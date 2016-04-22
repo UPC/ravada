@@ -13,9 +13,9 @@
 
 Create a database named "ravada". Review and run the sql files from the sql dir.
 
-$ mysqladmin create ravada
-$ cd sql
-$ cat *.sql | mysql ravada
+    $ mysqladmin create ravada
+    $ cd sql
+    $ cat *.sql | mysql ravada
 
 #KVM backend
 
