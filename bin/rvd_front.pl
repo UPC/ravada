@@ -17,12 +17,12 @@ our $TIMEOUT = 120;
 any '/' => sub {
   my $c = shift;
     my $login = ($c->param('login') or '');
-    my $os = ($c->param('os') or 1);
+    my $id_base = ($c->param('id_base') or 1);
     if (!$login ) {
-        $c->render(login => $login ,template => 'index' , os => $os
+        $c->render(login => $login ,template => 'index' , id_base => $id_base
                     , base => list_bases());
     } else {
-        show_link($c, $os, $login);
+        show_link($c, $id_base, $login);
     }
 };
 
@@ -194,14 +194,14 @@ __DATA__
 <h1>Welcome to SPICE !</h1>
 
 <form method="post">
-    Nom: <input name="login" value ="<%= $login %>" 
-            type="text"> <i>recorda el <b>.</b></i><br/>
-    Sistema <%= $os %>: <select name="os">
+    Name: <input name="login" value ="<%= $login %>" 
+            type="text"><br/>
+    Base: <select name="id_base">
 %       for my $option (sort keys %$base) {
             <option value="<%= $option %>"><%= $base->{$option} %></option>
 %       }
     </select><br/>
-    <input type="submit" value="entrar">
+    <input type="submit" value="launch">
 </form>
 
 @@ bases.html.ep
@@ -218,8 +218,8 @@ __DATA__
 % layout 'default';
 <h1>Run</h1>
 
-Hola <%= $name %>, entra aquí: 
-<a href="<%= $url %>"><%= $url %></a>
+Hi <%= $name %>, 
+<a href="<%= $url %>">click here</a>
 
 @@ fail.html.ep
 % layout 'default';
