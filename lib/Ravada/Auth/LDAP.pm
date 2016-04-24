@@ -1,6 +1,9 @@
 package Ravada::Auth::LDAP;
 
-use Net::LDAPS;
+use strict;
+use warnings;
+
+use Net::LDAP;
 
 our $LDAP;
 
@@ -9,7 +12,7 @@ sub login {
 
     _init_ldap();
 
-    my $search = $ldap->search(      # Search for the user
+    my $search = $LDAP->search(      # Search for the user
     base   => 'DC=casa,DC=guru',
     scope  => 'sub',
     filter => "(&(uid=$username))",
@@ -21,9 +24,10 @@ sub login {
 
     warn $user_dn;
 
-    $LDAP->bind( $user_dn, password => $pass );
-    return 1 if !$ldap->error;
-    warn "ERROR: ".$ldap->error. "Bad credentials for $username";
+    my $mesg = $LDAP->bind( $user_dn, password => $password );
+    return 1 if !$mesg->code;
+
+    warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
     return;
 }
 
@@ -33,7 +37,7 @@ sub _init_ldap {
 
     my ($host, $port) = ('localhost', 389);
 
-    $LDAP = Net::LDAPS->new($host, port => $port, verify => 'none') 
+    $LDAP = Net::LDAP->new($host, port => $port, verify => 'none') 
         or die "I can't connect to LDAP server at $host / $port : $@";
 }
 
