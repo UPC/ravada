@@ -583,10 +583,17 @@ sub search_drive {
 
     my $cont = 0;
     my $img;
+    my $list_disks = '';
+
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
 
-        die "ERROR: base disks only can have one device" if $cont++>1;
+        $list_disks .= $disk->toString();
+
+        die "ERROR: base disks only can have one device\n" 
+                .$list_disks
+            if $cont++>1;
+
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
 #                die $child->toString();
