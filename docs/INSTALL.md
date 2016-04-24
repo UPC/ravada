@@ -6,8 +6,10 @@
 - libdbd-mysql-perl
 - libdbi-perl
 - libdbix-connector-perl
+- libproc-pid-file-perl
 - libvirt-bin
 - libsys-virt-perl
+- libxml-libxml-perl
 
 #Mysql Database
 
