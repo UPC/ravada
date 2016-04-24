@@ -36,9 +36,12 @@ any '/' => sub {
         }
         push @error,("Access denied");
     }
-    $c->render(login => $login ,template => 'index' , id_base => $id_base
-                    , error => \@error
-                    , base => list_bases());
+    $c->render(
+                    template => 'bootstrap/main' 
+                    ,id_base => $id_base
+                      ,login => $login 
+                      ,error => \@error
+                       ,base => list_bases());
 };
 
 get '/ip' => sub {
