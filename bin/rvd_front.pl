@@ -20,16 +20,24 @@ our $TIMEOUT = 120;
 
 any '/' => sub {
   my $c = shift;
-    my $login = ($c->param('login') or '');
-    my $password = ($c->param('login') or '');
-    my $id_base = ($c->param('id_base') or 1);
+    my $login = $c->param('login');
+    my $password = $c->param('password');
+    my $id_base = $c->param('id_base');
 
-    if ( $login ) {
+    my @error =();
+    if ($c->param('submit')) {
+        push @error,("Empty login name")  if !length $login;
+        push @error,("Empty password")  if !length $password;
+    }
+
+    if ( $login && $password ) {
         if (Ravada::Auth::LDAP::login($login, $password)) {
             return show_link($c, $id_base, $login);
         }
+        push @error,("Access denied");
     }
     $c->render(login => $login ,template => 'index' , id_base => $id_base
+                    , error => \@error
                     , base => list_bases());
 };
 
@@ -201,15 +209,24 @@ __DATA__
 <h1>Welcome to SPICE !</h1>
 
 <form method="post">
-    Name: <input name="login" value ="<%= $login %>" 
+    User Name: <input name="login" value ="<%= $login %>" 
             type="text"><br/>
+    Password: <input type="password" name="password" value=""><br/>
     Base: <select name="id_base">
 %       for my $option (sort keys %$base) {
             <option value="<%= $option %>"><%= $base->{$option} %></option>
 %       }
     </select><br/>
-    <input type="submit" value="launch">
+    
+    <input type="submit" name="submit" value="launch">
 </form>
+% if (scalar @$error) {
+        <ul>
+%       for my $i (@$error) {
+            <li><%= $i %></li>
+%       }
+        </ul>
+% }
 
 @@ bases.html.ep
 % layout 'default';
