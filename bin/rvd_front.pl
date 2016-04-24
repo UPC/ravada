@@ -6,6 +6,10 @@ use Data::Dumper;
 use DBIx::Connector;
 use Mojolicious::Lite;
 
+use lib 'lib';
+
+use Ravada::Auth::LDAP;
+
 our $HOST = 'vsertel.upc.es';
 
 our $CON = DBIx::Connector->new("DBI:mysql:ravada"
@@ -17,13 +21,16 @@ our $TIMEOUT = 120;
 any '/' => sub {
   my $c = shift;
     my $login = ($c->param('login') or '');
+    my $password = ($c->param('login') or '');
     my $id_base = ($c->param('id_base') or 1);
-    if (!$login ) {
-        $c->render(login => $login ,template => 'index' , id_base => $id_base
-                    , base => list_bases());
-    } else {
-        show_link($c, $id_base, $login);
+
+    if ( $login ) {
+        if (Ravada::Auth::LDAP::login($login, $password)) {
+            return show_link($c, $id_base, $login);
+        }
     }
+    $c->render(login => $login ,template => 'index' , id_base => $id_base
+                    , base => list_bases());
 };
 
 get '/ip' => sub {
