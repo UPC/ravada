@@ -10,7 +10,7 @@ Read docs/INSTALL.md
 ### Development
 To run it in development mode issue those commands in two different terminals:
 
-    $ morbo ./bin/rvd_front.pl
+    $ morbo ./rvd_front.pl
     $ sudo ./bin/rvd_back.pl
 
 ### Production
