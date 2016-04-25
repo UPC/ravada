@@ -26,3 +26,6 @@ in the first line:
 Insert that file in the ldap server:
 
     $ ldapadd -h 127.0.0.1 -x -D "cn=Directory Manager" -W -f user.ldif
+
+Now you can user the former user with the login name "jdoe" and password "test"
+
