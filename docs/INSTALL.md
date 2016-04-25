@@ -1,3 +1,9 @@
+#Install Ravada
+
+Clone the sources:
+
+    $ git clone https://github.com/frankiejol/ravada.git
+
 #Packages
 
 ##Debian
@@ -27,3 +33,4 @@ Create a database named "ravada". Review and run the sql files from the sql dir.
 #KVM backend
 
 Install KVM and virt-manager. Create new virtual machines (called domains) there.
+See docs/operation.md
