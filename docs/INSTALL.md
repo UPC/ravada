@@ -6,6 +6,7 @@
 - libdbd-mysql-perl
 - libdbi-perl
 - libdbix-connector-perl
+- libipc-run3-perl
 - libnet-ldap-perl
 - libproc-pid-file-perl
 - libvirt-bin
