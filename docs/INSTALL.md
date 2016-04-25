@@ -6,10 +6,14 @@
 - libdbd-mysql-perl
 - libdbi-perl
 - libdbix-connector-perl
+- libnet-ldap-perl
 - libproc-pid-file-perl
 - libvirt-bin
 - libsys-virt-perl
 - libxml-libxml-perl
+- cpanminus
+
+    $ sudo cpanm Mojolicious
 
 #Mysql Database
 
