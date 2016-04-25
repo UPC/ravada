@@ -10,8 +10,6 @@ use lib 'lib';
 
 use Ravada::Auth::LDAP;
 
-our $HOST = 'vsertel.upc.es';
-
 our $CON = DBIx::Connector->new("DBI:mysql:ravada"
                         ,undef,undef,{RaiseError => 1
                         , PrintError=> 0 }) or die "I can't connect";
