@@ -7,11 +7,18 @@ our $LDAP;
 
 use Ravada::Auth::SQL;
 
-eval { require Ravada::Auth::LDAP; $LDAP = 1 };
+eval { 
+    require Ravada::Auth::LDAP; 
+    $LDAP = 1 
+};
 
 sub init {
     my ($config, $db_con) = @_;
-    Ravada::Auth::LDAP::init($config)   if $LDAP;
+    if ($config->{ldap}) {
+        Ravada::Auth::LDAP::init($config);
+    } else {
+        $LDAP = 0;
+    }
     Ravada::Auth::SQL::init($config, $db_con);
 }
 

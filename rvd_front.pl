@@ -11,7 +11,7 @@ use lib 'lib';
 
 use Ravada::Auth;
 
-my $FILE_CONFIG = "/etc/ravada.conf";
+my $FILE_CONFIG = "/etc/ravada_front.conf";
 my $help;
 GetOptions(
         config => \$FILE_CONFIG
@@ -37,6 +37,11 @@ any '/' => sub {
     my $c = shift;
 
     return quick_start($c);
+};
+
+any '/login' => sub {
+    my $c = shift;
+    $c->render(data => "TODO");
 };
 
 any '/logout' => sub {
@@ -250,7 +255,7 @@ sub list_bases {
 }
 
 sub init {
-    Ravada::Auth::init($config);
+    Ravada::Auth::init($config,$CON);
 }
 
 app->start;
