@@ -56,4 +56,7 @@ sub _init_ldap {
         or die "I can't connect to LDAP server at $host / $port : $@";
 }
 
+sub init {
+}
+
 1;

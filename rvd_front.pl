@@ -4,17 +4,34 @@ use strict;
 
 use Data::Dumper;
 use DBIx::Connector;
+use Getopt::Long;
 use Mojolicious::Lite;
 
 use lib 'lib';
 
-use Ravada::Auth::LDAP;
+use Ravada::Auth;
+
+my $FILE_CONFIG = "/etc/ravada.conf";
+my $help;
+GetOptions(
+        config => \$FILE_CONFIG
+         ,help  => \$help
+     ) or exit;
+
+if ($help) {
+    print "$0 [--help] [--config=$FILE_CONFIG]\n";
+    exit;
+}
 
 our $CON = DBIx::Connector->new("DBI:mysql:ravada"
                         ,undef,undef,{RaiseError => 1
                         , PrintError=> 0 }) or die "I can't connect";
 
 our $TIMEOUT = 120;
+my $config = plugin Config => {file => $FILE_CONFIG} if -e $FILE_CONFIG;
+
+init();
+############################################################################3
 
 any '/' => sub {
     my $c = shift;
@@ -51,7 +68,7 @@ sub quick_start {
     }
 
     if ( $login && $password ) {
-        if (Ravada::Auth::LDAP::login($login, $password)) {
+        if (Ravada::Auth::login($login, $password)) {
             $c->session('login' => $login);
         } else {
             push @error,("Access denied");
@@ -230,6 +247,10 @@ sub list_bases {
     }
     $sth->finish;
     return \%base;
+}
+
+sub init {
+    Ravada::Auth::init($config);
 }
 
 app->start;
