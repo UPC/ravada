@@ -21,7 +21,8 @@ sub login {
     filter => "(&(uid=$username))",
     attrs  => ['dn']
     );
-    die "not found '$username' at '$base'" if not $search->count;
+#    die "not found '$username' at '$base'" if not $search->count;
+    return if not $search->count;
 
     my $user_dn = $search->entry->dn;
 
