@@ -17,30 +17,57 @@ our $CON = DBIx::Connector->new("DBI:mysql:ravada"
 our $TIMEOUT = 120;
 
 any '/' => sub {
-  my $c = shift;
+    my $c = shift;
+
+    return quick_start($c);
+};
+
+any '/logout' => sub {
+    my $c = shift;
+    $c->session(expires => 1);
+    $c->session(login => undef);
+    $c->redirect_to('/');
+};
+
+sub _logged_in {
+    my $c = shift;
+    $c->stash(_logged_in => $c->session('login'));
+    return 1 if $c->session('login');
+}
+
+sub quick_start {
+    my $c = shift;
+
+    _logged_in($c);
+
     my $login = $c->param('login');
     my $password = $c->param('password');
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if ($c->param('submit')) {
+    if ($c->param('submit') && $login) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
 
     if ( $login && $password ) {
         if (Ravada::Auth::LDAP::login($login, $password)) {
-            return show_link($c, $id_base, $login);
+            $c->session('login' => $login);
+        } else {
+            push @error,("Access denied");
         }
-        push @error,("Access denied");
     }
+    return show_link($c, $id_base, $login)
+        if $c->param('submit') && _logged_in($c);
+
     $c->render(
                     template => 'bootstrap/start' 
                     ,id_base => $id_base
                       ,login => $login 
                       ,error => \@error
-                       ,base => list_bases());
-};
+                       ,base => list_bases()
+    );
+}
 
 get '/ip' => sub {
     my $c = shift;
@@ -173,6 +200,8 @@ sub show_link {
     my $c = shift;
     my ($id_base, $name) = @_;
 
+    die "Empty id_base" if !$id_base;
+
     my $base_name = base_name($id_base)
         or die "Unkown id_base '$id_base'";
 
@@ -184,7 +213,8 @@ sub show_link {
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'run', url => $uri , name => $name);
+    $c->render(template => 'bootstrap/run', url => $uri , name => $name
+                ,login => $c->session('login'));
 }
 
 sub list_bases {

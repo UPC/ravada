@@ -8,9 +8,11 @@
     <div class="jumbotron">
         <h2>Welcome to SPICE !</h2>
         <form method="post">
-            User Name: <input name="login" value ="<%= $login %>" 
+%           if (! $_logged_in) {
+                User Name: <input name="login" value ="<%= $login %>" 
                         type="text"><br/>
-            Password: <input type="password" name="password" value=""><br/>
+                Password: <input type="password" name="password" value=""><br/>
+%           }
             Base: <select name="id_base">
 %           for my $option (sort keys %$base) {
                 <option value="<%= $option %>"><%= $base->{$option} %></option>
