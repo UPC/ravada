@@ -2,16 +2,18 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use DBIx::Connector;
 use Getopt::Long;
 use Mojolicious::Lite;
+use YAML qw(LoadFile);
 
 use lib 'lib';
 
 use Ravada::Auth;
 
-my $FILE_CONFIG = "/etc/ravada_front.conf";
+my $FILE_CONFIG = "/etc/ravada.conf";
 my $help;
 GetOptions(
         config => \$FILE_CONFIG
@@ -23,12 +25,10 @@ if ($help) {
     exit;
 }
 
-our $CON = DBIx::Connector->new("DBI:mysql:ravada"
-                        ,undef,undef,{RaiseError => 1
-                        , PrintError=> 0 }) or die "I can't connect";
+our $CONFIG = LoadFile($FILE_CONFIG);
+our $CON;
 
 our $TIMEOUT = 120;
-my $config = plugin Config => {file => $FILE_CONFIG} if -e $FILE_CONFIG;
 
 init();
 ############################################################################3
@@ -41,7 +41,7 @@ any '/' => sub {
 
 any '/login' => sub {
     my $c = shift;
-    $c->render(data => "TODO");
+    return login($c);
 };
 
 any '/logout' => sub {
@@ -55,6 +55,34 @@ sub _logged_in {
     my $c = shift;
     $c->stash(_logged_in => $c->session('login'));
     return 1 if $c->session('login');
+}
+
+sub login {
+    my $c = shift;
+
+    return quick_start($c)    if _logged_in($c);
+
+    my $login = $c->param('login');
+    my $password = $c->param('password');
+    my @error =();
+    if ($c->param('submit') && $login) {
+        push @error,("Empty login name")  if !length $login;
+        push @error,("Empty password")  if !length $password;
+    }
+
+    if ( $login && $password ) {
+        if (Ravada::Auth::login($login, $password)) {
+            $c->session('login' => $login);
+        } else {
+            push @error,("Access denied");
+        }
+    }
+    $c->render(
+                    template => 'bootstrap/login' 
+                      ,login => $login 
+                      ,error => \@error
+    );
+
 }
 
 sub quick_start {
@@ -80,7 +108,7 @@ sub quick_start {
         }
     }
     return show_link($c, $id_base, $login)
-        if $c->param('submit') && _logged_in($c);
+        if $c->param('submit') && _logged_in($c) && defined $id_base;
 
     $c->render(
                     template => 'bootstrap/start' 
@@ -222,7 +250,7 @@ sub show_link {
     my $c = shift;
     my ($id_base, $name) = @_;
 
-    die "Empty id_base" if !$id_base;
+    confess "Empty id_base" if !$id_base;
 
     my $base_name = base_name($id_base)
         or die "Unkown id_base '$id_base'";
@@ -254,8 +282,19 @@ sub list_bases {
     return \%base;
 }
 
+sub _init_db {
+    my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
+    my $db_password = ($CONFIG->{db}->{password} or undef);
+    $CON = DBIx::Connector->new("DBI:mysql:ravada"
+                        ,$db_user,$db_password,{RaiseError => 1
+                        , PrintError=> 0 }) or die "I can't connect";
+
+
+}
+
 sub init {
-    Ravada::Auth::init($config,$CON);
+    _init_db();
+    Ravada::Auth::init($CONFIG,$CON);
 }
 
 app->start;

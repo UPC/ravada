@@ -1,0 +1,29 @@
+
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body role="document">
+    %= include 'bootstrap/navigation'
+    <div class="container theme-showcase" role="main">
+    <div class="jumbotron">
+        <h2>Welcome to SPICE !</h2>
+        <form method="post">
+            User Name: <input name="login" value ="<%= $login %>" 
+                        type="text"><br/>
+            Password: <input type="password" name="password" value=""><br/>
+    
+            <input type="submit" name="submit" value="launch">
+        </form>
+% if (scalar @$error) {
+        <ul>
+%       for my $i (@$error) {
+            <li><%= $i %></li>
+%       }
+        </ul>
+% }
+
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>

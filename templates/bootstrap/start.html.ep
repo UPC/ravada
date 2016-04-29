@@ -13,13 +13,17 @@
                         type="text"><br/>
                 Password: <input type="password" name="password" value=""><br/>
 %           }
-            Base: <select name="id_base">
-%           for my $option (sort keys %$base) {
-                <option value="<%= $option %>"><%= $base->{$option} %></option>
+%           if (keys %$base) {
+                Base: <select name="id_base">
+%               for my $option (sort keys %$base) {
+                    <option value="<%= $option %>"><%= $base->{$option} %></option>
+%               }
+                </select><br/>
+%           } else {
+                <b>Error :</b>  No base domains available.
 %           }
-            </select><br/>
+                <input type="submit" name="submit" value="launch">
     
-            <input type="submit" name="submit" value="launch">
         </form>
 % if (scalar @$error) {
         <ul>

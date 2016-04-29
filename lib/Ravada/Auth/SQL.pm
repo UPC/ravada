@@ -29,8 +29,16 @@ sub login {
     $sth->execute($login, sha1_hex($password));
     my ($found) = $sth->fetchrow;
     $sth->finish;
-    return if !$found;
-    return $found;
+    return $found   if $found;
+
+    $sth = $CON->dbh->prepare(
+       "SELECT name FROM users WHERE name=? AND password=password(?)");
+    $sth->execute($login, $password);
+    ($found) = $sth->fetchrow;
+    $sth->finish;
+    return $found   if $found;
+
+    return;
 }
 
 1;

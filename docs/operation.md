@@ -1,3 +1,12 @@
+
+#First run
+
+When the server is running connect it at http://servername:3000/
+
+Start creating a domain base for the users. As long as there are no, it will show this:
+
+    No base domains available
+
 #Domain Bases
 
 Domain bases are used to create virtual hosts. Build systems in the Hypervisor, then
