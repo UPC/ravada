@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body role="document">
+    %= include 'bootstrap/navigation'
+    <div class="container theme-showcase" role="main">
+    <div class="jumbotron">
+        <h2>New Base</h2>
+        <form method="post">
+            <input type="text" size="20" name=""><br/>
+%           if (keys %$image) {
+                boot CD: <select name="id_image">
+%               for my $option (sort keys %$image) {
+                    <option value="<%= $option %>"><%= $image->{$option}->{name} %></option>
+%               }
+                </select><br/>
+%           } else {
+                <b>Error :</b>  No base ISO Images available.
+%           }
+                Backend:<br/>
+                <input type="radio" name="backend value="kvm">kvm</input><br/>
+                <input type="radio" name="backend value="lxc">lxc</input><br/>
+
+                Disk: <input type="text" name="disk" size="2" value="8">Gb<br/>
+                Ram: <input type="text" name="ram" size="2" value="2">Gb<br/>
+                <input type="submit" name="submit" value="create">
+    
+        </form>
+% if (scalar @$error) {
+        <ul>
+%       for my $i (@$error) {
+            <li><%= $i %></li>
+%       }
+        </ul>
+% }
+
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>

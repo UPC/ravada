@@ -6,6 +6,7 @@ use Carp qw(confess);
 use Data::Dumper;
 use DBIx::Connector;
 use Getopt::Long;
+use Hash::Util qw(lock_hash);
 use Mojolicious::Lite;
 use YAML qw(LoadFile);
 
@@ -73,6 +74,7 @@ sub login {
     if ( $login && $password ) {
         if (Ravada::Auth::login($login, $password)) {
             $c->session('login' => $login);
+            return quick_start($c);
         } else {
             push @error,("Access denied");
         }
@@ -131,7 +133,23 @@ get '/ip/*' => sub {
     show_link($c,base_id($base_name),$ip);
 };
 
+any '/bases' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    my @error = ();
+    $c->render(template => 'bootstrap/new_base'
+                    ,image => _list_images()
+                    ,error => \@error
+    );
+};
+
 #######################################################
+
+sub access_denied {
+    my $c = shift;
+    $c->render(data => "Access denied");
+}
 
 sub base_id {
     my $name = shift;
@@ -281,6 +299,23 @@ sub list_bases {
     $sth->finish;
     return \%base;
 }
+
+sub _list_images {
+    my $dbh = $CON->dbh();
+    my $sth = $dbh->prepare(
+        "SELECT * FROM iso_images"
+        ." ORDER BY name"
+    );
+    $sth->execute;
+    my %image;
+    while ( my $row = $sth->fetchrow_hashref) {
+        $image{$row->{id}} = $row;
+    }
+    $sth->finish;
+    lock_hash(%image);
+    return \%image;
+}
+
 
 sub _init_db {
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
