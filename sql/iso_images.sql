@@ -9,6 +9,13 @@ CREATE TABLE `iso_images` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 );
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url)
+VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
+    ,'i386'
+    ,'trusty-i386.xml'
+    ,'trusty-volume.xml'
+    ,'http://localhost:/ubuntu-16.04-desktop-i386.iso');
 
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url)
