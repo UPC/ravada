@@ -26,8 +26,11 @@ if ($help) {
     exit;
 }
 
-our $CONFIG = LoadFile($FILE_CONFIG);
-our $CON;
+our $CONFIG = { rvd_back => {pid_file => '/var/run/rvd_back.pid'}};
+
+$CONFIG = LoadFile($FILE_CONFIG) or die "$! $FILE_CONFIG"
+    if -e $FILE_CONFIG;
+our $DB;
 
 our $TIMEOUT = 120;
 
@@ -52,11 +55,14 @@ any '/logout' => sub {
     $c->redirect_to('/');
 };
 
+###################################################
+
 sub _logged_in {
     my $c = shift;
     $c->stash(_logged_in => $c->session('login'));
     return 1 if $c->session('login');
 }
+
 
 sub login {
     my $c = shift;
@@ -137,14 +143,29 @@ any '/bases' => sub {
     my $c = shift;
 
     return access_denied($c) if !_logged_in($c);
+    return new_base($c);
+};
+
+#######################################################
+
+sub new_base {
+    my $c = shift;
     my @error = ();
+    my $name = $c->param('name');
+    my $ram = ($c->param('ram') or 2);
+    my $disk = ($c->param('disk') or 8);
+    if ($c->param('submit')) {
+        push @error,("Name is mandatory")   if !defined $name;
+    }
     $c->render(template => 'bootstrap/new_base'
+                    ,name => $name
+                    ,ram => $ram
+                    ,disk => $disk
                     ,image => _list_images()
                     ,error => \@error
     );
 };
 
-#######################################################
 
 sub access_denied {
     my $c = shift;
@@ -154,7 +175,7 @@ sub access_denied {
 sub base_id {
     my $name = shift;
 
-    my $sth = $CON->dbh->prepare("SELECT id FROM bases WHERE name=?");
+    my $sth = $DB->dbh->prepare("SELECT id FROM bases WHERE name=?");
     $sth->execute($name);
     my ($id) =$sth->fetchrow;
     die "CRITICAL: Unknown base $name" if !defined $id;
@@ -177,7 +198,7 @@ sub provisiona {
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
 
-    my $dbh = $CON->dbh;
+    my $dbh = $DB->dbh;
     my $sth = $dbh->prepare("INSERT INTO domains ( id_base,name) VALUES (?,?)");
     $sth->execute($id_base, $name);
     $sth->finish;
@@ -191,7 +212,7 @@ sub provisiona {
 sub wait_node_up {
     my ($c, $name) = @_;
 
-    my $dbh = $CON->dbh;
+    my $dbh = $DB->dbh;
     my $sth = $dbh->prepare(
         "SELECT created, error, uri FROM domains where name=?"
     );
@@ -212,7 +233,7 @@ sub wait_node_up {
 sub raise_node {
     my ($c, $id_base, $name) = @_;
 
-    my $dbh = $CON->dbh;
+    my $dbh = $DB->dbh;
     my $sth = $dbh->prepare(
         "SELECT id FROM domains WHERE name=? "
         ." AND id_base=?"
@@ -240,7 +261,7 @@ sub wait_request_done {
     my ($c, $id) = @_;
     
     my $req;
-    my $sth = $CON->dbh->prepare(
+    my $sth = $DB->dbh->prepare(
         "SELECT r.* , name "
         ." FROM domains_req r, domains d "
         ." WHERE r.id=? AND r.id_domain = d.id "
@@ -259,7 +280,7 @@ sub wait_request_done {
 sub base_name {
     my $id_base = shift;
 
-    my $sth = $CON->dbh->prepare("SELECT name FROM bases where id=?");
+    my $sth = $DB->dbh->prepare("SELECT name FROM bases where id=?");
     $sth->execute($id_base);
     return $sth->fetchrow;
 }
@@ -286,7 +307,7 @@ sub show_link {
 }
 
 sub list_bases {
-    my $dbh = $CON->dbh();
+    my $dbh = $DB->dbh();
     my $sth = $dbh->prepare(
         "SELECT id, name FROM bases"
         ." ORDER BY id"
@@ -301,7 +322,7 @@ sub list_bases {
 }
 
 sub _list_images {
-    my $dbh = $CON->dbh();
+    my $dbh = $DB->dbh();
     my $sth = $dbh->prepare(
         "SELECT * FROM iso_images"
         ." ORDER BY name"
@@ -320,16 +341,21 @@ sub _list_images {
 sub _init_db {
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
     my $db_password = ($CONFIG->{db}->{password} or undef);
-    $CON = DBIx::Connector->new("DBI:mysql:ravada"
+    $DB = DBIx::Connector->new("DBI:mysql:ravada"
                         ,$db_user,$db_password,{RaiseError => 1
                         , PrintError=> 0 }) or die "I can't connect";
 
 
 }
 
+sub check_back_running {
+    return -e $CONFIG->{rvd_back}->{pid_file};
+}
+
 sub init {
+    check_back_running or warn "CRITICAL: rvd_back is not running\n";
     _init_db();
-    Ravada::Auth::init($CONFIG,$CON);
+    Ravada::Auth::init($CONFIG,$DB);
 }
 
 app->start;
