@@ -10,7 +10,7 @@
         <form method="post">
             <input type="text" size="20" name="name" value="<%= $name %>"><br/>
 %           if (keys %$image) {
-                boot CD: <select name="id_image">
+                boot CD: <select name="id_iso">
 %               for my $option (sort keys %$image) {
                     <option value="<%= $option %>"><%= $image->{$option}->{name} %></option>
 %               }

@@ -26,10 +26,12 @@ if ($help) {
     exit;
 }
 
-our $CONFIG = { rvd_back => {pid_file => '/var/run/rvd_back.pid'}};
 
-$CONFIG = LoadFile($FILE_CONFIG) or die "$! $FILE_CONFIG"
+my $CONFIG = LoadFile($FILE_CONFIG) or die "$! $FILE_CONFIG"
     if -e $FILE_CONFIG;
+$CONFIG->{rvd_back}->{pid_file} = '/var/run/rvd_back.pid'
+    if !$CONFIG->{rvd_back}->{pid_file};
+
 our $DB;
 
 our $TIMEOUT = 120;
@@ -151,14 +153,14 @@ any '/bases' => sub {
 sub new_base {
     my $c = shift;
     my @error = ();
-    my $name = $c->param('name');
     my $ram = ($c->param('ram') or 2);
     my $disk = ($c->param('disk') or 8);
     if ($c->param('submit')) {
-        push @error,("Name is mandatory")   if !defined $name;
+        push @error,("Name is mandatory")   if !$c->param('name');
+        return req_new_base($c) if !@error;
     }
     $c->render(template => 'bootstrap/new_base'
-                    ,name => $name
+                    ,name => $c->param('name')
                     ,ram => $ram
                     ,disk => $disk
                     ,image => _list_images()
@@ -166,7 +168,33 @@ sub new_base {
     );
 };
 
+sub req_new_base {
+    my $c = shift;
+    my $sth = $DB->dbh->prepare(
+                "INSERT INTO bases_req (name, id_iso, date_req, created) "
+                ." VALUES (?,?,now(),'n')"
+    );
+    $sth->execute($c->param('name'), $c->param('id_iso'));
+    $sth->finish;
 
+    $sth=$DB->dbh->prepare("SELECT last_insert_id() ");
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+
+    my ($uri,$error) = wait_req_up($id);
+    if ($uri) {
+       $c->redirect_to($uri);
+       $c->render(template => 'bootstrap/run', url => $uri , name => $c->param('name')
+                ,login => $c->session('login'));
+
+    } else {
+        $c->render(template => 'fail', name => $c->param('name'), error => $error);
+    }
+}
+
+sub _search_req_base_error {
+    my $name = shift;
+}
 sub access_denied {
     my $c = shift;
     $c->render(data => "Access denied");
@@ -210,11 +238,12 @@ sub provisiona {
 }
 
 sub wait_node_up {
-    my ($c, $name) = @_;
+    my ($c, $name, $table) = @_;
+    $table = 'domains' if !$table;
 
     my $dbh = $DB->dbh;
     my $sth = $dbh->prepare(
-        "SELECT created, error, uri FROM domains where name=?"
+        "SELECT created, error, uri FROM $table where name=?"
     );
 
     for (1 .. $TIMEOUT) {
@@ -229,6 +258,26 @@ sub wait_node_up {
         return $uri if $created !~ /n/i;
     }
 }
+
+sub wait_req_up {
+    my ($id, $table) = @_;
+    $table = 'bases_req' if !$table;
+
+    my $dbh = $DB->dbh;
+    my $sth = $dbh->prepare(
+        "SELECT created, error, uri FROM $table where id=?"
+    );
+
+    for (1 .. $TIMEOUT) {
+        sleep 1;
+        $sth->execute($id);
+        my ($created, $error, $uri ) = $sth->fetchrow;
+        warn "$_ : ".$created." ".($error or '');
+        return ($uri) if $created !~ /n/i;
+        return (undef,$error) if $error;
+    }
+}
+
 
 sub raise_node {
     my ($c, $id_base, $name) = @_;
