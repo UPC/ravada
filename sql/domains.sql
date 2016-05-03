@@ -5,6 +5,8 @@ CREATE TABLE `domains` (
   `created` char(1) NOT NULL DEFAULT 'n',
   `error` varchar(200) DEFAULT NULL,
   `uri` varchar(250) DEFAULT NULL,
+  `is_base` char(1) NOT NULL DEFAULT 'n',
+  `file_base_img` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_base` (`id_base`,`name`),
   UNIQUE KEY `name` (`name`)
