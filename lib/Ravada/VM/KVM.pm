@@ -15,9 +15,17 @@ use Sys::Virt;
 use URI;
 use XML::LibXML;
 
+use Ravada::Domain::KVM;
+
 with 'Ravada::VM';
 
 ##########################################################################
+#
+has connector => (
+    is => 'ro'
+    ,isa => 'DBIx::Connector'
+    ,required => 1
+);
 
 has vm => (
     isa => 'Sys::Virt'
@@ -85,20 +93,88 @@ sub _load_storage_pool {
 
 }
 
-sub domain_create {
+=head2 create_domain
+
+Creates a domain.
+
+    $dom = $vm->create_domain(name => $name , id_iso => $id_iso);
+    $dom = $vm->create_domain(name => $name , id_base => $id_base);
+
+=cut
+
+sub create_domain {
     my $self = shift;
     my %args = @_;
     lock_hash(%args);
     
     croak "argument name required"       if !$args{name};
-    croak "argument id_iso_image or id_base required" 
+    croak "argument id_iso or id_base required" 
         if !$args{id_iso} && !$args{id_base};
 
+    my $domain;
+    my @fields = ( name => $args{name} );
     if ($args{id_iso}) {
-        return $self->_domain_create_from_iso(@_);
+        $domain = $self->_domain_create_from_iso(@_);
+    } elsif($args{id_base}) {
+        $domain = $self->_domain_create_from_base(@_);
+        push @fields, ( id_base => $args{id_base} );
     } else {
         confess "TODO";
     }
+    $self->_domain_insert_db(@fields);
+
+    return $domain;
+}
+
+=head2 search_domain
+
+Returns true or false if domain exists.
+
+    $domain = $vm->search_domain($domain_name);
+
+=cut
+
+sub search_domain {
+    my $self = shift;
+    my $name = shift;
+
+    for ($self->vm->list_all_domains()) {
+        return Ravada::Domain::KVM->new(
+                domain => $_
+                ,storage => $self->storage_pool
+                ,connector => $self->connector
+        ) if $_->get_name eq $name;
+    }
+}
+
+=head2 create_volume
+
+Creates a new storage volume. It requires a name and a xml template file defining the volume
+
+   my $vol = $vm->create_volume($name, $file_xml);
+
+=cut
+
+sub create_volume {
+    my $self = shift;
+    my ($name, $file_xml) = @_;
+    confess "Missing volume name"   if !$name;
+    confess "Missing xml template"  if !$file_xml;
+
+    open my $fh,'<', $file_xml or die "$! $file_xml";
+    my $dir_img = $DEFAULT_DIR_IMG;
+
+    my $doc = $XML->load_xml(IO => $fh);
+
+    $doc->findnodes('/volume/name/text()')->[0]->setData("$name.img");
+    $doc->findnodes('/volume/key/text()')->[0]->setData("$dir_img/$name.img");
+    $doc->findnodes('/volume/target/path/text()')->[0]->setData(
+                "$dir_img/$name.img");
+
+    my $vol = $self->storage_pool->create_volume($doc->toString);
+    warn "volume $dir_img/$name.img does not exists after creating volume"
+            if ! -e "$dir_img/$name.img";
+    return "$dir_img/$name.img";
 
 }
 
@@ -109,18 +185,28 @@ sub _domain_create_from_iso {
     croak "argument id_iso required" 
         if !$args{id_iso};
 
+    die "Domain $args{name} already exists"
+        if $self->search_domain($args{name});
+
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
 
     my $iso = $self->_search_iso($args{id_iso});
 
     my $device_cdrom = _iso_name($iso);
-    my $device_disk = ( $args{device_disk} or undef );
+    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume});
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, $device_disk)    if $device_disk;
+
+    my $dom = $self->vm->define_domain($xml->toString());
+    $dom->create;
+
+    return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+                                    ,connector => $self->connector
+    );
 }
 
 sub _iso_name {
@@ -393,11 +479,5 @@ sub _init_ip {
 
     return $ip;
 }
-
-sub domain_remove_vm {}
-
-sub prepare_base {}
-
-sub volume_create {}
 
 1;

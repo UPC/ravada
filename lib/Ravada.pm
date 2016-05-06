@@ -54,12 +54,22 @@ sub _init_config {
 
 sub _create_vm {
     my $self = shift;
-    return [ Ravada::VM::KVM->new( ) ];
+    return [ Ravada::VM::KVM->new( connector => $self->connector ) ];
 }
 
-sub domain_create {
+sub create_domain {
     my $self = shift;
 
-    $self->vm->[0]->domain_create(@_);
+    return $self->vm->[0]->create_domain(@_);
+}
+
+sub search_domain {
+    my $self = shift;
+    my $name = shift;
+
+    for my $vm (@{$self->vm}) {
+        my $domain = $vm->search_domain($name);
+        return $domain if $domain;
+    }
 }
 1;

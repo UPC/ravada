@@ -3,6 +3,7 @@ use strict;
 
 package Ravada::VM;
 
+use Carp qw(croak);
 use Moose::Role;
 
 requires 'connect';
@@ -11,12 +12,11 @@ requires 'connect';
 
 
 # domain
-requires 'domain_create';
-requires 'domain_remove_vm';
-requires 'prepare_base';
+requires 'create_domain';
+requires 'search_domain';
 
 # storage volume
-requires 'volume_create';
+requires 'create_volume';
 
 ############################################################
 
@@ -54,7 +54,7 @@ sub _build_connector { die "Database not connected" if !$Ravada::CONNECTOR;
 
 ############################################################
 #
-sub domain_remove_db {
+sub _domain_remove_db {
     my $self = shift;
     my $name = shift;
     my $sth = $self->connector->dbh->prepare("DELETE FROM domains WHERE name=?");
@@ -62,10 +62,24 @@ sub domain_remove_db {
     $sth->finish;
 }
 
+sub _domain_insert_db {
+    my $self = shift;
+    my %field = @_;
+    croak "Field name is mandatory ".Dumper(\%field)
+        if !exists $field{name};
+    my $sth = $self->connector->dbh->prepare("INSERT INTO domains "
+            ."(" . join(",",sort keys %field )." )"
+            ." VALUES (". join(",", map { '?' } keys %field )." ) "
+        );
+    $sth->execute( map { $field{$_} } sort keys %field );
+    $sth->finish;
+
+}
+
 sub domain_remove {
     my $self = shift;
     $self->domain_remove_vm();
-    $self->domain_remove_bd();
+    $self->_domain_remove_bd();
 }
 
 1;
