@@ -1,29 +1,35 @@
 
 <!DOCTYPE html>
 <html>
-%= include 'bootstrap/header'
+%= include 'bootstrap/in_header'
 <body role="document">
-    %= include 'bootstrap/navigation'
-    <div class="container theme-showcase" role="main">
-    <div class="jumbotron">
-        <h2>Welcome to SPICE !</h2>
-        <form method="post">
-            User Name: <input name="login" value ="<%= $login %>" 
-                        type="text"><br/>
-            Password: <input type="password" name="password" value=""><br/>
-    
-            <input type="submit" name="submit" value="launch">
-        </form>
-% if (scalar @$error) {
-        <ul>
-%       for my $i (@$error) {
-            <li><%= $i %></li>
-%       }
-        </ul>
-% }
+    %= include 'bootstrap/in_avigation'
+    <header class="intro">
+        <div class="intro-body">
+            <div class="container">
+                <form class="form-singin" method="post">
+                <h2 class="form-signin-heading">Login</h2>
 
-    </div>
-    </div>
-    %= include 'bootstrap/scripts'
+                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User/Email">
+
+                <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
+        
+               <!-- <input type="submit" name="submit" value="launch"> -->
+                <button id="submit" class="btn btn-lg btn-primary btn-block" type="submit" name="submit" value="launch">Launch</button>
+                % if (scalar @$error) {
+                        
+                %       for my $i (@$error) {
+                            <p id="err"><%= $i %></p>
+                %       }
+                        
+                % }
+                </form>
+                
+            </div>
+        </div>
+    </header>
+
+   
+    %= include 'bootstrap/in_scripts'
 </body>
 </html>
