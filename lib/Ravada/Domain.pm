@@ -3,6 +3,7 @@ package Ravada::Domain;
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Moose::Role;
 
 requires 'name';
@@ -29,6 +30,32 @@ sub id {
     return $id;
 }
 
+sub open {
+    my $self = shift;
+
+    my %args = @_;
+
+    my $id = $args{id} or confess "Missing required argument id";
+    delete $args{id};
+
+    my $row = $self->_select_domain_db ( id => $id );
+    return $self->search_domain($row->{name});
+#    confess $row;
+}
+
+sub _select_domain_db {
+    my $self = shift;
+    my %args = @_;
+
+    my $sth = $self->connector->dbh->prepare(
+        "SELECT * FROM domains WHERE ".join(",",map { "$_=?" } sort keys %args )
+    );
+    $sth->execute(map { $args{$_} } sort keys %args);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return $row;
+}
 
 sub _prepare_base_db {
     my $self = shift;

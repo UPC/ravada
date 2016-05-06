@@ -58,6 +58,7 @@ our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
 ##########################################################################
 
+
 sub connect {
     my $self = shift;
 
@@ -105,7 +106,6 @@ Creates a domain.
 sub create_domain {
     my $self = shift;
     my %args = @_;
-    lock_hash(%args);
     
     croak "argument name required"       if !$args{name};
     croak "argument id_iso or id_base required" 
@@ -207,6 +207,98 @@ sub _domain_create_from_iso {
     return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
                                     ,connector => $self->connector
     );
+}
+sub _create_disk {
+    return _create_disk_qcow2(@_);
+}
+
+sub _create_disk_qcow2 {
+    my $self = shift;
+    my ($base, $name) = @_;
+
+    confess "Missing base" if !$base;
+    confess "Missing name" if !$name;
+
+    my $dir_img  = $DEFAULT_DIR_IMG;
+
+    my $file_out = "$dir_img/$name.qcow2";
+
+    if (-e $file_out ) {
+        die "WARNING: output file $file_out already existed [skipping]\n";
+    }
+
+    my @cmd = ('qemu-img','create'
+                ,'-f','qcow2'
+                ,"-b", $base->file_base_img
+                ,$file_out
+    );
+    print join(" ",@cmd)."\n";
+
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    print $out  if $out;
+    warn $err   if $err;
+
+    if (! -e $file_out) {
+        warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n";
+        exit;
+    }
+    
+    warn "  qcow created\t\$?=$?\n";
+
+    return $file_out;
+}
+
+sub _search_domain_by_id {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $self->connector->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return $self->search_domain($row->{name});
+}
+
+sub _domain_create_from_base {
+    my $self = shift;
+    my %args = @_;
+
+    confess "argument id_base or base required ".Dumper(\%args) 
+        if !$args{id_base} && !$args{base};
+
+    die "Domain $args{name} already exists"
+        if $self->search_domain($args{name});
+
+    my $base = $args{base}  if $args{base};
+
+    $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
+
+    my $vm = $self->vm;
+    my $storage = $self->storage_pool;
+    my $xml = $base->domain->get_xml_description();
+
+    my $device_disk = $self->_create_disk($base, $args{name});
+#    _xml_modify_cdrom($xml, $device_cdrom);
+    my ($node_name) = $xml->findnodes('/domain/name/text()');
+    $node_name->setData($args{name});
+
+    _xml_modify_disk($xml, $device_disk);
+    _xml_modify_mac($xml);
+    _xml_modify_uuid($xml);
+    _xml_modify_spice_port($xml);
+    _xml_modify_video($xml);
+
+
+    my $dom = $self->vm->define_domain($xml->toString());
+    $dom->create;
+
+    return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+                                    ,connector => $self->connector
+    );
+
+
 }
 
 sub _iso_name {
