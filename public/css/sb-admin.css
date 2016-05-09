@@ -34,11 +34,14 @@ body {
 
 @media(min-width:768px) {
     #wrapper {
-        padding-left: 225px;
+      
     }
 
     #page-wrapper {
-        padding: 10px;
+        padding: 30px 100px;
+        min-height: 600px;
+        max-width: 1200px;
+        margin: 0 auto;
     }
 }
 
@@ -224,4 +227,8 @@ ul.alert-dropdown {
 
 .panel-yellow > a:hover {
     color: #df8a13;
+}
+#start{
+    font-size: 1.4em;
+
 }
