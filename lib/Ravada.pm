@@ -72,4 +72,25 @@ sub search_domain {
         return $domain if $domain;
     }
 }
+
+sub remove_volume {
+    my $self = shift;
+
+    my $file = shift;
+    my ($name) = $file =~ m{.*/(.*)};
+
+    my $removed = 0;
+    for my $vm (@{$self->vm}) {
+        my $vol = $vm->search_volume($name);
+        next if !$vol;
+
+        $vol->delete();
+        $removed++;
+    }
+    if (!$removed && -e $file ) {
+        warn "volume $file not found. removing file $file.\n";
+        unlink $file or die "$! $file";
+    }
+
+}
 1;

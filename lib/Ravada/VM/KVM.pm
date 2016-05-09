@@ -178,6 +178,23 @@ sub create_volume {
 
 }
 
+=head2 search_volume
+
+Searches a volume
+
+    my $vol =$vm->search_volume($name);
+
+=cut
+
+sub search_volume {
+    my $self = shift;
+    my $name = shift or confess "Missing volume name";
+
+    my $vol;
+    eval { $vol = $self->storage_pool->get_volume_by_name($name) };
+    return $vol;
+}
+
 sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
@@ -244,8 +261,6 @@ sub _create_disk_qcow2 {
         exit;
     }
     
-    warn "  qcow created\t\$?=$?\n";
-
     return $file_out;
 }
 
@@ -277,7 +292,7 @@ sub _domain_create_from_base {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-    my $xml = $base->domain->get_xml_description();
+    my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
     my $device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml, $device_cdrom);
@@ -285,8 +300,8 @@ sub _domain_create_from_base {
     $node_name->setData($args{name});
 
     _xml_modify_disk($xml, $device_disk);
-    _xml_modify_mac($xml);
-    _xml_modify_uuid($xml);
+    $self->_xml_modify_mac($xml);
+    $self->_xml_modify_uuid($xml);
     _xml_modify_spice_port($xml);
     _xml_modify_video($xml);
 
@@ -530,7 +545,7 @@ sub _new_uuid {
 
 sub _xml_modify_mac {
     my $self = shift;
-    my $doc = shift;
+    my $doc = shift or confess "Missing XML doc";
 
     my ($if_mac) = $doc->findnodes('/domain/devices/interface/mac')
         or exit;

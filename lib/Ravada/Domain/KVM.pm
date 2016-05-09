@@ -3,6 +3,7 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
+use Data::Dumper;
 use IPC::Run3 qw(run3);
 use Moose;
 use XML::LibXML;
@@ -93,7 +94,8 @@ sub vol_remove {
     my $file = shift;
     my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
-    my $vol = $self->storage->get_volume_by_name($name);
+    my $vol;
+    eval { $vol = $self->storage->get_volume_by_name($name) };
     if (!$vol) {
         warn "WARNING: I can't find volumne $name\n";
         return;
@@ -106,11 +108,21 @@ sub remove {
     $self->domain->shutdown  if $self->domain->is_active();
 
     $self->_wait_down();
+
+    $self->vol_remove($self->file_base_img) if $self->file_base_img();
     $self->domain->destroy   if $self->domain->is_active();
 
     $self->remove_disks();
+    $self->remove_file_image();
 
     $self->domain->undefine();
+}
+
+sub remove_file_image {
+    my $self = shift;
+    my $file = $self->file_base_img;
+    $self->vol_remove($file)    if $file;
+    unlink $file or die "$! $file" if -e $file;
 }
 
 sub _disk_device {
@@ -178,5 +190,26 @@ sub prepare_base {
 
     #update domains set is_base='y' , img = $file_qcow
     $self->_prepare_base_db($file_qcow);
+}
+
+=head2 display
+
+Returns the display URI
+
+=cut
+sub display {
+    my $self = shift;
+
+    return $self->{_display} if exists $self->{_display};
+
+    my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my ($graph) = $xml->findnodes('/domain/devices/graphics') 
+        or die "ERROR: I can't find graphic";
+
+    my ($type) = $graph->getAttribute('type');
+    my ($port) = $graph->getAttribute('port');
+    my ($address) = $graph->getAttribute('listen');
+
+    return "$type://$address:$port";
 }
 1;

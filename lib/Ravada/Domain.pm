@@ -8,26 +8,46 @@ use Moose::Role;
 
 requires 'name';
 requires 'remove';
+requires 'display';
 
 has 'domain' => (
     isa => 'Object'
     ,is => 'ro'
 );
 
+##################################################################################3
+#
 sub id {
+    return $_[0]->_data('id');
+
+}
+sub file_base_img {
+    return $_[0]->_data('file_base_img');
+}
+
+##################################################################################
+
+sub _data {
     my $self = shift;
+    my $field = shift or confess "Missing field name";
 
-    return $self->{id} if exists $self->{id};
+    return $self->{_data}->{$field} if exists $self->{_data}->{$field};
+    $self->_load_sql_data();
 
-    my $sth = $self->connector->dbh->prepare("SELECT id FROM domains "
+    return $self->{_data}->{$field};
+}
+
+sub _load_sql_data {
+    my $self = shift;
+    my $sth = $self->connector->dbh->prepare("SELECT * FROM domains "
         ." WHERE name=?"
     );
     $sth->execute($self->name);
-    my ($id) = $sth->fetchrow;
+    my $data = $sth->fetchrow_hashref;
     $sth->finish;
+    $self->{_data} = $data;
 
-    $self->{id} = $id;
-    return $id;
+    return $data;
 }
 
 sub open {
