@@ -4,7 +4,7 @@
 %= include 'bootstrap/inheader'
 <body role="document">
     %= include 'bootstrap/innavigation'
-     <header class="intro">
+     <header id="page-top" class="intro">
         <div class="intro-body">
             <div class="container">
                 <form class="form-singin" method="post">
@@ -19,7 +19,9 @@
                 % if (scalar @$error) {
                         
                 %       for my $i (@$error) {
-                            <p id="err"><%= $i %></p>
+                            <div class="alert alert-danger">
+                                <strong>Error: </strong><%= $i %>
+                            </div>    
                 %       }
                         
                 % }

@@ -38,7 +38,7 @@ body {
     }
 
     #page-wrapper {
-        padding: 30px 100px;
+        padding: 5px 100px;
         min-height: 600px;
         max-width: 1200px;
         margin: 0 auto;
@@ -231,4 +231,8 @@ ul.alert-dropdown {
 #start{
     font-size: 1.4em;
 
+}
+#screensh{
+    width: 100%;
+    border-radius: 0.2em;
 }
