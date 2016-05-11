@@ -3,6 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
+use Data::Dumper;
 use DBIx::Connector;
 use Moose;
 use YAML;
@@ -63,6 +64,15 @@ sub create_domain {
     return $self->vm->[0]->create_domain(@_);
 }
 
+sub remove_domain {
+    my $self = shift;
+    my $name = shift or confess "Missing domain name";
+
+    my $domain = $self->search_domain($name)
+        or confess "ERROR: I can't find domain $name";
+    $domain->remove();
+}
+
 sub search_domain {
     my $self = shift;
     my $name = shift;
@@ -92,5 +102,36 @@ sub remove_volume {
         unlink $file or die "$! $file";
     }
 
+}
+
+sub process_requests {
+    my $self = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
+    $sth->execute;
+    while (my ($id)= $sth->fetchrow) {
+        $self->_execute(Ravada::Request->open($id));
+    }
+    $sth->finish;
+}
+
+sub _execute {
+    my $self = shift;
+    my $request = shift;
+
+    if ($request->command() eq 'create' ) {
+        $request->status('working');
+        eval { $self->create_domain(%{$request->args}) };
+        $request->status('done');
+        $request->error($@);
+    } elsif ($request->command eq 'remove') {
+        $request->status('working');
+        eval { $self->remove_domain($request->args('name')) };
+        $request->status('done');
+        $request->error($@);
+
+    } else {
+        die "Unknown command ".$request->command;
+    }
 }
 1;

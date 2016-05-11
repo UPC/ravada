@@ -34,12 +34,36 @@ sub test_remove_domain {
     die "I can't remove old domain $name"
         if $domain;
 
+    ok(!search_domain_db($name),"Domain $name still in db");
+}
+
+sub test_remove_domain_by_name {
+    my $name = shift;
+
+    diag("Removing domain $name");
+    $ravada->remove_domain($name);
+
+    my $domain = $ravada->search_domain($name);
+    die "I can't remove old domain $name"
+        if $domain;
+
+}
+
+sub search_domain_db {
+    my $name = shift;
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    $sth->execute($name);
+    my $row =  $sth->fetchrow_hashref;
+    return $row;
+
 }
 
 sub test_new_domain {
-    my ($name) = $0 =~ m{.*/(.*)};
+    my ($name) = $0 =~ m{.*/(.*)\.t};
 
     test_remove_domain($name);
+
+    diag("Creating domain $name");
     my $domain = $ravada->create_domain(name => $name, id_iso => 1);
 
     ok($domain,"Domain not created");
@@ -52,11 +76,8 @@ sub test_new_domain {
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
-    $sth->execute($domain->name);
-    my $row =  $sth->fetchrow_hashref;
+    my $row =  search_domain_db($domain->name);
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
-    $sth->finish;
 
     return $domain;
 }
@@ -75,11 +96,22 @@ sub test_prepare_base {
 ################################################################
 
 test_vm_kvm();
-my $domain = test_new_domain();
+{
+    my $domain = test_new_domain();
 
-if (ok($domain,"test domain not created")) {
-    test_prepare_base($domain);
-    test_remove_domain($domain->name);
+    if (ok($domain,"test domain not created")) {
+        test_prepare_base($domain);
+        test_remove_domain($domain->name);
+    }
 }
+
+{
+    my $domain = test_new_domain();
+
+    if (ok($domain,"test domain not created")) {
+        test_remove_domain_by_name($domain->name);
+    }
+}
+
 
 done_testing();

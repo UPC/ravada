@@ -4,6 +4,7 @@ use strict;
 package Ravada::VM;
 
 use Carp qw(croak);
+use Data::Dumper;
 use Moose::Role;
 
 requires 'connect';
@@ -67,11 +68,16 @@ sub _domain_insert_db {
     my %field = @_;
     croak "Field name is mandatory ".Dumper(\%field)
         if !exists $field{name};
-    my $sth = $self->connector->dbh->prepare("INSERT INTO domains "
+    my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "
-        );
-    $sth->execute( map { $field{$_} } sort keys %field );
+    ;
+    my $sth = $self->connector->dbh->prepare($query);
+    eval { $sth->execute( map { $field{$_} } sort keys %field ) };
+    if ($@) {
+        warn "$query\n".Dumper(\%field);
+        die $@;
+    }
     $sth->finish;
 
 }

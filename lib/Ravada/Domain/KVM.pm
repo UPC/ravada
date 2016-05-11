@@ -3,6 +3,7 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
+use Carp qw(cluck croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
 use Moose;
@@ -92,15 +93,18 @@ sub remove_disks {
 sub vol_remove {
     my $self = shift;
     my $file = shift;
+    my $warning = shift;
+
     my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
     my $vol;
     eval { $vol = $self->storage->get_volume_by_name($name) };
     if (!$vol) {
-        warn "WARNING: I can't find volumne $name\n";
+#        cluck "WARNING: I can't find volume $name" if !$warning;
         return;
     }
     $vol->delete();
+    return 1;
 }
 
 sub remove {
@@ -109,19 +113,33 @@ sub remove {
 
     $self->_wait_down();
 
-    $self->vol_remove($self->file_base_img) if $self->file_base_img();
+    $self->vol_remove($self->file_base_img,1) if $self->file_base_img();
     $self->domain->destroy   if $self->domain->is_active();
 
     $self->remove_disks();
     $self->remove_file_image();
 
     $self->domain->undefine();
+
+    $self->_remove_domain_db();
+}
+
+sub _remove_domain_db {
+    my $self = shift;
+
+    my $sth = $self->connector->dbh->prepare("DELETE FROM domains "
+        ." WHERE id=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub remove_file_image {
     my $self = shift;
     my $file = $self->file_base_img;
-    $self->vol_remove($file)    if $file;
+
+    return if !$file;
+
+    $self->vol_remove($file,1);
     unlink $file or die "$! $file" if -e $file;
 }
 
