@@ -10,6 +10,18 @@ use YAML;
 
 use Ravada::VM::KVM;
 
+=head1 NAME
+
+Ravada - Remove Virtual Desktop Manager
+
+=head1 SYNOPSIS
+
+  use Ravada;
+
+  my $ravada = Ravada->new()
+
+=cut
+
 
 our $FILE_CONFIG = "/etc/ravada.conf";
 
@@ -31,6 +43,13 @@ has 'vm' => (
 has 'connector' => (
         is => 'ro'
 );
+
+=head2 BUILD
+
+Internal constructor
+
+=cut
+
 
 sub BUILD {
     my $self = shift;
@@ -58,11 +77,38 @@ sub _create_vm {
     return [ Ravada::VM::KVM->new( connector => $self->connector ) ];
 }
 
+=head2 create_domain
+
+Creates a new domain based on an ISO image or another domain.
+
+  my $domain = $ravada->create_domain( 
+         name => $name
+    , id_iso => 1
+  );
+
+
+  my $domain = $ravada->create_domain( 
+         name => $name
+    , id_base => 3
+  );
+
+
+=cut
+
+
 sub create_domain {
     my $self = shift;
 
     return $self->vm->[0]->create_domain(@_);
 }
+
+=head2 remove_domain
+
+Removes a domain
+
+  $ravada->remove_domain($name);
+
+=cut
 
 sub remove_domain {
     my $self = shift;
@@ -73,6 +119,12 @@ sub remove_domain {
     $domain->remove();
 }
 
+=head2 search_domain
+
+  my $domain = $ravada->search_domain($name);
+
+=cut
+
 sub search_domain {
     my $self = shift;
     my $name = shift;
@@ -82,6 +134,12 @@ sub search_domain {
         return $domain if $domain;
     }
 }
+
+=head2 remove_volume
+
+  $ravada->remove_volume($file);
+
+=cut
 
 sub remove_volume {
     my $self = shift;
@@ -103,6 +161,14 @@ sub remove_volume {
     }
 
 }
+
+=head2 process_requests
+
+This is run in the ravada backend. It processes the commands requested by the fronted
+
+  $ravada->process_requests();
+
+=cut
 
 sub process_requests {
     my $self = shift;
@@ -134,4 +200,15 @@ sub _execute {
         die "Unknown command ".$request->command;
     }
 }
+
+=head1 AUTHOR
+
+Francesc Guasch-Ortiz	, frankie@telecos.upc.edu
+
+=head1 SEE ALSO
+
+Sys::Virt
+
+=cut
+
 1;
