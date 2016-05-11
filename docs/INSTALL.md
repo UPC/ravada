@@ -18,6 +18,7 @@ Clone the sources:
 - libvirt-bin
 - libsys-virt-perl
 - libxml-libxml-perl
+- libconfig-yaml-perl
 
 ##Old debian
 
