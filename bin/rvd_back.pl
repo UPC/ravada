@@ -21,6 +21,8 @@ use XML::LibXML;
 use YAML;
 
 use lib './lib';
+
+use Ravada;
 use Ravada::Auth::SQL;
 
 my $CONFIG = {
@@ -108,6 +110,8 @@ my $VM_POOL;
 my $PARSER = XML::LibXML->new();
 our $CON;
 our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
+
+my $RAVADA = Ravada->new();
 ###################################################################
 #
 
@@ -736,15 +740,6 @@ sub list_domains {
     return \@domains_sorted
 }
 
-sub domain_exists {
-    my $name = shift;
-    my $domains = list_domains();
-    for (@$domains) {
-        return 1 if $_->get_name() eq $name;
-    }
-    return 0;
-}
-
 sub select_base_domain {
     my $domains = shift;
 
@@ -984,10 +979,9 @@ sub iso_name {
     return $device;
 }
 
-sub kvm_create_base {
+sub create_base {
     my ($req_base) = @_;
     my ($dom_name, $id_iso) = @_;
-
     if (ref($req_base) =~ /HASH/) {
         $dom_name = $req_base->{name};
         $id_iso = $req_base->{id_iso};
@@ -995,10 +989,10 @@ sub kvm_create_base {
         $req_base = undef;
     }
 
-    if ( domain_exists($dom_name) ) {
+    if ( $RAVADA->search_domain($dom_name) ) {
         die "There is already a domain called '$dom_name'.\n"
             if !$FORCE;
-        domain_remove($dom_name);
+        $RAVADA->remove_domain($dom_name);
     }
 
     my $iso;
@@ -1007,39 +1001,7 @@ sub kvm_create_base {
     } else {
         $iso = select_iso();
     }
-
-    my $device_cdrom = iso_name($iso);
-
-    my $device_disk = kvm_create_vol($dom_name, $iso);
-    my $doc = modify_domain($dom_name, "etc/xml/".$iso->{xml} , $device_disk);
-
-    xml_modify_cdrom($doc,$device_cdrom);
-    my $dom = $VM->define_domain($doc->toString());
-    
-#    sysprep($dom_name);
-    $dom->create();
-
-    my $uri = display_uri($dom_name);
-
-    print "$uri\n" if ($ENV{TERM});
-    return $uri;
-}
-
-sub xml_modify_cdrom {
-    my ($doc, $iso) = @_;
-
-    my @nodes = $doc->findnodes('/domain/devices/disk');
-    for my $disk (@nodes) {
-        next if $disk->getAttribute('device') ne 'cdrom';
-        for my $child ($disk->childNodes) {
-            if ($child->nodeName eq 'source') {
-                $child->setAttribute(file => $iso);
-                return;
-            }
-        }
-
-    }
-    die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
+    $RAVADA->create_domain( name => $dom_name, id_iso => $iso->id);
 }
 
 #################################################################
@@ -1062,7 +1024,7 @@ if ($PREPARE) {
         add_user($_);
     }
 }elsif ($CREATE) {
-    kvm_create_base(@ARGV);
+    create_base(@ARGV);
 } else {
     die "Already running\n"
         if Proc::PID::File->running;
