@@ -53,14 +53,19 @@ Internal constructor
 
 sub BUILD {
     my $self = shift;
-    $CONNECTOR = $self->connector if $self->connector;
+    if ( $self->connector ) {
+        $CONNECTOR = $self->connector 
+    } else {
+        $CONNECTOR = $self->_connect_dbh();
+    }
 }
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
     my $db_pass = ($CONFIG->{db}->{password} or undef);
-    return DBIx::Connector->new("DBI:$driver"
+    my $db = ( $CONFIG->{db}->{db} or 'ravada' );
+    return DBIx::Connector->new("DBI:$driver:$db"
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
 
