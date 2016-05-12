@@ -2,132 +2,47 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
 use Data::Dumper;
 use DBIx::Connector;
-use Getopt::Long;
-use Hash::Util qw(lock_hash);
 use Mojolicious::Lite;
-use YAML qw(LoadFile);
 
 use lib 'lib';
 
-use Ravada::Auth;
+use Ravada::Auth::LDAP;
 
-my $FILE_CONFIG = "/etc/ravada.conf";
-my $help;
-GetOptions(
-        config => \$FILE_CONFIG
-         ,help  => \$help
-     ) or exit;
+our $HOST = 'vsertel.upc.es';
 
-if ($help) {
-    print "$0 [--help] [--config=$FILE_CONFIG]\n";
-    exit;
-}
-
-
-my $CONFIG = LoadFile($FILE_CONFIG) or die "$! $FILE_CONFIG"
-    if -e $FILE_CONFIG;
-$CONFIG->{rvd_back}->{pid_file} = '/var/run/rvd_back.pid'
-    if !$CONFIG->{rvd_back}->{pid_file};
-
-our $DB;
+our $CON = DBIx::Connector->new("DBI:mysql:ravada"
+                        ,undef,undef,{RaiseError => 1
+                        , PrintError=> 0 }) or die "I can't connect";
 
 our $TIMEOUT = 120;
 
-init();
-############################################################################3
-
 any '/' => sub {
-    my $c = shift;
-
-    return quick_start($c);
-};
-
-any '/login' => sub {
-    my $c = shift;
-    return login($c);
-};
-
-any '/logout' => sub {
-    my $c = shift;
-    $c->session(expires => 1);
-    $c->session(login => undef);
-    $c->redirect_to('/');
-};
-
-###################################################
-
-sub _logged_in {
-    my $c = shift;
-    $c->stash(_logged_in => $c->session('login'));
-    return 1 if $c->session('login');
-}
-
-
-sub login {
-    my $c = shift;
-
-    return quick_start($c)    if _logged_in($c);
-
-    my $login = $c->param('login');
-    my $password = $c->param('password');
-    my @error =();
-    if ($c->param('submit') && $login) {
-        push @error,("Empty login name")  if !length $login;
-        push @error,("Empty password")  if !length $password;
-    }
-
-    if ( $login && $password ) {
-        if (Ravada::Auth::login($login, $password)) {
-            $c->session('login' => $login);
-            return quick_start($c);
-        } else {
-            push @error,("Access denied");
-        }
-    }
-    $c->render(
-                    template => 'bootstrap/login' 
-                      ,login => $login 
-                      ,error => \@error
-    );
-
-}
-
-sub quick_start {
-    my $c = shift;
-
-    _logged_in($c);
-
+  my $c = shift;
     my $login = $c->param('login');
     my $password = $c->param('password');
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if ($c->param('submit') && $login) {
+    if ($c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
 
     if ( $login && $password ) {
-        if (Ravada::Auth::login($login, $password)) {
-            $c->session('login' => $login);
-        } else {
-            push @error,("Access denied");
+        if (Ravada::Auth::LDAP::login($login, $password)) {
+            return show_link($c, $id_base, $login);
         }
+        push @error,("Access denied");
     }
-    return show_link($c, $id_base, $login)
-        if $c->param('submit') && _logged_in($c) && defined $id_base;
-
     $c->render(
-                    template => 'bootstrap/start' 
+                    template => 'bootstrap/main' 
                     ,id_base => $id_base
                       ,login => $login 
                       ,error => \@error
-                       ,base => list_bases()
-    );
-}
+                       ,base => list_bases());
+};
 
 get '/ip' => sub {
     my $c = shift;
@@ -141,69 +56,12 @@ get '/ip/*' => sub {
     show_link($c,base_id($base_name),$ip);
 };
 
-any '/bases' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c);
-    return new_base($c);
-};
-
 #######################################################
-
-sub new_base {
-    my $c = shift;
-    my @error = ();
-    my $ram = ($c->param('ram') or 2);
-    my $disk = ($c->param('disk') or 8);
-    if ($c->param('submit')) {
-        push @error,("Name is mandatory")   if !$c->param('name');
-        return req_new_base($c) if !@error;
-    }
-    $c->render(template => 'bootstrap/new_base'
-                    ,name => $c->param('name')
-                    ,ram => $ram
-                    ,disk => $disk
-                    ,image => _list_images()
-                    ,error => \@error
-    );
-};
-
-sub req_new_base {
-    my $c = shift;
-    my $sth = $DB->dbh->prepare(
-                "INSERT INTO bases_req (name, id_iso, date_req, created) "
-                ." VALUES (?,?,now(),'n')"
-    );
-    $sth->execute($c->param('name'), $c->param('id_iso'));
-    $sth->finish;
-
-    $sth=$DB->dbh->prepare("SELECT last_insert_id() ");
-    $sth->execute;
-    my ($id) = $sth->fetchrow;
-
-    my ($uri,$error) = wait_req_up($id);
-    if ($uri) {
-       $c->redirect_to($uri);
-       $c->render(template => 'bootstrap/run', url => $uri , name => $c->param('name')
-                ,login => $c->session('login'));
-
-    } else {
-        $c->render(template => 'fail', name => $c->param('name'), error => $error);
-    }
-}
-
-sub _search_req_base_error {
-    my $name = shift;
-}
-sub access_denied {
-    my $c = shift;
-    $c->render(data => "Access denied");
-}
 
 sub base_id {
     my $name = shift;
 
-    my $sth = $DB->dbh->prepare("SELECT id FROM bases WHERE name=?");
+    my $sth = $CON->dbh->prepare("SELECT id FROM bases WHERE name=?");
     $sth->execute($name);
     my ($id) =$sth->fetchrow;
     die "CRITICAL: Unknown base $name" if !defined $id;
@@ -257,26 +115,6 @@ sub wait_node_up {
         return $uri if $created !~ /n/i;
     }
 }
-
-sub wait_req_up {
-    my ($id, $table) = @_;
-    $table = 'bases_req' if !$table;
-
-    my $dbh = $DB->dbh;
-    my $sth = $dbh->prepare(
-        "SELECT created, error, uri FROM $table where id=?"
-    );
-
-    for (1 .. $TIMEOUT) {
-        sleep 1;
-        $sth->execute($id);
-        my ($created, $error, $uri ) = $sth->fetchrow;
-        warn "$_ : ".$created." ".($error or '');
-        return ($uri) if $created !~ /n/i;
-        return (undef,$error) if $error;
-    }
-}
-
 
 sub raise_node {
     my ($c, $id_base, $name) = @_;
@@ -337,8 +175,6 @@ sub show_link {
     my $c = shift;
     my ($id_base, $name) = @_;
 
-    confess "Empty id_base" if !$id_base;
-
     my $base_name = base_name($id_base)
         or die "Unkown id_base '$id_base'";
 
@@ -350,8 +186,7 @@ sub show_link {
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'bootstrap/run', url => $uri , name => $name
-                ,login => $c->session('login'));
+    $c->render(template => 'run', url => $uri , name => $name);
 }
 
 sub list_bases {
@@ -367,43 +202,6 @@ sub list_bases {
     }
     $sth->finish;
     return \%base;
-}
-
-sub _list_images {
-    my $dbh = $DB->dbh();
-    my $sth = $dbh->prepare(
-        "SELECT * FROM iso_images"
-        ." ORDER BY name"
-    );
-    $sth->execute;
-    my %image;
-    while ( my $row = $sth->fetchrow_hashref) {
-        $image{$row->{id}} = $row;
-    }
-    $sth->finish;
-    lock_hash(%image);
-    return \%image;
-}
-
-
-sub _init_db {
-    my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
-    my $db_password = ($CONFIG->{db}->{password} or undef);
-    $DB = DBIx::Connector->new("DBI:mysql:ravada"
-                        ,$db_user,$db_password,{RaiseError => 1
-                        , PrintError=> 0 }) or die "I can't connect";
-
-
-}
-
-sub check_back_running {
-    return -e $CONFIG->{rvd_back}->{pid_file};
-}
-
-sub init {
-    check_back_running or warn "CRITICAL: rvd_back is not running\n";
-    _init_db();
-    Ravada::Auth::init($CONFIG,$DB);
 }
 
 app->start;

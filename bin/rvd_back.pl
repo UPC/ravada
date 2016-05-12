@@ -29,7 +29,6 @@ my $CONFIG = {
     timeout_shutdown => 20,
 };
 
-
 my $help;
 my $FORCE;
 my $SECONDS_RECENT = 300;
@@ -73,7 +72,7 @@ GetOptions (       help => \$help
 #
 # check arguments
 #
-$CONFIG=YAML::LoadFile($FILE_CONFIG) if -e $FILE_CONFIG;
+$CONFIG=YAML::LoadFile($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
 
 if ($REMOVE_NOW) {
     $REMOVE = 1;
@@ -350,6 +349,8 @@ sub modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
+    warn "modify uuid";
+
     random:while (1) {
         my $new_uuid = new_uuid($uuid);
         next if $new_uuid eq $uuid;
@@ -382,6 +383,8 @@ sub unique_mac {
 
 sub modify_mac {
     my $doc = shift;
+
+    warn "Modify mac";
 
     my ($if_mac) = $doc->findnodes('/domain/devices/interface/mac')
         or exit;
