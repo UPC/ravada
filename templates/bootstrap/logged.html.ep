@@ -18,41 +18,40 @@
                      <h2>Welcome to SPICE! Choose a Machine to Start</h2>
                 </div>
                 <div class="panel-body">
-                    <form method="post">
+                    <form method="post" id="runform">
 %                      if (keys %$base) {
-                            
 %                          for my $option (sort keys %$base) {
-
+            
                                 <div class="col-sm-4">
                                 <div class="panel panel-success machine">
                                         <div class="panel-heading">
                                             <h3 class="panel-title"><%= $base->{$option} %></h3><br>
                                             <img id="screensh" src="/img/screenshot.jpg">
                                         </div>
-                                        <div class="panel-body">
-                                            <label class="radio-inline">
-                                                <input name="id_base" type="radio" value="<%= $option %>"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start this Machine</strong>
-                                            </label><br><br>
-                                            <label class="radio-inline">
-                                                <input name="id_base" type="radio" value="">&nbsp;<i class="fa fa-pause" aria-hidden="true"></i>&nbsp;Pause this Machine
-                                            </label><br>
-                                            <label class="radio-inline">
-                                                <input name="id_base" type="radio" value="">&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i>&nbsp;Shutdown this Machine
-                                            </label>
+                                        <div class="btn-group pannel-body" data-toggle="buttons">
+                                          <label class="btn btn-success" id="base_action">
+                                            <input name="id_base" id="submit" type="radio" value="<%= $option %>" onchange="submitForm()"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start this Machine</strong>
+                                          </label>
+                                          <label class="btn btn-warning" id="base_action">
+                                            <input name="id_base" type="radio" value="">&nbsp;<i class="fa fa-pause" aria-hidden="true"></i>&nbsp;Pause this Machine
+                                          </label>
+                                          <label class="btn btn-danger" id="base_action">
+                                            <input name="id_base" type="radio" value="">&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i>&nbsp;Shutdown this Machine
+                                          </label>
                                         </div>
                                 </div>
                                 </div>
 %                          }
-                            </select><br/>
+                        
 %                      } else {
                             <div class="alert alert-danger">
                                 <strong>Error</strong>  No base domains available.
                             </div>
 %                      }
-                            <div class="col-sm-12">
-                                <input type="submit" id="start" name="submit" value="Launch" class="btn btn-sm btn-success">
+                            <div class="col-sm-12" style="display:none">
+                                <input type="submit" name="submit" id="submitthis">
                             </div>
-                
+                        
                     </form>
 %                   if (scalar @$error) {
                             <ul>
@@ -128,6 +127,8 @@
         <!--/row-->        
     </div>
     %= include 'bootstrap/scripts'
+
+
 </div>
 
 </body>

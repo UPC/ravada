@@ -236,3 +236,7 @@ ul.alert-dropdown {
     width: 100%;
     border-radius: 0.2em;
 }
+#base_action{
+    margin: 7px 10px;
+    border-radius: 0.3em;
+}
