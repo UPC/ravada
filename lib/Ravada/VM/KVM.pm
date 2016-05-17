@@ -94,6 +94,10 @@ sub _load_storage_pool {
 
 }
 
+sub dir_img {
+    return $DEFAULT_DIR_IMG;
+}
+
 =head2 create_domain
 
 Creates a domain.
@@ -121,7 +125,7 @@ sub create_domain {
     } else {
         confess "TODO";
     }
-    $self->_domain_insert_db(@fields);
+    $domain->_insert_db(@fields);
 
     return $domain;
 }
@@ -145,6 +149,29 @@ sub search_domain {
                 ,connector => $self->connector
         ) if $_->get_name eq $name;
     }
+}
+
+=head2 list_domains
+
+Returns a list of the created domains
+
+  my @list = $vm->list_domains();
+
+=cut
+
+sub list_domains {
+    my $self = shift;
+
+    my @list;
+    for my $name ($self->vm->list_all_domains()) {
+        push @list, (Ravada::Domain::KVM->new(
+                          domain => $name
+                        ,storage => $self->storage_pool
+                      ,connector => $self->connector
+                    )
+        );
+    }
+    return @list;
 }
 
 =head2 create_volume
@@ -244,12 +271,17 @@ sub _create_disk_qcow2 {
         die "WARNING: output file $file_out already existed [skipping]\n";
     }
 
+    die "ERROR: Missing file_base_img in base ".$base->id
+        ." "
+        .Dumper($base->_select_domain_db)
+            if ! $base->file_base_img;
+
     my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
                 ,"-b", $base->file_base_img
                 ,$file_out
     );
-    print join(" ",@cmd)."\n";
+#    warn join(" ",@cmd)."\n";
 
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);

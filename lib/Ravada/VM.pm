@@ -16,6 +16,8 @@ requires 'connect';
 requires 'create_domain';
 requires 'search_domain';
 
+requires 'list_domains';
+
 # storage volume
 requires 'create_volume';
 
@@ -61,25 +63,6 @@ sub _domain_remove_db {
     my $sth = $self->connector->dbh->prepare("DELETE FROM domains WHERE name=?");
     $sth->execute($name);
     $sth->finish;
-}
-
-sub _domain_insert_db {
-    my $self = shift;
-    my %field = @_;
-    croak "Field name is mandatory ".Dumper(\%field)
-        if !exists $field{name};
-    my $query = "INSERT INTO domains "
-            ."(" . join(",",sort keys %field )." )"
-            ." VALUES (". join(",", map { '?' } keys %field )." ) "
-    ;
-    my $sth = $self->connector->dbh->prepare($query);
-    eval { $sth->execute( map { $field{$_} } sort keys %field ) };
-    if ($@) {
-        warn "$query\n".Dumper(\%field);
-        die $@;
-    }
-    $sth->finish;
-
 }
 
 sub domain_remove {

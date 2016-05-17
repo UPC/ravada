@@ -29,10 +29,6 @@ has 'connector' => (
     ,required => 1
 );
 
-#################################################3
-#
-our $TIMEOUT_SHUTDOWN = 20;
-
 ##################################################
 #
 
@@ -50,7 +46,7 @@ sub name {
 
 sub _wait_down {
     my $self = shift;
-    my $seconds = (shift or $TIMEOUT_SHUTDOWN);
+    my $seconds = (shift or $self->timeout_shutdown);
     for my $sec ( 0 .. $seconds) {
         return if !$self->domain->is_active;
         print "Waiting for ".$self->domain->get_name." to shutdown." if !$sec;
@@ -124,14 +120,6 @@ sub remove {
     $self->_remove_domain_db();
 }
 
-sub _remove_domain_db {
-    my $self = shift;
-
-    my $sth = $self->connector->dbh->prepare("DELETE FROM domains "
-        ." WHERE id=?");
-    $sth->execute($self->id);
-    $sth->finish;
-}
 
 sub remove_file_image {
     my $self = shift;
@@ -206,7 +194,6 @@ sub prepare_base {
     my $self = shift;
     my $file_qcow  = $self->_create_qcow_base();
 
-    #update domains set is_base='y' , img = $file_qcow
     $self->_prepare_base_db($file_qcow);
 }
 
@@ -230,4 +217,5 @@ sub display {
 
     return "$type://$address:$port";
 }
+
 1;

@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
@@ -10,6 +11,8 @@ use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $ravada = Ravada->new( connector => $test->connector);
+
+my $cont = 0;
 
 sub test_vm_kvm {
     my $vm = $ravada->vm->[0];
@@ -60,6 +63,7 @@ sub search_domain_db {
 
 sub test_new_domain {
     my ($name) = $0 =~ m{.*/(.*)\.t};
+    $name .= "_".$cont++;
 
     test_remove_domain($name);
 
@@ -93,19 +97,37 @@ sub test_prepare_base {
     $sth->finish;
 }
 
-################################################################
 
-test_vm_kvm();
-{
+
+sub test_domain{
+
+    my ($name) = $0 =~ m{.*/(.*)\.t};
+    test_remove_domain($name);
+
+    my $n_domains = scalar $ravada->list_domains();
     my $domain = test_new_domain();
 
     if (ok($domain,"test domain not created")) {
+        my @list = $ravada->list_domains();
+        ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
+            .($n_domains+1)
+            ." "
+            .join(",", sort map { $_->name } @list)
+        );
+        ok(!$domain->is_base,"Domain shouldn't be base "
+            .Dumper($domain->_select_domain_db()));
+
         test_prepare_base($domain);
+        ok($domain->is_base,"Domain should be base"
+            .Dumper($domain->_select_domain_db())
+
+        );
+
         test_remove_domain($domain->name);
     }
 }
 
-{
+sub test_domain_by_name {
     my $domain = test_new_domain();
 
     if (ok($domain,"test domain not created")) {
@@ -113,5 +135,39 @@ test_vm_kvm();
     }
 }
 
+sub test_prepare_import {
+    my $domain = test_new_domain();
+
+    if (ok($domain,"test domain not created")) {
+
+        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+        $sth->execute($domain->id);
+
+        test_prepare_base($domain);
+        ok($domain->is_base,"Domain should be base"
+            .Dumper($domain->_select_domain_db())
+
+        );
+
+        test_remove_domain($domain);
+    }
+
+}
+
+sub remove_old_domains {
+    my ($name) = $0 =~ m{.*/(.*)\.t};
+    for ( 0 .. 10 ) {
+        test_remove_domain($name."_".$_);
+    }
+}
+
+################################################################
+
+test_vm_kvm();
+
+remove_old_domains();
+test_domain();
+test_domain_by_name();
+test_prepare_import();
 
 done_testing();

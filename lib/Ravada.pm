@@ -41,7 +41,12 @@ has 'vm' => (
 );
 
 has 'connector' => (
-        is => 'ro'
+        is => 'rw'
+);
+
+has 'config' => (
+    is => 'ro'
+    ,isa => 'Str'
 );
 
 =head2 BUILD
@@ -53,11 +58,16 @@ Internal constructor
 
 sub BUILD {
     my $self = shift;
+    if ($self->config ) {
+        _init_config($self->config);
+    }
     if ( $self->connector ) {
         $CONNECTOR = $self->connector 
     } else {
         $CONNECTOR = $self->_connect_dbh();
+        $self->connector($CONNECTOR);
     }
+
 }
 
 sub _connect_dbh {
@@ -138,6 +148,25 @@ sub search_domain {
         my $domain = $vm->search_domain($name);
         return $domain if $domain;
     }
+}
+
+=head2 list_domains
+
+  List all created domains
+
+  my @list = $ravada->list_domains();
+
+=cut
+
+sub list_domains {
+    my $self = shift;
+    my @domains;
+    for my $vm (@{$self->vm}) {
+        for my $domain ($vm->list_domains) {
+            push @domains,($domain);
+        }
+    }
+    return @domains;
 }
 
 =head2 remove_volume
