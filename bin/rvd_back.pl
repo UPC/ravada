@@ -201,9 +201,7 @@ sub display_uri{
 sub start {
     warn "Starting daemon mode\n";
     for (;;) {
-        check_req_new_domain();
-        check_req_action();
-        check_req_new_base();
+        $RAVADA->process_requests();
         sleep 1;
     }
 }
