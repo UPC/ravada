@@ -149,7 +149,7 @@ sub test_prepare_import {
 
         );
 
-        test_remove_domain($domain);
+        test_remove_domain($domain->name);
     }
 
 }
