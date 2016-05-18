@@ -130,6 +130,28 @@ sub _new_request {
 }
 
 sub last_insert_id {
+    my $driver = $CONNECTOR->dbh->{Driver}->{Name};
+
+    if ( $driver =~ /sqlite/i ) {
+        return _last_insert_id_sqlite(@_);
+    } elsif ( $driver =~ /mysql/i ) {
+        return _last_insert_id_mysql(@_);
+    } else {
+        confess "I don't know how to get last_insert_id for $driver";
+    }
+}
+
+sub _last_insert_id_mysql {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT last_insert_id()");
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return $id;
+
+}
+
+sub _last_insert_id_sqlite {
     my $self = shift;
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT last_insert_rowid()");
