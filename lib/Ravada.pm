@@ -152,7 +152,7 @@ sub search_domain {
 
 =head2 list_domains
 
-  List all created domains
+List all created domains
 
   my @list = $ravada->list_domains();
 
@@ -169,9 +169,31 @@ sub list_domains {
     return @domains;
 }
 
+=head2 list_bases
+
+List all base domains
+
+  my @list = $ravada->list_domains();
+
+
+=cut
+
+sub list_bases {
+    my $self = shift;
+    my @domains;
+    for my $vm (@{$self->vm}) {
+        for my $domain ($vm->list_domains) {
+            push @domains,($domain) if $domain->is_base;
+        }
+    }
+    return @domains;
+}
+
+
 =head2 remove_volume
 
   $ravada->remove_volume($file);
+
 
 =cut
 

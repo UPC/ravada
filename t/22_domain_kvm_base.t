@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
@@ -10,14 +11,14 @@ use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $ravada = Ravada->new( connector => $test->connector);
+my $RAVADA = Ravada->new( connector => $test->connector);
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
 
 sub test_vm_kvm {
-    my $vm = $ravada->vm->[0];
+    my $vm = $RAVADA->vm->[0];
     ok($vm,"No vm found") or exit;
     ok(ref($vm) =~ /KVM$/,"vm is no kvm ".ref($vm)) or exit;
 
@@ -29,7 +30,7 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $ravada->search_domain($name);
+    $domain = $RAVADA->search_domain($name);
 
     if ($domain) {
         diag("Removing domain $name");
@@ -41,7 +42,7 @@ sub test_remove_domain {
                 if  $domain->file_base_img;
 
     }
-    $domain = $ravada->search_domain($name);
+    $domain = $RAVADA->search_domain($name);
     ok(!$domain, "I can't remove old domain $name") or exit;
 
 
@@ -54,7 +55,7 @@ sub test_new_domain_from_iso {
 
     diag("Creating new domain $name from iso");
     my $domain;
-    eval { $domain = $ravada->create_domain(name => $name, id_iso => 1) };
+    eval { $domain = $RAVADA->create_domain(name => $name, id_iso => 1) };
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -78,6 +79,12 @@ sub test_new_domain_from_iso {
 
 sub test_prepare_base {
     my $domain = shift;
+
+    my @list = $RAVADA->list_bases();
+    my $name = $domain->name;
+
+    ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
+
     $domain->prepare_base();
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
@@ -85,6 +92,13 @@ sub test_prepare_base {
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name);
     $sth->finish;
+
+    my @list2 = $RAVADA->list_bases();
+    ok(scalar @list2 == scalar @list + 1 ,"Expecting ".(scalar(@list)+1)." bases"
+            ." , got ".scalar(@list2));
+
+    ok(grep(/^$name$/, map { $_->name } @list2),"$name should be a base ".Dumper(\@list2));
+
 }
 
 sub test_new_domain_from_base {
@@ -94,7 +108,7 @@ sub test_new_domain_from_base {
     test_remove_domain($name);
 
     diag("Creating domain $name from base ");
-    my $domain = $ravada->create_domain(name => $name, id_base => $base->id);
+    my $domain = $RAVADA->create_domain(name => $name, id_base => $base->id);
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
@@ -159,7 +173,7 @@ sub remove_volume {
 
     return if !-e $file;
     diag("removing old $file");
-    $ravada->remove_volume($file);
+    $RAVADA->remove_volume($file);
     ok(! -e $file,"file $file not removed" );
 }
 
