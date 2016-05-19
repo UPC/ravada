@@ -18,7 +18,7 @@ Request a command to the ravada backend
 our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(name);
 
-our $CONNECTOR = $Ravada::CONNECTOR;
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub request {
     my $proto = shift;
@@ -35,7 +35,7 @@ sub open {
 
     my $id = shift or confess "Missing request id";
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
         ." WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
@@ -113,9 +113,9 @@ sub _new_request {
         delete $args{name};
     }
 
-    $CONNECTOR = $Ravada::CONNECTOR if !defined$CONNECTOR;
+    $CONNECTOR = \$Ravada::CONNECTOR if !defined$CONNECTOR;
 
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
         ."  VALUES ( "
                 .join(",", map { '?' } keys %args)
@@ -130,7 +130,7 @@ sub _new_request {
 }
 
 sub last_insert_id {
-    my $driver = $CONNECTOR->dbh->{Driver}->{Name};
+    my $driver = $$CONNECTOR->dbh->{Driver}->{Name};
 
     if ( $driver =~ /sqlite/i ) {
         return _last_insert_id_sqlite(@_);
@@ -143,7 +143,7 @@ sub last_insert_id {
 
 sub _last_insert_id_mysql {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT last_insert_id()");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_id()");
     $sth->execute;
     my ($id) = $sth->fetchrow;
     $sth->finish;
@@ -154,7 +154,7 @@ sub _last_insert_id_mysql {
 sub _last_insert_id_sqlite {
     my $self = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT last_insert_rowid()");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_rowid()");
     $sth->execute;
     my ($id) = $sth->fetchrow;
     $sth->finish;
@@ -167,7 +167,7 @@ sub status {
     my $status = shift;
 
     if (!defined $status) {
-        my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM requests "
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");
         $sth->execute($self->{id});
         my $row = $sth->fetchrow_hashref;
@@ -176,7 +176,7 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
-    my $sth = $CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
     $sth->execute($status, $self->{id});
     $sth->finish;
@@ -209,7 +209,7 @@ sub AUTOLOAD {
     confess "ERROR: Unknown field $name "
         if !exists $self->{$name} || !exists $FIELD{$name};
     if (!defined $value) {
-        my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM requests "
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");
         $sth->execute($self->{id});
         my $row = $sth->fetchrow_hashref;
@@ -221,7 +221,7 @@ sub AUTOLOAD {
     confess "ERROR: field $name is read only"
         if $FIELD_RO{$name};
 
-    my $sth = $CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
     $sth->execute($value, $self->{id});
     $sth->finish;
