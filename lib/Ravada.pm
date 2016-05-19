@@ -230,8 +230,6 @@ This is run in the ravada backend. It processes the commands requested by the fr
 sub process_requests {
     my $self = shift;
 
-    $Ravada::Request::CONNECTOR = $CONNECTOR;
-
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
