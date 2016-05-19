@@ -151,6 +151,23 @@ sub search_domain {
     }
 }
 
+=head2 search_domain_by_id
+
+  my $domain = $ravada->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+      my $id = shift;
+
+    for my $vm (@{$self->vm}) {
+        my $domain = $vm->search_domain_by_id($id);
+        return $domain if $domain;
+    }
+}
+
+
 =head2 list_domains
 
 List all created domains

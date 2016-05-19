@@ -151,6 +151,27 @@ sub search_domain {
     }
 }
 
+=head2 search_domain_by_id
+
+Returns a domain searching by its id
+
+    $domain = $vm->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+      my $id = shift;
+
+    my $sth = $self->connector->dbh->prepare("SELECT name FROM domains "
+        ." WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return if !$name;
+
+    return $self->search_domain($name);
+}
+
 =head2 list_domains
 
 Returns a list of the created domains

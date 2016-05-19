@@ -83,6 +83,11 @@ sub test_new_domain {
     my $row =  search_domain_db($domain->name);
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
 
+    my $domain2 = $ravada->search_domain_by_id($domain->id);
+    ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
+    ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
+        .$domain2->name);
+
     return $domain;
 }
 
