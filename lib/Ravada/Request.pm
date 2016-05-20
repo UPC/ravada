@@ -101,6 +101,28 @@ sub remove_domain {
 
 }
 
+=head2 start_domain
+
+Requests to start a domain
+
+  my $req = Ravada::Request->start_domain( name => 'name' );
+
+=cut
+
+sub start_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+    $name = $name->name if ref($name) =~ /Domain/;
+
+    my %args = ( name => $name )    or confess "Missing domain name";
+
+    my $self = {};
+    bless($self,$class);
+    return $self->_new_request(command => 'start' , args => encode_json({ name => $name }));
+}
+
 
 sub _new_request {
     my $self = shift;
@@ -201,9 +223,14 @@ sub args {
 sub AUTOLOAD {
     my $self = shift;
 
+
     my $name = $AUTOLOAD;
-    my $value = shift;
     $name =~ s/.*://;
+
+    confess "Can't locate object method $name via package $self"
+        if !ref($self);
+
+    my $value = shift;
     $name =~ tr/[a-z]/_/c;
 
     confess "ERROR: Unknown field $name "

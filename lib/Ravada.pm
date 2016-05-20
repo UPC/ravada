@@ -270,6 +270,17 @@ sub _execute {
         $request->status('done');
         $request->error($@);
 
+    } elsif ($request->command eq 'start') {
+        $request->status('working');
+        my $name = $request->args('name');
+        eval { 
+            my $domain = $self->search_domain($name);
+            die "Unknown domain '$name'\n" if !$domain;
+            $domain->start();
+        };
+        $request->status('done');
+        $request->error($@);
+
     } else {
         die "Unknown command ".$request->command;
     }

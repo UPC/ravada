@@ -264,14 +264,12 @@ sub shutdown {
         $req->error("Domain already down")  if $req;
         return;
     }
-    warn "shut down";
     $self->domain->shutdown();
     $req->status("Shutting down") if $req;
 
     for (0 .. $timeout) {
         my $msg = "Domain ".$self->name." shutting down ($_ / $timeout)\n";
         $req->error($msg)  if $req;
-        warn $msg if $ENV{TERM};
 
         last if !$self->is_active;
         sleep 1;
@@ -279,7 +277,6 @@ sub shutdown {
     if ($self->is_active) {
         my $msg = "Domaing wouldn't shut down, destroying\n";
         $req->error($msg)  if $req;
-        warn $msg if $ENV{TERM};
         $self->domain->destroy();
     }
     $req->status("done")        if $req;
