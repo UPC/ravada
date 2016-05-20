@@ -72,6 +72,10 @@ sub test_start {
                 .($req->error or '<NULL>'));
     $req = undef;
 
+    #####################################################################3
+    #
+    # start
+
     my $req2 = Ravada::Request->start_domain($name);
     $ravada->process_requests();
 
@@ -81,6 +85,21 @@ sub test_start {
 
     my $domain2 = $ravada->search_domain($name);
     ok($domain2->is_active);
+
+    $req2 = undef;
+
+    #####################################################################3
+    #
+    # stop
+
+    my $req3 = Ravada::Request->shutdown_domain($name);
+    $ravada->process_requests();
+    ok($req3->status eq 'done');
+
+    ok(!$domain->is_active);
+
+    my $domain3 = $ravada->search_domain($name);
+    ok(!$domain3->is_active);
 
 }
 

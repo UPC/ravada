@@ -124,6 +124,30 @@ sub start_domain {
 }
 
 
+=head2 shutdown_domain
+
+Requests to stop a domain
+
+  my $req = Ravada::Request->shutdown_domain( name => 'name' );
+
+=cut
+
+sub shutdown_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+    $name = $name->name if ref($name) =~ /Domain/;
+
+    my %args = ( name => $name )    or confess "Missing domain name";
+
+    my $self = {};
+    bless($self,$class);
+    return $self->_new_request(command => 'shutdown' , args => encode_json({ name => $name }));
+}
+
+
+
 sub _new_request {
     my $self = shift;
     my %args = @_;

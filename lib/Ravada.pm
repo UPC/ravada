@@ -306,14 +306,33 @@ sub _cmd_start {
 
 }
 
+sub _cmd_shutdown {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    eval { 
+        my $domain = $self->search_domain($name);
+        die "Unknown domain '$name'\n" if !$domain;
+        $domain->shutdown();
+    };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
 
     my %methods = (
+
           start => \&_cmd_start
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+      ,shutdown => \&_cmd_shutdown
     );
     return $methods{$cmd};
 }
