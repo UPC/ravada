@@ -20,7 +20,7 @@ our %FIELD_RO = map { $_ => 1 } qw(name);
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
-sub request {
+sub _request {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
@@ -28,6 +28,14 @@ sub request {
     bless ($self, $class);
     return $self;
 }
+
+=head2 open
+
+Opens the information of a previous request by id
+
+  my $req = Ravada::Request->open($id);
+
+=cut
 
 sub open {
     my $proto = shift;
@@ -170,12 +178,12 @@ sub _new_request {
     $sth->execute(map { $args{$_} } sort keys %args);
     $sth->finish;
 
-    $self->{id} = $self->last_insert_id();
+    $self->{id} = $self->_last_insert_id();
 
     return $self->open($self->{id});
 }
 
-sub last_insert_id {
+sub _last_insert_id {
     my $driver = $$CONNECTOR->dbh->{Driver}->{Name};
 
     if ( $driver =~ /sqlite/i ) {
@@ -207,6 +215,15 @@ sub _last_insert_id_sqlite {
     return $id;
 }
 
+=head2 status
+
+Returns or sets the status of a request
+
+  $req->status('done');
+
+  my $status = $req->status();
+
+=cut
 
 sub status {
     my $self = shift;
@@ -229,10 +246,37 @@ sub status {
     return $status;
 }
 
+=head2 command
+
+Returns the requested command
+
+=cut
+
 sub command {
     my $self = shift;
     return $self->{command};
 }
+
+=head2 args
+
+Returns the requested command
+
+  my $command = $req->command;
+
+=cut
+
+
+=head2 args
+
+Returns the arguments of a request or the value of one argument field
+
+  my $args = $request->args();
+  print $args->{name};
+
+  print $request->args('name');
+
+=cut
+
 
 sub args {
     my $self = shift;
