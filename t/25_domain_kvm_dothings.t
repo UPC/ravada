@@ -34,27 +34,6 @@ sub test_remove_domain {
 
 }
 
-sub show_domain {
-    my $domain = shift;
-
-    $SIG{CHLD} = 'IGNORE';
-    return;
-
-    my $pid = fork();
-    if (!defined $pid) {
-        warn "I can't fork";
-        return;
-    }
-    if ($pid) {
-        push @PIDS,($pid);
-        return;
-    }
-    my @cmd = ($REMOTE_VIEWER,$domain->display);
-    system(@cmd);
-    exit;
-}
-
-#
 ##############################################################
 
 END {
@@ -72,7 +51,6 @@ my $domain = $ravada->create_domain(name => $name, id_iso => 1 , active => 0);
 
 
 ok($domain,"Domain not created") and do {
-    show_domain($domain);
     $domain->shutdown(timeout => 5) if !$domain->is_active;
 
     for ( 1 .. 10 ){
@@ -88,7 +66,6 @@ ok($domain,"Domain not created") and do {
     ok(! $domain->is_active, "I can't shut down the domain") and do {
         $domain->start();
         ok($domain->is_active,"I don't see the domain active");
-        show_domain($domain)    if $domain->is_active();
 
         if ($domain->is_active) {
             $domain->shutdown(timeout => 3);
