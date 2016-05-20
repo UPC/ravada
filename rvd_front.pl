@@ -56,7 +56,6 @@ any '/logout' => sub {
 
 sub _logged_in {
     my $c = shift;
-    warn "_logged_in";
 
     $c->stash(_logged_in => $c->session('login'));
     return 1 if $c->session('login');
@@ -114,7 +113,7 @@ sub quick_start {
             push @error,("Access denied");
         }
     }
-    return show_link($c, $id_base, $login)
+    return show_link($c, $id_base, ( $login or $c->session('login')))
         if $c->param('submit') && _logged_in($c) && defined $id_base;
 
     $c->render(
@@ -248,6 +247,11 @@ sub show_link {
     my ($base, $name) = @_;
 
     confess "Missing base" if !$base;
+    confess "Missing name" if !$name;
+
+    if(!ref $base) {
+        $base = $RAVADA->search_domain_by_id($base) or die "I can't find base $base";
+    }
 
     my $host = $base->name."-".$name;
 
@@ -297,7 +301,6 @@ sub check_back_running {
 
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
-    Ravada::Auth::init();#$CONFIG);
 }
 
 app->start;
