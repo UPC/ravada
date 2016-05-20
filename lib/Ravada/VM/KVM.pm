@@ -110,6 +110,8 @@ Creates a domain.
 sub create_domain {
     my $self = shift;
     my %args = @_;
+
+    $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
     croak "argument id_iso or id_base required" 
@@ -267,7 +269,7 @@ sub _domain_create_from_iso {
     _xml_modify_disk($xml, $device_disk)    if $device_disk;
 
     my $dom = $self->vm->define_domain($xml->toString());
-    $dom->create;
+    $dom->create if $args{active};
 
     return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
                                     ,connector => $self->connector
