@@ -259,32 +259,65 @@ sub _execute {
     my $self = shift;
     my $request = shift;
 
-    if ($request->command() eq 'create' ) {
-        $request->status('working');
-        eval { $self->create_domain(%{$request->args}) };
-        $request->status('done');
-        $request->error($@);
-    } elsif ($request->command eq 'remove') {
-        $request->status('working');
-        eval { $self->remove_domain($request->args('name')) };
-        $request->status('done');
-        $request->error($@);
+    my $sub = $self->_req_method($request->command);
 
-    } elsif ($request->command eq 'start') {
-        $request->status('working');
-        my $name = $request->args('name');
-        eval { 
-            my $domain = $self->search_domain($name);
-            die "Unknown domain '$name'\n" if !$domain;
-            $domain->start();
-        };
-        $request->status('done');
-        $request->error($@);
+    die "Unknown command ".$request->command
+        if !$sub;
 
-    } else {
-        die "Unknown command ".$request->command;
-    }
+    return $sub->($self,$request);
+
 }
+
+sub _cmd_create {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    eval { $self->create_domain(%{$request->args}) };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+sub _cmd_remove {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    eval { $self->remove_domain($request->args('name')) };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+sub _cmd_start {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    eval { 
+        my $domain = $self->search_domain($name);
+        die "Unknown domain '$name'\n" if !$domain;
+        $domain->start();
+    };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+sub _req_method {
+    my $self = shift;
+    my  $cmd = shift;
+
+    my %methods = (
+          start => \&_cmd_start
+        ,create => \&_cmd_create
+        ,remove => \&_cmd_remove
+    );
+    return $methods{$cmd};
+}
+
 
 =head1 AUTHOR
 
