@@ -207,6 +207,26 @@ sub list_bases {
     return @domains;
 }
 
+=head2 list_images
+
+List all ISO images
+
+=cut
+
+sub list_images {
+    my $self = shift;
+    my @domains;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @domains,($row);
+    }
+    $sth->finish;
+    return @domains;
+}
+
 
 =head2 remove_volume
 

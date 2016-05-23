@@ -13,6 +13,6 @@ my $ravada = Ravada->new( connector => $test->connector);
 
 my @images = $ravada->list_images();
 
-ok(scalar @images);
+ok(scalar @images,"No images ".Dumper(\@images));
 
 done_testing();
