@@ -9,10 +9,10 @@
         <h2>New Base</h2>
         <form method="post">
             <input type="text" size="20" name="name" value="<%= $name %>"><br/>
-%           if (keys %$image) {
+%           if ($images->[0]) {
                 boot CD: <select name="id_iso">
-%               for my $option (sort keys %$image) {
-                    <option value="<%= $option %>"><%= $image->{$option}->{name} %></option>
+%               for my $image (@$images) {
+                    <option value="<%= $image->{id} %>"><%= $image->{name} %></option>
 %               }
                 </select><br/>
 %           } else {

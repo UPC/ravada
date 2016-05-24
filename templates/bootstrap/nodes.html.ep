@@ -1,0 +1,19 @@
+
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body role="document">
+    %= include 'bootstrap/navigation'
+    <div class="container theme-showcase" role="main">
+    <div class="jumbotron">
+        <h2>Nodes</h2>
+        <ul>
+%       for (@$nodes) {
+            <li><%= $_->name %></li>
+%       }
+        </ul>
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
