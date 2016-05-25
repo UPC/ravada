@@ -3,16 +3,19 @@
 <html>
 %= include 'bootstrap/header'
 <body role="document">
+    <div id="wrapper">
     %= include 'bootstrap/navigation'
-    <div class="container theme-showcase" role="main">
-    <div class="jumbotron">
+    <div id="page-wrapper">
+        <div class="container-fluid">
+        <div class="row">
+   
         <h2>New Base</h2>
         <form method="post">
             <input type="text" size="20" name="name" value="<%= $name %>"><br/>
-%           if (keys %$image) {
+%           if ($images->[0]) {
                 boot CD: <select name="id_iso">
-%               for my $option (sort keys %$image) {
-                    <option value="<%= $option %>"><%= $image->{$option}->{name} %></option>
+%               for my $image (@$images) {
+                    <option value="<%= $image->{id} %>"><%= $image->{name} %></option>
 %               }
                 </select><br/>
 %           } else {
@@ -38,9 +41,11 @@
 %       }
         </ul>
 % }
+        </div>
+        </div>
 
     </div>
-    </div>
     %= include 'bootstrap/scripts'
+    </div>
 </body>
 </html>

@@ -110,6 +110,8 @@ Creates a domain.
 sub create_domain {
     my $self = shift;
     my %args = @_;
+
+    $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
     croak "argument id_iso or id_base required" 
@@ -149,6 +151,27 @@ sub search_domain {
                 ,connector => $self->connector
         ) if $_->get_name eq $name;
     }
+}
+
+=head2 search_domain_by_id
+
+Returns a domain searching by its id
+
+    $domain = $vm->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+      my $id = shift;
+
+    my $sth = $self->connector->dbh->prepare("SELECT name FROM domains "
+        ." WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return if !$name;
+
+    return $self->search_domain($name);
 }
 
 =head2 list_domains
@@ -246,7 +269,7 @@ sub _domain_create_from_iso {
     _xml_modify_disk($xml, $device_disk)    if $device_disk;
 
     my $dom = $self->vm->define_domain($xml->toString());
-    $dom->create;
+    $dom->create if $args{active};
 
     return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
                                     ,connector => $self->connector

@@ -29,7 +29,6 @@ my $help;
 my $FORCE;
 my $VM_TYPE = 'qemu';
 
-my $IP;
 my ($BASE,$PREPARE, $DAEMON, $DEBUG, $REMOVE, $PROVISION, $ADD_USER, $CREATE );
 my $REMOVE_NOW;
 my $VERBOSE = $ENV{TERM};
@@ -65,9 +64,11 @@ GetOptions (       help => \$help
 #
 # check arguments
 #
+my $CONFIG=YAML::LoadFile($FILE_CONFIG) if -e $FILE_CONFIG;
+
 if ($REMOVE_NOW) {
     $REMOVE = 1;
-    $Ravada::Domain::TIMEOUT_SHUTDOWN = 1;
+    $CONFIG->{timeout_shutdown}= 1;
 }
 
 if ($REMOVE || $PROVISION || $ADD_USER || $CREATE) {
@@ -91,13 +92,6 @@ if ($help) {
 
 ###################################################################
 
-my $VM = Sys::Virt->new( address => "$VM_TYPE:///system") 
-    or die "I can't connect to $VM_TYPE local\n";
-
-$VM = undef;
-
-my $VM_POOL;
-
 our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
 
 my $RAVADA = Ravada->new( config => $FILE_CONFIG );
@@ -109,30 +103,8 @@ sub init_config {
 
 }
 
-sub init_external {
-    $REMOTE_VIEWER = `which remote-viewer`;
-    chomp $REMOTE_VIEWER;
-}
-
 sub init {
-    init_ip();
     init_config();
-    init_external();
-}
-
-sub init_ip {
-    my $name = hostname() or die "CRITICAL: I can't find the hostname.\n";
-    $IP = inet_ntoa(inet_aton($name)) 
-        or die "CRITICAL: I can't find IP of $name in the DNS.\n";
-
-    if ($IP eq '127.0.0.1') {
-        #TODO Net:DNS
-        $IP= `host $name`;
-        chomp $IP;
-        $IP =~ s/.*?address (\d+)/$1/;
-    }
-    die "I can't find IP with hostname $name ( $IP )\n"
-        if !$IP || $IP eq '127.0.0.1';
 }
 
 sub new_uuid {
@@ -195,7 +167,6 @@ sub provision {
 
 sub display_uri{
     my $domain = shift;
-
 }
 
 sub start {
@@ -251,14 +222,6 @@ sub select_base_domain {
         print "ERROR: Wrong option '$option'\n\n";
     }
     return $domains->[$option-1];
-}
-
-sub domain_open {
-    my $name = shift;
-    for ($VM->list_all_domains) {
-        return $_ if $_->get_name eq $name;
-    }
-    return;
 }
 
 sub domain_remove {

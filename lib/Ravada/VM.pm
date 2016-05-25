@@ -15,6 +15,7 @@ requires 'connect';
 # domain
 requires 'create_domain';
 requires 'search_domain';
+requires 'search_domain_by_id';
 
 requires 'list_domains';
 

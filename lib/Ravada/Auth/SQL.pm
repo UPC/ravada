@@ -3,18 +3,14 @@ package Ravada::Auth::SQL;
 use warnings;
 use strict;
 
+use Ravada;
 use Digest::SHA qw(sha1_hex);
 
-our $CON;
-
-sub init {
-    my ($config, $con) = @_;
-    $CON = $con;
-}
+our $CON = \$Ravada::CONNECTOR;
 
 sub add_user {
     my ($login,$password) = @_;
-    my $sth = $CON->dbh->prepare(
+    my $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password) VALUES(?,?)");
 
     $sth->execute($login,sha1_hex($password));
@@ -24,14 +20,14 @@ sub add_user {
 sub login {
     my ($login,$password) = @_;
 
-    my $sth = $CON->dbh->prepare(
+    my $sth = $$CON->dbh->prepare(
        "SELECT name FROM users WHERE name=? AND password=?");
     $sth->execute($login, sha1_hex($password));
     my ($found) = $sth->fetchrow;
     $sth->finish;
     return $found   if $found;
 
-    $sth = $CON->dbh->prepare(
+    $sth = $$CON->dbh->prepare(
        "SELECT name FROM users WHERE name=? AND password=password(?)");
     $sth->execute($login, $password);
     ($found) = $sth->fetchrow;

@@ -31,6 +31,9 @@ has 'connector' => (
 
 ##################################################
 #
+our $TIMEOUT_SHUTDOWN = 60;
+
+##################################################
 
 
 =head2 name
@@ -205,7 +208,7 @@ Returns the display URI
 sub display {
     my $self = shift;
 
-    return $self->{_display} if exists $self->{_display};
+    $self->start if !$self->is_active;
 
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics') 
@@ -215,7 +218,78 @@ sub display {
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
 
+    die "Unable to get port for domain ".$self->name
+        if !$port;
+
     return "$type://$address:$port";
+}
+
+=head2 is_active
+
+Returns whether the domain is running or not
+
+=cut
+
+sub is_active {
+    my $self = shift;
+    return $self->domain->is_active;
+}
+
+=head2 start
+
+Starts the domain
+
+=cut
+
+sub start {
+    my $self = shift;
+    $self->domain->create();
+}
+
+=head2 shutdown
+
+Stops the domain
+
+=cut
+
+sub shutdown {
+    my $self = shift;
+
+    my %args = @_;
+    my $req = $args{req};
+    my $timeout = ($args{timeout} or $TIMEOUT_SHUTDOWN);
+
+    if (!$self->is_active) {
+        $req->status("done")                if $req;
+        $req->error("Domain already down")  if $req;
+        return;
+    }
+    $self->domain->shutdown();
+    $req->status("Shutting down") if $req;
+
+    for (0 .. $timeout) {
+        my $msg = "Domain ".$self->name." shutting down ($_ / $timeout)\n";
+        $req->error($msg)  if $req;
+
+        last if !$self->is_active;
+        sleep 1;
+    }
+    if ($self->is_active) {
+        my $msg = "Domaing wouldn't shut down, destroying\n";
+        $req->error($msg)  if $req;
+        $self->domain->destroy();
+    }
+    $req->status("done")        if $req;
+}
+
+
+=head2 pause
+
+Pauses the domain
+
+=cut
+
+sub pause {
 }
 
 1;

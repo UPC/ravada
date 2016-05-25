@@ -62,13 +62,15 @@ sub search_domain_db {
 }
 
 sub test_new_domain {
+    my $active = shift;
+
     my ($name) = $0 =~ m{.*/(.*)\.t};
     $name .= "_".$cont++;
 
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $ravada->create_domain(name => $name, id_iso => 1);
+    my $domain = $ravada->create_domain(name => $name, id_iso => 1, active => $active);
 
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
@@ -82,6 +84,11 @@ sub test_new_domain {
 
     my $row =  search_domain_db($domain->name);
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
+
+    my $domain2 = $ravada->search_domain_by_id($domain->id);
+    ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
+    ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
+        .$domain2->name);
 
     return $domain;
 }
@@ -98,14 +105,20 @@ sub test_prepare_base {
 }
 
 
+sub test_domain_inactive {
+    my $domain = test_domain(0);
+}
 
 sub test_domain{
+
+    my $active = shift;
+    $active = 1 if !defined $active;
 
     my ($name) = $0 =~ m{.*/(.*)\.t};
     test_remove_domain($name);
 
     my $n_domains = scalar $ravada->list_domains();
-    my $domain = test_new_domain();
+    my $domain = test_new_domain($active);
 
     if (ok($domain,"test domain not created")) {
         my @list = $ravada->list_domains();
@@ -122,6 +135,8 @@ sub test_domain{
             .Dumper($domain->_select_domain_db())
 
         );
+        ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
+        ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
         test_remove_domain($domain->name);
     }
@@ -149,7 +164,7 @@ sub test_prepare_import {
 
         );
 
-        test_remove_domain($domain);
+        test_remove_domain($domain->name);
     }
 
 }
@@ -166,6 +181,7 @@ sub remove_old_domains {
 test_vm_kvm();
 
 remove_old_domains();
+test_domain_inactive();
 test_domain();
 test_domain_by_name();
 test_prepare_import();

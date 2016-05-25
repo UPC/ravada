@@ -36,8 +36,8 @@ init();
 
 any '/' => sub {
     my $c = shift;
-
-    return quick_start($c);
+    return quick_start($c) if _logged_in($c);
+    $c->redirect_to('/login');
 };
 
 any '/login' => sub {
@@ -52,11 +52,56 @@ any '/logout' => sub {
     $c->redirect_to('/');
 };
 
+get '/ip' => sub {
+    my $c = shift;
+    $c->render(template => 'bases', base => list_bases());
+};
+
+get '/ip/*' => sub {
+    my $c = shift;
+    _logged_in($c);
+    my ($base_name) = $c->req->url->to_abs =~ m{/ip/(.*)};
+    my $ip = $c->tx->remote_address();
+    my $base = $RAVADA->search_domain($base_name);
+    return quick_start_domain($c,$base->id,$ip);
+};
+
+any '/bases' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return bases($c);
+};
+
+
+any '/bases/new' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return new_base($c);
+};
+
+any '/domains' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return domains($c);
+
+};
+
+any '/users' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return users($c);
+
+};
+
+
 ###################################################
 
 sub _logged_in {
     my $c = shift;
-    warn "_logged_in";
 
     $c->stash(_logged_in => $c->session('login'));
     return 1 if $c->session('login');
@@ -85,7 +130,7 @@ sub login {
         }
     }
     $c->render(
-                    template => 'bootstrap/login' 
+                    template => 'bootstrap/start' 
                       ,login => $login 
                       ,error => \@error
     );
@@ -102,7 +147,7 @@ sub quick_start {
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if ($c->param('submit') && $login) {
+    if ($c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
@@ -114,11 +159,14 @@ sub quick_start {
             push @error,("Access denied");
         }
     }
-    return show_link($c, $id_base, $login)
-        if $c->param('submit') && _logged_in($c) && defined $id_base;
+    if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
+
+        return quick_start_domain($c, $id_base, ($login or $c->session('login')));
+
+    }
 
     $c->render(
-                    template => 'bootstrap/start' 
+                    template => 'bootstrap/logged' 
                     ,id_base => $id_base
                       ,login => $login 
                       ,error => \@error
@@ -126,28 +174,51 @@ sub quick_start {
     );
 }
 
-get '/ip' => sub {
-    my $c = shift;
-    $c->render(template => 'bases', base => list_bases());
-};
+sub quick_start_domain {
+    my ($c, $id_base, $name) = @_;
 
-get '/ip/*' => sub {
-    my $c = shift;
-    _logged_in($c);
-    my ($base_name) = $c->req->url->to_abs =~ m{/ip/(.*)};
-    my $ip = $c->tx->remote_address();
-    my $base = $RAVADA->search_domain($base_name);
-    show_link($c,$base,$ip);
-};
+    my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
-any '/bases' => sub {
-    my $c = shift;
+    my $domain_name = $base->name."-".$name;
 
-    return access_denied($c) if !_logged_in($c);
-    return new_base($c);
-};
+    my $domain = $RAVADA->search_domain($domain_name);
+    $domain = provision($c,  $id_base,  $name)
+        if !$domain;
+
+    return show_link($c,$domain);
+
+}
+
 
 #######################################################
+
+sub bases {
+    my $c = shift;
+    my @bases = $RAVADA->list_bases();
+    $c->render(template => 'bootstrap/bases'
+        ,bases => \@bases
+    );
+
+}
+
+sub domains {
+    my $c = shift;
+    my @domains = $RAVADA->list_domains();
+    $c->render(template => 'bootstrap/domains'
+        ,nodes => \@domains
+    );
+
+}
+
+sub users {
+    my $c = shift;
+    my @users = $RAVADA->list_users();
+    $c->render(template => 'bootstrap/users'
+        ,users => \@users
+    );
+
+}
+
 
 sub new_base {
     my $c = shift;
@@ -156,33 +227,37 @@ sub new_base {
     my $disk = ($c->param('disk') or 8);
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
-        return req_new_base($c) if !@error;
+        my $domain = req_new_base($c) if !@error;
+        return show_link($c, $domain);
     }
+    my @images = $RAVADA->list_images();
     $c->render(template => 'bootstrap/new_base'
                     ,name => $c->param('name')
                     ,ram => $ram
                     ,disk => $disk
-                    ,image => _list_images()
+                    ,images => \@images
                     ,error => \@error
     );
 };
 
 sub req_new_base {
     my $c = shift;
+    my $name = $c->param('name');
     my $req = Ravada::Request->create_domain(
-           name => $c->param('name')
+           name => $name
         ,id_iso => $c->param('id_iso')
     );
 
-    my ($uri,$error) = wait_req_up($req);
-    if ($uri) {
-       $c->redirect_to($uri);
-       $c->render(template => 'bootstrap/run', url => $uri , name => $c->param('name')
-                ,login => $c->session('login'));
+    wait_request_done($c,$req);
 
-    } else {
-        $c->render(template => 'fail', name => $c->param('name'), error => $error);
+    my $domain = $RAVADA->search_domain($name);
+
+    if ( $req->error ) {
+        $c->stash(error => $req->error) 
+    } elsif (!$domain) {
+        $c->stash(error => "I dunno why but no domain $name");
     }
+    return $domain;
 }
 
 sub _search_req_base_error {
@@ -226,7 +301,7 @@ sub provision {
 
     if ( $req->error ) {
         $c->stash(error => $req->error) 
-    } else {
+    } elsif (!$domain) {
         $c->stash(error => "I dunno why but no domain $name");
     }
     return $domain;
@@ -245,22 +320,15 @@ sub wait_request_done {
 
 sub show_link {
     my $c = shift;
-    my ($base, $name) = @_;
-
-    confess "Missing base" if !$base;
-
-    my $host = $base->name."-".$name;
-
-    my $domain =( $RAVADA->search_domain($host)
-            or provision($c, $base->id, $host));
+    my $domain = shift or confess "Missing domain";
 
     my $uri = $domain->display() if $domain;
     if (!$uri) {
-        $c->render(template => 'fail', name => $host);
+        $c->render(template => 'fail', name => $domain->name);
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'bootstrap/run', url => $uri , name => $name
+    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
 
@@ -274,22 +342,6 @@ sub list_bases {
     return \%base;
 }
 
-sub _list_images {
-    my $dbh = $RAVADA::CONNECTOR->dbh();
-    my $sth = $dbh->prepare(
-        "SELECT * FROM iso_images"
-        ." ORDER BY name"
-    );
-    $sth->execute;
-    my %image;
-    while ( my $row = $sth->fetchrow_hashref) {
-        $image{$row->{id}} = $row;
-    }
-    $sth->finish;
-    lock_hash(%image);
-    return \%image;
-}
-
 sub check_back_running {
     #TODO;
     return 1;
@@ -297,7 +349,6 @@ sub check_back_running {
 
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
-    Ravada::Auth::init();#$CONFIG);
 }
 
 app->start;

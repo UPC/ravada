@@ -12,6 +12,11 @@ requires 'name';
 requires 'remove';
 requires 'display';
 
+requires 'is_active';
+requires 'start';
+requires 'shutdown';
+requires 'pause';
+
 has 'domain' => (
     isa => 'Object'
     ,is => 'ro'

@@ -151,6 +151,23 @@ sub search_domain {
     }
 }
 
+=head2 search_domain_by_id
+
+  my $domain = $ravada->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+      my $id = shift;
+
+    for my $vm (@{$self->vm}) {
+        my $domain = $vm->search_domain_by_id($id);
+        return $domain if $domain;
+    }
+}
+
+
 =head2 list_domains
 
 List all created domains
@@ -187,6 +204,26 @@ sub list_bases {
             push @domains,($domain) if $domain->is_base;
         }
     }
+    return @domains;
+}
+
+=head2 list_images
+
+List all ISO images
+
+=cut
+
+sub list_images {
+    my $self = shift;
+    my @domains;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @domains,($row);
+    }
+    $sth->finish;
     return @domains;
 }
 
@@ -230,8 +267,6 @@ This is run in the ravada backend. It processes the commands requested by the fr
 sub process_requests {
     my $self = shift;
 
-    $Ravada::Request::CONNECTOR = $CONNECTOR;
-
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
@@ -244,21 +279,84 @@ sub _execute {
     my $self = shift;
     my $request = shift;
 
-    if ($request->command() eq 'create' ) {
-        $request->status('working');
-        eval { $self->create_domain(%{$request->args}) };
-        $request->status('done');
-        $request->error($@);
-    } elsif ($request->command eq 'remove') {
-        $request->status('working');
-        eval { $self->remove_domain($request->args('name')) };
-        $request->status('done');
-        $request->error($@);
+    my $sub = $self->_req_method($request->command);
 
-    } else {
-        die "Unknown command ".$request->command;
-    }
+    die "Unknown command ".$request->command
+        if !$sub;
+
+    return $sub->($self,$request);
+
 }
+
+sub _cmd_create {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    eval { $self->create_domain(%{$request->args}) };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+sub _cmd_remove {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    eval { $self->remove_domain($request->args('name')) };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+sub _cmd_start {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    eval { 
+        my $domain = $self->search_domain($name);
+        die "Unknown domain '$name'\n" if !$domain;
+        $domain->start();
+    };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+sub _cmd_shutdown {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    eval { 
+        my $domain = $self->search_domain($name);
+        die "Unknown domain '$name'\n" if !$domain;
+        $domain->shutdown();
+    };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+
+sub _req_method {
+    my $self = shift;
+    my  $cmd = shift;
+
+    my %methods = (
+
+          start => \&_cmd_start
+        ,create => \&_cmd_create
+        ,remove => \&_cmd_remove
+      ,shutdown => \&_cmd_shutdown
+    );
+    return $methods{$cmd};
+}
+
 
 =head1 AUTHOR
 
