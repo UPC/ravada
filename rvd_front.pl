@@ -81,13 +81,22 @@ any '/bases/new' => sub {
     return new_base($c);
 };
 
-any '/nodes' => sub {
+any '/domains' => sub {
     my $c = shift;
 
     return access_denied($c) if !_logged_in($c);
-    return nodes($c);
+    return domains($c);
 
 };
+
+any '/users' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return users($c);
+
+};
+
 
 ###################################################
 
@@ -192,11 +201,20 @@ sub bases {
 
 }
 
-sub nodes {
+sub domains {
     my $c = shift;
-    my @nodes = $RAVADA->list_domains();
-    $c->render(template => 'bootstrap/nodes'
-        ,nodes => \@nodes
+    my @domains = $RAVADA->list_domains();
+    $c->render(template => 'bootstrap/domains'
+        ,nodes => \@domains
+    );
+
+}
+
+sub users {
+    my $c = shift;
+    my @users = $RAVADA->list_users();
+    $c->render(template => 'bootstrap/users'
+        ,users => \@users
     );
 
 }
