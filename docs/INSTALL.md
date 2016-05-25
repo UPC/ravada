@@ -43,7 +43,7 @@ Grant all permissions to your user:
 Review and run the sql files from the sql dir.
 
     $ mysqladmin create ravada
-    $ cd sql
+    $ cd sql/mysql
     $ cat *.sql | mysql -p ravada
 
 #KVM backend
