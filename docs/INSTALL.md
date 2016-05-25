@@ -19,6 +19,9 @@ Clone the sources:
 - libsys-virt-perl
 - libxml-libxml-perl
 - libconfig-yaml-perl
+- libmoose-perl
+- libjson-xs-perl
+
 
 ##Old debian
 
