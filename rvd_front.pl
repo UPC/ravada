@@ -40,6 +40,12 @@ any '/' => sub {
     $c->redirect_to('/login');
 };
 
+any '/index.html' => sub {
+    my $c = shift;
+    return quick_start($c) if _logged_in($c);
+    $c->redirect_to('/login');
+};
+
 any '/login' => sub {
     my $c = shift;
     return login($c);
@@ -205,7 +211,7 @@ sub domains {
     my $c = shift;
     my @domains = $RAVADA->list_domains();
     $c->render(template => 'bootstrap/domains'
-        ,nodes => \@domains
+        ,domains => \@domains
     );
 
 }
