@@ -1,21 +1,18 @@
-CREATE TABLE `iso_images` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` char(64) NOT NULL,
-  `description` varchar(255),
-  `arch` char(8),
-  `xml`  varchar(64),
-  `xml_volume` varchar(64),
-  `url` varchar(255),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
-);
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url)
+VALUES('Debian Jessie 32 bits netinst'
+    ,'Debian 8.4.0 Jessie 32 bits (netsinst)'
+    ,'i386'
+    ,'jessie-i386.xml'
+    ,'jessie-volume.xml'
+    ,'http://cdimage.debian.org/debian-cd/8.4.0/i386/iso-cd/debian-8.4.0-i386-netinst.iso');
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url)
 VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
     ,'trusty-i386.xml'
     ,'trusty-volume.xml'
-    ,'http://localhost:/ubuntu-16.04-desktop-i386.iso');
+    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso');
 
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url)

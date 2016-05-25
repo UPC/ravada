@@ -23,7 +23,11 @@ sub init {
 }
 
 sub login {
-    return Ravada::Auth::LDAP::login(@_)    if $LDAP;
+    eval { return Ravada::Auth::LDAP::login(@_)    if $LDAP };
+    if ($@ =~ /I can't connect/i) {
+        $LDAP = 0;
+        warn $@;
+    }
     return Ravada::Auth::SQL::login(@_);
 }
 

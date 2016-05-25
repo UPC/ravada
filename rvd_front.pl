@@ -4,7 +4,6 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
-use DBIx::Connector;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite;
@@ -12,12 +11,15 @@ use YAML qw(LoadFile);
 
 use lib 'lib';
 
+use Ravada;
 use Ravada::Auth;
+use Ravada::Request;
 
-my $FILE_CONFIG = "/etc/ravada.conf";
 my $help;
+my $FILE_CONFIG = "/etc/ravada.conf";
+
 GetOptions(
-        config => \$FILE_CONFIG
+     'config=s' => \$FILE_CONFIG
          ,help  => \$help
      ) or exit;
 
@@ -26,15 +28,8 @@ if ($help) {
     exit;
 }
 
-
-my $CONFIG = LoadFile($FILE_CONFIG) or die "$! $FILE_CONFIG"
-    if -e $FILE_CONFIG;
-$CONFIG->{rvd_back}->{pid_file} = '/var/run/rvd_back.pid'
-    if !$CONFIG->{rvd_back}->{pid_file};
-
-our $DB;
-
-our $TIMEOUT = 120;
+our $RAVADA = Ravada->new(config => $FILE_CONFIG);
+our $TIMEOUT = 10;
 
 init();
 ############################################################################3
@@ -57,10 +52,57 @@ any '/logout' => sub {
     $c->redirect_to('/');
 };
 
+get '/ip' => sub {
+    my $c = shift;
+    $c->render(template => 'bases', base => list_bases());
+};
+
+get '/ip/*' => sub {
+    my $c = shift;
+    _logged_in($c);
+    my ($base_name) = $c->req->url->to_abs =~ m{/ip/(.*)};
+    my $ip = $c->tx->remote_address();
+    my $base = $RAVADA->search_domain($base_name);
+    return quick_start_domain($c,$base->id,$ip);
+};
+
+any '/bases' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return bases($c);
+};
+
+
+any '/bases/new' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return new_base($c);
+};
+
+any '/domains' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return domains($c);
+
+};
+
+any '/users' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return users($c);
+
+};
+
+
 ###################################################
 
 sub _logged_in {
     my $c = shift;
+
     $c->stash(_logged_in => $c->session('login'));
     return 1 if $c->session('login');
 }
@@ -105,7 +147,7 @@ sub quick_start {
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if ($c->param('submit') && $login) {
+    if ($c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
@@ -117,8 +159,11 @@ sub quick_start {
             push @error,("Access denied");
         }
     }
-    return show_link($c, $id_base, $login)
-        if $c->param('submit') && _logged_in($c) && defined $id_base;
+    if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
+
+        return quick_start_domain($c, $id_base, ($login or $c->session('login')));
+
+    }
 
     $c->render(
                     template => 'bootstrap/logged' 
@@ -129,26 +174,51 @@ sub quick_start {
     );
 }
 
-get '/ip' => sub {
-    my $c = shift;
-    $c->render(template => 'bases', base => list_bases());
-};
+sub quick_start_domain {
+    my ($c, $id_base, $name) = @_;
 
-get '/ip/*' => sub {
-    my $c = shift;
-    my ($base_name) = $c->req->url->to_abs =~ m{/ip/(.*)};
-    my $ip = $c->tx->remote_address();
-    show_link($c,base_id($base_name),$ip);
-};
+    my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
-any '/bases' => sub {
-    my $c = shift;
+    my $domain_name = $base->name."-".$name;
 
-    return access_denied($c) if !_logged_in($c);
-    return new_base($c);
-};
+    my $domain = $RAVADA->search_domain($domain_name);
+    $domain = provision($c,  $id_base,  $name)
+        if !$domain;
+
+    return show_link($c,$domain);
+
+}
+
 
 #######################################################
+
+sub bases {
+    my $c = shift;
+    my @bases = $RAVADA->list_bases();
+    $c->render(template => 'bootstrap/bases'
+        ,bases => \@bases
+    );
+
+}
+
+sub domains {
+    my $c = shift;
+    my @domains = $RAVADA->list_domains();
+    $c->render(template => 'bootstrap/domains'
+        ,nodes => \@domains
+    );
+
+}
+
+sub users {
+    my $c = shift;
+    my @users = $RAVADA->list_users();
+    $c->render(template => 'bootstrap/users'
+        ,users => \@users
+    );
+
+}
+
 
 sub new_base {
     my $c = shift;
@@ -157,39 +227,37 @@ sub new_base {
     my $disk = ($c->param('disk') or 8);
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
-        return req_new_base($c) if !@error;
+        my $domain = req_new_base($c) if !@error;
+        return show_link($c, $domain);
     }
+    my @images = $RAVADA->list_images();
     $c->render(template => 'bootstrap/new_base'
                     ,name => $c->param('name')
                     ,ram => $ram
                     ,disk => $disk
-                    ,image => _list_images()
+                    ,images => \@images
                     ,error => \@error
     );
 };
 
 sub req_new_base {
     my $c = shift;
-    my $sth = $DB->dbh->prepare(
-                "INSERT INTO bases_req (name, id_iso, date_req, created) "
-                ." VALUES (?,?,now(),'n')"
+    my $name = $c->param('name');
+    my $req = Ravada::Request->create_domain(
+           name => $name
+        ,id_iso => $c->param('id_iso')
     );
-    $sth->execute($c->param('name'), $c->param('id_iso'));
-    $sth->finish;
 
-    $sth=$DB->dbh->prepare("SELECT last_insert_id() ");
-    $sth->execute;
-    my ($id) = $sth->fetchrow;
+    wait_request_done($c,$req);
 
-    my ($uri,$error) = wait_req_up($id);
-    if ($uri) {
-       $c->redirect_to($uri);
-       $c->render(template => 'bootstrap/run', url => $uri , name => $c->param('name')
-                ,login => $c->session('login'));
+    my $domain = $RAVADA->search_domain($name);
 
-    } else {
-        $c->render(template => 'fail', name => $c->param('name'), error => $error);
+    if ( $req->error ) {
+        $c->stash(error => $req->error) 
+    } elsif (!$domain) {
+        $c->stash(error => "I dunno why but no domain $name");
     }
+    return $domain;
 }
 
 sub _search_req_base_error {
@@ -202,12 +270,9 @@ sub access_denied {
 
 sub base_id {
     my $name = shift;
+    my $base = $RAVADA->search_domain($name);
 
-    my $sth = $DB->dbh->prepare("SELECT id FROM bases WHERE name=?");
-    $sth->execute($name);
-    my ($id) =$sth->fetchrow;
-    die "CRITICAL: Unknown base $name" if !defined $id;
-    return $id;
+    return $base->id;
 }
 
 sub find_uri {
@@ -218,7 +283,7 @@ sub find_uri {
     return $url;
 }
 
-sub provisiona {
+sub provision {
     my $c = shift;
     my $id_base = shift;
     my $name = shift;
@@ -226,185 +291,64 @@ sub provisiona {
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
 
-    my $dbh = $DB->dbh;
-    my $sth = $dbh->prepare("INSERT INTO domains ( id_base,name) VALUES (?,?)");
-    $sth->execute($id_base, $name);
-    $sth->finish;
+    my $domain = $RAVADA->search_domain(name => $name);
+    return $domain if $domain;
 
-    if (wait_node_up($c,$name)) {
-        return find_uri($name);
+    my $req = Ravada::Request->create_domain(name => $name, id_base => $id_base);
+    wait_request_done($c,$req);
+
+    $domain = $RAVADA->search_domain($name);
+
+    if ( $req->error ) {
+        $c->stash(error => $req->error) 
+    } elsif (!$domain) {
+        $c->stash(error => "I dunno why but no domain $name");
     }
-
-}
-
-sub wait_node_up {
-    my ($c, $name, $table) = @_;
-    $table = 'domains' if !$table;
-
-    my $dbh = $DB->dbh;
-    my $sth = $dbh->prepare(
-        "SELECT created, error, uri FROM $table where name=?"
-    );
-
-    for (1 .. $TIMEOUT) {
-        sleep 1;
-        $sth->execute($name);
-        my ($created, $error, $uri ) = $sth->fetchrow;
-        warn "$_ : ".$created." ".($error or '');
-        if ($error) {
-            $c->stash(error => $error) if $error;
-            last;
-        }
-        return $uri if $created !~ /n/i;
-    }
-}
-
-sub wait_req_up {
-    my ($id, $table) = @_;
-    $table = 'bases_req' if !$table;
-
-    my $dbh = $DB->dbh;
-    my $sth = $dbh->prepare(
-        "SELECT created, error, uri FROM $table where id=?"
-    );
-
-    for (1 .. $TIMEOUT) {
-        sleep 1;
-        $sth->execute($id);
-        my ($created, $error, $uri ) = $sth->fetchrow;
-        warn "$_ : ".$created." ".($error or '');
-        return ($uri) if $created !~ /n/i;
-        return (undef,$error) if $error;
-    }
-}
-
-
-sub raise_node {
-    my ($c, $id_base, $name) = @_;
-
-    my $dbh = $DB->dbh;
-    my $sth = $dbh->prepare(
-        "SELECT id FROM domains WHERE name=? "
-        ." AND id_base=?"
-    );
-    $sth->execute($name, $id_base);
-    my ($id) = $sth->fetchrow;
-    $sth->finish;
-    warn "Found $id " if $id;
-    return provisiona(@_) if !$id;
-
-    $sth = $dbh->prepare(
-        "INSERT INTO domains_req (id_domain,start,date_req) "
-        ." VALUES (?,'y',NOW())"
-    );
-    $sth->execute($id);
-
-    $sth = $dbh->prepare("SELECT last_insert_id() FROM domains_req");
-    $sth->execute;
-    my ($id_request) = $sth->fetchrow or die "Missing last insert id";
-
-    return wait_request_done($c,$id_request);
+    return $domain;
 }
 
 sub wait_request_done {
-    my ($c, $id) = @_;
+    my ($c, $req) = @_;
     
-    my $req;
-    my $sth = $DB->dbh->prepare(
-        "SELECT r.* , name "
-        ." FROM domains_req r, domains d "
-        ." WHERE r.id=? AND r.id_domain = d.id "
-    );
     for ( 1 .. $TIMEOUT ) {
-        $sth->execute($id);
-        $req = $sth->fetchrow_hashref;
-        $c->stash(error => $req->{error})   if $req->{error};
-        last if $req->{id} && $req->{done};
+        warn $req->status;
+        last if $req->status eq 'done';
         sleep 1;
     }
-    return 0 if $req->{error};
-    return find_uri($req->{name});
-}
-
-sub base_name {
-    my $id_base = shift;
-
-    my $sth = $DB->dbh->prepare("SELECT name FROM bases where id=?");
-    $sth->execute($id_base);
-    return $sth->fetchrow;
+    return $req;
 }
 
 sub show_link {
     my $c = shift;
-    my ($id_base, $name) = @_;
+    my $domain = shift or confess "Missing domain";
 
-    confess "Empty id_base" if !$id_base;
-
-    my $base_name = base_name($id_base)
-        or die "Unkown id_base '$id_base'";
-
-    my $host = $base_name."-".$name;
-
-    my $uri = ( find_uri($host) or raise_node($c, $id_base,$host));
+    my $uri = $domain->display() if $domain;
     if (!$uri) {
-        $c->render(template => 'fail', name => $host);
+        $c->render(template => 'fail', name => $domain->name);
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'bootstrap/run', url => $uri , name => $name
+    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
 
 sub list_bases {
-    my $dbh = $DB->dbh();
-    my $sth = $dbh->prepare(
-        "SELECT id, name FROM bases"
-        ." ORDER BY id"
-    );
-    $sth->execute;
+    my @bases = $RAVADA->list_bases();
+
     my %base;
-    while ( my ($id,$name) = $sth->fetchrow) {
-        $base{$id} = $name;
+    for my $base ( $RAVADA->list_bases ) {
+        $base{$base->id} = $base->name;
     }
-    $sth->finish;
     return \%base;
 }
 
-sub _list_images {
-    my $dbh = $DB->dbh();
-    my $sth = $dbh->prepare(
-        "SELECT * FROM iso_images"
-        ." ORDER BY name"
-    );
-    $sth->execute;
-    my %image;
-    while ( my $row = $sth->fetchrow_hashref) {
-        $image{$row->{id}} = $row;
-    }
-    $sth->finish;
-    lock_hash(%image);
-    return \%image;
-}
-
-
-sub _init_db {
-    my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
-    my $db_password = ($CONFIG->{db}->{password} or undef);
-    $DB = DBIx::Connector->new("DBI:mysql:ravada"
-                        ,$db_user,$db_password,{RaiseError => 1
-                        , PrintError=> 0 }) or die "I can't connect";
-
-
-}
-
 sub check_back_running {
-    return -e $CONFIG->{rvd_back}->{pid_file};
+    #TODO;
+    return 1;
 }
 
 sub init {
-    check_back_running or warn "CRITICAL: rvd_back is not running\n";
-    _init_db();
-    Ravada::Auth::init($CONFIG,$DB);
+    check_back_running() or warn "CRITICAL: rvd_back is not running\n";
 }
 
 app->start;
