@@ -8,7 +8,7 @@
     <div class="jumbotron">
         <h2>Domains</h2>
         <ul>
-%       for (@$domainm s) {
+%       for (@$domains) {
             <li><%= $_->name %></li>
 %       }
         </ul>
