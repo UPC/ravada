@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
+
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+        <div class="page-header">
+        <div class="row">
+        <h2>Welcome to SPICE! Choose a Machine to Start</h2>
+
+            <form method="post">
+%           if (keys %$base) {
+                
+%               for my $option (sort keys %$base) {
+
+                    <div class="col-sm-3">
+                    <div class="panel panel-primary machine">
+                            <div class="panel-heading">
+                                <h3 class="panel-title"><%= $base->{$option} %></h3>
+                            </div>
+                            <div class="panel-body">
+                                <input name="id_base" type="radio" value="<%= $option %>">Start this Machine<br>
+                                <input name="id_base" type="radio" value="">Pause this Machine<br>
+                                <input name="id_base" type="radio" value="">Shutdown this Machine<br>
+                            </div>
+                    </div>
+                    </div>
+%               }
+                </select><br/>
+%           } else {
+                <div class="alert alert-danger">
+                    <strong>Error</strong>  No base domains available.
+                </div>
+%           }
+                <div class="col-sm-12">
+                    <input type="submit" id="start" name="submit" value="launch" class="btn btn-sm btn-success">
+                </div>
+    
+        </form>
+%        if (scalar @$error) {
+                <ul>
+%              for my $i (@$error) {
+                    <li><%= $i %></li>
+%              }
+                </ul>
+%        }
+
+<!--
+        <form method="post">
+%           if (! $_logged_in) {
+                User Name: <input name="login" value ="<%= $login %>" 
+                        type="text"><br/>
+                Password: <input type="password" name="password" value=""><br/>
+%           }
+%           if (keys %$base) {
+                Base: <select name="id_base">
+%               for my $option (sort keys %$base) {
+                    <option value="<%= $option %>"><%= $base->{$option} %></option>
+%               }
+                </select><br/>
+%           } else {
+                <b>Error :</b>  No base domains available.
+%           }
+                <input type="submit" name="submit" value="launch">
+    
+        </form>
+% if (scalar @$error) {
+        <ul>
+%       for my $i (@$error) {
+            <li><%= $i %></li>
+%       }
+        </ul>
+% }
+-->
+        </div>    
+        </div>
+
+    </div>
+    %= include 'bootstrap/scripts'
+</div>
+
+</body>
+
+</html>

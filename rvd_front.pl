@@ -36,8 +36,8 @@ init();
 
 any '/' => sub {
     my $c = shift;
-
-    return quick_start($c);
+    return quick_start($c) if _logged_in($c);
+    $c->redirect_to('/login');
 };
 
 any '/login' => sub {
@@ -130,7 +130,7 @@ sub login {
         }
     }
     $c->render(
-                    template => 'bootstrap/login' 
+                    template => 'bootstrap/start' 
                       ,login => $login 
                       ,error => \@error
     );
@@ -166,7 +166,7 @@ sub quick_start {
     }
 
     $c->render(
-                    template => 'bootstrap/start' 
+                    template => 'bootstrap/logged' 
                     ,id_base => $id_base
                       ,login => $login 
                       ,error => \@error
