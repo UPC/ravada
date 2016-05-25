@@ -6,9 +6,9 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main">
     <div class="jumbotron">
-        <h2>Nodes</h2>
+        <h2>Domains</h2>
         <ul>
-%       for (@$nodes) {
+%       for (@$domainm s) {
             <li><%= $_->name %></li>
 %       }
         </ul>
