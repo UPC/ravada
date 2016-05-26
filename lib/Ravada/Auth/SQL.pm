@@ -8,17 +8,8 @@ use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Moose;
 
-has 'name' => (
-           is => 'ro'
-         ,isa => 'Str'
-    ,required => 1
-);
+with 'Ravada::Auth::User';
 
-has 'password' => (
-           is => 'ro'
-         ,isa => 'Str'
-    ,required => 1
-);
 
 our $CON = \$Ravada::CONNECTOR;
 
