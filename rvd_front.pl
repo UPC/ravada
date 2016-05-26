@@ -265,6 +265,7 @@ sub req_new_base {
     my $req = Ravada::Request->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
+       ,is_base => 1
     );
 
     wait_request_done($c,$req);
