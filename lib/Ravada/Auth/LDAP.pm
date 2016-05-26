@@ -17,7 +17,12 @@ our @OBJECT_CLASS = ('top'
                     ,'inetOrgPerson'
                    );
 
-our $GID = 500;
+sub BUILD {
+    my $self = shift;
+    die "ERROR: Login failed ".$self->name
+        if !$self->login;
+    return $self;
+}
 
 sub add_user {
     my ($name, $password, $is_admin) = @_;
@@ -42,14 +47,14 @@ sub add_user {
     }
 }
 
-sub _new_uid {
-    my $n = rand(1000)+1000;
-
-    return $n;
+sub remove_user {
+    my $name = shift;
+    my $entry = _search_uid($name);
+    $LDAP->delete($entry);
 }
 
-sub login {
-    my ($username, $password) = @_;
+sub _search_uid {
+    my $username = shift;
 
     _init_ldap();
 
@@ -60,11 +65,17 @@ sub login {
     filter => "(&(uid=$username))",
     attrs  => ['dn']
     );
-    die "not found" if not $search->count;
+    die "uid=$username not found" if not $search->count;
+    return $search->entry;
+}
 
-    my $user_dn = $search->entry->dn;
+sub login {
+    my $self = shift;
+    my ($username, $password) = ($self->name , $self->password);
 
-    warn $user_dn;
+    my $entry = _search_uid($username);
+
+    my $user_dn = $entry->dn;
 
     my $mesg = $LDAP->bind( $user_dn, password => $password );
     return 1 if !$mesg->code;
@@ -97,7 +108,6 @@ sub _init_ldap {
         or die "I can't connect to LDAP server at $host / $port : $@";
 
     if ($cn) {
-        warn "Binding with $cn / $pass\n";
         my $mesg = $LDAP->bind($cn, password => $pass);
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $cn\n"
             if $mesg->code;
