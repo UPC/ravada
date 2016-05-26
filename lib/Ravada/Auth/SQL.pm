@@ -41,17 +41,27 @@ sub add_user {
 sub login {
     my $self = shift;
 
-    $self->{_data} = {};
+    my ($name, $password);
+
+    if (ref $self) {
+        $name = $self->name;
+        $password = $self->password;
+        $self->{_data} = {};
+    } else { # old login API
+        $name = $self;
+        $password = shift;
+    }
+
 
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE name=? AND password=?");
-    $sth->execute($self->name , sha1_hex($self->password));
+    $sth->execute($name , sha1_hex($password));
     my ($found) = $sth->fetchrow_hashref;
     $sth->finish;
 
     if ($found) {
         lock_hash %$found;
-        $self->{_data} = $found if $found;
+        $self->{_data} = $found if ref $self && $found;
     }
 
     return 1 if $found;

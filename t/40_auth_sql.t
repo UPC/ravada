@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
@@ -17,9 +18,10 @@ Ravada::Auth::SQL::add_user('test',$$);
 
 my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT * FROM users WHERE name=?");
 $sth->execute('test');
-ok($sth->fetchrow,"I can't find test user in the database") or exit;
+my $row = $sth->fetchrow_hashref;
+ok($row->{name} eq 'test' ,"I can't find test user in the database ".Dumper($row));
 
 
-ok(Ravada::Auth::SQL::login('test',$$,"I can't login test/$$"));
+ok(Ravada::Auth::SQL::login('test',$$),"I can't login test/$$");
 
 done_testing();
