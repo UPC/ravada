@@ -295,8 +295,14 @@ sub _cmd_create {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
-    eval { $self->create_domain(%{$request->args}) };
+    $request->status('creating domain');
+    my $domain;
+    eval {$domain = $self->create_domain(%{$request->args}) };
+
+    if ($request->args('is_base') ) {
+        $request->status('preparing base');
+        $domain->prepare_base();
+    }
     $request->status('done');
     $request->error($@);
 

@@ -69,6 +69,38 @@ sub test_req_create_domain_iso {
     return $domain;
 }
 
+sub test_req_create_base {
+
+    my $name = $DOMAIN_NAME."_base";
+    my $req = Ravada::Request->create_domain( 
+        name => $name
+        ,id_iso => 1
+        ,is_base => 1
+    );
+    ok($req);
+    ok($req->status);
+    ok(defined $req->args->{name} 
+        && $req->args->{name} eq $name
+            ,"Expecting args->{name} eq $name "
+             ." ,got '".($req->args->{name} or '<UNDEF>')."'");
+
+    ok($req->status eq 'requested'
+        ,"Status of request is ".$req->status." it should be requested");
+
+    $ravada->process_requests();
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+
+    my $domain =  $ravada->search_domain($name);
+
+    ok($domain,"I can't find domain $name");
+    ok($domain && $domain->is_base,"Domain $name should be base");
+    return $domain;
+}
+
+
 sub test_req_remove_domain_obj {
     my $domain = shift;
 
@@ -108,6 +140,12 @@ test_remove_domain($DOMAIN_NAME."_iso");
     my $domain = test_req_create_domain_iso();
     test_req_remove_domain_name($domain->name)  if $domain;
 }
+
+{
+    my $domain = test_req_create_base();
+    test_req_remove_domain_name($domain->name)  if $domain;
+}
+
 
 test_remove_domain($DOMAIN_NAME."_iso");
 
