@@ -191,8 +191,15 @@ sub quick_start_domain {
     $domain = provision($c,  $id_base,  $name)
         if !$domain;
 
+    return show_failure($c, $name) if !$domain;
     return show_link($c,$domain);
 
+}
+
+sub show_failure {
+    my $c = shift;
+    my $name = shift;
+    $c->render(template => 'fail', name => $name);
 }
 
 
@@ -233,8 +240,14 @@ sub new_base {
     my $disk = ($c->param('disk') or 8);
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
-        my $domain = req_new_base($c) if !@error;
-        return show_link($c, $domain);
+        if (!@error) {
+            my $domain = req_new_base($c);
+            if ($domain) {
+                return show_link($c, $domain);
+            } else {
+                return show_failure($c, $c->param('name'));
+            }
+        }
     }
     my @images = $RAVADA->list_images();
     $c->render(template => 'bootstrap/new_base'
@@ -326,10 +339,13 @@ sub wait_request_done {
 
 sub show_link {
     my $c = shift;
-    my $domain = shift or confess "Missing domain";
+    my $domain = shift;# or confess "Missing domain";
+
 
     my $uri = $domain->display() if $domain;
     if (!$uri) {
+        my $name = '';
+        $name = $domain->name if $domain;
         $c->render(template => 'fail', name => $domain->name);
         return;
     }
