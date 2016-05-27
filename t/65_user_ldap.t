@@ -98,7 +98,7 @@ SKIP: {
         test_user_admin();
         test_user_fail();
         test_user();
-#        remove_users();
+        remove_users();
     };
 };
     
