@@ -6,4 +6,4 @@ blib
 pm_to_blib
 t/db
 db
-ldap.conf
+t/ravada_ldap.conf

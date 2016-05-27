@@ -30,7 +30,6 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 
 our $CONNECTOR;
 our $CONFIG = {};
-_init_config($FILE_CONFIG) if -e $FILE_CONFIG;
 _connect_dbh();
 
 
@@ -59,9 +58,12 @@ Internal constructor
 
 sub BUILD {
     my $self = shift;
-    if ($self->config ) {
+    if ($self->config()) {
         _init_config($self->config);
+    } else {
+        _init_config($FILE_CONFIG)
     }
+
     if ( $self->connector ) {
         $CONNECTOR = $self->connector 
     } else {
