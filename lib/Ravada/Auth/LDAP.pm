@@ -189,6 +189,7 @@ sub _init_ldap {
 
 sub is_admin {
     my $self = shift;
+    return;
 }
 
 sub init {
