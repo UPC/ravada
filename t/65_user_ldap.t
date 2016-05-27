@@ -80,6 +80,22 @@ sub remove_users {
         ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
     }
 }
+
+sub test_add_group {
+
+    my $name = "grup.test";
+
+    Ravada::Auth::LDAP::add_group($name);
+
+    my $group = Ravada::Auth::LDAP::search_group($name);
+    ok($group,"Group $name not created");
+
+    Ravada::Auth::LDAP::remove_group($name) if $group;
+
+    my $group2 = Ravada::Auth::LDAP::search_group($name);
+    ok(!$group2,"Group $name not removed");
+
+}
     
 SKIP: {
     my $ldap;
@@ -98,6 +114,8 @@ SKIP: {
         test_user_admin();
         test_user_fail();
         test_user();
+
+        test_add_group();
         remove_users();
     };
 };

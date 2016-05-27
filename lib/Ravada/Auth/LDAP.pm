@@ -100,6 +100,76 @@ sub search_user {
     return $search->entry;
 }
 
+=head2 add_group
+
+Add a group to the LDAP
+
+=cut
+
+sub add_group {
+    my $name = shift;
+    my $base = (shift or _dc_base());
+
+    my $mesg = $LDAP_ADMIN->add(
+        cn => $name
+        ,dn => "cn=$name,ou=groups,$base"
+        , attrs => [ cn=>$name
+                    ,objectClass => ['groupOfUniqueNames','top']
+                    ,ou => 'Groups'
+                    ,description => "Group for $name"
+          ]
+    );
+    if ($mesg->code) {
+        die "Error afegint $name ".$mesg->error;
+    }
+
+}
+
+sub remove_group {
+    my $name = shift;
+    my $base = shift;
+
+    $base = "ou=groups,"._dc_base() if !$base;
+
+    my $entries = search_group($name, $base);
+    if (!$entries->[0]) {
+        die "I can't find cn=$name at base: ".($base or _dc_base());
+    }
+    $entries->[0]->delete()->update();
+
+}
+
+=head2 search_group
+
+    Search group by name
+
+=cut
+
+sub search_group {
+    my $name = shift;
+    my $base = shift;
+
+    $base = "ou=groups,"._dc_base() if !$base;
+
+    my $mesg = $LDAP->search (
+        filter => "cn=$name"
+         ,base => $base
+    );
+    if ($mesg->code){
+        warn $mesg->code." ".$mesg->error;
+    }
+    my @entries = $mesg->entries;
+
+    return \@entries;
+}
+
+
+=head2 login
+
+    $user->login($name, $password);
+
+=cut
+
 sub login {
     my $self = shift;
     my ($username, $password) = ($self->name , $self->password);
@@ -186,6 +256,12 @@ sub _init_ldap {
 
     $LDAP = _connect_ldap();
 }
+
+=head2 is_admin
+
+Returns wether an user is admin
+
+=cut
 
 sub is_admin {
     my $self = shift;
