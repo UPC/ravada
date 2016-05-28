@@ -131,12 +131,13 @@ sub remove_group {
 
     $base = "ou=groups,"._dc_base() if !$base;
 
-    my $entries = search_group($name, $base);
-    if (!$entries->[0]) {
+    my $entry = search_group($name, $base);
+    if (!$entry) {
         die "I can't find cn=$name at base: ".($base or _dc_base());
     }
-    $entries->[0]->delete()->update();
-
+    my $mesg = $LDAP_ADMIN->delete($entry);
+    die "ERROR: ".$mesg->code." : ".$mesg->error
+        if $mesg->code;
 }
 
 =head2 search_group
@@ -160,7 +161,7 @@ sub search_group {
     }
     my @entries = $mesg->entries;
 
-    return \@entries;
+    return $entries[0]
 }
 
 

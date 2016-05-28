@@ -85,6 +85,12 @@ sub test_add_group {
 
     my $name = "grup.test";
 
+    Ravada::Auth::LDAP::remove_group($name)
+        if Ravada::Auth::LDAP::search_group($name);
+
+    my $group0 = Ravada::Auth::LDAP::search_group($name);
+    ok(!$group0,"Group $name shouldn't exist") or return;
+
     Ravada::Auth::LDAP::add_group($name);
 
     my $group = Ravada::Auth::LDAP::search_group($name);
