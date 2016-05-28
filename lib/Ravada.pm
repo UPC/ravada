@@ -61,7 +61,7 @@ sub BUILD {
     if ($self->config()) {
         _init_config($self->config);
     } else {
-        _init_config($FILE_CONFIG)
+        _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
     }
 
     if ( $self->connector ) {
