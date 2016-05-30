@@ -9,6 +9,7 @@ Clone the sources:
 ##Debian
 
 - mysql-server
+- libauthen-passphrase-perl
 - libdbd-mysql-perl
 - libdbi-perl
 - libdbix-connector-perl
