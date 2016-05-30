@@ -5,10 +5,12 @@ use warnings;
 
 use Authen::Passphrase;
 use Authen::Passphrase::SaltedDigest;
+use Carp qw(carp);
 use Data::Dumper;
 use Digest::SHA qw(sha1_hex);
 use Moose;
 use Net::LDAP;
+use Net::LDAP::Entry;
 use Net::Domain qw(hostdomain);
 
 with 'Ravada::Auth::User';
@@ -89,15 +91,21 @@ sub search_user {
     confess "Missing LDAP" if !$ldap;
 
     my $base = _dc_base();
-    my $search = $ldap->search(      # Search for the user
+    my $mesg = $ldap->search(      # Search for the user
     base   => $base,
     scope  => 'sub',
     filter => "(&(uid=$username))",
     attrs  => ['*']
     );
-    return if !$search->count();
 
-    return $search->entry;
+    die "ERROR: ".$mesg->code." : ".$mesg->error
+        if $mesg->code;
+
+    return if !$mesg->count();
+
+    my @entry = $mesg->entries;
+
+    return $entry[0];
 }
 
 =head2 add_group
@@ -131,7 +139,7 @@ sub remove_group {
 
     $base = "ou=groups,"._dc_base() if !$base;
 
-    my $entry = search_group($name, $base);
+    my $entry = search_group(name => $name, base => $base);
     if (!$entry) {
         die "I can't find cn=$name at base: ".($base or _dc_base());
     }
@@ -147,23 +155,44 @@ sub remove_group {
 =cut
 
 sub search_group {
-    my $name = shift;
-    my $base = shift;
+    my %args = @_;
 
-    $base = "ou=groups,"._dc_base() if !$base;
+    my $name = $args{name} or confess "Missing group name";
+    my $base = ( $args{base} or "ou=groups,"._dc_base() );
+    my $ldap = ( $args{ldap} or $LDAP );
 
-    my $mesg = $LDAP->search (
+    my $mesg = $ldap ->search (
         filter => "cn=$name"
          ,base => $base
     );
     if ($mesg->code){
-        warn $mesg->code." ".$mesg->error;
+        die "ERROR searching for group $name at $base :".$mesg->code." ".$mesg->error;
     }
     my @entries = $mesg->entries;
 
     return $entries[0]
 }
 
+=head2 add_to_group
+
+Adds user to group
+
+    add_to_group($uid, $group_name);
+
+=cut
+
+sub add_to_group {
+    my ($uid, $group_name) = @_;
+
+    my $user = search_user($uid)                        or die "No such user $uid";
+    my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)   
+        or die "No such group $group_name";
+
+    $group->add(uniqueMember=> $user->dn);
+    my $mesg = $group->update($LDAP_ADMIN);
+    die $mesg->error if $mesg->code;
+
+}
 
 =head2 login
 
@@ -177,7 +206,9 @@ sub login {
 
     my $entry = search_user($username);
 
-    my $user_dn = $entry->dn;
+    my $user_dn;
+    eval { $user_dn = $entry->dn };
+    die "Failed fetching user $username dn" if !$user_dn;
 
     my $mesg = $LDAP->bind( $user_dn, password => $password );
     return 1 if !$mesg->code;
@@ -244,7 +275,8 @@ sub _init_ldap_admin {
 
     my ($cn, $pass);
     if ($$CONFIG->{ldap} ) {
-        ($cn, $pass) = ( $$CONFIG->{ldap}->{cn} , $$CONFIG->{ldap}->{password});
+        ($cn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{cn} 
+            , $$CONFIG->{ldap}->{admin_user}->{password});
     } else {
         die "Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
@@ -266,7 +298,20 @@ Returns wether an user is admin
 
 sub is_admin {
     my $self = shift;
-    return;
+    my $verbose = shift;
+
+    my $admin_group =  $$CONFIG->{ldap}->{admin_group}
+        or die "ERROR: Missing ldap -> admin_group entry in the config file\n";
+    my $group = search_group(name => $admin_group)
+        or do {
+            warn "WARNING: I can't find group $admin_group in the LDAP directory\n"
+                if $verbose;
+            return 0;
+        };
+
+    my $dn = search_user($self->name)->dn;
+    return grep /^$dn$/,$group->get_value('uniqueMember');
+
 }
 
 sub init {
