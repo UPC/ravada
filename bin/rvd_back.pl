@@ -165,6 +165,12 @@ sub provision {
     
 }
 
+sub prepare_base {
+    my $name = shift;
+    my $domain = $RAVADA->search_domain($name) or die "Unknown domain $name";
+    $domain->prepare_base();
+}
+
 sub display_uri{
     my $domain = shift;
 }
