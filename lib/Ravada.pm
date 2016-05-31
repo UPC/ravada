@@ -92,10 +92,7 @@ sub _init_config {
 
 sub _create_vm {
     my $self = shift;
-    my $vm_kvm;
-    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR ))  };
-
-    $self->vm->[0] = $vm_kvm if $vm_kvm;
+    return [ Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) ];
 }
 
 =head2 create_domain
