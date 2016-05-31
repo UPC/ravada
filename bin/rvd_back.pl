@@ -247,7 +247,7 @@ sub add_user {
     my $password = <STDIN>;
     chomp $password;
 
-    $RAVADA->add_user_sql($login, $password);
+    Ravada::Auth::SQL::add_user($login, $password);
 }
 
 sub select_iso {
