@@ -103,6 +103,17 @@ any '/users' => sub {
 
 };
 
+get '/list_bases.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_bases_data);
+};
+
+get '/list_images.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_images_data);
+};
+
+
 
 ###################################################
 

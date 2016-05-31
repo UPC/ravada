@@ -209,6 +209,21 @@ sub list_bases {
     return @domains;
 }
 
+=head2 list_bases_data
+
+List information about the bases
+
+=cut
+
+sub list_bases_data {
+    my $self = shift;
+    my @data;
+    for ($self->list_bases ) {
+        push @data,{ id => $_->id , name => $_->name };
+    }
+    return \@data;
+}
+
 =head2 list_images
 
 List all ISO images
@@ -227,6 +242,21 @@ sub list_images {
     }
     $sth->finish;
     return @domains;
+}
+
+=head2 list_images_data
+
+List information about the images
+
+=cut
+
+sub list_images_data {
+    my $self = shift;
+    my @data;
+    for ($self->list_images ) {
+        push @data,{ id => $_->{id} , name => $_->{name} };
+    }
+    return \@data;
 }
 
 

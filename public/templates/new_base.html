@@ -1,0 +1,23 @@
+<h2>New Base</h2>
+<form name="new_base" method="post" action="#">
+    <label for "name">Name</label><input type="text" size="20" name="name" ><br/>
+
+    <label for="id_base">ISO image</label>
+    <select name ="id_iso"
+        ng-model="id_iso"
+        ng-options="item.id as item.name for item in images"
+    >
+    </select>
+    <br/>
+                Backend:<br/>
+                <input type="radio" name="backend" value="kvm">kvm</input><br/>
+                <input type="radio" name="backend" value="lxc"
+                    disabled="true"
+                >lxc</input><br/>
+
+                Disk: <input type="text" name="disk" size="2"> Gb<br/>
+                Ram: <input type="text" name="ram" size="2"> Gb<br/>
+                <input type="button" value="create">
+    
+</form>
+
