@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html>
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body role="document">
     <div id="wrapper">
@@ -8,39 +8,8 @@
     <div id="page-wrapper">
         <div class="container-fluid">
         <div class="row">
-   
-        <h2>New Base</h2>
-        <form method="post">
-            <input type="text" size="20" name="name" value="<%= $name %>"><br/>
-%           if ($images->[0]) {
-                boot CD: <select name="id_iso">
-%               for my $image (@$images) {
-                    <option value="<%= $image->{id} %>"><%= $image->{name} %></option>
-%               }
-                </select><br/>
-%           } else {
-                <b>Error :</b>  No base ISO Images available.
-%           }
-                Backend:<br/>
-                <input type="radio" name="backend" value="kvm">kvm</input><br/>
-                <input type="radio" name="backend" value="lxc"
-                    disabled="true"
-                >lxc</input><br/>
-
-                Disk: <input type="text" name="disk" size="2" 
-                        value="<%= $disk %>">Gb<br/>
-                Ram: <input type="text" name="ram" size="2"
-                        value="<%= $ram %>">Gb<br/>
-                <input type="submit" name="submit" value="create">
-    
-        </form>
-% if (scalar @$error) {
-        <ul>
-%       for my $i (@$error) {
-            <li><%= $i %></li>
-%       }
-        </ul>
-% }
+           <div ng-controller="new_base">
+           <sol-show-newbase></sol-show-newbase>
         </div>
         </div>
 
