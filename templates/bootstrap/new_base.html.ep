@@ -9,8 +9,9 @@
         <div class="container-fluid">
         <div class="row">
            <div ng-controller="new_base">
-           <sol-show-newbase></sol-show-newbase>
-        </div>
+            <sol-show-newbase></sol-show-newbase>
+           </div>
+            <%= join("<br/>",@$error ) %>
         </div>
 
     </div>

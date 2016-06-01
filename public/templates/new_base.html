@@ -1,5 +1,8 @@
 <h2>New Base</h2>
-<form name="new_base" method="post" action="#">
+<form name="new_base" method="post" action="#" 
+    ng-controller="new_base"
+    novalidate
+    >
     <label for "name">Name</label><input type="text" size="20" name="name" ><br/>
 
     <label for="id_base">ISO image</label>
@@ -17,7 +20,7 @@
 
                 Disk: <input type="text" name="disk" size="2"> Gb<br/>
                 Ram: <input type="text" name="ram" size="2"> Gb<br/>
-                <input type="button" value="create">
+                <input type="submit" name="submit" value="create">
     
 </form>
 

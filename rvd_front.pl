@@ -261,6 +261,8 @@ sub new_base {
         }
     }
     my @images = $RAVADA->list_images();
+    warn join("\n",@error) if @error;
+
     $c->render(template => 'bootstrap/new_base'
                     ,name => $c->param('name')
                     ,ram => $ram
