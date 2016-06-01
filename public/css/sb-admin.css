@@ -240,3 +240,16 @@ ul.alert-dropdown {
     margin: 7px 10px;
     border-radius: 0.3em;
 }
+
+
+/*####################################
+##############AngularJS###############
+####################################*/
+
+.ng-invalid.ng-dirty{
+    border-color: #FA787E;
+}
+
+.ng-valid.ng-dirty {
+    border-color: #78FA89;
+}
