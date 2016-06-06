@@ -12,7 +12,7 @@ use_ok('Ravada::Domain::KVM');
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $ravada = Ravada->new( connector => $test->connector);
 
-my $cont = 0;
+my $CONT= 0;
 
 sub test_vm_kvm {
     my $vm = $ravada->vm->[0];
@@ -27,7 +27,7 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $ravada->search_domain($name);
+    $domain = $ravada->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
@@ -46,7 +46,7 @@ sub test_remove_domain_by_name {
     diag("Removing domain $name");
     $ravada->remove_domain($name);
 
-    my $domain = $ravada->search_domain($name);
+    my $domain = $ravada->search_domain($name, 1);
     die "I can't remove old domain $name"
         if $domain;
 
@@ -65,7 +65,7 @@ sub test_new_domain {
     my $active = shift;
 
     my ($name) = $0 =~ m{.*/(.*)\.t};
-    $name .= "_".$cont++;
+    $name .= "_".$CONT++;
 
     test_remove_domain($name);
 
@@ -114,9 +114,6 @@ sub test_domain{
     my $active = shift;
     $active = 1 if !defined $active;
 
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    test_remove_domain($name);
-
     my $n_domains = scalar $ravada->list_domains();
     my $domain = test_new_domain($active);
 
@@ -138,9 +135,47 @@ sub test_domain{
         ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
+        ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
+        my $vm_domain;
+        eval { $vm_domain = $ravada->vm->[0]->vm->get_domain_by_name($domain->name)};
+        ok($vm_domain,"Domain ".$domain->name." missing in VM") or exit;
+
         test_remove_domain($domain->name);
     }
 }
+
+sub test_domain_in_virsh {
+    my $name = shift;
+    for my $vm_domain ($ravada->vm->[0]->vm->list_all_domains) {
+        return 1 if $vm_domain->get_name eq $name;
+    }
+    return 0;
+}
+
+sub test_domain_missing_in_db {
+    # test when a domain is in the VM but not in the DB
+
+    my $active = shift;
+    $active = 1 if !defined $active;
+
+    my $n_domains = scalar $ravada->list_domains();
+    my $domain = test_new_domain($active);
+
+    if (ok($domain,"test domain not created")) {
+        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+        $sth->execute($domain->id);
+
+        my $domain2 = $ravada->search_domain($domain->name);
+        ok(!$domain2,"This domain should not show up in Ravada, it's not in the DB");
+
+        my $vm_domain;
+        eval { $vm_domain = $ravada->vm->[0]->vm->get_domain_by_name($domain->name)};
+        ok($vm_domain,"I can't find the domain in the VM") or return;
+
+        test_remove_domain($domain->name);
+    }
+}
+
 
 sub test_domain_by_name {
     my $domain = test_new_domain();
@@ -181,6 +216,7 @@ sub remove_old_domains {
 test_vm_kvm();
 
 remove_old_domains();
+test_domain_missing_in_db();
 test_domain_inactive();
 test_domain();
 test_domain_by_name();

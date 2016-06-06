@@ -21,11 +21,6 @@ with 'Ravada::VM';
 
 ##########################################################################
 #
-has connector => (
-    is => 'ro'
-    ,isa => 'DBIx::Connector'
-    ,required => 1
-);
 
 has vm => (
     isa => 'Sys::Virt'
@@ -56,8 +51,12 @@ our $IP = _init_ip();
 #
 our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
+our $CONNECTOR = \$Ravada::CONNECTOR;
+
 ##########################################################################
 
+sub BUILD {
+}
 
 sub connect {
     my $self = shift;
@@ -118,16 +117,13 @@ sub create_domain {
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
-    my @fields = ( name => $args{name} );
     if ($args{id_iso}) {
         $domain = $self->_domain_create_from_iso(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
-        push @fields, ( id_base => $args{id_base} );
     } else {
         confess "TODO";
     }
-    $domain->_insert_db(@fields);
 
     return $domain;
 }
@@ -145,12 +141,19 @@ sub search_domain {
     my $name = shift;
 
     for ($self->vm->list_all_domains()) {
-        return Ravada::Domain::KVM->new(
+        next if $_->get_name ne $name;
+
+        my $domain;
+        eval {
+            $domain = Ravada::Domain::KVM->new(
                 domain => $_
                 ,storage => $self->storage_pool
-                ,connector => $self->connector
-        ) if $_->get_name eq $name;
+            );
+        };
+        warn $@ if $@;
+        return $domain if $domain;
     }
+    return;
 }
 
 =head2 search_domain_by_id
@@ -165,7 +168,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $self->connector->dbh->prepare("SELECT name FROM domains "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
         ." WHERE id=?");
     $sth->execute($id);
     my ($name) = $sth->fetchrow;
@@ -187,12 +190,14 @@ sub list_domains {
 
     my @list;
     for my $name ($self->vm->list_all_domains()) {
-        push @list, (Ravada::Domain::KVM->new(
+        my $domain ;
+        eval { $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
-                      ,connector => $self->connector
-                    )
-        );
+                    );
+             $domain->id();
+        };
+        push @list,($domain) if $domain;
     }
     return @list;
 }
@@ -271,9 +276,9 @@ sub _domain_create_from_iso {
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
 
-    return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                                    ,connector => $self->connector
-    );
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+    $domain->_insert_db(name => $args{name});
+    return $domain;
 }
 sub _create_disk {
     return _create_disk_qcow2(@_);
@@ -323,7 +328,7 @@ sub _search_domain_by_id {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $self->connector->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
@@ -364,11 +369,10 @@ sub _domain_create_from_base {
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create;
 
-    return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                                    ,connector => $self->connector
-    );
+    my $domain = Ravada::Domain::KVM->create(domain => $dom , storage => $self->storage_pool);
 
-
+    $domain->_insert_db(name => $args{name}, id_base => $base->id);
+    return $domain;
 }
 
 sub _iso_name {
@@ -441,7 +445,7 @@ sub _search_iso {
     my $self = shift;
     my $id_iso = shift or croak "Missing id_iso";
 
-    my $sth = $self->connector->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;

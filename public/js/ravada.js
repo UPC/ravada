@@ -1,6 +1,6 @@
 var app = angular.module("ravada.app",[]);
  
-    app.controller("new_base",[ '$scope', '$http', function($scope, $http) {
+    app.controller("new_machine",[ '$scope', '$http', function($scope, $http) {
 
         $http.get('/list_images.json').then(function(response) {
                 $scope.images = response.data;
@@ -20,11 +20,11 @@ var app = angular.module("ravada.app",[]);
 
     });
 
-    app.directive("solShowNewbase",function() {
+    app.directive("solShowNewmachine",function() {
 
         return {
             restrict: "E",
-            templateUrl: '/templates/new_base.html',
+            templateUrl: '/templates/new_machine.html',
         };
 
     });

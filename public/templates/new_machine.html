@@ -1,11 +1,11 @@
 <h2>New Base</h2>
-<form name="new_base" method="post" action="#" 
-    ng-controller="new_base"
+<form name="new_machine" method="post" action="#" 
+    ng-controller="new_machine"
     novalidate
     >
     <label for "name">Name</label><input type="text" size="20" name="name" ><br/>
 
-    <label for="id_base">ISO image</label>
+    <label for="id_iso">ISO image</label>
     <select name ="id_iso"
         ng-model="id_iso"
         ng-options="item.id as item.name for item in images"

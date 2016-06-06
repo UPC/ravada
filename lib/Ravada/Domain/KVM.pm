@@ -23,15 +23,10 @@ has 'storage' => (
     ,required => 1
 );
 
-has 'connector' => (
-    is => 'ro'
-    ,isa => 'DBIx::Connector'
-    ,required => 1
-);
-
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################
 
@@ -291,5 +286,9 @@ Pauses the domain
 
 sub pause {
 }
+
+#sub BUILD {
+#    warn "Builder KVM.pm";
+#}
 
 1;

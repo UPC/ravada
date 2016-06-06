@@ -132,7 +132,7 @@ sub remove_domain {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
 
-    my $domain = $self->search_domain($name)
+    my $domain = $self->search_domain($name, 1)
         or confess "ERROR: I can't find domain $name";
     $domain->remove();
 }
@@ -146,11 +146,17 @@ sub remove_domain {
 sub search_domain {
     my $self = shift;
     my $name = shift;
+    my $import = shift;
 
     for my $vm (@{$self->vm}) {
         my $domain = $vm->search_domain($name);
-        return $domain if $domain;
+        return if !$domain;
+        my $id;
+        eval { $id = $domain->id };
+        # TODO import the domain in the database with an _insert_db or something
+        return $domain if $id || $import;
     }
+    return;
 }
 
 =head2 search_domain_by_id
@@ -188,6 +194,31 @@ sub list_domains {
     }
     return @domains;
 }
+
+=head2 list_domains_data
+
+List all domains in raw format. Return a list of id => { name , id , is_active , is_base }
+
+   my $list = $ravada->list_domains_data();
+
+   $c->render(json => $list);
+
+=cut
+
+sub list_domains_data {
+    my $self = shift;
+    my @domains;
+    for ($self->list_domains()) {
+        push @domains,{ $_->id => {     id => $_->id 
+                                    , name => $_->name
+                                  ,is_base => $_->is_base
+                                ,is_active => $_->is_active
+                               }
+                           }
+    }
+    
+}
+
 
 =head2 list_bases
 
@@ -328,10 +359,6 @@ sub _cmd_create {
     my $domain;
     eval {$domain = $self->create_domain(%{$request->args}) };
 
-    if ($request->args('is_base') ) {
-        $request->status('preparing base');
-        $domain->prepare_base();
-    }
     $request->status('done');
     $request->error($@);
 

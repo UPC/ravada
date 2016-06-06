@@ -6,10 +6,10 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main">
     <div class="jumbotron">
-        <h2>Bases</h2>
-        <a href="/bases/new">New Base</a><br/>
+        <h2>Virtual Machines</h2>
+        <a href="/machines/new">New Machine</a><br/>
         <ul>
-%       for (@$bases) {
+%       for (@$domains) {
             <li><%= $_->name %></li>
 %       }
         </ul>

@@ -75,7 +75,6 @@ sub test_req_create_base {
     my $req = Ravada::Request->create_domain( 
         name => $name
         ,id_iso => 1
-        ,is_base => 1
     );
     ok($req);
     ok($req->status);
@@ -96,6 +95,7 @@ sub test_req_create_base {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name");
+    $domain->prepare_base();
     ok($domain && $domain->is_base,"Domain $name should be base");
     return $domain;
 }

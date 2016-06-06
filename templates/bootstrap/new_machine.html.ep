@@ -8,8 +8,8 @@
     <div id="page-wrapper">
         <div class="container-fluid">
         <div class="row">
-           <div ng-controller="new_base">
-            <sol-show-newbase></sol-show-newbase>
+           <div ng-controller="new_machine">
+            <sol-show-newmachine></sol-show-newmachine>
            </div>
             <%= join("<br/>",@$error ) %>
         </div>

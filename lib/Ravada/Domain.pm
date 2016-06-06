@@ -29,8 +29,13 @@ has 'timeout_shutdown' => (
 );
 
 
+##################################################################################3
+#
+
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################################################3
+
 #
 sub id {
     return $_[0]->_data('id');
@@ -41,7 +46,6 @@ sub file_base_img {
     eval { $file = $_[0]->_data('file_base_img') };
     return $file ;
 }
-
 
 ##################################################################################
 
@@ -84,7 +88,7 @@ sub _select_domain_db {
         }
     }
 
-    my $sth = $self->connector->dbh->prepare(
+    my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM domains WHERE ".join(",",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
@@ -102,7 +106,7 @@ sub _prepare_base_db {
     if (!$self->_select_domain_db) {
         $self->_insert_db( name => $self->name );
     }
-    my $sth = $self->connector->dbh->prepare(
+    my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set is_base='y',file_base_img=? "
         ." WHERE id=?"
     );
@@ -120,7 +124,7 @@ sub _insert_db {
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "
     ;
-    my $sth = $self->connector->dbh->prepare($query);
+    my $sth = $$CONNECTOR->dbh->prepare($query);
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         warn "$query\n".Dumper(\%field);
@@ -134,7 +138,7 @@ sub _remove_domain_db {
     my $self = shift;
 
     $self->_select_domain_db or return;
-    my $sth = $self->connector->dbh->prepare("DELETE FROM domains "
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
     $sth->execute($self->id);
     $sth->finish;

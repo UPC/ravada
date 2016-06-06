@@ -72,27 +72,19 @@ get '/ip/*' => sub {
     return quick_start_domain($c,$base->id,$ip);
 };
 
-any '/bases' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c);
-    return bases($c);
-};
-
-
-any '/bases/new' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c);
-    return new_base($c);
-};
-
-any '/domains' => sub {
+any '/machines' => sub {
     my $c = shift;
 
     return access_denied($c) if !_logged_in($c);
     return domains($c);
+};
 
+
+any '/machines/new' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return new_machine($c);
 };
 
 any '/users' => sub {
@@ -113,7 +105,10 @@ get '/list_images.json' => sub {
     $c->render(json => $RAVADA->list_images_data);
 };
 
-
+get '/list_domains.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_domains_data);
+};
 
 ###################################################
 
@@ -216,19 +211,10 @@ sub show_failure {
 
 #######################################################
 
-sub bases {
-    my $c = shift;
-    my @bases = $RAVADA->list_bases();
-    $c->render(template => 'bootstrap/bases'
-        ,bases => \@bases
-    );
-
-}
-
 sub domains {
     my $c = shift;
     my @domains = $RAVADA->list_domains();
-    $c->render(template => 'bootstrap/domains'
+    $c->render(template => 'bootstrap/machines'
         ,domains => \@domains
     );
 
@@ -244,7 +230,7 @@ sub users {
 }
 
 
-sub new_base {
+sub new_machine {
     my $c = shift;
     my @error = ();
     my $ram = ($c->param('ram') or 2);
@@ -252,7 +238,7 @@ sub new_base {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         if (!@error) {
-            my $domain = req_new_base($c);
+            my $domain = req_new_domain($c);
             if ($domain) {
                 return show_link($c, $domain);
             } else {
@@ -263,7 +249,7 @@ sub new_base {
     my @images = $RAVADA->list_images();
     warn join("\n",@error) if @error;
 
-    $c->render(template => 'bootstrap/new_base'
+    $c->render(template => 'bootstrap/new_machine'
                     ,name => $c->param('name')
                     ,ram => $ram
                     ,disk => $disk
@@ -272,13 +258,12 @@ sub new_base {
     );
 };
 
-sub req_new_base {
+sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
     my $req = Ravada::Request->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
-       ,is_base => 1
     );
 
     wait_request_done($c,$req);

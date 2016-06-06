@@ -8,4 +8,3 @@ CREATE TABLE `users` (
   UNIQUE KEY `name` (`name`)
 );
 
-INSERT INTO users (name,password,change_password) VALUES ( 'root',password('root'),'y');
