@@ -8,7 +8,7 @@
     <label for="id_iso">ISO image</label>
     <select name ="id_iso"
         ng-model="id_iso"
-        ng-options="item.id as item.name for item in images"
+        ng-options="item.name for item in images track by item.id"
     >
     </select>
     <br/>
