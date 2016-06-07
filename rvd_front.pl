@@ -110,6 +110,19 @@ get '/list_machines.json' => sub {
     $c->render(json => $RAVADA->list_domains_data);
 };
 
+# machine commands
+
+get '/machine/view/*.html' => sub {
+    my $c = shift;
+    return view_machine($c);
+};
+
+get '/machine/clone/*.html' => sub {
+    my $c = shift;
+    return clone_machine($c);
+};
+
+
 ###################################################
 
 sub _logged_in {
@@ -188,16 +201,18 @@ sub quick_start {
 
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
+    $name = $c->session('login')    if !$name;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
     my $domain_name = $base->name."-".$name;
 
+    warn "searching for domain $domain_name";
     my $domain = $RAVADA->search_domain($domain_name);
-    $domain = provision($c,  $id_base,  $name)
+    $domain = provision($c,  $id_base,  $domain_name)
         if !$domain;
 
-    return show_failure($c, $name) if !$domain;
+    return show_failure($c, $domain_name) if !$domain;
     return show_link($c,$domain);
 
 }
@@ -370,6 +385,35 @@ sub check_back_running {
 
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
+}
+
+sub _search_requested_machine {
+    my $c = shift;
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+
+    return show_failure($c,"I can't find id.html in ".$c->req->url->to_abs->path)
+        if !$id;
+
+    my $domain = $RAVADA->search_domain_by_id($id);
+    if (!$domain ) {
+        return show_failure($c,"I can't find domain id=$id");
+    }
+    return $domain;
+}
+
+sub view_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    return show_link($c, _search_requested_machine($c));
+}
+
+sub clone_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $base = _search_requested_machine($c);
+    return quick_start_domain($c, $base->id);
 }
 
 app->start;
