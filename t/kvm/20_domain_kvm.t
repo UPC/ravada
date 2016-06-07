@@ -127,6 +127,15 @@ sub test_domain{
         ok(!$domain->is_base,"Domain shouldn't be base "
             .Dumper($domain->_select_domain_db()));
 
+        # test list domains
+        my @list_domains = $ravada->list_domains();
+        ok(@list_domains,"No domains in list");
+        my $list_domains_data = $ravada->list_domains_data();
+        ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
+        my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
+        ok($is_base eq '0',"Mangled is base '$is_base' ".Dumper($list_domains_data));
+
+        # test prepare base
         test_prepare_base($domain);
         ok($domain->is_base,"Domain should be base"
             .Dumper($domain->_select_domain_db())
@@ -160,8 +169,10 @@ sub test_domain_missing_in_db {
 
     my $n_domains = scalar $ravada->list_domains();
     my $domain = test_new_domain($active);
+    ok($ravada->list_domains > $n_domains,"There should be more than $n_domains");
 
     if (ok($domain,"test domain not created")) {
+
         my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
         $sth->execute($domain->id);
 
@@ -171,6 +182,10 @@ sub test_domain_missing_in_db {
         my $vm_domain;
         eval { $vm_domain = $ravada->vm->[0]->vm->get_domain_by_name($domain->name)};
         ok($vm_domain,"I can't find the domain in the VM") or return;
+
+        my @list_domains = $ravada->list_domains;
+        ok($ravada->list_domains == $n_domains,"There should be only $n_domains domains "
+                                        .", there are ".scalar(@list_domains));
 
         test_remove_domain($domain->name);
     }
@@ -216,9 +231,9 @@ sub remove_old_domains {
 test_vm_kvm();
 
 remove_old_domains();
+test_domain();
 test_domain_missing_in_db();
 test_domain_inactive();
-test_domain();
 test_domain_by_name();
 test_prepare_import();
 
