@@ -7,6 +7,7 @@
              <td><a href="/machine/{{machine.id}}">{{machine.name}}</a></td>
              <td>{{machine.is_base}}</td>
              <td>{{machine.is_active}}</td>
+             <td ng-show="{{machine.is_base}}"><a href="/machine/view/{{machine.id}}.html">view</a></td>
          </tr>
      </table>
 
