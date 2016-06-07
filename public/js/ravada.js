@@ -29,4 +29,21 @@ var app = angular.module("ravada.app",[]);
 
     });
 
+// list machines
+    app.controller("machines",[ '$scope', '$http', function($scope, $http) {
+
+        $http.get('/list_machines.json').then(function(response) {
+                $scope.list_machines= response.data;
+        });
+
+    }]);
+
+    app.directive("solShowListmachines",function() {
+
+        return {
+            restrict: "E",
+            templateUrl: '/templates/list_machines.html',
+        };
+
+    });
 
