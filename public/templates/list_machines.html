@@ -1,0 +1,12 @@
+<h2>Machines</h2>
+<a href="/machines/new">New Machine</a><br/>
+
+     <table class="unstyled" border="1">
+         <tr><td></td><td>is base</td><td>is active</td></tr>
+         <tr ng-repeat="machine in list_machines">
+             <td><a href="/machine/{{machine.id}}">{{machine.name}}</a></td>
+             <td>{{machine.is_base}}</td>
+             <td>{{machine.is_active}}</td>
+         </tr>
+     </table>
+
