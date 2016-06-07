@@ -20,7 +20,7 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain = $name if ref($name);
-    $domain = $ravada->search_domain($name);
+    $domain = $ravada->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
@@ -32,7 +32,7 @@ sub test_remove_domain {
                 if  $domain->file_base_img;
 
     }
-    $domain = $ravada->search_domain($name);
+    $domain = $ravada->search_domain($name,1);
     ok(!$domain, "I can't remove old domain $name") or exit;
 
 }
