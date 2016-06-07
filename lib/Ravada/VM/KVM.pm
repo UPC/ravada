@@ -369,7 +369,7 @@ sub _domain_create_from_base {
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create;
 
-    my $domain = Ravada::Domain::KVM->create(domain => $dom , storage => $self->storage_pool);
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
 
     $domain->_insert_db(name => $args{name}, id_base => $base->id);
     return $domain;
