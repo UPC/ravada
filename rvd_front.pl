@@ -105,7 +105,7 @@ get '/list_images.json' => sub {
     $c->render(json => $RAVADA->list_images_data);
 };
 
-get '/list_domains.json' => sub {
+get '/list_machines.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_domains_data);
 };
