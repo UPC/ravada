@@ -6,12 +6,9 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main">
     <div class="jumbotron">
-        <h2>Domains</h2>
-        <ul>
-%       for (@$domains) {
-            <li><%= $_->name %></li>
-%       }
-        </ul>
+          <div ng-controller="machines">
+            <sol-show-machines></sol-show-machines>
+           </div>
     </div>
     </div>
     %= include 'bootstrap/scripts'
