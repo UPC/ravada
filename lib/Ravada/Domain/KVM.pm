@@ -227,7 +227,7 @@ Returns whether the domain is running or not
 
 sub is_active {
     my $self = shift;
-    return $self->domain->is_active;
+    return ( $self->domain->is_active or 0);
 }
 
 =head2 start

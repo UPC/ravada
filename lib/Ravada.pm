@@ -208,15 +208,15 @@ List all domains in raw format. Return a list of id => { name , id , is_active ,
 sub list_domains_data {
     my $self = shift;
     my @domains;
-    for ($self->list_domains()) {
-        push @domains,{ $_->id => {     id => $_->id 
-                                    , name => $_->name
-                                  ,is_base => $_->is_base
-                                ,is_active => $_->is_active
-                               }
+    for my $domain ($self->list_domains()) {
+        push @domains, {                id => $domain->id 
+                                    , name => $domain->name
+                                  ,is_base => $domain->is_base
+                                ,is_active => $domain->is_active
+                               
                            }
     }
-    
+    return \@domains;
 }
 
 

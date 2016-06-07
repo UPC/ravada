@@ -155,7 +155,8 @@ sub is_base {
     my $self = shift;
     $self->_select_domain_db or return;
 
-    return $self->_data('is_base') =~ /y/i 
+    return 1 if $self->_data('is_base') =~ /y/i;
+    return 0;
 };
 
 1;

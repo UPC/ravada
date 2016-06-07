@@ -191,13 +191,14 @@ sub list_domains {
     my @list;
     for my $name ($self->vm->list_all_domains()) {
         my $domain ;
+        my $id;
         eval { $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
                     );
-             $domain->id();
+             $id = $domain->id();
         };
-        push @list,($domain) if $domain;
+        push @list,($domain) if $domain && $id;
     }
     return @list;
 }
