@@ -13,3 +13,6 @@ At the end, in "Test Summary Report" you can check the result.
 If something goes wrong you see: 
     Result: FAIL    
 
+##Run a single test
+
+    $ make && sudo prove -b t/lxc/*t
