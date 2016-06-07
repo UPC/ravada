@@ -1,18 +1,14 @@
 
 <!DOCTYPE html>
-<html>
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main">
     <div class="jumbotron">
-        <h2>Virtual Machines</h2>
-        <a href="/machines/new">New Machine</a><br/>
-        <ul>
-%       for (@$domains) {
-            <li><%= $_->name %></li>
-%       }
-        </ul>
+        <div ng-controller="machines">
+            <sol-show-listmachines></sol-show-listmachines>
+        </div>
     </div>
     </div>
     %= include 'bootstrap/scripts'
