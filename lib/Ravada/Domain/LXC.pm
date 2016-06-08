@@ -9,6 +9,8 @@ use IPC::Run3 qw(run3);
 use Moose;
 use XML::LibXML;
 
+#with 'Ravada::Domain';
+
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
@@ -16,28 +18,44 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################
 #TODO
-sub name {
-    my $self = shift;
-}
+#sub name {
+#    my $self = shift;
+#}
 #TODO
 
-sub remove {
+sub create_container {
+ 	my $self = shift;
+    my $name = shift;
+    my @domain = ('lxc-create','-n',$name,'-t','ubuntu');
+    my ($in,$out,$err);
+    run3(\@domain,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+	return;
+}
+
+
+sub remove_container {
     my $self = shift;
-    my $base_name = $self->name;
+    my $name = shift;
     my @domain = ('lxc-destroy','-n',$name,'-f');
     my ($in,$out,$err);
     run3(\@domain,\$in,\$out,\$err);
-    #ok(!$?,"@domain \$?=$? , it should be 0 $err $out.");
-    #}
-
-    #run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
-    die "Command failed: $!" unless ($err && $? == 0);
+    return;
 }
 
-
-
+sub search_container {
+    my $self = shift;
+    my $name = shift;
+    my @info = ('lxc-info','-n',$name);
+    my ($in,$out,$err);
+    run3(\@info,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+    return;
+}
 
 sub shutdown {
     my $self = shift;
