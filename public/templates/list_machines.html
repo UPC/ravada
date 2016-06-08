@@ -2,12 +2,14 @@
 <a href="/machines/new">New Machine</a><br/>
 
      <table class="unstyled" border="1">
-         <tr><td></td><td>is base</td><td>is active</td></tr>
+         <tr><td></td><td>is base</td><td>is active</td><td colspan="2"></td></tr>
          <tr ng-repeat="machine in list_machines">
              <td><a href="/machine/{{machine.id}}">{{machine.name}}</a></td>
              <td>{{machine.is_base}}</td>
              <td>{{machine.is_active}}</td>
-             <td ng-show="{{machine.is_base}}"><a href="/machine/view/{{machine.id}}.html">view</a></td>
+             <td><a href="/machine/view/{{machine.id}}.html">view</a></td>
+             <td ng-show="{{machine.is_base}}"><a href="/machine/clone/{{machine.id}}.html">clone</a></td>
+             <td ng-show="{{!machine.is_base}}"><a href="/machine/prepare/{{machine.id}}.html">prepare base</a></td>
          </tr>
      </table>
 
