@@ -23,38 +23,41 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 #}
 #TODO
 
-sub create_container {
+sub create_domain {
  	my $self = shift;
-    my $name = shift;
-    my @domain = ('lxc-create','-n',$name,'-t','ubuntu');
+    my $name = shift or confess "Missing domain name";
+
+    my @cmd = ('lxc-create','-n',$name,'-t','ubuntu');
     my ($in,$out,$err);
-    run3(\@domain,\$in,\$out,\$err);
+    run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
 	return;
 }
 
 
-sub remove_container {
+sub remove_domain {
     my $self = shift;
-    my $name = shift;
-    my @domain = ('lxc-destroy','-n',$name,'-f');
+    my $name = shift or confess "Missing domain name";
+
+    my @cmd = ('lxc-destroy','-n',$name,'-f');
     my ($in,$out,$err);
-    run3(\@domain,\$in,\$out,\$err);
+    run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
     return;
 }
 
-sub search_container {
+sub search_domain {
     my $self = shift;
-    my $name = shift;
-    my @info = ('lxc-info','-n',$name);
+    my $container_name = $self->name;
+#    my $name = shift;
+    my @cmd = ('lxc-info','-n',$container_name);
     my ($in,$out,$err);
-    run3(\@info,\$in,\$out,\$err);
+    run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
-    return;
+    return ( $? );
 }
 
 sub shutdown {
