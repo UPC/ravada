@@ -22,6 +22,8 @@ sub test_remove_container {
       if ($domain) {
        diag("Removing container $name");
        $ravada->remove_container($name);
+        my $domain2 = $ravada->search_container($name,1);
+        ok(!$domain2,"Containter $name should be removed");
       }
 }
 
@@ -34,7 +36,7 @@ sub test_new_container {
 
     test_remove_container($name);
 
-    diag("Creating container $name");
+    diag("Creating container $name. It may take looong time the very first time.");
     $ravada->create_container($name,1);
 #    ok(!$?),"Container $name created");
 
