@@ -22,3 +22,7 @@ See docs/production.md
 ### Operation
 
 See docs/operation.md
+
+### Testing
+
+See docs/test.md
