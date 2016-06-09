@@ -122,6 +122,10 @@ get '/machine/clone/*.html' => sub {
     return clone_machine($c);
 };
 
+get '/machine/shutdown/*.html' => sub {
+        my $c = shift;
+        return shutdown_machine($c);
+};
 
 ###################################################
 
@@ -367,6 +371,7 @@ sub show_link {
     $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
+
 
 sub list_bases {
     my @bases = $RAVADA->list_bases();

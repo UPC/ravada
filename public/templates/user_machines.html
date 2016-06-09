@@ -1,0 +1,12 @@
+<div class="col-sm-4">
+<div class="panel panel-success machine" ng-repeat="machine in list_machines" ng-show="{{machine.is_base}}">
+    <div class="panel-heading">
+        <h3 class="panel-title">{{machine.name}}</h3><br>
+        <img id="screensh" src="/img/screenshot.jpg">
+    </div>
+    <div class="panel-body">
+        <button type="button" class="btn btn-success" href="/machine/view/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start this Machine</strong></button>
+        <button type="button" class="btn btn-success" ng-show="{{machine.is_active}}" href="><strong>&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i>&nbsp;Shutdown this Machine</strong></button>
+    </div>
+</div>
+</div>
