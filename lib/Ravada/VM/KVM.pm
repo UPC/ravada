@@ -271,7 +271,6 @@ sub _domain_create_from_iso {
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
-    _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, $device_disk)    if $device_disk;
 
     my $dom = $self->vm->define_domain($xml->toString());
@@ -356,7 +355,8 @@ sub _domain_create_from_base {
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
     my $device_disk = $self->_create_disk($base, $args{name});
-#    _xml_modify_cdrom($xml, $device_cdrom);
+#    _xml_modify_cdrom($xml);
+    _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
@@ -539,10 +539,6 @@ sub _xml_modify_cdrom {
     my @nodes = $doc->findnodes('/domain/devices/disk');
     for my $disk (@nodes) {
         next if $disk->getAttribute('device') ne 'cdrom';
-        if (!$iso) {
-            warn "TODO remove cdrom\n";
-            return;
-        }
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 $child->setAttribute(file => $iso);
@@ -552,6 +548,28 @@ sub _xml_modify_cdrom {
 
     }
     die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
+}
+
+sub _xml_remove_cdrom {
+    my $doc = shift;
+
+    my ($node_devices )= $doc->findnodes('/domain/devices');
+    my $devices = $doc->findnodes('/domain/devices');
+    for my $context ($devices->get_nodelist) {
+        for my $disk ($context->findnodes('./disk')) {
+#            warn $node->toString();
+            if ( $disk->nodeName eq 'disk'
+                && $disk->getAttribute('device') eq 'cdrom') {
+
+                my ($source) = $disk->findnodes('./source');
+                if ($source) {
+#                    warn "\n\t->removing ".$source->nodeName." ".$source->getAttribute('file')
+#                        ."\n";
+                    $disk->removeChild($source);
+                }
+            }
+        }
+    }
 }
 
 sub _xml_modify_disk {

@@ -155,6 +155,11 @@ sub _disk_device {
             }
         }
     }
+    if (!$img) {
+        my (@devices) = $doc->findnodes('/domain/devices/disk');
+        die "I can't find disk device FROM "
+            .join("\n",map { $_->toString() } @devices);
+    }
     return $img;
 
 }
@@ -163,7 +168,7 @@ sub _create_qcow_base {
     my $self = shift;
 
     my $base_name = $self->name;
-    my $base_img = $self->_disk_device();
+    my $base_img = $self->_disk_device() or die "I can't find disk device";
 
     my $qcow_img = $base_img;
     
