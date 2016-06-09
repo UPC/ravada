@@ -9,6 +9,7 @@ var app = angular.module("ravada.app",[]);
     }]);
 
     app.controller("SupportForm",function($scope){
+        this.user = {};
         $scope.showErr = false;
         $scope.isOkey = function() {
             if($scope.contactForm.$valid){
@@ -17,6 +18,15 @@ var app = angular.module("ravada.app",[]);
                 $scope.showErr = true;
             }
         }
+
+    });
+
+    app.directive("solShowSupportform",function() {
+
+        return {
+            restrict: "E",
+            templateUrl: '/templates/support_form.html',
+        };
 
     });
 
@@ -47,3 +57,11 @@ var app = angular.module("ravada.app",[]);
 
     });
 
+    app.directive("solShowCardsmachines",function() {
+
+        return {
+            restrict: "E",
+            templateUrl: '/templates/user_machines.html',
+        };
+
+    });
