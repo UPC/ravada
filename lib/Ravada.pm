@@ -92,7 +92,25 @@ sub _init_config {
 
 sub _create_vm {
     my $self = shift;
-    return [ Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) ];
+
+    my @vms = ();
+
+    my $vm_kvm;
+    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
+    my $err_kvm = $@;
+    push @vms,($vm_kvm) if $vm_kvm;
+
+    my $vm_lxc;
+    eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
+    push @vms,($vm_lxc) if $vm_lxc;
+    my $err_lxc = $@;
+
+    if (!@vms) {
+        die "No VMs found: $err_lxc\n$err_kvm\n";
+    }
+    return \@vms;
+
+
 }
 
 =head2 create_domain
