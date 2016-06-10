@@ -63,7 +63,7 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating container $name. It may take looong time the very first time.");
-    my $domain = $vm_lxc->create_domain(name => $name, id_iso => 1, active => $active);
+    my $domain = $vm_lxc->create_domain(name => $name, id_isotemplate => 1, active => $active);
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::LXC';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
