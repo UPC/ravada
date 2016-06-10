@@ -22,19 +22,27 @@ sub test_remove_domain {
     my $domain = $name if ref($name);
     $domain = $ravada->search_domain($name,1);
 
+    my $disks_not_removed = 0;
+
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
-        ok(!$@ , "Error removing domain $name : $@") or exit;
+        my @disks = $domain->list_disks();
+        eval { 
+            $domain->remove();
+        };
+        ok(!$@ , "Error removing domain $name ".ref($domain).": $@") or exit;
 
         ok(! -e $domain->file_base_img ,"Image file was not removed "
                     . $domain->file_base_img )
                 if  $domain->file_base_img;
+        for (@disks) {
+            ok(!-e $_,"Disk $_ should be removed") or $disks_not_removed++;
+        }
 
     }
     $domain = $ravada->search_domain($name,1);
     ok(!$domain, "I can't remove old domain $name") or exit;
-
+    ok(!$disks_not_removed,"$disks_not_removed disks not removed from domain $name");
 }
 
 sub test_new_domain {
