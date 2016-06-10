@@ -134,7 +134,6 @@ sub _create_vm {
     if (!@vms) {
         die "No VMs found: $err_lxc\n$err_kvm\n";
     }
-    warn Dumper(@vms);
     return \@vms;
 
 }
