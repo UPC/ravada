@@ -440,6 +440,24 @@ sub _req_method {
     return $methods{$cmd};
 }
 
+=head2 search_vm
+
+Searches for a VM of a given type
+
+  my $vm = $ravada->search_vm('kvm');
+
+=cut
+
+sub search_vm {
+    my $self = shift;
+    my $type = shift;
+
+    my $class = 'Ravada::VM::'.uc($type);
+    for my $vm (@{$self->vm}) {
+        return $vm if ref($vm) eq $class;
+    }
+    return;
+}
 
 =head1 AUTHOR
 
