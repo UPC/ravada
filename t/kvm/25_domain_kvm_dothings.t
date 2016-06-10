@@ -54,6 +54,13 @@ sub remove_old_disks {
 
 ##############################################################
 
+my $vm = $RAVADA->search_vm('kvm');
+SKIP: {
+    my $msg = "SKIPPED test: No VM backend found";
+    diag($msg)      if !$vm;
+    skip $msg,10    if !$vm;
+
+
 remove_old_disks();
 my ($name) = $0 =~ m{.*/(.*)\.t};
 $name .= "_0";
@@ -88,6 +95,7 @@ ok($domain,"Domain not created") and do {
         };
     };
 };
+}
 
 done_testing();
 

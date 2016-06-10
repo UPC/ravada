@@ -213,6 +213,11 @@ sub test_dont_allow_remove_base_before_sons {
 }
 
 ################################################################
+my $vm = $RAVADA->search_vm('kvm');
+SKIP: {
+    my $msg = "SKIPPED test: No VM backend found";
+    diag($msg)      if !$vm;
+    skip $msg,10    if !$vm;
 
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);
@@ -230,5 +235,7 @@ if (ok($domain,"test domain not created")) {
 
     test_dont_allow_remove_base_before_sons();
 }
+
+};
 
 done_testing();
