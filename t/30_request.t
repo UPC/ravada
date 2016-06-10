@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
@@ -94,9 +95,10 @@ sub test_req_create_base {
 
     my $domain =  $ravada->search_domain($name);
 
-    ok($domain,"I can't find domain $name");
-    $domain->prepare_base();
-    ok($domain && $domain->is_base,"Domain $name should be base");
+    ok($domain,"I can't find domain $name") && do {
+        $domain->prepare_base();
+        ok($domain && $domain->is_base,"Domain $name should be base");
+    };
     return $domain;
 }
 
@@ -130,7 +132,8 @@ sub remove_old_disks {
     my ($name) = $0 =~ m{.*/(.*)\.t};
 
     my $vm = $ravada->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
+    return if !$vm;
+    ok($vm,"I can't find a KVM virtual manager");
 
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
