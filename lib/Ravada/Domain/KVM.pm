@@ -74,6 +74,12 @@ sub list_disks {
     return @disks;
 }
 
+=head2 remove_disks
+
+Remove the volume files of the domain
+
+=cut
+
 sub remove_disks {
     my $self = shift;
 
@@ -83,8 +89,7 @@ sub remove_disks {
             warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
             next;
         }
-        warn "removing $file\n";
-        $self->vol_remove($file);
+        $self->_vol_remove($file);
         if ( -e $file ) {
             unlink $file or die "$! $file";
         }
@@ -97,7 +102,7 @@ sub remove_disks {
 
 }
 
-sub vol_remove {
+sub _vol_remove {
     my $self = shift;
     my $file = shift;
     my $warning = shift;
@@ -120,7 +125,7 @@ sub remove {
 
     $self->_wait_down();
 
-    $self->vol_remove($self->file_base_img,1) if $self->file_base_img();
+    $self->_vol_remove($self->file_base_img,1) if $self->file_base_img();
     $self->domain->destroy   if $self->domain->is_active();
 
     eval {
@@ -142,7 +147,7 @@ sub remove_file_image {
 
     return if !$file;
 
-    $self->vol_remove($file,1);
+    $self->_vol_remove($file,1);
     unlink $file or die "$! $file" if -e $file;
 }
 
