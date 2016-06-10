@@ -10,12 +10,12 @@ use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $ravada = Ravada->new( connector => $test->connector);
+my $RAVADA = Ravada->new( connector => $test->connector);
 
 my $CONT= 0;
 
 sub test_vm_kvm {
-    my $vm = $ravada->vm->[0];
+    my $vm = $RAVADA->search_vm('kvm');
     ok($vm,"No vm found") or exit;
     ok(ref($vm) =~ /KVM$/,"vm is no kvm ".ref($vm)) or exit;
 
@@ -27,13 +27,13 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $ravada->search_domain($name,1);
+    $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
         $domain->remove();
     }
-    $domain = $ravada->search_domain($name);
+    $domain = $RAVADA->search_domain($name);
     die "I can't remove old domain $name"
         if $domain;
 
@@ -44,9 +44,9 @@ sub test_remove_domain_by_name {
     my $name = shift;
 
     diag("Removing domain $name");
-    $ravada->remove_domain($name);
+    $RAVADA->remove_domain($name);
 
-    my $domain = $ravada->search_domain($name, 1);
+    my $domain = $RAVADA->search_domain($name, 1);
     die "I can't remove old domain $name"
         if $domain;
 
@@ -70,7 +70,7 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $ravada->create_domain(name => $name, id_iso => 1, active => $active);
+    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active);
 
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
@@ -85,7 +85,7 @@ sub test_new_domain {
     my $row =  search_domain_db($domain->name);
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
 
-    my $domain2 = $ravada->search_domain_by_id($domain->id);
+    my $domain2 = $RAVADA->search_domain_by_id($domain->id);
     ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
     ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
         .$domain2->name);
@@ -114,11 +114,11 @@ sub test_domain{
     my $active = shift;
     $active = 1 if !defined $active;
 
-    my $n_domains = scalar $ravada->list_domains();
+    my $n_domains = scalar $RAVADA->list_domains();
     my $domain = test_new_domain($active);
 
     if (ok($domain,"test domain not created")) {
-        my @list = $ravada->list_domains();
+        my @list = $RAVADA->list_domains();
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
             .($n_domains+1)
             ." "
@@ -128,9 +128,9 @@ sub test_domain{
             .Dumper($domain->_select_domain_db()));
 
         # test list domains
-        my @list_domains = $ravada->list_domains();
+        my @list_domains = $RAVADA->list_domains();
         ok(@list_domains,"No domains in list");
-        my $list_domains_data = $ravada->list_domains_data();
+        my $list_domains_data = $RAVADA->list_domains_data();
         ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
         my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
         ok($is_base eq '0',"Mangled is base '$is_base' ".Dumper($list_domains_data));
@@ -146,7 +146,7 @@ sub test_domain{
 
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
         my $vm_domain;
-        eval { $vm_domain = $ravada->vm->[0]->vm->get_domain_by_name($domain->name)};
+        eval { $vm_domain = $RAVADA->vm->[0]->vm->get_domain_by_name($domain->name)};
         ok($vm_domain,"Domain ".$domain->name." missing in VM") or exit;
 
         test_remove_domain($domain->name);
@@ -155,7 +155,7 @@ sub test_domain{
 
 sub test_domain_in_virsh {
     my $name = shift;
-    for my $vm_domain ($ravada->vm->[0]->vm->list_all_domains) {
+    for my $vm_domain ($RAVADA->vm->[0]->vm->list_all_domains) {
         return 1 if $vm_domain->get_name eq $name;
     }
     return 0;
@@ -167,24 +167,24 @@ sub test_domain_missing_in_db {
     my $active = shift;
     $active = 1 if !defined $active;
 
-    my $n_domains = scalar $ravada->list_domains();
+    my $n_domains = scalar $RAVADA->list_domains();
     my $domain = test_new_domain($active);
-    ok($ravada->list_domains > $n_domains,"There should be more than $n_domains");
+    ok($RAVADA->list_domains > $n_domains,"There should be more than $n_domains");
 
     if (ok($domain,"test domain not created")) {
 
         my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
         $sth->execute($domain->id);
 
-        my $domain2 = $ravada->search_domain($domain->name);
+        my $domain2 = $RAVADA->search_domain($domain->name);
         ok(!$domain2,"This domain should not show up in Ravada, it's not in the DB");
 
         my $vm_domain;
-        eval { $vm_domain = $ravada->vm->[0]->vm->get_domain_by_name($domain->name)};
+        eval { $vm_domain = $RAVADA->vm->[0]->vm->get_domain_by_name($domain->name)};
         ok($vm_domain,"I can't find the domain in the VM") or return;
 
-        my @list_domains = $ravada->list_domains;
-        ok($ravada->list_domains == $n_domains,"There should be only $n_domains domains "
+        my @list_domains = $RAVADA->list_domains;
+        ok($RAVADA->list_domains == $n_domains,"There should be only $n_domains domains "
                                         .", there are ".scalar(@list_domains));
 
         test_remove_domain($domain->name);
@@ -226,11 +226,30 @@ sub remove_old_domains {
     }
 }
 
+sub remove_old_disks {
+    my ($name) = $0 =~ m{.*/(.*)\.t};
+
+    my $vm = $RAVADA->search_vm('kvm');
+    ok($vm,"I can't find a KVM virtual manager") or return;
+
+    my $dir_img = $vm->dir_img();
+    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
+
+    for my $count ( 0 .. 10 ) {
+        my $disk = $dir_img."/$name"."_$count.img";
+        if ( -e $disk ) {
+            unlink $disk or die "I can't remove $disk";
+        }
+    }
+    $vm->storage_pool->refresh();
+}
+
 ################################################################
 
 test_vm_kvm();
 
 remove_old_domains();
+remove_old_disks();
 test_domain();
 test_domain_missing_in_db();
 test_domain_inactive();

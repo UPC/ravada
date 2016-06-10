@@ -10,8 +10,7 @@ use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $ravada = Ravada->new( connector => $test->connector);
-my @PIDS;
+my $RAVADA = Ravada->new( connector => $test->connector);
 my $REMOTE_VIEWER = `which remote-viewer`;
 chomp $REMOTE_VIEWER;
 
@@ -22,32 +21,46 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $ravada->search_domain($name);
+    $domain = $RAVADA->search_domain($name);
 
     if ($domain) {
         diag("Removing domain $name");
         $domain->remove();
     }
-    $domain = $ravada->search_domain($name);
+    $domain = $RAVADA->search_domain($name);
     die "I can't remove old domain $name"
         if $domain;
 
 }
 
+sub remove_old_disks {
+    my ($name) = $0 =~ m{.*/(.*)\.t};
+
+    my $vm = $RAVADA->search_vm('kvm');
+    ok($vm,"I can't find a KVM virtual manager") or return;
+
+    my $dir_img = $vm->dir_img();
+    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
+
+    for my $count ( 0 .. 10 ) {
+        my $disk = $dir_img."/$name"."_$count.img";
+        if ( -e $disk ) {
+            unlink $disk or die "I can't remove $disk";
+        }
+    }
+    $vm->storage_pool->refresh();
+}
+
+
 ##############################################################
 
-END {
-    return if !@PIDS;
-    diag("Killing ".join(",",@PIDS));
-    kill(15,@PIDS);
-    kill(7,@PIDS);
-};
-
+remove_old_disks();
 my ($name) = $0 =~ m{.*/(.*)\.t};
+$name .= "_0";
 
 test_remove_domain($name);
 
-my $domain = $ravada->create_domain(name => $name, id_iso => 1 , active => 0);
+my $domain = $RAVADA->create_domain(name => $name, id_iso => 1 , active => 0);
 
 
 ok($domain,"Domain not created") and do {
