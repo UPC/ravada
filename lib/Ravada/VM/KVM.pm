@@ -93,7 +93,17 @@ sub _load_storage_pool {
 
 }
 
+=head2 dir_img
+
+Returns the directory where disk images are stored in this Virtual Manager
+
+=cut
+
 sub dir_img {
+    my $self = shift;
+    return $DEFAULT_DIR_IMG if $DEFAULT_DIR_IMG;
+    
+    $self->_load_storage_pool();
     return $DEFAULT_DIR_IMG;
 }
 
