@@ -18,7 +18,7 @@ requires 'shutdown';
 requires 'pause';
 
 has 'domain' => (
-    isa => 'Object'
+    isa => 'Any'
     ,is => 'ro'
 );
 
