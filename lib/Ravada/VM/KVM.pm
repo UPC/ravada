@@ -277,10 +277,12 @@ sub _domain_create_from_iso {
     my $iso = $self->_search_iso($args{id_iso});
 
     my $device_cdrom = _iso_name($iso);
+
     my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume});
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
+    _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, $device_disk)    if $device_disk;
 
     my $dom = $self->vm->define_domain($xml->toString());
