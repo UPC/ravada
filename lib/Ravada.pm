@@ -111,8 +111,6 @@ sub _create_vm_kvm {
 
         $storage = $vm_kvm->dir_img();
     };
-    warn $internal_vm;
-    warn $storage;
     $vm_kvm = undef if $@ || !$internal_vm || !$storage;
     return ($vm_kvm,$@);
 }
