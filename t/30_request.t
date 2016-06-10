@@ -9,7 +9,7 @@ use_ok('Ravada::Request');
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
-my $ravada = Ravada->new(connector => $test->connector);
+my $ravada;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
@@ -126,10 +126,43 @@ sub test_req_remove_domain_name {
 
 }
 
+sub remove_old_disks {
+    my ($name) = $0 =~ m{.*/(.*)\.t};
+
+    my $vm = $ravada->search_vm('kvm');
+    ok($vm,"I can't find a KVM virtual manager") or return;
+
+    my $dir_img = $vm->dir_img();
+    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
+
+    for my $count ( 0 .. 10 ) {
+        my $disk = $dir_img."/$name"."_$count.img";
+        if ( -e $disk ) {
+            unlink $disk or die "I can't remove $disk";
+        }
+    }
+    for (qw(iso base)) {
+        my $disk = $dir_img."/$name".'_'."$_.img";
+        unlink $disk or die "I can't remove $disk"
+            if -e $disk;
+    }
+
+    $vm->storage_pool->refresh();
+}
+
 
 ################################################
+eval { $ravada = Ravada->new(connector => $test->connector) };
+
+ok($ravada,"I can't launch a new Ravada") or exit;
+
+my $vm_kvm = $ravada->search_vm('kvm');
+my $vm_lxc = $ravada->search_vm('lxc');
+
+ok($vm_kvm || $vm_lxc,"No KVM nor LXC virtual managers found") or exit;
 
 test_remove_domain($DOMAIN_NAME."_iso");
+remove_old_disks();
 
 {
     my $domain = test_req_create_domain_iso();
