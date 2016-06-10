@@ -55,8 +55,11 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##########################################################################
 
-sub BUILD {
-}
+=head2 connect
+
+Connect to the Virtual Machine Manager
+
+=cut
 
 sub connect {
     my $self = shift;
