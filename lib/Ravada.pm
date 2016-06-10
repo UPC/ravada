@@ -10,6 +10,7 @@ use YAML;
 
 use Ravada::Request;
 use Ravada::VM::KVM;
+use Ravada::VM::LXC;
 
 =head1 NAME
 
@@ -90,14 +91,39 @@ sub _init_config {
     _connect_dbh();
 }
 
+sub _create_vm_kvm {
+    my $self = shift;
+
+    my $cmd_qemu_img = `which qemu-img`;
+    chomp $cmd_qemu_img;
+
+    return(undef,"ERROR: Missing qemu-img") if !$cmd_qemu_img;
+
+    my $vm_kvm;
+
+    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
+    my $err_kvm = $@;
+
+    my ($internal_vm , $storage);
+    eval {
+        $internal_vm = $vm_kvm->vm;
+        $internal_vm->list_all_domains();
+
+        $storage = $vm_kvm->dir_img();
+    };
+    warn $internal_vm;
+    warn $storage;
+    $vm_kvm = undef if $@ || !$internal_vm || !$storage;
+    return ($vm_kvm,$@);
+}
+
 sub _create_vm {
     my $self = shift;
 
     my @vms = ();
 
-    my $vm_kvm;
-    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
-    my $err_kvm = $@;
+    my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
+
     push @vms,($vm_kvm) if $vm_kvm;
 
     my $vm_lxc;
@@ -108,8 +134,8 @@ sub _create_vm {
     if (!@vms) {
         die "No VMs found: $err_lxc\n$err_kvm\n";
     }
+    warn Dumper(@vms);
     return \@vms;
-
 
 }
 
