@@ -141,10 +141,14 @@ SKIP: {
 
     my $msg = ($@ or "No LXC vitual manager found");
 
+    my $vm = $ravada->search_vm('lxc');
+
     if (!$vm_lxc) {
+        ok(!$vm,"There should be no LXC backends");
         diag("SKIPPING LXC tests: $msg");
         skip $msg,10;
     }
+    ok($vm,"I can't find a LXC virtual manager from ravada");
     my $domain = test_domain();
 
 #test_new_domain();
