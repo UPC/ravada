@@ -1,6 +1,9 @@
 package Ravada::VM::LXC;
 
-use Carp qw(croak);
+use warnings;
+use strict;
+
+use Carp qw(carp croak);
 use Data::Dumper;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
@@ -13,12 +16,13 @@ use XML::LibXML;
 
 with 'Ravada::VM';
 
-our $CMD_LXC;
+our $CMD_LXC_LS;
 
 sub BUILD {
     my $self = shift;
-    $self->connect();
-    die "No LXC backend found\n" if !$CMD_LXC;
+
+    $self->connect()                if !defined $CMD_LXC_LS;
+    die "No LXC backend found\n"    if !$CMD_LXC_LS;
 }
 
 sub connect {
@@ -33,12 +37,12 @@ sub connect {
 #
 #Reference: https://help.ubuntu.com/lts/serverguide/lxc.html#lxc-startup
 #
-    return $CMD_LXC if $CMD_LXC;
+    return $CMD_LXC_LS if defined $CMD_LXC_LS;
 
-    $CMD_LXC = `which lxc`;
-    chomp $CMD_LXC;
+    $CMD_LXC_LS = `which lxc-ls`;
+    chomp $CMD_LXC_LS;
 
-    return $CMD_LXC;
+    return $CMD_LXC_LS;
 }
 
 sub create_domain {

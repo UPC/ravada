@@ -147,6 +147,15 @@ SKIP: {
         ok(!$vm,"There should be no LXC backends");
         diag("SKIPPING LXC tests: $msg");
         skip $msg,10;
+    } else {
+        $Ravada::VM::LXC::CMD_LXC_LS = '';
+        # twice to ignore warnings
+        $Ravada::VM::LXC::CMD_LXC_LS = '';
+        diag("Testing missing LXC");
+
+        my $ravada2 = Ravada->new();
+        my $vm2 = $ravada2->search_vm('lxc');
+        ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
     }
     ok($vm,"I can't find a LXC virtual manager from ravada");
     my $domain = test_domain();
