@@ -56,7 +56,7 @@ sub create_domain {
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
-    if ($args{id_template}) {
+    if ($args{id_iso}) {
         $domain = $self->_domain_create_from_template(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
@@ -77,21 +77,17 @@ sub _domain_create_from_template {
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
     
-    my $vm = $self->vm;
-    my $template = $args{id_iso};
+    my $template = "ubuntu";
     my $name = $args{name};
 
     my @cmd = ('lxc-create','-n',$name,'-t', $template);
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
-    warn $err   if $err;
+    die $err   if $?;
 
-    my $dom = $self->vm;
-    $dom->create if $args{active};
-
-    my $domain = Ravada::Domain::LXC->new(domain => $dom);
-    #$domain->_insert_db(name => $args{name});
+    my $domain = Ravada::Domain::LXC->new(domain => $args{name});
+    $domain->_insert_db(name => $args{name});
     return $domain;
 }
 
@@ -101,15 +97,39 @@ sub _domain_create_from_base {
 
 sub search_domain {
     my $self = shift;
-    my $name = $self->name;
-  
-    my @cmd = ('lxc-info','-n',$name);
+    my $name = shift;
+
+    my @cmd = ('lxc-ls','-f');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
-    warn $out  if $out;
+    warn $out  if !$out;
     warn $err   if $err;
-    return ( $? );
+    my $domain;
+
+    for ( split /\n/,$out ) {
+        my ($out_name) = /(\w+) /;
+        next if $out_name ne $name;
+        eval { 
+            $domain = $name;
+        };
+    return $domain if $domain;
+    }
+    return;
 }
+
+
+
+# sub search_domain {
+#     my $self = shift;
+#     my $name = shift;
+  
+#     my @cmd = ('lxc-info','-n',$name);
+#     my ($in,$out,$err);
+#     run3(\@cmd,\$in,\$out,\$err);
+#     warn $out  if $out;
+#     warn $err   if $err;
+#     return if !$out || $?==1;
+# }
 
 sub search_domain_by_id {
    }

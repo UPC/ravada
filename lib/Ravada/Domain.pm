@@ -127,7 +127,7 @@ sub _insert_db {
     my $sth = $$CONNECTOR->dbh->prepare($query);
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
-        warn "$query\n".Dumper(\%field);
+        #warn "$query\n".Dumper(\%field);
         die $@;
     }
     $sth->finish;

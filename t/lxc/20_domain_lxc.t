@@ -22,14 +22,14 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $ravada->search_domain($name,1);
-
+    $domain = $ravada->search_domain($name);
+diag("Domini => $domain");
     if ($domain) {
         diag("Removing domain $name");
         eval { $domain->remove() };
         ok(!$@ , "Error removing domain $name : $@") or exit;
     }
-    $domain = $ravada->search_domain($name,1);
+    $domain = $ravada->search_domain($name);
     ok(!$domain, "I can't remove old domain $name") or exit;
 }
 
@@ -39,7 +39,7 @@ sub test_remove_domain_by_name {
     diag("Removing domain $name");
     $ravada->remove_domain($name);
 
-    my $domain = $ravada->search_domain($name, 1);
+    my $domain = $ravada->search_domain($name);
     die "I can't remove old domain $name"
         if $domain;
 
@@ -90,13 +90,12 @@ sub test_domain_inactive {
 }
 
 sub test_domain{
-
     my $active = shift;
     $active = 1 if !defined $active;
 
     my $n_domains = scalar $ravada->list_domains();
     my $domain = test_new_domain($active);
-
+    
     if (ok($domain,"test domain not created")) {
         my @list = $ravada->list_domains();
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
@@ -158,11 +157,12 @@ SKIP: {
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
     }
     ok($vm,"I can't find a LXC virtual manager from ravada");
-    my $domain = test_domain();
+    #my $domain = test_domain();
 
 #test_new_domain();
+my $domain = test_new_domain();
 
-#test_remove_container( $domain );
+#test_remove_domain( $name);
 
 }
 

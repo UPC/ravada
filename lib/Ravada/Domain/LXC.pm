@@ -21,7 +21,9 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub name {
     my $self = shift;
+    $self->_select_domain_db or return;
 
+    return 1 if $self->_data('name');
 }
 
 sub remove {
