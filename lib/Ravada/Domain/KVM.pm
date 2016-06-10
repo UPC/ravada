@@ -55,30 +55,43 @@ sub _wait_down {
 
 }
 
-sub remove_disks {
+sub list_disks {
     my $self = shift;
+    my @disks = ();
 
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
-    my $removed = 0;
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
 
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 my $file = $child->getAttribute('file');
-                if (! -e $file ) {
-                    warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
-                    next;
-                }
-                $self->vol_remove($file);
-                if ( -e $file ) {
-                    unlink $file or die "$! $file";
-                }
-                $removed++;
+                push @disks,($file);
             }
         }
     }
+    return @disks;
+}
+
+sub remove_disks {
+    my $self = shift;
+
+    my $removed = 0;
+    for my $file ($self->list_disks) {
+        if (! -e $file ) {
+            warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
+            next;
+        }
+        warn "removing $file\n";
+        $self->vol_remove($file);
+        if ( -e $file ) {
+            unlink $file or die "$! $file";
+        }
+        $removed++;
+
+    }
+
     warn "WARNING: No disk files removed for ".$self->domain->get_name."\n"
         if !$removed;
 
@@ -110,8 +123,12 @@ sub remove {
     $self->vol_remove($self->file_base_img,1) if $self->file_base_img();
     $self->domain->destroy   if $self->domain->is_active();
 
+    eval {
     $self->remove_disks();
     $self->remove_file_image();
+    };
+    warn "WARNING: Problem removing disks for ".$self->name." : $@"
+        if $@;
 
     $self->domain->undefine();
 
