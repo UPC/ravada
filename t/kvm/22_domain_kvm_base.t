@@ -12,7 +12,9 @@ use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA = Ravada->new( connector => $test->connector);
+my $RAVADA;
+
+eval { $RAVADA = Ravada->new( connector => $test->connector) };
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
@@ -213,9 +215,12 @@ sub test_dont_allow_remove_base_before_sons {
 }
 
 ################################################################
-my $vm = $RAVADA->search_vm('kvm');
+my $vm;
+
+eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+
 SKIP: {
-    my $msg = "SKIPPED test: No VM backend found";
+    my $msg = "SKIPPED test: No KVM backend found";
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

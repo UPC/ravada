@@ -32,8 +32,13 @@ sub test_search_vm {
 
 #######################################################
 
-my $RAVADA = Ravada->new();
-my $vm = $RAVADA->search_vm('kvm');
+my $RAVADA;
+eval { $RAVADA = Ravada->new() };
+
+my $vm;
+
+eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+
 SKIP: {
     my $msg = "SKIPPED test: No VM backend found";
     diag($msg)      if !$vm;

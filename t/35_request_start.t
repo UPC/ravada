@@ -9,7 +9,9 @@ use_ok('Ravada::Request');
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
-my $ravada = Ravada->new(connector => $test->connector);
+my $ravada;
+
+eval { $ravada = Ravada->new(connector => $test->connector) };
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 
@@ -113,7 +115,17 @@ sub test_start {
 
 ###############################################################
 #
-test_start();
 
+my $vmm;
+
+eval { $vmm = $ravada->search_vm() if $ravada };
+
+SKIP: {
+    my $msg = "SKIPPED: No virtual managers found";
+    diag($msg) if !$vmm;
+    skip($msg,10) if !$vmm;
+
+    test_start();
+};
 done_testing();
 

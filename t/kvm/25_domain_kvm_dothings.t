@@ -10,7 +10,9 @@ use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA = Ravada->new( connector => $test->connector);
+my $RAVADA;
+
+eval { $RAVADA = Ravada->new( connector => $test->connector) };
 my $REMOTE_VIEWER = `which remote-viewer`;
 chomp $REMOTE_VIEWER;
 
@@ -54,9 +56,10 @@ sub remove_old_disks {
 
 ##############################################################
 
-my $vm = $RAVADA->search_vm('kvm');
+my $vm;
+eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
-    my $msg = "SKIPPED test: No VM backend found";
+    my $msg = "SKIPPED test: No KVM backend found";
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

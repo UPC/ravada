@@ -157,12 +157,16 @@ sub remove_old_disks {
 ################################################
 eval { $ravada = Ravada->new(connector => $test->connector) };
 
-ok($ravada,"I can't launch a new Ravada") or exit;
+ok($ravada,"I can't launch a new Ravada");# or exit;
 
-my $vm_kvm = $ravada->search_vm('kvm');
-my $vm_lxc = $ravada->search_vm('lxc');
+my ($vm_kvm, $vm_lxc);
+eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada };
+eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada };
 
-ok($vm_kvm || $vm_lxc,"No KVM nor LXC virtual managers found") or exit;
+SKIP: {
+    my $msg = "SKIPPED: No KVM nor LXC virtual managers found";
+    diag($msg) if !$vm_kvm && !$vm_lxc;
+    skip($msg,10) if !$vm_kvm && !$vm_lxc;
 
 test_remove_domain($DOMAIN_NAME."_iso");
 remove_old_disks();
@@ -184,5 +188,7 @@ remove_old_disks();
 
 
 test_remove_domain($DOMAIN_NAME."_iso");
+
+};
 
 done_testing();

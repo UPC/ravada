@@ -477,6 +477,8 @@ sub search_vm {
     my $self = shift;
     my $type = shift;
 
+    confess "Missing VM type"   if !$type;
+
     my $class = 'Ravada::VM::'.uc($type);
     for my $vm (@{$self->vm}) {
         return $vm if ref($vm) eq $class;
