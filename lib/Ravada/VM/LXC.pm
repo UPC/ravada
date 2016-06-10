@@ -13,6 +13,14 @@ use XML::LibXML;
 
 with 'Ravada::VM';
 
+our $CMD_LXC;
+
+sub BUILD {
+    my $self = shift;
+    $self->connect();
+    die "No LXC backend found\n" if !$CMD_LXC;
+}
+
 sub connect {
 
 #There are two user-space implementations of containers, each exploiting the same kernel
@@ -25,7 +33,12 @@ sub connect {
 #
 #Reference: https://help.ubuntu.com/lts/serverguide/lxc.html#lxc-startup
 #
+    return $CMD_LXC if $CMD_LXC;
 
+    $CMD_LXC = `which lxc`;
+    chomp $CMD_LXC;
+
+    return $CMD_LXC;
 }
 
 sub create_domain {

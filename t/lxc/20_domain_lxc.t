@@ -11,8 +11,9 @@ use_ok('Ravada::Domain::LXC');
 use_ok('Ravada::VM::LXC');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $ravada= Ravada->new();
-my $vm_lxc = Ravada::VM::LXC->new(); 
+my $ravada= Ravada->new( connector => $test->connector);
+my $vm_lxc;
+
 
 my $CONT= 0;
 
@@ -135,11 +136,21 @@ sub test_domain{
 
 
 ################################################################
-my $domain = test_domain();
+eval { $vm_lxc = Ravada::VM::LXC->new() };
+SKIP: {
+
+    my $msg = ($@ or "No LXC vitual manager found");
+
+    if (!$vm_lxc) {
+        diag("SKIPPING LXC tests: $msg");
+        skip $msg,10;
+    }
+    my $domain = test_domain();
 
 #test_new_domain();
 
 #test_remove_container( $domain );
 
+}
 
 done_testing();
