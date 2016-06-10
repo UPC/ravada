@@ -9,7 +9,7 @@ use IPC::Run3 qw(run3);
 use Moose;
 use XML::LibXML;
 
-#with 'Ravada::Domain';
+with 'Ravada::Domain';
 
 ##################################################
 #
@@ -17,26 +17,14 @@ our $TIMEOUT_SHUTDOWN = 60;
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################
-#TODO
-#sub name {
-#    my $self = shift;
-#}
-#TODO
 
-sub create_domain {
- 	my $self = shift;
-    my $name = shift or confess "Missing domain name";
 
-    my @cmd = ('lxc-create','-n',$name,'-t','ubuntu');
-    my ($in,$out,$err);
-    run3(\@cmd,\$in,\$out,\$err);
-    warn $out  if $out;
-    warn $err   if $err;
-	return;
+sub name {
+    my $self = shift;
+
 }
 
-
-sub remove_domain {
+sub remove {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
 
@@ -48,20 +36,39 @@ sub remove_domain {
     return;
 }
 
-sub search_domain {
+sub display {
     my $self = shift;
-    my $container_name = $self->name;
-#    my $name = shift;
-    my @cmd = ('lxc-info','-n',$container_name);
+
+}
+
+sub is_active {
+    my $self = shift;
+
+}
+
+sub start {
+    my $self = shift;
+    my $name = shift or confess "Missing domain name";
+
+    my @cmd = ('lxc-start','-n',$name);
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
-    return ( $? );
+    return;
+
 }
 
 sub shutdown {
     my $self = shift;
+    my $name = shift or confess "Missing domain name";
+
+    my @cmd = ('lxc-stop','-n',$name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+    return;
 
 }
 
@@ -73,6 +80,10 @@ Pauses the domain
 =cut
 
 sub pause {
+    my $self = shift;
+
 }
+
+
 
 1;

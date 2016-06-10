@@ -56,8 +56,8 @@ sub create_domain {
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
-    if ($args{id_iso}) {
-        $domain = $self->_domain_create_from_iso(@_);
+    if ($args{id_template}) {
+        $domain = $self->_domain_create_from_template(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
     } else {
@@ -67,15 +67,55 @@ sub create_domain {
     return $domain;
 }
 
+sub _domain_create_from_template {
+    my $self = shift;
+    my %args = @_;
+    
+    croak "argument id_iso required" 
+        if !$args{id_iso};
 
+    die "Domain $args{name} already exists"
+        if $self->search_domain($args{name});
+    
+    my $vm = $self->vm;
+    my $template = $args{id_iso};
+    my $name = $args{name};
 
-sub create_volume {
+    my @cmd = ('lxc-create','-n',$name,'-t', $template);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
 
- 
+    my $dom = $self->vm;
+    $dom->create if $args{active};
+
+    my $domain = Ravada::Domain::LXC->new(domain => $dom);
+    #$domain->_insert_db(name => $args{name});
+    return $domain;
 }
 
+sub _domain_create_from_base {
+
+}
+
+sub search_domain {
+    my $self = shift;
+    my $name = $self->name;
+  
+    my @cmd = ('lxc-info','-n',$name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+    return ( $? );
+}
+
+sub search_domain_by_id {
+   }
+
 sub list_domains {
-	# my $self = shift;
+    # my $self = shift;
 
  #    my @list;
  #    for my $name ($self->vm->list_all_domains()) {
@@ -92,48 +132,7 @@ sub list_domains {
  #    return @list;
 }
 
-sub search_domain {
-
-    # my $self = shift;
-    # my $name = shift;
-
-    # for ($self->vm->list_all_domains()) {
-    #     next if $_->get_name ne $name;
-
-    #     my $domain;
-    #     eval {
-    #         $domain = Ravada::Domain::LXC->new(
-    #             domain => $_
-    #             ,storage => $self->storage_pool
-    #         );
-    #     };
-    #     warn $@ if $@;
-    #     return $domain if $domain;
-    # }
-    # return;
-}
-
-sub search_domain_by_id {
-   }
-
-
-sub _domain_create_from_iso {
-    # my $self = shift;
-    # my %args = @_;
-
-    # croak "argument id_iso required" 
-    #     if !$args{id_iso};
-
-    # die "Domain $args{name} already exists"
-    #     if $self->search_domain($args{name});
-
-    # my $vm = $self->vm;
-    # my $storage = $self->storage_pool;
-
-    # my $iso = $self->_search_iso($args{id_iso});
-
-    
-    return 
+sub create_volume {
 }
 
 1;
