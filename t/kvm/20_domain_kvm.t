@@ -145,9 +145,10 @@ sub test_domain{
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
-        my $vm_domain;
-        eval { $vm_domain = $RAVADA->vm->[0]->vm->get_domain_by_name($domain->name)};
-        ok($vm_domain,"Domain ".$domain->name." missing in VM") or exit;
+        my $vm = $RAVADA->search_vm('kvm');
+        my $domain2;
+        eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
+        ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
 
         test_remove_domain($domain->name);
     }
@@ -155,8 +156,10 @@ sub test_domain{
 
 sub test_domain_in_virsh {
     my $name = shift;
-    for my $vm_domain ($RAVADA->vm->[0]->vm->list_all_domains) {
-        return 1 if $vm_domain->get_name eq $name;
+    my $vm = $RAVADA->search_vm('kvm');
+
+    for my $domain ($vm->vm->list_all_domains) {
+        return 1 if $domain->get_name eq $name;
     }
     return 0;
 }
@@ -179,9 +182,10 @@ sub test_domain_missing_in_db {
         my $domain2 = $RAVADA->search_domain($domain->name);
         ok(!$domain2,"This domain should not show up in Ravada, it's not in the DB");
 
-        my $vm_domain;
-        eval { $vm_domain = $RAVADA->vm->[0]->vm->get_domain_by_name($domain->name)};
-        ok($vm_domain,"I can't find the domain in the VM") or return;
+        my $vm = $RAVADA->search_vm('kvm');
+        my $domain3;
+        eval { $domain3 = $vm->vm->get_domain_by_name($domain->name)};
+        ok($domain3,"I can't find the domain in the VM") or return;
 
         my @list_domains = $RAVADA->list_domains;
         ok($RAVADA->list_domains == $n_domains,"There should be only $n_domains domains "
