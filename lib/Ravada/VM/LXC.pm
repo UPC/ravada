@@ -98,7 +98,6 @@ sub _domain_create_from_base {
 sub search_domain {
     my $self = shift;
     my $name = shift;
-
     my @cmd = ('lxc-ls','-f');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
@@ -114,22 +113,10 @@ sub search_domain {
         };
     return $domain if $domain;
     }
-    return;
+    return $name;
 }
 
 
-
-# sub search_domain {
-#     my $self = shift;
-#     my $name = shift;
-  
-#     my @cmd = ('lxc-info','-n',$name);
-#     my ($in,$out,$err);
-#     run3(\@cmd,\$in,\$out,\$err);
-#     warn $out  if $out;
-#     warn $err   if $err;
-#     return if !$out || $?==1;
-# }
 
 sub search_domain_by_id {
    }

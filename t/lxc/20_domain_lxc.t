@@ -14,7 +14,6 @@ my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $ravada= Ravada->new( connector => $test->connector);
 my $vm_lxc;
 
-
 my $CONT= 0;
 
 
@@ -22,14 +21,15 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $ravada->search_domain($name);
+    diag("Search Domain");
+    $domain = $vm_lxc->search_domain($name);
 diag("Domini => $domain");
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
+        eval { Ravada::Domain::LXC->remove($name) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
     }
-    $domain = $ravada->search_domain($name);
+    $domain = $vm_lxc->search_domain($name);
     ok(!$domain, "I can't remove old domain $name") or exit;
 }
 
@@ -37,9 +37,9 @@ sub test_remove_domain_by_name {
     my $name = shift;
 
     diag("Removing domain $name");
-    $ravada->remove_domain($name);
+    $vm_lxc->remove_domain($name);
 
-    my $domain = $ravada->search_domain($name);
+    my $domain = $vm_lxc->search_domain($name);
     die "I can't remove old domain $name"
         if $domain;
 
@@ -59,7 +59,7 @@ sub test_new_domain {
     
     my ($name) = $0 =~ m{.*/(.*)\.t};
     $name .= "_".$CONT++;
-
+    diag ("Test remove domain");
     test_remove_domain($name);
 
     diag("Creating container $name. It may take looong time the very first time.");
@@ -94,6 +94,7 @@ sub test_domain{
     $active = 1 if !defined $active;
 
     my $n_domains = scalar $ravada->list_domains();
+    diag("Test new domain");
     my $domain = test_new_domain($active);
     
     if (ok($domain,"test domain not created")) {
@@ -160,7 +161,7 @@ SKIP: {
     #my $domain = test_domain();
 
 #test_new_domain();
-my $domain = test_new_domain();
+my $domain = test_domain();
 
 #test_remove_domain( $name);
 
