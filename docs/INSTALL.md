@@ -52,6 +52,13 @@ Review and run the sql files from the sql dir.
 Install KVM and virt-manager. Create new virtual machines (called domains) there.
 See docs/operation.md
 
+#Ravada user
+
+Add a new user for the ravada web. This command will create a new admin user in the database:
+
+    $ ./bin/rvd_back.pl --add-user
+
+
 #Next
 
 Read docs/operation.md
