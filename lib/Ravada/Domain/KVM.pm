@@ -125,17 +125,19 @@ sub remove {
 
     $self->_wait_down();
 
-    $self->_vol_remove($self->file_base_img,1) if $self->file_base_img();
     $self->domain->destroy   if $self->domain->is_active();
 
-    eval {
-    $self->remove_disks();
-    $self->remove_file_image();
-    };
-    warn "WARNING: Problem removing disks for ".$self->name." : $@"
-        if $@;
+    eval { $self->remove_disks() };
+    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
+
+    eval { $self->remove_file_image() };
+    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
+            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
+
+    eval { $self->remove_file_image() };
+    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name." : $@" if $@;
 
     $self->_remove_domain_db();
 }
@@ -147,8 +149,12 @@ sub remove_file_image {
 
     return if !$file;
 
-    $self->_vol_remove($file,1);
-    unlink $file or die "$! $file" if -e $file;
+    chmod 0700, $file or die "$! $file";
+    eval { $self->_vol_remove($file,1) };
+    if ( -e $file ) {
+        eval { unlink $file or die "$! $file"};
+    }
+    $self->vm->storage_pool->refresh();
 }
 
 sub _disk_device {
