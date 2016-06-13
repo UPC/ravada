@@ -118,7 +118,10 @@ sub test_start {
 
 my $vmm;
 
-eval { $vmm = $ravada->search_vm() if $ravada };
+eval { 
+    $vmm = $ravada->search_vm('kvm');
+    $vmm = $ravada->search_vm('lxc') if !$vmm;
+} if $ravada;
 
 SKIP: {
     my $msg = "SKIPPED: No virtual managers found";
