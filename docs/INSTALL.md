@@ -46,6 +46,9 @@ Review and run the sql files from the sql dir.
     $ mysqladmin create ravada
     $ cd sql/mysql
     $ cat *.sql | mysql -p ravada
+    $ cd ..
+    $ cd data
+    $ cat *.sql | mysql -p ravada
 
 #KVM backend
 

@@ -253,3 +253,6 @@ ul.alert-dropdown {
 .ng-valid.ng-dirty {
     border-color: #78FA89;
 }
+.machine-card .btn{
+    margin: 7px 0;
+}

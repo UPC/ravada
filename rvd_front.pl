@@ -421,6 +421,16 @@ sub clone_machine {
     return quick_start_domain($c, $base->id);
 }
 
+sub shutdown_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $base = _search_requested_machine($c);
+    $base->shutdown;
+
+    return quick_start($c);
+}
+
 app->start;
 __DATA__
 
