@@ -131,8 +131,8 @@ sub remove {
     warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
 
     eval { $self->remove_file_image() };
-    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
-            ." , I will try again later : $@" if $@;
+#    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
+#            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
 
