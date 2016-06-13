@@ -147,7 +147,7 @@ sub remove_file_image {
     my $self = shift;
     my $file = $self->file_base_img;
 
-    return if !$file;
+    return if !$file || ! -e $file;
 
     chmod 0700, $file or die "$! $file";
     eval { $self->_vol_remove($file,1) };
