@@ -1,15 +1,34 @@
-<h2>Machines</h2>
-<a href="/machines/new">New Machine</a><br/>
 
-     <table class="unstyled" border="1">
-         <tr><td></td><td>is base</td><td>is active</td><td colspan="2"></td></tr>
-         <tr ng-repeat="machine in list_machines">
-             <td><a href="/machine/{{machine.id}}">{{machine.name}}</a></td>
-             <td>{{machine.is_base}}</td>
-             <td>{{machine.is_active}}</td>
-             <td><a href="/machine/view/{{machine.id}}.html">view</a></td>
-             <td ng-show="{{machine.is_base}}"><a href="/machine/clone/{{machine.id}}.html">clone</a></td>
-             <td ng-show="{{!machine.is_base}}"><a href="/machine/prepare/{{machine.id}}.html">prepare base</a></td>
-         </tr>
-     </table>
+<div class="page-header">
+    <div class="panel panel-default">
+    <div class="panel-heading">
+        <h2>Machines List <a href="/machines/new" style="float: right;" class="btn btn-success">New Machine</a></h2>
+    </div>
+    <div class="panel-body">
 
+        <div class="col-lg-12">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Machine Name</th>
+                        <th>Base</th>
+                        <th>Active</th>
+                        <th colspan="2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="machine in list_machines">
+                        <td><a href="/machine/{{machine.id}}">{{machine.name}}</a></td>
+                        <td><i ng-show="{{machine.is_base}}" class="fa fa-check" aria-hidden="true"></i><i ng-show="{{!machine.is_base}}" class="fa fa-times" aria-hidden="true"></i></td>
+                        <td><i ng-show="{{machine.is_active}}" class="fa fa-check" aria-hidden="true"></i><i ng-show="{{!machine.is_active}}" class="fa fa-times" aria-hidden="true"></i></td>
+                        <td><a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html">View</a>
+                            <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html">Clone</a>
+                            <a ng-show="{{!machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+</div>
