@@ -17,10 +17,10 @@ requires 'start';
 requires 'shutdown';
 requires 'pause';
 
-has 'domain' => (
-    isa => 'Any'
-    ,is => 'ro'
-);
+#has 'domain' => (
+#    isa => 'Any'
+#    ,is => 'ro'
+#);
 
 has 'timeout_shutdown' => (
     isa => 'Int'
