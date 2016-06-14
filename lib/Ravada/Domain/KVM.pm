@@ -55,6 +55,14 @@ sub _wait_down {
 
 }
 
+=head2 list_dists
+
+Returns a list of the disks used by the virtual machine. CDRoms are not included
+
+  my@ disks = $domain->list_disks();
+
+=cut
+
 sub list_disks {
     my $self = shift;
     my @disks = ();
@@ -119,6 +127,14 @@ sub _vol_remove {
     return 1;
 }
 
+=head2 remove
+
+Removes this domain. It removes also the disk drives and base images.
+
+TODO: check if it is base for other domains, and refuse if it is.
+
+=cut
+
 sub remove {
     my $self = shift;
     $self->domain->shutdown  if $self->domain->is_active();
@@ -130,20 +146,22 @@ sub remove {
     eval { $self->remove_disks() };
     warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
 
-    eval { $self->remove_file_image() };
+    eval { $self->remove_file_image() } if $self->file_base_img;
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
 
-    eval { $self->remove_file_image() };
-    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name." : $@" if $@;
+    if ($self->file_base_img) {
+        eval { $self->remove_file_image() };
+        warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name." : $@" if $@;
+    }
 
     $self->_remove_domain_db();
 }
 
 
-sub remove_file_image {
+sub _remove_file_image {
     my $self = shift;
     my $file = $self->file_base_img;
 
@@ -220,6 +238,13 @@ sub _create_qcow_base {
     return $qcow_img;
 
 }
+
+=head prepare_base
+
+Prepares a base virtual machine with this domain disk
+
+=cut
+
 
 sub prepare_base {
     my $self = shift;
