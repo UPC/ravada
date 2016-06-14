@@ -11,6 +11,7 @@ use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $RAVADA;
+my $VMM;
 
 eval { $RAVADA = Ravada->new( connector => $test->connector) };
 my $REMOTE_VIEWER = `which remote-viewer`;
@@ -23,13 +24,13 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $RAVADA->search_domain($name);
+    $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
         $domain->remove();
     }
-    $domain = $RAVADA->search_domain($name);
+    $domain = $RAVADA->search_domain($name,1);
     die "I can't remove old domain $name"
         if $domain;
 
@@ -56,12 +57,11 @@ sub remove_old_disks {
 
 ##############################################################
 
-my $vm;
-eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+eval { $VMM = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
-    diag($msg)      if !$vm;
-    skip $msg,10    if !$vm;
+    diag($msg)      if !$VMM;
+    skip $msg,10    if !$VMM;
 
 
 remove_old_disks();
@@ -70,7 +70,7 @@ $name .= "_0";
 
 test_remove_domain($name);
 
-my $domain = $RAVADA->create_domain(name => $name, id_iso => 1 , active => 0);
+my $domain = $VMM->create_domain(name => $name, id_iso => 1 , active => 0);
 
 
 ok($domain,"Domain not created") and do {
