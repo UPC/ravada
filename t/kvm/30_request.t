@@ -50,10 +50,12 @@ sub test_remove_domain {
 }
 
 sub test_req_create_domain_iso {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
+    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
+    $name =~ s{/}{_}g;
     $name.="_".$CONT++;
 
 
+    diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
         name => $name
         ,id_iso => 1
@@ -81,7 +83,8 @@ sub test_req_create_domain_iso {
 }
 
 sub remove_old_domains {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
+    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
+    $name =~ s{/}{_}g;
     for ( 0 .. 10 ) {
         test_remove_domain($name."_".$_);
     }
@@ -89,7 +92,8 @@ sub remove_old_domains {
 }
 
 sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
+    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
+    $name =~ s{/}{_}g;
 
     my $vm = $RAVADA->search_vm('kvm');
     ok($vm,"I can't find a KVM virtual manager") or return;
@@ -100,6 +104,7 @@ sub remove_old_disks {
     for my $count ( 0 .. 10 ) {
         my $disk = $dir_img."/$name"."_$count.img";
         if ( -e $disk ) {
+            diag("Removing previous $disk");
             unlink $disk or die "I can't remove $disk";
         }
     }
@@ -111,7 +116,7 @@ eval { $RAVADA = Ravada->new(connector => $test->connector) };
 
 ok($RAVADA,"I can't launch a new Ravada");# or exit;
 
-my ($vm_kvm, $vm_lxc);
+my ($vm_kvm);
 eval { $vm_kvm = $RAVADA->search_vm('kvm')  if $RAVADA };
 
 SKIP: {
@@ -127,9 +132,9 @@ SKIP: {
     {
         my $domain = test_req_create_domain_iso();
 
-        test_req_prepare_base($domain->name);
-        test_req_remove_domain_name($domain->name)  if $domain;
-        test_remove_domain($domain->name);
+        test_req_prepare_base($domain->name)    if $domain;
+        test_remove_domain($domain->name)       if $domain;
     }
 }
 
+done_testing();
