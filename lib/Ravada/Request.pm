@@ -154,7 +154,29 @@ sub shutdown_domain {
     return $self->_new_request(command => 'shutdown' , args => encode_json({ name => $name }));
 }
 
+=head2 prepare_base
 
+Returns a new request for preparing a domain base
+
+  my $req = Ravada::Request->prepare_base( $name );
+
+=cut
+
+sub prepare_base {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+    $name = $name->name if ref($name) =~ /Domain/;
+
+    my %args = ( name => $name )    or confess "Missing domain name";
+
+    my $self = {};
+    bless($self,$class);
+    return $self->_new_request(command => 'prepare_base' 
+        , args => encode_json({ name => $name }));
+
+}
 
 sub _new_request {
     my $self = shift;

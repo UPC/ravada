@@ -432,6 +432,23 @@ sub _cmd_start {
 
 }
 
+sub _cmd_prepare_base {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    eval { 
+        my $domain = $self->search_domain($name);
+        die "Unknown domain '$name'\n" if !$domain;
+        $domain->prepare_base();
+    };
+    $request->status('done');
+    $request->error($@);
+
+}
+
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -459,6 +476,7 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
+  ,prepare_base => \&_cmd_prepare_base
     );
     return $methods{$cmd};
 }

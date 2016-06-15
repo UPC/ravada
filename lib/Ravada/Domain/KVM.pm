@@ -146,16 +146,13 @@ sub remove {
     eval { $self->remove_disks() };
     warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
 
-    eval { $self->remove_file_image() } if $self->file_base_img;
+    $self->_remove_file_image();
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
 
-    if ($self->file_base_img) {
-        eval { $self->remove_file_image() };
-        warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name." : $@" if $@;
-    }
+    $self->_remove_file_image();
 
     $self->_remove_domain_db();
 }
@@ -167,12 +164,10 @@ sub _remove_file_image {
 
     return if !$file || ! -e $file;
 
-    chmod 0700, $file or die "$! $file";
-    eval { $self->_vol_remove($file,1) };
-    if ( -e $file ) {
-        eval { unlink $file or die "$! $file"};
-    }
-    $self->vm->storage_pool->refresh();
+    chmod 0770, $file or die "$! $file";
+    $self->_vol_remove($file,1);
+    unlink $file or die "$! $file"  if -e $file;
+    $self->storage->refresh();
 }
 
 sub _disk_device {
