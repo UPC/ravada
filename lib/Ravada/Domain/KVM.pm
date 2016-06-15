@@ -55,7 +55,7 @@ sub _wait_down {
 
 }
 
-=head2 list_dists
+=head2 list_disks
 
 Returns a list of the disks used by the virtual machine. CDRoms are not included
 
@@ -234,7 +234,7 @@ sub _create_qcow_base {
 
 }
 
-=head prepare_base
+=head2 prepare_base
 
 Prepares a base virtual machine with this domain disk
 
@@ -328,6 +328,17 @@ sub shutdown {
         $self->domain->destroy();
     }
     $req->status("done")        if $req;
+}
+
+=head2 shutdown_now
+
+Shuts down uncleanly the domain
+
+=cut
+
+sub shutdown_now {
+    my $self = shift;
+    return $self->shutdown(timeout => 1);
 }
 
 
