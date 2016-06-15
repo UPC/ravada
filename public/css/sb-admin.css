@@ -241,6 +241,9 @@ ul.alert-dropdown {
     border-radius: 0.3em;
 }
 
+#machines-control{
+    margin-top: 40px;
+}
 
 /*####################################
 ##############AngularJS###############

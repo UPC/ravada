@@ -1,16 +1,19 @@
-
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body role="document">
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
     %= include 'bootstrap/navigation'
-    <div class="container theme-showcase" role="main">
-    <div class="jumbotron">
+    <div id="page-wrapper">
+
+        <!--BASES AND DOMAINS LIST-->
         <div ng-controller="machines">
             <sol-show-listmachines></sol-show-listmachines>
         </div>
+
     </div>
     </div>
     %= include 'bootstrap/scripts'
 </body>
 </html>
+
