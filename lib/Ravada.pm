@@ -5,6 +5,7 @@ use strict;
 
 use Data::Dumper;
 use DBIx::Connector;
+use JSON::XS;
 use Moose;
 use YAML;
 
@@ -374,9 +375,38 @@ sub process_requests {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
-        $self->_execute(Ravada::Request->open($id));
+        warn "Processing request $id";
+        my $req = Ravada::Request->open($id);
+        $self->_execute($req);
+        warn $req->status();
     }
     $sth->finish;
+}
+
+=head2 list_requests
+
+Returns a list of ruquests : ( id , domain_name, status, error )
+
+=cut
+
+sub list_requests {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, args, status, error "
+        ." FROM requests "
+        ." WHERE status <> 'done' "
+    );
+    $sth->execute;
+    my @reqs;
+    my ($id, $j_args, $status, $error);
+    $sth->bind_columns(\($id, $j_args, $status, $error));
+
+    while ( $sth->fetch) {
+        my $args = decode_json($j_args) if $j_args;
+
+        push @reqs,{ id => $id, status => $status, error => $error , name => $args->{name}};
+    }
+    $sth->finish;
+    return \@reqs;
 }
 
 sub _execute {

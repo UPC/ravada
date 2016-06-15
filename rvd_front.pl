@@ -127,6 +127,16 @@ get '/machine/shutdown/*.html' => sub {
         return shutdown_machine($c);
 };
 
+get '/machine/prepare/*.html' => sub {
+        my $c = shift;
+        return prepare_machine($c);
+};
+
+get '/requests.json' => sub {
+    my $c = shift;
+    return list_requests($c);
+};
+
 ###################################################
 
 sub _logged_in {
@@ -348,10 +358,12 @@ sub wait_request_done {
     my ($c, $req) = @_;
     
     for ( 1 .. $TIMEOUT ) {
-        warn $req->status;
+        warn "$_ ".$req->status;
         last if $req->status eq 'done';
         sleep 1;
     }
+    $req->status("timeout")
+        if $req->status eq 'working';
     return $req;
 }
 
@@ -429,6 +441,27 @@ sub shutdown_machine {
     $base->shutdown;
 
     return quick_start($c);
+}
+
+sub prepare_machine {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $req = Ravada::Request->prepare_base(
+        $domain->name
+    );
+
+    $c->render(text => 'Base '.$domain->name." prepared.");
+
+}
+
+sub list_requests {
+    my $c = shift;
+
+    my $list_requests = $RAVADA->list_requests();
+    $c->render(json => $list_requests);
 }
 
 app->start;

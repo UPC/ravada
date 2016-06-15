@@ -263,6 +263,7 @@ sub status {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
+    warn "$status";
     $sth->execute($status, $self->{id});
     $sth->finish;
     return $status;
