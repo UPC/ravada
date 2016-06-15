@@ -33,7 +33,7 @@ sub test_remove_domain {
 sub test_remove_domain_by_name {
     my $name = shift;
 
-    diag("Removing domain $name");
+    diag("Removing domain: $name");
     $vm_lxc->remove_domain($name);
 
     my $domain = $vm_lxc->search_domain($name);
@@ -102,10 +102,11 @@ sub test_domain{
 
     if (ok($domain,"test domain not created")) {
         my @list = $RAVADA->list_domains();
+        warn Dumper (@list);
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
             .($n_domains+1)
-            ." "
-            .join(",", sort map { $_->name } @list)
+            #." "
+            #.join(",", sort map { $_->name } @list)
         );
         #ok(!$domain->is_base,"Domain shouldn't be base "
         #    .Dumper($domain->_select_domain_db()));

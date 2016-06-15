@@ -18,7 +18,6 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################
 
-
 sub name {
  #   my $self = shift;
  #   $self->_select_domain_db or return;
@@ -35,6 +34,7 @@ sub remove {
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
+    #Ravada::VM->_domain_remove_db($name);
     return;
 }
 

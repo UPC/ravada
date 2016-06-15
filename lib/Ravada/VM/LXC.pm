@@ -97,23 +97,22 @@ sub _domain_create_from_base {
 
 sub search_domain {
     my $self = shift;
-    my $name = shift;
+    my $domain = shift or confess "Missing domain name";
+    
+    warn Dumper ($domain);
     my @cmd = ('lxc-ls','-f');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if !$out;
     warn $err   if $err;
-    my $domain;
+   # my $domain;
 
     for ( split /\n/,$out ) {
         my ($out_name) = /(\w+) /;
-        next if $out_name ne $name;
-        eval { 
-            $domain = $name;
-        };
+        next if $out_name ne $domain;
     return $domain if $domain;
     }
-    return $name;
+    return;
 }
 
 
@@ -122,22 +121,34 @@ sub search_domain_by_id {
    }
 
 sub list_domains {
-    # my $self = shift;
+    my $self = shift;
 
- #    my @list;
- #    for my $name ($self->vm->list_all_domains()) {
- #        my $domain ;
- #        my $id;
- #        eval { $domain = Ravada::Domain::LXC->new(
- #                          domain => $name
- #                        ,storage => $self->storage_pool
- #                    );
- #             $id = $domain->id();
- #        };
- #        push @list,($domain) if $domain && $id;
- #    }
- #    return @list;
+    my @list = ('lxc-ls','-1');
+    my ($in,$out,$err);
+    run3(\@list,\$in,\$out,\$err);
+    warn $out  if !$out;
+    warn $err   if $err;
+    return $out;
 }
+
+
+# sub list_domains {
+#     my $self = shift;
+
+#     my @list;
+#     for my $name ($self->vm->list_all_domains()) {
+#         my $domain ;
+#         my $id;
+#         eval { $domain = Ravada::Domain::KVM->new(
+#                           domain => $name
+#                         ,storage => $self->storage_pool
+#                     );
+#              $id = $domain->id();
+#         };
+#         push @list,($domain) if $domain && $id;
+#     }
+#     return @list;
+# }
 
 sub create_volume {
 }
