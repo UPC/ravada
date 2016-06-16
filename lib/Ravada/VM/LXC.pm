@@ -12,11 +12,12 @@ use Moose;
 use Sys::Hostname;
 use XML::LibXML;
 
-#use Ravada::Domain::LXC;
+use Ravada::Domain::LXC;
 
 with 'Ravada::VM';
 
 our $CMD_LXC_LS;
+#our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub BUILD {
     my $self = shift;
@@ -92,7 +93,18 @@ sub _domain_create_from_template {
 }
 
 sub _domain_create_from_base {
+#     lxc-copy -n base-ubuntu-PAS -N base-ubuntu-PAS-CoW-2 -B overlayfs -s
+    my $self = shift;
+    my $name = shift or confess "Missing domain name";
 
+    my $newname = $name . "_cow";
+    my @cmd = ('lxc-copy','-n',$name,"-N",$newname,"-B","overlayfs","-s");
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+    #TODO create $newname in ddbb
+    return $newname;
 }
 
 sub search_domain {

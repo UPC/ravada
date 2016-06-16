@@ -30,31 +30,6 @@ sub test_remove_domain {
 #    ok(!$domain, "I can't remove old domain $domain") or exit;
 }
 
-sub test_remove_domain_by_name {
-    my $name = shift;
-
-    diag("Removing domain: $name");
-    $vm_lxc->remove_domain($name);
-
-    my $domain = $vm_lxc->search_domain($name);
-    die "I can't remove old domain $name"
-        if $domain;
-
-}
-
-sub search_domain_db {
-    my $name = shift;
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
- diag("search_domain_db -> $sth ");
-    $sth->execute($name);
- diag("search_domain_db -> $sth ");
-
-    my $row =  $sth->fetchrow_hashref;
- diag("search_domain_db -> $row ");
-    return $row;
-
-}
-
 sub test_new_domain {
     my $active = shift;
     
@@ -74,28 +49,39 @@ sub test_new_domain {
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
-
-# TODO search domain in db
-    # my $row =  search_domain_db($domain);
-    # ok($domain->name,"I can't find the domain at the db");
-    #my $domain2 = $RAVADA->search_domain_by_id($domain->id);
-    #ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
-    #ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
-    #    .$domain2->name);
-
     return $name;
 }
 
 sub test_domain_create_from_base {
-    my $name = shift; # or confess "Missing domain name";
+    my $name = shift; 
     diag("Test domain created from base: $name");
-    my $domain = $vm_lxc->_domain_create_from_base($name);
-
-    return $domain if $domain;
+    my $newdomain = $vm_lxc->_domain_create_from_base($name);
+    ok(!$?,"Error create domain from base: $name");
+    return $newdomain if $newdomain;
 }
 
-sub test_domain_inactive {
-    my $domain = test_domain(0);
+sub test_with_limits_template{
+    my $name = shift;
+    my $memory = "1G";
+    my $swap = "512M";
+    my $cpushares = "256";
+    my $ioweight = "500";
+    diag("Test add limit to domain created from template: $name");
+    Ravada::Domain::LXC->limits($name,$memory,$swap,$cpushares,$ioweight);
+    ok(!$?,"Error appliying limits to container: $name");
+    return;
+}
+
+sub test_with_limits_base{
+    my $name = shift;
+    my $memory = "1G";
+    my $swap = "512M";
+    my $cpushares = "256";
+    my $ioweight = "500";
+    diag("Test add limit to domain created from template: $name");
+    Ravada::Domain::LXC->limits($name,$memory,$swap,$cpushares,$ioweight);
+    ok(!$?,"Error appliying limits to base container: $name");
+    return;
 }
 
 sub test_domain{
@@ -127,6 +113,7 @@ sub test_domain{
         # my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
         # ok($is_base eq '0',"Mangled is base '$is_base' ".Dumper($list_domains_data));
 
+#TODO
         # test prepare base
 #        test_prepare_base($domain);
 #       ok($domain->is_base,"Domain should be base"
@@ -173,8 +160,11 @@ SKIP: {
 
 #test_new_domain();
 my $domain = test_domain();
+#test_with_limits_template($domain);
 
-#test_domain_create_from_base($domain);
+
+my $newdomain = test_domain_create_from_base($domain);
+test_with_limits_base($newdomain);
 
 #test_remove_domain($domain);
 
