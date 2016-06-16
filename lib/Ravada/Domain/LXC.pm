@@ -11,7 +11,7 @@ use XML::LibXML;
 
 with 'Ravada::Domain';
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+#my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 
 ##################################################
 #
