@@ -15,6 +15,8 @@ my $ravada;
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
+#######################################################################
+
 sub test_empty_request {
     my $request = $ravada->request();
     ok($request);
@@ -44,6 +46,7 @@ sub test_remove_domain {
 sub test_req_create_domain_iso {
 
     my $name = $DOMAIN_NAME."_iso";
+    diag("Requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
         name => $name
         ,id_iso => 1
@@ -132,6 +135,7 @@ sub remove_old_disks {
     my ($name) = $0 =~ m{.*/(.*)\.t};
 
     my $vm = $ravada->search_vm('kvm');
+    diag("remove old disks");
     return if !$vm;
     ok($vm,"I can't find a KVM virtual manager");
 
@@ -168,27 +172,28 @@ SKIP: {
     diag($msg) if !$vm_kvm && !$vm_lxc;
     skip($msg,10) if !$vm_kvm && !$vm_lxc;
 
-test_remove_domain($DOMAIN_NAME."_iso");
-test_remove_domain($DOMAIN_NAME."_base");
-remove_old_disks();
+    diag("Testing with kvm=".($vm_kvm or 0)." , lxc=".($vm_lxc or 0));
+    test_remove_domain($DOMAIN_NAME."_iso");
+    test_remove_domain($DOMAIN_NAME."_base");
+    remove_old_disks();
 
-{
+    {
     my $domain = test_req_create_domain_iso();
     test_req_remove_domain_obj($domain)         if $domain;
-}
+    }
 
-{
+    {
     my $domain = test_req_create_domain_iso();
     test_req_remove_domain_name($domain->name)  if $domain;
-}
+    }
 
-{
+    {
     my $domain = test_req_create_base();
     test_req_remove_domain_name($domain->name)  if $domain;
-}
+    }
 
 
-test_remove_domain($DOMAIN_NAME."_iso");
+    test_remove_domain($DOMAIN_NAME."_iso");
 
 };
 
