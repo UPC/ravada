@@ -95,6 +95,11 @@ any '/users' => sub {
 
 };
 
+get '/list_vm_types.json' => sub {
+    my $c = shift;
+    $c->render(json => [$RAVADA->list_vm_types]);
+};
+
 get '/list_bases.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_bases_data);
@@ -111,6 +116,11 @@ get '/list_machines.json' => sub {
 };
 
 # machine commands
+
+get '/machine/manage/*html' => sub {
+    my $c = shift;
+    return manage_machine($c);
+};
 
 get '/machine/view/*.html' => sub {
     my $c = shift;
@@ -418,6 +428,16 @@ sub _search_requested_machine {
     return $domain;
 }
 
+sub manage_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+    if (!$domain) {
+        return $c->render(text => "Domain no found");
+    }
+    $c->render(text => "TODO : ".Dumper($domain));
+}
 sub view_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);

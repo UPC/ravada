@@ -415,6 +415,23 @@ sub list_requests {
     return \@reqs;
 }
 
+=head2 list_vm_types
+
+Returnsa list ofthe types of Virtual Machines available on this system
+
+=cut
+
+sub list_vm_types {
+    my $self = shift;
+    
+    my %type;
+    for my $vm (@{$self->vm}) {
+            my ($name) = ref($vm) =~ /.*::(.*)/;
+            $type{$name}++;
+    }
+    return sort keys %type;
+}
+
 sub _execute {
     my $self = shift;
     my $request = shift;
