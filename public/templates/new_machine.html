@@ -12,15 +12,16 @@
     >
     </select>
     <br/>
-                Backend:<br/>
-                <input type="radio" name="backend" value="kvm">kvm</input><br/>
-                <input type="radio" name="backend" value="lxc"
-                    disabled="true"
-                >lxc</input><br/>
-
-                Disk: <input type="text" name="disk" size="2"> Gb<br/>
-                Ram: <input type="text" name="ram" size="2"> Gb<br/>
-                <input type="submit" name="submit" value="create">
+    <label for="backend">Backend</label>
+    <select name="backend"
+            ng-model="backend"
+            ng-options="item for item in backends"
+            >
+    </select>
+        <br/>
+    Disk: <input type="text" name="disk" size="2"> Gb<br/>
+    Ram: <input type="text" name="ram" size="2"> Gb<br/>
+    <input type="submit" name="submit" value="create">
     
 </form>
 
