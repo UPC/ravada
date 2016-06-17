@@ -3,7 +3,7 @@ package Ravada::Domain;
 use warnings;
 use strict;
 
-use Carp qw(confess croak);
+use Carp qw(confess croak cluck);
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -17,10 +17,10 @@ requires 'start';
 requires 'shutdown';
 requires 'pause';
 
-#has 'domain' => (
-#    isa => 'Any'
-#    ,is => 'ro'
-#);
+has 'domain' => (
+    isa => 'Any'
+    ,is => 'ro'
+);
 
 has 'timeout_shutdown' => (
     isa => 'Int'
@@ -76,7 +76,7 @@ sub open {
 
 sub _select_domain_db {
     my $self = shift;
-    my %args = @_;
+    my %args = @_; 
 
     if (!keys %args) {
         my $id;

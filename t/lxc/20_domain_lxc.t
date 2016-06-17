@@ -18,16 +18,17 @@ my $CONT= 0;
 
 
 sub test_remove_domain {
-    my $domain = shift;
+    my $name = shift;
 
-    if ($domain) {
-        diag("Removing domain $domain");
-        Ravada::Domain::LXC->remove($domain);
+  
+        diag("Removing domain $name");
+        my $domain = $vm_lxc->search_domain($name);
+        $domain->remove() if $domain;
         diag ("$@");
-        ok(!$@ , "Error removing domain $domain : $@") or exit;
-    }
-#    $domain = $RAVADA->search_domain($domain);
-#    ok(!$domain, "I can't remove old domain $domain") or exit;
+        ok(!$@ , "Error removing domain $name : $@") or exit;
+  
+    $domain = $RAVADA->search_domain($name);
+    ok(!$domain, "I can't remove old domain $name") or exit;
 }
 
 sub test_remove_domain_by_name {

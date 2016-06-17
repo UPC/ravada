@@ -21,7 +21,8 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 ##################################################
 
 sub name {
- #   my $self = shift;
+    my $self = shift;
+    return $self->domain;
  #   $self->_select_domain_db or return;
 
 #    return 1 if $self->_data('name');
@@ -29,17 +30,19 @@ sub name {
 
 sub remove {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my $name = $self->name or confess "Missing domain name";
 
     my @cmd = ('lxc-destroy','-n',$name,'-f');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
     warn $err   if $err;
+    #die $err   if $?;
     #TODO look $?
-    #Ravada::VM->_domain_remove_db($name);
-    #my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE name=?");
-    #$sth->execute($name);
+    Ravada::VM->_domain_remove_db($name);
+    # my $sth = connector->dbh->prepare("DELETE FROM domains WHERE name=?");
+    # $sth->execute($name);
+    # $sth->finish;
 
     return;
 }
@@ -69,19 +72,24 @@ sub limits{
 
     my $mountpoint = "/var/lib/lxc/$name";
     open my $config, '>>' , "$mountpoint/config" or die $!;
-    print $config lxc_config();
+    print $config _lxc_config($memory,$swap,$cpushares,$ioweight);
     close $config;
 }
 
 #TODO: repair variables inside sub
-sub lxc_config{
+sub _lxc_config{
+    my $memory = shift;
+    my $swap =shift;
+    my $cpushares = shift;
+    my $ioweight = shift;
+
     return <<EOF;
 
 # RAM, swap, cpushare and ioweight Limits 
-lxc.cgroup.memory.limit_in_bytes = memory
-lxc.cgroup.memory.memsw.limit_in_bytes = swap
-lxc.cgroup.cpu.shares = cpushares
-lxc.cgroup.blkio.weight = ioweight
+lxc.cgroup.memory.limit_in_bytes = $memory
+lxc.cgroup.memory.memsw.limit_in_bytes = $swap
+lxc.cgroup.cpu.shares = $cpushares
+lxc.cgroup.blkio.weight = $ioweight
 EOF
 }
 
