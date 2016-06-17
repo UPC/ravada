@@ -18,16 +18,17 @@ my $CONT= 0;
 
 
 sub test_remove_domain {
-    my $domain = shift;
+    my $name = shift;
 
-    if ($domain) {
-        diag("Removing domain $domain");
-        Ravada::Domain::LXC->remove($domain);
+  
+        diag("Removing domain $name");
+        my $domain = $vm_lxc->search_domain($name);
+        $domain->remove() if $domain;
         diag ("$@");
-        ok(!$@ , "Error removing domain $domain : $@") or exit;
-    }
-#    $domain = $RAVADA->search_domain($domain);
-#    ok(!$domain, "I can't remove old domain $domain") or exit;
+        ok(!$@ , "Error removing domain $name : $@") or exit;
+  
+    $domain = $RAVADA->search_domain($name);
+    ok(!$domain, "I can't remove old domain $name") or exit;
 }
 
 sub test_new_domain {
@@ -56,6 +57,7 @@ sub test_domain_create_from_base {
     my $name = shift; 
     diag("Test domain created from base: $name");
     my $newdomain = $vm_lxc->_domain_create_from_base($name);
+    warn $newdomain;
     ok(!$?,"Error create domain from base: $name");
     return $newdomain if $newdomain;
 }
@@ -78,7 +80,7 @@ sub test_with_limits_base{
     my $swap = "512M";
     my $cpushares = "256";
     my $ioweight = "500";
-    diag("Test add limit to domain created from template: $name");
+    diag("Test add limit to domain created from base: $name");
     Ravada::Domain::LXC->limits($name,$memory,$swap,$cpushares,$ioweight);
     ok(!$?,"Error appliying limits to base container: $name");
     return;
@@ -163,7 +165,7 @@ my $domain = test_domain();
 #test_with_limits_template($domain);
 
 
-my $newdomain = test_domain_create_from_base($domain);
+my $newdomain = test_domain_create_from_base();
 test_with_limits_base($newdomain);
 
 #test_remove_domain($domain);

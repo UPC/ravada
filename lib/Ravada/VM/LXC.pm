@@ -93,7 +93,6 @@ sub _domain_create_from_template {
 }
 
 sub _domain_create_from_base {
-#     lxc-copy -n base-ubuntu-PAS -N base-ubuntu-PAS-CoW-2 -B overlayfs -s
     my $self = shift;
     my $name = shift or confess "Missing domain name";
 
@@ -104,7 +103,9 @@ sub _domain_create_from_base {
     warn $out  if $out;
     warn $err   if $err;
     #TODO create $newname in ddbb
-    return $newname;
+    my $newdomain = Ravada::Domain::LXC->new(domain => $newname);
+    $newdomain->_insert_db(name => $newname);
+    return $newdomain;
 }
 
 sub search_domain {

@@ -11,8 +11,6 @@ use XML::LibXML;
 
 with 'Ravada::Domain';
 
-#my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
@@ -23,15 +21,12 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 sub name {
     my $self = shift;
     return $self->domain;
- #   $self->_select_domain_db or return;
-
-#    return 1 if $self->_data('name');
 }
 
 sub remove {
     my $self = shift;
     my $name = $self->name or confess "Missing domain name";
-
+    warn $name;
     my @cmd = ('lxc-destroy','-n',$name,'-f');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
@@ -40,10 +35,7 @@ sub remove {
     #die $err   if $?;
     #TODO look $?
     Ravada::VM->_domain_remove_db($name);
-    # my $sth = connector->dbh->prepare("DELETE FROM domains WHERE name=?");
-    # $sth->execute($name);
-    # $sth->finish;
-
+  
     return;
 }
 
@@ -76,7 +68,6 @@ sub limits{
     close $config;
 }
 
-#TODO: repair variables inside sub
 sub _lxc_config{
     my $memory = shift;
     my $swap =shift;
