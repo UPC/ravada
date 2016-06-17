@@ -115,21 +115,22 @@ sub test_domain{
     my $active = shift;
     $active = 1 if !defined $active;
 
-    my $n_domains = scalar $RAVADA->list_domains();
+    my $vm = $RAVADA->search_vm('kvm');
+    my $n_domains = scalar $vm->list_domains();
     my $domain = test_new_domain($active);
 
     if (ok($domain,"test domain not created")) {
-        my @list = $RAVADA->list_domains();
+        my @list = $vm->list_domains();
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
             .($n_domains+1)
             ." "
-            .join(",", sort map { $_->name } @list)
+            .join(" * ", sort map { $_->name } @list)
         );
         ok(!$domain->is_base,"Domain shouldn't be base "
             .Dumper($domain->_select_domain_db()));
 
         # test list domains
-        my @list_domains = $RAVADA->list_domains();
+        my @list_domains = $vm->list_domains();
         ok(@list_domains,"No domains in list");
         my $list_domains_data = $RAVADA->list_domains_data();
         ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
@@ -146,7 +147,6 @@ sub test_domain{
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
-        my $vm = $RAVADA->search_vm('kvm');
         my $domain2;
         eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
         ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
@@ -227,7 +227,10 @@ sub test_prepare_import {
 sub remove_old_domains {
     my ($name) = $0 =~ m{.*/(.*)\.t};
     for ( 0 .. 10 ) {
-        test_remove_domain($name."_".$_);
+        my $dom_name = $name."_$_";
+        my $domain = $RAVADA->search_domain($dom_name);
+        $domain->shutdown_now() if $domain;
+        test_remove_domain($dom_name);
     }
 }
 

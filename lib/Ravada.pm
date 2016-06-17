@@ -251,6 +251,9 @@ sub list_domains_data {
     my $self = shift;
     my @domains;
     for my $domain ($self->list_domains()) {
+        eval { $domain->id };
+        warn $@ if $@;
+        next if $@;
         push @domains, {                id => $domain->id 
                                     , name => $domain->name
                                   ,is_base => $domain->is_base
