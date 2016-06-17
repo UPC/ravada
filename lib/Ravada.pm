@@ -279,6 +279,9 @@ sub list_bases {
     my @domains;
     for my $vm (@{$self->vm}) {
         for my $domain ($vm->list_domains) {
+            eval { $domain->id };
+            warn $@ if $@;
+            next    if $@;
             push @domains,($domain) if $domain->is_base;
         }
     }

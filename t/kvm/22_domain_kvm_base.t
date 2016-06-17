@@ -16,8 +16,7 @@ my $RAVADA;
 
 eval { $RAVADA = Ravada->new( connector => $test->connector) };
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*/.*)\.};
-$DOMAIN_NAME =~ s{/}{_}g;
+my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 $DOMAIN_NAME_SON =~ s/base_//;
 
@@ -42,9 +41,10 @@ sub test_remove_domain {
         eval { $domain->remove() };
         ok(!$@ , "Error removing domain $name : $@") ;
 
-        ok(! -e $domain->file_base_img ,"Image file was not removed "
-                    . $domain->file_base_img )
-                if  $domain->file_base_img;
+        if ( $domain->file_base_img ) {
+            ok(! -e $domain->file_base_img ,"Image file was not removed "
+                                        .$domain->file_base_img )
+        }
 
     }
     $domain = $RAVADA->search_domain($name,1);

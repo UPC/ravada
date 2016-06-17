@@ -127,7 +127,7 @@ sub _vol_remove {
     return 1;
 }
 
-=head2 remove
+=head2 removekvm_22_domain_kvm_base.ro.qcow2
 
 Removes this domain. It removes also the disk drives and base images.
 
@@ -146,13 +146,16 @@ sub remove {
     eval { $self->remove_disks() };
     warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@;
+
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@;
 
     $self->_remove_domain_db();
 }
@@ -164,10 +167,16 @@ sub _remove_file_image {
 
     return if !$file || ! -e $file;
 
-    chmod 0770, $file or die "$! $file";
-    $self->_vol_remove($file,1);
-    unlink $file or die "$! $file"  if -e $file;
-    $self->storage->refresh();
+    chmod 0770, $file or die "$! chmodding $file";
+    chown $<,$(,$file    or die "$! chowning $file";
+    eval { $self->_vol_remove($file,1) };
+
+    if ( -e $file ) {
+        eval { unlink $file or die "$! $file" };
+        $self->storage->refresh();
+    }
+    return if ! -e $file;
+    warn $@ if $@;
 }
 
 sub _disk_device {
