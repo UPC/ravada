@@ -151,7 +151,7 @@ Returns true or false if domain exists.
 
 sub search_domain {
     my $self = shift;
-    my $name = shift;
+    my $name = shift or confess "Missing name";
 
     for ($self->vm->list_all_domains()) {
         next if $_->get_name ne $name;

@@ -11,6 +11,7 @@ requires 'connect';
 
 # global DB Connection
 
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 # domain
 requires 'create_domain';
@@ -61,7 +62,7 @@ sub _build_connector { die "Database not connected" if !$Ravada::CONNECTOR;
 sub _domain_remove_db {
     my $self = shift;
     my $name = shift;
-    my $sth = $self->connector->dbh->prepare("DELETE FROM domains WHERE name=?");
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains WHERE name=?");
     $sth->execute($name);
     $sth->finish;
 }
