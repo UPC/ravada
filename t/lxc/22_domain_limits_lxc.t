@@ -56,10 +56,11 @@ sub test_new_domain {
 sub test_domain_create_from_base {
     my $name = shift; 
     diag("Test domain created from base: $name");
-    my $newdomain = $vm_lxc->_domain_create_from_base($name);
-    warn $newdomain;
+    #my $newdomain = $vm_lxc->_domain_create_from_base($name);
+    my $self = $vm_lxc->_domain_create_from_base($name);
+    warn $self;#$newdomain;
     ok(!$?,"Error create domain from base: $name");
-    return $newdomain if $newdomain;
+    return $self if $self;# newdomain if $newdomain;
 }
 
 sub test_with_limits_template{
@@ -165,7 +166,7 @@ my $domain = test_domain();
 #test_with_limits_template($domain);
 
 
-my $newdomain = test_domain_create_from_base();
+my $newdomain = test_domain_create_from_base($domain);
 test_with_limits_base($newdomain);
 
 #test_remove_domain($domain);

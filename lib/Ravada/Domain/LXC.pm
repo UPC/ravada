@@ -41,14 +41,14 @@ sub remove {
 
 sub create_files{
     # my $self = shift;
-    # my $path = search_path;
+    # my $path = _search_path;
     # open my $out,'>' , "$path/$filename" or die $!;
     # print $out "hola";
     # close $out;
 
 }
 
-sub search_path{
+sub _search_path{
     my $self = shift;
 
 }
