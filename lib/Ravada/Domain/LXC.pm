@@ -39,18 +39,85 @@ sub remove {
     return;
 }
 
-sub create_files{
-    # my $self = shift;
-    # my $path = _search_path;
-    # open my $out,'>' , "$path/$filename" or die $!;
-    # print $out "hola";
-    # close $out;
+# ADD    spiceqxl.xorg.conf /etc/X11/     
+# ADD    resolution.desktop /etc/xdg/autostart/
+# ADD    keyboard.desktop /etc/xdg/autostart/
+# ADD        run.sh   /root/
+# lxc-execute -n base-ubuntu-PAS-row -- /bin/bash -c /root/run.sh
 
+
+sub create_files{
+    my $self = shift;
+    my $domain = shift;
+    my $filename = shift;
+    my $port = shift;
+    my $content = shift;
+
+    my $path = "/var/lib/lxc/$domain/delta0/";
+    open my $out,'>>' , "$path/$filename" or die $!;
+    print $out $content;
+    close $out;
 }
 
-sub _search_path{
-    my $self = shift;
+sub _run_sh{
+    return <<EOF;
+#!/bin/bash
+SPICE_RES=${SPICE_RES:-"1280x960"}
+SPICE_LOCAL=\${SPICE_LOCAL:-"es_CA.UTF-8"}
+TIMEZONE=\${TIMEZONE:-"Europe/Madrid"}
+SPICE_USER=\${SPICE_USER:-"user"}
+SPICE_UID=\${SPICE_UID:-"1010"}
+SPICE_GID=\${SPICE_GID:-"1010"}
+SPICE_PASSWD=\${SPICE_PASSWD:-"password"}
+SPICE_KB=`echo "\$SPICE_LOCAL" | awk -F"_" '{print \$1}'` 
+SUDO=\${SUDO:-"NO"}
+locale-gen \$SPICE_LOCAL
+echo \$TIMEZONE > /etc/timezone
+useradd -ms /bin/bash -u \$SPICE_UID \$SPICE_USER
+echo "\$SPICE_USER:\$SPICE_PASSWD" | chpasswd
+#sed -i "s|#Option \"SpicePassword\" \"\"|Option \"SpicePassword\" \"\$SPICE_PASSWD\"|" /etc/X11/spiceqxl.xorg.conf
+#unset SPICE_PASSWD
+update-locale LANG=\$SPICE_LOCAL
+sed -i "s/XKBLAYOUT=.*/XKBLAYOUT=\"\$SPICE_KB\"/" /etc/default/keyboard
+sed -i "s/SPICE_KB/\$SPICE_KB/" /etc/xdg/autostart/keyboard.desktop
+sed -i "s/SPICE_RES/\$SPICE_RES/" /etc/xdg/autostart/resolution.desktop
+if [ "\$SUDO" != "NO" ]; then
+    sed -i "s/^\(sudo:.*\)/\1\$SPICE_USER/" /etc/group
+fi
+cd /home/\$SPICE_USER
+su \$SPICE_USER -c "/usr/bin/Xorg -config /etc/X11/spiceqxl.xorg.conf -logfile  /home/\$SPICE_USER/.Xorg.2.log :2 &" 2>/dev/null
+su \$SPICE_USER -c "DISPLAY=:2 /usr/bin/mate-session"
+EOF
+}
 
+sub _keyboard_desktop{
+    return <<EOF;
+[Desktop Entry]
+Type=Application
+Name=xrandr
+Exec=/usr/bin/setxkbmap  SPICE_KB
+NoDisplay=true
+EOF
+}
+
+sub _resolution_desktop{
+    return <<EOF;
+[Desktop Entry]
+Type=Application
+Name=xrandr
+Exec=/usr/bin/xrandr -s SPICE_RES 
+NoDisplay=true
+EOF
+}
+
+sub _spiceqxl_xorg{
+    my $port = shift;
+    return <<EOF;
+Option "SpicePort" "$port"
+Option "SpiceDisableTicketing" "1"
+Option "SpiceDeferredFPS" "10"
+Option "SpiceIPV4Only" "true"
+EOF
 }
 
 #Introduce limits when create a new container 
@@ -103,6 +170,7 @@ sub is_active {
 sub start {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
+# lxc-execute -n name -- /bin/bash -c /root/run.sh
 
     my @cmd = ('lxc-start','-n',$name);
     my ($in,$out,$err);
@@ -145,6 +213,16 @@ sub pause {
     return;
 }
 
+sub unpause {
+    my $self = shift;
+    my $name = shift or confess "Missing domain name";
 
+    my @cmd = ('lxc-unfreeze','-n',$name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+    return;
+}
 
 1;
