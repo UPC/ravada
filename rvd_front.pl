@@ -253,8 +253,33 @@ sub show_failure {
 sub domains {
     my $c = shift;
     my @domains = $RAVADA->list_domains();
+
+
+    my @error = ();
+    my $ram = ($c->param('ram') or 2);
+    my $disk = ($c->param('disk') or 8);
+    if ($c->param('submit')) {
+        push @error,("Name is mandatory")   if !$c->param('name');
+        if (!@error) {
+            my $domain = req_new_domain($c);
+            if ($domain) {
+                return show_link($c, $domain);
+            } else {
+                return show_failure($c, $c->param('name'));
+            }
+        }
+    }
+    my @images = $RAVADA->list_images();
+    warn join("\n",@error) if @error;
+
+
     $c->render(template => 'bootstrap/machines'
         ,domains => \@domains
+        ,name => $c->param('name')
+        ,ram => $ram
+        ,disk => $disk
+        ,images => \@images
+        ,error => \@error
     );
 
 }
