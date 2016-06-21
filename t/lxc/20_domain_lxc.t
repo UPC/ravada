@@ -42,13 +42,10 @@ sub test_remove_domain_by_name {
 
 sub search_domain_db {
     my $name = shift;
+    warn $name;
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
- diag("search_domain_db -> $sth ");
     $sth->execute($name);
- diag("search_domain_db -> $sth ");
-
-    my $row =  $sth->fetchrow_hashref;
- diag("search_domain_db -> $row ");
+    my $row =  $sth->fetchrow_hashref();
     return $row;
 }
 
@@ -71,6 +68,14 @@ sub test_new_domain {
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
+    my $row =  search_domain_db($domain->name);
+    warn $row;
+    ok($row->{name},"I can't find the domain at the db");
+
+    my $domain2 = $vm_lxc->search_domain_by_id($domain->id);
+    ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
+    ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
+        .$domain2->name);
 
     return $name;
 }
@@ -83,10 +88,47 @@ sub test_domain{
     my $active = shift;
     $active = 1 if !defined $active;
 
-    my $n_domains = scalar $RAVADA->list_domains();
-    
+    my $vm = $RAVADA->search_vm('lxc');
+
+    my $n_domains = scalar $vm->list_domains();
     diag("Test new domain n_domains= $n_domains");
     my $domain = test_new_domain($active);
+
+    if (ok($domain,"test domain not created")) {
+        my @list = $vm->list_domains();
+        ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
+            .($n_domains+1)
+            .". List: "
+            .join(" * ", sort map { $_->name } @list)
+        );
+#PER AQUI
+        ok(!$domain->is_base,"Domain shouldn't be base "
+            .Dumper($domain->_select_domain_db()));
+
+        # test list domains
+        my @list_domains = $vm->list_domains();
+        ok(@list_domains,"No domains in list");
+        my $list_domains_data = $RAVADA->list_domains_data();
+        ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
+        my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
+        ok($is_base eq '0',"Mangled is base '$is_base' ".Dumper($list_domains_data));
+
+        # test prepare base
+        test_prepare_base($domain);
+        ok($domain->is_base,"Domain should be base"
+            .Dumper($domain->_select_domain_db())
+
+        );
+        ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
+        ok($domain->is_active,"domain should active") if defined $active && $active==1;
+
+        ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
+        my $domain2;
+        eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
+        ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
+
+        test_remove_domain($domain->name);
+    }
 }
 
 ################################################################
@@ -95,7 +137,7 @@ SKIP: {
 
     my $msg = ($@ or "No LXC vitual manager found");
 
-    my $vm = $RAVADA->search_vm('lxc');
+    my $vm = $RAVADA->search_vm('lxc') if $RAVADA;
 
     if (!$vm_lxc) {
         ok(!$vm,"There should be no LXC backends");
@@ -114,7 +156,7 @@ SKIP: {
     ok($vm,"I can't find a LXC virtual manager from ravada");
 
 my $domain = test_domain();
-test_remove_domain($domain);
+#test_remove_domain($domain);
 }
 
 done_testing();

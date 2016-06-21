@@ -26,7 +26,6 @@ sub name {
 sub remove {
     my $self = shift;
     my $name = $self->name or confess "Missing domain name";
-    warn $name;
     my @cmd = ('lxc-destroy','-n',$name,'-f');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);

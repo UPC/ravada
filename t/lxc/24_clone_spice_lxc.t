@@ -20,8 +20,9 @@ my $CONT= 0;
 sub test_remove_domain {
     my $name = shift;
     diag("Removing domain $name");
+    warn $name;
     my $domain = $vm_lxc->search_domain($name);
-    warn Dumper($domain);
+    warn $domain;
     $domain->remove() if $domain;
     diag ("$@");
     ok(!$@ , "Error removing domain $name : $@") or exit;
@@ -37,6 +38,7 @@ sub test_new_domain {
     $name .= "_".$CONT++;
     diag ("Test remove domain");
     my $name_cow = $name . "_cow";
+    warn $name_cow;
     test_remove_domain($name_cow);
     test_remove_domain($name);
 
