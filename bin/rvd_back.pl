@@ -35,7 +35,7 @@ my $VERBOSE = $ENV{TERM};
 my $FILE_CONFIG = "/etc/ravada.conf";
 
 my $USAGE = "$0 --base=".($BASE or 'BASE')
-        ." [--prepare] [--daemon] [--file-config=$FILE_CONFIG] "
+        ." [--debug] [--prepare] [--daemon] [--file-config=$FILE_CONFIG] "
         ." [name]\n"
         ." --create : creates an empty virtual machine\n"
         ." --prepare : prepares a base system with one of the created nodes\n"
@@ -48,6 +48,7 @@ my $USAGE = "$0 --base=".($BASE or 'BASE')
 
 GetOptions (       help => \$help
                  ,force => \$FORCE
+                 ,debug => \$DEBUG
                 ,create => \$CREATE
                 ,daemon => \$DAEMON
                 ,remove => \$REMOVE
@@ -89,7 +90,7 @@ if ($help) {
     exit;
 }
 
-
+$Ravada::DEBUG=1    if $DEBUG;
 ###################################################################
 
 our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
