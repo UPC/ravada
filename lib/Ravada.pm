@@ -167,7 +167,7 @@ sub create_domain {
     delete $args{backend};
 
     my $vm = $self->vm->[0];
-    $vm = $self->search_backend($backend)   if $backend;
+    $vm = $self->search_vm($backend)   if $backend;
 
     return $vm->create_domain(@_);
 }
