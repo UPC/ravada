@@ -233,14 +233,30 @@ sub select_base_domain {
     return $domains->[$option-1];
 }
 
+sub disks_remove {
+    my $name = shift;
+
+    my $kvm = $RAVADA->search_vm('kvm');
+    if ($kvm) {
+        my $dir_img = $kvm->dir_img();
+        my $disk = $dir_img."/$name.img";
+        if ( -e $disk ) {
+            warn "Removing $disk\n";
+            unlink $disk or die "I can't remove $disk";
+        }
+        $kvm->storage_pool->refresh();
+    }
+}
+
 sub domain_remove {
     my $name = shift;
     my $dom = $RAVADA->search_domain($name);
     if (!$dom) {
-        die "ERROR: I can't find domain $name\n";
-        return;
+        warn "ERROR: I can't find domain $name\n";
+    } else {
+        $dom->remove();
     }
-    $dom->remove();
+    disks_remove($name);
 }
 
 sub add_user {
