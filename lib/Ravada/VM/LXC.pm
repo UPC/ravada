@@ -75,8 +75,8 @@ sub _domain_create_from_template {
     croak "argument id_iso required" 
         if !$args{id_iso};
 
-    #die "Domain $args{name} already exists"
-    #    if $self->search_domain($args{name});
+    die "Domain $args{name} already exists"
+        if $self->search_domain($args{name});
     
     my $template = "ubuntu";
     my $name = $args{name};
