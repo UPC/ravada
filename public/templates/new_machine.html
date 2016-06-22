@@ -47,7 +47,7 @@
                     <label for="backend">Backend</label>
                     <select name="backend"
                             ng-model="backend"
-                            ng-options="item for item in backends"
+                            ng-options="item for item in backends track by item"
                     ></select>
                 </div><br/>
                 <div class="from-group">

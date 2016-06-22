@@ -299,6 +299,7 @@ sub new_machine {
     my @error = ();
     my $ram = ($c->param('ram') or 2);
     my $disk = ($c->param('disk') or 8);
+    my $backend = $c->param('backend');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         if (!@error) {
@@ -328,6 +329,7 @@ sub req_new_domain {
     my $req = Ravada::Request->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
+        ,backend => $c->param('backend')
     );
 
     wait_request_done($c,$req);
