@@ -32,6 +32,8 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 
 our $CONNECTOR;
 our $CONFIG = {};
+our $DEBUG;
+
 _connect_dbh();
 
 
@@ -159,7 +161,15 @@ Creates a new domain based on an ISO image or another domain.
 sub create_domain {
     my $self = shift;
 
-    return $self->vm->[0]->create_domain(@_);
+    my %args = @_;
+
+    my $backend = $args{backend};
+    delete $args{backend};
+
+    my $vm = $self->vm->[0];
+    $vm = $self->search_backend($backend)   if $backend;
+
+    return $vm->create_domain(@_);
 }
 
 =head2 remove_domain
@@ -381,10 +391,9 @@ sub process_requests {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
-        warn "Processing request $id";
         my $req = Ravada::Request->open($id);
         $self->_execute($req);
-        warn $req->status();
+        warn $req->status() if $DEBUG;
     }
     $sth->finish;
 }
