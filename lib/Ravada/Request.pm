@@ -18,6 +18,14 @@ Request a command to the ravada backend
 our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(name);
 
+our %VALID_ARG = (
+    create_domain => { 
+            name => 1
+         ,id_iso => 1
+        ,backend => 1
+    }
+);
+
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub _request {
@@ -78,6 +86,9 @@ sub create_domain {
     confess "Missing domain name "
         if !$args{name};
 
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
+    }
     my $self = {};
 
     bless($self,$class);
@@ -263,7 +274,6 @@ sub status {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
-    warn "$status";
     $sth->execute($status, $self->{id});
     $sth->finish;
     return $status;
