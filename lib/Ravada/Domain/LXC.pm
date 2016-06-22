@@ -38,13 +38,6 @@ sub remove {
     return;
 }
 
-# ADD    spiceqxl.xorg.conf /etc/X11/     
-# ADD    resolution.desktop /etc/xdg/autostart/
-# ADD    keyboard.desktop /etc/xdg/autostart/
-# ADD        run.sh   /root/
-# lxc-execute -n base-ubuntu-PAS-row -- /bin/bash -c /root/run.sh
-
-
 sub create_files{
     my $self = shift;
     my $domain = shift;
@@ -65,13 +58,14 @@ SPICE_RES=${SPICE_RES:-"1280x960"}
 SPICE_LOCAL=\${SPICE_LOCAL:-"es_CA.UTF-8"}
 TIMEZONE=\${TIMEZONE:-"Europe/Madrid"}
 SPICE_USER=\${SPICE_USER:-"user"}
-SPICE_UID=\${SPICE_UID:-"1010"}
-SPICE_GID=\${SPICE_GID:-"1010"}
+SPICE_UID=\${SPICE_UID:-"1000"}
+SPICE_GID=\${SPICE_GID:-"1000"}
 SPICE_PASSWD=\${SPICE_PASSWD:-"password"}
 SPICE_KB=`echo "\$SPICE_LOCAL" | awk -F"_" '{print \$1}'` 
 SUDO=\${SUDO:-"NO"}
 locale-gen \$SPICE_LOCAL
 echo \$TIMEZONE > /etc/timezone
+userdel -r ubuntu
 useradd -ms /bin/bash -u \$SPICE_UID \$SPICE_USER
 echo "\$SPICE_USER:\$SPICE_PASSWD" | chpasswd
 #sed -i "s|#Option \"SpicePassword\" \"\"|Option \"SpicePassword\" \"\$SPICE_PASSWD\"|" /etc/X11/spiceqxl.xorg.conf

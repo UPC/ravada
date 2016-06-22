@@ -48,7 +48,7 @@ sub search_domain_db {
     warn $name;
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
-    my $row =  $sth->fetchrow_hashref();
+    my $row =  $sth->fetchrow_hashref;
     return $row;
 }
 
@@ -71,7 +71,7 @@ sub test_new_domain {
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
-    my $row =  search_domain_db($domain->name);
+    my $row =  search_domain_db($name);
     warn $row;
     ok($row->{name},"I can't find the domain at the db");
 
@@ -159,7 +159,7 @@ SKIP: {
     ok($vm,"I can't find a LXC virtual manager from ravada");
 
 my $domain = test_domain();
-#test_remove_domain($domain);
+test_remove_domain($domain);
 }
 
 done_testing();
