@@ -49,11 +49,16 @@ sub test_remove_domain {
 
 }
 
-sub test_req_create_domain_iso {
+sub _new_name {
     my ($name) = $0 =~ m{.*/(.*/.*)\.t};
     $name =~ s{/}{_}g;
     $name.="_".$CONT++;
 
+    return $name;
+}
+
+sub test_req_create_domain_iso {
+    my $name = _new_name();
 
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
@@ -80,6 +85,40 @@ sub test_req_create_domain_iso {
 
     ok($domain,"I can't find domain $name");
     return $domain;
+}
+
+sub test_force_kvm {
+    my $name = _new_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_iso => 1
+        ,backend => 'kvm'
+    );
+    ok($req);
+    ok($req->status);
+    ok(defined $req->args->{name} 
+        && $req->args->{name} eq $name
+            ,"Expecting args->{name} eq $name "
+             ." ,got '".($req->args->{name} or '<UNDEF>')."'");
+
+    ok($req->status eq 'requested'
+        ,"Status of request is ".$req->status." it should be requested");
+
+    $RAVADA->process_requests();
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+
+    my $domain =  $RAVADA->search_domain($name);
+
+    ok($domain,"I can't find domain $name");
+
+    my $vm = $RAVADA->search_vm('kvm');
+    my $domain2 = $ vm->search_domain($name);
+    ok($domain2,"I can't find $name in the KVM backend");
+    return $domain;
+
 }
 
 sub remove_old_domains {
@@ -133,6 +172,11 @@ SKIP: {
         my $domain = test_req_create_domain_iso();
 
         test_req_prepare_base($domain->name)    if $domain;
+        test_remove_domain($domain->name)       if $domain;
+    }
+
+    {
+        my $domain = test_force_kvm();
         test_remove_domain($domain->name)       if $domain;
     }
 }
