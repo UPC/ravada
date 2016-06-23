@@ -112,9 +112,18 @@ sub search_domain {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
 
-    for my $domain ( $self->list_domains ) {
-        
-        return $domain if $domain->name eq $name;
+    for my $domain_lxc ( $self->_list_domains ) {
+        next if $domain_lxc ne $name;
+
+        my $domain ;
+        my $id;
+        eval{ $domain = Ravada::Domain::LXC->new(
+                          domain => $name                          
+                         );
+              $id = $domain->id()   if $domain;
+        };
+
+        return $domain if $domain && $domain->name eq $name;
     }
     return;
 }
@@ -146,7 +155,7 @@ sub list_domains {
         eval{ $domain = Ravada::Domain::LXC->new(
                           domain => $name                          
                          );
-              $id = $domain->id();
+              $id = $domain->id()   if $domain;
           };
         push @list,($domain) if $domain && $id;
     }
