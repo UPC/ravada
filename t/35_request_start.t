@@ -158,6 +158,7 @@ SKIP: {
     skip($msg,10) if !$vmm;
 
     remove_old_domains();
+    remove_old_disks();
     test_start();
 };
 done_testing();
