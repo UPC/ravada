@@ -55,7 +55,7 @@ sub create_files{
 sub _run_sh{
     return <<EOF;
 #!/bin/bash
-SPICE_RES=${SPICE_RES:-"1280x960"}
+SPICE_RES=\${SPICE_RES:-"1280x960"}
 SPICE_LOCAL=\${SPICE_LOCAL:-"es_CA.UTF-8"}
 TIMEZONE=\${TIMEZONE:-"Europe/Madrid"}
 SPICE_USER=\${SPICE_USER:-"user"}

@@ -50,6 +50,14 @@ Review and run the sql files from the sql dir.
     $ cd data
     $ cat *.sql | mysql -p ravada
 
+#Config file
+
+Create a config file at /etc/ravada.conf with:
+    
+    db:
+      user: frankie
+      password: *****
+
 #KVM backend
 
 Install KVM and virt-manager. Create new virtual machines (called domains) there.
