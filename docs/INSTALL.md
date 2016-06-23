@@ -53,9 +53,10 @@ Review and run the sql files from the sql dir.
 #Config file
 
 Create a config file at /etc/ravada.conf with:
+    
     db:
       user: frankie
-      password: hola
+      password: *****
 
 #KVM backend
 
