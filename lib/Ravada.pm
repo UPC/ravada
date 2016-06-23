@@ -200,7 +200,7 @@ sub search_domain {
     my $import = shift;
 
     for my $vm (@{$self->vm}) {
-        my $domain = $vm->search_domain($name);
+        my $domain = $vm->search_domain($name, $import);
         return if !$domain;
         my $id;
         eval { $id = $domain->id };
