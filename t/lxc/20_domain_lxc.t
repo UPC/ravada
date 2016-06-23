@@ -65,8 +65,8 @@ sub test_new_domain {
     diag ("Test remove domain");
     test_remove_domain($name);
 
-    diag("Creating container $name. It may take looong time the very first time.");
-    my $domain = $vm_lxc->create_domain(name => $name, id_iso => 1, active => $active);
+    diag("Creating container $name.");
+    my $domain = $vm_lxc->create_domain(name => $name, id_template => 1, active => $active);
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::LXC';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
@@ -99,7 +99,7 @@ sub test_prepare_base {
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name);
+    ok($row->{name} && $row->{name} eq $domain->name,"I can't find ".$domain->name." in bases");
     $sth->finish;
 }
 
@@ -139,11 +139,6 @@ sub test_domain{
         );
         ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
-
-        ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
-        my $domain2;
-        eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
-        ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
 
         test_remove_domain($domain->name);
     }

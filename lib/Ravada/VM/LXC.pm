@@ -17,7 +17,7 @@ use Ravada::Domain::LXC;
 with 'Ravada::VM';
 
 our $CMD_LXC_LS;
-#our $CONNECTOR = \$Ravada::CONNECTOR;
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub BUILD {
     my $self = shift;
@@ -53,11 +53,11 @@ sub create_domain {
     $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
-    croak "argument id_iso or id_base required" 
-        if !$args{id_iso} && !$args{id_base};
+    croak "argument id_template or id_base required" 
+        if !$args{id_template} && !$args{id_base};
 
     my $domain;
-    if ($args{id_iso}) {
+    if ($args{id_template}) {
         $domain = $self->_domain_create_from_template(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
@@ -72,16 +72,16 @@ sub _domain_create_from_template {
     my $self = shift;
     my %args = @_;
     
-    croak "argument id_iso required" 
-        if !$args{id_iso};
+    croak "argument id_template required" 
+        if !$args{id_template};
 
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
     
-    my $template = "ubuntu";
+    my $template = $self->_search_template($args{id_template});
     my $name = $args{name};
 
-    my @cmd = ('lxc-create','-n',$name,'-t', $template);
+    my @cmd = ('lxc-create','-n',$name,'-t', $template->{name});
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
@@ -90,6 +90,19 @@ sub _domain_create_from_template {
     my $domain = Ravada::Domain::LXC->new(domain => $args{name});
     $domain->_insert_db(name => $args{name});
     return $domain;
+}
+
+sub _search_template {
+    my $self = shift;
+    my $id_template = shift or confess "Missing id_template";
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM lxc_templates WHERE id = ?");
+    $sth->execute($id_template);
+    my $row = $sth->fetchrow_hashref;
+    die "Missing lxc_template id=$id_template" if !keys %$row;
+    lock_hash(%$row);
+    return $row;
+
 }
 
 sub prepare_base {

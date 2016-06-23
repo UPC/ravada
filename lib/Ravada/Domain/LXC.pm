@@ -218,4 +218,13 @@ sub unpause {
     return;
 }
 
+=head2 prepare_base
+
+Makes the container available to be a base for other containers.
+
+=cut
+
+sub prepare_base {
+}
+
 1;
