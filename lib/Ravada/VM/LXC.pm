@@ -92,6 +92,9 @@ sub _domain_create_from_template {
     return $domain;
 }
 
+sub prepare_base {
+}
+
 sub _domain_create_from_base {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
@@ -111,16 +114,16 @@ sub _domain_create_from_base {
 sub search_domain {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
+    my $import = shift;
 
     for my $domain_lxc ( $self->_list_domains ) {
         next if $domain_lxc ne $name;
-
         my $domain ;
         my $id;
         eval{ $domain = Ravada::Domain::LXC->new(
-                          domain => $name                          
+                          domain => $domain_lxc
                          );
-              $id = $domain->id()   if $domain;
+              $id = $domain->id()   if $domain && !$import;
         };
 
         return $domain if $domain && $domain->name eq $name;
@@ -141,7 +144,13 @@ sub search_domain_by_id {
    
     #warn $out  if !$out;
     warn $err   if $err;   
-    return split /\n/,$out;
+    my @domains;
+    for (split /\n/,$out) {
+        s/^\s+//;
+        s/\s+$//;
+        push @domains,($_);
+    }
+    return @domains;
  }
 
 
