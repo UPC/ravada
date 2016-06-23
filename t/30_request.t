@@ -172,7 +172,7 @@ SKIP: {
     diag($msg) if !$vm_kvm && !$vm_lxc;
     skip($msg,10) if !$vm_kvm && !$vm_lxc;
 
-    diag("Testing with kvm=".($vm_kvm or 0)." , lxc=".($vm_lxc or 0));
+    diag("Testing requests with ".(ref $ravada->vm->[0] or '<UNDEF>'));
     test_remove_domain($DOMAIN_NAME."_iso");
     test_remove_domain($DOMAIN_NAME."_base");
     remove_old_disks();
