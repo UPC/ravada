@@ -34,7 +34,6 @@ our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
 
-_connect_dbh();
 
 
 has 'vm' => (
