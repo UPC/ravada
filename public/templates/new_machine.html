@@ -57,8 +57,9 @@
                 <label for="id_template">Template</label>
                 <select name ="id_template"
                         ng-model="id_template"
-                        required=""
-                ></select>
+                        required="">
+                    <option label="busybox" value="busybox">busybox</option>
+                </select>
             </div><br/>
             
             <div ng-if="backend == 'KVM'" class="from-group">

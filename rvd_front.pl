@@ -259,7 +259,8 @@ sub domains {
     my $ram = ($c->param('ddram') or 2);
     my $disk = ($c->param('dddisk') or 8);
     my $backend = $c->param('backend');
-    my $template = $c->param('template');
+    my $id_iso = $c->param('id_iso');
+    my $id_template = $c->param('id_template');
 
 
     if ($c->param('submit')) {
@@ -302,7 +303,8 @@ sub new_machine {
     my $ram = ($c->param('ram') or 2);
     my $disk = ($c->param('disk') or 8);
     my $backend = $c->param('backend');
-    my $template = $c->param('template');
+    my $id_iso = $c->param('id_iso');
+    my $id_template = $c->param('id_template');
 
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
