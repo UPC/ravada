@@ -24,44 +24,99 @@
     <input type="submit" name="submit" value="create">
     
 </form>-->
-
-
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h2>New Base</h2>
-        </div>
-        <div class="panel-body">
-            <form name="new_machine" role="form" method="post" action="#" ng-controller="new_machine" novalidate>
-                <div class="from-group">
-                    <label for="name">Name</label>
-                    <input class="form-control" type="text" size="20" name="name" ><br/>
-                </div>
-                <div class="from-group">
-                    <label for="id_iso">ISO image</label>
-                    <select name ="id_iso"
-                            ng-model="id_iso"
-                            ng-options="item.name for item in images track by item.id"
-                    ></select>
-                </div><br/>
-                <div class="from-group">
-                    <label for="backend">Backend</label>
-                    <select name="backend"
-                            ng-model="backend"
-                            ng-options="item for item in backends track by item"
-                    ></select>
-                </div><br/>
-                <div class="from-group">
-                    <label for="disk">Disk Size: (GB)</label>
-                    <input class="form-control" type="text" name="disk" size="2">
-                </div><br/>
-                <div class="from-group">
-                    <label fro="ram">Ram: (GB)</label>
-                    <input class="form-control" type="text" name="ram" size="2">
-                </div><br/>
-
-
-                <input type="submit" class="btn btn-default" name="submit" value="Create">
-
-            </form>
-        </div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h2>New Base</h2>
     </div>
+    <div class="panel-body">
+        <form name="new_machineForm" role="form" method="post" action="#" ng-controller="new_machine" novalidate>
+            <div class="from-group">
+                <label for="name">Name</label>
+                <input class="form-control" ng-model="name" type="text" ng-maxlength="20" name="name" required=""><br/>
+            </div>
+            
+            <div class="from-group">
+                <label for="backend">Backend</label>
+                <select name="backend"
+                        ng-model="backend"
+                        ng-options="item for item in backends track by item"
+                        required=""
+                ></select>
+            </div><br/>
+
+            <div ng-if="backend == 'KVM'" class="from-group">
+                <label for="id_iso">ISO image</label>
+                <select name ="id_iso"
+                        ng-model="id_iso"
+                        ng-options="item.name for item in images track by item.id"
+                        required=""
+                ></select>
+            </div>
+
+            <div ng-if="backend == 'LXC'" class="from-group">
+                <label for="id_template">Template</label>
+                <select name ="id_template"
+                        ng-model="id_template"
+                        required=""
+                ></select>
+            </div><br/>
+            
+            <div ng-if="backend == 'KVM'" class="from-group">
+                <label for="disk">Disk Size: (GB)</label>
+                <input class="form-control" ng-model="ddsize" type="number" name="ddsize" min="1" max="10" required="">
+            </div>
+            <div ng-show="backend == 'KVM' || backend == 'LXC'" class="from-group">
+                <label fro="ram">Ram: (GB)</label>
+                <input class="form-control" ng-model="ramsize" type="number" name="ramsize" min="1" max="4" required="">
+            </div><br/>
+            
+            <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
+                <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Machine name is required.
+                </div>
+                <div ng-show="new_machineForm.name.$error.maxlength" class="alert alert-warning fade in">
+                    <strong>Error</strong> Machine name can't exceed 20 characters.
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.backend.$touched">
+                <div ng-show="new_machineForm.backend.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Backend selection is required.
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.id_iso.$touched">
+                <div ng-show="new_machineForm.id_iso.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> ISO image selection is required
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.id_template.$touched">
+                <div ng-show="new_machineForm.id_template.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Template selection is required
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.ddsize.$touched">
+                <div ng-show="new_machineForm.ddsize.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Disk Size selection is required
+                </div>
+                <div ng-show="new_machineForm.ddsize.$error.min || new_machineForm.ddsize.$error.max" class="alert alert-warning">
+                    <strong>Error</strong> Disk Size selection must be between 1GB and 10GB
+                </div>
+            </div>
+            <div ng-show="new_machineForm.$submitted || new_machineForm.ramsize.$touched">
+                <div ng-show="new_machineForm.ramsize.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Ram Size selection is required
+                </div>
+                <div ng-show="new_machineForm.ramsize.$error.min || new_machineForm.ramsize.$error.max" class="alert alert-warning fade in">
+                    <strong>Error</strong> Ram Size selection must be between 1GB and 4GB
+                </div>
+            </div>
+
+
+            <input type="submit" class="btn btn-default" name="submit" value="Create" ng-disabled="new_machineForm.$invalid">
+
+        </form>
+    </div>
+</div>

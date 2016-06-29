@@ -256,8 +256,12 @@ sub domains {
 
 
     my @error = ();
-    my $ram = ($c->param('ram') or 2);
-    my $disk = ($c->param('disk') or 8);
+    my $ram = ($c->param('ddram') or 2);
+    my $disk = ($c->param('dddisk') or 8);
+    my $backend = $c->param('backend');
+    my $template = $c->param('template');
+
+
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         if (!@error) {
@@ -269,7 +273,6 @@ sub domains {
             }
         }
     }
-    my @images = $RAVADA->list_images();
     warn join("\n",@error) if @error;
 
 
@@ -278,7 +281,6 @@ sub domains {
         ,name => $c->param('name')
         ,ram => $ram
         ,disk => $disk
-        ,images => \@images
         ,error => \@error
     );
 
@@ -300,6 +302,8 @@ sub new_machine {
     my $ram = ($c->param('ram') or 2);
     my $disk = ($c->param('disk') or 8);
     my $backend = $c->param('backend');
+    my $template = $c->param('template');
+
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         if (!@error) {
@@ -311,14 +315,13 @@ sub new_machine {
             }
         }
     }
-    my @images = $RAVADA->list_images();
+
     warn join("\n",@error) if @error;
 
     $c->render(template => 'bootstrap/new_machine'
                     ,name => $c->param('name')
                     ,ram => $ram
                     ,disk => $disk
-                    ,images => \@images
                     ,error => \@error
     );
 };

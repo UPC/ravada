@@ -1,6 +1,21 @@
-var app = angular.module("ravada.app",[]);
+
+
+    angular.module("ravada.app",['ngResource'])
+            .directive("solShowSupportform", swSupForm)
+            .directive("solShowNewmachine", swNewMach)
+            .directive("solShowListmachines", swListMach)
+            .directive("solShowCardsmachines", swCardsMach)
+            .service("request", gtRequest)
+            .service("listMach", gtListMach)
+            .controller("new_machine", newMachineCtrl)
+            .controller("SupportForm", suppFormCtrl)
+            .controller("machines", machinesCrtl);
+
+
+
+
  
-    app.controller("new_machine",[ '$scope', '$http', function($scope, $http) {
+    function newMachineCtrl($scope, $http) {
 
         $http.get('/list_images.json').then(function(response) {
                 $scope.images = response.data;
@@ -10,9 +25,9 @@ var app = angular.module("ravada.app",[]);
         });
 
 
-    }]);
+    };
 
-    app.controller("SupportForm",function($scope){
+    function suppFormCtrl($scope){
         this.user = {};
         $scope.showErr = false;
         $scope.isOkey = function() {
@@ -23,49 +38,69 @@ var app = angular.module("ravada.app",[]);
             }
         }
 
-    });
+    };
 
-    app.directive("solShowSupportform",function() {
+    function swSupForm() {
 
         return {
             restrict: "E",
             templateUrl: '/templates/support_form.html',
         };
 
-    });
+    };
 
-    app.directive("solShowNewmachine",function() {
+    function swNewMach() {
 
         return {
             restrict: "E",
             templateUrl: '/templates/new_machine.html',
         };
 
-    });
+    };
 
 // list machines
-    app.controller("machines",[ '$scope', '$http', function($scope, $http) {
+    function machinesCrtl($scope, $http, request, listMach) {
 
         $http.get('/list_machines.json').then(function(response) {
                 $scope.list_machines= response.data;
         });
 
-    }]);
+        request.get(function( res ) {
+            $scope.res = res;
+        });
 
-    app.directive("solShowListmachines",function() {
+    };
+
+    function swListMach() {
 
         return {
             restrict: "E",
             templateUrl: '/templates/list_machines.html',
         };
 
-    });
+    };
 
-    app.directive("solShowCardsmachines",function() {
+    function swCardsMach() {
 
         return {
             restrict: "E",
             templateUrl: '/templates/user_machines.html',
         };
 
-    });
+    };
+
+    function gtRequest($resource){
+
+        return $resource('/requests.json',{},{
+            get:{isArray:true}
+        });
+
+    };
+
+    function gtListMach($resource){
+
+        return $resource('/list_machines.json',{},{
+            get:{isArray:true}
+        });
+
+    };

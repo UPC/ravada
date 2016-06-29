@@ -489,6 +489,7 @@ sub _cmd_start {
         die "Unknown domain '$name'\n" if !$domain;
         $domain->start();
     };
+
     $request->status('done');
     $request->error($@);
 
@@ -522,6 +523,7 @@ sub _cmd_shutdown {
         die "Unknown domain '$name'\n" if !$domain;
         $domain->shutdown();
     };
+    sleep(60000);
     $request->status('done');
     $request->error($@);
 
