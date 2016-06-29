@@ -506,7 +506,7 @@ sub remove_machine {
     my $base = _search_requested_machine($c);
     $base->remove;
 
-    return domain($c);
+    return;
 }
 
 sub prepare_machine {
@@ -579,7 +579,7 @@ Hi <%= $name %>,
 <h1>Fail</h1>
 
 Sorry <%= $name %>, I couldn't make it.
-<pre>ERROR: <%= $error %></pre>
+<pre>ERROR: <%= my $error %></pre>
 
 @@ layouts/default.html.ep
 <!DOCTYPE html>
