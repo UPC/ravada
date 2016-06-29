@@ -136,7 +136,10 @@ get '/machine/shutdown/*.html' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
-
+get '/machine/remove/*.html' => sub {
+        my $c = shift;
+        return remove_machine($c);
+};
 get '/machine/prepare/*.html' => sub {
         my $c = shift;
         return prepare_machine($c);
@@ -256,6 +259,7 @@ sub domains {
 
 
     my @error = ();
+
     my $ram = ($c->param('ddram') or 2);
     my $disk = ($c->param('dddisk') or 8);
     my $backend = $c->param('backend');
@@ -493,6 +497,16 @@ sub shutdown_machine {
     $base->shutdown;
 
     return quick_start($c);
+}
+
+sub remove_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $base = _search_requested_machine($c);
+    $base->remove;
+
+    return domain($c);
 }
 
 sub prepare_machine {

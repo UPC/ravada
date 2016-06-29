@@ -18,6 +18,7 @@
                         <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html">Clone</a>
                         <a ng-show="{{!machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
                     </td>
+                    <td><a class="btn btn-danger btn-sm" href="/machine/remove/{{machine.id}}.html">X</a></td>
                 </tr>
             </tbody>
         </table>
