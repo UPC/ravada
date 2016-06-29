@@ -1,6 +1,12 @@
 # ravada
 Remove Virtual Desktops Manager
 
+Broker: ravada
+
+Hypervisors: [KVM](http://www.linux-kvm.org/) - [LXC](https://linuxcontainers.org/)
+
+Remote Access: [Spice](http://www.spice-space.org/)
+
 ## Install
 
 Read docs/INSTALL.md
