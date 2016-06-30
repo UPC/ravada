@@ -406,19 +406,19 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 sub list_requests {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, args, status, error "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
         ." FROM requests "
-        ." WHERE status <> 'done' "
+        ." ORDER BY date_changed DESC LIMIT 4"
     );
     $sth->execute;
     my @reqs;
-    my ($id, $j_args, $status, $error);
-    $sth->bind_columns(\($id, $j_args, $status, $error));
+    my ($id, $command, $j_args, $date_changed, $status, $error);
+    $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
 
     while ( $sth->fetch) {
         my $args = decode_json($j_args) if $j_args;
 
-        push @reqs,{ id => $id, status => $status, error => $error , name => $args->{name}};
+        push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
     }
     $sth->finish;
     return \@reqs;

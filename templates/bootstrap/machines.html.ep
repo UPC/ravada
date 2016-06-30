@@ -10,12 +10,17 @@
         <div ng-controller="machines">
             <div class="page-header">
                 <div class="panel panel-default">
-                <div class="panel-heading">
-                    <h2>Machines List <button id="newMButton" style="float: right;" class="btn btn-success">New Machine</button></h2>
+                    <div class="panel-heading">
+                        <h2>Machines List <button id="newMButton" style="float: right;" class="btn btn-success">New Machine</button></h2>
+                    </div>
+                    <sol-show-listmachines></sol-show-listmachines>
                 </div>
-                <sol-show-listmachines></sol-show-listmachines>
-                </div>
-                </div>
+            </div>
+            <div class="page-header">
+            
+                <sol-show-machines-notifications></sol-show-machines-notifications>            
+            
+            </div>
         </div>
 
         <div ng-controller="new_machine">

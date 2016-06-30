@@ -5,6 +5,7 @@
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
             .directive("solShowCardsmachines", swCardsMach)
+            .directive("solShowMachinesNotifications", swMachNotif)
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .controller("new_machine", newMachineCtrl)
@@ -88,6 +89,13 @@
         };
 
     };
+
+    function swMachNotif() {
+        return {
+            restrict: "E",
+            templateUrl: '/templates/machines_notif.html',
+        };
+    }
 
     function gtRequest($resource){
 
