@@ -503,10 +503,13 @@ sub remove_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
 
-    my $base = _search_requested_machine($c);
-    $base->remove;
+    my $domain = _search_requested_machine($c);
 
-    return;
+    my $req = Ravada::Request->remove_domain(
+        $domain->name
+    );
+
+    return $c->render(data => "domain removing in progress");
 }
 
 sub prepare_machine {
