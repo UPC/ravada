@@ -19,8 +19,10 @@ my ($NAME) = $0 =~ m{.*/(.*)\.t$};
 
 
 sub remove_old {
-    for ( 1 .. $CONT ) {
-        $vm_lxc->remove_domain("${NAME}_$CONT");
+    for ( 0 .. $CONT ) {
+        my $name = "${NAME}_$CONT";
+        my $domain = $vm_lxc->search_domain($name);
+        $domain->remove if $domain;
     }
 }
 
@@ -50,10 +52,24 @@ sub test_new_req {
         ,"Status of request is ".$req->status." it should be done");
     ok(!$req->error,"Error ".$req->error." creating domain ".$name);
 
-    my $domain = $RAVADA->search_domain($name);
-    ok($domain,"No domain $name found");
+    my $domain_r = $RAVADA->search_domain($name);
+    ok($domain_r,"No domain $name found in Ravada");
+
+    my $domain_lxc = $vm_lxc->search_domain($name);
+    ok($domain_lxc,"No domain $name found in LXC");
+
+    my $domain = ( $domain_r or $domain_lxc);
+    return if !$domain;
 
     return $domain;
+}
+
+sub test_vm_lxc {
+    my $found = 0;
+    for my $vm (@{$RAVADA->vm}) {
+        $found ++ if ref($vm) eq 'Ravada::VM::LXC';
+    }
+    ok($found,"LXC vm not found ".join(" , ",@{$RAVADA->{vm}}));
 }
 
 ################################################################
@@ -64,7 +80,9 @@ SKIP: {
     my $msg = "No LXC backend found $@";
     diag($msg)          if !$vm_lxc;
     skip ($msg,10)    if !$vm_lxc;
-    remove_old ();
+    remove_old();
+
+    test_vm_lxc();
     test_new_req();
 };
 

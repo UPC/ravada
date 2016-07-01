@@ -201,10 +201,12 @@ sub search_domain {
 
     for my $vm (@{$self->vm}) {
         my $domain = $vm->search_domain($name, $import);
-        return if !$domain;
+        next if !$domain;
+        warn "found domain $name";
         my $id;
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
+        warn $@ if $@;
         return $domain if $id || $import;
     }
     return;
