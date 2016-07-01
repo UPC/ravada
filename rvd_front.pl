@@ -338,6 +338,7 @@ sub req_new_domain {
     my $req = Ravada::Request->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
+        ,id_template => $c->param('id_template')
         ,backend => $c->param('backend')
     );
 

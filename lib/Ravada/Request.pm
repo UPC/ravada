@@ -23,6 +23,7 @@ our %VALID_ARG = (
             name => 1
          ,id_iso => 1
         ,backend => 1
+    ,id_template => 1
     }
 );
 
