@@ -57,8 +57,8 @@
                 <label for="id_template">Template</label>
                 <select name ="id_template"
                         ng-model="id_template"
+                        ng-options="item.name for item in templates_lxc track by item.id"
                         required="">
-                    <option label="busybox" value="busybox">busybox</option>
                 </select>
             </div><br/>
             

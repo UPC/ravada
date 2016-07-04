@@ -350,6 +350,37 @@ sub list_images_data {
 }
 
 
+sub list_images_lxc {
+    my $self = shift;
+    my @domains;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM lx_templates ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @domains,($row);
+    }
+    $sth->finish;
+    return @domains;
+}
+
+=head2 list_images_data
+
+List information about the images
+
+=cut
+
+sub list_images_data_lxc {
+    my $self = shift;
+    my @data;
+    for ($self->list_images_lxc ) {
+        push @data,{ id => $_->{id} , name => $_->{name} };
+    }
+    return \@data;
+}
+
+
+
 =head2 remove_volume
 
   $ravada->remove_volume($file);

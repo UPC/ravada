@@ -24,6 +24,9 @@
         $http.get('/list_vm_types.json').then(function(response) {
                 $scope.backends = response.data;
         });
+        $http.get('/list_templates.json').then(function(response) {
+                $scope.templates_lxc = response.data;
+        });
 
 
     };

@@ -115,6 +115,12 @@ get '/list_machines.json' => sub {
     $c->render(json => $RAVADA->list_domains_data);
 };
 
+get '/list_templates.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_images_data_lxc);
+};
+
+
 # machine commands
 
 get '/machine/manage/*html' => sub {

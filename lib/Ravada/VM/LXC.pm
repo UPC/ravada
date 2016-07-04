@@ -96,10 +96,10 @@ sub _search_template {
     my $self = shift;
     my $id_template = shift or confess "Missing id_template";
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM lxc_templates WHERE id = ?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM lx_templates WHERE id = ?");
     $sth->execute($id_template);
     my $row = $sth->fetchrow_hashref;
-    die "Missing lxc_template id=$id_template" if !keys %$row;
+    die "Missing lx_template id=$id_template" if !keys %$row;
     lock_hash(%$row);
     return $row;
 

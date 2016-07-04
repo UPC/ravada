@@ -53,7 +53,8 @@ sub test_remove_domain_by_name {
 
 }
 
-sub search_domain_db {
+sub search_domain_db
+ {
     my $name = shift;
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
