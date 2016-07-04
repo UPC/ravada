@@ -261,19 +261,33 @@ List all domains in raw format. Return a list of id => { name , id , is_active ,
 sub list_domains_data {
     my $self = shift;
     my @domains;
-    for my $domain ($self->list_domains()) {
-        eval { $domain->id };
-        warn $@ if $@;
-        next if $@;
-        push @domains, {                id => $domain->id 
-                                    , name => $domain->name
-                                  ,is_base => $domain->is_base
-                                ,is_active => $domain->is_active
-                               
-                           }
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM domains ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @domains,($row);
     }
+    $sth->finish;
     return \@domains;
 }
+
+# sub list_domains_data {
+#     my $self = shift;
+#     my @domains;
+#     for my $domain ($self->list_domains()) {
+#         eval { $domain->id };
+#         warn $@ if $@;
+#         next if $@;
+#         push @domains, {                id => $domain->id 
+#                                     , name => $domain->name
+#                                   ,is_base => $domain->is_base
+#                                 ,is_active => $domain->is_active
+                               
+#                            }
+#     }
+#     return \@domains;
+# }
 
 
 =head2 list_bases
