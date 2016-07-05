@@ -144,10 +144,18 @@ sub search_domain {
     return;
 }
 
-
-
 sub search_domain_by_id {
-   }
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
+        ." WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return if !$name;
+
+    return $self->search_domain($name);
+} 
 
  sub _list_domains {
     my $self = shift;
