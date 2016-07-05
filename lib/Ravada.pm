@@ -368,7 +368,7 @@ sub list_images_lxc {
     my $self = shift;
     my @domains;
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT * FROM lx_templates ORDER BY name"
+        "SELECT * FROM lxc_templates ORDER BY name"
     );
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
