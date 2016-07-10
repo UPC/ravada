@@ -6,7 +6,13 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
   VERSION   => '0.01',
   PREREQ_PM => {'Mojolicious' => '6.15'
-      ,'Sys::Virt' => 0
+      ,'Authen::Passphrase' => 0
+	  ,'IPC::Run3'  => 0
+	  ,'JSON::XS'   => 0
+	  ,'Moose'	    => 0
+	  ,'Net::LDAP'  => 0
+      ,'Sys::Virt'  => 0
+      ,'XML::LibXML'=> 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'}
