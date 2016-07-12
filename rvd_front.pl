@@ -72,27 +72,19 @@ get '/ip/*' => sub {
     return quick_start_domain($c,$base->id,$ip);
 };
 
-any '/bases' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c);
-    return bases($c);
-};
-
-
-any '/bases/new' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c);
-    return new_base($c);
-};
-
-any '/domains' => sub {
+any '/machines' => sub {
     my $c = shift;
 
     return access_denied($c) if !_logged_in($c);
     return domains($c);
+};
 
+
+any '/machines/new' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+    return new_machine($c);
 };
 
 any '/users' => sub {
@@ -103,6 +95,66 @@ any '/users' => sub {
 
 };
 
+get '/list_vm_types.json' => sub {
+    my $c = shift;
+    $c->render(json => [$RAVADA->list_vm_types]);
+};
+
+get '/list_bases.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_bases_data);
+};
+
+get '/list_images.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_images_data);
+};
+
+get '/list_machines.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_domains_data);
+};
+
+get '/list_templates.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_images_data_lxc);
+};
+
+
+# machine commands
+
+get '/machine/manage/*html' => sub {
+    my $c = shift;
+    return manage_machine($c);
+};
+
+get '/machine/view/*.html' => sub {
+    my $c = shift;
+    return view_machine($c);
+};
+
+get '/machine/clone/*.html' => sub {
+    my $c = shift;
+    return clone_machine($c);
+};
+
+get '/machine/shutdown/*.html' => sub {
+        my $c = shift;
+        return shutdown_machine($c);
+};
+get '/machine/remove/*.html' => sub {
+        my $c = shift;
+        return remove_machine($c);
+};
+get '/machine/prepare/*.html' => sub {
+        my $c = shift;
+        return prepare_machine($c);
+};
+
+get '/requests.json' => sub {
+    my $c = shift;
+    return list_requests($c);
+};
 
 ###################################################
 
@@ -182,16 +234,18 @@ sub quick_start {
 
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
+    $name = $c->session('login')    if !$name;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
     my $domain_name = $base->name."-".$name;
 
+    warn "searching for domain $domain_name";
     my $domain = $RAVADA->search_domain($domain_name);
-    $domain = provision($c,  $id_base,  $name)
+    $domain = provision($c,  $id_base,  $domain_name)
         if !$domain;
 
-    return show_failure($c, $name) if !$domain;
+    return show_failure($c, $domain_name) if !$domain;
     return show_link($c,$domain);
 
 }
@@ -205,20 +259,40 @@ sub show_failure {
 
 #######################################################
 
-sub bases {
-    my $c = shift;
-    my @bases = $RAVADA->list_bases();
-    $c->render(template => 'bootstrap/bases'
-        ,bases => \@bases
-    );
-
-}
-
 sub domains {
     my $c = shift;
     my @domains = $RAVADA->list_domains();
-    $c->render(template => 'bootstrap/domains'
+
+
+    my @error = ();
+
+    my $ram = ($c->param('ddram') or 2);
+    my $disk = ($c->param('dddisk') or 8);
+    my $backend = $c->param('backend');
+    my $id_iso = $c->param('id_iso');
+    my $id_template = $c->param('id_template');
+
+
+    if ($c->param('submit')) {
+        push @error,("Name is mandatory")   if !$c->param('name');
+        if (!@error) {
+            my $domain = req_new_domain($c);
+            if ($domain) {
+                return show_link($c, $domain);
+            } else {
+                return show_failure($c, $c->param('name'));
+            }
+        }
+    }
+    warn join("\n",@error) if @error;
+
+
+    $c->render(template => 'bootstrap/machines'
         ,domains => \@domains
+        ,name => $c->param('name')
+        ,ram => $ram
+        ,disk => $disk
+        ,error => \@error
     );
 
 }
@@ -233,15 +307,19 @@ sub users {
 }
 
 
-sub new_base {
+sub new_machine {
     my $c = shift;
     my @error = ();
     my $ram = ($c->param('ram') or 2);
     my $disk = ($c->param('disk') or 8);
+    my $backend = $c->param('backend');
+    my $id_iso = $c->param('id_iso');
+    my $id_template = $c->param('id_template');
+
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         if (!@error) {
-            my $domain = req_new_base($c);
+            my $domain = req_new_domain($c);
             if ($domain) {
                 return show_link($c, $domain);
             } else {
@@ -249,23 +327,25 @@ sub new_base {
             }
         }
     }
-    my @images = $RAVADA->list_images();
-    $c->render(template => 'bootstrap/new_base'
+
+    warn join("\n",@error) if @error;
+
+    $c->render(template => 'bootstrap/new_machine'
                     ,name => $c->param('name')
                     ,ram => $ram
                     ,disk => $disk
-                    ,images => \@images
                     ,error => \@error
     );
 };
 
-sub req_new_base {
+sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
     my $req = Ravada::Request->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
-       ,is_base => 1
+        ,id_template => $c->param('id_template')
+        ,backend => $c->param('backend')
     );
 
     wait_request_done($c,$req);
@@ -331,10 +411,12 @@ sub wait_request_done {
     my ($c, $req) = @_;
     
     for ( 1 .. $TIMEOUT ) {
-        warn $req->status;
+        warn "$_ ".$req->status;
         last if $req->status eq 'done';
         sleep 1;
     }
+    $req->status("timeout")
+        if $req->status eq 'working';
     return $req;
 }
 
@@ -355,6 +437,7 @@ sub show_link {
                 ,login => $c->session('login'));
 }
 
+
 sub list_bases {
     my @bases = $RAVADA->list_bases();
 
@@ -372,6 +455,89 @@ sub check_back_running {
 
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
+}
+
+sub _search_requested_machine {
+    my $c = shift;
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+
+    return show_failure($c,"I can't find id.html in ".$c->req->url->to_abs->path)
+        if !$id;
+
+    my $domain = $RAVADA->search_domain_by_id($id);
+    if (!$domain ) {
+        return show_failure($c,"I can't find domain id=$id");
+    }
+    return $domain;
+}
+
+sub manage_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+    if (!$domain) {
+        return $c->render(text => "Domain no found");
+    }
+    $c->render(text => "TODO : ".Dumper($domain));
+}
+sub view_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    return show_link($c, _search_requested_machine($c));
+}
+
+sub clone_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $base = _search_requested_machine($c);
+    return quick_start_domain($c, $base->id);
+}
+
+sub shutdown_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $base = _search_requested_machine($c);
+    $base->shutdown;
+
+    return quick_start($c);
+}
+
+sub remove_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $req = Ravada::Request->remove_domain(
+        $domain->name
+    );
+
+    return $c->render(data => "domain removing in progress");
+}
+
+sub prepare_machine {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $req = Ravada::Request->prepare_base(
+        $domain->name
+    );
+
+    $c->render(text => 'Base '.$domain->name." prepared.");
+
+}
+
+sub list_requests {
+    my $c = shift;
+
+    my $list_requests = $RAVADA->list_requests();
+    $c->render(json => $list_requests);
 }
 
 app->start;
@@ -423,7 +589,7 @@ Hi <%= $name %>,
 <h1>Fail</h1>
 
 Sorry <%= $name %>, I couldn't make it.
-<pre>ERROR: <%= $error %></pre>
+<pre>ERROR: <%= my $error %></pre>
 
 @@ layouts/default.html.ep
 <!DOCTYPE html>

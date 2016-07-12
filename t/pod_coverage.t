@@ -10,8 +10,12 @@ eval {
 SKIP: {
     diag($@) if $@;
     skip(2,$@)  if $@;
-pod_coverage_ok( "Ravada", "Ravada is covered" );
-pod_coverage_ok( "Ravada::Request", "Ravada is covered" );
+    for my $type ( qw(VM Domain) ){
+        for my $backend (qw(KVM LXC)) {
+            Test::Pod::Coverage::pod_coverage_ok( "Ravada::$type::$backend"
+                , "Ravada::$type::$backend is covered" );
+        }
+    }
 }
 
 done_testing();

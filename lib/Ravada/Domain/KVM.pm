@@ -23,15 +23,10 @@ has 'storage' => (
     ,required => 1
 );
 
-has 'connector' => (
-    is => 'ro'
-    ,isa => 'DBIx::Connector'
-    ,required => 1
-);
-
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################
 
@@ -60,36 +55,62 @@ sub _wait_down {
 
 }
 
-sub remove_disks {
+=head2 list_disks
+
+Returns a list of the disks used by the virtual machine. CDRoms are not included
+
+  my@ disks = $domain->list_disks();
+
+=cut
+
+sub list_disks {
     my $self = shift;
+    my @disks = ();
 
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
-    my $removed = 0;
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
 
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 my $file = $child->getAttribute('file');
-                if (! -e $file ) {
-                    warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
-                    next;
-                }
-                $self->vol_remove($file);
-                if ( -e $file ) {
-                    unlink $file or die "$! $file";
-                }
-                $removed++;
+                push @disks,($file);
             }
         }
     }
+    return @disks;
+}
+
+=head2 remove_disks
+
+Remove the volume files of the domain
+
+=cut
+
+sub remove_disks {
+    my $self = shift;
+
+    my $removed = 0;
+    for my $file ($self->list_disks) {
+        if (! -e $file ) {
+            warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
+            next;
+        }
+        $self->_vol_remove($file);
+        if ( -e $file ) {
+            unlink $file or die "$! $file";
+        }
+        $removed++;
+
+    }
+
     warn "WARNING: No disk files removed for ".$self->domain->get_name."\n"
         if !$removed;
 
 }
 
-sub vol_remove {
+sub _vol_remove {
     my $self = shift;
     my $file = shift;
     my $warning = shift;
@@ -106,32 +127,56 @@ sub vol_remove {
     return 1;
 }
 
+=head2 removekvm_22_domain_kvm_base.ro.qcow2
+
+Removes this domain. It removes also the disk drives and base images.
+
+TODO: check if it is base for other domains, and refuse if it is.
+
+=cut
+
 sub remove {
     my $self = shift;
     $self->domain->shutdown  if $self->domain->is_active();
 
     $self->_wait_down();
 
-    $self->vol_remove($self->file_base_img,1) if $self->file_base_img();
     $self->domain->destroy   if $self->domain->is_active();
 
-    $self->remove_disks();
-    $self->remove_file_image();
+    eval { $self->remove_disks() };
+    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
+
+    eval { $self->_remove_file_image() };
+    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@;
+
+#    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
+#            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
+
+    eval { $self->_remove_file_image() };
+    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@;
 
     $self->_remove_domain_db();
 }
 
 
-sub remove_file_image {
+sub _remove_file_image {
     my $self = shift;
     my $file = $self->file_base_img;
 
-    return if !$file;
+    return if !$file || ! -e $file;
 
-    $self->vol_remove($file,1);
-    unlink $file or die "$! $file" if -e $file;
+    chmod 0770, $file or die "$! chmodding $file";
+    chown $<,$(,$file    or die "$! chowning $file";
+    eval { $self->_vol_remove($file,1) };
+
+    if ( -e $file ) {
+        eval { unlink $file or die "$! $file" };
+        $self->storage->refresh();
+    }
+    return if ! -e $file;
+    warn $@ if $@;
 }
 
 sub _disk_device {
@@ -160,6 +205,11 @@ sub _disk_device {
             }
         }
     }
+    if (!$img) {
+        my (@devices) = $doc->findnodes('/domain/devices/disk');
+        die "I can't find disk device FROM "
+            .join("\n",map { $_->toString() } @devices);
+    }
     return $img;
 
 }
@@ -168,7 +218,7 @@ sub _create_qcow_base {
     my $self = shift;
 
     my $base_name = $self->name;
-    my $base_img = $self->_disk_device();
+    my $base_img = $self->_disk_device() or die "I can't find disk device";
 
     my $qcow_img = $base_img;
     
@@ -192,6 +242,13 @@ sub _create_qcow_base {
     return $qcow_img;
 
 }
+
+=head2 prepare_base
+
+Prepares a base virtual machine with this domain disk
+
+=cut
+
 
 sub prepare_base {
     my $self = shift;
@@ -232,7 +289,7 @@ Returns whether the domain is running or not
 
 sub is_active {
     my $self = shift;
-    return $self->domain->is_active;
+    return ( $self->domain->is_active or 0);
 }
 
 =head2 start
@@ -282,6 +339,17 @@ sub shutdown {
     $req->status("done")        if $req;
 }
 
+=head2 shutdown_now
+
+Shuts down uncleanly the domain
+
+=cut
+
+sub shutdown_now {
+    my $self = shift;
+    return $self->shutdown(timeout => 1);
+}
+
 
 =head2 pause
 
@@ -291,5 +359,9 @@ Pauses the domain
 
 sub pause {
 }
+
+#sub BUILD {
+#    warn "Builder KVM.pm";
+#}
 
 1;

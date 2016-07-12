@@ -5,11 +5,13 @@ use strict;
 
 use Data::Dumper;
 use DBIx::Connector;
+use JSON::XS;
 use Moose;
 use YAML;
 
 use Ravada::Request;
 use Ravada::VM::KVM;
+use Ravada::VM::LXC;
 
 =head1 NAME
 
@@ -30,8 +32,8 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 
 our $CONNECTOR;
 our $CONFIG = {};
-_init_config($FILE_CONFIG) if -e $FILE_CONFIG;
-_connect_dbh();
+our $DEBUG;
+
 
 
 has 'vm' => (
@@ -59,9 +61,12 @@ Internal constructor
 
 sub BUILD {
     my $self = shift;
-    if ($self->config ) {
+    if ($self->config()) {
         _init_config($self->config);
+    } else {
+        _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
     }
+
     if ( $self->connector ) {
         $CONNECTOR = $self->connector 
     } else {
@@ -88,9 +93,49 @@ sub _init_config {
     _connect_dbh();
 }
 
+sub _create_vm_kvm {
+    my $self = shift;
+
+    my $cmd_qemu_img = `which qemu-img`;
+    chomp $cmd_qemu_img;
+
+    return(undef,"ERROR: Missing qemu-img") if !$cmd_qemu_img;
+
+    my $vm_kvm;
+
+    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
+    my $err_kvm = $@;
+
+    my ($internal_vm , $storage);
+    eval {
+        $internal_vm = $vm_kvm->vm;
+        $internal_vm->list_all_domains();
+
+        $storage = $vm_kvm->dir_img();
+    };
+    $vm_kvm = undef if $@ || !$internal_vm || !$storage;
+    return ($vm_kvm,$@);
+}
+
 sub _create_vm {
     my $self = shift;
-    return [ Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) ];
+
+    my @vms = ();
+
+    my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
+
+    push @vms,($vm_kvm) if $vm_kvm;
+
+    my $vm_lxc;
+    eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
+    push @vms,($vm_lxc) if $vm_lxc;
+    my $err_lxc = $@;
+
+    if (!@vms) {
+        die "No VMs found: $err_lxc\n$err_kvm\n";
+    }
+    return \@vms;
+
 }
 
 =head2 create_domain
@@ -115,7 +160,15 @@ Creates a new domain based on an ISO image or another domain.
 sub create_domain {
     my $self = shift;
 
-    return $self->vm->[0]->create_domain(@_);
+    my %args = @_;
+
+    my $backend = $args{backend};
+    delete $args{backend};
+
+    my $vm = $self->vm->[0];
+    $vm = $self->search_vm($backend)   if $backend;
+
+    return $vm->create_domain(@_);
 }
 
 =head2 remove_domain
@@ -130,7 +183,7 @@ sub remove_domain {
     my $self = shift;
     my $name = shift or confess "Missing domain name";
 
-    my $domain = $self->search_domain($name)
+    my $domain = $self->search_domain($name, 1)
         or confess "ERROR: I can't find domain $name";
     $domain->remove();
 }
@@ -144,11 +197,19 @@ sub remove_domain {
 sub search_domain {
     my $self = shift;
     my $name = shift;
+    my $import = shift;
 
     for my $vm (@{$self->vm}) {
-        my $domain = $vm->search_domain($name);
-        return $domain if $domain;
+        my $domain = $vm->search_domain($name, $import);
+        next if !$domain;
+        warn "found domain $name";
+        my $id;
+        eval { $id = $domain->id };
+        # TODO import the domain in the database with an _insert_db or something
+        warn $@ if $@;
+        return $domain if $id || $import;
     }
+    return;
 }
 
 =head2 search_domain_by_id
@@ -187,6 +248,48 @@ sub list_domains {
     return @domains;
 }
 
+=head2 list_domains_data
+
+List all domains in raw format. Return a list of id => { name , id , is_active , is_base }
+
+   my $list = $ravada->list_domains_data();
+
+   $c->render(json => $list);
+
+=cut
+
+sub list_domains_data {
+    my $self = shift;
+    my @domains;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM domains ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @domains,($row);
+    }
+    $sth->finish;
+    return \@domains;
+}
+
+# sub list_domains_data {
+#     my $self = shift;
+#     my @domains;
+#     for my $domain ($self->list_domains()) {
+#         eval { $domain->id };
+#         warn $@ if $@;
+#         next if $@;
+#         push @domains, {                id => $domain->id 
+#                                     , name => $domain->name
+#                                   ,is_base => $domain->is_base
+#                                 ,is_active => $domain->is_active
+                               
+#                            }
+#     }
+#     return \@domains;
+# }
+
+
 =head2 list_bases
 
 List all base domains
@@ -201,10 +304,28 @@ sub list_bases {
     my @domains;
     for my $vm (@{$self->vm}) {
         for my $domain ($vm->list_domains) {
+            eval { $domain->id };
+            warn $@ if $@;
+            next    if $@;
             push @domains,($domain) if $domain->is_base;
         }
     }
     return @domains;
+}
+
+=head2 list_bases_data
+
+List information about the bases
+
+=cut
+
+sub list_bases_data {
+    my $self = shift;
+    my @data;
+    for ($self->list_bases ) {
+        push @data,{ id => $_->id , name => $_->name };
+    }
+    return \@data;
 }
 
 =head2 list_images
@@ -226,6 +347,52 @@ sub list_images {
     $sth->finish;
     return @domains;
 }
+
+=head2 list_images_data
+
+List information about the images
+
+=cut
+
+sub list_images_data {
+    my $self = shift;
+    my @data;
+    for ($self->list_images ) {
+        push @data,{ id => $_->{id} , name => $_->{name} };
+    }
+    return \@data;
+}
+
+
+sub list_images_lxc {
+    my $self = shift;
+    my @domains;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM lxc_templates ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @domains,($row);
+    }
+    $sth->finish;
+    return @domains;
+}
+
+=head2 list_images_data
+
+List information about the images
+
+=cut
+
+sub list_images_data_lxc {
+    my $self = shift;
+    my @data;
+    for ($self->list_images_lxc ) {
+        push @data,{ id => $_->{id} , name => $_->{name} };
+    }
+    return \@data;
+}
+
 
 
 =head2 remove_volume
@@ -270,9 +437,55 @@ sub process_requests {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
-        $self->_execute(Ravada::Request->open($id));
+        my $req = Ravada::Request->open($id);
+        warn "executing request ".$req." ".Dumper($req) if $DEBUG;
+        $self->_execute($req);
+        warn $req->status() if $DEBUG;
     }
     $sth->finish;
+}
+
+=head2 list_requests
+
+Returns a list of ruquests : ( id , domain_name, status, error )
+
+=cut
+
+sub list_requests {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
+        ." FROM requests "
+        ." ORDER BY date_changed DESC LIMIT 4"
+    );
+    $sth->execute;
+    my @reqs;
+    my ($id, $command, $j_args, $date_changed, $status, $error);
+    $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
+
+    while ( $sth->fetch) {
+        my $args = decode_json($j_args) if $j_args;
+
+        push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
+    }
+    $sth->finish;
+    return \@reqs;
+}
+
+=head2 list_vm_types
+
+Returnsa list ofthe types of Virtual Machines available on this system
+
+=cut
+
+sub list_vm_types {
+    my $self = shift;
+    
+    my %type;
+    for my $vm (@{$self->vm}) {
+            my ($name) = ref($vm) =~ /.*::(.*)/;
+            $type{$name}++;
+    }
+    return sort keys %type;
 }
 
 sub _execute {
@@ -296,10 +509,6 @@ sub _cmd_create {
     my $domain;
     eval {$domain = $self->create_domain(%{$request->args}) };
 
-    if ($request->args('is_base') ) {
-        $request->status('preparing base');
-        $domain->prepare_base();
-    }
     $request->status('done');
     $request->error($@);
 
@@ -327,10 +536,28 @@ sub _cmd_start {
         die "Unknown domain '$name'\n" if !$domain;
         $domain->start();
     };
+
     $request->status('done');
     $request->error($@);
 
 }
+
+sub _cmd_prepare_base {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    eval { 
+        my $domain = $self->search_domain($name);
+        die "Unknown domain '$name'\n" if !$domain;
+        $domain->prepare_base();
+    };
+    $request->status('done');
+    $request->error($@);
+
+}
+
 
 sub _cmd_shutdown {
     my $self = shift;
@@ -343,6 +570,7 @@ sub _cmd_shutdown {
         die "Unknown domain '$name'\n" if !$domain;
         $domain->shutdown();
     };
+    sleep(60000);
     $request->status('done');
     $request->error($@);
 
@@ -359,10 +587,31 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
+  ,prepare_base => \&_cmd_prepare_base
     );
     return $methods{$cmd};
 }
 
+=head2 search_vm
+
+Searches for a VM of a given type
+
+  my $vm = $ravada->search_vm('kvm');
+
+=cut
+
+sub search_vm {
+    my $self = shift;
+    my $type = shift;
+
+    confess "Missing VM type"   if !$type;
+
+    my $class = 'Ravada::VM::'.uc($type);
+    for my $vm (@{$self->vm}) {
+        return $vm if ref($vm) eq $class;
+    }
+    return;
+}
 
 =head1 AUTHOR
 

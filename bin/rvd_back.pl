@@ -35,7 +35,7 @@ my $VERBOSE = $ENV{TERM};
 my $FILE_CONFIG = "/etc/ravada.conf";
 
 my $USAGE = "$0 --base=".($BASE or 'BASE')
-        ." [--prepare] [--daemon] [--file-config=$FILE_CONFIG] "
+        ." [--debug] [--prepare] [--daemon] [--file-config=$FILE_CONFIG] "
         ." [name]\n"
         ." --create : creates an empty virtual machine\n"
         ." --prepare : prepares a base system with one of the created nodes\n"
@@ -48,6 +48,7 @@ my $USAGE = "$0 --base=".($BASE or 'BASE')
 
 GetOptions (       help => \$help
                  ,force => \$FORCE
+                 ,debug => \$DEBUG
                 ,create => \$CREATE
                 ,daemon => \$DAEMON
                 ,remove => \$REMOVE
@@ -89,7 +90,7 @@ if ($help) {
     exit;
 }
 
-
+$Ravada::DEBUG=1    if $DEBUG;
 ###################################################################
 
 our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
@@ -165,6 +166,14 @@ sub provision {
     
 }
 
+sub prepare_base {
+    my $name = shift;
+    my $domain = $RAVADA->search_domain($name) or die "Unknown domain $name";
+    warn "Preparing $name base\n";
+    $domain->prepare_base();
+    warn "Done.\n";
+}
+
 sub display_uri{
     my $domain = shift;
 }
@@ -224,14 +233,30 @@ sub select_base_domain {
     return $domains->[$option-1];
 }
 
+sub disks_remove {
+    my $name = shift;
+
+    my $kvm = $RAVADA->search_vm('kvm');
+    if ($kvm) {
+        my $dir_img = $kvm->dir_img();
+        my $disk = $dir_img."/$name.img";
+        if ( -e $disk ) {
+            warn "Removing $disk\n";
+            unlink $disk or die "I can't remove $disk";
+        }
+        $kvm->storage_pool->refresh();
+    }
+}
+
 sub domain_remove {
     my $name = shift;
     my $dom = $RAVADA->search_domain($name);
     if (!$dom) {
-        die "ERROR: I can't find domain $name\n";
-        return;
+        warn "ERROR: I can't find domain $name\n";
+    } else {
+        $dom->remove();
     }
-    $dom->remove();
+    disks_remove($name);
 }
 
 sub add_user {
@@ -241,7 +266,7 @@ sub add_user {
     my $password = <STDIN>;
     chomp $password;
 
-    $RAVADA->add_user_sql($login, $password);
+    Ravada::Auth::SQL::add_user($login, $password);
 }
 
 sub select_iso {

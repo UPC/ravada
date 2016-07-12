@@ -18,6 +18,15 @@ Request a command to the ravada backend
 our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(name);
 
+our %VALID_ARG = (
+    create_domain => { 
+            name => 1
+         ,id_iso => 1
+        ,backend => 1
+    ,id_template => 1
+    }
+);
+
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub _request {
@@ -78,6 +87,9 @@ sub create_domain {
     confess "Missing domain name "
         if !$args{name};
 
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
+    }
     my $self = {};
 
     bless($self,$class);
@@ -154,7 +166,29 @@ sub shutdown_domain {
     return $self->_new_request(command => 'shutdown' , args => encode_json({ name => $name }));
 }
 
+=head2 prepare_base
 
+Returns a new request for preparing a domain base
+
+  my $req = Ravada::Request->prepare_base( $name );
+
+=cut
+
+sub prepare_base {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+    $name = $name->name if ref($name) =~ /Domain/;
+
+    my %args = ( name => $name )    or confess "Missing domain name";
+
+    my $self = {};
+    bless($self,$class);
+    return $self->_new_request(command => 'prepare_base' 
+        , args => encode_json({ name => $name }));
+
+}
 
 sub _new_request {
     my $self = shift;

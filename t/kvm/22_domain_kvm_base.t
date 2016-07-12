@@ -6,15 +6,19 @@ use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
 use Test::SQL::Data;
+use XML::LibXML;
 
 use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA = Ravada->new( connector => $test->connector);
+my $RAVADA;
+
+eval { $RAVADA = Ravada->new( connector => $test->connector) };
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
+$DOMAIN_NAME_SON =~ s/base_//;
 
 
 sub test_vm_kvm {
@@ -30,19 +34,20 @@ sub test_remove_domain {
     my $name = shift;
 
     my $domain;
-    $domain = $RAVADA->search_domain($name);
+    $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
         eval { $domain->remove() };
-        ok(!$@ , "Error removing domain $name : $@") or exit;
+        ok(!$@ , "Error removing domain $name : $@") ;
 
-        ok(! -e $domain->file_base_img ,"Image file was not removed "
-                    . $domain->file_base_img )
-                if  $domain->file_base_img;
+        if ( $domain->file_base_img ) {
+            ok(! -e $domain->file_base_img ,"Image file was not removed "
+                                        .$domain->file_base_img )
+        }
 
     }
-    $domain = $RAVADA->search_domain($name);
+    $domain = $RAVADA->search_domain($name,1);
     ok(!$domain, "I can't remove old domain $name") or exit;
 
 
@@ -53,7 +58,7 @@ sub test_new_domain_from_iso {
 
     test_remove_domain($name);
 
-    diag("Creating new domain $name from iso");
+    diag("Creating domain $name from iso");
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name, id_iso => 1) };
     ok(!$@,"Domain $name not created: $@");
@@ -107,7 +112,7 @@ sub test_new_domain_from_base {
     my $name = $DOMAIN_NAME_SON;
     test_remove_domain($name);
 
-    diag("Creating domain $name from base ");
+    diag("Creating domain $name from ".$base->name);
     my $domain = $RAVADA->create_domain(name => $name, id_base => $base->id);
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
@@ -131,7 +136,30 @@ sub test_new_domain_from_base {
         test_spawn_viewer($domain);
     }
 
+    test_domain_not_cdrom($domain);
     return $domain;
+
+}
+
+sub test_domain_not_cdrom {
+    my $domain = shift;
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+
+    my $cdrom = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        if ($disk->getAttribute('device') eq 'cdrom') {
+
+            my ($source) = $disk->findnodes('./source');
+            $cdrom++    if $source;
+
+            ok(!$source
+                ,$domain->name." shouldn't have a CDROM source\n".$disk->toString())
+                    or exit;
+
+        }
+    }
+    ok(!$cdrom,"No cdroms sources should have been found.");
+
 
 }
 
@@ -177,9 +205,28 @@ sub remove_volume {
     ok(! -e $file,"file $file not removed" );
 }
 
+sub test_dont_allow_remove_base_before_sons {
+    #TODO
+    # create a base
+    # create a son
+    # try to remove the base and be denied
+    # remove the son
+    # try to remove the base and succeed
+    # profit !
+}
+
 ################################################################
+my $vm;
+
+eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+
+SKIP: {
+    my $msg = "SKIPPED test: No KVM backend found";
+    diag($msg)      if !$vm;
+    skip $msg,10    if !$vm;
 
 test_vm_kvm();
+test_remove_domain($DOMAIN_NAME);
 test_remove_domain($DOMAIN_NAME_SON);
 remove_old_volumes();
 my $domain = test_new_domain_from_iso();
@@ -191,6 +238,10 @@ if (ok($domain,"test domain not created")) {
     my $domain_son = test_new_domain_from_base($domain);
     test_remove_domain($domain_son->name);
     test_remove_domain($domain->name);
+
+    test_dont_allow_remove_base_before_sons();
 }
+
+};
 
 done_testing();

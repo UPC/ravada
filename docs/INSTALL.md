@@ -9,6 +9,7 @@ Clone the sources:
 ##Debian
 
 - mysql-server
+- libauthen-passphrase-perl
 - libdbd-mysql-perl
 - libdbi-perl
 - libdbix-connector-perl
@@ -45,11 +46,29 @@ Review and run the sql files from the sql dir.
     $ mysqladmin create ravada
     $ cd sql/mysql
     $ cat *.sql | mysql -p ravada
+    $ cd ..
+    $ cd data
+    $ cat *.sql | mysql -p ravada
+
+#Config file
+
+Create a config file at /etc/ravada.conf with:
+    
+    db:
+      user: frankie
+      password: *****
 
 #KVM backend
 
 Install KVM and virt-manager. Create new virtual machines (called domains) there.
 See docs/operation.md
+
+#Ravada user
+
+Add a new user for the ravada web. This command will create a new admin user in the database:
+
+    $ ./bin/rvd_back.pl --add-user
+
 
 #Next
 

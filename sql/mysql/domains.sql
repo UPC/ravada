@@ -7,6 +7,7 @@ CREATE TABLE `domains` (
   `uri` varchar(250) DEFAULT NULL,
   `is_base` char(1) NOT NULL DEFAULT 'n',
   `file_base_img` varchar(255) DEFAULT NULL,
+  `port` int(5),
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_base` (`id_base`,`name`),
   UNIQUE KEY `name` (`name`)

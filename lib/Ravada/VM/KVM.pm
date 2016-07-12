@@ -21,11 +21,6 @@ with 'Ravada::VM';
 
 ##########################################################################
 #
-has connector => (
-    is => 'ro'
-    ,isa => 'DBIx::Connector'
-    ,required => 1
-);
 
 has vm => (
     isa => 'Sys::Virt'
@@ -56,8 +51,15 @@ our $IP = _init_ip();
 #
 our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
+our $CONNECTOR = \$Ravada::CONNECTOR;
+
 ##########################################################################
 
+=head2 connect
+
+Connect to the Virtual Machine Manager
+
+=cut
 
 sub connect {
     my $self = shift;
@@ -94,7 +96,17 @@ sub _load_storage_pool {
 
 }
 
+=head2 dir_img
+
+Returns the directory where disk images are stored in this Virtual Manager
+
+=cut
+
 sub dir_img {
+    my $self = shift;
+    return $DEFAULT_DIR_IMG if $DEFAULT_DIR_IMG;
+    
+    $self->_load_storage_pool();
     return $DEFAULT_DIR_IMG;
 }
 
@@ -118,16 +130,13 @@ sub create_domain {
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
-    my @fields = ( name => $args{name} );
     if ($args{id_iso}) {
         $domain = $self->_domain_create_from_iso(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
-        push @fields, ( id_base => $args{id_base} );
     } else {
         confess "TODO";
     }
-    $domain->_insert_db(@fields);
 
     return $domain;
 }
@@ -142,15 +151,22 @@ Returns true or false if domain exists.
 
 sub search_domain {
     my $self = shift;
-    my $name = shift;
+    my $name = shift or confess "Missing name";
 
     for ($self->vm->list_all_domains()) {
-        return Ravada::Domain::KVM->new(
+        next if $_->get_name ne $name;
+
+        my $domain;
+        eval {
+            $domain = Ravada::Domain::KVM->new(
                 domain => $_
                 ,storage => $self->storage_pool
-                ,connector => $self->connector
-        ) if $_->get_name eq $name;
+            );
+        };
+        warn $@ if $@;
+        return $domain if $domain;
     }
+    return;
 }
 
 =head2 search_domain_by_id
@@ -165,7 +181,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $self->connector->dbh->prepare("SELECT name FROM domains "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
         ." WHERE id=?");
     $sth->execute($id);
     my ($name) = $sth->fetchrow;
@@ -187,12 +203,15 @@ sub list_domains {
 
     my @list;
     for my $name ($self->vm->list_all_domains()) {
-        push @list, (Ravada::Domain::KVM->new(
+        my $domain ;
+        my $id;
+        eval { $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
-                      ,connector => $self->connector
-                    )
-        );
+                    );
+             $id = $domain->id();
+        };
+        push @list,($domain) if $domain && $id;
     }
     return @list;
 }
@@ -261,6 +280,7 @@ sub _domain_create_from_iso {
     my $iso = $self->_search_iso($args{id_iso});
 
     my $device_cdrom = _iso_name($iso);
+
     my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume});
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
@@ -271,9 +291,9 @@ sub _domain_create_from_iso {
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
 
-    return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                                    ,connector => $self->connector
-    );
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+    $domain->_insert_db(name => $args{name});
+    return $domain;
 }
 sub _create_disk {
     return _create_disk_qcow2(@_);
@@ -323,7 +343,7 @@ sub _search_domain_by_id {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $self->connector->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
@@ -350,7 +370,8 @@ sub _domain_create_from_base {
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
     my $device_disk = $self->_create_disk($base, $args{name});
-#    _xml_modify_cdrom($xml, $device_cdrom);
+#    _xml_modify_cdrom($xml);
+    _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
@@ -364,11 +385,10 @@ sub _domain_create_from_base {
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create;
 
-    return Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                                    ,connector => $self->connector
-    );
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
 
-
+    $domain->_insert_db(name => $args{name}, id_base => $base->id);
+    return $domain;
 }
 
 sub _iso_name {
@@ -441,7 +461,7 @@ sub _search_iso {
     my $self = shift;
     my $id_iso = shift or croak "Missing id_iso";
 
-    my $sth = $self->connector->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
@@ -534,10 +554,6 @@ sub _xml_modify_cdrom {
     my @nodes = $doc->findnodes('/domain/devices/disk');
     for my $disk (@nodes) {
         next if $disk->getAttribute('device') ne 'cdrom';
-        if (!$iso) {
-            warn "TODO remove cdrom\n";
-            return;
-        }
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 $child->setAttribute(file => $iso);
@@ -547,6 +563,28 @@ sub _xml_modify_cdrom {
 
     }
     die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
+}
+
+sub _xml_remove_cdrom {
+    my $doc = shift;
+
+    my ($node_devices )= $doc->findnodes('/domain/devices');
+    my $devices = $doc->findnodes('/domain/devices');
+    for my $context ($devices->get_nodelist) {
+        for my $disk ($context->findnodes('./disk')) {
+#            warn $node->toString();
+            if ( $disk->nodeName eq 'disk'
+                && $disk->getAttribute('device') eq 'cdrom') {
+
+                my ($source) = $disk->findnodes('./source');
+                if ($source) {
+#                    warn "\n\t->removing ".$source->nodeName." ".$source->getAttribute('file')
+#                        ."\n";
+                    $disk->removeChild($source);
+                }
+            }
+        }
+    }
 }
 
 sub _xml_modify_disk {
