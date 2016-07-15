@@ -208,7 +208,7 @@ sub search_domain {
     for my $vm (@{$self->vm}) {
         my $domain = $vm->search_domain($name, $import);
         next if !$domain;
-        warn "found domain $name";
+        next if !$domain->_select_domain_db && !$import;
         my $id;
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
@@ -571,12 +571,13 @@ sub _cmd_shutdown {
 
     $request->status('working');
     my $name = $request->args('name');
+    my $timeout = ($request->args('timeout') or 60);
+    my $domain;
     eval { 
-        my $domain = $self->search_domain($name);
+        $domain = $self->search_domain($name);
         die "Unknown domain '$name'\n" if !$domain;
-        $domain->shutdown();
+        $domain->shutdown(timeout => $timeout);
     };
-    sleep(60000);
     $request->status('done');
     $request->error($@);
 

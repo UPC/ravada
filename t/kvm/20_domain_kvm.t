@@ -136,7 +136,8 @@ sub test_domain{
         my $list_domains_data = $RAVADA->list_domains_data();
         ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
         my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
-        ok($is_base eq '0',"Mangled is base '$is_base' ".Dumper($list_domains_data));
+        ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 "
+            .Dumper($list_domains_data));
 
         # test prepare base
         test_prepare_base($domain);

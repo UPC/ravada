@@ -112,6 +112,8 @@ sub test_start {
     my $domain3 = $RAVADA->search_domain($name);
     ok(!$domain3->is_active);
 
+    return $domain3;
+
 }
 sub remove_old_domains {
     my ($name) = $0 =~ m{.*/(.*)\.t};
@@ -159,7 +161,10 @@ SKIP: {
 
     remove_old_domains();
     remove_old_disks();
-    test_start();
+    my $domain = test_start();
+
+    $domain->shutdown_now();
+    $domain->remove();
 };
 done_testing();
 
