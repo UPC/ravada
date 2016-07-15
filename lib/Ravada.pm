@@ -131,8 +131,14 @@ sub _create_vm {
     push @vms,($vm_lxc) if $vm_lxc;
     my $err_lxc = $@;
 
+    my $vm_lxd;
+    eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) };
+    push @vms,($vm_lxd) if $vm_lxd;
+    my $err_lxd = $@;
+
+
     if (!@vms) {
-        die "No VMs found: $err_lxc\n$err_kvm\n";
+        die "No VMs found: $err_lxc\n$err_kvm\n$err_lxd\n";
     }
     return \@vms;
 
