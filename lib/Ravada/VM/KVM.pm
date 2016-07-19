@@ -365,6 +365,8 @@ sub _domain_create_from_base {
 
     $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
 
+    confess "ERROR: Missing base or id_base"  if !$base;
+
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());

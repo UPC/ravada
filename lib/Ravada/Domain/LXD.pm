@@ -49,4 +49,15 @@ sub shutdown {}
 
 sub start {}
 
+sub _prepare_base_file {
+    #TODO
+}
+
+sub prepare_base {
+    my $self = shift;
+
+    my $file_base = $self->_prepare_base_file();
+    $self->_prepare_base_db($file_base);
+}
+
 1;

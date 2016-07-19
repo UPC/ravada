@@ -12,6 +12,7 @@ use YAML;
 use Ravada::Request;
 use Ravada::VM::KVM;
 use Ravada::VM::LXC;
+use Ravada::VM::LXD;
 
 =head1 NAME
 
@@ -117,6 +118,13 @@ sub _create_vm_kvm {
     return ($vm_kvm,$@);
 }
 
+sub _create_vm_lxd {
+    my $vm_lxd;
+    $vm_lxd = Ravada::VM::LXD->new( );
+    my $err_lxd = $@;
+    return $vm_lxd;
+}
+
 sub _create_vm {
     my $self = shift;
 
@@ -132,10 +140,9 @@ sub _create_vm {
     my $err_lxc = $@;
 
     my $vm_lxd;
-    eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) };
+    eval { $vm_lxd = _create_vm_lxd() } ;
     push @vms,($vm_lxd) if $vm_lxd;
     my $err_lxd = $@;
-
 
     if (!@vms) {
         die "No VMs found: $err_lxc\n$err_kvm\n$err_lxd\n";
@@ -311,7 +318,7 @@ sub list_bases {
     for my $vm (@{$self->vm}) {
         for my $domain ($vm->list_domains) {
             eval { $domain->id };
-            warn $@ if $@;
+            warn $@ if $@   && $DEBUG;
             next    if $@;
             push @domains,($domain) if $domain->is_base;
         }

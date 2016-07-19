@@ -17,6 +17,8 @@ requires 'start';
 requires 'shutdown';
 requires 'pause';
 
+requires 'prepare_base';
+
 has 'domain' => (
     isa => 'Any'
     ,is => 'ro'

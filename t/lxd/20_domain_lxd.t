@@ -75,10 +75,8 @@ sub test_new_domain {
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
         if $domain;
 
-        #TODO
-=pod
 
-    my @cmd = ('lxc-info','-n',$name);
+    my @cmd = ('lxc','info',$name);
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
@@ -91,7 +89,6 @@ sub test_new_domain {
     #ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
     #    .$domain2->name);
 
-=cut
 
     return $domain;
 }
