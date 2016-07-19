@@ -47,16 +47,6 @@ has 'default_dir_img' => (
      , is => 'ro'
 );
 
-has 'connector' => (
-     is => 'ro'
-    ,isa => 'DBIx::Connector'
-    ,lazy => 1
-    ,builder => '_build_connector'
-);
-sub _build_connector { die "Database not connected" if !$Ravada::CONNECTOR;
-    return $Ravada::CONNECTOR;
-}
-
 ############################################################
 #
 sub _domain_remove_db {

@@ -14,8 +14,7 @@ use_ok($CLASS);
 ##########################################################
 
 sub test_vm_connect {
-    my $vm = Ravada::VM::KVM->new(connector => $test->connector
-    );
+    my $vm = Ravada::VM::KVM->new();
     ok($vm);
     ok($vm->type eq 'qemu');
     ok($vm->host eq 'localhost');
