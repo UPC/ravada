@@ -20,6 +20,7 @@ our $CMD_LXC_LS;
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub BUILD {
+    die "LXC disabled in this release";
     my $self = shift;
 
     $self->connect()                if !defined $CMD_LXC_LS;

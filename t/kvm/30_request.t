@@ -8,6 +8,8 @@ use Test::SQL::Data;
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
+my $BACKEND = 'KVM';
+
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
 my $RAVADA;
@@ -62,8 +64,9 @@ sub test_req_create_domain_iso {
 
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
-        name => $name
-        ,id_iso => 1
+            name => $name
+         ,id_iso => 1
+        ,backend => $BACKEND
     );
     ok($req);
     ok($req->status);

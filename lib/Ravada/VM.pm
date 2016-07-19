@@ -63,4 +63,12 @@ sub domain_remove {
     $self->_domain_remove_bd();
 }
 
+sub name {
+    my $self = shift;
+
+    my ($ref) = ref($self) =~ /.*::(.*)/;
+
+    return ($ref or ref($self));
+}
+
 1;

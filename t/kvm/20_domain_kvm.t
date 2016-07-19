@@ -6,8 +6,10 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
+my $BACKEND = 'KVM';
+
 use_ok('Ravada');
-use_ok('Ravada::Domain::KVM');
+use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $RAVADA;
@@ -72,7 +74,9 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active);
+    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
+        , backend => $BACKEND
+    );
 
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';

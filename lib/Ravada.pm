@@ -3,6 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
+use Carp qw(carp);
 use Data::Dumper;
 use DBIx::Connector;
 use JSON::XS;
@@ -165,8 +166,12 @@ sub create_domain {
     my $backend = $args{backend};
     delete $args{backend};
 
+
     my $vm = $self->vm->[0];
     $vm = $self->search_vm($backend)   if $backend;
+
+    carp "WARNING: no backend defined, we will use ".$vm->name
+        if !$backend;
 
     return $vm->create_domain(@_);
 }
@@ -206,7 +211,7 @@ sub search_domain {
         my $id;
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
-        warn $@ if $@;
+        warn $@ if $@   && $DEBUG;
         return $domain if $id || $import;
     }
     return;
