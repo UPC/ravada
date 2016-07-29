@@ -90,8 +90,11 @@ sub _connect_dbh {
 
 sub _init_config {
     my $file = shift;
+
+    my $connector = shift;
+
     $CONFIG = YAML::LoadFile($file);
-    _connect_dbh();
+    $CONNECTOR = ( $connector or _connect_dbh());
 }
 
 sub _create_vm_kvm {
@@ -487,6 +490,7 @@ sub list_vm_types {
     
     my %type;
     for my $vm (@{$self->vm}) {
+            warn $vm;
             my ($name) = ref($vm) =~ /.*::(.*)/;
             $type{$name}++;
     }
@@ -582,6 +586,14 @@ sub _cmd_shutdown {
 
 }
 
+sub _cmd_list_vm_types {
+    my $self = shift;
+    my $request = shift;
+    $request->status('working');
+    my @list_types = $self->list_vm_types();
+    $request->result(encode_json( \@list_types));
+    $request->status('done');
+}
 
 sub _req_method {
     my $self = shift;
@@ -594,6 +606,7 @@ sub _req_method {
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
   ,prepare_base => \&_cmd_prepare_base
+ ,list_vm_types => \&_cmd_list_vm_types
     );
     return $methods{$cmd};
 }
