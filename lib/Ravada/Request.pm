@@ -193,6 +193,26 @@ sub prepare_base {
 
 }
 
+=head2 list_vm_types
+
+Returns a list of VM types
+
+    my $req = Ravada::Request->list_vm_types();
+
+    my $types = $req->result;
+
+=cut
+
+sub list_vm_types {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'list_vm_types' );
+
+}
+
 sub _new_request {
     my $self = shift;
     my %args = @_;
@@ -281,6 +301,36 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
     return $status;
+}
+
+=head2 result
+
+  Returns the result of the request if any
+
+  my $result = $req->result;
+
+=cut
+
+sub result {
+    my $self = shift;
+
+    my $value = shift;
+
+    if (defined $value ) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set result=? "
+            ." WHERE id=?");
+        $sth->execute($value, $self->{id});
+        $sth->finish;
+
+    } else {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
+        $sth->execute($self->{id});
+        ($value) = $sth->fetchrow;
+        $sth->finish;
+
+    }
+
+    return $value;
 }
 
 =head2 command
