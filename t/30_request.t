@@ -131,6 +131,18 @@ sub test_req_remove_domain_name {
 
 }
 
+sub test_list_vm_types {
+    my $req = Ravada::Request->list_vm_types();
+    $ravada->process_requests();
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".($req->error or '')." requesting VM types ");
+
+    my $result = $req->result();
+    ok(ref $result eq 'ARRAY',"Expecting ARRAY , got ".ref($result));
+
+}
+
 sub remove_old_disks {
     my ($name) = $0 =~ m{.*/(.*)\.t};
 
@@ -195,6 +207,7 @@ SKIP: {
 
     test_remove_domain($DOMAIN_NAME."_iso");
 
+    test_list_vm_types();
 };
 
 done_testing();
