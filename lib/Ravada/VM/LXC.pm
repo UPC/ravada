@@ -105,9 +105,6 @@ sub _search_template {
 
 }
 
-sub prepare_base {
-}
-
 sub _domain_create_from_base {
     my $self = shift;
     my $name = shift or confess "Missing domain name";

@@ -225,6 +225,8 @@ Makes the container available to be a base for other containers.
 =cut
 
 sub prepare_base {
+    my $self = shift;
+    $self->_prepare_base_db();
 }
 
 1;
