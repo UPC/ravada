@@ -15,6 +15,11 @@ my $ravada;
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
+my @ARG_CREATE_DOM = (
+        id_iso => 1
+);
+
+
 #######################################################################
 
 sub test_empty_request {
@@ -49,7 +54,7 @@ sub test_req_create_domain_iso {
     diag("Requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
         name => $name
-        ,id_iso => 1
+        ,@ARG_CREATE_DOM
     );
     ok($req);
     ok($req->status);
@@ -78,7 +83,7 @@ sub test_req_create_base {
     my $name = $DOMAIN_NAME."_base";
     my $req = Ravada::Request->create_domain( 
         name => $name
-        ,id_iso => 1
+        ,@ARG_CREATE_DOM
     );
     ok($req);
     ok($req->status);
@@ -164,8 +169,12 @@ eval { $ravada = Ravada->new(connector => $test->connector) };
 ok($ravada,"I can't launch a new Ravada");# or exit;
 
 my ($vm_kvm, $vm_lxc);
-eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada };
-eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada };
+eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada;
+    @ARG_CREATE_DOM = ( id_iso => 1 );
+};
+eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada;
+    @ARG_CREATE_DOM = ( id_template => 1 );
+};
 
 SKIP: {
     my $msg = "SKIPPED: No KVM nor LXC virtual managers found";
