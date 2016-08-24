@@ -12,6 +12,7 @@ use_ok('Ravada::VM::LXC');
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
+
 my $vm_lxc;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
@@ -158,7 +159,6 @@ sub remove_old_domains {
 ################################################################
 eval { $vm_lxc = Ravada::VM::LXC->new() };
 SKIP: {
-
     my $msg = ($@ or "No LXC vitual manager found");
 
     my $vm = $RAVADA->search_vm('lxc') if $RAVADA;
@@ -172,16 +172,17 @@ SKIP: {
         $Ravada::VM::LXC::CMD_LXC_LS = '';
         diag("Testing missing LXC");
 
-        my $ravada2 = Ravada->new( connector => $test->connector);
-        my $vm2 = $ravada2->search_vm('lxc');
+        my $ravada2;
+        eval { $ravada2 = Ravada->new( connector => $test->connector); };
+        my $vm2 = $ravada2->search_vm('lxc')    if $ravada2;
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
         $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
+        remove_old_domains();
+        my $domain = test_domain();
+        test_remove_domain($domain);
     }
     ok($vm,"I can't find a LXC virtual manager from ravada");
 
-    remove_old_domains();
-    my $domain = test_domain();
-    test_remove_domain($domain);
 }
 
 done_testing();
