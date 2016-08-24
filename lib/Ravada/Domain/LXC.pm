@@ -176,7 +176,8 @@ sub start {
 
 sub shutdown {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my $name = $self->name;
+#    my $name = shift or confess "Missing domain name";
 
     my @cmd = ('lxc-stop','-n',$name);
     my ($in,$out,$err);
@@ -185,6 +186,11 @@ sub shutdown {
     warn $err   if $err;
     return;
 
+}
+
+sub shutdown_now {
+    my $self = shift;
+    return $self->shutdown(@_);
 }
 
 
