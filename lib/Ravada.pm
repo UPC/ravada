@@ -206,7 +206,7 @@ sub search_domain {
         my $id;
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
-        warn $@ if $@;
+#        warn $@ if $@;
         return $domain if $id || $import;
     }
     return;

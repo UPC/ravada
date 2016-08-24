@@ -97,7 +97,7 @@ sub test_prepare_base {
     my $domain = shift;
     $domain->prepare_base();
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base=1");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find ".$domain->name." in bases");
@@ -134,7 +134,8 @@ sub test_domain{
 
         # test prepare base
         test_prepare_base($domain);
-        ok($domain->is_base,"Domain should be base"
+        ok($domain->is_base,"Domain should be base "
+            ."is_base=".$domain->is_base." "
             .Dumper($domain->_select_domain_db())
 
         );

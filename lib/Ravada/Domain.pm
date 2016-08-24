@@ -107,7 +107,7 @@ sub _prepare_base_db {
         $self->_insert_db( name => $self->name );
     }
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set is_base='y',file_base_img=? "
+        "UPDATE domains set is_base=1,file_base_img=? "
         ." WHERE id=?"
     );
     $sth->execute($file_img , $self->id);
@@ -153,10 +153,10 @@ Returns true or  false if the domain is a prepared base
 
 sub is_base { 
     my $self = shift;
-    $self->_select_domain_db or return;
+    $self->_select_domain_db or return 0;
 
-    return 1 if $self->_data('is_base') =~ /y/i;
-    return 0;
+    return 0 if $self->_data('is_base') =~ /n/i;
+    return $self->_data('is_base');
 };
 
 1;
