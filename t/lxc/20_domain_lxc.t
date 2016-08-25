@@ -59,6 +59,28 @@ sub _new_name {
     return $DOMAIN_NAME."_".$CONT++;
 }
 
+sub test_domain_from_base {
+    my $base_name = shift;
+    my $base = $vm_lxc->search_domain($base_name,1) or die "Unknown domain $base_name";
+
+    my $name = _new_name();
+    test_remove_domain($name);
+    my $domain = $vm_lxc->create_domain(name => $name
+        , id_base => $base->id);#, active => $active);
+
+    ok($domain,"Domain not created") or return;
+    my $exp_ref= 'Ravada::Domain::LXC';
+    ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
+        if $domain;
+
+    my @cmd = ('lxc-info','-n',$name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
+
+    return $domain;
+}
+
 sub test_new_domain {
     my $active = shift;
     
@@ -142,7 +164,6 @@ sub test_domain{
         ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
-        test_remove_domain($domain->name);
     }
 }
 
@@ -180,7 +201,9 @@ SKIP: {
         $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
         remove_old_domains();
         my $domain = test_domain();
+        my $domain2 = test_domain_from_base($domain);
         test_remove_domain($domain);
+        test_remove_domain($domain2);
     }
     ok($vm,"I can't find a LXC virtual manager from ravada");
 
