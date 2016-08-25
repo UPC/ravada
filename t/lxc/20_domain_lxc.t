@@ -76,7 +76,7 @@ sub test_domain_from_base {
     my @cmd = ('lxc-info','-n',$name);
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
-    ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
+    ok(!$?,"@cmd \$?=$? , it should be 0 $err $out") or exit;
 
     return $domain;
 }
@@ -135,7 +135,9 @@ sub test_domain{
     my $n_domains = scalar $vm->list_domains();
     diag("Test new domain n_domains= $n_domains");
     my $domain = test_new_domain($active);
-    if (ok($domain,"test domain not created")) {
+    if (!ok($domain,"test domain not created")) {
+        return;
+    }
         my @list = $vm->list_domains();
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
             .($n_domains+1)
@@ -164,7 +166,7 @@ sub test_domain{
         ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
-    }
+    return $domain->name;
 }
 
 sub remove_old_domains {

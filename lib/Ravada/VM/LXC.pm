@@ -20,7 +20,6 @@ our $CMD_LXC_LS;
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub BUILD {
-    die "LXC disabled in this release";
     my $self = shift;
 
     $self->connect()                if !defined $CMD_LXC_LS;
@@ -82,11 +81,12 @@ sub _domain_create_from_template {
     my $template = $self->_search_template($args{id_template});
     my $name = $args{name};
 
-    my @cmd = ('lxc-create','-n',$name,'-t', $template->{name});
+    my @cmd = ('lxc-create','-n',$name,'-t', $template->{name}
+            ,'-B','overlayfs');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
-    die $err   if $?;
+    die join(" ",@cmd)."\n".$err   if $?;
 
     my $domain = Ravada::Domain::LXC->new(domain => $args{name});
     $domain->_insert_db(name => $args{name});
@@ -114,11 +114,12 @@ sub _domain_create_from_base {
 
     my $base = $self->search_domain_by_id($id_base);
 
-    my @cmd = ('lxc-copy','-n',$base->name,"-N",$newname,"-B","overlayfs","-s");
+    my @cmd = ('lxc-clone','-s'
+        ,'-o',$base->name,"-n",$newname,"-B","overlay");
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
-    warn $err   if $err;
+    die join(" ",@cmd)."\n".$err   if $?;
     #TODO create $newname in ddbb
     my $newdomain = Ravada::Domain::LXC->new(domain => $newname);
     $newdomain->_insert_db(name => $newname);
