@@ -11,7 +11,7 @@ use YAML qw(LoadFile);
 
 use lib 'lib';
 
-use Ravada;
+use Ravada::Front;
 use Ravada::Auth;
 use Ravada::Request;
 
@@ -28,7 +28,7 @@ if ($help) {
     exit;
 }
 
-our $RAVADA = Ravada->new(config => $FILE_CONFIG);
+our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
 our $TIMEOUT = 10;
 
 init();
@@ -228,7 +228,6 @@ sub quick_start {
                     ,id_base => $id_base
                       ,login => $login 
                       ,error => \@error
-                       ,base => list_bases()
     );
 }
 
@@ -439,6 +438,7 @@ sub show_link {
 
 
 sub list_bases {
+    confess "Don't use me";
     my @bases = $RAVADA->list_bases();
 
     my %base;

@@ -127,7 +127,7 @@ sub _vol_remove {
     return 1;
 }
 
-=head2 removekvm_22_domain_kvm_base.ro.qcow2
+=head2 remove
 
 Removes this domain. It removes also the disk drives and base images.
 

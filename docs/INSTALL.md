@@ -39,11 +39,11 @@ Create a database named "ravada".
 Grant all permissions to your user:
 
     $ mysql -u root -p
-    mysql> grant all on ravada.* to frankie@'localhost' identified by 'figure a password';
+    mysql> grant all on ravada.* to ravada@'localhost' identified by 'figure a password';
 
 Review and run the sql files from the sql dir.
 
-    $ mysqladmin create ravada
+    $ mysqladmin -p create ravada
     $ cd sql/mysql
     $ cat *.sql | mysql -p ravada
     $ cd ..
@@ -55,13 +55,15 @@ Review and run the sql files from the sql dir.
 Create a config file at /etc/ravada.conf with:
     
     db:
-      user: frankie
+      user: ravada
       password: *****
 
 #KVM backend
 
 Install KVM and virt-manager. Create new virtual machines (called domains) there.
 See docs/operation.md
+
+    $ sudo apt-get install qemu-kvm
 
 #Ravada user
 

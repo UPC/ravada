@@ -6,8 +6,10 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
+my $BACKEND = 'KVM';
+
 use_ok('Ravada');
-use_ok('Ravada::Domain::KVM');
+use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $RAVADA;
@@ -72,7 +74,9 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active);
+    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
+        , backend => $BACKEND
+    );
 
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
@@ -136,7 +140,8 @@ sub test_domain{
         my $list_domains_data = $RAVADA->list_domains_data();
         ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
         my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
-        ok($is_base eq '0',"Mangled is base '$is_base' ".Dumper($list_domains_data));
+        ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 "
+            .Dumper($list_domains_data));
 
         # test prepare base
         test_prepare_base($domain);

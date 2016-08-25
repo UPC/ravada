@@ -8,8 +8,11 @@ use Test::More;
 use Test::SQL::Data;
 use XML::LibXML;
 
+my $BACKEND = 'KVM';
+
 use_ok('Ravada');
-use_ok('Ravada::Domain::KVM');
+use_ok("Ravada::Domain::$BACKEND");
+
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
 my $RAVADA;
@@ -60,7 +63,11 @@ sub test_new_domain_from_iso {
 
     diag("Creating domain $name from iso");
     my $domain;
-    eval { $domain = $RAVADA->create_domain(name => $name, id_iso => 1) };
+    eval { $domain = $RAVADA->create_domain(name => $name
+                                        , id_iso => 1
+                                        ,backend => $BACKEND
+            ) 
+    };
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -113,7 +120,11 @@ sub test_new_domain_from_base {
     test_remove_domain($name);
 
     diag("Creating domain $name from ".$base->name);
-    my $domain = $RAVADA->create_domain(name => $name, id_base => $base->id);
+    my $domain = $RAVADA->create_domain(
+                name => $name
+            ,id_base => $base->id
+            ,backend => $BACKEND
+    );
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))

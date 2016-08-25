@@ -3,6 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
+use Carp qw(carp);
 use Data::Dumper;
 use DBIx::Connector;
 use JSON::XS;
@@ -89,8 +90,11 @@ sub _connect_dbh {
 
 sub _init_config {
     my $file = shift;
+
+    my $connector = shift;
+
     $CONFIG = YAML::LoadFile($file);
-    _connect_dbh();
+    $CONNECTOR = ( $connector or _connect_dbh());
 }
 
 sub _create_vm_kvm {
@@ -165,8 +169,12 @@ sub create_domain {
     my $backend = $args{backend};
     delete $args{backend};
 
+
     my $vm = $self->vm->[0];
     $vm = $self->search_vm($backend)   if $backend;
+
+    carp "WARNING: no backend defined, we will use ".$vm->name
+        if !$backend;
 
     return $vm->create_domain(@_);
 }
@@ -202,11 +210,11 @@ sub search_domain {
     for my $vm (@{$self->vm}) {
         my $domain = $vm->search_domain($name, $import);
         next if !$domain;
-        warn "found domain $name";
+        next if !$domain->_select_domain_db && !$import;
         my $id;
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
-#        warn $@ if $@;
+        warn $@ if $@   && $DEBUG;
         return $domain if $id || $import;
     }
     return;
@@ -482,6 +490,7 @@ sub list_vm_types {
     
     my %type;
     for my $vm (@{$self->vm}) {
+            warn $vm;
             my ($name) = ref($vm) =~ /.*::(.*)/;
             $type{$name}++;
     }
@@ -565,17 +574,26 @@ sub _cmd_shutdown {
 
     $request->status('working');
     my $name = $request->args('name');
+    my $timeout = ($request->args('timeout') or 60);
+    my $domain;
     eval { 
-        my $domain = $self->search_domain($name);
+        $domain = $self->search_domain($name);
         die "Unknown domain '$name'\n" if !$domain;
-        $domain->shutdown();
+        $domain->shutdown(timeout => $timeout);
     };
-    sleep(60000);
     $request->status('done');
     $request->error($@);
 
 }
 
+sub _cmd_list_vm_types {
+    my $self = shift;
+    my $request = shift;
+    $request->status('working');
+    my @list_types = $self->list_vm_types();
+    $request->result(encode_json( \@list_types));
+    $request->status('done');
+}
 
 sub _req_method {
     my $self = shift;
@@ -588,6 +606,7 @@ sub _req_method {
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
   ,prepare_base => \&_cmd_prepare_base
+ ,list_vm_types => \&_cmd_list_vm_types
     );
     return $methods{$cmd};
 }

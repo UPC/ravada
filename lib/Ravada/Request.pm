@@ -148,7 +148,8 @@ sub start_domain {
 
 Requests to stop a domain
 
-  my $req = Ravada::Request->shutdown_domain( name => 'name' );
+  my $req = Ravada::Request->shutdown_domain( 'name' );
+  my $req = Ravada::Request->shutdown_domain( 'name' , $timeout );
 
 =cut
 
@@ -159,11 +160,13 @@ sub shutdown_domain {
     my $name = shift;
     $name = $name->name if ref($name) =~ /Domain/;
 
-    my %args = ( name => $name )    or confess "Missing domain name";
+    my $timeout = ( shift or 10 );
+
+    my %args = ( name => $name, timeout => $timeout )    or confess "Missing domain name";
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'shutdown' , args => encode_json({ name => $name }));
+    return $self->_new_request(command => 'shutdown' , args => encode_json(\%args));
 }
 
 =head2 prepare_base
@@ -187,6 +190,26 @@ sub prepare_base {
     bless($self,$class);
     return $self->_new_request(command => 'prepare_base' 
         , args => encode_json({ name => $name }));
+
+}
+
+=head2 list_vm_types
+
+Returns a list of VM types
+
+    my $req = Ravada::Request->list_vm_types();
+
+    my $types = $req->result;
+
+=cut
+
+sub list_vm_types {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'list_vm_types' );
 
 }
 
@@ -278,6 +301,36 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
     return $status;
+}
+
+=head2 result
+
+  Returns the result of the request if any
+
+  my $result = $req->result;
+
+=cut
+
+sub result {
+    my $self = shift;
+
+    my $value = shift;
+
+    if (defined $value ) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set result=? "
+            ." WHERE id=?");
+        $sth->execute($value, $self->{id});
+        $sth->finish;
+
+    } else {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
+        $sth->execute($self->{id});
+        ($value) = $sth->fetchrow;
+        $sth->finish;
+
+    }
+
+    return $value;
 }
 
 =head2 command
