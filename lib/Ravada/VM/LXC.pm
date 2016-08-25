@@ -107,10 +107,13 @@ sub _search_template {
 
 sub _domain_create_from_base {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my %arg = @_;
+    my $newname = $arg{name} or confess "Missing name";
+    my $id_base = $arg{id_base} or confess "Missing id_base";
 
-    my $newname = $name . "_cow";
-    my @cmd = ('lxc-copy','-n',$name,"-N",$newname,"-B","overlayfs","-s");
+    my $base = $self->search_domain_by_id($id_base);
+
+    my @cmd = ('lxc-copy','-n',$base->name,"-N",$newname,"-B","overlayfs","-s");
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
