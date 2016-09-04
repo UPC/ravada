@@ -6,7 +6,6 @@ use strict;
 use Carp qw(carp);
 use Data::Dumper;
 use DBIx::Connector;
-use JSON::XS;
 use Moose;
 use YAML;
 
@@ -490,7 +489,6 @@ sub list_vm_types {
     
     my %type;
     for my $vm (@{$self->vm}) {
-            warn $vm;
             my ($name) = ref($vm) =~ /.*::(.*)/;
             $type{$name}++;
     }
@@ -591,7 +589,7 @@ sub _cmd_list_vm_types {
     my $request = shift;
     $request->status('working');
     my @list_types = $self->list_vm_types();
-    $request->result(encode_json( \@list_types));
+    $request->result(\@list_types);
     $request->status('done');
 }
 
