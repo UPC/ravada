@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
@@ -15,6 +16,10 @@ eval { $RAVADA = Ravada->new(connector => $test->connector) };
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $CONT = 0;
+
+my @ARG_CREATE_DOM = (
+        id_iso => 1
+);
 
 sub test_request_start {
 }
@@ -54,7 +59,7 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => 0);
+    my $domain = $RAVADA->create_domain(name => $name, @ARG_CREATE_DOM, active => 0);
 
     ok($domain,"Domain not created");
 
@@ -69,7 +74,8 @@ sub test_start {
     test_new_domain($name);
 
     my $domain = $RAVADA->search_domain($name);
-    ok(!$domain->is_active,"Domain $name should be inactive") or return;
+    ok($domain,"Domain $name not found") or return;
+    ok(!$domain->is_active,"Domain $name should be inactive") or return $domain;
 
 
     my $req = Ravada::Request->start_domain(
@@ -129,7 +135,7 @@ sub remove_old_disks {
     my ($name) = $0 =~ m{.*/(.*)\.t};
 
     my $vm = $RAVADA->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
+    return if !$vm;
 
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
@@ -149,10 +155,14 @@ sub remove_old_disks {
 
 my $vmm;
 
-eval { 
-    $vmm = $RAVADA->search_vm('kvm');
-    $vmm = $RAVADA->search_vm('lxc') if !$vmm;
-} if $RAVADA;
+my ($vm_kvm, $vm_lxc);
+eval { $vmm = $RAVADA->search_vm('kvm')  if $RAVADA;
+    @ARG_CREATE_DOM = ( id_iso => 1 );
+};
+eval { $vmm = $RAVADA->search_vm('lxc')  if $RAVADA && !$vmm;
+    @ARG_CREATE_DOM = ( id_template => 1 );
+};
+
 
 SKIP: {
     my $msg = "SKIPPED: No virtual managers found";
@@ -163,8 +173,10 @@ SKIP: {
     remove_old_disks();
     my $domain = test_start();
 
-    $domain->shutdown_now();
-    $domain->remove();
+    if ($domain) {
+        $domain->shutdown_now();
+        $domain->remove();
+    }
 };
 done_testing();
 

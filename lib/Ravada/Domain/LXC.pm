@@ -157,17 +157,28 @@ sub display {
 
 sub is_active {
     my $self = shift;
-
+    my @cmd = ('lxc-info','-n',$self->name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $err   if $err;
+    for (split /\n/, $out) {
+        my ($field,$value) = /(\w+\:)\s+(.*)/;
+        next if $field !~ /State/i;
+        return 0 if $value =~ /STOPPED/i;
+        return 1 if $value =~ /RUNNING/i;
+        confess "Unknown $field $value";
+    }
+    return;
 }
 
 sub start {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
 # lxc-execute -n name -- /bin/bash -c /root/run.sh
 
-    my @cmd = ('lxc-start','-n',$name);
+    my @cmd = ('lxc-start','-n',$self->name);
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
+    warn "starting ".$self->name;
     warn $out  if $out;
     warn $err   if $err;
     return;
@@ -234,5 +245,10 @@ sub prepare_base {
     my $self = shift;
     $self->_prepare_base_db();
 }
+
+sub list_disks { 
+    # TODOD
+    return () 
+};
 
 1;

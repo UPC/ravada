@@ -53,7 +53,7 @@ sub create_domain {
     $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
-    croak "argument id_template or id_base required" 
+    croak "argument id_template or id_base required , got ".Dumper(\%args) 
         if !$args{id_template} && !$args{id_base};
 
     my $domain;
@@ -159,7 +159,7 @@ sub search_domain_by_id {
     return $self->search_domain($name);
 } 
 
- sub _list_domains {
+sub _list_domains {
     my $self = shift;
     my @list = ('lxc-ls','-1');
     my ($in,$out,$err);
