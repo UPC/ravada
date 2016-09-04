@@ -64,7 +64,7 @@ sub create_domain {
     } else {
         confess "TODO";
     }
-
+    $domain->start if $args{active};
     return $domain;
 }
 
