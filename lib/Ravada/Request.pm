@@ -319,13 +319,14 @@ sub result {
     if (defined $value ) {
         my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set result=? "
             ." WHERE id=?");
-        $sth->execute($value, $self->{id});
+        $sth->execute(encode_json($value), $self->{id});
         $sth->finish;
 
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
         $sth->execute($self->{id});
         ($value) = $sth->fetchrow;
+        $value = decode_json($value);
         $sth->finish;
 
     }
