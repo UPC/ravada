@@ -103,10 +103,12 @@ sub test_prepare_base {
     my $domain = shift;
     $domain->prepare_base();
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
+    my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
-    my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name);
+    my ($is_base) =  $sth->fetchrow;
+    ok($is_base
+            ,"Expecting is_base=1 got "
+            .(${is_base} or '<UNDEF>'));
     $sth->finish;
 }
 

@@ -99,10 +99,10 @@ sub test_prepare_base {
 
     $domain->prepare_base();
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name);
+    ok($row->{is_base});
     $sth->finish;
 
     my @list2 = $RAVADA->list_bases();
