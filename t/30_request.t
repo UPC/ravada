@@ -182,10 +182,10 @@ ok($ravada,"I can't launch a new Ravada");# or exit;
 
 my ($vm_kvm, $vm_lxc);
 eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada;
-    @ARG_CREATE_DOM = ( id_iso => 1 );
+    @ARG_CREATE_DOM = ( id_iso => 1 )       if $vm_kvm;
 };
 eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada;
-    @ARG_CREATE_DOM = ( id_template => 1 );
+    @ARG_CREATE_DOM = ( id_template => 1 )  if $vm_lxc;
 };
 
 SKIP: {
