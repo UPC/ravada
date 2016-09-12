@@ -96,7 +96,7 @@ any '/users' => sub {
 
 get '/list_vm_types.json' => sub {
     my $c = shift;
-    $c->render(json => [$RAVADA->list_vm_types]);
+    $c->render(json => $RAVADA->list_vm_types);
 };
 
 get '/list_bases.json' => sub {
