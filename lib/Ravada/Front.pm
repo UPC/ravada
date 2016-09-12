@@ -70,7 +70,7 @@ sub list_vm_types {
     my $self = shift;
 
     my $req = Ravada::Request->list_vm_types();
-    _wait_request($req);
+    $self->_wait_request($req);
 
     die "ERROR: Timeout waiting for request ".$req->id
         if $req->status() eq 'timeout';
