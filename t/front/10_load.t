@@ -56,5 +56,4 @@ sub test_add_domain_db {
 test_empty();
 test_add_domain_db();
  
- 
 done_testing();

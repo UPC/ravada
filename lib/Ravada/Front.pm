@@ -59,4 +59,9 @@ sub list_domains {
 
 }
 
+sub create_domain {
+    my $self = shift;
+    return Ravada::Request->create_domain(@_);
+}
+
 1;
