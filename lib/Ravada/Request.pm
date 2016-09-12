@@ -213,6 +213,21 @@ sub list_vm_types {
 
 }
 
+=head2 ping_backend
+
+Returns wether the backend is alive or not
+
+=cut
+
+sub ping_backend {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'ping_backend' );
+}
+
 sub _new_request {
     my $self = shift;
     my %args = @_;
