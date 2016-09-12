@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp qw(confess);
+use Data::Dumper;
 use JSON::XS;
 use Ravada;
 
@@ -341,7 +342,7 @@ sub result {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
         $sth->execute($self->{id});
         ($value) = $sth->fetchrow;
-        $value = decode_json($value);
+        $value = decode_json($value)    if defined $value;
         $sth->finish;
 
     }
