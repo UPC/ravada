@@ -13,7 +13,6 @@ use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Auth;
-use Ravada::Request;
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
@@ -340,7 +339,7 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
-    my $req = Ravada::Request->create_domain(
+    my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
         ,id_template => $c->param('id_template')
