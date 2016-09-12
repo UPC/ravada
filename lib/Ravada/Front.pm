@@ -34,8 +34,12 @@ Internal constructor
 
 sub BUILD {
     my $self = shift;
-    $$CONNECTOR = $self->connector if $self->connector;
-    Ravada::_init_config($self->config, $self->connector);
+    if ($self->connector) {
+        $$CONNECTOR = $self->connector;
+    } else {
+        Ravada::_init_config($self->config());
+        $CONNECTOR = Ravada::_connect_dbh();
+    }
 }
 
 sub list_bases {
@@ -76,6 +80,21 @@ sub list_vm_types {
         if $req->status() eq 'timeout';
 
     return $req->result();
+}
+
+sub list_iso_images {
+    my $self = shift;
+
+    my @iso;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @iso,($row);
+    }
+    $sth->finish;
+    return \@iso;
 }
 
 sub create_domain {
