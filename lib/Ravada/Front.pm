@@ -16,6 +16,11 @@ has 'config' => (
 has 'connector' => (
         is => 'rw'
 );
+has 'backend' => (
+    is => 'ro',
+    isa => 'Ravada'
+
+);
 
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
@@ -79,8 +84,12 @@ sub create_domain {
 }
 
 sub _wait_request {
+    my $self = shift;
     my $req = shift;
+
     my $timeout = ( shift or $TIMEOUT );
+
+    $self->backend->process_requests if $self->backend;
 
     for ( 1 .. $TIMEOUT ) {
         last if $req->status eq 'done';
@@ -94,8 +103,10 @@ sub _wait_request {
 
 sub ping_backend {
     my $self = shift;
+
     my $req = Ravada::Request->ping_backend();
-    _wait_request($req, 2);
+    $self->_wait_request($req, 2);
+
     return 1 if $req->status() eq 'done';
     return 0;
 }
