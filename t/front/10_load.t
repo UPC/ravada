@@ -9,7 +9,7 @@ use_ok('Ravada::Front');
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
-my $rvd = Ravada::Front->new( connector => $test->connector);
+my $RVD_FRONT = Ravada::Front->new( connector => $test->connector);
 
 # twice so it won't warn it is only used once
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
@@ -17,11 +17,11 @@ ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
 
 sub test_empty {
 
-    my $bases = $rvd->list_bases();
+    my $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
 
-    my $domains = $rvd->list_domains();
+    my $domains = $RVD_FRONT->list_domains();
     ok($domains,"No domains list returned");
     ok(scalar @$domains == 0, "There should be no domains");
 
@@ -34,17 +34,17 @@ sub test_add_domain_db {
             ."(name) VALUES (?)");
     $sth->execute('a');
     
-    my $domains = $rvd->list_domains();
+    my $domains = $RVD_FRONT->list_domains();
     ok($domains,"No domains list returned");
     ok(scalar @$domains == 1, "There should be one domain ".Dumper($domains));
     
-    my $bases = $rvd->list_bases();
+    my $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
     
     $test->dbh->do("UPDATE DOMAINS set is_base='y' WHERE name='a'");
     
-    $bases = $rvd->list_bases();
+    $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 1, "There should 1 base");
     
@@ -53,7 +53,22 @@ sub test_add_domain_db {
     }
 }
 
-test_empty();
-test_add_domain_db();
+sub test_vm_types {
+    my $vm_types;
+    eval { $vm_types = $RVD_FRONT->list_vm_types() };
+    if ($@ =~ /timeout/i ) {
+    }
+
+}
+
+my $ping = $RVD_FRONT->ping_backend();
+
+SKIP: {
+    diag("SKIPPING: No backend found at ping")    if !$ping;
+    skip("No backend found at ping",10) if !$ping;
+    test_empty();
+    test_add_domain_db();
+    test_vm_types();
+}
  
 done_testing();
