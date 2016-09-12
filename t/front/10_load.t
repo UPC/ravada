@@ -9,7 +9,11 @@ use_ok('Ravada::Front');
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
-my $RVD_FRONT = Ravada::Front->new( connector => $test->connector);
+my $RVD_BACK  = Ravada->new( config => 't/etc/ravada.conf' );
+my $RVD_FRONT = Ravada::Front->new( connector => $test->connector 
+    , config => 't/etc/ravada.conf'
+    , backend => $RVD_BACK
+);
 
 # twice so it won't warn it is only used once
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
