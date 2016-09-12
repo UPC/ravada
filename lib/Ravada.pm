@@ -593,6 +593,14 @@ sub _cmd_list_vm_types {
     $request->status('done');
 }
 
+sub _cmd_ping_backend {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('done');
+    return 1;
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -603,6 +611,7 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
+  ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,list_vm_types => \&_cmd_list_vm_types
     );
