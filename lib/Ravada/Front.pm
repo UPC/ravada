@@ -6,6 +6,8 @@ use warnings;
 use Moose;
 use Ravada;
 
+use Data::Dumper;
+
 has 'config' => (
     is => 'ro'
     ,isa => 'Str'
@@ -17,6 +19,7 @@ has 'connector' => (
 
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
+our $TIMEOUT = 5;
 
 =head2 BUILD
 
@@ -56,12 +59,45 @@ sub list_domains {
     $sth->finish;
 
     return \@domains;
+}
 
+sub list_vm_types {
+    my $self = shift;
+
+    my $req = Ravada::Request->list_vm_types();
+    _wait_request($req);
+
+    die "ERROR: Timeout waiting for request ".$req->id
+        if $req->status() eq 'timeout';
+
+    return $req->result();
 }
 
 sub create_domain {
     my $self = shift;
     return Ravada::Request->create_domain(@_);
+}
+
+sub _wait_request {
+    my $req = shift;
+    my $timeout = ( shift or $TIMEOUT );
+
+    for ( 1 .. $TIMEOUT ) {
+        last if $req->status eq 'done';
+        sleep 1;
+    }
+    $req->status("timeout")
+        if $req->status eq 'working';
+    return $req;
+
+}
+
+sub ping_backend {
+    my $self = shift;
+    my $req = Ravada::Request->ping_backend();
+    _wait_request($req, 2);
+    return 1 if $req->status() eq 'done';
+    return 0;
 }
 
 1;
