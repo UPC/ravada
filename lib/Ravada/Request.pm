@@ -21,9 +21,9 @@ our %FIELD_RO = map { $_ => 1 } qw(name);
 
 our %VALID_ARG = (
     create_domain => { 
-            name => 1
+              vm => 1
+           ,name => 1
          ,id_iso => 1
-        ,backend => 1
     ,id_template => 1
     }
 );
