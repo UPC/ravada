@@ -162,4 +162,31 @@ sub search_domain {
     lock_hash(%$row);
     return $row;
 }
+
+=head2 list_requests
+
+Returns a list of ruquests : ( id , domain_name, status, error )
+
+=cut
+
+sub list_requests {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
+        ." FROM requests "
+        ." ORDER BY date_changed DESC LIMIT 4"
+    );
+    $sth->execute;
+    my @reqs;
+    my ($id, $command, $j_args, $date_changed, $status, $error);
+    $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
+
+    while ( $sth->fetch) {
+        my $args = decode_json($j_args) if $j_args;
+
+        push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
+    }
+    $sth->finish;
+    return \@reqs;
+}
+
 1;
