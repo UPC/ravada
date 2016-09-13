@@ -29,6 +29,8 @@ our %VALID_ARG = (
 );
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
+$CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+
 
 sub _request {
     my $proto = shift;
