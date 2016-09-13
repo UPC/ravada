@@ -5,6 +5,7 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use_ok('Ravada');
 use_ok('Ravada::Front');
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
@@ -14,7 +15,7 @@ my @rvd_args = (
    ,connector => $test->connector 
 );
 
-my $RVD_BACK  = Ravada->new( @rvd_args);
+my $RVD_BACK  = Ravada->new( @rvd_args );
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
@@ -22,6 +23,9 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 # twice so it won't warn it is only used once
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
+
+ok($RVD_BACK->connector());
+
 
 sub test_empty {
 

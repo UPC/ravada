@@ -13,7 +13,15 @@ my $CONT= 0;
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
-my $RVD = Ravada::Front->new( connector => $test->connector);
+my @rvd_args = (
+       config => 't/etc/ravada.conf' 
+   ,connector => $test->connector 
+);
+
+my $RVD_BACK  = Ravada->new( @rvd_args );
+my $RVD_FRONT = Ravada::Front->new( @rvd_args
+    , backend => $RVD_BACK
+);
 
 my %CREATE_ARGS = (
     kvm => { id_iso => 1 }
@@ -37,13 +45,13 @@ sub create_args {
 for my $backend ('kvm','lxc') {
 
     my $name = _new_name();
-    my $req = $RVD->create_domain( name => $name 
+    my $req = $RVD_FRONT->create_domain( name => $name 
         , backend => $backend
         , create_args($backend)
     );
     ok($req, "Request $name not created");
 
-    $RVD->wait_request($req);
+    $RVD_FRONT->wait_request($req);
 
     ok($req->status eq 'done',"Request for create $backend domain ".$req->status);
 }
