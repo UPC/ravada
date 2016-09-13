@@ -346,14 +346,14 @@ sub req_new_domain {
         ,backend => $c->param('backend')
     );
 
-    wait_request_done($c,$req);
+    $RAVADA->wait_request_done($req);
+
+
+    return $c->stash(error => $req->error) if $req->error;
 
     my $domain = $RAVADA->search_domain($name);
-
-    if ( $req->error ) {
-        $c->stash(error => $req->error) 
-    } elsif (!$domain) {
-        $c->stash(error => "I dunno why but no domain $name");
+    if (!$domain) {
+        return $c->stash(error => "I dunno why but no domain $name");
     }
     return $domain;
 }
@@ -403,19 +403,6 @@ sub provision {
         $c->stash(error => "I dunno why but no domain $name");
     }
     return $domain;
-}
-
-sub wait_request_done {
-    my ($c, $req) = @_;
-    
-    for ( 1 .. $TIMEOUT ) {
-        warn "$_ ".$req->status;
-        last if $req->status eq 'done';
-        sleep 1;
-    }
-    $req->status("timeout")
-        if $req->status eq 'working';
-    return $req;
 }
 
 sub show_link {
