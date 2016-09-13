@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Ravada;
+use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Moose;
@@ -12,6 +13,8 @@ with 'Ravada::Auth::User';
 
 
 our $CON = \$Ravada::CONNECTOR;
+$CON = \$Ravada::Front::CONNECTOR   if !$$CON;
+
 
 sub BUILD {
     my $self = shift;
