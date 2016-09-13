@@ -74,7 +74,7 @@ sub list_vm_types {
     my $self = shift;
 
     my $req = Ravada::Request->list_vm_types();
-    $self->_wait_request($req);
+    $self->wait_request($req);
 
     die "ERROR: Timeout waiting for request ".$req->id
         if $req->status() eq 'timeout';
@@ -118,7 +118,7 @@ sub create_domain {
     return Ravada::Request->create_domain(@_);
 }
 
-sub _wait_request {
+sub wait_request {
     my $self = shift;
     my $req = shift;
 
@@ -140,7 +140,7 @@ sub ping_backend {
     my $self = shift;
 
     my $req = Ravada::Request->ping_backend();
-    $self->_wait_request($req, 2);
+    $self->wait_request($req, 2);
 
     return 1 if $req->status() eq 'done';
     return 0;
