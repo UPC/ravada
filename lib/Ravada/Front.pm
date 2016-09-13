@@ -125,7 +125,7 @@ sub wait_request {
 
     my $timeout = ( shift or $TIMEOUT );
 
-    $self->backend->process_requests if $self->backend;
+    $self->backend->process_requests() if $self->backend;
 
     for ( 1 .. $TIMEOUT ) {
         last if $req->status eq 'done';
