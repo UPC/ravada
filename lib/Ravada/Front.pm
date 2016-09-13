@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Hash::Util qw(lock_hash);
+use JSON::XS;
 use Moose;
 use Ravada;
 

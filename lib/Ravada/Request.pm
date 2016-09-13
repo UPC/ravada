@@ -7,6 +7,7 @@ use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Ravada;
+use Ravada::Front;
 
 use vars qw($AUTOLOAD);
 
@@ -28,9 +29,17 @@ our %VALID_ARG = (
     }
 );
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
-$CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+our $CONNECTOR;
 
+sub _init_connector {
+    $CONNECTOR = \$Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+
+}
+
+sub BUILD {
+    _init_connector();
+}
 
 sub _request {
     my $proto = shift;
@@ -54,6 +63,8 @@ sub open {
     my $class = ref($proto) || $proto;
 
     my $id = shift or confess "Missing request id";
+
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
         ." WHERE id=?");
@@ -242,7 +253,7 @@ sub _new_request {
         delete $args{name};
     }
 
-    $CONNECTOR = \$Ravada::CONNECTOR if !defined$CONNECTOR;
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
