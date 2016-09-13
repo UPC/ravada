@@ -42,17 +42,24 @@ sub create_args {
 }
 
 
-for my $backend ('kvm','lxc') {
+for my $vm ('kvm','lxc') {
 
     my $name = _new_name();
     my $req = $RVD_FRONT->create_domain( name => $name 
-        , backend => $backend
-        , create_args($backend)
+        , vm => $vm
+        , create_args($vm)
     );
     ok($req, "Request $name not created");
 
     $RVD_FRONT->wait_request($req);
 
-    ok($req->status eq 'done',"Request for create $backend domain ".$req->status);
+    ok($req->status eq 'done',"Request for create $vm domain ".$req->status);
+
+    my $domain  = $RVD_FRONT->search_domain($name);
+
+    ok($domain,"Domain $name not found");
+    ok($domain && $domain->{name} && 
+        $domain->{name} eq $name,"Expecting domain name $name, got "
+        .($domain->{name} or '<UNDEF>'));
 }
 done_testing();
