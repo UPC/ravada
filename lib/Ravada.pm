@@ -166,15 +166,15 @@ sub create_domain {
 
     my %args = @_;
 
-    my $backend = $args{backend};
-    delete $args{backend};
+    my $vm_name = $args{vm};
+    delete $args{vm};
 
 
     my $vm = $self->vm->[0];
-    $vm = $self->search_vm($backend)   if $backend;
+    $vm = $self->search_vm($vm_name)   if $vm_name;
 
-    carp "WARNING: no backend defined, we will use ".$vm->name
-        if !$backend;
+    carp "WARNING: no VM defined, we will use ".$vm->name
+        if !$vm_name;
 
     return $vm->create_domain(@_);
 }
