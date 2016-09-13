@@ -343,10 +343,10 @@ sub req_new_domain {
            name => $name
         ,id_iso => $c->param('id_iso')
         ,id_template => $c->param('id_template')
-        ,backend => $c->param('backend')
+        ,vm=> $c->param('backend')
     );
 
-    $RAVADA->wait_request_done($req);
+    $RAVADA->wait_request($req);
 
 
     return $c->stash(error => $req->error) if $req->error;
