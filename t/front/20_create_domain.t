@@ -44,5 +44,7 @@ for my $backend ('kvm','lxc') {
     ok($req, "Request $name not created");
 
     $RVD->wait_request($req);
+
+    ok($req->status eq 'done',"Request for create $backend domain ".$req->status);
 }
 done_testing();

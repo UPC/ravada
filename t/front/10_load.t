@@ -9,9 +9,13 @@ use_ok('Ravada::Front');
 
 my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 
-my $RVD_BACK  = Ravada->new( config => 't/etc/ravada.conf' );
-my $RVD_FRONT = Ravada::Front->new( connector => $test->connector 
-    , config => 't/etc/ravada.conf'
+my @rvd_args = (
+       config => 't/etc/ravada.conf' 
+   ,connector => $test->connector 
+);
+
+my $RVD_BACK  = Ravada->new( @rvd_args);
+my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
 
