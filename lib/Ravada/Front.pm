@@ -3,6 +3,7 @@ package Ravada::Front;
 use strict;
 use warnings;
 
+use Hash::Util qw(lock_hash);
 use Moose;
 use Ravada;
 
@@ -146,4 +147,19 @@ sub ping_backend {
     return 0;
 }
 
+sub search_domain {
+    my $self = shift;
+
+    my $name = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    $sth->execute($name);
+
+    my $row = $sth->fetchrow_hashref;
+
+    return if !keys %$row;
+
+    lock_hash(%$row);
+    return $row;
+}
 1;
