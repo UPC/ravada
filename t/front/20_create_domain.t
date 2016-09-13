@@ -41,6 +41,8 @@ for my $backend ('kvm','lxc') {
         , backend => $backend
         , create_args($backend)
     );
-    ok($req, "Domain $name not created");
+    ok($req, "Request $name not created");
+
+    $RVD->wait_request($req);
 }
 done_testing();

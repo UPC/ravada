@@ -114,10 +114,9 @@ get '/list_machines.json' => sub {
     $c->render(json => $RAVADA->list_domains_data);
 };
 
-get '/list_templates.json' => sub {
+get '/list_lxc_templates.json' => sub {
     my $c = shift;
-    warn "TODO list_templates.json";
-#    $c->render(json => $RAVADA->list_images_data_lxc);
+    $c->render(json => $RAVADA->list_lxc_templates);
 };
 
 

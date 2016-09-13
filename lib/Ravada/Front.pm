@@ -23,7 +23,7 @@ has 'backend' => (
 );
 
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
+our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 5;
 
 =head2 BUILD
@@ -35,7 +35,7 @@ Internal constructor
 sub BUILD {
     my $self = shift;
     if ($self->connector) {
-        $$CONNECTOR = $self->connector;
+        $CONNECTOR = $self->connector;
     } else {
         Ravada::_init_config($self->config());
         $CONNECTOR = Ravada::_connect_dbh();
@@ -44,7 +44,7 @@ sub BUILD {
 
 sub list_bases {
     my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base='y'");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base='y'");
     $sth->execute();
     
     my @bases = ();
@@ -58,7 +58,7 @@ sub list_bases {
 
 sub list_domains {
     my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domains ");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains ");
     $sth->execute();
     
     my @domains = ();
@@ -95,6 +95,22 @@ sub list_iso_images {
     }
     $sth->finish;
     return \@iso;
+}
+
+sub list_lxc_templates {
+    my $self = shift;
+
+    my @template;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM lxc_templates ORDER BY name"
+    );
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @template,($row);
+    }
+    $sth->finish;
+    return \@template;
+
 }
 
 sub create_domain {
