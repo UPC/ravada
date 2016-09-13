@@ -91,9 +91,10 @@ sub _init_config {
     my $file = shift;
 
     my $connector = shift;
+    confess "Deprecated connector" if $connector;
 
     $CONFIG = YAML::LoadFile($file);
-    $CONNECTOR = ( $connector or _connect_dbh());
+#    $CONNECTOR = ( $connector or _connect_dbh());
 }
 
 sub _create_vm_kvm {
