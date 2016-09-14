@@ -66,7 +66,7 @@ sub test_req_create_domain_iso {
     my $req = Ravada::Request->create_domain( 
             name => $name
          ,id_iso => 1
-        ,backend => $BACKEND
+             ,vm => $BACKEND
     );
     ok($req);
     ok($req->status);
@@ -95,7 +95,7 @@ sub test_force_kvm {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_iso => 1
-        ,backend => 'kvm'
+        ,vm => 'kvm'
     );
     ok($req);
     ok($req->status);
