@@ -65,7 +65,7 @@ sub test_new_domain_from_iso {
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
                                         , id_iso => 1
-                                        ,backend => $BACKEND
+                                        ,vm => $BACKEND
             ) 
     };
     ok(!$@,"Domain $name not created: $@");
@@ -123,7 +123,7 @@ sub test_new_domain_from_base {
     my $domain = $RAVADA->create_domain(
                 name => $name
             ,id_base => $base->id
-            ,backend => $BACKEND
+            ,vm => $BACKEND
     );
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';

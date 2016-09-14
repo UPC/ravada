@@ -75,7 +75,7 @@ sub test_new_domain {
 
     diag("Creating domain $name");
     my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
-        , backend => $BACKEND
+        , vm => $BACKEND
     );
 
     ok($domain,"Domain not created");
