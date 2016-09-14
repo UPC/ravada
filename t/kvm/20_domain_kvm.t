@@ -12,8 +12,14 @@ use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+
+my @rvd_args = (
+       config => 't/etc/ravada.conf' 
+   ,connector => $test->connector 
+);
+
 my $RAVADA;
-eval { $RAVADA = Ravada->new( connector => $test->connector) };
+eval { $RAVADA = Ravada->new( @rvd_args ) };
 
 my $CONT= 0;
 
