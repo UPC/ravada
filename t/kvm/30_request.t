@@ -174,8 +174,10 @@ SKIP: {
     {
         my $domain = test_req_create_domain_iso();
 
-        test_req_prepare_base($domain->name)    if $domain;
-        test_remove_domain($domain->name)       if $domain;
+        if ($domain ) {
+            test_req_prepare_base($domain->name);
+            test_remove_domain($domain->name);
+        }
     }
 
     {
