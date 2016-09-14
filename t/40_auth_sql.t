@@ -10,11 +10,12 @@ my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
 use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
 
-ok($Ravada::Auth::SQL::CON,"Undefined DB connection");
 
 my $RAVADA = Ravada->new(connector => $test->connector);
 
 Ravada::Auth::SQL::add_user('test',$$);
+
+ok($$Ravada::Auth::SQL::CON,"Undefined DB connection");
 
 my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT * FROM users WHERE name=?");
 $sth->execute('test');
