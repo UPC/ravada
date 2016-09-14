@@ -190,4 +190,27 @@ sub list_requests {
     return \@reqs;
 }
 
+=head2 search_domain_by_id
+
+  my $domain = $ravada->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+      my $id = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    $sth->execute($id);
+
+    my $row = $sth->fetchrow_hashref;
+
+    return if !keys %$row;
+
+    lock_hash(%$row);
+    return $row;
+
+}
+
+
 1;
