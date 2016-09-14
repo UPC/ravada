@@ -153,11 +153,11 @@ my $vmm;
 
 eval { 
     $vmm = $RAVADA->search_vm('kvm');
-    @ARG_CREATE_DOM = ( id_iso => 1, backend => 'kvm' )  if $vmm;
+    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm' )  if $vmm;
 
     if (!$vmm) {
         $vmm = $RAVADA->search_vm('lxc');
-        @ARG_CREATE_DOM = ( id_template => 1, backend => 'LXC' );
+        @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC' );
     }
 
 } if $RAVADA;
