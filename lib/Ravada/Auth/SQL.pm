@@ -12,11 +12,17 @@ use Moose;
 with 'Ravada::Auth::User';
 
 
-our $CON = \$Ravada::CONNECTOR;
-$CON = \$Ravada::Front::CONNECTOR   if !$$CON;
+our $CON;
+
+sub _init_connector {
+    $CON= \$Ravada::CONNECTOR;
+    $CON= \$Ravada::Front::CONNECTOR   if !$$CON;
+}
 
 
 sub BUILD {
+    _init_connector();
+
     my $self = shift;
     die "ERROR: Login failed ".$self->name
         if !$self->login();#$self->name, $self->password);
@@ -24,6 +30,7 @@ sub BUILD {
 }
 
 sub add_user {
+    _init_connector();
     my ($login,$password, $is_admin ) = @_;
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password,is_admin) VALUES(?,?,?)");
