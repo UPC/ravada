@@ -242,6 +242,27 @@ sub ping_backend {
     return $self->_new_request( command => 'ping_backend' );
 }
 
+=head2 domdisplay
+
+Returns the domdisplay of a domain
+
+Arguments:
+
+* domain name
+
+=cut
+
+sub domdisplay {
+   my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'domdisplay',args => { name => $name });
+}
+
 sub _new_request {
     my $self = shift;
     my %args = @_;
@@ -251,6 +272,9 @@ sub _new_request {
     if ($args{name}) {
         $args{domain_name} = $args{name};
         delete $args{name};
+    }
+    if ( ref $args{args} ) {
+        $args{args} = encode_json($args{args});
     }
 
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
@@ -400,8 +424,8 @@ sub args {
     my $name = shift;
     return $self->{args}    if !$name;
 
-    confess "Unknown argument $name"
-        if !exists $self->{args}->{name};
+    confess "Unknown argument $name ".Dumper($self->{args})
+        if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
 }
 

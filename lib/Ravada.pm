@@ -471,6 +471,18 @@ sub _execute {
 
 }
 
+sub _cmd_domdisplay {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+
+    my $name = $request->args('name');
+    confess "Unknown name for request ".Dumper($request)  if!$name;
+    my $domain = $self->search_domain($request->args->{name});
+    return $domain->display;
+}
+
 sub _cmd_create {
     my $self = shift;
     my $request = shift;
@@ -574,6 +586,7 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
+    ,domdisplay => \&_cmd_domdisplay
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,list_vm_types => \&_cmd_list_vm_types

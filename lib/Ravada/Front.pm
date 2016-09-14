@@ -208,8 +208,18 @@ sub search_domain_by_id {
     return if !keys %$row;
 
     lock_hash(%$row);
-    return $row;
 
+    return $row;
+}
+
+sub domdisplay {
+    my $self = shift;
+    my $name = shift;
+
+    my $req = Ravada::Request->domdisplay($name);
+    $self->wait_request($req, 2);
+
+    return $req->result();
 }
 
 
