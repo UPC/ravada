@@ -435,8 +435,11 @@ sub AUTOLOAD {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
-    $sth->execute($value, $self->{id});
-    $sth->finish;
+    eval { 
+        $sth->execute($value, $self->{id});
+        $sth->finish;
+    };
+    warn "$name=$value\n$@" if $@;
     return $value;
 
 }
