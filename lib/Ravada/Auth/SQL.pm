@@ -14,8 +14,6 @@ with 'Ravada::Auth::User';
 
 our $CON;
 
-_init_connector();
-
 sub _init_connector {
     $CON= \$Ravada::CONNECTOR;
     $CON= \$Ravada::Front::CONNECTOR   if !$$CON;
