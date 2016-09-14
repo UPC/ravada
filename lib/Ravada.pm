@@ -435,7 +435,7 @@ sub process_requests {
         my $req = Ravada::Request->open($id);
         warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
         $self->_execute($req);
-        warn $req->status() if $DEBUG;
+        warn "status: ".$req->status() if $DEBUG || $debug;
     }
     $sth->finish;
 }
@@ -480,7 +480,12 @@ sub _cmd_domdisplay {
     my $name = $request->args('name');
     confess "Unknown name for request ".Dumper($request)  if!$name;
     my $domain = $self->search_domain($request->args->{name});
-    return $domain->display;
+
+    my $display = $domain->display;
+    $request->result({display => $display});
+
+    $request->status('done');
+
 }
 
 sub _cmd_create {

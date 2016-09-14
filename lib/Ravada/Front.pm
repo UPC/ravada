@@ -217,10 +217,19 @@ sub domdisplay {
     my $name = shift;
 
     my $req = Ravada::Request->domdisplay($name);
-    $self->wait_request($req, 2);
+    $self->wait_request($req, 10);
 
-    return $req->result();
+    return if $req->status() ne 'done';
+
+    my $result = $req->result();
+    return $result->{display};
 }
 
+sub start_domain {
+    my $self = shift;
+    my $name = shift;
+
+    return Ravada::Request->start_domain($name);
+}
 
 1;

@@ -127,5 +127,13 @@ for my $vm_name ('kvm','lxc') {
     ok($domain && $domain->{name} && 
         $domain->{name} eq $name,"Expecting domain name $name, got "
         .($domain->{name} or '<UNDEF>'));
+
+    $RVD_FRONT->start_domain($name);
+    $RVD_FRONT->wait_request($req,10);
+    ok($req->status('done'),"Request ".$req->status);
+
+    my $display = $RVD_FRONT->domdisplay($name);
+    ok($display,"No display for domain $name found. Is it active ?");
+    ok($display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '$display'");
 }
 done_testing();
