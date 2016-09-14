@@ -414,17 +414,15 @@ sub show_link {
     my $domain = shift;# or confess "Missing domain";
 
 
-    confess "show link";
-
-    my $uri = $domain->display() if $domain;
+    my $uri = $RAVADA->domdisplay($domain->{name}) if $domain;
     if (!$uri) {
         my $name = '';
-        $name = $domain->name if $domain;
-        $c->render(template => 'fail', name => $domain->name);
+        $name = $domain->{name} if $domain;
+        $c->render(template => 'fail', name => $domain->{name});
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
+    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->{name}
                 ,login => $c->session('login'));
 }
 
