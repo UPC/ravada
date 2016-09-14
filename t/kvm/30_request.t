@@ -59,6 +59,40 @@ sub _new_name {
     return $name;
 }
 
+sub test_req_clone {
+    my $domain_father = shift;
+    my $name = _new_name();
+
+    diag("requesting create domain $name, cloned from ".$domain_father->name);
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_base => $domain_father->id
+        ,vm => $BACKEND
+    );
+    ok($req);
+    ok($req->status);
+    ok(defined $req->args->{name} 
+        && $req->args->{name} eq $name
+            ,"Expecting args->{name} eq $name "
+             ." ,got '".($req->args->{name} or '<UNDEF>')."'");
+
+    ok($req->status eq 'requested'
+        ,"Status of request is ".$req->status." it should be requested");
+
+
+    $RAVADA->process_requests();
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+
+    my $domain =  $RAVADA->search_domain($name);
+
+    ok($domain,"I can't find domain $name");
+    return $domain;
+
+}
+
 sub test_req_create_domain_iso {
     my $name = _new_name();
 
@@ -176,7 +210,9 @@ SKIP: {
 
         if ($domain ) {
             test_req_prepare_base($domain->name);
+            my $domain_clon = test_req_clone($domain);
             test_remove_domain($domain->name);
+            test_remove_domain($domain_clon->name);
         }
     }
 
