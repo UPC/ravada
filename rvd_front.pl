@@ -111,7 +111,7 @@ get '/list_images.json' => sub {
 
 get '/list_machines.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_domains_data);
+    $c->render(json => $RAVADA->list_domains);
 };
 
 get '/list_lxc_templates.json' => sub {
@@ -349,11 +349,15 @@ sub req_new_domain {
     $RAVADA->wait_request($req);
 
 
-    return $c->stash(error => $req->error) if $req->error;
+    if ( $req->error ) {
+        $c->stash(error => $req->error) ;
+        return;
+    }
 
     my $domain = $RAVADA->search_domain($name);
     if (!$domain) {
-        return $c->stash(error => "I dunno why but no domain $name");
+        $c->stash(error => "I dunno why but no domain $name");
+        return;
     }
     return $domain;
 }
@@ -409,6 +413,8 @@ sub show_link {
     my $c = shift;
     my $domain = shift;# or confess "Missing domain";
 
+
+    confess "show link";
 
     my $uri = $domain->display() if $domain;
     if (!$uri) {
@@ -499,7 +505,7 @@ sub remove_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->remove_domain(
-        $domain->name
+        $domain->{name}
     );
 
     return $c->render(data => "domain removing in progress");
