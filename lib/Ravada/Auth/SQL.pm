@@ -42,6 +42,8 @@ sub add_user {
 sub login {
     my $self = shift;
 
+    _init_connector();
+
     my ($name, $password);
 
     if (ref $self) {
