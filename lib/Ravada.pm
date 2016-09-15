@@ -495,6 +495,7 @@ sub _cmd_create {
     $request->status('creating domain');
     my $domain;
     eval {$domain = $self->create_domain(%{$request->args}) };
+    warn $@ if $@;
 
     $request->status('done');
     $request->error($@);
