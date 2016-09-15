@@ -255,7 +255,7 @@ sub _connect_ldap {
     my ($cn, $pass) = @_;
     $pass = '' if !defined $pass;
 
-    my ($host, $port) = ('localhost', 389);
+    my ($host, $port) = ( $$CONFIG->{ldap}->{server}, $$CONFIG->{ldap}->{port});
 
     my $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
         or die "I can't connect to LDAP server at $host / $port : $@";
