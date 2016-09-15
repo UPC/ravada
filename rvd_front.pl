@@ -236,9 +236,8 @@ sub quick_start_domain {
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
-    my $domain_name = $base->name."-".$name;
+    my $domain_name = $base->{name}."-".$name;
 
-    warn "searching for domain $domain_name";
     my $domain = $RAVADA->search_domain($domain_name);
     $domain = provision($c,  $id_base,  $domain_name)
         if !$domain;
@@ -396,8 +395,9 @@ sub provision {
     my $domain = $RAVADA->search_domain(name => $name);
     return $domain if $domain;
 
+    warn "requesting the creation of $name";
     my $req = Ravada::Request->create_domain(name => $name, id_base => $id_base);
-    wait_request_done($c,$req);
+    $RAVADA->wait_request($req, $TIMEOUT);
 
     $domain = $RAVADA->search_domain($name);
 
@@ -483,7 +483,7 @@ sub clone_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
-    return quick_start_domain($c, $base->id);
+    return quick_start_domain($c, $base->{id});
 }
 
 sub shutdown_machine {
@@ -516,10 +516,10 @@ sub prepare_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->prepare_base(
-        $domain->name
+        $domain->{name}
     );
 
-    $c->render(text => 'Base '.$domain->name." prepared.");
+    $c->render(text => 'Base '.$domain->{name}." preparing base.");
 
 }
 
