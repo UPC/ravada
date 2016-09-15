@@ -25,6 +25,7 @@ our %VALID_ARG = (
               vm => 1
            ,name => 1
          ,id_iso => 1
+        ,id_base => 1
     ,id_template => 1
     }
 );
