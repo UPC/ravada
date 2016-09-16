@@ -23,7 +23,7 @@ if (! -e $FILE_CONFIG ) {
     DumpFile($FILE_CONFIG,$config);
 }
 
-my $ravada = Ravada->new(config => 't/ravada_ldap.conf');#connector => $test->connector);
+my $ravada = Ravada->new(config => 't/etc/ravada_ldap.conf');#connector => $test->connector);
 
 
 my @USERS;
