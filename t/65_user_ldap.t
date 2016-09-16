@@ -9,7 +9,7 @@ use YAML qw(LoadFile DumpFile);
 use_ok('Ravada');
 use_ok('Ravada::Auth::LDAP');
 
-my $FILE_CONFIG = "t/ravada_ldap.conf";
+my $FILE_CONFIG = "t/etc/ravada_ldap.conf";
 my $ADMIN_GROUP = "test.admin.group";
 
 if (! -e $FILE_CONFIG ) {
