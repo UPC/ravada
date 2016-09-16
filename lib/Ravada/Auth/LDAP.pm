@@ -10,6 +10,7 @@ use Data::Dumper;
 use Digest::SHA qw(sha1_hex);
 use Moose;
 use Net::LDAP;
+use Net::LDAPS;
 use Net::LDAP::Entry;
 use Net::Domain qw(hostdomain);
 
@@ -257,9 +258,16 @@ sub _connect_ldap {
 
     my ($host, $port) = ( $$CONFIG->{ldap}->{server}, $$CONFIG->{ldap}->{port});
 
-    my $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
-        or die "I can't connect to LDAP server at $host / $port : $@";
+    my $ldap;
+    
+    if ($port == 636 ) {
+        $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
+            or die "I can't connect to LDAP server at $host / $port : $@";
+    } else {
+         $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
+            or die "I can't connect to LDAP server at $host / $port : $@";
 
+    }
     if ($cn) {
         my $mesg = $ldap->bind($cn, password => $pass);
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $cn\n"
@@ -280,7 +288,7 @@ sub _init_ldap_admin {
     } else {
         die "Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
-    $LDAP_ADMIN = _connect_ldap($cn, $pass);
+    $LDAP_ADMIN = _connect_ldap($cn, $pass) ;
     return $LDAP_ADMIN;
 }
 
