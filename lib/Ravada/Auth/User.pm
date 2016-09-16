@@ -18,7 +18,7 @@ has 'name' => (
 has 'password' => (
            is => 'ro'
          ,isa => 'Str'
-    ,required => 1
+    ,required => 0
 );
 
 1;

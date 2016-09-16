@@ -24,6 +24,11 @@ sub BUILD {
     _init_connector();
 
     my $self = shift;
+
+    $self->_load_data();
+
+    return $self if !$self->password();
+
     die "ERROR: Login failed ".$self->name
         if !$self->login();#$self->name, $self->password);
     return $self;
@@ -37,6 +42,24 @@ sub add_user {
 
     $sth->execute($login,sha1_hex($password),$is_admin);
     $sth->finish;
+}
+
+sub _load_data {
+    my $self = shift;
+
+    die "No login name" if !$self->name;
+
+    my $sth = $$CON->dbh->prepare(
+       "SELECT * FROM users WHERE name=? ");
+    $sth->execute($self->name );
+    my ($found) = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    if ($found) {
+        delete $found->{password};
+        lock_hash %$found;
+        $self->{_data} = $found if ref $self && $found;
+    }
 }
 
 sub login {
@@ -76,5 +99,6 @@ sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
 }
+
 1;
 

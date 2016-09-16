@@ -14,6 +14,8 @@ use Net::LDAPS;
 use Net::LDAP::Entry;
 use Net::Domain qw(hostdomain);
 
+use Ravada::Auth::SQL;
+
 with 'Ravada::Auth::User';
 
 our $CONFIG = \$Ravada::CONFIG;
@@ -216,7 +218,16 @@ sub login {
     return 1 if $mesg && !$mesg->code;
 
 #    warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-    return $self->_match_password($username, $password);
+    my $user_ok = $self->_match_password($username, $password);
+
+    $self->_check_user_profile($username)   if $user_ok;
+
+    return $user_ok;
+}
+
+sub _check_user_profile {
+    my $self = shift;
+    my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
 }
 
 sub _match_password {
@@ -256,7 +267,7 @@ sub _dc_base {
 }
 
 sub _connect_ldap {
-    my ($cn, $pass) = @_;
+    my ($dn, $pass) = @_;
     $pass = '' if !defined $pass;
 
     my ($host, $port) = ( $$CONFIG->{ldap}->{server}, $$CONFIG->{ldap}->{port});
@@ -271,9 +282,10 @@ sub _connect_ldap {
             or die "I can't connect to LDAP server at $host / $port : $@";
 
     }
-    if ($cn) {
-        my $mesg = $ldap->bind($cn, password => $pass);
-        die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $cn\n"
+    if ($dn) {
+        my $mesg = $ldap->bind($dn, password => $pass);
+        warn "$dn/$pass ".$mesg->error if $mesg->code;
+        die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
     }
@@ -284,14 +296,14 @@ sub _connect_ldap {
 sub _init_ldap_admin {
     return $LDAP_ADMIN if $LDAP_ADMIN;
 
-    my ($cn, $pass);
+    my ($dn, $pass);
     if ($$CONFIG->{ldap} ) {
-        ($cn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{cn} 
+        ($dn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{dn} 
             , $$CONFIG->{ldap}->{admin_user}->{password});
     } else {
         die "Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
-    $LDAP_ADMIN = _connect_ldap($cn, $pass) ;
+    $LDAP_ADMIN = _connect_ldap($dn, $pass) ;
     return $LDAP_ADMIN;
 }
 

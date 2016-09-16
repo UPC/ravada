@@ -23,7 +23,8 @@ if (! -e $FILE_CONFIG ) {
     DumpFile($FILE_CONFIG,$config);
 }
 
-my $ravada = Ravada->new(config => 't/etc/ravada_ldap.conf');#connector => $test->connector);
+my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $ravada = Ravada->new(config => 't/etc/ravada_ldap.conf', connector => $test->connector);
 
 
 my @USERS;
@@ -56,6 +57,10 @@ sub test_user{
     ok(!$mcnulty->is_admin,"User ".$mcnulty->name." should not be admin "
             .Dumper($mcnulty->{_data}));
 
+
+    my $mcnulty_sql = Ravada::Auth::SQL->new(name => $name);
+    ok($mcnulty_sql,"I can't find mcnulty in the SQL db");
+    ok($mcnulty_sql->{name} eq $name, "Expecting '$name', got $mcnulty_sql->{name}");
     return $mcnulty;
 }
 
@@ -131,7 +136,7 @@ SKIP: {
     eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
 
     if ($@ =~ /Bad credentials/) {
-        diag("Fix admin credentials in $FILE_CONFIG");
+        diag("$@\nFix admin credentials in $FILE_CONFIG");
     } else {
         diag("Skipped LDAP tests ".($@ or '')) if !$ldap;
     }
