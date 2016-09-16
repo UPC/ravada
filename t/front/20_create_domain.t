@@ -11,7 +11,7 @@ my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
 $DOMAIN_NAME = 'front_'.$DOMAIN_NAME;
 my $CONT= 0;
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my @rvd_args = (
        config => 't/etc/ravada.conf' 

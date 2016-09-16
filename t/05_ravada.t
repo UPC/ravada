@@ -8,7 +8,7 @@ use_ok('Ravada');
 
 ok(! $Ravada::CONNECTOR, "DB connector should be undef at load time");
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $ravada = Ravada->new( connector => $test->connector );
 
 ok($Ravada::CONNECTOR, "Now we should have a DB connector ");

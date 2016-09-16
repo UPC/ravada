@@ -13,7 +13,7 @@ use_ok('Ravada::Request');
 
 my $BACKEND = 'KVM';
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $RAVADA;
 my $VMM;
