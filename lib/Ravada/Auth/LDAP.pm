@@ -88,7 +88,7 @@ sub search_user {
     my $username = shift;
     _init_ldap();
 
-    my $ldap = (shift or $LDAP);
+    my $ldap = (shift or $LDAP_ADMIN);
     confess "Missing LDAP" if !$ldap;
 
     my $base = _dc_base();
@@ -211,8 +211,9 @@ sub login {
     eval { $user_dn = $entry->dn };
     die "Failed fetching user $username dn" if !$user_dn;
 
-    my $mesg = $LDAP->bind( $user_dn, password => $password );
-    return 1 if !$mesg->code;
+    my $mesg;
+#    eval { $mesg = $LDAP->bind( $user_dn, password => $password )};
+    return 1 if $mesg && !$mesg->code;
 
 #    warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
     return $self->_match_password($username, $password);
@@ -233,16 +234,18 @@ sub _match_password {
         if !$user->get_value('userPassword');
     my $password_ldap = $user->get_value('userPassword');
 
-    warn $user->get_value('uid')."\n".$user->get_value('userPassword')
-        ."\n"
-        .sha1_hex($password);
+#    warn $user->get_value('uid')."\n".$user->get_value('userPassword')
+#        ."\n"
+#        .sha1_hex($password);
 
     return $user->get_value('uid') eq $cn
         && Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
 }
 
 sub _dc_base {
-    # TODO: from config
+    
+    return $$CONFIG->{ldap}->{base}
+        if $$CONFIG->{ldap}->{base};
 
     my $base = '';
     for my $part (split /\./,hostdomain()) {
