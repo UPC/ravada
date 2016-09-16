@@ -5,6 +5,9 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -51,17 +54,10 @@ sub test_remove_domain {
 
 }
 
-sub _new_name {
-    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
-    $name =~ s{/}{_}g;
-    $name.="_".$CONT++;
-
-    return $name;
-}
 
 sub test_req_clone {
     my $domain_father = shift;
-    my $name = _new_name();
+    my $name = new_domain_name();#_new_name();
 
     diag("requesting create domain $name, cloned from ".$domain_father->name);
     my $req = Ravada::Request->create_domain(
@@ -89,12 +85,16 @@ sub test_req_clone {
     my $domain =  $RAVADA->search_domain($name);
 
     ok($domain,"I can't find domain $name");
+
+    my $ref_expected = 'Ravada::Domain::KVM';
+    ok(ref $domain && ref $domain eq $ref_expected
+        ,"Domain $name ref not $ref_expected , got ".ref($domain)) or exit;
     return $domain;
 
 }
 
 sub test_req_create_domain_iso {
-    my $name = _new_name();
+    my $name = new_domain_name();
 
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
@@ -125,7 +125,7 @@ sub test_req_create_domain_iso {
 }
 
 sub test_force_kvm {
-    my $name = _new_name();
+    my $name = new_domain_name();
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_iso => 1
@@ -167,28 +167,8 @@ sub remove_old_domains {
 
 }
 
-sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
-    $name =~ s{/}{_}g;
-
-    my $vm = $RAVADA->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            diag("Removing previous $disk");
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    $vm->storage_pool->refresh();
-}
-
 #########################################################################
-eval { $RAVADA = Ravada->new(connector => $test->connector) };
+eval { $RAVADA = rvd_back( $test->connector) };
 
 ok($RAVADA,"I can't launch a new Ravada");# or exit;
 
