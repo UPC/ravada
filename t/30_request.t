@@ -8,7 +8,7 @@ use Test::SQL::Data;
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada;
 

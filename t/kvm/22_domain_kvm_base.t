@@ -14,7 +14,7 @@ use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA;
 
 eval { $RAVADA = Ravada->new( connector => $test->connector) };

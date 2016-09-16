@@ -5,7 +5,7 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
