@@ -270,7 +270,8 @@ sub _connect_ldap {
     my ($dn, $pass) = @_;
     $pass = '' if !defined $pass;
 
-    my ($host, $port) = ( $$CONFIG->{ldap}->{server}, $$CONFIG->{ldap}->{port});
+    my $host = ($$CONFIG->{ldap}->{server} or 'localhost');
+    my $port = ($$CONFIG->{ldap}->{port} or 389);
 
     my $ldap;
     
