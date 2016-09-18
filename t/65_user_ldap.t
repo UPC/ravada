@@ -24,7 +24,7 @@ if (! -e $FILE_CONFIG ) {
 }
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-my $ravada = Ravada->new(config => 't/etc/ravada_ldap.conf', connector => $test->connector);
+my $ravada = Ravada->new(config => $FILE_CONFIG, connector => $test->connector);
 
 
 my @USERS;
