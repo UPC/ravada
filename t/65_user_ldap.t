@@ -16,7 +16,7 @@ if (! -e $FILE_CONFIG ) {
     my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
     my $config = { 
         ldap => {
-            admin_user => { cn => $LDAP_USER , password => $LDAP_PASS }
+            admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
             ,admin_group => $ADMIN_GROUP
         }    
     };
