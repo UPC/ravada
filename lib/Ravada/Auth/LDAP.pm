@@ -101,6 +101,8 @@ sub search_user {
     attrs  => ['*']
     );
 
+    return if $mesg->code == 32;
+
     die "ERROR: ".$mesg->code." : ".$mesg->error
         if $mesg->code;
 
