@@ -17,6 +17,7 @@ if (! -e $FILE_CONFIG ) {
     my $config = { 
         ldap => {
             admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
+            ,base => Ravada::Auth::LDAP::_dc_base()
             ,admin_group => $ADMIN_GROUP
         }    
     };
