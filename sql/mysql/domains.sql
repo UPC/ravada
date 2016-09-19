@@ -8,6 +8,7 @@ CREATE TABLE `domains` (
   `is_base` int(1) NOT NULL DEFAULT '0',
   `file_base_img` varchar(255) DEFAULT NULL,
   `port` int(5),
+  `id_owner` int(11),
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_base` (`id_base`,`name`),
   UNIQUE KEY `name` (`name`)
