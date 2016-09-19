@@ -47,6 +47,15 @@ sub test_user{
     my $user = Ravada::Auth::LDAP::search_user($name);
     ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
 
+    # check for the user in the SQL db, he shouldn't be  there
+    #
+    my $sth = $test->connector->dbh->prepare("SELECT * FROM users WHERE name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    ok(!$row->{name},"I shouldn't find $name in the SQL db ".Dumper($row));
+
+
     eval { Ravada::Auth::LDAP::add_user($name,'jameson') };
     push @USERS,($name);
 
@@ -58,6 +67,14 @@ sub test_user{
     ok(!$mcnulty->is_admin,"User ".$mcnulty->name." should not be admin "
             .Dumper($mcnulty->{_data}));
 
+    # check for the user in the SQL db
+    # 
+    $sth = $test->connector->dbh->prepare("SELECT * FROM users WHERE name=?");
+    $sth->execute($name);
+    $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    ok($row->{name} && $row->{name} eq $name 
+        && $row->{id},"I can't find $name in the users SQL table ".Dumper($row));
 
     my $mcnulty_sql = Ravada::Auth::SQL->new(name => $name);
     ok($mcnulty_sql,"I can't find mcnulty in the SQL db");

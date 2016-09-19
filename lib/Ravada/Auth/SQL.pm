@@ -40,7 +40,12 @@ sub add_user {
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password,is_admin) VALUES(?,?,?)");
 
-    $sth->execute($login,sha1_hex($password),$is_admin);
+    if ($password) {
+        $password = sha1_hex($password);
+    } else {
+        $password = '*LK* no pss';
+    }
+    $sth->execute($login,$password,$is_admin);
     $sth->finish;
 }
 
@@ -98,6 +103,11 @@ sub login {
 sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
+}
+
+sub id {
+    my $self = shift;
+    return $self->{_data}->{id};
 }
 
 1;
