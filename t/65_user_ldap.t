@@ -16,7 +16,8 @@ if (! -e $FILE_CONFIG ) {
     my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
     my $config = { 
         ldap => {
-            admin_user => { cn => $LDAP_USER , password => $LDAP_PASS }
+            admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
+            ,base => Ravada::Auth::LDAP::_dc_base()
             ,admin_group => $ADMIN_GROUP
         }    
     };
@@ -24,7 +25,7 @@ if (! -e $FILE_CONFIG ) {
 }
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-my $ravada = Ravada->new(config => 't/etc/ravada_ldap.conf', connector => $test->connector);
+my $ravada = Ravada->new(config => $FILE_CONFIG, connector => $test->connector);
 
 
 my @USERS;

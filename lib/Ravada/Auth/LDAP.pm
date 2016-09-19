@@ -101,6 +101,8 @@ sub search_user {
     attrs  => ['*']
     );
 
+    return if $mesg->code == 32;
+
     die "ERROR: ".$mesg->code." : ".$mesg->error
         if $mesg->code;
 
@@ -270,7 +272,8 @@ sub _connect_ldap {
     my ($dn, $pass) = @_;
     $pass = '' if !defined $pass;
 
-    my ($host, $port) = ( $$CONFIG->{ldap}->{server}, $$CONFIG->{ldap}->{port});
+    my $host = ($$CONFIG->{ldap}->{server} or 'localhost');
+    my $port = ($$CONFIG->{ldap}->{port} or 389);
 
     my $ldap;
     

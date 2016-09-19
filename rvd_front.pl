@@ -399,12 +399,12 @@ sub provision {
     my $req = Ravada::Request->create_domain(name => $name, id_base => $id_base);
     $RAVADA->wait_request($req, 1);
 
-    $domain = $RAVADA->search_domain($name);
 
     if ( $req->status ne 'done' ) {
         $c->stash(error => "Domain provisioning request ".$req->status);
-        return $domain;
+        return;
     }
+    $domain = $RAVADA->search_domain($name);
     if ( $req->error ) {
         $c->stash(error => $req->error) 
     } elsif (!$domain) {
