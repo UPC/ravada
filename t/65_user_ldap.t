@@ -79,6 +79,21 @@ sub test_user{
     my $mcnulty_sql = Ravada::Auth::SQL->new(name => $name);
     ok($mcnulty_sql,"I can't find mcnulty in the SQL db");
     ok($mcnulty_sql->{name} eq $name, "Expecting '$name', got $mcnulty_sql->{name}");
+    
+    # login again to check it doesn't get added twice
+ 
+    my $mcnulty2;
+    eval { $mcnulty2 = Ravada::Auth::LDAP->new(name => $name,password => 'jameson') };
+    
+    ok($mcnulty2,($@ or "ldap login failed for $name")) or return;
+    $sth = $test->connector->dbh->prepare("SELECT count(*) FROM users WHERE name=?");
+    $sth->execute($name);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+    
+    ok($count == 1,"Found $count $name, expecting 1");
+
+
     return $mcnulty;
 }
 
