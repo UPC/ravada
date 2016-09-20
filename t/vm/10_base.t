@@ -68,9 +68,17 @@ sub test_create_domain {
     my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name, @{$ARG_CREATE_DOM{$vm_name}}) };
+    eval { $domain = $vm->create_domain(name => $name
+                    , id_owner => 1
+                    , @{$ARG_CREATE_DOM{$vm_name}}) 
+    };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
+    ok($domain->name 
+        && $domain->name eq $name,"Expecting domain name '$name' , got "
+        .($domain->name or '<UNDEF>')
+        ." for VM $vm_name"
+    );
 }
 
 #######################################################

@@ -81,6 +81,7 @@ sub test_new_domain {
 
     diag("Creating domain $name");
     my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
+        , id_owner => 1
         , vm => $BACKEND
     );
 
@@ -223,9 +224,6 @@ sub test_prepare_import {
     my $domain = test_new_domain();
 
     if (ok($domain,"test domain not created")) {
-
-        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
-        $sth->execute($domain->id);
 
         test_prepare_base($domain);
         ok($domain->is_base,"Domain should be base"

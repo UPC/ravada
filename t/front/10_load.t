@@ -43,8 +43,8 @@ sub test_empty {
 sub test_add_domain_db {
 
     my $sth = $test->dbh->prepare("INSERT INTO domains "
-            ."(name) VALUES (?)");
-    $sth->execute('a');
+            ."(name, id_owner) VALUES (?,?)");
+    $sth->execute('a',1);
     
     my $domains = $RVD_FRONT->list_domains();
     ok($domains,"No domains list returned");

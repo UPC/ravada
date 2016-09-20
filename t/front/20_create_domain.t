@@ -24,8 +24,8 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 );
 
 my %CREATE_ARGS = (
-    kvm => { id_iso => 1 }
-    ,lxc => { id_template => 1 }
+    kvm => { id_iso => 1, id_owner => 1 }
+    ,lxc => { id_template => 1, id_owner => 1 }
 );
 
 ###################################################################

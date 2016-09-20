@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Carp qw(confess croak cluck);
+use Data::Dumper;
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -104,7 +105,8 @@ sub _prepare_base_db {
     my $file_img = shift;
 
     if (!$self->_select_domain_db) {
-        $self->_insert_db( name => $self->name );
+        confess "CRITICAL: The data should be already inserted";
+#        $self->_insert_db( name => $self->name, id_owner => $self->id_owner );
     }
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set is_base=1,file_base_img=? "
@@ -118,8 +120,12 @@ sub _prepare_base_db {
 sub _insert_db {
     my $self = shift;
     my %field = @_;
-    croak "Field name is mandatory ".Dumper(\%field)
-        if !exists $field{name};
+
+    for (qw(name id_owner)) {
+        confess "Field $_ is mandatory ".Dumper(\%field)
+            if !exists $field{$_};
+    }
+
     my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "
@@ -158,5 +164,11 @@ sub is_base {
     return 0 if $self->_data('is_base') =~ /n/i;
     return $self->_data('is_base');
 };
+
+
+sub id_owner {
+    my $self = shift;
+    return $self->_data('id_owner',@_);
+}
 
 1;

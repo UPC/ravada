@@ -63,6 +63,7 @@ sub test_req_clone {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_base => $domain_father->id
+       ,id_owner => 1
         ,vm => $BACKEND
     );
     ok($req);
@@ -100,6 +101,7 @@ sub test_req_create_domain_iso {
     my $req = Ravada::Request->create_domain( 
             name => $name
          ,id_iso => 1
+       ,id_owner => 1
              ,vm => $BACKEND
     );
     ok($req);
@@ -129,6 +131,7 @@ sub test_force_kvm {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_iso => 1
+      ,id_owner => 1
         ,vm => 'kvm'
     );
     ok($req);

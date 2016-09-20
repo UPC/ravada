@@ -17,6 +17,7 @@ my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
 my @ARG_CREATE_DOM = (
         id_iso => 1
+        ,id_owner => 1
 );
 
 
@@ -182,10 +183,10 @@ ok($ravada,"I can't launch a new Ravada");# or exit;
 
 my ($vm_kvm, $vm_lxc);
 eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada;
-    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm' )       if $vm_kvm;
+    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => 1 )       if $vm_kvm;
 };
 eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada;
-    @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC' )  if $vm_lxc;
+    @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => 1 )  if $vm_lxc;
 };
 
 SKIP: {

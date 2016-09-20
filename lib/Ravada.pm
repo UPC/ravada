@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-use Carp qw(carp);
+use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
 use Moose;
@@ -166,6 +166,9 @@ sub create_domain {
     my $self = shift;
 
     my %args = @_;
+
+    croak "Argument id_owner required "
+        if !$args{id_owner};
 
     my $vm_name = $args{vm};
     delete $args{vm};

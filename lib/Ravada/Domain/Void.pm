@@ -10,13 +10,21 @@ use Moose;
 
 with 'Ravada::Domain';
 
-sub display {}
-sub is_active {}
+has 'domain' => (
+    is => 'ro'
+    ,isa => 'Str'
+    ,required => 1
+);
 
-sub name {
+#######################################3
+
+sub name { 
     my $self = shift;
     return $self->domain;
-}
+};
+
+sub display {}
+sub is_active {}
 
 sub pause {}
 sub remove {}

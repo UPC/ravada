@@ -28,9 +28,12 @@ sub create_domain {
     $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
+    croak "argument id_owner required"       if !$args{id_owner};
 
-    my $domain = Ravada::Domain::Void->new(name => $args{name});
-    $domain->_insert_db(name => $args{name});
+    my $domain = Ravada::Domain::Void->new(name => $args{name}, domain => $args{name}
+                                                            , id_owner => $args{id_owner}
+    );
+    $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner});
 
     return $domain;
 }

@@ -70,7 +70,7 @@ $name .= "_0";
 
 test_remove_domain($name);
 
-my $domain = $VMM->create_domain(name => $name, id_iso => 1 , active => 0);
+my $domain = $VMM->create_domain(name => $name, id_iso => 1 , active => 0, id_owner => 1);
 
 
 ok($domain,"Domain not created") and do {
