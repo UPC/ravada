@@ -20,6 +20,24 @@ with 'Ravada::VM';
 ##########################################################################
 #
 
+sub connect {}
+
+sub create_domain {
+}
+
+sub create_volume {
+}
+
+sub list_domains {
+    return [];
+}
+
+sub search_domain {
+}
+
+sub search_domain_by_id {
+}
+
 #########################################################################3
 
 1;

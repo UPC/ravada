@@ -109,6 +109,7 @@ sub _create_vm_kvm {
 
     eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
     my $err_kvm = $@;
+    return (undef, $err_kvm)    if !$vm_kvm;
 
     my ($internal_vm , $storage);
     eval {
@@ -615,6 +616,10 @@ sub search_vm {
     confess "Missing VM type"   if !$type;
 
     my $class = 'Ravada::VM::'.uc($type);
+
+    if ($type eq 'Void') {
+        return Ravada::VM::Void->new();
+    }
 
     my @vms;
     eval { @vms = @{$self->vm} };

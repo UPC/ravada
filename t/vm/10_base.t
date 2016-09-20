@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
@@ -12,42 +13,56 @@ use_ok('Ravada');
 ##########################################################
 
 sub test_vm_connect {
-    my $vm = Ravada::VM::KVM->new(backend => $BACKEND );
+    my $vm_name = shift;
+
+    my $class = "Ravada::VM::$vm_name";
+    my $obj = {};
+
+    bless $obj,$class;
+
+    my $vm = $obj->new();
     ok($vm);
-    ok($vm->type eq 'qemu');
     ok($vm->host eq 'localhost');
-    ok($vm->vm);
 }
 
 sub test_search_vm {
+    my $vm_name = shift;
+
+    return if $vm_name eq 'Void';
+
+    my $class = "Ravada::VM::$vm_name";
+
     my $ravada = Ravada->new();
-    my $vm = $ravada->search_vm($BACKEND);
-    ok($vm,"I can't find a $BACKEND virtual manager");
-    ok(ref $vm eq $CLASS,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
-        ." it should be $CLASS");
+    my $vm = $ravada->search_vm($vm_name);
+    ok($vm,"I can't find a $vm virtual manager");
+    ok(ref $vm eq $class,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
+        ." it should be $class");
 }
 
 #######################################################
 
-my $BACKEND = 'Void';
-my $CLASS= "Ravada::VM::$BACKEND";
+for my $VM (qw( Void KVM )) {
 
-use_ok($CLASS);
+    diag("Testing $VM VM");
+    my $CLASS= "Ravada::VM::$VM";
 
-my $RAVADA;
-eval { $RAVADA = Ravada->new() };
+    use_ok($CLASS);
 
-my $vm;
+    my $RAVADA;
+    eval { $RAVADA = Ravada->new() };
 
-eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA;
+    my $vm;
 
-SKIP: {
-    my $msg = "SKIPPED test: No VM backend found";
-    diag($msg)      if !$vm;
-    skip $msg,10    if !$vm;
+    eval { $vm = $RAVADA->search_vm($VM) } if $RAVADA;
 
-test_vm_connect();
-test_search_vm();
+    SKIP: {
+        my $msg = "SKIPPED test: No $VM VM found ";
+        diag($msg)      if !$vm;
+        skip $msg,10    if !$vm;
 
-};
+        test_vm_connect($VM);
+        test_search_vm($VM);
+
+    };
+}
 done_testing();
