@@ -2,6 +2,8 @@ package Test::Ravada;
 use strict;
 use warnings;
 
+use  Carp qw(carp);
+use  Data::Dumper;
 use  Test::More;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 
@@ -9,7 +11,7 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 
@@ -28,18 +30,40 @@ sub new_domain_name {
 }
 
 sub rvd_back {
-    my $connector = shift;
-    my $config = (shift or $DEFAULT_CONFIG);
+    my ($connector, $config ) =@_;
 
     return $RVD_BACK if !$config && !$connector;
 
     eval { $RVD_BACK = Ravada->new(
             connector => $connector
-                , config => $config
+                , config => ( $config or $DEFAULT_CONFIG)
             );
     };
-
+    die $@ if $@;
     return $RVD_BACK;
+}
+
+sub _remove_old_domains_kvm {
+    my $domain;
+    my $vm = rvd_back()->search_vm('kvm');
+
+    for ( 0 .. 10 ) {
+        my $dom_name = base_domain_name()."_$_";
+        my $domain = $vm->search_domain($dom_name);
+        next if !$domain;
+
+        $domain->shutdown_now() if $domain;
+
+        diag("Removing domain $dom_name");
+        eval {
+            $domain->remove();
+        };
+        ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
+    }
+
+}
+sub remove_old_domains {
+    _remove_old_domains_kvm();
 }
 
 sub remove_old_disks {
