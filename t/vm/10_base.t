@@ -5,10 +5,23 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new();
+use lib 't/lib';
+use Test::Ravada;
+
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
+my $FILE_CONFIG = 't/etc/ravada.conf';
+
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+
+my %ARG_CREATE_DOM = (
+      KVM => [ id_iso => 1 ]
+    ,Void => [ ]
+);
+
+rvd_back($test->connector, $FILE_CONFIG);
 
 ##########################################################
 
@@ -32,36 +45,60 @@ sub test_search_vm {
 
     my $class = "Ravada::VM::$vm_name";
 
-    my $ravada = Ravada->new();
+    my $ravada = Ravada->new(@ARG_RVD);
     my $vm = $ravada->search_vm($vm_name);
     ok($vm,"I can't find a $vm virtual manager");
     ok(ref $vm eq $class,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
         ." it should be $class");
 }
 
+sub test_create_domain {
+    my $vm_name = shift;
+
+    my $ravada = Ravada->new(@ARG_RVD);
+    my $vm = $ravada->search_vm($vm_name);
+    ok($vm,"I can't find VM $vm_name") or return;
+
+    my $name = new_domain_name();
+
+    if (!$ARG_CREATE_DOM{$vm_name}) {
+        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
+        return;
+    }
+    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
+
+    my $domain;
+    eval { $domain = $vm->create_domain(name => $name, @{$ARG_CREATE_DOM{$vm_name}}) };
+
+    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
+}
+
 #######################################################
 
-for my $VM (qw( Void KVM )) {
+remove_old_domains();
 
-    diag("Testing $VM VM");
-    my $CLASS= "Ravada::VM::$VM";
+for my $vm_name (qw( Void KVM )) {
+
+    diag("Testing $vm_name VM");
+    my $CLASS= "Ravada::VM::$vm_name";
 
     use_ok($CLASS);
 
     my $RAVADA;
-    eval { $RAVADA = Ravada->new() };
+    eval { $RAVADA = Ravada->new(@ARG_RVD) };
 
     my $vm;
 
-    eval { $vm = $RAVADA->search_vm($VM) } if $RAVADA;
+    eval { $vm = $RAVADA->search_vm($vm_name) } if $RAVADA;
 
     SKIP: {
-        my $msg = "SKIPPED test: No $VM VM found ";
+        my $msg = "SKIPPED test: No $vm_name VM found ";
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        test_vm_connect($VM);
-        test_search_vm($VM);
+        test_vm_connect($vm_name);
+        test_search_vm($vm_name);
+        test_create_domain($vm_name);
 
     };
 }
