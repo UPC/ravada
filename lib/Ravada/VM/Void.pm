@@ -13,8 +13,7 @@ use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
 
-use Ravada::Domain::KVM;
-
+use Ravada::Domain::Void;
 with 'Ravada::VM';
 
 ##########################################################################
@@ -23,6 +22,17 @@ with 'Ravada::VM';
 sub connect {}
 
 sub create_domain {
+    my $self = shift;
+    my %args = @_;
+
+    $args{active} = 1 if !defined $args{active};
+    
+    croak "argument name required"       if !$args{name};
+
+    my $domain = Ravada::Domain::Void->new(name => $args{name});
+    $domain->_insert_db(name => $args{name});
+
+    return $domain;
 }
 
 sub create_volume {
