@@ -119,7 +119,8 @@ sub _create_vm_kvm {
         $storage = $vm_kvm->dir_img();
     };
     $vm_kvm = undef if $@ || !$internal_vm || !$storage;
-    return ($vm_kvm,$@);
+    $err_kvm .= ($@ or '');
+    return ($vm_kvm,$err_kvm);
 }
 
 sub _create_vm {
