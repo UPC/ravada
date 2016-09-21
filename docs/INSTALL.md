@@ -22,6 +22,7 @@ Clone the sources:
 - libconfig-yaml-perl
 - libmoose-perl
 - libjson-xs-perl
+- qemu-utils
 
 
 ##Old debian
@@ -60,10 +61,10 @@ Create a config file at /etc/ravada.conf with:
 
 #KVM backend
 
-Install KVM and virt-manager. Create new virtual machines (called domains) there.
-See docs/operation.md
+Install KVM 
 
-    $ sudo apt-get install qemu-kvm
+    $ sudo apt-get install qemu-kvm qemu-utils
+    $ sudo virsh pool-define-as default dir - - - - "/var/lib/libvirt/images"
 
 #Ravada user
 
