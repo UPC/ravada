@@ -5,7 +5,7 @@ VALUES(1,'Debian Jessie 32 bits netinst'
     ,'i386'
     ,'jessie-i386.xml'
     ,'jessie-volume.xml'
-    ,'http://cdimage.debian.org/debian-cd/8.5.0/i386/iso-cd/debian-8.5.0-i386-netinst.iso');
+    ,'http://cdimage.debian.org/debian-cd/8.6.0/i386/iso-cd/debian-8.6.0-i386-netinst.iso');
 INSERT INTO iso_images
 (id,name,description,arch,xml,xml_volume,url)
 VALUES(2,'Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
