@@ -5,6 +5,9 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 use_ok('Ravada::Front');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
@@ -18,7 +21,7 @@ my @rvd_args = (
    ,connector => $test->connector 
 );
 
-my $RVD_BACK  = Ravada->new( @rvd_args );
+my $RVD_BACK  = rvd_back( @rvd_args );
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
@@ -39,32 +42,6 @@ sub create_args {
 
     die "Unknown backend $backend" if !$CREATE_ARGS{$backend};
     return %{$CREATE_ARGS{$backend}};
-}
-sub remove_old_disks {
-    my $name = $DOMAIN_NAME;
-
-    my $vm = $RVD_BACK->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    $vm->storage_pool->refresh();
-}
-
-sub remove_old_domains {
-    for ( 0 .. 10 ) {
-        my $dom_name = $DOMAIN_NAME."_$_";
-        my $domain = $RVD_BACK->search_domain($dom_name);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
 }
 
 sub search_domain_db
@@ -97,7 +74,7 @@ sub test_remove_domain {
 ####################################################################
 #
 
-remove_old_domains();
+remove_old_domains()    if $RVD_BACK;
 remove_old_disks();
 
 
