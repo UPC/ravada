@@ -347,6 +347,7 @@ sub req_new_domain {
         ,id_iso => $c->param('id_iso')
         ,id_template => $c->param('id_template')
         ,vm=> $c->param('backend')
+        ,id_owner => $USER->id
     );
 
     $RAVADA->wait_request($req);
@@ -400,7 +401,11 @@ sub provision {
     return $domain if $domain;
 
     warn "requesting the creation of $name";
-    my $req = Ravada::Request->create_domain(name => $name, id_base => $id_base);
+    my $req = Ravada::Request->create_domain(
+             name => $name
+        , id_base => $id_base
+        ,id_owner => $USER->id
+    );
     $RAVADA->wait_request($req, 1);
 
 
