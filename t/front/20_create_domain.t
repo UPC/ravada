@@ -23,7 +23,7 @@ my @rvd_args = (
    ,connector => $test->connector 
 );
 
-my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE );
+my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE);
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
@@ -78,7 +78,7 @@ sub test_remove_domain {
 ####################################################################
 #
 
-remove_old_domains();
+remove_old_domains()    if $RVD_BACK;
 remove_old_disks();
 
 

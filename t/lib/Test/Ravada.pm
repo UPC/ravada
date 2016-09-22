@@ -50,6 +50,7 @@ sub rvd_back {
 sub _remove_old_domains_kvm {
     my $domain;
     my $vm = rvd_back()->search_vm('kvm');
+    return if !$vm;
 
     for ( 0 .. 10 ) {
         my $dom_name = base_domain_name()."_$_";
@@ -74,8 +75,8 @@ sub remove_old_disks {
     my ($name) = $0 =~ m{.*/(.*/.*)\.t};
     $name =~ s{/}{_}g;
 
-    my $vm = $RVD_BACK->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
+    my $vm = $RVD_BACK->search_vm('kvm') or return;
+#    ok($vm,"I can't find a KVM virtual manager") or return;
 
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
