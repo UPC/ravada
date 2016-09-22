@@ -9,7 +9,7 @@ use Test::SQL::Data;
 use_ok('Ravada');
 use_ok('Ravada::Domain::KVM');
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA;
 my $VMM;
 
@@ -70,7 +70,7 @@ $name .= "_0";
 
 test_remove_domain($name);
 
-my $domain = $VMM->create_domain(name => $name, id_iso => 1 , active => 0);
+my $domain = $VMM->create_domain(name => $name, id_iso => 1 , active => 0, id_owner => 1);
 
 
 ok($domain,"Domain not created") and do {

@@ -36,6 +36,12 @@ has storage_pool => (
     ,lazy => 1
 );
 
+has type => (
+    isa => 'Str'
+    ,is => 'ro'
+    ,default => 'qemu'
+);
+
 #########################################################################3
 #
 
@@ -126,7 +132,8 @@ sub create_domain {
     $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
-    croak "argument id_iso or id_base required" 
+    croak "argument id_owner required"   if !$args{id_owner};
+    croak "argument id_iso or id_base required ".Dumper(\%args)
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
@@ -268,8 +275,10 @@ sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
 
-    croak "argument id_iso required" 
-        if !$args{id_iso};
+    for (qw(id_iso id_owner)) {
+        croak "argument $_ required" 
+            if !$args{$_};
+    }
 
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
@@ -292,7 +301,7 @@ sub _domain_create_from_iso {
     $dom->create if $args{active};
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
-    $domain->_insert_db(name => $args{name});
+    $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
 sub _create_disk {
@@ -387,7 +396,7 @@ sub _domain_create_from_base {
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
 
-    $domain->_insert_db(name => $args{name}, id_base => $base->id);
+    $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     return $domain;
 }
 

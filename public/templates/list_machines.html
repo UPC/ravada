@@ -21,6 +21,8 @@
                         <a ng-show="{{!machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
                         <a ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" href="/machine/shutdown/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i></strong> ShutDown</a>
                         <a class="btn btn-danger btn-sm" href="/machine/remove/{{machine.id}}.html">Delete</a>
+                        <a class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
+                        is_base: {{machine.is_base}}
                     </td>
                     
                 </tr>

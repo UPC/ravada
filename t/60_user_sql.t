@@ -8,7 +8,7 @@ use Test::SQL::Data;
 use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada = Ravada->new(connector => $test->connector);
 
@@ -25,7 +25,14 @@ Ravada::Auth::SQL::add_user('root','root', 1);
     my $user = Ravada::Auth::SQL->new(name => 'root',password => 'root');
     
     ok($user);
+    ok($user->id, "User ".$user->name." has no id");
     ok($user->is_admin,"User ".$user->name." should be admin ".Dumper($user->{_data}));
+
+    my $user2 = Ravada::Auth::SQL->search_by_id($user->id );
+    ok($user2, "I can't open user with id") or return;
+    ok($user2->id eq $user->id ,"Expecting user id=".$user->id." , got ".$user2->id);
+    ok($user2->name eq $user->name,"Expecting user name =".$user->name." , got ".$user2->name);
+
 }
     
 Ravada::Auth::SQL::add_user('mcnulty','jameson');

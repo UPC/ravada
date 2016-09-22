@@ -14,7 +14,7 @@ use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA;
 
 eval { $RAVADA = Ravada->new( connector => $test->connector) };
@@ -65,7 +65,8 @@ sub test_new_domain_from_iso {
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
                                         , id_iso => 1
-                                        ,backend => $BACKEND
+                                        ,vm => $BACKEND
+                                        ,id_owner => 1
             ) 
     };
     ok(!$@,"Domain $name not created: $@");
@@ -99,10 +100,10 @@ sub test_prepare_base {
 
     $domain->prepare_base();
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name);
+    ok($row->{is_base});
     $sth->finish;
 
     my @list2 = $RAVADA->list_bases();
@@ -123,7 +124,8 @@ sub test_new_domain_from_base {
     my $domain = $RAVADA->create_domain(
                 name => $name
             ,id_base => $base->id
-            ,backend => $BACKEND
+           ,id_owner => 1
+            ,vm => $BACKEND
     );
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';

@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
@@ -35,13 +36,16 @@ sub test_search_vm {
 my $RAVADA;
 eval { $RAVADA = Ravada->new() };
 
+my $err = ($@ or '');
 my $vm;
 
-eval { $vm = Ravada::VM::KVM->new() } ;
+eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA;
+$err .= ($@ or '');
 
 SKIP: {
-    my $msg = "SKIPPED test: No VM backend found ".($@ or '');
+    my $msg = "SKIPPED test: No KVM virtual machine manager found ";
     diag($msg)      if !$vm;
+    diag($err)      if !$vm;
     skip $msg,10    if !$vm;
 
 test_vm_connect();

@@ -11,9 +11,15 @@ my $BACKEND = 'KVM';
 use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
+
+my @rvd_args = (
+       config => 't/etc/ravada.conf' 
+   ,connector => $test->connector 
+);
+
 my $RAVADA;
-eval { $RAVADA = Ravada->new( connector => $test->connector) };
+eval { $RAVADA = Ravada->new( @rvd_args ) };
 
 my $CONT= 0;
 
@@ -75,7 +81,8 @@ sub test_new_domain {
 
     diag("Creating domain $name");
     my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
-        , backend => $BACKEND
+        , id_owner => 1
+        , vm => $BACKEND
     );
 
     ok($domain,"Domain not created");
@@ -91,7 +98,7 @@ sub test_new_domain {
     my $row =  search_domain_db($domain->name);
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
 
-    my $domain2 = $RAVADA->search_domain_by_id($domain->id);
+    my $domain2 = $RAVADA->search_domain($domain->name);
     ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
     ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
         .$domain2->name);
@@ -103,10 +110,12 @@ sub test_prepare_base {
     my $domain = shift;
     $domain->prepare_base();
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
+    my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
-    my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name);
+    my ($is_base) =  $sth->fetchrow;
+    ok($is_base
+            ,"Expecting is_base=1 got "
+            .(${is_base} or '<UNDEF>'));
     $sth->finish;
 }
 
@@ -215,9 +224,6 @@ sub test_prepare_import {
     my $domain = test_new_domain();
 
     if (ok($domain,"test domain not created")) {
-
-        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
-        $sth->execute($domain->id);
 
         test_prepare_base($domain);
         ok($domain->is_base,"Domain should be base"

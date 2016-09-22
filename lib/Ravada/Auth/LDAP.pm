@@ -10,8 +10,11 @@ use Data::Dumper;
 use Digest::SHA qw(sha1_hex);
 use Moose;
 use Net::LDAP;
+use Net::LDAPS;
 use Net::LDAP::Entry;
 use Net::Domain qw(hostdomain);
+
+use Ravada::Auth::SQL;
 
 with 'Ravada::Auth::User';
 
@@ -87,7 +90,7 @@ sub search_user {
     my $username = shift;
     _init_ldap();
 
-    my $ldap = (shift or $LDAP);
+    my $ldap = (shift or $LDAP_ADMIN);
     confess "Missing LDAP" if !$ldap;
 
     my $base = _dc_base();
@@ -97,6 +100,8 @@ sub search_user {
     filter => "(&(uid=$username))",
     attrs  => ['*']
     );
+
+    return if $mesg->code == 32;
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
         if $mesg->code;
@@ -210,11 +215,24 @@ sub login {
     eval { $user_dn = $entry->dn };
     die "Failed fetching user $username dn" if !$user_dn;
 
-    my $mesg = $LDAP->bind( $user_dn, password => $password );
-    return 1 if !$mesg->code;
+    my $mesg;
+#    eval { $mesg = $LDAP->bind( $user_dn, password => $password )};
+    return 1 if $mesg && !$mesg->code;
 
 #    warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-    return $self->_match_password($username, $password);
+    my $user_ok = $self->_match_password($username, $password);
+
+    $self->_check_user_profile($username)   if $user_ok;
+
+    return $user_ok;
+}
+
+sub _check_user_profile {
+    my $self = shift;
+    my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
+    return if $user_sql->id;
+
+    Ravada::Auth::SQL::add_user($self->name , undef, 0);
 }
 
 sub _match_password {
@@ -232,16 +250,18 @@ sub _match_password {
         if !$user->get_value('userPassword');
     my $password_ldap = $user->get_value('userPassword');
 
-    warn $user->get_value('uid')."\n".$user->get_value('userPassword')
-        ."\n"
-        .sha1_hex($password);
+#    warn $user->get_value('uid')."\n".$user->get_value('userPassword')
+#        ."\n"
+#        .sha1_hex($password);
 
     return $user->get_value('uid') eq $cn
         && Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
 }
 
 sub _dc_base {
-    # TODO: from config
+    
+    return $$CONFIG->{ldap}->{base}
+        if $$CONFIG->{ldap}->{base};
 
     my $base = '';
     for my $part (split /\./,hostdomain()) {
@@ -252,17 +272,26 @@ sub _dc_base {
 }
 
 sub _connect_ldap {
-    my ($cn, $pass) = @_;
+    my ($dn, $pass) = @_;
     $pass = '' if !defined $pass;
 
-    my ($host, $port) = ('localhost', 389);
+    my $host = ($$CONFIG->{ldap}->{server} or 'localhost');
+    my $port = ($$CONFIG->{ldap}->{port} or 389);
 
-    my $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
-        or die "I can't connect to LDAP server at $host / $port : $@";
+    my $ldap;
+    
+    if ($port == 636 ) {
+        $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
+            or die "I can't connect to LDAP server at $host / $port : $@";
+    } else {
+         $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
+            or die "I can't connect to LDAP server at $host / $port : $@";
 
-    if ($cn) {
-        my $mesg = $ldap->bind($cn, password => $pass);
-        die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $cn\n"
+    }
+    if ($dn) {
+        my $mesg = $ldap->bind($dn, password => $pass);
+        warn "$dn/$pass ".$mesg->error if $mesg->code;
+        die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
     }
@@ -273,14 +302,14 @@ sub _connect_ldap {
 sub _init_ldap_admin {
     return $LDAP_ADMIN if $LDAP_ADMIN;
 
-    my ($cn, $pass);
+    my ($dn, $pass);
     if ($$CONFIG->{ldap} ) {
-        ($cn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{cn} 
+        ($dn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{dn} 
             , $$CONFIG->{ldap}->{admin_user}->{password});
     } else {
         die "Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
-    $LDAP_ADMIN = _connect_ldap($cn, $pass);
+    $LDAP_ADMIN = _connect_ldap($dn, $pass) ;
     return $LDAP_ADMIN;
 }
 

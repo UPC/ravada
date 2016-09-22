@@ -4,33 +4,99 @@ use warnings;
 use strict;
 
 use Ravada;
+use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Moose;
 
+use Data::Dumper;
+
 with 'Ravada::Auth::User';
 
 
-our $CON = \$Ravada::CONNECTOR;
+our $CON;
+
+sub _init_connector {
+    $CON= \$Ravada::CONNECTOR;
+    $CON= \$Ravada::Front::CONNECTOR   if !$$CON;
+}
+
 
 sub BUILD {
+    _init_connector();
+
     my $self = shift;
+
+    $self->_load_data();
+
+    return $self if !$self->password();
+
     die "ERROR: Login failed ".$self->name
         if !$self->login();#$self->name, $self->password);
     return $self;
 }
 
+sub search_by_id {
+    my $self = shift;
+    my $id = shift;
+    my $data = _load_data_by_id($id);
+    return Ravada::Auth::SQL->new(name => $data->{name});
+}
+
 sub add_user {
+    _init_connector();
     my ($login,$password, $is_admin ) = @_;
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password,is_admin) VALUES(?,?,?)");
 
-    $sth->execute($login,sha1_hex($password),$is_admin);
+    if ($password) {
+        $password = sha1_hex($password);
+    } else {
+        $password = '*LK* no pss';
+    }
+    $sth->execute($login,$password,$is_admin);
     $sth->finish;
+}
+
+sub _load_data {
+    my $self = shift;
+    _init_connector();
+
+    die "No login name nor id " if !$self->name && !$self->id;
+
+    my $sth = $$CON->dbh->prepare(
+       "SELECT * FROM users WHERE name=? ");
+    $sth->execute($self->name);
+    my ($found) = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return if !$found->{name};
+
+    delete $found->{password};
+    lock_hash %$found;
+    $self->{_data} = $found if ref $self && $found;
+}
+
+sub _load_data_by_id {
+    my $id = shift;
+    _init_connector();
+
+    my $sth = $$CON->dbh->prepare(
+       "SELECT * FROM users WHERE id=? ");
+    $sth->execute($id);
+    my ($found) = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    delete $found->{password};
+    lock_hash %$found;
+
+    return $found;
 }
 
 sub login {
     my $self = shift;
+
+    _init_connector();
 
     my ($name, $password);
 
@@ -63,6 +129,15 @@ sub login {
 sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
+}
+
+sub id {
+    my $self = shift;
+    my $id;
+    eval { $id = $self->{_data}->{id} };
+    confess $@ if $@;
+
+    return $id;
 }
 1;
 

@@ -3,7 +3,7 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
-use Carp qw(cluck croak);
+use Carp qw(cluck confess croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
 use Moose;

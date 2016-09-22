@@ -8,12 +8,18 @@ use Test::SQL::Data;
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
+
+my @ARG_CREATE_DOM = (
+        id_iso => 1
+        ,id_owner => 1
+);
+
 
 #######################################################################
 
@@ -49,7 +55,7 @@ sub test_req_create_domain_iso {
     diag("Requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
         name => $name
-        ,id_iso => 1
+        ,@ARG_CREATE_DOM
     );
     ok($req);
     ok($req->status);
@@ -78,7 +84,7 @@ sub test_req_create_base {
     my $name = $DOMAIN_NAME."_base";
     my $req = Ravada::Request->create_domain( 
         name => $name
-        ,id_iso => 1
+        ,@ARG_CREATE_DOM
     );
     ok($req);
     ok($req->status);
@@ -131,6 +137,18 @@ sub test_req_remove_domain_name {
 
 }
 
+sub test_list_vm_types {
+    my $req = Ravada::Request->list_vm_types();
+    $ravada->process_requests();
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".($req->error or '')." requesting VM types ");
+
+    my $result = $req->result();
+    ok(ref $result eq 'ARRAY',"Expecting ARRAY , got ".ref($result));
+
+}
+
 sub remove_old_disks {
     my ($name) = $0 =~ m{.*/(.*)\.t};
 
@@ -164,8 +182,12 @@ eval { $ravada = Ravada->new(connector => $test->connector) };
 ok($ravada,"I can't launch a new Ravada");# or exit;
 
 my ($vm_kvm, $vm_lxc);
-eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada };
-eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada };
+eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada;
+    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => 1 )       if $vm_kvm;
+};
+eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada;
+    @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => 1 )  if $vm_lxc;
+};
 
 SKIP: {
     my $msg = "SKIPPED: No KVM nor LXC virtual managers found";
@@ -195,6 +217,7 @@ SKIP: {
 
     test_remove_domain($DOMAIN_NAME."_iso");
 
+    test_list_vm_types();
 };
 
 done_testing();

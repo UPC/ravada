@@ -3,10 +3,9 @@ package Ravada;
 use warnings;
 use strict;
 
-use Carp qw(carp);
+use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
-use JSON::XS;
 use Moose;
 use YAML;
 
@@ -90,8 +89,12 @@ sub _connect_dbh {
 
 sub _init_config {
     my $file = shift;
+
+    my $connector = shift;
+    confess "Deprecated connector" if $connector;
+
     $CONFIG = YAML::LoadFile($file);
-    _connect_dbh();
+#    $CONNECTOR = ( $connector or _connect_dbh());
 }
 
 sub _create_vm_kvm {
@@ -106,6 +109,7 @@ sub _create_vm_kvm {
 
     eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
     my $err_kvm = $@;
+    return (undef, $err_kvm)    if !$vm_kvm;
 
     my ($internal_vm , $storage);
     eval {
@@ -115,7 +119,8 @@ sub _create_vm_kvm {
         $storage = $vm_kvm->dir_img();
     };
     $vm_kvm = undef if $@ || !$internal_vm || !$storage;
-    return ($vm_kvm,$@);
+    $err_kvm .= ($@ or '');
+    return ($vm_kvm,$err_kvm);
 }
 
 sub _create_vm {
@@ -163,16 +168,20 @@ sub create_domain {
 
     my %args = @_;
 
-    my $backend = $args{backend};
-    delete $args{backend};
+    croak "Argument id_owner required "
+        if !$args{id_owner};
+
+    my $vm_name = $args{vm};
+    delete $args{vm};
 
 
     my $vm = $self->vm->[0];
-    $vm = $self->search_vm($backend)   if $backend;
+    $vm = $self->search_vm($vm_name)   if $vm_name;
 
-    carp "WARNING: no backend defined, we will use ".$vm->name
-        if !$backend;
+    carp "WARNING: no VM defined, we will use ".$vm->name
+        if !$vm_name;
 
+    confess "I can't find any vm ".Dumper($self->vm) if !$vm;
     return $vm->create_domain(@_);
 }
 
@@ -217,21 +226,6 @@ sub search_domain {
     return;
 }
 
-=head2 search_domain_by_id
-
-  my $domain = $ravada->search_domain_by_id($id);
-
-=cut
-
-sub search_domain_by_id {
-    my $self = shift;
-      my $id = shift;
-
-    for my $vm (@{$self->vm}) {
-        my $domain = $vm->search_domain_by_id($id);
-        return $domain if $domain;
-    }
-}
 
 
 =head2 list_domains
@@ -438,43 +432,19 @@ This is run in the ravada backend. It processes the commands requested by the fr
 
 sub process_requests {
     my $self = shift;
+    my $debug = shift;
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id);
-        warn "executing request ".$req." ".Dumper($req) if $DEBUG;
+        warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
         $self->_execute($req);
-        warn $req->status() if $DEBUG;
+        warn "status: ".$req->status() if $DEBUG || $debug;
     }
     $sth->finish;
 }
 
-=head2 list_requests
-
-Returns a list of ruquests : ( id , domain_name, status, error )
-
-=cut
-
-sub list_requests {
-    my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
-        ." FROM requests "
-        ." ORDER BY date_changed DESC LIMIT 4"
-    );
-    $sth->execute;
-    my @reqs;
-    my ($id, $command, $j_args, $date_changed, $status, $error);
-    $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
-
-    while ( $sth->fetch) {
-        my $args = decode_json($j_args) if $j_args;
-
-        push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
-    }
-    $sth->finish;
-    return \@reqs;
-}
 
 =head2 list_vm_types
 
@@ -506,6 +476,23 @@ sub _execute {
 
 }
 
+sub _cmd_domdisplay {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+
+    my $name = $request->args('name');
+    confess "Unknown name for request ".Dumper($request)  if!$name;
+    my $domain = $self->search_domain($request->args->{name});
+    my $user = Ravada::Auth::SQL->search_by_id( $request->args->{uid});
+    my $display = $domain->display($user);
+    $request->result({display => $display});
+
+    $request->status('done');
+
+}
+
 sub _cmd_create {
     my $self = shift;
     my $request = shift;
@@ -513,6 +500,7 @@ sub _cmd_create {
     $request->status('creating domain');
     my $domain;
     eval {$domain = $self->create_domain(%{$request->args}) };
+    warn $@ if $@;
 
     $request->status('done');
     $request->error($@);
@@ -582,6 +570,22 @@ sub _cmd_shutdown {
 
 }
 
+sub _cmd_list_vm_types {
+    my $self = shift;
+    my $request = shift;
+    $request->status('working');
+    my @list_types = $self->list_vm_types();
+    $request->result(\@list_types);
+    $request->status('done');
+}
+
+sub _cmd_ping_backend {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('done');
+    return 1;
+}
 
 sub _req_method {
     my $self = shift;
@@ -593,7 +597,10 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
       ,shutdown => \&_cmd_shutdown
+    ,domdisplay => \&_cmd_domdisplay
+  ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
+ ,list_vm_types => \&_cmd_list_vm_types
     );
     return $methods{$cmd};
 }
@@ -613,7 +620,14 @@ sub search_vm {
     confess "Missing VM type"   if !$type;
 
     my $class = 'Ravada::VM::'.uc($type);
-    for my $vm (@{$self->vm}) {
+
+    if ($type eq 'Void') {
+        return Ravada::VM::Void->new();
+    }
+
+    my @vms;
+    eval { @vms = @{$self->vm} };
+    for my $vm (@vms) {
         return $vm if ref($vm) eq $class;
     }
     return;

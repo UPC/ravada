@@ -7,5 +7,6 @@ CREATE TABLE `requests` (
   `status` char(32) DEFAULT NULL,
   `error` varchar(255) DEFAULT NULL,
   `id_domain` int(11) DEFAULT NULL,
-  `domain_name` char(80) DEFAULT NULL
+  `domain_name` char(80) DEFAULT NULL,
+  `result` varchar(255) DEFAULT NULL
 );

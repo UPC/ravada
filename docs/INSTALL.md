@@ -22,6 +22,7 @@ Clone the sources:
 - libconfig-yaml-perl
 - libmoose-perl
 - libjson-xs-perl
+- qemu-utils
 
 
 ##Old debian
@@ -39,11 +40,11 @@ Create a database named "ravada".
 Grant all permissions to your user:
 
     $ mysql -u root -p
-    mysql> grant all on ravada.* to frankie@'localhost' identified by 'figure a password';
+    mysql> grant all on ravada.* to ravada@'localhost' identified by 'figure a password';
 
 Review and run the sql files from the sql dir.
 
-    $ mysqladmin create ravada
+    $ mysqladmin -p create ravada
     $ cd sql/mysql
     $ cat *.sql | mysql -p ravada
     $ cd ..
@@ -55,13 +56,15 @@ Review and run the sql files from the sql dir.
 Create a config file at /etc/ravada.conf with:
     
     db:
-      user: frankie
+      user: ravada
       password: *****
 
 #KVM backend
 
-Install KVM and virt-manager. Create new virtual machines (called domains) there.
-See docs/operation.md
+Install KVM 
+
+    $ sudo apt-get install qemu-kvm qemu-utils
+    $ sudo virsh pool-define-as default dir - - - - "/var/lib/libvirt/images"
 
 #Ravada user
 

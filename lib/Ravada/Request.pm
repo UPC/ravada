@@ -4,8 +4,10 @@ use strict;
 use warnings;
 
 use Carp qw(confess);
+use Data::Dumper;
 use JSON::XS;
 use Ravada;
+use Ravada::Front;
 
 use vars qw($AUTOLOAD);
 
@@ -20,14 +22,26 @@ our %FIELD_RO = map { $_ => 1 } qw(name);
 
 our %VALID_ARG = (
     create_domain => { 
-            name => 1
+              vm => 1
+           ,name => 1
          ,id_iso => 1
-        ,backend => 1
+        ,id_base => 1
+       ,id_owner => 1
     ,id_template => 1
     }
 );
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
+our $CONNECTOR;
+
+sub _init_connector {
+    $CONNECTOR = \$Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+
+}
+
+sub BUILD {
+    _init_connector();
+}
 
 sub _request {
     my $proto = shift;
@@ -51,6 +65,8 @@ sub open {
     my $class = ref($proto) || $proto;
 
     my $id = shift or confess "Missing request id";
+
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
         ." WHERE id=?");
@@ -193,6 +209,64 @@ sub prepare_base {
 
 }
 
+=head2 list_vm_types
+
+Returns a list of VM types
+
+    my $req = Ravada::Request->list_vm_types();
+
+    my $types = $req->result;
+
+=cut
+
+sub list_vm_types {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'list_vm_types' );
+
+}
+
+=head2 ping_backend
+
+Returns wether the backend is alive or not
+
+=cut
+
+sub ping_backend {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'ping_backend' );
+}
+
+=head2 domdisplay
+
+Returns the domdisplay of a domain
+
+Arguments:
+
+* domain name
+
+=cut
+
+sub domdisplay {
+   my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+    my $uid = shift;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'domdisplay'
+        ,args => { name => $name, uid => $uid });
+}
+
 sub _new_request {
     my $self = shift;
     my %args = @_;
@@ -203,8 +277,11 @@ sub _new_request {
         $args{domain_name} = $args{name};
         delete $args{name};
     }
+    if ( ref $args{args} ) {
+        $args{args} = encode_json($args{args});
+    }
 
-    $CONNECTOR = \$Ravada::CONNECTOR if !defined$CONNECTOR;
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
@@ -283,6 +360,37 @@ sub status {
     return $status;
 }
 
+=head2 result
+
+  Returns the result of the request if any
+
+  my $result = $req->result;
+
+=cut
+
+sub result {
+    my $self = shift;
+
+    my $value = shift;
+
+    if (defined $value ) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set result=? "
+            ." WHERE id=?");
+        $sth->execute(encode_json($value), $self->{id});
+        $sth->finish;
+
+    } else {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
+        $sth->execute($self->{id});
+        ($value) = $sth->fetchrow;
+        $value = decode_json($value)    if defined $value;
+        $sth->finish;
+
+    }
+
+    return $value;
+}
+
 =head2 command
 
 Returns the requested command
@@ -320,8 +428,8 @@ sub args {
     my $name = shift;
     return $self->{args}    if !$name;
 
-    confess "Unknown argument $name"
-        if !exists $self->{args}->{name};
+    confess "Unknown argument $name ".Dumper($self->{args})
+        if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
 }
 
@@ -355,8 +463,11 @@ sub AUTOLOAD {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
-    $sth->execute($value, $self->{id});
-    $sth->finish;
+    eval { 
+        $sth->execute($value, $self->{id});
+        $sth->finish;
+    };
+    warn "$name=$value\n$@" if $@;
     return $value;
 
 }

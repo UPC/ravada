@@ -11,9 +11,8 @@ use YAML qw(LoadFile);
 
 use lib 'lib';
 
-use Ravada;
+use Ravada::Front;
 use Ravada::Auth;
-use Ravada::Request;
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
@@ -28,8 +27,9 @@ if ($help) {
     exit;
 }
 
-our $RAVADA = Ravada->new(config => $FILE_CONFIG);
+our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
 our $TIMEOUT = 10;
+our $USER;
 
 init();
 ############################################################################3
@@ -97,7 +97,7 @@ any '/users' => sub {
 
 get '/list_vm_types.json' => sub {
     my $c = shift;
-    $c->render(json => [$RAVADA->list_vm_types]);
+    $c->render(json => $RAVADA->list_vm_types);
 };
 
 get '/list_bases.json' => sub {
@@ -107,17 +107,17 @@ get '/list_bases.json' => sub {
 
 get '/list_images.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_images_data);
+    $c->render(json => $RAVADA->list_iso_images);
 };
 
 get '/list_machines.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_domains_data);
+    $c->render(json => $RAVADA->list_domains);
 };
 
-get '/list_templates.json' => sub {
+get '/list_lxc_templates.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_images_data_lxc);
+    $c->render(json => $RAVADA->list_lxc_templates);
 };
 
 
@@ -161,7 +161,10 @@ get '/requests.json' => sub {
 sub _logged_in {
     my $c = shift;
 
-    $c->stash(_logged_in => $c->session('login'));
+    my $login = $c->session('login') or return;
+
+    $USER = Ravada::Auth::SQL->new(name => $login);
+    $c->stash(_logged_in => $login );
     return 1 if $c->session('login');
 }
 
@@ -237,9 +240,8 @@ sub quick_start_domain {
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
-    my $domain_name = $base->name."-".$name;
+    my $domain_name = $base->{name}."-".$name;
 
-    warn "searching for domain $domain_name";
     my $domain = $RAVADA->search_domain($domain_name);
     $domain = provision($c,  $id_base,  $domain_name)
         if !$domain;
@@ -337,21 +339,26 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
-    my $req = Ravada::Request->create_domain(
+    my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
         ,id_template => $c->param('id_template')
-        ,backend => $c->param('backend')
+        ,vm=> $c->param('backend')
+        ,id_owner => $USER->id
     );
 
-    wait_request_done($c,$req);
+    $RAVADA->wait_request($req);
 
-    my $domain = $RAVADA->search_domain($name);
 
     if ( $req->error ) {
-        $c->stash(error => $req->error) 
-    } elsif (!$domain) {
+        $c->stash(error => $req->error) ;
+        return;
+    }
+
+    my $domain = $RAVADA->search_domain($name);
+    if (!$domain) {
         $c->stash(error => "I dunno why but no domain $name");
+        return;
     }
     return $domain;
 }
@@ -390,11 +397,20 @@ sub provision {
     my $domain = $RAVADA->search_domain(name => $name);
     return $domain if $domain;
 
-    my $req = Ravada::Request->create_domain(name => $name, id_base => $id_base);
-    wait_request_done($c,$req);
+    warn "requesting the creation of $name";
+    my $req = Ravada::Request->create_domain(
+             name => $name
+        , id_base => $id_base
+        ,id_owner => $USER->id
+    );
+    $RAVADA->wait_request($req, 1);
 
+
+    if ( $req->status ne 'done' ) {
+        $c->stash(error => "Domain provisioning request ".$req->status);
+        return;
+    }
     $domain = $RAVADA->search_domain($name);
-
     if ( $req->error ) {
         $c->stash(error => $req->error) 
     } elsif (!$domain) {
@@ -403,47 +419,23 @@ sub provision {
     return $domain;
 }
 
-sub wait_request_done {
-    my ($c, $req) = @_;
-    
-    for ( 1 .. $TIMEOUT ) {
-        warn "$_ ".$req->status;
-        last if $req->status eq 'done';
-        sleep 1;
-    }
-    $req->status("timeout")
-        if $req->status eq 'working';
-    return $req;
-}
-
 sub show_link {
     my $c = shift;
     my $domain = shift;# or confess "Missing domain";
 
 
-    my $uri = $domain->display() if $domain;
+    my $uri = $RAVADA->domdisplay($domain->{name}, $USER) if $domain;
     if (!$uri) {
         my $name = '';
-        $name = $domain->name if $domain;
-        $c->render(template => 'fail', name => $domain->name);
+        $name = $domain->{name} if $domain;
+        $c->render(template => 'fail', name => $domain->{name});
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
+    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->{name}
                 ,login => $c->session('login'));
 }
 
-
-sub list_bases {
-    confess "TODO";
-    my @bases = $RAVADA->list_bases();
-
-    my %base;
-    for my $base ( $RAVADA->list_bases ) {
-        $base{$base->id} = $base->name;
-    }
-    return \%base;
-}
 
 sub check_back_running {
     #TODO;
@@ -490,7 +482,7 @@ sub clone_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
-    return quick_start_domain($c, $base->id);
+    return quick_start_domain($c, $base->{id});
 }
 
 sub shutdown_machine {
@@ -510,7 +502,7 @@ sub remove_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->remove_domain(
-        $domain->name
+        $domain->{name}
     );
 
     return $c->render(data => "domain removing in progress");
@@ -523,10 +515,10 @@ sub prepare_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->prepare_base(
-        $domain->name
+        $domain->{name}
     );
 
-    $c->render(text => 'Base '.$domain->name." prepared.");
+    $c->render(text => 'Base '.$domain->{name}." preparing base.");
 
 }
 
