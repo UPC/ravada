@@ -133,7 +133,7 @@ sub _create_vm {
     my $err_lxc = $@;
 
     if (!@vms) {
-        die "No VMs found: $err_lxc\n$err_kvm\n";
+        confess "No VMs found: $err_lxc\n$err_kvm\n";
     }
     return \@vms;
 
