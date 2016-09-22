@@ -16,14 +16,18 @@ sub init {
     my ($config, $db_con) = @_;
     if ($config->{ldap}) {
         Ravada::Auth::LDAP::init($config);
+        warn "LDAP enabled";
     } else {
         $LDAP = 0;
     }
-    Ravada::Auth::SQL::init($config, $db_con);
+#    Ravada::Auth::SQL::init($config, $db_con);
 }
 
 sub login {
-    eval { return Ravada::Auth::LDAP::login(@_)    if $LDAP };
+    my ($name, $pass) = @_;
+
+    return Ravada::Auth::LDAP->new(name => $name, password => $pass)
+        if $LDAP;
     if ($@ =~ /I can't connect/i) {
         $LDAP = 0;
         warn $@;

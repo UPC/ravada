@@ -9,6 +9,7 @@ use DBIx::Connector;
 use Moose;
 use YAML;
 
+use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
 use Ravada::VM::LXC;
@@ -73,7 +74,7 @@ sub BUILD {
         $CONNECTOR = $self->_connect_dbh();
         $self->connector($CONNECTOR);
     }
-
+    Ravada::Auth::init($CONFIG);
 }
 
 sub _connect_dbh {

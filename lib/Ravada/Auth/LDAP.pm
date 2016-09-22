@@ -209,6 +209,7 @@ sub login {
     my $self = shift;
     my ($username, $password) = ($self->name , $self->password);
 
+    _init_ldap_admin();
     my $entry = search_user($username);
 
     my $user_dn;
