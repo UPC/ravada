@@ -214,8 +214,8 @@ sub search_domain_by_id {
 
 sub domdisplay {
     my $self = shift;
-    my $name = shift;
-    my $user = shift;
+    my $name = shift    or confess "Missing domain name";
+    my $user = shift    or confess "Missing user";
 
     my $req = Ravada::Request->domdisplay($name, $user->id);
     $self->wait_request($req, 10);
