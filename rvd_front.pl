@@ -29,6 +29,7 @@ if ($help) {
 
 our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
 our $TIMEOUT = 10;
+our $USER;
 
 init();
 ############################################################################3
@@ -160,7 +161,10 @@ get '/requests.json' => sub {
 sub _logged_in {
     my $c = shift;
 
-    $c->stash(_logged_in => $c->session('login'));
+    my $login = $c->session('login') or return;
+
+    $USER = Ravada::Auth::SQL->new(name => $login);
+    $c->stash(_logged_in => $login );
     return 1 if $c->session('login');
 }
 
@@ -418,7 +422,7 @@ sub show_link {
     my $domain = shift;# or confess "Missing domain";
 
 
-    my $uri = $RAVADA->domdisplay($domain->{name}) if $domain;
+    my $uri = $RAVADA->domdisplay($domain->{name}, $USER) if $domain;
     if (!$uri) {
         my $name = '';
         $name = $domain->{name} if $domain;
