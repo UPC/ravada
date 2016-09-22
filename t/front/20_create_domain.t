@@ -10,10 +10,6 @@ use Test::Ravada;
 
 use_ok('Ravada::Front');
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
-$DOMAIN_NAME = 'front_'.$DOMAIN_NAME;
-my $CONT= 0;
-
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $CONFIG_FILE = 't/etc/ravada.conf';
@@ -36,10 +32,6 @@ my %CREATE_ARGS = (
 my $USER = create_user('foo','bar');
 
 ###################################################################
-
-sub _new_name {
-    return $DOMAIN_NAME."_".$CONT++;
-}
 
 sub create_args {
     my $backend = shift;
@@ -90,7 +82,7 @@ for my $vm_name ('kvm','lxc') {
         next;
     }
 
-    my $name = _new_name();
+    my $name = new_domain_name();
     my $req = $RVD_FRONT->create_domain( name => $name 
         , vm => $vm_name
         , create_args($vm_name)
@@ -120,5 +112,7 @@ for my $vm_name ('kvm','lxc') {
     $display = undef;
     eval { $display = $RVD_FRONT->domdisplay($name ) };
     ok(!$display,"No display should b e returned with no user");
+
+    test_remove_domain($name);
 }
 done_testing();
