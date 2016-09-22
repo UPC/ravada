@@ -677,14 +677,14 @@ sub _init_ip {
     my $ip = inet_ntoa(inet_aton($name)) 
         or die "CRITICAL: I can't find IP of $name in the DNS.\n";
 
-    if ($ip eq '127.0.0.1') {
+    if ($ip =~ /^127./) {
         #TODO Net:DNS
         $ip= `host $name`;
         chomp $ip;
         $ip =~ s/.*?address (\d+)/$1/;
     }
     die "I can't find IP with hostname $name ( $ip )\n"
-        if !$ip || $ip eq '127.0.0.1';
+        if !$ip || $ip =~ /^127./;
 
     return $ip;
 }
