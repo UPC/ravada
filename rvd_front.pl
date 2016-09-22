@@ -228,7 +228,6 @@ sub quick_start {
                     ,id_base => $id_base
                       ,login => $login 
                       ,error => \@error
-                       ,base => list_bases()
     );
 }
 
@@ -261,8 +260,6 @@ sub show_failure {
 
 sub domains {
     my $c = shift;
-    my @domains = $RAVADA->list_domains();
-
 
     my @error = ();
 
@@ -288,7 +285,6 @@ sub domains {
 
 
     $c->render(template => 'bootstrap/machines'
-        ,domains => \@domains
         ,name => $c->param('name')
         ,ram => $ram
         ,disk => $disk
@@ -439,6 +435,7 @@ sub show_link {
 
 
 sub list_bases {
+    confess "TODO";
     my @bases = $RAVADA->list_bases();
 
     my %base;
