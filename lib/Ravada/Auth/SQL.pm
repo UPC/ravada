@@ -60,6 +60,7 @@ sub add_user {
 
 sub _load_data {
     my $self = shift;
+    _init_connector();
 
     die "No login name nor id " if !$self->name && !$self->id;
 
@@ -78,6 +79,7 @@ sub _load_data {
 
 sub _load_data_by_id {
     my $id = shift;
+    _init_connector();
 
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE id=? ");
