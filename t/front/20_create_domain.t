@@ -116,5 +116,9 @@ for my $vm_name ('kvm','lxc') {
     my $display = $RVD_FRONT->domdisplay($name, $USER);
     ok($display,"No display for domain $name found. Is it active ?");
     ok($display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '$display'");
+
+    $display = undef;
+    eval { $display = $RVD_FRONT->domdisplay($name ) };
+    ok(!$display,"No display should b e returned with no user");
 }
 done_testing();
