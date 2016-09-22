@@ -484,8 +484,8 @@ sub _cmd_domdisplay {
     my $name = $request->args('name');
     confess "Unknown name for request ".Dumper($request)  if!$name;
     my $domain = $self->search_domain($request->args->{name});
-
-    my $display = $domain->display;
+    my $user = Ravada::Auth::SQL->search_by_id( $request->args->{uid});
+    my $display = $domain->display($user);
     $request->result({display => $display});
 
     $request->status('done');

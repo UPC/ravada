@@ -5,13 +5,17 @@ use warnings;
 use  Carp qw(carp);
 use  Data::Dumper;
 use  Test::More;
+
+use Ravada;
+use Ravada::Auth::SQL;
+
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 
 require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 
@@ -88,6 +92,18 @@ sub remove_old_disks {
         unlink $disk or die "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
+}
+
+sub create_user {
+    my ($name, $pass, $is_admin) = @_;
+    Ravada::Auth::SQL::add_user($name, $pass, $is_admin);
+
+    my $user;
+    eval {
+        $user = Ravada::Auth::SQL->new(name => $name, password => $pass);
+    };
+    die $@ if !$user;
+    return $user;
 }
 
 1;

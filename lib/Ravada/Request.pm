@@ -259,10 +259,12 @@ sub domdisplay {
     my $class=ref($proto) || $proto;
 
     my $name = shift;
+    my $uid = shift;
 
     my $self = {};
     bless ($self, $class);
-    return $self->_new_request( command => 'domdisplay',args => { name => $name });
+    return $self->_new_request( command => 'domdisplay'
+        ,args => { name => $name, uid => $uid });
 }
 
 sub _new_request {

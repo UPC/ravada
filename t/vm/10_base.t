@@ -23,6 +23,8 @@ my %ARG_CREATE_DOM = (
 
 rvd_back($test->connector, $FILE_CONFIG);
 
+my $USER = create_user("foo","bar");
+
 ##########################################################
 
 sub test_vm_connect {
@@ -69,7 +71,7 @@ sub test_create_domain {
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
-                    , id_owner => 1
+                    , id_owner => $USER->id
                     , @{$ARG_CREATE_DOM{$vm_name}}) 
     };
 
@@ -79,6 +81,23 @@ sub test_create_domain {
         .($domain->name or '<UNDEF>')
         ." for VM $vm_name"
     );
+
+    return $domain;
+}
+
+sub test_manage_domain {
+    my $domain = shift;
+
+    my $display;
+    eval { $display = $domain->display($USER) };
+    ok($display,"No display for ".$domain->name." $@");
+}
+
+sub test_remove_domain {
+    my $domain = shift;
+    eval { $domain->remove };
+    ok(!$@ , "Error removing domain ".$domain->name." ".ref($domain).": $@") or exit;
+
 }
 
 #######################################################
@@ -106,8 +125,9 @@ for my $vm_name (qw( Void KVM )) {
 
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
-        test_create_domain($vm_name);
-
+        my $domain = test_create_domain($vm_name);
+        test_manage_domain($domain);
+        test_remove_domain($domain);
     };
 }
 done_testing();

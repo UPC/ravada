@@ -215,8 +215,9 @@ sub search_domain_by_id {
 sub domdisplay {
     my $self = shift;
     my $name = shift;
+    my $user = shift;
 
-    my $req = Ravada::Request->domdisplay($name);
+    my $req = Ravada::Request->domdisplay($name, $user->id);
     $self->wait_request($req, 10);
 
     return if $req->status() ne 'done';

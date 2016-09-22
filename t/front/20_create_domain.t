@@ -5,6 +5,9 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 use_ok('Ravada::Front');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
@@ -13,12 +16,14 @@ my $CONT= 0;
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
+my $CONFIG_FILE = 't/etc/ravada.conf';
+
 my @rvd_args = (
-       config => 't/etc/ravada.conf' 
+       config => $CONFIG_FILE
    ,connector => $test->connector 
 );
 
-my $RVD_BACK  = Ravada->new( @rvd_args );
+my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE );
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
@@ -27,6 +32,8 @@ my %CREATE_ARGS = (
     kvm => { id_iso => 1, id_owner => 1 }
     ,lxc => { id_template => 1, id_owner => 1 }
 );
+
+my $USER = create_user('foo','bar');
 
 ###################################################################
 
@@ -39,32 +46,6 @@ sub create_args {
 
     die "Unknown backend $backend" if !$CREATE_ARGS{$backend};
     return %{$CREATE_ARGS{$backend}};
-}
-sub remove_old_disks {
-    my $name = $DOMAIN_NAME;
-
-    my $vm = $RVD_BACK->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    $vm->storage_pool->refresh();
-}
-
-sub remove_old_domains {
-    for ( 0 .. 10 ) {
-        my $dom_name = $DOMAIN_NAME."_$_";
-        my $domain = $RVD_BACK->search_domain($dom_name);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
 }
 
 sub search_domain_db
@@ -132,7 +113,7 @@ for my $vm_name ('kvm','lxc') {
     $RVD_FRONT->wait_request($req,10);
     ok($req->status('done'),"Request ".$req->status);
 
-    my $display = $RVD_FRONT->domdisplay($name);
+    my $display = $RVD_FRONT->domdisplay($name, $USER);
     ok($display,"No display for domain $name found. Is it active ?");
     ok($display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '$display'");
 }

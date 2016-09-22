@@ -23,7 +23,10 @@ sub name {
     return $self->domain;
 };
 
-sub display {}
+sub display {
+    return 'void://hostname:000/';
+}
+
 sub is_active {}
 
 sub pause {}

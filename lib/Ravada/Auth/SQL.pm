@@ -9,6 +9,8 @@ use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Moose;
 
+use Data::Dumper;
+
 with 'Ravada::Auth::User';
 
 
@@ -34,6 +36,13 @@ sub BUILD {
     return $self;
 }
 
+sub search_by_id {
+    my $self = shift;
+    my $id = shift;
+    my $data = _load_data_by_id($id);
+    return Ravada::Auth::SQL->new(name => $data->{name});
+}
+
 sub add_user {
     _init_connector();
     my ($login,$password, $is_admin ) = @_;
@@ -52,19 +61,34 @@ sub add_user {
 sub _load_data {
     my $self = shift;
 
-    die "No login name" if !$self->name;
+    die "No login name nor id " if !$self->name && !$self->id;
 
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE name=? ");
-    $sth->execute($self->name );
+    $sth->execute($self->name);
     my ($found) = $sth->fetchrow_hashref;
     $sth->finish;
 
-    if ($found) {
-        delete $found->{password};
-        lock_hash %$found;
-        $self->{_data} = $found if ref $self && $found;
-    }
+    return if !$found->{name};
+
+    delete $found->{password};
+    lock_hash %$found;
+    $self->{_data} = $found if ref $self && $found;
+}
+
+sub _load_data_by_id {
+    my $id = shift;
+
+    my $sth = $$CON->dbh->prepare(
+       "SELECT * FROM users WHERE id=? ");
+    $sth->execute($id);
+    my ($found) = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    delete $found->{password};
+    lock_hash %$found;
+
+    return $found;
 }
 
 sub login {
@@ -107,8 +131,11 @@ sub is_admin {
 
 sub id {
     my $self = shift;
-    return $self->{_data}->{id};
-}
+    my $id;
+    eval { $id = $self->{_data}->{id} };
+    confess $@ if $@;
 
+    return $id;
+}
 1;
 

@@ -12,7 +12,7 @@ requires 'is_admin';
 has 'name' => (
            is => 'ro'
          ,isa => 'Str'
-    ,required => 1
+    ,required =>1 
 );
 
 has 'password' => (

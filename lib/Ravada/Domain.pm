@@ -36,8 +36,25 @@ has 'timeout_shutdown' => (
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################################################3
-
 #
+# Method Modifiers
+# 
+
+before 'display' => \&_allowed;
+
+sub _allowed {
+    my $self = shift;
+
+    my ($user) = @_;
+
+    confess "Missing user uid"  if !defined $user;
+    return if $self->id_owner == $user->id
+            || $user->is_admin;
+
+    die "User ".$user->name." not allowed to access ".$self->domain;
+
+}
+##################################################################################3
 sub id {
     return $_[0]->_data('id');
 
