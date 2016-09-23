@@ -339,6 +339,7 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
+    warn $USER->id;
     my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
