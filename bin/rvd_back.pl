@@ -33,6 +33,7 @@ my ($BASE,$PREPARE, $DAEMON, $DEBUG, $REMOVE, $PROVISION, $ADD_USER, $CREATE );
 my $REMOVE_NOW;
 my $VERBOSE = $ENV{TERM};
 my $FILE_CONFIG = "/etc/ravada.conf";
+my $ADD_USER_LDAP;
 
 my $USAGE = "$0 --base=".($BASE or 'BASE')
         ." [--debug] [--prepare] [--daemon] [--file-config=$FILE_CONFIG] "
@@ -40,6 +41,7 @@ my $USAGE = "$0 --base=".($BASE or 'BASE')
         ." --create : creates an empty virtual machine\n"
         ." --prepare : prepares a base system with one of the created nodes\n"
         ." --add-user : adds a new db user\n"
+        ." --add-user-ldap : adds a new LDAP user\n"
         ." --provision : provisions a new domain\n"
         ." --remove : removes a domain\n"
         ." --remove-now : removes a domain, doesn't wait a nice shutdown\n"
@@ -57,6 +59,7 @@ GetOptions (       help => \$help
                ,verbose => \$VERBOSE
              ,'config=s'=> \$FILE_CONFIG
              ,'add-user'=> \$ADD_USER
+        ,'add-user-ldap'=> \$ADD_USER_LDAP
              ,provision => \$PROVISION
            ,'remove-now'=> \$REMOVE_NOW
 ) or exit;
@@ -72,7 +75,7 @@ if ($REMOVE_NOW) {
     $CONFIG->{timeout_shutdown}= 1;
 }
 
-if ($REMOVE || $PROVISION || $ADD_USER || $CREATE) {
+if ($REMOVE || $PROVISION || $ADD_USER || $ADD_USER_LDAP || $CREATE) {
     if ( ! @ARGV ) {
         $help=1;
         warn "ERROR: missing username.\n"   if $ADD_USER;
@@ -83,6 +86,10 @@ if ($REMOVE || $PROVISION || $ADD_USER || $CREATE) {
 if ($PROVISION && !$BASE ) {
     warn "ERROR: Missing base\n";
     $help =1;
+}
+if ($ADD_USER && $ADD_USER_LDAP) {
+    warn "ERROR: Only one kind of user, please\n";
+    $help = 1;
 }
 
 if ($help) {
@@ -269,6 +276,17 @@ sub add_user {
     Ravada::Auth::SQL::add_user($login, $password);
 }
 
+sub add_user_ldap {
+    my $login = shift;
+
+    print "password : ";
+    my $password = <STDIN>;
+    chomp $password;
+
+    Ravada::Auth::LDAP::add_user($login, $password);
+}
+
+
 sub select_iso {
     my $sth = $RAVADA->connector->dbh->prepare("SELECT * FROM iso_images ORDER BY name");
     $sth->execute;
@@ -408,6 +426,10 @@ if ($PREPARE) {
 } elsif ($ADD_USER) {
     for (@ARGV) {
         add_user($_);
+    }
+}elsif ($ADD_USER_LDAP) {
+    for (@ARGV) {
+        add_user_ldap($_);
     }
 }elsif ($CREATE) {
     create_base(@ARGV);

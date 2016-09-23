@@ -308,7 +308,7 @@ sub _init_ldap_admin {
         ($dn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{dn} 
             , $$CONFIG->{ldap}->{admin_user}->{password});
     } else {
-        die "Missing ldap section in config file ".Dumper($$CONFIG)."\n"
+        die "ERROR: Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
     $LDAP_ADMIN = _connect_ldap($dn, $pass) ;
     return $LDAP_ADMIN;

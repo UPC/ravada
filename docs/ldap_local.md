@@ -5,27 +5,20 @@
     $ sudo apt-get install 389-ds-base
     $ sudo setup-ds
 
+##Add a LDAP section in the config file
+
+The config file usually is /etc/ravada.conf. Add this configuration:
+
+    ldap:
+        admin_group: test.admin.group
+        admin_user:
+            dn: cn=Directory Manager
+            password: thepasswordyouusedwhensetup-ds
+        base: 'dc=telecom,dc=bcn'
+
+
 ##Insert one test user
 
-First create the file user.ldif. Use the domain name that your host belongs to
-in the first line:
+The ravada backend script allows creating users in the LDAP
 
-    dn: uid=jdoe,ou=People,dc=domain,dc=name
-    objectClass: top
-    objectClass: person
-    objectClass: organizationalPerson
-    objectClass: inetOrgPerson
-    uid: jdoe
-    cn: John Doe
-    displayName: John Doe
-    givenName: John
-    sn: Doe
-    userPassword: test
-
-
-Insert that file in the ldap server:
-
-    $ ldapadd -h 127.0.0.1 -x -D "cn=Directory Manager" -W -f user.ldif
-
-Now you can user the former user with the login name "jdoe" and password "test"
-
+    $ sudo ./bin/ldap_admin.pl --add-user-ldap jimmy.mcnulty
