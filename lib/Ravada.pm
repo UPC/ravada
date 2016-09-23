@@ -501,7 +501,7 @@ sub _cmd_create_fork {
 
     $request->status('creating domain');
     my $domain;
-    eval {$domain = $self->create_domain(%{$request->args}) };
+    eval {$domain = $self->create_domain(%{$request->args},request => $request) };
     warn $@ if $@;
 
     $request->status('done');
