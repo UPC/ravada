@@ -31,7 +31,7 @@ sub login {
         $LDAP = 0;
         warn $@;
     }
-    return Ravada::Auth::SQL::login(@_);
+    return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
 1;
