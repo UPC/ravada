@@ -353,9 +353,12 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
+    warn $self->{id}." ".$self->{command}." ".$status;
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
-    $sth->execute($status, $self->{id});
+    eval { $sth->execute($status, $self->{id}) };
+    warn $status if $@;
+    warn $@ if $@;
     $sth->finish;
     return $status;
 }
