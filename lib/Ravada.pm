@@ -7,6 +7,7 @@ use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
 use Moose;
+use POSIX qw(WNOHANG);
 use YAML;
 
 use Ravada::Auth;
@@ -494,7 +495,7 @@ sub _cmd_domdisplay {
 
 }
 
-sub _cmd_create {
+sub _cmd_create_fork {
     my $self = shift;
     my $request = shift;
 
@@ -506,6 +507,52 @@ sub _cmd_create {
     $request->status('done');
     $request->error($@);
 
+}
+
+sub _wait_pids {
+    my $self = shift;
+    my $request = shift;
+
+    for my $pid ( keys %{$self->{pids}}) {
+        $request->status("waiting for pid $pid");
+        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
+        my $kid = waitpid($pid,0);
+
+        warn "Found $kid";
+        return if $kid  == $pid;
+    }
+}
+
+sub _add_pid {
+    my $self = shift;
+    my $pid = shift;
+
+    $self->{pids}->{$pid} = time;
+}
+
+sub _cmd_create {
+
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('waiting for other tasks');
+
+    $self->_wait_pids($request);
+
+    $request->status('forking');
+
+    my $pid = fork();
+    if (!defined $pid) {
+        $request->status('done');
+        $request->error("I can't fork");
+        return;
+    }
+    if ($pid == 0 ) {
+        $self->_cmd_create_fork($request);
+        exit;
+    }
+    $self->_add_pid($pid);
+    return;
 }
 
 sub _cmd_remove {
