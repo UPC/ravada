@@ -16,7 +16,6 @@ sub init {
     my ($config, $db_con) = @_;
     if ($config->{ldap}) {
         Ravada::Auth::LDAP::init($config);
-        warn "LDAP enabled";
     } else {
         $LDAP = 0;
     }
