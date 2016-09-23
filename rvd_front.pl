@@ -358,10 +358,19 @@ sub req_new_domain {
 
     my $domain = $RAVADA->search_domain($name);
     if (!$domain) {
-        $c->stash(error => "I dunno why but no domain $name");
-        return;
+        return _show_request($c,$req);
     }
     return $domain;
+}
+
+sub _show_request {
+    my $c = shift;
+    my $request = shift;
+
+    $c->render(
+         template => 'bootstrap/request'
+        , request => $request
+    );
 }
 
 sub _search_req_base_error {

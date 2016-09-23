@@ -1,0 +1,2 @@
+<h1>Request</h1>
+<%= Data::Dumper::Dumper($request) %>
