@@ -75,13 +75,18 @@ sub list_domains {
 sub list_vm_types {
     my $self = shift;
 
+    return $self->{cache}->{vm_types} if $self->{cache}->{vm_types};
+
     my $req = Ravada::Request->list_vm_types();
     $self->wait_request($req);
 
     die "ERROR: Timeout waiting for request ".$req->id
         if $req->status() eq 'timeout';
 
-    return $req->result();
+    my $result = $req->result();
+    $self->{cache}->{vm_types} = $result if $result->[0];
+
+    return $result;
 }
 
 sub list_iso_images {
