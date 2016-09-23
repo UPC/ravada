@@ -176,6 +176,10 @@ sub create_domain {
     my $vm_name = $args{vm};
     delete $args{vm};
 
+    my $request = $args{request}            if $args{request};
+
+    $request->status("Searching for VM")    if $request;
+    sleep 5;
 
     my $vm = $self->vm->[0];
     $vm = $self->search_vm($vm_name)   if $vm_name;
@@ -184,6 +188,8 @@ sub create_domain {
         if !$vm_name;
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
+
+    $request->status("creating domain in ".ref($vm));
     return $vm->create_domain(@_);
 }
 
