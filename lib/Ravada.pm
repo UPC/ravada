@@ -441,7 +441,11 @@ sub process_requests {
     while (my ($id)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id);
         warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
-        $self->_execute($req);
+        eval { $self->_execute($req) };
+        if ($@) {
+            $req->status('done');
+            $req->error($@);
+        }
         warn "status: ".$req->status() if $DEBUG || $debug;
     }
     $sth->finish;
