@@ -510,6 +510,7 @@ sub _do_cmd_create{
     my $request = shift;
 
     $request->status('creating domain');
+    warn "$$ creating domain";
     my $domain;
     eval {$domain = $self->create_domain(%{$request->args},request => $request) };
     warn $@ if $@;
