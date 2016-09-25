@@ -435,13 +435,14 @@ This is run in the ravada backend. It processes the commands requested by the fr
 sub process_requests {
     my $self = shift;
     my $debug = shift;
+    my $dont_fork = shift;
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id);
         warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
-        eval { $self->_execute($req) };
+        eval { $self->_execute($req, $dont_fork) };
         if ($@) {
             $req->status('done');
             $req->error($@);
@@ -451,6 +452,10 @@ sub process_requests {
     $sth->finish;
 }
 
+sub _process_requests_dont_fork {
+    my $self = shift;
+    return $self->process_requests(undef,1);
+}
 
 =head2 list_vm_types
 
@@ -472,13 +477,14 @@ sub list_vm_types {
 sub _execute {
     my $self = shift;
     my $request = shift;
+    my $dont_fork = shift;
 
     my $sub = $self->_req_method($request->command);
 
     die "Unknown command ".$request->command
         if !$sub;
 
-    return $sub->($self,$request);
+    return $sub->($self,$request, $dont_fork);
 
 }
 
@@ -499,7 +505,7 @@ sub _cmd_domdisplay {
 
 }
 
-sub _cmd_create_fork {
+sub _do_cmd_create{
     my $self = shift;
     my $request = shift;
 
@@ -518,11 +524,12 @@ sub _wait_pids {
     my $request = shift;
 
     for my $pid ( keys %{$self->{pids}}) {
-        $request->status("waiting for pid $pid");
-        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
+        $request->status("waiting for pid $pid")    if $request;
+
+#        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
         my $kid = waitpid($pid,0);
 
-        warn "Found $kid";
+#        warn "Found $kid";
         return if $kid  == $pid;
     }
 }
@@ -538,13 +545,16 @@ sub _cmd_create {
 
     my $self = shift;
     my $request = shift;
+    my $dont_fork = shift;
+
+    return $self->_do_cmd_create($request)
+        if $dont_fork;
 
     $request->status('waiting for other tasks');
 
     $self->_wait_pids($request);
 
     $request->status('forking');
-
     my $pid = fork();
     if (!defined $pid) {
         $request->status('done');
@@ -552,7 +562,7 @@ sub _cmd_create {
         return;
     }
     if ($pid == 0 ) {
-        $self->_cmd_create_fork($request);
+        $self->_do_cmd_create($request);
         exit;
     }
     $self->_add_pid($pid);
