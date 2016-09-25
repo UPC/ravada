@@ -52,7 +52,7 @@ Ravada::Auth::SQL::add_user('mcnulty','jameson');
 
     my $user3 = Ravada::Auth::login('mcnulty','jameson');
     ok($user3,"No user returned from Ravada::Auth::login");
-    ok(ref $user && ref($user3) eq 'Ravada::Auth::SQL');
+    ok(ref $user3 && ref($user3) eq 'Ravada::Auth::SQL');
     ok(!$user3->is_admin,"User ".$user3->name." should not be admin ".Dumper($user3->{_data}));
 
 }
