@@ -24,6 +24,11 @@ has 'backend' => (
 
 );
 
+has 'fork' => (
+    is => 'rw'
+    ,isa => 'Int'
+    ,default => 1
+);
 
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 5;
@@ -131,7 +136,13 @@ sub wait_request {
 
     my $timeout = ( shift or $TIMEOUT );
 
-    $self->backend->process_requests() if $self->backend;
+    if ( $self->backend ) {
+        if ($self->fork ) {
+            $self->backend->process_requests();
+        } else {
+            $self->backend->_process_requests_dont_fork();
+        }
+    }
 
     for ( 1 .. $TIMEOUT ) {
         last if $req->status eq 'done';

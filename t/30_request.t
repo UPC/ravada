@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use POSIX qw(WNOHANG);
 use Test::More;
 use Test::SQL::Data;
 
@@ -19,7 +20,6 @@ my @ARG_CREATE_DOM = (
         id_iso => 1
         ,id_owner => 1
 );
-
 
 #######################################################################
 
@@ -49,6 +49,18 @@ sub test_remove_domain {
 
 }
 
+sub wait_request {
+    my $req = shift;
+    my $status = '';
+    for ( 1 .. 100 ) {
+        last if $req->status eq 'done';
+        next if $req->status eq $status;
+        diag("Request ".$req->command." ".$req->status);
+        $status=$req->status;
+        sleep 1;
+    }
+
+}
 sub test_req_create_domain_iso {
 
     my $name = $DOMAIN_NAME."_iso";
@@ -59,6 +71,8 @@ sub test_req_create_domain_iso {
     );
     ok($req);
     ok($req->status);
+
+    
     ok(defined $req->args->{name} 
         && $req->args->{name} eq $name
             ,"Expecting args->{name} eq $name "
@@ -67,7 +81,10 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
+
+    wait_request($req);
+    $ravada->_wait_pids();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -96,7 +113,7 @@ sub test_req_create_base {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");

@@ -26,7 +26,7 @@ sub test_req_prepare_base {
     ok(!$domain0->is_base,"Domain $name should not be base");
 
     my $req = Ravada::Request->prepare_base($name);
-    $RAVADA->process_requests();
+    $RAVADA->_process_requests_dont_fork();
 
     my $domain =  $RAVADA->search_domain($name);
     ok($domain->is_base,"Domain $name should be base");
@@ -77,7 +77,7 @@ sub test_req_clone {
         ,"Status of request is ".$req->status." it should be requested");
 
 
-    $RAVADA->process_requests();
+    $RAVADA->_process_requests_dont_fork();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -114,7 +114,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $RAVADA->process_requests();
+    $RAVADA->_process_requests_dont_fork();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -144,7 +144,7 @@ sub test_force_kvm {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $RAVADA->process_requests();
+    $RAVADA->_process_requests_dont_fork();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -158,15 +158,6 @@ sub test_force_kvm {
     my $domain2 = $ vm->search_domain($name);
     ok($domain2,"I can't find $name in the KVM backend");
     return $domain;
-
-}
-
-sub remove_old_domains {
-    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
-    $name =~ s{/}{_}g;
-    for ( 0 .. 10 ) {
-        test_remove_domain($name."_".$_);
-    }
 
 }
 
