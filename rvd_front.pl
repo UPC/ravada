@@ -183,10 +183,13 @@ sub login {
     }
 
     if ( $login && $password ) {
-        if (Ravada::Auth::login($login, $password)) {
+        my $auth_ok;
+        eval { $auth_ok = Ravada::Auth::login($login, $password)};
+        if ( $auth_ok) {
             $c->session('login' => $login);
             return quick_start($c);
         } else {
+            warn $@ if $@;
             push @error,("Access denied");
         }
     }
