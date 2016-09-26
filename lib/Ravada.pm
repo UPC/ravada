@@ -453,7 +453,7 @@ sub process_requests {
             $req->error($@);
             $req->status('done');
         }
-        warn "status: ".$req->status()." error: ".$req->error if $DEBUG || $debug;
+        warn "status: ".$req->status()." error: '".($req->error or '')."'" if $DEBUG || $debug;
     }
     $sth->finish;
 }
