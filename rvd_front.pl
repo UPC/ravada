@@ -268,33 +268,7 @@ sub domains {
 
     my @error = ();
 
-    my $ram = ($c->param('ddram') or 2);
-    my $disk = ($c->param('dddisk') or 8);
-    my $backend = $c->param('backend');
-    my $id_iso = $c->param('id_iso');
-    my $id_template = $c->param('id_template');
-
-
-    if ($c->param('submit')) {
-        push @error,("Name is mandatory")   if !$c->param('name');
-        if (!@error) {
-            my $domain = req_new_domain($c);
-            if ($domain) {
-                return show_link($c, $domain);
-            } else {
-                return show_failure($c, $c->param('name'));
-            }
-        }
-    }
-    warn join("\n",@error) if @error;
-
-
-    $c->render(template => 'bootstrap/machines'
-        ,name => $c->param('name')
-        ,ram => $ram
-        ,disk => $disk
-        ,error => \@error
-    );
+    $c->render(template => 'bootstrap/machines');
 
 }
 
@@ -320,15 +294,21 @@ sub new_machine {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         if (!@error) {
-            my $domain = req_new_domain($c);
-            if ($domain) {
-                return show_link($c, $domain);
+            my $request = req_new_domain($c);
+            if ($request) {
+                if ($request->status eq 'done') {
+                    my $domain = $RAVADA->search_domain($c->param('name'));
+                    return show_link($c, $domain)               if $domain;
+                    return show_failure($c, $c->param('name'))  if !$domain;
+
+                    return _show_request($c, $request);
+                }
+
             } else {
                 return show_failure($c, $c->param('name'));
             }
         }
     }
-
     warn join("\n",@error) if @error;
 
     $c->render(template => 'bootstrap/new_machine'
@@ -342,7 +322,6 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
-    warn $USER->id;
     my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -351,19 +330,7 @@ sub req_new_domain {
         ,id_owner => $USER->id
     );
 
-    $RAVADA->wait_request($req);
-
-
-    if ( $req->error ) {
-        $c->stash(error => $req->error) ;
-        return;
-    }
-
-    my $domain = $RAVADA->search_domain($name);
-    if (!$domain) {
-        return _show_request($c,$req);
-    }
-    return $domain;
+    return $req;
 }
 
 sub _show_request {
@@ -436,6 +403,7 @@ sub show_link {
     my $c = shift;
     my $domain = shift;# or confess "Missing domain";
 
+    confess "Domain is not a ref $domain " if !ref $domain;
 
     my $uri = $RAVADA->domdisplay($domain->{name}, $USER) if $domain;
     if (!$uri) {
