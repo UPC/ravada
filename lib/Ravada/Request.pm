@@ -353,13 +353,15 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
-    warn $self->{id}." ".$self->{command}." ".$status;
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
-    eval { $sth->execute($status, $self->{id}) };
-    warn $status if $@;
-    warn $@ if $@;
+    $sth->execute($status, $self->{id});
     $sth->finish;
+
+    my $domain;
+    eval { $domain = $self->args('name') };
+
+#    warn $self->{id}." ".$self->{command}." '".($domain or '<UNDEF>')."' ".$status;
     return $status;
 }
 

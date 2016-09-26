@@ -68,26 +68,25 @@ sub test_start {
     my $name = $DOMAIN_NAME."_".$CONT++;
     test_remove_domain($name);
 
-    test_new_domain($name);
-
-    my $domain = $RAVADA->search_domain($name);
-    ok(!$domain->is_active,"Domain $name should be inactive") or return;
-
 
     my $req = Ravada::Request->start_domain(
         "does not exists"
     );
-    $RAVADA->process_requests();
+    $RAVADA->_process_requests_dont_fork();
 
-    ok($req->status eq 'done', "Expecting status done, got ".$req->status);
+    ok($req->status eq 'done', "Req ".$req->{id}." expecting status done, got ".$req->status);
     ok($req->error && $req->error =~ /unknown/i
-            ,"Expecting unknown domain error , got "
-                .($req->error or '<NULL>'));
+            ,"Req ".$req->{id}." expecting unknown domain error , got "
+                .($req->error or '<NULL>')) or return;
     $req = undef;
 
     #####################################################################3
     #
     # start
+    test_new_domain($name);
+
+    my $domain = $RAVADA->search_domain($name);
+    ok(!$domain->is_active,"Domain $name should be inactive") or return;
 
     my $req2 = Ravada::Request->start_domain($name);
     $RAVADA->process_requests();
@@ -171,8 +170,8 @@ SKIP: {
     remove_old_disks();
     my $domain = test_start();
 
-    $domain->shutdown_now();
-    $domain->remove();
+    $domain->shutdown_now() if $domain;
+    $domain->remove()       if $domain;
 };
 done_testing();
 

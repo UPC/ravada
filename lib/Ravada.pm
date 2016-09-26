@@ -189,7 +189,7 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    $request->status("creating domain in ".ref($vm));
+    $request->status("creating domain in ".ref($vm))    if $request;
     return $vm->create_domain(@_);
 }
 
@@ -450,17 +450,18 @@ sub process_requests {
         warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
         eval { $self->_execute($req, $dont_fork) };
         if ($@) {
-            $req->status('done');
             $req->error($@);
+            $req->status('done');
         }
-        warn "status: ".$req->status() if $DEBUG || $debug;
+        warn "status: ".$req->status()." error: ".$req->error if $DEBUG || $debug;
     }
     $sth->finish;
 }
 
 sub _process_requests_dont_fork {
     my $self = shift;
-    return $self->process_requests(undef,1);
+    my $debug = shift;
+    return $self->process_requests($debug,1);
 }
 
 =head2 list_vm_types
@@ -593,14 +594,12 @@ sub _cmd_start {
 
     $request->status('working');
     my $name = $request->args('name');
-    eval { 
-        my $domain = $self->search_domain($name);
-        die "Unknown domain '$name'\n" if !$domain;
-        $domain->start();
-    };
+    my $domain = $self->search_domain($name);
+    die "Unknown domain '$name'" if !$domain;
+    $domain->start();
 
     $request->status('done');
-    $request->error($@);
+    $request->error($@ or '');
 
 }
 
