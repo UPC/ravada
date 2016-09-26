@@ -73,6 +73,7 @@ sub test_remove_domain {
 remove_old_domains()    if $RVD_BACK;
 remove_old_disks();
 
+$RVD_FRONT->fork(0);
 
 for my $vm_name ('kvm','lxc') {
 

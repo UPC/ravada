@@ -25,8 +25,9 @@ sub init {
 sub login {
     my ($name, $pass) = @_;
 
-    return Ravada::Auth::LDAP->new(name => $name, password => $pass)
-        if $LDAP;
+    eval {
+        return Ravada::Auth::LDAP->new(name => $name, password => $pass);
+    } if $LDAP;
     if ($@ =~ /I can't connect/i) {
         $LDAP = 0;
         warn $@;
