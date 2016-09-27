@@ -35,8 +35,6 @@
             </div>
         </div>
 
-        <%= join("<br/>",@$error ) %>
-
     </div>
     </div>
     %= include 'bootstrap/scripts'

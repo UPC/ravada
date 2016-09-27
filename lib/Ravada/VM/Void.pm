@@ -46,6 +46,16 @@ sub list_domains {
 }
 
 sub search_domain {
+    my $self = shift;
+    my $name = shift;
+
+    my $domain = Ravada::Domain::Void->new( domain => $name);
+    my $id;
+
+    eval { $id = $domain->id };
+    return if !defined $id;
+
+    return $domain;
 }
 
 sub search_domain_by_id {

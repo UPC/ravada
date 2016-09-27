@@ -6,6 +6,9 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
@@ -13,15 +16,8 @@ use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 
-my @rvd_args = (
-       config => 't/etc/ravada.conf' 
-   ,connector => $test->connector 
-);
-
-my $RAVADA;
-eval { $RAVADA = Ravada->new( @rvd_args ) };
-
-my $CONT= 0;
+my $RAVADA = rvd_back($test->connector , 't/etc/ravada.conf');
+my $USER = create_user('foo','bar');
 
 sub test_vm_kvm {
     my $vm = $RAVADA->search_vm('kvm');
@@ -34,13 +30,14 @@ sub test_vm_kvm {
 }
 sub test_remove_domain {
     my $name = shift;
+    my $user = (shift or $USER);
 
     my $domain;
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
-        $domain->remove();
+        $domain->remove($user);
     }
     $domain = $RAVADA->search_domain($name);
     die "I can't remove old domain $name"
@@ -53,7 +50,7 @@ sub test_remove_domain_by_name {
     my $name = shift;
 
     diag("Removing domain $name");
-    $RAVADA->remove_domain($name);
+    $RAVADA->remove_domain(name => $name, uid => $USER->id);
 
     my $domain = $RAVADA->search_domain($name, 1);
     die "I can't remove old domain $name"
@@ -74,14 +71,13 @@ sub search_domain_db
 sub test_new_domain {
     my $active = shift;
 
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    $name .= "_".$CONT++;
+    my $name = new_domain_name();
 
     test_remove_domain($name);
 
     diag("Creating domain $name");
     my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
-        , id_owner => 1
+        , id_owner => $USER->id
         , vm => $BACKEND
     );
 
@@ -207,7 +203,7 @@ sub test_domain_missing_in_db {
         ok($RAVADA->list_domains == $n_domains,"There should be only $n_domains domains "
                                         .", there are ".scalar(@list_domains));
 
-        test_remove_domain($domain->name);
+        test_remove_domain($domain->name, user_admin());
     }
 }
 
@@ -234,34 +230,6 @@ sub test_prepare_import {
         test_remove_domain($domain->name);
     }
 
-}
-
-sub remove_old_domains {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    for ( 0 .. 10 ) {
-        my $dom_name = $name."_$_";
-        my $domain = $RAVADA->search_domain($dom_name);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
-}
-
-sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-
-    my $vm = $RAVADA->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    $vm->storage_pool->refresh();
 }
 
 ################################################################

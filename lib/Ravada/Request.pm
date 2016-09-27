@@ -6,6 +6,7 @@ use warnings;
 use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
+use Hash::Util;
 use Ravada;
 use Ravada::Front;
 
@@ -18,7 +19,7 @@ Request a command to the ravada backend
 =cut
 
 our %FIELD = map { $_ => 1 } qw(error);
-our %FIELD_RO = map { $_ => 1 } qw(name);
+our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our %VALID_ARG = (
     create_domain => { 
@@ -28,6 +29,10 @@ our %VALID_ARG = (
         ,id_base => 1
        ,id_owner => 1
     ,id_template => 1
+    }
+    ,remove_domain => {
+        name => 1
+        ,uid => 1
     }
 );
 
@@ -81,7 +86,7 @@ sub open {
 
     $row->{args} = $args;
 
-    bless ($row,$class);
+    bless ($row, $class);
     return $row;
 }
 
@@ -114,8 +119,8 @@ sub create_domain {
 
 =head2 remove_domain
 
-    my $req = Ravada::Request->create_domain( name => 'bla'
-                    , id_iso => 1
+    my $req = Ravada::Request->remove_domain( name => 'bla'
+                    , uid => $user->id
     );
 
 
@@ -126,14 +131,19 @@ sub remove_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my %args = @_;
+    confess "Missing domain name"   if !$args{name};
+    confess "Name is not scalar"    if ref($args{name});
+    confess "Missing uid"           if !$args{uid};
 
-    my %args = ( name => $name )    or confess "Missing domain name";
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
+    }
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'remove' , args => encode_json({ name => $name }));
+
+    return $self->_new_request(command => 'remove' , args => encode_json(\%args));
 
 }
 
@@ -357,6 +367,11 @@ sub status {
             ." WHERE id=?");
     $sth->execute($status, $self->{id});
     $sth->finish;
+
+    my $domain;
+    eval { $domain = $self->args('name') };
+
+#    warn $self->{id}." ".$self->{command}." '".($domain or '<UNDEF>')."' ".$status;
     return $status;
 }
 
@@ -447,7 +462,7 @@ sub AUTOLOAD {
     $name =~ tr/[a-z]/_/c;
 
     confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} || !exists $FIELD{$name};
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
     if (!defined $value) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");

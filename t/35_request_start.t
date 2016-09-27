@@ -6,17 +6,15 @@ use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
+use lib 't/lib';
+
+use Test::Ravada;
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
-my $RAVADA;
-
-eval { $RAVADA = Ravada->new(connector => $test->connector) };
+my $RAVADA = rvd_back($test->connector, 't/etc/ravada.conf');
 
 my @ARG_CREATE_DOM;
-
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
-my $CONT = 0;
 
 sub test_request_start {
 }
@@ -33,7 +31,7 @@ sub test_remove_domain {
         diag("Removing domain $name");
         my @disks = $domain->list_disks();
         eval { 
-            $domain->remove();
+            $domain->remove(user_admin->id);
         };
         ok(!$@ , "Error removing domain $name ".ref($domain).": $@") or exit;
 
@@ -65,29 +63,28 @@ sub test_new_domain {
 
 
 sub test_start {
-    my $name = $DOMAIN_NAME."_".$CONT++;
+    my $name = new_domain_name();
     test_remove_domain($name);
-
-    test_new_domain($name);
-
-    my $domain = $RAVADA->search_domain($name);
-    ok(!$domain->is_active,"Domain $name should be inactive") or return;
 
 
     my $req = Ravada::Request->start_domain(
         "does not exists"
     );
-    $RAVADA->process_requests();
+    $RAVADA->_process_requests_dont_fork();
 
-    ok($req->status eq 'done', "Expecting status done, got ".$req->status);
+    ok($req->status eq 'done', "Req ".$req->{id}." expecting status done, got ".$req->status);
     ok($req->error && $req->error =~ /unknown/i
-            ,"Expecting unknown domain error , got "
-                .($req->error or '<NULL>'));
+            ,"Req ".$req->{id}." expecting unknown domain error , got "
+                .($req->error or '<NULL>')) or return;
     $req = undef;
 
     #####################################################################3
     #
     # start
+    test_new_domain($name);
+
+    my $domain = $RAVADA->search_domain($name);
+    ok(!$domain->is_active,"Domain $name should be inactive") or return;
 
     my $req2 = Ravada::Request->start_domain($name);
     $RAVADA->process_requests();
@@ -117,34 +114,6 @@ sub test_start {
     return $domain3;
 
 }
-sub remove_old_domains {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    for ( 0 .. 10 ) {
-        my $dom_name = $name."_$_";
-        my $domain = $RAVADA->search_domain($dom_name);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
-}
-
-sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-
-    my $vm = $RAVADA->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    $vm->storage_pool->refresh();
-}
-
 
 ###############################################################
 #
@@ -171,8 +140,8 @@ SKIP: {
     remove_old_disks();
     my $domain = test_start();
 
-    $domain->shutdown_now();
-    $domain->remove();
+    $domain->shutdown_now() if $domain;
+    $domain->remove(user_admin())       if $domain;
 };
 done_testing();
 

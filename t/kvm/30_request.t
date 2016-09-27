@@ -18,6 +18,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 my $RAVADA;
 my $VMM;
 my $CONT = 0;
+my $USER;
 
 sub test_req_prepare_base {
     my $name = shift;
@@ -41,7 +42,7 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
+        eval { $domain->remove($USER) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
         ok(! -e $domain->file_base_img ,"Image file was not removed "
@@ -63,7 +64,7 @@ sub test_req_clone {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_base => $domain_father->id
-       ,id_owner => 1
+       ,id_owner => $USER->id
         ,vm => $BACKEND
     );
     ok($req);
@@ -101,7 +102,7 @@ sub test_req_create_domain_iso {
     my $req = Ravada::Request->create_domain( 
             name => $name
          ,id_iso => 1
-       ,id_owner => 1
+       ,id_owner => $USER->id
              ,vm => $BACKEND
     );
     ok($req);
@@ -131,7 +132,7 @@ sub test_force_kvm {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_iso => 1
-      ,id_owner => 1
+      ,id_owner => $USER->id
         ,vm => 'kvm'
     );
     ok($req);
@@ -162,7 +163,8 @@ sub test_force_kvm {
 }
 
 #########################################################################
-eval { $RAVADA = rvd_back( $test->connector) };
+eval { $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf') };
+$USER = create_user('foo','bar')    if $RAVADA;
 
 ok($RAVADA,"I can't launch a new Ravada");# or exit;
 

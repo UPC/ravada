@@ -6,6 +6,7 @@ use strict;
 use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
+use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
 use YAML;
@@ -14,6 +15,7 @@ use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
 use Ravada::VM::LXC;
+use Ravada::VM::Void;
 
 =head1 NAME
 
@@ -176,6 +178,9 @@ sub create_domain {
     my $vm_name = $args{vm};
     delete $args{vm};
 
+    my $request = $args{request}            if $args{request};
+
+    $request->status("Searching for VM")    if $request;
 
     my $vm = $self->vm->[0];
     $vm = $self->search_vm($vm_name)   if $vm_name;
@@ -184,6 +189,8 @@ sub create_domain {
         if !$vm_name;
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
+
+    $request->status("creating domain in ".ref($vm))    if $request;
     return $vm->create_domain(@_);
 }
 
@@ -197,11 +204,21 @@ Removes a domain
 
 sub remove_domain {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my %arg = @_;
 
-    my $domain = $self->search_domain($name, 1)
-        or confess "ERROR: I can't find domain $name";
-    $domain->remove();
+    confess "Argument name required "
+        if !$arg{name};
+
+    confess "Argument uid required "
+        if !$arg{uid};
+
+    lock_hash(%arg);
+
+    my $domain = $self->search_domain($arg{name}, 1)
+        or confess "ERROR: I can't find domain $arg{name}";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
+    $domain->remove( $user);
 }
 
 =head2 search_domain
@@ -225,6 +242,14 @@ sub search_domain {
         warn $@ if $@   && $DEBUG;
         return $domain if $id || $import;
     }
+
+    my $vm = $self->search_vm('Void');
+    warn "No Void VM" if !$vm;
+    return if !$vm;
+
+    my $domain = $vm->search_domain($name, $import);
+    return $domain if $domain;
+
     return;
 }
 
@@ -437,6 +462,8 @@ sub process_requests {
     my $debug = shift;
     my $dont_fork = shift;
 
+    $self->_wait_pids_nohang();
+
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
@@ -444,17 +471,20 @@ sub process_requests {
         warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
         eval { $self->_execute($req, $dont_fork) };
         if ($@) {
-            $req->status('done');
             $req->error($@);
+            $req->status('done');
         }
-        warn "status: ".$req->status() if $DEBUG || $debug;
+        warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
+            ." , error: '".($req->error or 'NONE')."'" 
+                if $DEBUG || $debug;
     }
     $sth->finish;
 }
 
 sub _process_requests_dont_fork {
     my $self = shift;
-    return $self->process_requests(undef,1);
+    my $debug = shift;
+    return $self->process_requests($debug,1);
 }
 
 =head2 list_vm_types
@@ -510,14 +540,25 @@ sub _do_cmd_create{
     my $request = shift;
 
     $request->status('creating domain');
-    warn "$$ creating domain";
+    warn "$$ creating domain"   if $DEBUG;
     my $domain;
-    eval {$domain = $self->create_domain(%{$request->args},request => $request) };
+    $domain = $self->create_domain(%{$request->args},request => $request);
     warn $@ if $@;
 
     $request->status('done');
     $request->error($@);
 
+}
+
+sub _wait_pids_nohang {
+    my $self = shift;
+    return if !keys %{$self->{pids}};
+
+    my $kid = waitpid(-1 , WNOHANG);
+    return if !$kid;
+
+    warn "Kid $kid finished";
+    delete $self->{pids}->{$kid};
 }
 
 sub _wait_pids {
@@ -575,7 +616,10 @@ sub _cmd_remove {
     my $request = shift;
 
     $request->status('working');
-    eval { $self->remove_domain($request->args('name')) };
+    confess "Unknown user id ".$request->args->{uid}
+        if !defined $request->args->{uid};
+
+    $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
     $request->status('done');
     $request->error($@);
 
@@ -587,14 +631,12 @@ sub _cmd_start {
 
     $request->status('working');
     my $name = $request->args('name');
-    eval { 
-        my $domain = $self->search_domain($name);
-        die "Unknown domain '$name'\n" if !$domain;
-        $domain->start();
-    };
+    my $domain = $self->search_domain($name);
+    die "Unknown domain '$name'" if !$domain;
+    $domain->start();
 
     $request->status('done');
-    $request->error($@);
+    $request->error($@ or '');
 
 }
 
@@ -684,7 +726,7 @@ sub search_vm {
 
     my $class = 'Ravada::VM::'.uc($type);
 
-    if ($type eq 'Void') {
+    if ($type =~ /Void/i) {
         return Ravada::VM::Void->new();
     }
 
