@@ -190,6 +190,7 @@ sub list_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
         ." FROM requests "
+        ." WHERE command NOT IN (SELECT command FROM requests WHERE command = 'list_vm_types')"
         ." ORDER BY date_changed DESC LIMIT 4"
     );
     $sth->execute;
