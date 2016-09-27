@@ -75,6 +75,7 @@ sub _data {
     $self->{_data} = $self->_select_domain_db( name => $self->name);
 
     confess "No DB info for domain ".$self->name    if !$self->{_data};
+    confess "No field $field in domains"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
 }
@@ -186,6 +187,11 @@ sub is_base {
 sub id_owner {
     my $self = shift;
     return $self->_data('id_owner',@_);
+}
+
+sub vm {
+    my $self = shift;
+    return $self->_data('vm');
 }
 
 1;

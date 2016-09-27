@@ -30,7 +30,10 @@ sub display {
 sub is_active {}
 
 sub pause {}
-sub remove {}
+sub remove {
+    my $self = shift;
+    $self->_remove_domain_db();
+}
 sub shutdown {}
 sub start {}
 

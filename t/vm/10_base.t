@@ -95,10 +95,24 @@ sub test_manage_domain {
 
 sub test_remove_domain {
     my $domain = shift;
+    diag("Removing domain ".$domain->name);
+    my $domain0 = rvd_back()->search_domain($domain->name);
+    ok($domain0, "Domain ".$domain->name." should be there in ".ref $domain);
+
+
     eval { $domain->remove };
     ok(!$@ , "Error removing domain ".$domain->name." ".ref($domain).": $@") or exit;
 
+    my $domain2 = rvd_back()->search_domain($domain->name);
+    ok(!$domain2, "Domain ".$domain->name." should be removed in ".ref $domain);
+
 }
+
+sub test_search_domain {
+    my $domain = shift;
+    my $domain0 = rvd_back()->search_domain($domain->name);
+    ok($domain0, "Domain ".$domain->name." should be there in ".ref $domain);
+};
 
 #######################################################
 
@@ -126,6 +140,7 @@ for my $vm_name (qw( Void KVM )) {
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
         my $domain = test_create_domain($vm_name);
+        test_search_domain($domain);
         test_manage_domain($domain);
         test_remove_domain($domain);
     };

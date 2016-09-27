@@ -203,10 +203,25 @@ Removes a domain
 
 sub remove_domain {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my %arg = @_;
 
-    my $domain = $self->search_domain($name, 1)
-        or confess "ERROR: I can't find domain $name";
+    croak "Argument name required "
+        if !$arg{name};
+
+    croak "Argument id_user required "
+        if !$arg{id_user};
+
+    lock_hash(%arg);
+
+    my $domain = $self->search_domain($arg{name}, 1)
+        or confess "ERROR: I can't find domain $arg{name}";
+
+#    TODO allow if user is admin
+#    my $user = ...
+    confess "ERROR: Access denied. User ".$arg{id_user}." is not owner of domain $arg{name}"
+        if $domain->id_owner != $arg{id_user};
+#            || $user->is_admin();
+
     $domain->remove();
 }
 
@@ -231,6 +246,14 @@ sub search_domain {
         warn $@ if $@   && $DEBUG;
         return $domain if $id || $import;
     }
+
+    my $vm = $self->search_vm('Void');
+    warn "No Void VM" if !$vm;
+    return if !$vm;
+
+    my $domain = $vm->search_domain($name, $import);
+    return $domain if $domain;
+
     return;
 }
 
@@ -704,7 +727,7 @@ sub search_vm {
 
     my $class = 'Ravada::VM::'.uc($type);
 
-    if ($type eq 'Void') {
+    if ($type =~ /Void/i) {
         return Ravada::VM::Void->new();
     }
 
