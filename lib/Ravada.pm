@@ -6,6 +6,7 @@ use strict;
 use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
+use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
 use YAML;
@@ -14,6 +15,7 @@ use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
 use Ravada::VM::LXC;
+use Ravada::VM::Void;
 
 =head1 NAME
 
@@ -179,7 +181,6 @@ sub create_domain {
     my $request = $args{request}            if $args{request};
 
     $request->status("Searching for VM")    if $request;
-    sleep 5;
 
     my $vm = $self->vm->[0];
     $vm = $self->search_vm($vm_name)   if $vm_name;
@@ -205,24 +206,19 @@ sub remove_domain {
     my $self = shift;
     my %arg = @_;
 
-    croak "Argument name required "
+    confess "Argument name required "
         if !$arg{name};
 
-    croak "Argument id_user required "
-        if !$arg{id_user};
+    confess "Argument uid required "
+        if !$arg{uid};
 
     lock_hash(%arg);
 
     my $domain = $self->search_domain($arg{name}, 1)
         or confess "ERROR: I can't find domain $arg{name}";
 
-#    TODO allow if user is admin
-#    my $user = ...
-    confess "ERROR: Access denied. User ".$arg{id_user}." is not owner of domain $arg{name}"
-        if $domain->id_owner != $arg{id_user};
-#            || $user->is_admin();
-
-    $domain->remove();
+    my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
+    $domain->remove( $user);
 }
 
 =head2 search_domain
@@ -620,7 +616,10 @@ sub _cmd_remove {
     my $request = shift;
 
     $request->status('working');
-    eval { $self->remove_domain($request->args('name')) };
+    confess "Unknown user id ".$request->args->{uid}
+        if !defined $request->args->{uid};
+
+    $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
     $request->status('done');
     $request->error($@);
 

@@ -24,12 +24,13 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
 
+my $USER = create_user('foo','bar');
+
 my %CREATE_ARGS = (
-    kvm => { id_iso => 1, id_owner => 1 }
-    ,lxc => { id_template => 1, id_owner => 1 }
+    kvm => { id_iso => 1,       id_owner => $USER->id }
+    ,lxc => { id_template => 1, id_owner => $USER->id }
 );
 
-my $USER = create_user('foo','bar');
 
 ###################################################################
 
@@ -58,7 +59,7 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        $domain->remove();
+        $domain->remove($USER);
     }
     $domain = $RVD_BACK->search_domain($name);
     die "I can't remove old domain $name"
@@ -108,7 +109,9 @@ for my $vm_name ('kvm','lxc') {
 
     my $display = $RVD_FRONT->domdisplay($name, $USER);
     ok($display,"No display for domain $name found. Is it active ?");
-    ok($display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '$display'");
+    ok($display && $display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '"
+                .($display or '<UNDEF>')
+                ."'");
 
     $display = undef;
     eval { $display = $RVD_FRONT->domdisplay($name ) };

@@ -100,7 +100,7 @@ sub test_remove_domain {
     ok($domain0, "Domain ".$domain->name." should be there in ".ref $domain);
 
 
-    eval { $domain->remove };
+    eval { $domain->remove($USER) };
     ok(!$@ , "Error removing domain ".$domain->name." ".ref($domain).": $@") or exit;
 
     my $domain2 = rvd_back()->search_domain($domain->name);

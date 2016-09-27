@@ -30,6 +30,10 @@ our %VALID_ARG = (
        ,id_owner => 1
     ,id_template => 1
     }
+    ,remove_domain => {
+        name => 1
+        ,uid => 1
+    }
 );
 
 our $CONNECTOR;
@@ -115,8 +119,8 @@ sub create_domain {
 
 =head2 remove_domain
 
-    my $req = Ravada::Request->create_domain( name => 'bla'
-                    , id_iso => 1
+    my $req = Ravada::Request->remove_domain( name => 'bla'
+                    , uid => $user->id
     );
 
 
@@ -127,14 +131,19 @@ sub remove_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my %args = @_;
+    confess "Missing domain name"   if !$args{name};
+    confess "Name is not scalar"    if ref($args{name});
+    confess "Missing uid"           if !$args{uid};
 
-    my %args = ( name => $name )    or confess "Missing domain name";
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
+    }
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'remove' , args => encode_json({ name => $name }));
+
+    return $self->_new_request(command => 'remove' , args => encode_json(\%args));
 
 }
 

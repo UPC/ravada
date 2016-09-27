@@ -9,6 +9,9 @@ use Test::SQL::Data;
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
+use lib 't/lib';
+use Test::Ravada;
+
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada;
@@ -16,10 +19,14 @@ my $ravada;
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
+my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $USER = create_user("foo","bar");
+
 my @ARG_CREATE_DOM = (
         id_iso => 1
-        ,id_owner => 1
+        ,id_owner => $USER->id
 );
+
 
 #######################################################################
 
@@ -36,7 +43,7 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
+        eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
         ok(! -e $domain->file_base_img ,"Image file was not removed "
@@ -135,7 +142,7 @@ sub test_req_create_base {
 sub test_req_remove_domain_obj {
     my $domain = shift;
 
-    my $req = Ravada::Request->remove_domain($domain);
+    my $req = Ravada::Request->remove_domain(name => $domain->name, uid => user_admin->id);
     $ravada->process_requests();
 
     my $domain2 =  $ravada->search_domain($domain->name);
@@ -147,7 +154,7 @@ sub test_req_remove_domain_obj {
 sub test_req_remove_domain_name {
     my $name = shift;
 
-    my $req = Ravada::Request->remove_domain($name);
+    my $req = Ravada::Request->remove_domain(name => $name, uid => user_admin()->id);
 
     $ravada->process_requests();
 
@@ -168,33 +175,6 @@ sub test_list_vm_types {
     ok(ref $result eq 'ARRAY',"Expecting ARRAY , got ".ref($result));
 
 }
-
-sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-
-    my $vm = $ravada->search_vm('kvm');
-    diag("remove old disks");
-    return if !$vm;
-    ok($vm,"I can't find a KVM virtual manager");
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    for (qw(iso base)) {
-        my $disk = $dir_img."/$name".'_'."$_.img";
-        unlink $disk or die "I can't remove $disk"
-            if -e $disk;
-    }
-
-    $vm->storage_pool->refresh();
-}
-
 
 ################################################
 eval { $ravada = Ravada->new(connector => $test->connector) };

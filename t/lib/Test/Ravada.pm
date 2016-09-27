@@ -2,7 +2,7 @@ package Test::Ravada;
 use strict;
 use warnings;
 
-use  Carp qw(carp);
+use  Carp qw(carp confess);
 use  Data::Dumper;
 use  Test::More;
 
@@ -15,15 +15,20 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 
 our $CONT = 0;
 our $RVD_BACK;
+our $USER_ADMIN;
 
+sub user_admin {
+    return $USER_ADMIN;
+}
 sub base_domain_name {
-    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
+    my ($name) = $0 =~ m{.*?/(.*)\.t};
+    die "I can't find name in $0"   if !$name;
     $name =~ s{/}{_}g;
 
     return $name;
@@ -42,6 +47,7 @@ sub rvd_back {
             connector => $connector
                 , config => ( $config or $DEFAULT_CONFIG)
             );
+            $USER_ADMIN = create_user('admin','admin',1);
     };
     die $@ if $@;
     return $RVD_BACK;
@@ -61,7 +67,7 @@ sub _remove_old_domains_kvm {
 
         diag("Removing domain $dom_name");
         eval {
-            $domain->remove();
+            $domain->remove( $USER_ADMIN );
         };
         ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
     }
@@ -72,8 +78,8 @@ sub remove_old_domains {
 }
 
 sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*/.*)\.t};
-    $name =~ s{/}{_}g;
+    my $name = base_domain_name();
+    confess "Unknown base domain name " if !$name;
 
     my $vm = $RVD_BACK->search_vm('kvm') or return;
 #    ok($vm,"I can't find a KVM virtual manager") or return;

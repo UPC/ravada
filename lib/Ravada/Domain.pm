@@ -41,17 +41,27 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 # 
 
 before 'display' => \&_allowed;
+before 'remove' => \&_allowed;
 
 sub _allowed {
     my $self = shift;
 
     my ($user) = @_;
 
-    confess "Missing user uid"  if !defined $user;
-    return if $self->id_owner == $user->id
-            || $user->is_admin;
+    confess "Missing user"  if !defined $user;
+    confess "ERROR: User '$user' not class user , it is ".(ref($user) or 'SCALAR')
+        if !ref $user || ref($user) !~ /Ravada::Auth/;
 
-    die "User ".$user->name." not allowed to access ".$self->domain;
+    return if $user->is_admin;
+    my $id_owner;
+    eval { $id_owner = $self->id_owner };
+    my $err = $@;
+
+    die "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+        ." owned by ".($id_owner or '<UNDEF>')."\n".Dumper($self)
+            if (defined $id_owner && $id_owner != $user->id );
+
+    confess $err if $err;
 
 }
 ##################################################################################3
