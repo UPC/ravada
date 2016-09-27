@@ -90,6 +90,9 @@ sub test_req_create_domain_iso {
         ,"Status of request is ".$req->status." it should be done");
     ok(!$req->error,"Error ".$req->error." creating domain ".$name);
 
+    my $req2 = Ravada::Request->open($req->id);
+    ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
+
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name");

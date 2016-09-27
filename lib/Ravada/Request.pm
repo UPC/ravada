@@ -6,6 +6,7 @@ use warnings;
 use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
+use Hash::Util;
 use Ravada;
 use Ravada::Front;
 
@@ -18,7 +19,7 @@ Request a command to the ravada backend
 =cut
 
 our %FIELD = map { $_ => 1 } qw(error);
-our %FIELD_RO = map { $_ => 1 } qw(name);
+our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our %VALID_ARG = (
     create_domain => { 
@@ -81,7 +82,7 @@ sub open {
 
     $row->{args} = $args;
 
-    bless ($row,$class);
+    bless ($row, $class);
     return $row;
 }
 
@@ -452,7 +453,7 @@ sub AUTOLOAD {
     $name =~ tr/[a-z]/_/c;
 
     confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} || !exists $FIELD{$name};
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
     if (!defined $value) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");

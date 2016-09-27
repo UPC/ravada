@@ -443,6 +443,8 @@ sub process_requests {
     my $debug = shift;
     my $dont_fork = shift;
 
+    $self->_wait_pids_nohang();
+
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
@@ -453,7 +455,9 @@ sub process_requests {
             $req->error($@);
             $req->status('done');
         }
-        warn "status: ".$req->status()." error: '".($req->error or '')."'" if $DEBUG || $debug;
+        warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
+            ." , error: '".($req->error or 'NONE')."'" 
+                if $DEBUG || $debug;
     }
     $sth->finish;
 }
@@ -517,14 +521,25 @@ sub _do_cmd_create{
     my $request = shift;
 
     $request->status('creating domain');
-    warn "$$ creating domain";
+    warn "$$ creating domain"   if $DEBUG;
     my $domain;
-    eval {$domain = $self->create_domain(%{$request->args},request => $request) };
+    $domain = $self->create_domain(%{$request->args},request => $request);
     warn $@ if $@;
 
     $request->status('done');
     $request->error($@);
 
+}
+
+sub _wait_pids_nohang {
+    my $self = shift;
+    return if !keys %{$self->{pids}};
+
+    my $kid = waitpid(-1 , WNOHANG);
+    return if !$kid;
+
+    warn "Kid $kid finished";
+    delete $self->{pids}->{$kid};
 }
 
 sub _wait_pids {
