@@ -91,7 +91,6 @@ sub list_vm_types {
     my $result = $req->result();
     $self->{cache}->{vm_types} = $result if $result->[0];
 
-    warn Dumper($result);
     return $result;
 }
 
