@@ -368,8 +368,36 @@ sub _search_req_base_error {
     my $name = shift;
 }
 sub access_denied {
+    
+
     my $c = shift;
-    $c->render(data => "Access denied");
+
+    return quick_start($c)    if _logged_in($c);
+
+    my $login = $c->param('login');
+    my $password = $c->param('password');
+    my @error =();
+    if ($c->param('submit') && $login) {
+        push @error,("Empty login name")  if !length $login;
+        push @error,("Empty password")  if !length $password;
+    }
+
+    if ( $login && $password ) {
+        my $auth_ok;
+        eval { $auth_ok = Ravada::Auth::login($login, $password)};
+        if ( $auth_ok) {
+            $c->session('login' => $login);
+            return quick_start($c);
+        } else {
+            warn $@ if $@;
+            push @error,("Access denied");
+        }
+    }
+    $c->render(
+                    template => 'bootstrap/start' 
+                      ,login => $login 
+                      ,error => \@error
+    );
 }
 
 sub base_id {
