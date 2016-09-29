@@ -37,7 +37,7 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
-
+our $CAN_FORK = 0;
 
 
 has 'vm' => (
@@ -488,6 +488,7 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
+    $dont_fork = 1 if !$CAN_FORK;
 
     $self->_wait_pids_nohang();
     $self->check_vms();
