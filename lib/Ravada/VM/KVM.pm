@@ -458,7 +458,7 @@ sub _download_file_lwp {
 
 sub _download_file_external {
     my ($url,$device) = @_;
-    my @cmd = ("/usr/bin/lwp-download",$url,$device);
+    my @cmd = ("/usr/bin/wget",$url,'-o',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);

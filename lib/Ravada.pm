@@ -127,6 +127,18 @@ sub _create_vm_kvm {
     return ($vm_kvm,$err_kvm);
 }
 
+sub _refresh_vm_kvm {
+    my $self = shift;
+    for my $n ( 0 .. $#{$self->vm}) {
+        my $vm = $self->vm->[$n];
+        next if ref $vm !~ /KVM/i;
+        warn "Refreshing VM $n $vm" if $DEBUG;
+        my ($vm2, $err) = $self->_create_vm_kvm();
+        $self->vm->[$n] = $vm2;
+        warn $err if $err;
+    }
+}
+
 sub _create_vm {
     my $self = shift;
 
@@ -146,6 +158,20 @@ sub _create_vm {
     }
     return \@vms;
 
+}
+
+sub check_vms {
+    my $self = shift;
+
+    my @vm = @{$self->vm};
+    for my $n ( 0 .. $#vm ) {
+        if ($vm[$n] && ref $vm[$n] =~ /KVM/i) {
+            if (!$vm[$n]->is_alive) {
+                warn "$vm[$n] dead" if $DEBUG;
+                $vm[$n] = $self->_create_vm_kvm();
+            }
+        }
+    }
 }
 
 =head2 create_domain
@@ -215,7 +241,7 @@ sub remove_domain {
     lock_hash(%arg);
 
     my $domain = $self->search_domain($arg{name}, 1)
-        or confess "ERROR: I can't find domain $arg{name}";
+        or die "ERROR: I can't find domain '$arg{name}', maybe already removed.";
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     $domain->remove( $user);
@@ -463,17 +489,28 @@ sub process_requests {
     my $dont_fork = shift;
 
     $self->_wait_pids_nohang();
+    $self->check_vms();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
+        ." WHERE status='requested' OR status = 'retry'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
+        $self->_wait_pids_nohang();
         my $req = Ravada::Request->open($id);
-        warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
+        warn "executing request ".$req->id." ".$req->status()." ".$req->command
+            ." ".Dumper($req->args) if $DEBUG || $debug;
         eval { $self->_execute($req, $dont_fork) };
-        if ($@) {
-            $req->error($@);
+        my $err = $@;
+        if ($err =~ /libvirt error code: 38/) {
+            if ( $req->status() ne 'retry') {
+                warn $req->id." ".$req->command." to retry" if $DEBUG;
+                $req->status('retry')   
+            }
+            $self->_refresh_vm_kvm();
+        } else {
             $req->status('done');
         }
+        $req->error($err or '');
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'" 
                 if $DEBUG || $debug;
@@ -484,7 +521,7 @@ sub process_requests {
 sub _process_requests_dont_fork {
     my $self = shift;
     my $debug = shift;
-    return $self->process_requests($debug,1);
+    return $self->process_requests($debug, 1);
 }
 
 =head2 list_vm_types
@@ -528,6 +565,7 @@ sub _cmd_domdisplay {
     confess "Unknown name for request ".Dumper($request)  if!$name;
     my $domain = $self->search_domain($request->args->{name});
     my $user = Ravada::Auth::SQL->search_by_id( $request->args->{uid});
+    $request->error('');
     my $display = $domain->display($user);
     $request->result({display => $display});
 
@@ -557,7 +595,7 @@ sub _wait_pids_nohang {
     my $kid = waitpid(-1 , WNOHANG);
     return if !$kid;
 
-    warn "Kid $kid finished";
+    warn "Kid $kid finished"    if $DEBUG;
     delete $self->{pids}->{$kid};
 }
 
@@ -608,6 +646,7 @@ sub _cmd_create {
         exit;
     }
     $self->_add_pid($pid);
+
     return;
 }
 

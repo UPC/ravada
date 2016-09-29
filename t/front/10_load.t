@@ -18,6 +18,7 @@ my @rvd_args = (
 my $RVD_BACK  = Ravada->new( @rvd_args );
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
+    , fork => 0
 );
 
 # twice so it won't warn it is only used once
