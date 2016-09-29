@@ -6,12 +6,16 @@ ISO images are required to create KVM virtual machines. They can be placed or do
 
 Copy the .iso file to the KVM storage, it is /var/lib/libvirt/images by default. Make sure everybody can read it
 
-   # chown 07500 file.iso
-  
+    # chown 07500 file.iso
+
+Get the md5 for the ISO file, you will need it for the next step:
+
+    # md5sum file.iso
+    
 Add an entry to the SQL table:
 
     mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5)
-            VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbbla');
+            VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbblamd5sumjustgenerated');
   
 ##XML file
 
