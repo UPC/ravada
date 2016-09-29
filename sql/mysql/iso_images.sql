@@ -6,7 +6,7 @@ CREATE TABLE `iso_images` (
   `xml`  varchar(64),
   `xml_volume` varchar(64),
   `url` varchar(255),
-  'md5' char(32),
+  `md5` char(32),
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 );

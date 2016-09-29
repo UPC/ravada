@@ -24,12 +24,14 @@ VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
     ,'xenial-volume.xml'
-    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso');
+    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso'
+    ,'610c4a399df39a78866f9236b8c658da'
+);
 
 INSERT INTO iso_images
 (id,name,description,arch,url,md5)
 VALUES(4,'Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
         ,'amd64'
         ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-amd64.iso'
-        ,'610c4a399df39a78866f9236b8c658da'
+        ,'c94d54942a2954cf852884d656224186'
     );
