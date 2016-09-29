@@ -487,6 +487,8 @@ sub _download_file_external {
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
     print $out if $out;
+    chmod 0755,$device or die "$! chmod 0755 $device"
+        if -e $device;
     die $err if $err;
 }
 
