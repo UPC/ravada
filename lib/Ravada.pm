@@ -129,6 +129,7 @@ sub _create_vm_kvm {
 
 sub _refresh_vm_kvm {
     my $self = shift;
+    sleep 1;
     for my $n ( 0 .. $#{$self->vm}) {
         my $vm = $self->vm->[$n];
         next if ref $vm !~ /KVM/i;
@@ -492,19 +493,23 @@ sub process_requests {
     $self->check_vms();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status='requested' OR status = 'retry'");
+        ." WHERE status='requested' OR status like 'retry %'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
         $self->_wait_pids_nohang();
         my $req = Ravada::Request->open($id);
         warn "executing request ".$req->id." ".$req->status()." ".$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
+
+        my ($n_retry) = $req->status() =~ /retry (\d+)/;
+        $n_retry = 0 if !$n_retry;
+
         eval { $self->_execute($req, $dont_fork) };
         my $err = $@;
         if ($err =~ /libvirt error code: 38/) {
-            if ( $req->status() ne 'retry') {
+            if ( $n_retry < 3) {
                 warn $req->id." ".$req->command." to retry" if $DEBUG;
-                $req->status('retry')   
+                $req->status("retry ".++$n_retry)   
             }
             $self->_refresh_vm_kvm();
         } else {
@@ -514,6 +519,8 @@ sub process_requests {
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'" 
                 if $DEBUG || $debug;
+
+        $self->_refresh_vm_kvm() if $req->command =~ /create|remove/i;
     }
     $sth->finish;
 }
@@ -593,7 +600,7 @@ sub _wait_pids_nohang {
     return if !keys %{$self->{pids}};
 
     my $kid = waitpid(-1 , WNOHANG);
-    return if !$kid;
+    return if !$kid || $kid == -1;
 
     warn "Kid $kid finished"    if $DEBUG;
     delete $self->{pids}->{$kid};
@@ -602,6 +609,8 @@ sub _wait_pids_nohang {
 sub _wait_pids {
     my $self = shift;
     my $request = shift;
+
+    $request->status('waiting for other tasks')     if $request;
 
     for my $pid ( keys %{$self->{pids}}) {
         $request->status("waiting for pid $pid")    if $request;
@@ -630,7 +639,6 @@ sub _cmd_create {
     return $self->_do_cmd_create($request)
         if $dont_fork;
 
-    $request->status('waiting for other tasks');
 
     $self->_wait_pids($request);
 
@@ -650,7 +658,7 @@ sub _cmd_create {
     return;
 }
 
-sub _cmd_remove {
+sub _do_cmd_remove {
     my $self = shift;
     my $request = shift;
 
@@ -662,6 +670,32 @@ sub _cmd_remove {
     $request->status('done');
     $request->error($@);
 
+}
+
+sub _cmd_remove {
+    my $self = shift;
+    my $request = shift;
+    my $dont_fork = shift;
+
+    return $self->_do_cmd_remove($request)
+        if $dont_fork;
+
+    $self->_wait_pids($request);
+
+    $request->status('forking');
+    my $pid = fork();
+    if (!defined $pid) {
+        $request->status('done');
+        $request->error("I can't fork");
+        return;
+    }
+    if ($pid == 0 ) {
+        $self->_do_cmd_remove($request);
+        exit;
+    }
+    $self->_add_pid($pid);
+
+    return;
 }
 
 sub _cmd_start {
