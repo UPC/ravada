@@ -11,15 +11,17 @@ VALUES(1,'Debian Jessie 32 bits netinst'
 
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url)
+(id,name,description,arch,xml,xml_volume,url,md5)
 VALUES(2,'Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
     ,'trusty-i386.xml'
     ,'trusty-volume.xml'
-    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso');
+    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso'
+	,'610c4a399df39a78866f9236b8c658da'
+	);
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url)
+(id,name,description,arch,xml,xml_volume,url,md5)
 VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
