@@ -551,7 +551,7 @@ sub prepare_machine {
         $domain->{name}
     );
 
-    $c->render(text => 'Base '.$domain->{name}." preparing base.");
+    $c->render(template => 'bootstrap/machines');
 
 }
 
