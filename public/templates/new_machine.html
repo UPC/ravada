@@ -62,14 +62,14 @@
                 </select>
             </div><br/>
             
-            <div ng-if="backend == 'KVM'" class="from-group">
+            <!--<div ng-if="backend == 'KVM'" class="from-group">
                 <label for="disk">Disk Size: (GB)</label>
                 <input class="form-control" ng-model="ddsize" type="number" name="ddsize" min="1" max="10" required="">
             </div>
             <div ng-show="backend == 'KVM' || backend == 'LXC'" class="from-group">
                 <label fro="ram">Ram: (GB)</label>
                 <input class="form-control" ng-model="ramsize" type="number" name="ramsize" min="1" max="4" required="">
-            </div><br/>
+            </div><br/>-->
             
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            <div ng-show="new_machineForm.$submitted || new_machineForm.ddsize.$touched">
+           <!-- <div ng-show="new_machineForm.$submitted || new_machineForm.ddsize.$touched">
                 <div ng-show="new_machineForm.ddsize.$error.required" class="alert alert-warning fade in">
                     <strong>Error</strong> Disk Size selection is required
                 </div>
@@ -113,7 +113,7 @@
                 <div ng-show="new_machineForm.ramsize.$error.min || new_machineForm.ramsize.$error.max" class="alert alert-warning fade in">
                     <strong>Error</strong> Ram Size selection must be between 1GB and 4GB
                 </div>
-            </div>
+            </div>-->
 
 
             <input type="submit" class="btn btn-default" name="submit" value="Create" ng-disabled="new_machineForm.$invalid">
