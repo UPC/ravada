@@ -7,7 +7,7 @@
   <allocation unit='bytes'>5395775488</allocation>
   <target>
     <path>/var/lib/libvirt/images/__name__.img</path>
-    <format type='raw'/>
+    <format type='qcow2'/>
     <permissions>
       <mode>0600</mode>
       <owner>0</owner>
