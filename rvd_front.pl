@@ -535,7 +535,8 @@ sub remove_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->remove_domain(
-        $domain->{name}
+        name => $domain->{name}
+        ,uid => $USER->id
     );
 
     return $c->render(data => "domain removing in progress");

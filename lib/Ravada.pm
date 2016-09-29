@@ -37,7 +37,7 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
-
+our $CAN_FORK = 0;
 
 
 has 'vm' => (
@@ -127,6 +127,19 @@ sub _create_vm_kvm {
     return ($vm_kvm,$err_kvm);
 }
 
+sub _refresh_vm_kvm {
+    my $self = shift;
+    sleep 1;
+    for my $n ( 0 .. $#{$self->vm}) {
+        my $vm = $self->vm->[$n];
+        next if ref $vm !~ /KVM/i;
+        warn "Refreshing VM $n $vm" if $DEBUG;
+        my ($vm2, $err) = $self->_create_vm_kvm();
+        $self->vm->[$n] = $vm2;
+        warn $err if $err;
+    }
+}
+
 sub _create_vm {
     my $self = shift;
 
@@ -146,6 +159,20 @@ sub _create_vm {
     }
     return \@vms;
 
+}
+
+sub check_vms {
+    my $self = shift;
+
+    my @vm = @{$self->vm};
+    for my $n ( 0 .. $#vm ) {
+        if ($vm[$n] && ref $vm[$n] =~ /KVM/i) {
+            if (!$vm[$n]->is_alive) {
+                warn "$vm[$n] dead" if $DEBUG;
+                $vm[$n] = $self->_create_vm_kvm();
+            }
+        }
+    }
 }
 
 =head2 create_domain
@@ -215,7 +242,7 @@ sub remove_domain {
     lock_hash(%arg);
 
     my $domain = $self->search_domain($arg{name}, 1)
-        or confess "ERROR: I can't find domain $arg{name}";
+        or die "ERROR: I can't find domain '$arg{name}', maybe already removed.";
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     $domain->remove( $user);
@@ -461,22 +488,40 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
+    $dont_fork = 1 if !$CAN_FORK;
 
     $self->_wait_pids_nohang();
+    $self->check_vms();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE status='requested'");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
+        ." WHERE status='requested' OR status like 'retry %'");
     $sth->execute;
     while (my ($id)= $sth->fetchrow) {
+        $self->_wait_pids_nohang();
         my $req = Ravada::Request->open($id);
-        warn "executing request ".$req." ".Dumper($req) if $DEBUG || $debug;
+        warn "executing request ".$req->id." ".$req->status()." ".$req->command
+            ." ".Dumper($req->args) if $DEBUG || $debug;
+
+        my ($n_retry) = $req->status() =~ /retry (\d+)/;
+        $n_retry = 0 if !$n_retry;
+
         eval { $self->_execute($req, $dont_fork) };
-        if ($@) {
-            $req->error($@);
+        my $err = $@;
+        if ($err =~ /libvirt error code: 38/) {
+            if ( $n_retry < 3) {
+                warn $req->id." ".$req->command." to retry" if $DEBUG;
+                $req->status("retry ".++$n_retry)   
+            }
+            $self->_refresh_vm_kvm();
+        } else {
             $req->status('done');
         }
+        $req->error($err or '');
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'" 
                 if $DEBUG || $debug;
+
+        $self->_refresh_vm_kvm() if $req->command =~ /create|remove/i;
     }
     $sth->finish;
 }
@@ -484,7 +529,7 @@ sub process_requests {
 sub _process_requests_dont_fork {
     my $self = shift;
     my $debug = shift;
-    return $self->process_requests($debug,1);
+    return $self->process_requests($debug, 1);
 }
 
 =head2 list_vm_types
@@ -528,6 +573,7 @@ sub _cmd_domdisplay {
     confess "Unknown name for request ".Dumper($request)  if!$name;
     my $domain = $self->search_domain($request->args->{name});
     my $user = Ravada::Auth::SQL->search_by_id( $request->args->{uid});
+    $request->error('');
     my $display = $domain->display($user);
     $request->result({display => $display});
 
@@ -555,15 +601,17 @@ sub _wait_pids_nohang {
     return if !keys %{$self->{pids}};
 
     my $kid = waitpid(-1 , WNOHANG);
-    return if !$kid;
+    return if !$kid || $kid == -1;
 
-    warn "Kid $kid finished";
+    warn "Kid $kid finished"    if $DEBUG;
     delete $self->{pids}->{$kid};
 }
 
 sub _wait_pids {
     my $self = shift;
     my $request = shift;
+
+    $request->status('waiting for other tasks')     if $request;
 
     for my $pid ( keys %{$self->{pids}}) {
         $request->status("waiting for pid $pid")    if $request;
@@ -592,7 +640,6 @@ sub _cmd_create {
     return $self->_do_cmd_create($request)
         if $dont_fork;
 
-    $request->status('waiting for other tasks');
 
     $self->_wait_pids($request);
 
@@ -608,10 +655,11 @@ sub _cmd_create {
         exit;
     }
     $self->_add_pid($pid);
+
     return;
 }
 
-sub _cmd_remove {
+sub _do_cmd_remove {
     my $self = shift;
     my $request = shift;
 
@@ -623,6 +671,32 @@ sub _cmd_remove {
     $request->status('done');
     $request->error($@);
 
+}
+
+sub _cmd_remove {
+    my $self = shift;
+    my $request = shift;
+    my $dont_fork = shift;
+
+    return $self->_do_cmd_remove($request)
+        if $dont_fork;
+
+    $self->_wait_pids($request);
+
+    $request->status('forking');
+    my $pid = fork();
+    if (!defined $pid) {
+        $request->status('done');
+        $request->error("I can't fork");
+        return;
+    }
+    if ($pid == 0 ) {
+        $self->_do_cmd_remove($request);
+        exit;
+    }
+    $self->_add_pid($pid);
+
+    return;
 }
 
 sub _cmd_start {
