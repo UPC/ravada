@@ -75,7 +75,9 @@ get '/ip/*' => sub {
 any '/machines' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c);
+    return access_denied($c) if !_logged_in($c)
+        || !$USER->is_admin;
+
     return domains($c);
 };
 
@@ -171,11 +173,15 @@ get '/requests.json' => sub {
 sub _logged_in {
     my $c = shift;
 
-    my $login = $c->session('login') or return;
+    $USER = undef;
 
-    $USER = Ravada::Auth::SQL->new(name => $login);
+    my $login = $c->session('login');
+    $USER = Ravada::Auth::SQL->new(name => $login)  if $login;
+
     $c->stash(_logged_in => $login );
-    return 1 if $c->session('login');
+    $c->stash(_user => $USER);
+
+    return $USER;
 }
 
 
