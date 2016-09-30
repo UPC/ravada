@@ -4,7 +4,6 @@ use strict;
 package Ravada::Auth;
 
 our $LDAP=0;
-$Ravada::DEBUG = 1;
 
 use Ravada::Auth::SQL;
 
