@@ -54,7 +54,7 @@
         function checkReloading() {
             if (window.location.hash=="#autoreload") {
 //               reloading=setTimeout("window.location.reload();", 600000);
-                document.getElementById("reloadCB").checked=true;
+//                document.getElementById("reloadCB").checked=true;
             }
         }
 
