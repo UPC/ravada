@@ -504,7 +504,7 @@ sub process_requests {
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
-
+        $req->status('working');
         eval { $self->_execute($req, $dont_fork) };
         my $err = $@;
         if ($err =~ /libvirt error code: 38/) {
