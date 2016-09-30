@@ -529,9 +529,9 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
-    $base->shutdown;
+    my $req = Ravada::Request->shutdown_domain($base->{name});
 
-    return quick_start($c);
+    return $c->redirect_to('/machines');
 }
 
 sub remove_machine {
