@@ -539,7 +539,7 @@ sub remove_machine {
         ,uid => $USER->id
     );
 
-    return $c->render(data => "domain removing in progress");
+    return $c->redirect_to('/machines');
 }
 
 sub prepare_machine {
