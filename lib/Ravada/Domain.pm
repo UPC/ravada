@@ -17,6 +17,7 @@ requires 'is_active';
 requires 'start';
 requires 'shutdown';
 requires 'pause';
+requires 'prepare_base';
 
 has 'domain' => (
     isa => 'Any'
@@ -42,6 +43,7 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 
 before 'display' => \&_allowed;
 before 'remove' => \&_allowed;
+before 'prepare_base' => sub { my $self = shift; $self->is_base(0) };
 
 sub _allowed {
     my $self = shift;

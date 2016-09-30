@@ -36,5 +36,6 @@ sub remove {
 }
 sub shutdown {}
 sub start {}
+sub prepare_base {}
 
 1;
