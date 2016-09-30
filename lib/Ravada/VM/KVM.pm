@@ -403,7 +403,10 @@ sub _domain_create_from_base {
 
 sub _iso_name {
     my $iso = shift;
+
     my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
+    $iso_name = $iso->{url} if !$iso_name;
+
     my $device = "$DEFAULT_DIR_IMG/$iso_name";
 
     confess "Missing MD5 field on table iso_images FOR $iso->{url}"
