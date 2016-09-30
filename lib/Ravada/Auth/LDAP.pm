@@ -108,9 +108,10 @@ sub search_user {
 
     return if !$mesg->count();
 
-    my @entry = $mesg->entries;
+    my @entries = $mesg->entries;
+#    warn join ( "\n",map { $_->dn } @entries);
 
-    return $entry[0];
+    return @entries;
 }
 
 =head2 add_group
@@ -210,18 +211,22 @@ sub login {
     my ($username, $password) = ($self->name , $self->password);
 
     _init_ldap_admin();
-    my $entry = search_user($username);
+    my $user_ok;
 
-    my $user_dn;
-    eval { $user_dn = $entry->dn };
-    die "Failed fetching user $username dn" if !$user_dn;
+    my @entries = search_user($username);
 
-    my $mesg;
-#    eval { $mesg = $LDAP->bind( $user_dn, password => $password )};
-    return 1 if $mesg && !$mesg->code;
+    for my $entry (@entries) {
 
-#    warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-    my $user_ok = $self->_match_password($username, $password);
+
+#       my $mesg;
+#       eval { $mesg = $LDAP->bind( $user_dn, password => $password )};
+#       return 1 if $mesg && !$mesg->code;
+
+#       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
+        $user_ok = $self->_match_password($entry, $password);
+        warn $entry->dn." : $user_ok" if $Ravada::DEBUG;
+        last if $user_ok;
+    }
 
     $self->_check_user_profile($username)   if $user_ok;
 
@@ -238,14 +243,10 @@ sub _check_user_profile {
 
 sub _match_password {
     my $self = shift;
-    my ($cn, $password) = @_;
-
-    confess "Missing cn" if !$cn;
-    confess "Missing password" if !$password;
+    my $user = shift;
+    my $password = shift or die "ERROR: Missing password for ".$user->get_value('cn'); # We won't allow empty passwords
 
     _init_ldap_admin();
-
-    my $user = search_user($cn, $LDAP_ADMIN);
 
     die "No userPassword for ".$user->get_value('uid')
         if !$user->get_value('userPassword');
@@ -255,8 +256,7 @@ sub _match_password {
 #        ."\n"
 #        .sha1_hex($password);
 
-    return $user->get_value('uid') eq $cn
-        && Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
+    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
 }
 
 sub _dc_base {
