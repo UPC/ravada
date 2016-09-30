@@ -60,7 +60,7 @@
 
         function toggleAutoRefresh(cb) {
             if (cb.checked) {
-                window.location.replace("#autoreload");
+//                window.location.replace("#autoreload");
 //                reloading=setTimeout("window.location.reload();", 60000);
             } else {
                 window.location.replace("#");
