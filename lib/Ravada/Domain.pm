@@ -19,6 +19,8 @@ requires 'shutdown';
 requires 'pause';
 requires 'prepare_base';
 
+requires 'disk_device';
+
 has 'domain' => (
     isa => 'Any'
     ,is => 'ro'
@@ -43,7 +45,48 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 
 before 'display' => \&_allowed;
 before 'remove' => \&_allowed;
-before 'prepare_base' => sub { my $self = shift; $self->is_base(0) };
+before 'prepare_base' => \&_allow_prepare_base;
+after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
+
+sub _allow_prepare_base { 
+    my $self = shift; 
+    my ($user) = @_;
+
+    $self->_allowed($user);
+    $self->_check_disk_modified();
+    $self->_check_has_clones();
+
+    $self->shutdown();
+    $self->is_base(0);
+};
+
+sub _check_has_clones {
+    my $self = shift;
+    my @clones = $self->clones;
+    die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+        if $#clones>=0;
+}
+
+sub _check_disk_modified {
+    my $self = shift;
+
+    if ( !$self->is_base() ) {
+        return;
+    }
+    my $file_base = $self->file_base_img;
+    confess "Missing file_base_img" if !$file_base;
+
+    my @stat_base = stat($file_base);
+    
+    my $files_updated = 0;
+    for my $file ( $self->disk_device ) {
+        my @stat = stat($file);
+        $files_updated++ if $stat[9] > $stat_base[9];
+#        warn "\ncheck\t$file ".$stat[9]."\n vs \t$file_base ".$stat_base[9]." $files_updated\n";
+    }
+    die "Base already created and no disk images updated"
+        if !$files_updated;
+}
 
 sub _allowed {
     my $self = shift;
@@ -204,6 +247,27 @@ sub id_owner {
 sub vm {
     my $self = shift;
     return $self->_data('vm');
+}
+
+=head2 clones
+
+Returns a list of clones from this virtual machine
+
+    my @clones = $domain->clones
+
+=cut
+
+sub clones {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains "
+            ." WHERE id_base = ?");
+    $sth->execute($self->id);
+    my @clones;
+    while (my ($id) = $sth->fetchrow) {
+        # TODO: open the domain, now it returns only the id
+        push @clones , ($id );
+    }
+    return @clones;
 }
 
 1;
