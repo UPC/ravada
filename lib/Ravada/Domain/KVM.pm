@@ -214,6 +214,19 @@ sub _disk_device {
 
 }
 
+=head2 disk_device
+
+Returns the file name of the disk of the domain.
+
+  my $file_name = $domain->disk_device();
+
+=cut
+
+sub disk_device {
+    my $self = shift;
+    return $self->_disk_device();
+}
+
 sub _create_qcow_base {
     my $self = shift;
 

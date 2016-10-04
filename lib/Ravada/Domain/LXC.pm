@@ -235,4 +235,8 @@ sub prepare_base {
     $self->_prepare_base_db();
 }
 
+sub disk_device {
+    confess "TODO";
+}
+
 1;

@@ -33,7 +33,8 @@ sub create_domain {
     my $domain = Ravada::Domain::Void->new(name => $args{name}, domain => $args{name}
                                                             , id_owner => $args{id_owner}
     );
-    $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner});
+    $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
+        , id_base => ($args{id_base} or undef));
 
     return $domain;
 }
