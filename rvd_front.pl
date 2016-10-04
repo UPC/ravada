@@ -555,7 +555,8 @@ sub prepare_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->prepare_base(
-        $domain->{name}
+        name => $domain->{name}
+        ,uid => $USER->id
     );
 
     $c->render(template => 'bootstrap/machines');
