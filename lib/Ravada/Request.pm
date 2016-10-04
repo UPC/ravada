@@ -34,6 +34,11 @@ our %VALID_ARG = (
         name => 1
         ,uid => 1
     }
+    ,prepare_base => {
+        name => 1
+        ,uid => 1
+
+    }
 );
 
 our $CONNECTOR;
@@ -207,15 +212,20 @@ sub prepare_base {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my %args = @_;
+    confess "Missing domain name"   if !$args{name};
+    confess "Missing uid"           if !$args{uid};
 
-    my %args = ( name => $name )    or confess "Missing domain name";
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
+    }
+
+    $args{name} = $args{name}->name if ref($args{name}) =~ /Domain/;
 
     my $self = {};
     bless($self,$class);
     return $self->_new_request(command => 'prepare_base' 
-        , args => encode_json({ name => $name }));
+        , args => encode_json( \%args ));
 
 }
 

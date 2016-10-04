@@ -133,7 +133,7 @@ sub test_req_create_base {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name") && do {
-        $domain->prepare_base();
+        $domain->prepare_base($USER);
         ok($domain && $domain->is_base,"Domain $name should be base");
     };
     return $domain;
@@ -184,10 +184,10 @@ ok($ravada,"I can't launch a new Ravada");# or exit;
 
 my ($vm_kvm, $vm_lxc);
 eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada;
-    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => 1 )       if $vm_kvm;
+    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => $USER->id )       if $vm_kvm;
 };
 eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada;
-    @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => 1 )  if $vm_lxc;
+    @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => $USER->id )  if $vm_lxc;
 };
 
 SKIP: {

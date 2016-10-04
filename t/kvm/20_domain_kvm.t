@@ -104,7 +104,7 @@ sub test_new_domain {
 
 sub test_prepare_base {
     my $domain = shift;
-    $domain->prepare_base();
+    $domain->prepare_base($USER);
 
     my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
@@ -148,15 +148,16 @@ sub test_domain{
         ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 "
             .Dumper($list_domains_data));
 
+        ok(!$domain->is_active  ,"domain should be inactive") if defined $active && $active==0;
+        ok($domain->is_active   ,"domain should be active")   if defined $active && $active==1;
+
         # test prepare base
         test_prepare_base($domain);
         ok($domain->is_base,"Domain should be base"
             .Dumper($domain->_select_domain_db())
 
         );
-        ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
-        ok($domain->is_active,"domain should active") if defined $active && $active==1;
-
+ 
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
         my $domain2;
         eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};

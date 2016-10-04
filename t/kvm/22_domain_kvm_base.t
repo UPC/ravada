@@ -68,7 +68,7 @@ sub test_new_domain_from_iso {
     eval { $domain = $RAVADA->create_domain(name => $name
                                         , id_iso => 1
                                         ,vm => $BACKEND
-                                        ,id_owner => 1
+                                        ,id_owner => $USER->id
             ) 
     };
     ok(!$@,"Domain $name not created: $@");
@@ -100,7 +100,7 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    $domain->prepare_base();
+    $domain->prepare_base($USER);
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
@@ -126,7 +126,7 @@ sub test_new_domain_from_base {
     my $domain = $RAVADA->create_domain(
                 name => $name
             ,id_base => $base->id
-           ,id_owner => 1
+           ,id_owner => $USER->id
             ,vm => $BACKEND
     );
     ok($domain,"Domain not created");

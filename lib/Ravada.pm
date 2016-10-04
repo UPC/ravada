@@ -589,10 +589,8 @@ sub _do_cmd_create{
     warn "$$ creating domain"   if $DEBUG;
     my $domain;
     $domain = $self->create_domain(%{$request->args},request => $request);
-    warn $@ if $@;
 
     $request->status('done');
-    $request->error($@);
 
 }
 
@@ -710,7 +708,6 @@ sub _cmd_start {
     $domain->start();
 
     $request->status('done');
-    $request->error($@ or '');
 
 }
 
@@ -719,14 +716,16 @@ sub _cmd_prepare_base {
     my $request = shift;
 
     $request->status('working');
-    my $name = $request->args('name');
-    eval { 
-        my $domain = $self->search_domain($name);
-        die "Unknown domain '$name'\n" if !$domain;
-        $domain->prepare_base();
-    };
-    $request->status('done');
-    $request->error($@);
+    my $name = $request->args('name')   or confess "Missing argument name";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    my $domain = $self->search_domain($name);
+
+    die "Unknown domain '$name'\n" if !$domain;
+
+    $domain->prepare_base($user);
 
 }
 
@@ -738,14 +737,12 @@ sub _cmd_shutdown {
     $request->status('working');
     my $name = $request->args('name');
     my $timeout = ($request->args('timeout') or 60);
+
     my $domain;
-    eval { 
-        $domain = $self->search_domain($name);
-        die "Unknown domain '$name'\n" if !$domain;
-        $domain->shutdown(timeout => $timeout);
-    };
-    $request->status('done');
-    $request->error($@);
+    $domain = $self->search_domain($name);
+    die "Unknown domain '$name'\n" if !$domain;
+
+    $domain->shutdown(timeout => $timeout);
 
 }
 

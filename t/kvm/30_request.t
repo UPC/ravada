@@ -26,11 +26,15 @@ sub test_req_prepare_base {
     my $domain0 =  $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
 
-    my $req = Ravada::Request->prepare_base($name);
+    my $req = Ravada::Request->prepare_base(name => $name, uid => $USER->id);
     $RAVADA->_process_requests_dont_fork();
+
+    ok($req->status('done'),"Request should be done, it is".$req->status);
+    ok(!$req->error(),"Request error ".$req->error);
 
     my $domain =  $RAVADA->search_domain($name);
     ok($domain->is_base,"Domain $name should be base");
+    ok($domain->file_base_img,"Domain $name has no file_base_img");
 
 }
 
