@@ -58,7 +58,7 @@ sub _remove_old_domains_kvm {
     my $vm = rvd_back()->search_vm('kvm');
     return if !$vm;
 
-    for ( 0 .. 10 ) {
+    for (reverse 0 .. 10 ) {
         my $dom_name = base_domain_name()."_$_";
         my $domain = $vm->search_domain($dom_name);
         next if !$domain;

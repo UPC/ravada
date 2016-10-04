@@ -44,9 +44,17 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 # 
 
 before 'display' => \&_allowed;
-before 'remove' => \&_allowed;
+before 'remove' => \&_allow_remove;
 before 'prepare_base' => \&_allow_prepare_base;
 after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
+
+sub _allow_remove {
+    my $self = shift;
+    my ($user) = @_;
+
+    $self->_allowed($user);
+    $self->_check_has_clones();
+}
 
 sub _allow_prepare_base { 
     my $self = shift; 
@@ -62,7 +70,10 @@ sub _allow_prepare_base {
 
 sub _check_has_clones {
     my $self = shift;
-    my @clones = $self->clones;
+    my @clones;
+    
+    eval { @clones = $self->clones };
+    die $@  if $@ && $@ !~ /No DB info/i;
     die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
         if $#clones>=0;
 }
@@ -259,13 +270,13 @@ Returns a list of clones from this virtual machine
 
 sub clones {
     my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
             ." WHERE id_base = ?");
     $sth->execute($self->id);
     my @clones;
-    while (my ($id) = $sth->fetchrow) {
+    while (my $row = $sth->fetchrow_hashref) {
         # TODO: open the domain, now it returns only the id
-        push @clones , ($id );
+        push @clones , $row;
     }
     return @clones;
 }
