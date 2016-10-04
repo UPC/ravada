@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<meta http-equiv="refresh" content="20">
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
     %= include 'bootstrap/navigation'
@@ -17,12 +16,6 @@
                         
                         <button id="newMButton" style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
 
-                        <div style="float: right;" class="btn-group" data-toggle="buttons">
-                        <label  class="btn btn-warning disabled">
-                            <input type="checkbox" checked onclick="toggleAutoRefresh(this);" id="reloadCB"> AutoRefresh
-                        </label>
-                        </div>
-
                         </h2>
                     </div>
                     
@@ -31,7 +24,7 @@
             </div>
             <div class="page-header">
             
-                <sol-show-machines-notifications></sol-show-machines-notifications>            
+                <sol-show-machines-notifications><sol-show-machines-notifications>            
             
             </div>
         </div>
@@ -48,29 +41,6 @@
     </div>
     </div>
     %= include 'bootstrap/scripts'
-    <script type="text/javascript">
-        var reloading;
-
-        function checkReloading() {
-            if (window.location.hash=="#autoreload") {
-//               reloading=setTimeout("window.location.reload();", 600000);
-//                document.getElementById("reloadCB").checked=true;
-            }
-        }
-
-        function toggleAutoRefresh(cb) {
-            if (cb.checked) {
-//                window.location.replace("#autoreload");
-//                reloading=setTimeout("window.location.reload();", 60000);
-            } else {
-                window.location.replace("#");
-                clearTimeout(reloading);
-            }
-        }
-
-        window.onload=checkReloading;
-
-    </script>
 </body>
 </html>
 
