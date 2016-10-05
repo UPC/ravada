@@ -92,7 +92,7 @@ sub _check_disk_modified {
     
     my $files_updated = 0;
     for my $file ( $self->disk_device ) {
-        my @stat = stat($file);
+        my @stat = stat($file) or next;
         $files_updated++ if $stat[9] > $stat_base[9];
 #        warn "\ncheck\t$file ".$stat[9]."\n vs \t$file_base ".$stat_base[9]." $files_updated\n";
     }
