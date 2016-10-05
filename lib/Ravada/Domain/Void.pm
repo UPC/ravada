@@ -26,9 +26,6 @@ sub BUILD {
     mkdir $TMP_DIR or die "$! when mkdir $TMP_DIR"
         if ! -e $TMP_DIR;
 
-    open my $imp,'>',$self->disk_device or die "$! ".$self->disk_device;
-    print $imp "Void Domain ".$self->name."\n";
-    close $imp;
 }
 
 sub name { 
@@ -49,6 +46,10 @@ sub remove {
     $self->remove_disks();
 }
 sub shutdown {}
+sub shutdown_now {
+    my $self = shift;
+    return $self->shutdown(@_);
+}
 sub start {}
 sub prepare_base {
     my $self = shift;
@@ -74,16 +75,16 @@ sub list_disks {
 }
 
 sub _vol_remove {
-    return;
+    my $self = shift;
+    my $file = shift;
+    unlink $file or die "$! $file"
+        if -e $file;
 }
 
 sub remove_disks {
     my $self = shift;
     for my $file ($self->list_disks) {
-        if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
-            next;
-        }
+        next if ! -e $file;
         $self->_vol_remove($file);
         if ( -e $file ) {
             unlink $file or die "$! $file";
