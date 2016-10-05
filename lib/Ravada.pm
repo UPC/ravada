@@ -130,6 +130,12 @@ sub _create_vm_kvm {
 sub _refresh_vm_kvm {
     my $self = shift;
     sleep 1;
+    my @vms;
+    eval { @vms = $self->vm };
+    return if $@ && $@ =~ /No VMs found/i;
+    die $@ if $@;
+
+    return if !scalar @vms;
     for my $n ( 0 .. $#{$self->vm}) {
         my $vm = $self->vm->[$n];
         next if ref $vm !~ /KVM/i;
@@ -164,7 +170,8 @@ sub _create_vm {
 sub check_vms {
     my $self = shift;
 
-    my @vm = @{$self->vm};
+    my @vm;
+    eval { @vm = @{$self->vm} };
     for my $n ( 0 .. $#vm ) {
         if ($vm[$n] && ref $vm[$n] =~ /KVM/i) {
             if (!$vm[$n]->is_alive) {
@@ -209,8 +216,9 @@ sub create_domain {
 
     $request->status("Searching for VM")    if $request;
 
-    my $vm = $self->vm->[0];
+    my $vm;
     $vm = $self->search_vm($vm_name)   if $vm_name;
+    $vm = $self->vm->[0]               if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
         if !$vm_name;
@@ -259,6 +267,18 @@ sub search_domain {
     my $name = shift;
     my $import = shift;
 
+    my $vm = $self->search_vm('Void');
+    warn "No Void VM" if !$vm;
+    return if !$vm;
+
+    my $domain = $vm->search_domain($name, $import);
+    return $domain if $domain;
+
+    my @vms;
+    eval { @vms = $self->vm };
+    return if $@ && $@ =~ /No VMs found/i;
+    die $@ if $@;
+
     for my $vm (@{$self->vm}) {
         my $domain = $vm->search_domain($name, $import);
         next if !$domain;
@@ -270,12 +290,6 @@ sub search_domain {
         return $domain if $id || $import;
     }
 
-    my $vm = $self->search_vm('Void');
-    warn "No Void VM" if !$vm;
-    return if !$vm;
-
-    my $domain = $vm->search_domain($name, $import);
-    return $domain if $domain;
 
     return;
 }
@@ -803,6 +817,9 @@ sub search_vm {
 
     my @vms;
     eval { @vms = @{$self->vm} };
+    return if $@ && $@ =~ /No VMs found/i;
+    die $@ if $@;
+
     for my $vm (@vms) {
         return $vm if ref($vm) eq $class;
     }
