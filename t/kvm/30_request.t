@@ -59,6 +59,27 @@ sub test_remove_domain {
 
 }
 
+sub test_dont_remove_father {
+    my $name = shift;
+
+    my $domain = $name if ref($name);
+    $domain = $VMM->search_domain($name,1);
+
+    if ($domain) {
+        diag("Removing domain $name");
+        eval { $domain->remove($USER) };
+        ok($@ , "Error removing domain $name with clones should not be allowed");
+
+        ok( -e $domain->file_base_img ,"Image file was removed "
+                    . $domain->file_base_img )
+                if  $domain->file_base_img;
+
+    }
+    $domain = $RAVADA->search_domain($name,1);
+    ok($domain, "Domain $name with clones should not be removed");
+
+}
+
 
 sub test_req_clone {
     my $domain_father = shift;
@@ -191,8 +212,9 @@ SKIP: {
         if ($domain ) {
             test_req_prepare_base($domain->name);
             my $domain_clon = test_req_clone($domain);
-            test_remove_domain($domain->name);
+            test_dont_remove_father($domain->name);
             test_remove_domain($domain_clon->name);
+            test_remove_domain($domain->name);
         }
     }
 
@@ -201,5 +223,8 @@ SKIP: {
         test_remove_domain($domain->name)       if $domain;
     }
 }
+
+remove_old_domains();
+remove_old_disks();
 
 done_testing();
