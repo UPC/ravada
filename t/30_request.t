@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
@@ -69,6 +70,7 @@ sub wait_request {
 
 }
 sub test_req_create_domain_iso {
+    my $vm_name = shift;
 
     my $name = new_domain_name();
     diag("Requesting create domain $name");
@@ -171,6 +173,9 @@ sub test_req_remove_domain_name {
 }
 
 sub test_list_vm_types {
+    my $vm_name = shift or confess "Missing vm name";
+    return if $vm_name =~ /Void/i;
+
     my $req = Ravada::Request->list_vm_types();
     $ravada->process_requests();
     ok($req->status eq 'done'
@@ -199,28 +204,35 @@ eval { $ravada = Ravada->new(connector => $test->connector) };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 
-my $vm;
-eval { $vm= $ravada->search_vm('Void')  if $ravada;
-    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'Void', id_owner => $USER->id )       if $vm;
-};
+for my $vm_name ( qw(Void KVM)) {
+    my $vm;
+    eval {
+        $vm= $ravada->search_vm($vm_name)  if $ravada;
+        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id )       if $vm;
+    };
 
-SKIP: {
-    my $msg = "SKIPPED: No virtual managers found";
+    SKIP: {
+        my $msg = "SKIPPED: No virtual managers found";
+        skip($msg,10)   if !$vm;
+    
+        diag("Testing requests with ".(ref $vm or '<UNDEF>'));
+        remove_old_domains();
+        remove_old_disks();
+    
+        my $domain_iso0 = test_req_create_domain_iso();
+        test_req_remove_domain_obj($domain_iso0)         if $domain_iso0;
+    
+        my $domain_iso = test_req_create_domain_iso();
+        test_req_remove_domain_name($domain_iso->name)  if $domain_iso;
+    
+        my $domain_base = test_req_create_base();
+        test_req_remove_domain_name($domain_base->name)  if $domain_base;
+    
+        test_list_vm_types($vm_name);
+    };
+}
 
-    diag("Testing requests with ".(ref $ravada->vm->[0] or '<UNDEF>'));
-    remove_old_domains();
-    remove_old_disks();
-
-    my $domain_iso0 = test_req_create_domain_iso();
-    test_req_remove_domain_obj($domain_iso0)         if $domain_iso0;
-
-    my $domain_iso = test_req_create_domain_iso();
-    test_req_remove_domain_name($domain_iso->name)  if $domain_iso;
-
-    my $domain_base = test_req_create_base();
-    test_req_remove_domain_name($domain_base->name)  if $domain_base;
-
-    test_list_vm_types();
-};
+remove_old_domains();
+remove_old_disks();
 
 done_testing();
