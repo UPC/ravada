@@ -67,7 +67,6 @@ sub _remove_old_domains_vm {
 
         $domain->shutdown_now() if $domain;
 
-        diag("[$vm_name] Removing domain $dom_name");
         eval {
             $domain->remove( $USER_ADMIN );
         };
@@ -98,7 +97,6 @@ sub _remove_old_disks_kvm {
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
 
-        diag("Removing previous $disk");
         unlink $disk or die "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
@@ -115,7 +113,6 @@ sub _remove_old_disks_void {
         my $disk = "$dir_img/$file";
         next if ! -f $disk;
 
-        diag("Removing previous $disk");
         unlink $disk or die "I can't remove $disk";
 
     }
