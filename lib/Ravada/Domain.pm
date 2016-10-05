@@ -16,6 +16,7 @@ requires 'display';
 requires 'is_active';
 requires 'start';
 requires 'shutdown';
+requires 'shutdown_now';
 requires 'pause';
 requires 'prepare_base';
 
