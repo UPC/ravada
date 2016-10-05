@@ -33,6 +33,12 @@ sub _init_connector {
 
 _init_connector();
 
+=head2 BUILD
+
+Internal OO builder
+
+=cut
+
 sub BUILD {
     _init_connector();
 }
@@ -103,6 +109,17 @@ sub unread_messages {
 
 }
 
+=head2 show_message
+
+Returns a message by id
+
+    my $message = $user->show_message($id);
+
+The data is returned as h hash ref.
+
+=cut
+
+
 sub show_message {
     my $self = shift;
     my $id = shift;
@@ -120,6 +137,17 @@ sub show_message {
 
 }
 
+=head2 mark_message_read
+
+Marks a message as read
+
+    $user->mark_message_read($id);
+
+Returns nothing
+
+=cut
+
+
 sub mark_message_read {
     my $self = shift;
     my $id = shift;
@@ -132,6 +160,17 @@ sub mark_message_read {
     $sth->finish;
 
 }
+
+=head2 mark_all_messages_read
+
+Marks all message as read
+
+    $user->mark_all_messages_read();
+
+Returns nothing
+
+=cut
+
 
 sub mark_all_messages_read {
     my $self = shift;

@@ -57,6 +57,14 @@ sub search_by_id {
     return Ravada::Auth::SQL->new(name => $data->{name});
 }
 
+=head2 add_user
+
+Adds a new user in the SQL database. Returns nothing.
+
+    Ravada::Auth::SQL::add_user($user, $pass, $is_admin);
+
+=cut
+
 sub add_user {
     _init_connector();
     my ($login,$password, $is_admin ) = @_;
@@ -140,10 +148,27 @@ sub login {
     return;
 }
 
+=head2 is_admin
+
+Returns true if the user is admin.
+
+    my $is = $user->is_admin;
+
+=cut
+
+
 sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
 }
+
+=head2 id
+
+Returns the user id
+
+    my $id = $user->id;
+
+=cut
 
 sub id {
     my $self = shift;
