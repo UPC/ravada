@@ -391,4 +391,10 @@ sub add_volume {
 #    warn "Builder KVM.pm";
 #}
 
+sub list_volumes {
+}
+
+sub list_files_base {
+}
+
 1;

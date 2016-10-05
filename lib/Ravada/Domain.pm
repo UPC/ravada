@@ -22,6 +22,8 @@ requires 'prepare_base';
 
 #storage
 requires 'add_volume';
+requires 'list_volumes';
+requires 'list_files_base';
 
 requires 'disk_device';
 

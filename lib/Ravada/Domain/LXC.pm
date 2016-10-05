@@ -250,4 +250,10 @@ Adds a new volume to the domain
 sub add_volume {
 }
 
+sub list_volumes {
+}
+
+sub list_files_base {
+}
+
 1;
