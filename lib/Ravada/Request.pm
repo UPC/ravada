@@ -378,12 +378,53 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
 
-    my $domain;
-    eval { $domain = $self->args('name') };
-
-#    warn $self->{id}." ".$self->{command}." '".($domain or '<UNDEF>')."' ".$status;
+    $self->_send_message($status)   if $self->command ne 'domdisplay';
     return $status;
 }
+
+sub _send_message {
+    my $self = shift;
+    my $status = shift;
+
+    my $uid;
+
+    eval { $uid = $self->args('id_owner') };
+    eval { $uid = $self->args('uid') };
+    return if !$uid;
+
+    my $domain_name;
+    eval { $domain_name = $self->args('name') };
+    $domain_name = ''               if !$domain_name;
+    $domain_name = "$domain_name "  if length $domain_name;
+
+    $self->_remove_unnecessary_messages() if $self->status eq 'done';
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO messages ( id_user, id_request, subject, message ) "
+        ." VALUES ( ?,?,?,?)"
+    );
+    $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
+        ,$self->error);
+    $sth->finish;
+}
+
+sub _remove_unnecessary_messages {
+    my $self = shift;
+
+    my $uid;
+    eval { $uid = $self->args('id_owner') };
+    eval { $uid = $self->args('uid') };
+    return if !$uid;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM messages WHERE id_user=? AND id_request=?"
+    );
+
+    $sth->execute($uid, $self->id);
+    $sth->finish;
+
+}
+
 
 =head2 result
 

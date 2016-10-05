@@ -507,6 +507,7 @@ sub process_requests {
         $req->status('working');
         eval { $self->_execute($req, $dont_fork) };
         my $err = $@;
+        $req->error($err or '');
         if ($err =~ /libvirt error code: 38/) {
             if ( $n_retry < 3) {
                 warn $req->id." ".$req->command." to retry" if $DEBUG;
@@ -516,7 +517,6 @@ sub process_requests {
         } else {
             $req->status('done');
         }
-        $req->error($err or '');
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'" 
                 if $DEBUG || $debug;

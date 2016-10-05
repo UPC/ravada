@@ -168,6 +168,25 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
+get '/messages/' => sub {
+    my $c = shift;
+
+    return $c->redirect_to('/login') if !_logged_in($c);
+
+    return $c->render( json => [$USER->unread_messages()] );
+};
+
+get '/messages/*.html' => sub {
+    my $c = shift;
+
+    return $c->redirect_to('/login') if !_logged_in($c);
+
+    my ($id_message) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+
+    return $c->render( json => $USER->show_message($id_message) );
+};
+
+
 ###################################################
 
 sub _logged_in {

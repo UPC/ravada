@@ -72,6 +72,8 @@ sub test_req_create_domain_iso {
 
     my $name = new_domain_name();
     diag("Requesting create domain $name");
+
+    test_unread_messages($USER,0);
     my $req = Ravada::Request->create_domain( 
         name => $name
         ,@ARG_CREATE_DOM
@@ -96,6 +98,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
     ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+    test_unread_messages($USER,1);
 
     my $req2 = Ravada::Request->open($req->id);
     ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
@@ -103,6 +106,8 @@ sub test_req_create_domain_iso {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name");
+
+    $USER->mark_all_messages_read();
     return $domain;
 }
 
@@ -177,23 +182,30 @@ sub test_list_vm_types {
 
 }
 
+sub test_unread_messages {
+    my ($user, $n_unread) = @_;
+
+    my @messages = $user->unread_messages();
+
+    ok(scalar @messages == $n_unread,"Expecting $n_unread unread messages , got "
+        .scalar@messages." ".Dumper(\@messages));
+
+    $user->mark_all_messages_read();
+}
+
+
 ################################################
 eval { $ravada = Ravada->new(connector => $test->connector) };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 
-my ($vm_kvm, $vm_lxc);
-eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada;
-    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => $USER->id )       if $vm_kvm;
-};
-eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada;
-    @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => $USER->id )  if $vm_lxc;
+my $vm;
+eval { $vm= $ravada->search_vm('Void')  if $ravada;
+    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'Void', id_owner => $USER->id )       if $vm;
 };
 
 SKIP: {
-    my $msg = "SKIPPED: No KVM nor LXC virtual managers found";
-    diag($msg) if !$vm_kvm && !$vm_lxc;
-    skip($msg,10) if !$vm_kvm && !$vm_lxc;
+    my $msg = "SKIPPED: No virtual managers found";
 
     diag("Testing requests with ".(ref $ravada->vm->[0] or '<UNDEF>'));
     remove_old_domains();

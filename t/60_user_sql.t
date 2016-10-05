@@ -50,6 +50,8 @@ Ravada::Auth::SQL::add_user('mcnulty','jameson');
     ok(!$mcnulty->is_admin,"User ".$mcnulty->name." should not be admin "
             .Dumper($mcnulty->{_data}));
 
+    my @messages = $mcnulty->messages();
+    ok(!scalar @messages);
     my $user3 = Ravada::Auth::login('mcnulty','jameson');
     ok($user3,"No user returned from Ravada::Auth::login");
     ok(ref $user3 && ref($user3) eq 'Ravada::Auth::SQL');

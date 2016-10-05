@@ -54,6 +54,7 @@ sub test_search_vm {
         ." it should be $class");
 }
 
+
 sub test_create_domain {
     my $vm_name = shift;
 
