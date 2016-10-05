@@ -43,7 +43,17 @@ sub create_volume {
 }
 
 sub list_domains {
-    return [];
+    opendir my $ls,$Ravada::Domain::DIR_TMP or return;
+
+    my %domain;
+    while (my $file = readdir $ls ) {
+        $file =~ s/\.\w+//;
+        $domain{$file}++;
+    }
+
+    closedir $ls;
+
+    return [keys %domain];
 }
 
 sub search_domain {
@@ -54,7 +64,7 @@ sub search_domain {
     my $id;
 
     eval { $id = $domain->id };
-    return if !defined $id;
+    return if !defined $id && ! -e $domain->disk_device();
 
     return $domain;
 }
