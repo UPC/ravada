@@ -22,6 +22,12 @@ sub _init_connector {
 }
 
 
+=head2 BUILD
+
+Internal OO build method
+
+=cut
+
 sub BUILD {
     _init_connector();
 
@@ -35,6 +41,14 @@ sub BUILD {
         if !$self->login();#$self->name, $self->password);
     return $self;
 }
+
+=head2 search_by_id
+
+Searches a user by its id
+
+    my $user = Ravada::Auth::SQL->search_by_id( $id );
+
+=cut
 
 sub search_by_id {
     my $self = shift;

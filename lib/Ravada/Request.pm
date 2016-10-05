@@ -49,6 +49,12 @@ sub _init_connector {
 
 }
 
+=head2 BUILD
+
+    Internal object builder, do not call
+
+=Cut
+
 sub BUILD {
     _init_connector();
 }
