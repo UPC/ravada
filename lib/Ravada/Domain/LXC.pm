@@ -239,4 +239,15 @@ sub disk_device {
     confess "TODO";
 }
 
+=head2 add_volume
+
+Adds a new volume to the domain
+
+    $domain->add_volume($size);
+
+=cut
+
+sub add_volume {
+}
+
 1;

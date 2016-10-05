@@ -115,6 +115,18 @@ sub _load_data_by_id {
     return $found;
 }
 
+=head2 login
+
+Logins the user
+
+     my $ok = $user->login($password);
+     my $ok = Ravada::LDAP::SQL::login($name, $password);
+
+returns true if it succeeds
+
+=cut
+
+
 sub login {
     my $self = shift;
 

@@ -20,6 +20,9 @@ requires 'shutdown_now';
 requires 'pause';
 requires 'prepare_base';
 
+#storage
+requires 'add_volume';
+
 requires 'disk_device';
 
 has 'domain' => (
