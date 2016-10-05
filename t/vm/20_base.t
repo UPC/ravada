@@ -114,7 +114,7 @@ sub touch_mtime {
     close $touch;
     my @stat1 = stat($disk);
 
-    die "$stat0[9] not before $stat1[9] for $disk" if $stat0[9] >= $stat1[9];
+    die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
 
 }
 
