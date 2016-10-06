@@ -7,6 +7,7 @@ use Carp qw(cluck croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
 use Moose;
+use YAML qw(LoadFile DumpFile);
 
 with 'Ravada::Domain';
 
@@ -26,9 +27,7 @@ sub BUILD {
     mkdir $TMP_DIR or die "$! when mkdir $TMP_DIR"
         if ! -e $TMP_DIR;
 
-    open my $imp,'>',$self->disk_device or die "$! ".$self->disk_device;
-    print $imp "Void Domain ".$self->name."\n";
-    close $imp;
+    $self->_store(name => $self->name);
 }
 
 sub name { 
@@ -40,16 +39,56 @@ sub display {
     return 'void://hostname:000/';
 }
 
-sub is_active {}
+sub is_active {
+    my $self = shift;
 
-sub pause {}
+    return $self->_value('is_active');
+}
+
+sub pause {
+    my $self = shift;
+    $self->_store(is_active => 0);
+}
 sub remove {
     my $self = shift;
-    $self->_remove_domain_db();
-    $self->remove_disks();
+
+    $self->_store(is_active => 0);
 }
-sub shutdown {}
-sub start {}
+
+sub _store {
+    my $self = shift;
+
+    my ($var, $value) = @_;
+
+    my $data = {};
+    $data = LoadFile($self->disk_device )   if -e $self->disk_device();
+    $data->{$var} = $value;
+    DumpFile($self->disk_device , $data);
+
+}
+
+sub _value{
+    my $self = shift;
+
+    my ($var) = @_;
+
+    my $data = LoadFile($self->disk_device );
+    
+    return $data->{$var};
+
+}
+
+
+sub shutdown {
+    my $self = shift;
+    $self->_store(is_active => 0);
+}
+
+sub start {
+    my $self = shift;
+    $self->_store(is_active => 1);
+}
+
 sub prepare_base {
     my $self = shift;
 
