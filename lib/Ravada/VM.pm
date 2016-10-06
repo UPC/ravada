@@ -46,6 +46,19 @@ has 'readonly' => (
     , is => 'ro'
     ,default => 0
 );
+############################################################
+#
+# Method Modifiers
+# 
+#
+before 'create_domain' => \&_check_readonly;
+
+sub _check_readonly {
+    my $self = shift;
+    confess "ERROR: You can't create domains in read-only mode "
+        if $self->readonly 
+
+}
 
 ############################################################
 #

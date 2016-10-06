@@ -22,6 +22,12 @@ sub _init_connector {
 }
 
 
+=head2 BUILD
+
+Internal OO build method
+
+=cut
+
 sub BUILD {
     _init_connector();
 
@@ -36,12 +42,28 @@ sub BUILD {
     return $self;
 }
 
+=head2 search_by_id
+
+Searches a user by its id
+
+    my $user = Ravada::Auth::SQL->search_by_id( $id );
+
+=cut
+
 sub search_by_id {
     my $self = shift;
     my $id = shift;
     my $data = _load_data_by_id($id);
     return Ravada::Auth::SQL->new(name => $data->{name});
 }
+
+=head2 add_user
+
+Adds a new user in the SQL database. Returns nothing.
+
+    Ravada::Auth::SQL::add_user($user, $pass, $is_admin);
+
+=cut
 
 sub add_user {
     _init_connector();
@@ -93,6 +115,18 @@ sub _load_data_by_id {
     return $found;
 }
 
+=head2 login
+
+Logins the user
+
+     my $ok = $user->login($password);
+     my $ok = Ravada::LDAP::SQL::login($name, $password);
+
+returns true if it succeeds
+
+=cut
+
+
 sub login {
     my $self = shift;
 
@@ -126,10 +160,27 @@ sub login {
     return;
 }
 
+=head2 is_admin
+
+Returns true if the user is admin.
+
+    my $is = $user->is_admin;
+
+=cut
+
+
 sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
 }
+
+=head2 id
+
+Returns the user id
+
+    my $id = $user->id;
+
+=cut
 
 sub id {
     my $self = shift;

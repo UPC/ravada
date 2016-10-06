@@ -25,7 +25,6 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
-
 #######################################################################33
 
 sub test_create_domain {
@@ -59,6 +58,16 @@ sub test_create_domain {
     return $domain;
 }
 
+sub test_add_volume {
+    my $domain = shift;
+
+    $domain->add_volume(1);
+
+    my @volumes = $domain->list_volumes();
+
+    ok(scalar @volumes == 2,"Expecting 2 volumes, got ".scalar(@volumes));
+}
+
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
@@ -67,22 +76,11 @@ sub test_prepare_base {
     ok(!$@, $@);
     ok($domain->is_base);
 
-    eval { $domain->prepare_base( $USER) };
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
-    ok($domain->is_base);
+    my @files_base= $domain->list_files_base();
 
-    my $disk = $domain->disk_device();
-    $domain->shutdown;
-
-    touch_mtime($disk);
-
-    eval { $domain->prepare_base( $USER) };
-    ok(!$@,"Trying to prepare base again failed, it should have worked. ");
-    ok($domain->is_base);
+    ok(scalar @files_base == 2, "Expecting 2 files base, got ".scalar(@files_base));
 
     my $name_clone = new_domain_name();
-
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
@@ -90,36 +88,16 @@ sub test_prepare_base {
         ,vm => $vm_name
     );
     ok($domain_clone);
-    touch_mtime($disk);
-    eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
-        ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
-    ok($domain->is_base);
+    ok(! $domain_clone->is_base,"Clone domain should not be base");
 
-    $domain_clone->remove($USER);
+    my @volumes = $domain_clone->list_volumes();
 
-    eval { $domain->prepare_base($USER) };
-    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
-    ok($domain->is_base);
-}
+    ok(scalar @volumes == 2,"Expecting 2 volumes, got ".scalar(@volumes));
 
-sub touch_mtime {
-    my $disk = shift;
-
-    my @stat0 = stat($disk);
-
-    sleep 2;
-    open my $touch,'>>',$disk or die "$! $disk";
-    print $touch " ";
-    close $touch;
-    my @stat1 = stat($disk);
-
-    die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
 
 }
 
 #######################################################################33
-
 
 remove_old_domains();
 remove_old_disks();
@@ -131,12 +109,8 @@ for my $vm_name (@VMS) {
 
     use_ok($CLASS);
 
-    my $RAVADA;
-    eval { $RAVADA = Ravada->new(@ARG_RVD) };
-
     my $vm;
-
-    eval { $vm = $RAVADA->search_vm($vm_name) } if $RAVADA;
+    eval { $vm = $RVD_BACK->search_vm($vm_name) } if $RVD_BACK;
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
@@ -144,6 +118,7 @@ for my $vm_name (@VMS) {
         skip $msg,10    if !$vm;
 
         my $domain = test_create_domain($vm_name);
+        test_add_volume($domain);
         test_prepare_base($vm_name, $domain);
     }
 }
@@ -152,3 +127,4 @@ remove_old_domains();
 remove_old_disks();
 
 done_testing();
+

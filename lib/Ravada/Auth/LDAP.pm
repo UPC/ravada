@@ -29,12 +29,26 @@ our @OBJECT_CLASS = ('top'
                     ,'inetOrgPerson'
                    );
 
+=head2 BUILD
+
+Internal OO build
+
+=cut
+
 sub BUILD {
     my $self = shift;
     die "ERROR: Login failed ".$self->name
         if !$self->login;
     return $self;
 }
+
+=head2 add_user
+
+Adds a new user in the LDAP directory
+
+    Ravada::Auth::LDAP::add_user($name, $password, $is_admin);
+
+=cut
 
 sub add_user {
     my ($name, $password, $is_admin) = @_;
@@ -62,6 +76,14 @@ sub add_user {
         die "Error afegint $name ".$mesg->error;
     }
 }
+
+=head2 remove_user
+
+Removes the user
+
+    Ravada::Auth::LDAP::remove_user($name);
+
+=cut
 
 sub remove_user {
     my $name = shift;
@@ -138,6 +160,15 @@ sub add_group {
     }
 
 }
+
+=head2 remove_group
+
+Removes the group from the LDAP directory. Use with caution
+
+    Ravada::Auth::LDAP::remove_group($name, $base);
+
+=cut
+
 
 sub remove_group {
     my $name = shift;
@@ -343,6 +374,12 @@ sub is_admin {
     return grep /^$dn$/,$group->get_value('uniqueMember');
 
 }
+
+=head2 init
+
+LDAP init, don't call, does nothing
+
+=cut
 
 sub init {
 }

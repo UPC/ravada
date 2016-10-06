@@ -17,17 +17,16 @@ has 'domain' => (
     ,required => 1
 );
 
-our $TMP_DIR = "/var/tmp/rvd_void";
+our $DIR_TMP = "/var/tmp/rvd_void";
 
 #######################################3
 
 sub BUILD {
     my $self = shift;
     
-    mkdir $TMP_DIR or die "$! when mkdir $TMP_DIR"
-        if ! -e $TMP_DIR;
+    mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
+        if ! -e $DIR_TMP;
 
-    $self->_store(name => $self->name);
 }
 
 sub name { 
@@ -52,7 +51,7 @@ sub pause {
 sub remove {
     my $self = shift;
 
-    $self->_store(is_active => 0);
+    $self->remove_disks();
 }
 
 sub _store {
@@ -84,6 +83,11 @@ sub shutdown {
     $self->_store(is_active => 0);
 }
 
+sub shutdown_now {
+    my $self = shift;
+    return $self->shutdown(@_);
+}
+
 sub start {
     my $self = shift;
     $self->_store(is_active => 1);
@@ -105,7 +109,7 @@ sub prepare_base {
 
 sub disk_device {
     my $self = shift;
-    return "$TMP_DIR/".$self->name.".img";
+    return "$DIR_TMP/".$self->name.".img";
 }
 
 sub list_disks {
@@ -113,22 +117,41 @@ sub list_disks {
 }
 
 sub _vol_remove {
-    return;
+    my $self = shift;
+    my $file = shift;
+    unlink $file or die "$! $file"
+        if -e $file;
 }
 
 sub remove_disks {
     my $self = shift;
-    for my $file ($self->list_disks) {
-        if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
-            next;
-        }
+    my @files = $self->list_disks;
+    push @files, $self->file_base_img() if $self->file_base_img;
+    for my $file (@files) {
+        next if ! -e $file;
         $self->_vol_remove($file);
         if ( -e $file ) {
             unlink $file or die "$! $file";
         }
     }
 
+}
+
+=head2 add_volume
+
+Adds a new volume to the domain
+
+    $domain->add_volume($size);
+
+=cut
+
+sub add_volume {
+}
+
+sub list_volumes {
+}
+
+sub list_files_base {
 }
 
 1;

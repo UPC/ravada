@@ -53,19 +53,20 @@ sub rvd_back {
     return $RVD_BACK;
 }
 
-sub _remove_old_domains_kvm {
+sub _remove_old_domains_vm {
+    my $vm_name = shift;
+
     my $domain;
-    my $vm = rvd_back()->search_vm('kvm');
+    my $vm = rvd_back()->search_vm($vm_name);
     return if !$vm;
 
-    for (reverse 0 .. 10 ) {
+    for (reverse 0 .. 20 ) {
         my $dom_name = base_domain_name()."_$_";
         my $domain = $vm->search_domain($dom_name);
         next if !$domain;
 
         $domain->shutdown_now() if $domain;
 
-        diag("Removing domain $dom_name");
         eval {
             $domain->remove( $USER_ADMIN );
         };
@@ -74,10 +75,11 @@ sub _remove_old_domains_kvm {
 
 }
 sub remove_old_domains {
-    _remove_old_domains_kvm();
+    _remove_old_domains_vm('KVM');
+    _remove_old_domains_vm('Void');
 }
 
-sub remove_old_disks {
+sub _remove_old_disks_kvm {
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
@@ -96,10 +98,32 @@ sub remove_old_disks {
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
 
-        diag("Removing previous $disk");
         unlink $disk or die "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
+}
+
+sub _remove_old_disks_void {
+    my $name = base_domain_name();
+
+    my $dir_img =  $Ravada::Domain::Void::DIR_TMP ;
+    opendir my $ls,$dir_img or return;
+    while (my $file = readdir $ls ) {
+        next if $file !~ /^${name}_\d+\.(img|ro\.qcow2|qcow2)$/;
+
+        my $disk = "$dir_img/$file";
+        next if ! -f $disk;
+
+        unlink $disk or die "I can't remove $disk";
+
+    }
+    closedir $ls;
+}
+
+sub remove_old_disks {
+    return _remove_old_disks_void();
+    return _remove_old_disks_kvm();
+
 }
 
 sub create_user {

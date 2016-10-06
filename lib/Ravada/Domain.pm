@@ -16,8 +16,14 @@ requires 'display';
 requires 'is_active';
 requires 'start';
 requires 'shutdown';
+requires 'shutdown_now';
 requires 'pause';
 requires 'prepare_base';
+
+#storage
+requires 'add_volume';
+requires 'list_volumes';
+requires 'list_files_base';
 
 requires 'disk_device';
 
@@ -44,9 +50,15 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 # 
 
 before 'display' => \&_allowed;
+
 before 'remove' => \&_allow_remove;
+ after 'remove' => \&_remove_domain_db;
+
 before 'prepare_base' => \&_allow_prepare_base;
-after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
+ after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
+
+#
+# TODO _check_readonly
 
 sub _allow_remove {
     my $self = shift;
@@ -54,6 +66,7 @@ sub _allow_remove {
 
     $self->_allowed($user);
     $self->_check_has_clones();
+
 }
 
 sub _allow_prepare_base { 
@@ -91,7 +104,7 @@ sub _check_disk_modified {
     
     my $files_updated = 0;
     for my $file ( $self->disk_device ) {
-        my @stat = stat($file);
+        my @stat = stat($file) or next;
         $files_updated++ if $stat[9] > $stat_base[9];
 #        warn "\ncheck\t$file ".$stat[9]."\n vs \t$file_base ".$stat_base[9]." $files_updated\n";
     }

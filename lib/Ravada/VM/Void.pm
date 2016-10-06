@@ -36,6 +36,7 @@ sub create_domain {
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
         , id_base => ($args{id_base} or undef));
 
+    $domain->start();
     return $domain;
 }
 
@@ -43,20 +44,35 @@ sub create_volume {
 }
 
 sub list_domains {
-    return [];
+    opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
+
+    my %domain;
+    while (my $file = readdir $ls ) {
+        $file =~ s/\.\w+//;
+        $file =~ s/(.*)\.qcow.*$/$1/;
+        next if $file !~ /\w/;
+        $domain{$file}++;
+    }
+
+    closedir $ls;
+
+    return sort keys %domain;
 }
 
 sub search_domain {
     my $self = shift;
     my $name = shift;
 
-    my $domain = Ravada::Domain::Void->new( domain => $name);
-    my $id;
+    for my $name_vm ( $self->list_domains ) {
+        next if $name_vm ne $name;
 
-    eval { $id = $domain->id };
-    return if !defined $id;
+        my $domain = Ravada::Domain::Void->new( domain => $name);
+        my $id;
 
-    return $domain;
+        eval { $id = $domain->id };
+        return if !defined $id;#
+        return $domain;
+    }
 }
 
 sub search_domain_by_id {

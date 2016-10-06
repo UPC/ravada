@@ -14,6 +14,12 @@ eval {
 warn $@  if $Ravada::DEBUG && $@;
 warn "LDAP loaded=$LDAP"    if $Ravada::DEBUG;
 
+=head2 init
+
+Initializes the submodules
+
+=cut
+
 sub init {
     my ($config, $db_con) = @_;
     if ($config->{ldap}) {
@@ -23,6 +29,14 @@ sub init {
     }
 #    Ravada::Auth::SQL::init($config, $db_con);
 }
+
+=head2 login
+
+Tries login in all the submodules
+
+    my $ok = Ravada::Auth::login($name, $pass);
+
+=cut
 
 sub login {
     my ($name, $pass) = @_;

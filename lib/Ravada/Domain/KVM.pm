@@ -154,10 +154,7 @@ sub remove {
 
     $self->domain->undefine();
 
-    eval { $self->_remove_file_image() };
-    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@;
-
-    $self->_remove_domain_db();
+    $self->_remove_file_image();
 }
 
 
@@ -379,8 +376,25 @@ Pauses the domain
 sub pause {
 }
 
+=head2 add_volume
+
+Adds a new volume to the domain
+
+    $domain->add_volume($size);
+
+=cut
+
+sub add_volume {
+}
+
 #sub BUILD {
 #    warn "Builder KVM.pm";
 #}
+
+sub list_volumes {
+}
+
+sub list_files_base {
+}
 
 1;
