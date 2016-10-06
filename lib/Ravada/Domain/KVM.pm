@@ -172,8 +172,11 @@ sub _remove_file_image {
     eval { $self->_vol_remove($file,1) };
 
     if ( -e $file ) {
-        eval { unlink $file or die "$! $file" };
-        $self->storage->refresh();
+        eval { 
+            unlink $file or die "$! $file" ;
+            $self->storage->refresh();
+        };
+        warn $@ if $@;
     }
     return if ! -e $file;
     warn $@ if $@;
