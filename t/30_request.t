@@ -146,25 +146,27 @@ sub test_req_create_base {
 
 
 sub test_req_remove_domain_obj {
+    my $vm = shift;
     my $domain = shift;
 
     my $req = Ravada::Request->remove_domain(name => $domain->name, uid => user_admin->id);
-    $ravada->_process_requests_dont_fork();
+    $ravada->_process_requests_dont_fork(1);
 
-    my $domain2 =  $ravada->search_domain($domain->name);
+    my $domain2 =  $vm->search_domain($domain->name);
     ok(!$domain2,"Domain ".$domain->name." should be removed");
     ok(!$req->error,"Error ".$req->error." removing domain ".$domain->name);
 
 }
 
 sub test_req_remove_domain_name {
+    my $vm = shift;
     my $name = shift;
 
     my $req = Ravada::Request->remove_domain(name => $name, uid => user_admin()->id);
 
     $ravada->_process_requests_dont_fork();
 
-    my $domain =  $ravada->search_domain($name);
+    my $domain =  $vm->search_domain($name);
     ok(!$domain,"Domain $name should be removed");
     ok(!$req->error,"Error ".$req->error." removing domain $name");
 
@@ -212,13 +214,13 @@ SKIP: {
     remove_old_disks();
 
     my $domain_iso0 = test_req_create_domain_iso();
-    test_req_remove_domain_obj($domain_iso0)         if $domain_iso0;
+    test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;
 
     my $domain_iso = test_req_create_domain_iso();
-    test_req_remove_domain_name($domain_iso->name)  if $domain_iso;
+    test_req_remove_domain_name($vm, $domain_iso->name)  if $domain_iso;
 
     my $domain_base = test_req_create_base();
-    test_req_remove_domain_name($domain_base->name)  if $domain_base;
+    test_req_remove_domain_name($vm, $domain_base->name)  if $domain_base;
 
     test_list_vm_types();
 };
