@@ -23,7 +23,6 @@ requires 'prepare_base';
 #storage
 requires 'add_volume';
 requires 'list_volumes';
-requires 'list_files_base';
 
 requires 'disk_device';
 
@@ -57,7 +56,6 @@ before 'remove' => \&_allow_remove;
 before 'prepare_base' => \&_allow_prepare_base;
  after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
 
-#
 # TODO _check_readonly
 
 sub _allow_remove {
@@ -206,12 +204,20 @@ sub _prepare_base_db {
 #        $self->_insert_db( name => $self->name, id_owner => $self->id_owner );
     }
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set is_base=1,file_base_img=? "
-        ." WHERE id=?"
+        "INSERT INTO file_base_images "
+        ." (id_domain , file_base_img )"
+        ." VALUES(?,?)"
     );
-    $sth->execute($file_img , $self->id);
+    $sth->execute($self->id, $file_img );
     $sth->finish;
-    $self->{_data} = $self->_select_domain_db();
+
+    $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains SET is_base=1 "
+        ." WHERE id=?");
+    $sth->execute($self->id);
+    $sth->finish;
+
+    $self->_select_domain_db();
 }
 
 sub _insert_db {
@@ -272,6 +278,12 @@ sub id_owner {
     return $self->_data('id_owner',@_);
 }
 
+sub id_base {
+    my $self = shift;
+    return $self->_data('id_base',@_);
+}
+
+
 sub vm {
     my $self = shift;
     return $self->_data('vm');
@@ -296,6 +308,22 @@ sub clones {
         push @clones , $row;
     }
     return @clones;
+}
+
+sub list_files_base {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img "
+        ." FROM file_base_images "
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+
+    my @files;
+    while ( my $img = $sth->fetchrow) {
+        push @files,($img);
+    }
+    $sth->finish;
+    return @files;
 }
 
 1;

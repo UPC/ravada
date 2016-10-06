@@ -144,39 +144,39 @@ sub remove {
     $self->domain->destroy   if $self->domain->is_active();
 
     eval { $self->remove_disks() };
-    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@;
+    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
     eval { $self->_remove_file_image() };
-    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@;
+    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
-
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
 }
 
 
 sub _remove_file_image {
     my $self = shift;
-    my $file = $self->file_base_img;
+    for my $file ( $self->list_files_base ) {
 
-    return if !$file || ! -e $file;
+        next if !$file || ! -e $file;
 
-    chmod 0770, $file or die "$! chmodding $file";
-    chown $<,$(,$file    or die "$! chowning $file";
-    eval { $self->_vol_remove($file,1) };
+        chmod 0770, $file or die "$! chmodding $file";
+        chown $<,$(,$file    or die "$! chowning $file";
+        eval { $self->_vol_remove($file,1) };
 
-    if ( -e $file ) {
-        eval { 
-            unlink $file or die "$! $file" ;
-            $self->storage->refresh();
-        };
+        if ( -e $file ) {
+            eval { 
+                unlink $file or die "$! $file" ;
+                $self->storage->refresh();
+            };
+            warn $@ if $@;
+        }
+        next if ! -e $file;
         warn $@ if $@;
     }
-    return if ! -e $file;
-    warn $@ if $@;
 }
 
 sub _disk_device {
@@ -184,8 +184,7 @@ sub _disk_device {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
         or die "ERROR: $!\n";
 
-    my $cont = 0;
-    my $img;
+    my @img;
     my $list_disks = '';
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
@@ -193,24 +192,19 @@ sub _disk_device {
 
         $list_disks .= $disk->toString();
 
-        die "ERROR: base disks only can have one device\n" 
-                .$list_disks
-            if $cont++>1;
-
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
 #                die $child->toString();
-                $img = $child->getAttribute('file');
-                $cont++;
+                push @img , ($child->getAttribute('file'));
             }
         }
     }
-    if (!$img) {
+    if (!scalar @img) {
         my (@devices) = $doc->findnodes('/domain/devices/disk');
         die "I can't find disk device FROM "
             .join("\n",map { $_->toString() } @devices);
     }
-    return $img;
+    return @img;
 
 }
 
@@ -230,29 +224,36 @@ sub disk_device {
 sub _create_qcow_base {
     my $self = shift;
 
-    my $base_name = $self->name;
-    my $base_img = $self->_disk_device() or die "I can't find disk device";
+    my @qcow_img;
 
-    my $qcow_img = $base_img;
+    my $base_name = $self->name;
+    for  my $base_img ( $self->list_volumes()) {
+
+        my $qcow_img = $base_img;
     
-    $qcow_img =~ s{\.\w+$}{\.ro.qcow2};
-    my @cmd = ('qemu-img','convert',
+        $qcow_img =~ s{\.\w+$}{\.ro.qcow2};
+
+        push @qcow_img,($qcow_img);
+
+        my @cmd = ('qemu-img','convert',
                 '-O','qcow2', $base_img
                 ,$qcow_img
-    );
+        );
 
-    my ($in, $out, $err);
-    run3(\@cmd,\$in,\$out,\$err);
-    warn $out  if $out;
-    warn $err   if $err;
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        warn $out  if $out;
+        warn $err   if $err;
 
-    if (! -e $qcow_img) {
-        warn "ERROR: Output file $qcow_img not created at ".join(" ",@cmd)."\n";
-        exit;
+        if (! -e $qcow_img) {
+            warn "ERROR: Output file $qcow_img not created at ".join(" ",@cmd)."\n";
+            exit;
+        }
+
+        chmod 0555,$qcow_img;
+        $self->_prepare_base_db($qcow_img);
     }
-
-    chmod 0555,$qcow_img;
-    return $qcow_img;
+    return @qcow_img;
 
 }
 
@@ -265,9 +266,8 @@ Prepares a base virtual machine with this domain disk
 
 sub prepare_base {
     my $self = shift;
-    my $file_qcow  = $self->_create_qcow_base();
 
-    $self->_prepare_base_db($file_qcow);
+    return $self->_create_qcow_base();
 }
 
 =head2 display
@@ -385,6 +385,95 @@ Adds a new volume to the domain
 =cut
 
 sub add_volume {
+    my $self = shift;
+    my %args = @_;
+
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
+
+    for my $arg_name (keys %args) {
+        confess "Unknown arg $arg_name"
+            if !$valid_arg{$arg_name};
+    }
+    confess "Missing vm"    if !$args{vm};
+    confess "Missing name " if !$args{name};
+
+    my $path = $args{vm}->create_volume($args{name}, "etc/xml/trusty-volume.xml"
+        ,($args{size} or undef));
+
+# TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
+# change dev=vd*  , slot=*
+#
+    my $target_dev = $self->_new_target_dev();
+    my $pci_slot = $self->_new_pci_slot();
+    
+    my $xml_device =<<EOT;
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='$path'/>
+      <backingStore/>
+      <target bus='virtio' dev='$target_dev'/>
+      <alias name='virtio-disk1'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>
+    </disk>
+EOT
+
+    eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
+    die $@."\n".$self->domain->get_xml_description if$@;
+}
+
+sub _new_target_dev {
+    my $self = shift;
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+        or die "ERROR: $!\n";
+
+    my %target;
+
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        next if $disk->getAttribute('device') ne 'disk';
+
+
+        for my $child ($disk->childNodes) {
+            if ($child->nodeName eq 'target') {
+#                die $child->toString();
+                $target{ $child->getAttribute('dev') }++;
+            }
+        }
+    }
+    my ($dev) = keys %target;
+    $dev =~ s/(.*).$/$1/;
+    for ('b' .. 'z') {
+        my $new = "$dev$_";
+        return $new if !$target{$new};
+    }
+}
+
+sub _new_pci_slot{
+    my $self = shift;
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+        or die "ERROR: $!\n";
+
+    my %target;
+
+    for my $name (qw(disk controller interface graphics sound video memballoon)) {
+        for my $disk ($doc->findnodes("/domain/devices/$name")) {
+
+
+            for my $child ($disk->childNodes) {
+                if ($child->nodeName eq 'address') {
+#                    die $child->toString();
+                    $target{ $child->getAttribute('slot') }++
+                        if $child->getAttribute('slot');
+                }
+            }
+        }
+    }
+    for ( 1 .. 99) {
+        $_ = "0$_" if length $_ < 2;
+        my $new = '0x'.$_;
+        return $new if !$target{$new};
+    }
 }
 
 #sub BUILD {
@@ -392,9 +481,12 @@ sub add_volume {
 #}
 
 sub list_volumes {
+    my $self = shift;
+    return $self->disk_device();
 }
 
-sub list_files_base {
+sub file_base_img {
+    confess "DEPRECATED";
 }
 
 1;

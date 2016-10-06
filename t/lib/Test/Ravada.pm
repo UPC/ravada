@@ -83,7 +83,11 @@ sub _remove_old_disks_kvm {
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
-    my $vm = $RVD_BACK->search_vm('kvm') or return;
+    my $vm = $RVD_BACK->search_vm('kvm');
+    if (!$vm) {
+        warn "I can't find a kvm backend";
+        return;
+    }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
     my $dir_img = $vm->dir_img();
@@ -93,7 +97,7 @@ sub _remove_old_disks_kvm {
     ok(!$@,$@) or return;
     opendir my $ls,$dir_img or die "$! $dir_img";
     while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+\.(img|ro\.qcow2|qcow2)$/;
+        next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
 
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
@@ -121,8 +125,8 @@ sub _remove_old_disks_void {
 }
 
 sub remove_old_disks {
-    return _remove_old_disks_void();
-    return _remove_old_disks_kvm();
+    _remove_old_disks_void();
+    _remove_old_disks_kvm();
 
 }
 

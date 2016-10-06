@@ -16,7 +16,6 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 # domain
 requires 'create_domain';
 requires 'search_domain';
-requires 'search_domain_by_id';
 
 requires 'list_domains';
 
@@ -83,5 +82,27 @@ sub name {
 
     return ($ref or ref($self));
 }
+
+=head2 search_domain_by_id
+
+Returns a domain searching by its id
+
+    $domain = $vm->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+      my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
+        ." WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return if !$name;
+
+    return $self->search_domain($name);
+}
+
 
 1;

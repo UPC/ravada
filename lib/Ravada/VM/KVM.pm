@@ -179,26 +179,6 @@ sub search_domain {
     return;
 }
 
-=head2 search_domain_by_id
-
-Returns a domain searching by its id
-
-    $domain = $vm->search_domain_by_id($id);
-
-=cut
-
-sub search_domain_by_id {
-    my $self = shift;
-      my $id = shift;
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
-        ." WHERE id=?");
-    $sth->execute($id);
-    my ($name) = $sth->fetchrow;
-    return if !$name;
-
-    return $self->search_domain($name);
-}
 
 =head2 list_domains
 
@@ -236,9 +216,11 @@ Creates a new storage volume. It requires a name and a xml template file definin
 
 sub create_volume {
     my $self = shift;
-    my ($name, $file_xml) = @_;
+    my ($name, $file_xml, $size) = @_;
+
     confess "Missing volume name"   if !$name;
     confess "Missing xml template"  if !$file_xml;
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
 
     open my $fh,'<', $file_xml or die "$! $file_xml";
     my $dir_img = $DEFAULT_DIR_IMG;
@@ -250,6 +232,12 @@ sub create_volume {
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                 "$dir_img/$name.img");
 
+    if ($size) {
+#        TODO
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size/10));
+        $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
+    }
+#    warn $doc->toString();
     my $vol = $self->storage_pool->create_volume($doc->toString);
     warn "volume $dir_img/$name.img does not exists after creating volume"
             if ! -e "$dir_img/$name.img";
@@ -320,35 +308,31 @@ sub _create_disk_qcow2 {
 
     my $dir_img  = $DEFAULT_DIR_IMG;
 
-    my $file_out = "$dir_img/$name.qcow2";
+    my @files_out;
 
-    if (-e $file_out ) {
-        die "WARNING: output file $file_out already existed [skipping]\n";
-    }
+    for my $file_base ( $base->list_files_base ) {
+        my $file_out = "$file_base.qcow2";
 
-    die "ERROR: Missing file_base_img in base ".$base->id
-        ." "
-        .Dumper($base->_select_domain_db)
-            if ! $base->file_base_img;
-
-    my @cmd = ('qemu-img','create'
+        my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
-                ,"-b", $base->file_base_img
+                ,"-b", $file_base
                 ,$file_out
-    );
+        );
 #    warn join(" ",@cmd)."\n";
 
-    my ($in, $out, $err);
-    run3(\@cmd,\$in,\$out,\$err);
-    print $out  if $out;
-    warn $err   if $err;
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        print $out  if $out;
+        warn $err   if $err;
 
-    if (! -e $file_out) {
-        warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n";
-        exit;
+        if (! -e $file_out) {
+            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n";
+            exit;
+        }
+        push @files_out,($file_out);
     }
+    return @files_out;
     
-    return $file_out;
 }
 
 sub _search_domain_by_id {
@@ -381,13 +365,13 @@ sub _domain_create_from_base {
     my $storage = $self->storage_pool;
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
-    my $device_disk = $self->_create_disk($base, $args{name});
+    my @device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
-    _xml_modify_disk($xml, $device_disk);
+    _xml_modify_disk($xml, @device_disk);
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
     _xml_modify_spice_port($xml);

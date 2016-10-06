@@ -23,10 +23,14 @@ our $DIR_TMP = "/var/tmp/rvd_void";
 
 sub BUILD {
     my $self = shift;
+
+    my $args = $_[0];
     
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
+    $self->add_volume(name => 'voida' , size => 1, path => "$DIR_TMP/".$self->name.".img")
+        if !$args->{id_base};
 }
 
 sub name { 
@@ -96,15 +100,14 @@ sub start {
 sub prepare_base {
     my $self = shift;
 
-    # TODO do it for many devices. Requires new table in SQL db
-    my $file_qcow = $self->disk_device;
-    $file_qcow .= ".qcow";
+    for my $file_qcow ($self->list_volumes) {;
+        $file_qcow .= ".qcow";
 
-    open my $out,'>',$file_qcow or die "$! $file_qcow";
-    print $out "$file_qcow\n";
-    close $out;
-    $self->_prepare_base_db($file_qcow);
-
+        open my $out,'>',$file_qcow or die "$! $file_qcow";
+        print $out "$file_qcow\n";
+        close $out;
+        $self->_prepare_base_db($file_qcow);
+    }
 }
 
 sub disk_device {
@@ -146,12 +149,35 @@ Adds a new volume to the domain
 =cut
 
 sub add_volume {
+    my $self = shift;
+    my %args = @_;
+
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
+
+    for my $arg_name (keys %args) {
+        confess "Unknown arg $arg_name"
+            if !$valid_arg{$arg_name};
+    }
+    confess "Missing name " if !$args{name};
+#    TODO
+#    confess "Missing size " if !$args{size};
+    $args{path} = "$DIR_TMP/".$self->name.".$args{name}.img"
+        if !$args{path};
+
+    my $data = { };
+    $data = LoadFile($self->disk_device) if -e $self->disk_device;
+
+    $data->{device}->{$args{name}} = \%args;
+    DumpFile($self->disk_device, $data);
+
 }
 
 sub list_volumes {
-}
+    my $self = shift;
+    my $data = LoadFile($self->disk_device) if -e $self->disk_device;
 
-sub list_files_base {
+    return [] if !exists $data->{device};
+    return keys %{$data->{device}};
 }
 
 1;
