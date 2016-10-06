@@ -87,7 +87,8 @@ sub remove_old_disks {
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
 
-    $vm->storage_pool->refresh();
+    eval { $vm->storage_pool->refresh() };
+    ok(!$@,$@) or return;
     opendir my $ls,$dir_img or die "$! $dir_img";
     while (my $disk = readdir $ls) {
         next if $disk !~ /^${name}_\d+\.(img|ro\.qcow2|qcow2)$/;
