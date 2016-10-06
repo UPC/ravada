@@ -25,14 +25,14 @@
                         
                 % }
                 </form>
-                <a href="#instruccions" class="btn btn-circle page-scroll">
-                            <i class="fa fa-angle-double-down animated"></i>
+                <!--<a href="#instruccions" class="btn btn-circle page-scroll">
+                            <i class="fa fa-angle-double-down animated"></i>-->
                 </a>
             </div>
         </div>
     </header>
 
-    <!-- Instruccions -->
+    <!-- Instruccions 
     <section id="instruccions" class="container content-section text-center">
         <div class="row">
             <div class="col-lg-8 col-lg-offset-2">
@@ -42,7 +42,7 @@
         </div>
     </section>
 
-    <!-- Tecnologies -->
+    Tecnologies 
     <section id="tecnologies" class="content-section text-center">
         <div class="download-section">
             <div class="container">
@@ -55,7 +55,7 @@
         </div>
     </section>
 
-    <!-- Contacte -->
+    Contacte 
     <section id="contacte" class="container content-section text-center">
         <div class="row">
             <div class="col-lg-8 col-lg-offset-2">
@@ -63,7 +63,7 @@
                 <p>Section content</p>
             </div>
         </div>
-    </section>
+    </section>-->
 
 
 

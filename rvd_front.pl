@@ -176,12 +176,20 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
-get '/messages/' => sub {
+any '/messages' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+
+    return messages($c);
+};
+
+get '/messagess.json' => sub {
     my $c = shift;
 
     return $c->redirect_to('/login') if !_logged_in($c);
 
-    return $c->render( json => [$USER->unread_messages()] );
+    return $c->render( json => [$USER->messages()] );
 };
 
 get '/messages/*.html' => sub {
@@ -312,6 +320,15 @@ sub domains {
     my @error = ();
 
     $c->render(template => 'bootstrap/machines');
+
+}
+
+sub messages {
+    my $c = shift;
+
+    my @error = ();
+
+    $c->render(template => 'bootstrap/messages');
 
 }
 

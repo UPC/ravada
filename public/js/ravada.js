@@ -6,11 +6,14 @@
             .directive("solShowListmachines", swListMach)
             .directive("solShowCardsmachines", swCardsMach)
             .directive("solShowMachinesNotifications", swMachNotif)
+            .directive("solShowMessages", swMess)
             .service("request", gtRequest)
             .service("listMach", gtListMach)
+            .service("listMess", gtListMess)
             .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
-            .controller("machines", machinesCrtl);
+            .controller("machines", machinesCrtl)
+            .controller("messages", messagesCrtl)
 
 
 
@@ -98,7 +101,7 @@
             restrict: "E",
             templateUrl: '/templates/machines_notif.html',
         };
-    }
+    };
 
     function gtRequest($resource){
 
@@ -111,6 +114,34 @@
     function gtListMach($resource){
 
         return $resource('/list_machines.json',{},{
+            get:{isArray:true}
+        });
+
+    };
+
+// list messages
+    function messagesCrtl($scope, $http, request, listMess) {
+
+        $http.get('/messagess.json').then(function(response) {
+                $scope.list_message= response.data;
+        });
+
+        request.get(function( res ) {
+            $scope.res = res;
+        });
+
+    };
+
+    function swMess() {
+        return {
+            restrict: "E",
+            templateUrl: '/templates/list_messages.html',
+        };
+    };
+
+    function gtListMess($resource){
+
+        return $resource('/messagess.json',{},{
             get:{isArray:true}
         });
 
