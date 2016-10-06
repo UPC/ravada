@@ -666,8 +666,6 @@ sub _do_cmd_remove {
         if !defined $request->args->{uid};
 
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
-    $request->status('done');
-    $request->error($@);
 
 }
 
@@ -677,7 +675,7 @@ sub _cmd_remove {
     my $dont_fork = shift;
 
     return $self->_do_cmd_remove($request)
-        if $dont_fork;
+        if $dont_fork || !$CAN_FORK;
 
     $self->_wait_pids($request);
 
