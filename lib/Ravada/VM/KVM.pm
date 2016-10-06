@@ -75,9 +75,11 @@ sub connect {
     confess "undefined host" if !defined $self->host;
 
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $self->type.":///system");
+        $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
     } else {
-        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system");
+        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
+                              ,readonly => $self->mode
+                          );
     }
     return $vm;
 }

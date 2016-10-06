@@ -41,6 +41,12 @@ has 'default_dir_img' => (
      , is => 'ro'
 );
 
+has 'readonly' => (
+    isa => 'Str'
+    , is => 'ro'
+    ,default => 0
+);
+
 ############################################################
 #
 sub _domain_remove_db {
