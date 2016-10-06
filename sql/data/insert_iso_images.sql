@@ -34,6 +34,8 @@ INSERT INTO iso_images
 (id,name,description,arch,url,md5)
 VALUES(4,'Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
         ,'amd64'
+        ,'xenial64-amd64.xml'
+        ,'xenial64-volume.xml'
         ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-amd64.iso'
         ,'c94d54942a2954cf852884d656224186'
     );
