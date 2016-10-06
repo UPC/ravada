@@ -210,6 +210,10 @@ sub _insert_db {
             if !exists $field{$_};
     }
 
+    my ($vm) = ref($self) =~ /.*\:\:(\w+)$/;
+    confess "Unknown domain from ".ref($self)   if !$vm;
+    $field{vm} = $vm;
+
     my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "

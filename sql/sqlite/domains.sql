@@ -8,6 +8,7 @@ CREATE TABLE `domains` (
   `is_base` int(1) NOT NULL DEFAULT '0',
   `file_base_img` varchar(255) DEFAULT NULL,
   `id_owner` int(11) NOT NULL,
+  `vm` char(120) NOT NULL,
   UNIQUE (`id_base`,`name`),
   UNIQUE (`name`)
 );

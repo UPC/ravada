@@ -10,6 +10,7 @@ CREATE TABLE `domains` (
   `file_screenshot` varchar(255) DEFAULT NULL,
   `port` int(5),
   `id_owner` int(11),
+  `vm` char(120) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_base` (`id_base`,`name`),
   UNIQUE KEY `name` (`name`)
