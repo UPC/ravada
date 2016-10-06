@@ -164,6 +164,17 @@ sub ping_backend {
     return 0;
 }
 
+sub open_vm {
+    my $self = shift;
+    my $type = shift or confess "I need vm type";
+    my $class = "Ravada::VM::$type";
+
+    my $proto = {};
+    bless $proto,$class;
+
+    return $proto->new(readonly => 1);
+}
+
 sub search_domain {
     my $self = shift;
 
@@ -175,6 +186,13 @@ sub search_domain {
     my $row = $sth->fetchrow_hashref;
 
     return if !keys %$row;
+
+    my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
+
+    my $vm = $self->open_vm($vm_name);
+    my $domain = $vm->search_domain($name);
+
+    $row->{is_active} = $domain->is_active if $domain;
 
     lock_hash(%$row);
     return $row;
