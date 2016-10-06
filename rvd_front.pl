@@ -125,6 +125,14 @@ get '/list_lxc_templates.json' => sub {
 
 # machine commands
 
+get '/machine/*.json' => sub {
+    my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    $c->render(json => $RAVADA->domain($id));
+};
+
 get '/machine/manage/*html' => sub {
     my $c = shift;
     return manage_machine($c);
