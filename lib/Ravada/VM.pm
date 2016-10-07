@@ -82,6 +82,14 @@ sub domain_remove {
     $self->_domain_remove_bd();
 }
 
+=head2 name
+
+Returns the name of this Virtual Machine Manager
+
+    my $name = $vm->name();
+
+=cut
+
 sub name {
     my $self = shift;
 
