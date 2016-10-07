@@ -179,7 +179,7 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
-any '/messages' => sub {
+any '/messages.html' => sub {
     my $c = shift;
 
     return access_denied($c) if !_logged_in($c);
@@ -187,7 +187,7 @@ any '/messages' => sub {
     return messages($c);
 };
 
-get '/messagess.json' => sub {
+get '/messages.json' => sub {
     my $c = shift;
 
     return $c->redirect_to('/login') if !_logged_in($c);
@@ -195,7 +195,15 @@ get '/messagess.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
-get '/messages/*.html' => sub {
+get '/messages/read/*.html' => sub {
+    my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    $USER->mark_message_read($id);
+    return $c->redirect_to("/messages.html");
+};
+
+get '/messages/view/*.html' => sub {
     my $c = shift;
 
     return $c->redirect_to('/login') if !_logged_in($c);

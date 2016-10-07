@@ -122,7 +122,7 @@
 // list messages
     function messagesCrtl($scope, $http, request, listMess) {
 
-        $http.get('/messagess.json').then(function(response) {
+        $http.get('/messages.json').then(function(response) {
                 $scope.list_message= response.data;
         });
 
@@ -141,7 +141,7 @@
 
     function gtListMess($resource){
 
-        return $resource('/messagess.json',{},{
+        return $resource('/messages.json',{},{
             get:{isArray:true}
         });
 

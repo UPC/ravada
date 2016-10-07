@@ -22,7 +22,7 @@
                         <div ng-show="{{message.date_read != null}}">{{message.date_send}}</div></td>
 
                     <td>
-                        <a ng-show="{{message.date_read == null}}" href="messages/{{message.id}}.html" class="btn btn-success">Mark as Read</a>
+                        <a ng-show="{{message.date_read == null}}" href="/messages/read/{{message.id}}.html" class="btn btn-success">Mark as Read</a>
 
                         <button class="btn btn-info">View</button>
                     </td>

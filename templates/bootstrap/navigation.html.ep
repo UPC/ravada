@@ -12,7 +12,7 @@
                 </li>
 % if (defined $_user ) {
                 <li>
-                    <a href="/messages/">
+                    <a href="/messages.html">
 %                   if ($_user->unread_messages) {
                         <i class="fa fa-fw fa-bell"></i>
                         <b>NEW </b>
