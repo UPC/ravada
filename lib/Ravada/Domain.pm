@@ -152,11 +152,6 @@ sub id {
     return $_[0]->_data('id');
 
 }
-sub file_base_img {
-    my $file;
-    eval { $file = $_[0]->_data('file_base_img') };
-    return $file ;
-}
 
 ##################################################################################
 
