@@ -335,7 +335,7 @@ sub shutdown {
     my $req = $args{req};
     my $timeout = ($args{timeout} or $TIMEOUT_SHUTDOWN);
 
-    if (!$self->is_active) {
+    if (!$self->is_active && !$args{force}) {
         $req->status("done")                if $req;
         $req->error("Domain already down")  if $req;
         return;

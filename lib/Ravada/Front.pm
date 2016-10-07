@@ -192,10 +192,7 @@ sub search_domain {
     my $vm = $self->open_vm($vm_name);
     my $domain = $vm->search_domain($name);
 
-    $row->{is_active} = $domain->is_active if $domain;
-
-    lock_hash(%$row);
-    return $row;
+    return $domain;
 }
 
 =head2 list_requests

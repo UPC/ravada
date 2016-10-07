@@ -171,6 +171,7 @@ sub search_domain {
             $domain = Ravada::Domain::KVM->new(
                 domain => $_
                 ,storage => $self->storage_pool
+                ,readonly => $self->readonly
             );
         };
         warn $@ if $@;

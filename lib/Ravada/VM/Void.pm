@@ -76,7 +76,10 @@ sub search_domain {
     for my $name_vm ( $self->list_domains ) {
         next if $name_vm ne $name;
 
-        my $domain = Ravada::Domain::Void->new( domain => $name);
+        my $domain = Ravada::Domain::Void->new( 
+            domain => $name
+            ,readonly => $self->readonly
+        );
         my $id;
 
         eval { $id = $domain->id };

@@ -37,6 +37,11 @@ has 'timeout_shutdown' => (
     ,default => $TIMEOUT_SHUTDOWN
 );
 
+has 'readonly' => (
+    isa => 'Int'
+    ,is => 'ro'
+    ,default => 0
+);
 
 ##################################################################################3
 #
@@ -56,7 +61,14 @@ before 'remove' => \&_allow_remove;
 before 'prepare_base' => \&_allow_prepare_base;
  after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
 
-# TODO _check_readonly
+before 'start' => \&_allow_manage;
+before 'shutdown' => \&_allow_manage;
+
+sub _allow_manage {
+    my $self = shift;
+    confess "Disabled from read only connection"
+        if $self->readonly;
+}
 
 sub _allow_remove {
     my $self = shift;

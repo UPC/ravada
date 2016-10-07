@@ -99,9 +99,9 @@ for my $vm_name ('kvm','lxc') {
     my $domain  = $RVD_FRONT->search_domain($name);
 
     ok($domain,"Domain $name not found") or exit;
-    ok($domain && $domain->{name} && 
-        $domain->{name} eq $name,"Expecting domain name $name, got "
-        .($domain->{name} or '<UNDEF>'));
+    ok($domain && $domain->name && 
+        $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
+        .($domain->name or '<UNDEF>'));
 
     $RVD_FRONT->start_domain($name);
     $RVD_FRONT->wait_request($req,10);
