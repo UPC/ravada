@@ -1,6 +1,17 @@
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(1,'Debian Jessie 32 bits netinst'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('DSL 4.11 rc2'
+    ,'Damn Small Linux 4.11 rc2'
+    ,'i386'
+    ,'dsl-i386.xml'
+    ,'dsl-volume.xml'
+    ,'http://distro.ibiblio.org/damnsmall/release_candidate/dsl-4.11.rc2.iso'
+    ,'4b61c7892eefc23b71d4931bdcc3f1f1'
+);
+
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Debian Jessie 32 bits netinst'
     ,'Debian 8.5.0 Jessie 32 bits (netsinst)'
     ,'i386'
     ,'jessie-i386.xml'
@@ -11,8 +22,8 @@ VALUES(1,'Debian Jessie 32 bits netinst'
 
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(2,'Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
     ,'trusty-i386.xml'
     ,'trusty-volume.xml'
@@ -21,8 +32,8 @@ VALUES(2,'Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
 	);
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
     ,'xenial-volume.xml'
@@ -31,8 +42,8 @@ VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
 );
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(4,'Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
         ,'amd64'
         ,'xenial64-amd64.xml'
         ,'xenial64-volume.xml'
