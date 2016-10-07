@@ -283,7 +283,6 @@ sub display {
     my $self = shift;
 
     if (!$self->is_active ) {
-        warn "starting";
         $self->start ;
     }
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
