@@ -148,6 +148,14 @@ sub _allowed {
 
 }
 ##################################################################################3
+=head2 id
+
+Returns the id of  the domain
+
+    my $id = $domain->id();
+
+=cut
+
 sub id {
     return $_[0]->_data('id');
 
