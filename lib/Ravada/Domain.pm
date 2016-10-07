@@ -95,16 +95,19 @@ sub _check_disk_modified {
     if ( !$self->is_base() ) {
         return;
     }
-    my $file_base = $self->file_base_img;
-    confess "Missing file_base_img" if !$file_base;
 
-    my @stat_base = stat($file_base);
+    my $last_stat_base = 0;
+    for my $file_base ( $self->list_files_base ) {
+        my @stat_base = stat($file_base);
+        $last_stat_base = $stat_base[9] if$stat_base[9] > $last_stat_base;
+#        warn $last_stat_base;
+    }
     
     my $files_updated = 0;
     for my $file ( $self->disk_device ) {
         my @stat = stat($file) or next;
-        $files_updated++ if $stat[9] > $stat_base[9];
-#        warn "\ncheck\t$file ".$stat[9]."\n vs \t$file_base ".$stat_base[9]." $files_updated\n";
+        $files_updated++ if $stat[9] > $last_stat_base;
+#        warn "\ncheck\t$file ".$stat[9]."\n vs \tfile_base $last_stat_base $files_updated\n";
     }
     die "Base already created and no disk images updated"
         if !$files_updated;

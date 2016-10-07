@@ -72,10 +72,10 @@ sub test_prepare_base {
         .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
-    my $disk = $domain->disk_device();
+    my @disk = $domain->disk_device();
     $domain->shutdown;
 
-    touch_mtime($disk);
+    touch_mtime(@disk);
 
     eval { $domain->prepare_base( $USER) };
     ok(!$@,"Trying to prepare base again failed, it should have worked. ");
@@ -90,7 +90,7 @@ sub test_prepare_base {
         ,vm => $vm_name
     );
     ok($domain_clone);
-    touch_mtime($disk);
+    touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
     ok($@ && $@ =~ /has \d+ clones/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
@@ -98,23 +98,24 @@ sub test_prepare_base {
 
     $domain_clone->remove($USER);
 
+    touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
+
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base);
 }
 
 sub touch_mtime {
-    my $disk = shift;
+    for my $disk (@_) {
 
-    my @stat0 = stat($disk);
+        my @stat0 = stat($disk);
 
-    sleep 2;
-    open my $touch,'>>',$disk or die "$! $disk";
-    print $touch " ";
-    close $touch;
-    my @stat1 = stat($disk);
+        sleep 2;
+        utime(undef, undef, $disk) or die "$! $disk";
+        my @stat1 = stat($disk);
 
-    die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
+        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
+    }
 
 }
 
