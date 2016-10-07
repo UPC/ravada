@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+
+        <!--BASES AND DOMAINS LIST-->
+        <div ng-controller="messages">
+            <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2>Messages 
+                        
+                        <button id="newMButton" style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+
+                        </h2>
+                    </div>
+                    <sol-show-messages></sol-show-messages>
+                    
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
+
