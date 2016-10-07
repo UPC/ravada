@@ -51,7 +51,7 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 before 'display' => \&_allowed;
 
 before 'remove' => \&_allow_remove;
- after 'remove' => \&_remove_domain_db;
+ after 'remove' => \&_after_remove_domain;
 
 before 'prepare_base' => \&_allow_prepare_base;
  after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
@@ -247,6 +247,12 @@ sub _insert_db {
 
 }
 
+sub _after_remove_domain {
+    my $self = shift;
+    $self->_remove_files_base();
+    $self->_remove_domain_db();
+}
+
 sub _remove_domain_db {
     my $self = shift;
 
@@ -255,6 +261,14 @@ sub _remove_domain_db {
         ." WHERE id=?");
     $sth->execute($self->id);
     $sth->finish;
+}
+
+sub _remove_files_base {
+    my $self = shift;
+
+    for my $file ( $self->list_files_base ) {
+        unlink $file or die "$! $file" if -e $file;
+    }
 }
 
 
@@ -312,6 +326,11 @@ sub clones {
 
 sub list_files_base {
     my $self = shift;
+
+    my $id;
+    eval { $id = $self->id };
+    return if $@ && $@ =~ /No DB info/i;
+    die $@ if $@;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img "
         ." FROM file_base_images "

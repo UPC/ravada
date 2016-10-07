@@ -70,6 +70,9 @@ sub _remove_old_domains_vm {
         eval {
             $domain->remove( $USER_ADMIN );
         };
+        if ( $@ && $@ =~ /No DB info/i ) {
+            eval { $domain->domain->undefine() if $domain->domain };
+        }
         ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
     }
 

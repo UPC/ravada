@@ -92,6 +92,11 @@ sub remove_disks {
     my $self = shift;
 
     my $removed = 0;
+
+    my $id;
+    eval { $id = $self->id };
+    return if $@ && $@ =~ /No DB info/i;
+    die $@ if $@;
     for my $file ($self->list_disks) {
         if (! -e $file ) {
             warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
@@ -131,8 +136,6 @@ sub _vol_remove {
 
 Removes this domain. It removes also the disk drives and base images.
 
-TODO: check if it is base for other domains, and refuse if it is.
-
 =cut
 
 sub remove {
@@ -143,17 +146,16 @@ sub remove {
 
     $self->domain->destroy   if $self->domain->is_active();
 
-    eval { $self->remove_disks() };
-    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
+    $self->remove_disks();
+#    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
-    eval { $self->_remove_file_image() };
-    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
+    $self->_remove_file_image();
+#    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
     $self->domain->undefine();
-    eval { $self->_remove_file_image() };
 }
 
 
@@ -483,10 +485,6 @@ sub _new_pci_slot{
 sub list_volumes {
     my $self = shift;
     return $self->disk_device();
-}
-
-sub file_base_img {
-    confess "DEPRECATED";
 }
 
 1;
