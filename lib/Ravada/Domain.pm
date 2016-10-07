@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(confess croak cluck);
 use Data::Dumper;
+use JSON::XS;
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -360,4 +361,19 @@ sub list_files_base {
     return @files;
 }
 
+=head2 json
+
+Returns the domain information as json
+
+=cut
+
+sub json {
+    my $self = shift;
+
+    my $id = $self->_data('id');
+    my $data = $self->{_data};
+    $data->{is_active} = $self->is_active;
+
+    return encode_json($data);
+}
 1;

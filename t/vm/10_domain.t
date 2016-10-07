@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use JSON::XS;
 use Test::More;
 use Test::SQL::Data;
 
@@ -81,6 +82,14 @@ sub test_create_domain {
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
         ." for VM $vm_name"
+    );
+
+    my $json = $domain->json();
+    ok($json);
+    my $dec_json = decode_json($json);
+    ok($dec_json->{name} && $dec_json->{name} eq $domain->name 
+        ,"[$vm_name] expecting json->{name} = '".$domain->name."'"
+        ." , got ".($dec_json->{name} or '<UNDEF>')." for json ".Dumper($dec_json)
     );
 
     return $domain;
