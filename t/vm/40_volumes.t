@@ -66,7 +66,7 @@ sub test_add_volume {
 
     my @volumes = $domain->list_volumes();
 
-    diag("[".$domain->vm."] adding volume $volume_name to domain ".$domain->name);
+#    diag("[".$domain->vm."] adding volume $volume_name to domain ".$domain->name);
 
     $domain->add_volume(name => $domain->name.".$volume_name", size => 1024 , vm => $vm);
 
@@ -82,7 +82,7 @@ sub test_prepare_base {
     my $domain = shift;
 
     my @volumes = $domain->list_volumes();
-    diag("[$vm_name] preparing base for domain ".$domain->name);
+#    diag("[$vm_name] preparing base for domain ".$domain->name);
     my @img;
     eval {@img = $domain->prepare_base( $USER) };
     ok(!$@, $@);
@@ -103,7 +103,7 @@ sub test_clone {
     my @volumes = $domain->list_volumes();
 
     my $name_clone = new_domain_name();
-    diag("[$vm_name] going to clone from ".$domain->name);
+#    diag("[$vm_name] going to clone from ".$domain->name);
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
@@ -118,7 +118,27 @@ sub test_clone {
     ok(scalar @volumes_clone == scalar @volumes
         ,"[$vm_name] Expecting ".scalar @volumes." volumes, got ".scalar(@volumes));
 
+    my %volumes_clone = map { $_ => 1 } @volumes_clone ;
+
+    ok(scalar keys %volumes_clone == scalar @volumes_clone
+        ,"check duplicate files cloned ".join(",",sort keys %volumes_clone)." <-> "
+        .join(",",sort @volumes_clone));
+
     return $domain_clone;
+}
+
+sub test_files_base {
+    my ($vm_name, $domain, $volumes) = @_;
+    my @files_base= $domain->list_files_base();
+    ok(scalar @files_base == scalar @$volumes, "[$vm_name] Domain ".$domain->name
+            ." expecting ".scalar @$volumes." files base, got ".scalar(@files_base)) or exit;
+
+    my %files_base = map { $_ => 1 } @files_base;
+
+    ok(scalar keys %files_base == scalar @files_base
+        ,"check duplicate files base ".join(",",sort keys %files_base)." <-> "
+        .join(",",sort @files_base));
+
 }
 
 #######################################################################33
@@ -164,12 +184,10 @@ for my $vm_name (reverse sort @VMS) {
             ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
 
         test_prepare_base($vm_name, $domain2);
-        my @files_base= $domain2->list_files_base();
-        ok(scalar @files_base == scalar @volumes, "[$vm_name] Domain ".$domain2->name
-            ." expecting ".scalar @volumes." files base, got ".scalar(@files_base)) or exit;
-
+        test_files_base($vm_name, $domain2, \@volumes);
 
         my $domain2_clone = test_clone($vm_name, $domain2);
+        
         test_add_volume($vm, $domain2, 'vdc');
 
         @volumes = $domain2->list_volumes;
