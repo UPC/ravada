@@ -70,6 +70,9 @@ sub list_domains {
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        my $domain ;
+        eval { $domain   = $self->search_domain($row->{name}) };
+        $row->{is_active} = 1 if $domain && $domain->is_active;
         push @domains, ($row);
     }
     $sth->finish;
