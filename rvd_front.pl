@@ -136,6 +136,8 @@ get '/machine/info/*.json' => sub {
 
 get '/machine/manage/*html' => sub {
     my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+
     return manage_machine($c);
 };
 
@@ -549,8 +551,21 @@ sub manage_machine {
     if (!$domain) {
         return $c->render(text => "Domain no found");
     }
-    $c->render(text => "TODO : ".Dumper($domain));
+    return access_denied($c)    if $domain->{id_owner} != $USER->id
+        || !$USER->is_admin;
+
+    $c->stash(domain => $domain);
+    _enable_buttons($c, $domain);
+    $c->render( template => 'bootstrap/manage_machine');
 }
+
+sub _enable_buttons {
+    my $c = shift;
+    my $domain = shift;
+    $c->stash(_shutdown_disabled => '');
+    $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
+}
+
 sub view_machine {
     my $c = shift;
     my $domain = shift;
