@@ -167,7 +167,7 @@ sub _create_vm {
 
 }
 
-sub check_vms {
+sub _check_vms {
     my $self = shift;
 
     my @vm;
@@ -431,7 +431,9 @@ sub list_images_data {
 }
 
 
-sub list_images_lxc {
+=pod
+
+sub _list_images_lxc {
     my $self = shift;
     my @domains;
     my $sth = $CONNECTOR->dbh->prepare(
@@ -445,13 +447,7 @@ sub list_images_lxc {
     return @domains;
 }
 
-=head2 list_images_data
-
-List information about the images
-
-=cut
-
-sub list_images_data_lxc {
+sub _list_images_data_lxc {
     my $self = shift;
     my @data;
     for ($self->list_images_lxc ) {
@@ -460,7 +456,7 @@ sub list_images_data_lxc {
     return \@data;
 }
 
-
+=cut
 
 =head2 remove_volume
 
@@ -505,7 +501,7 @@ sub process_requests {
     $dont_fork = 1 if !$CAN_FORK;
 
     $self->_wait_pids_nohang();
-    $self->check_vms();
+    $self->_check_vms();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
         ." WHERE status='requested' OR status like 'retry %'");
