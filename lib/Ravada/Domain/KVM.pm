@@ -483,6 +483,15 @@ sub _new_pci_slot{
 #    warn "Builder KVM.pm";
 #}
 
+=head2 list_volumes
+
+Returns a list of the disk volumes. Each element of the list is a string with the filename.
+For KVM it reads from the XML definition of the domain.
+
+    my @volumes = $domain->list_volumes();
+
+=cut
+
 sub list_volumes {
     my $self = shift;
     return $self->disk_device();
