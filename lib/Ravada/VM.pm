@@ -69,6 +69,13 @@ sub _domain_remove_db {
     $sth->finish;
 }
 
+=head2 domain_remove
+
+Remove the domain. Returns nothing.
+
+=cut
+
+
 sub domain_remove {
     my $self = shift;
     $self->domain_remove_vm();
