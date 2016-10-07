@@ -99,7 +99,8 @@ sub remove_disks {
     die $@ if $@;
     for my $file ($self->list_disks) {
         if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->domain->get_name."\n";
+            warn "WARNING: $file already removed for ".$self->domain->get_name."\n"
+                if $0 !~ /.t$/;
             next;
         }
         $self->_vol_remove($file);
