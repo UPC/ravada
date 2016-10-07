@@ -31,7 +31,7 @@ VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
 );
 
 INSERT INTO iso_images
-(id,name,description,arch,url,md5)
+(id,name,description,arch,xml,xml_volume,url,md5)
 VALUES(4,'Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
         ,'amd64'
         ,'xenial64-amd64.xml'
