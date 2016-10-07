@@ -195,6 +195,13 @@ get '/messages.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
+get '/messages/read/all.html' => sub {
+    my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+    $USER->mark_all_messages_read;
+    return $c->redirect_to("/messages.html");
+};
+
 get '/messages/read/*.html' => sub {
     my $c = shift;
     return $c->redirect_to('/login') if !_logged_in($c);

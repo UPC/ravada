@@ -15,6 +15,9 @@
                         
                         <button id="newMButton" style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
 
+                        <a style="float: right; margin: 0 10px;" href="/messages/read/all.html" class="btn btn-succes"><i class="fa fa-envelope-o" aria-hidden="true"></i>
+Mark all as Read</a>
+
                         </h2>
                     </div>
                     <sol-show-messages></sol-show-messages>

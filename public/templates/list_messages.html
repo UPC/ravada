@@ -13,7 +13,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="message in list_message">
+                <tr ng-repeat="message in list_message | orderBy:date_send">
                     <td><div ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
                         <div ng-show="{{message.date_read != null}}">{{message.subject}}</div>
                     </td>
