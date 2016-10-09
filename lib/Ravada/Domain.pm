@@ -48,6 +48,7 @@ has 'readonly' => (
 #
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
+$CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
 
 ##################################################################################3
 #
@@ -88,7 +89,6 @@ sub _allow_prepare_base {
     $self->_check_disk_modified();
     $self->_check_has_clones();
 
-    $self->shutdown();
     $self->is_base(0);
 };
 
