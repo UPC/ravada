@@ -152,6 +152,7 @@ sub _create_vm {
     my @vms = ();
 
     my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
+    warn $err_kvm if $err_kvm;
 
     push @vms,($vm_kvm) if $vm_kvm;
 

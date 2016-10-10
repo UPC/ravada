@@ -9,6 +9,9 @@ use JSON::XS;
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
+our $CONNECTOR;
+
+_init_connector();
 
 requires 'name';
 requires 'remove';
@@ -47,7 +50,6 @@ has 'readonly' => (
 ##################################################################################3
 #
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################################################3
 #
@@ -88,7 +90,6 @@ sub _allow_prepare_base {
     $self->_check_disk_modified();
     $self->_check_has_clones();
 
-    $self->shutdown();
     $self->is_base(0);
 };
 
@@ -148,21 +149,33 @@ sub _allowed {
 
 }
 ##################################################################################3
+
+sub _init_connector {
+    $CONNECTOR = \$Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
+}
+
+=head2 id
+
+Returns the id of  the domain
+
+    my $id = $domain->id();
+
+=cut
+
 sub id {
     return $_[0]->_data('id');
 
 }
-sub file_base_img {
-    my $file;
-    eval { $file = $_[0]->_data('file_base_img') };
-    return $file ;
-}
+
 
 ##################################################################################
 
 sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
+
+    _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
@@ -239,6 +252,8 @@ sub _prepare_base_db {
 sub _insert_db {
     my $self = shift;
     my %field = @_;
+
+    _init_connector();
 
     for (qw(name id_owner)) {
         confess "Field $_ is mandatory ".Dumper(\%field)
@@ -329,6 +344,9 @@ Returns a list of clones from this virtual machine
 
 sub clones {
     my $self = shift;
+
+    _init_connector();
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
             ." WHERE id_base = ?");
     $sth->execute($self->id);

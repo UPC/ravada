@@ -287,7 +287,7 @@ sub _domain_create_from_iso {
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
     _xml_modify_cdrom($xml, $device_cdrom);
-    _xml_modify_disk($xml, $device_disk)    if $device_disk;
+    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
@@ -372,7 +372,7 @@ sub _domain_create_from_base {
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
-    _xml_modify_disk($xml, @device_disk);
+    _xml_modify_disk($xml, \@device_disk);
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
     _xml_modify_spice_port($xml);
@@ -622,12 +622,13 @@ sub _xml_modify_disk {
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
 
-        die "ERROR: base disks only can have one device" if $cont++>1;
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'driver') {
                 $child->setAttribute(type => 'qcow2');
             } elsif ($child->nodeName eq 'source') {
-                $child->setAttribute(file => $device);
+                my $new_device = $device->[$cont++] or confess "Missing device $cont "
+                    .Dumper($device);
+                $child->setAttribute(file => $new_device);
             }
         }
     }
@@ -693,14 +694,17 @@ sub _init_ip {
     my $ip = inet_ntoa(inet_aton($name)) 
         or die "CRITICAL: I can't find IP of $name in the DNS.\n";
 
-    if ($ip =~ /^127./) {
+    if (!$ip || $ip =~ /^127./) {
         #TODO Net:DNS
         $ip= `host $name`;
         chomp $ip;
         $ip =~ s/.*?address (\d+)/$1/;
     }
-    die "I can't find IP with hostname $name ( $ip )\n"
-        if !$ip || $ip =~ /^127./;
+    if ( !$ip || $ip =~ /^127./ || $ip !~ /^\d+\..*\.\d+$/) {
+        warn "WARNING: I can't find IP with hostname $name ( $ip )"
+            .", using localhost\n";
+        $ip='127.0.0.1';
+    }
 
     return $ip;
 }

@@ -129,7 +129,6 @@ sub _vol_remove {
 sub remove_disks {
     my $self = shift;
     my @files = $self->list_disks;
-    push @files, $self->file_base_img() if $self->file_base_img;
     for my $file (@files) {
         next if ! -e $file;
         $self->_vol_remove($file);

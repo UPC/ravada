@@ -135,7 +135,7 @@ sub create_domain {
 
 sub wait_request {
     my $self = shift;
-    my $req = shift;
+    my $req = shift or confess "Missing request";
 
     my $timeout = ( shift or $TIMEOUT );
 
@@ -244,7 +244,7 @@ sub search_domain_by_id {
 
     lock_hash(%$row);
 
-    return $row;
+    return $self->search_domain($row->{name});
 }
 
 sub domdisplay {
