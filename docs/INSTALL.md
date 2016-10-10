@@ -23,6 +23,7 @@ Clone the sources:
 - libmoose-perl
 - libjson-xs-perl
 - qemu-utils
+- virt-manager
 
 
 ##Old debian
