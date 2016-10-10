@@ -90,6 +90,7 @@ sub test_start {
     $RAVADA->process_requests();
 
     ok($req2->status eq 'done');
+    $domain->start()    if !$domain->is_active();
 
     ok($domain->is_active);
 
@@ -117,6 +118,9 @@ sub test_start {
 
 ###############################################################
 #
+
+remove_old_domains();
+remove_old_disks();
 
 my $vmm;
 
