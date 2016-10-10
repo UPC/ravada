@@ -511,6 +511,19 @@ sub show_link {
 
     return access_denied($c) if $USER->id != $domain->id_owner;
 
+    if ( !$domain->is_active ) {
+        my $req = Ravada::Request->start_domain($domain->name);
+
+        $RAVADA->wait_request($req);
+        warn "ERROR: ".$req->error if $req->error();
+
+        return $c->render(data => 'ERROR starting domain '.$req->error)
+            if $req->error && $req->error !~ /already running/i;
+
+        return $c->redirect_to("/request/".$req->id.".html")
+            if !$req->status eq 'done';
+    }
+
     my $uri = $domain->display($USER);
     if (!$uri) {
         my $name = '';

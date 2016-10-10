@@ -135,7 +135,7 @@ sub create_domain {
 
 sub wait_request {
     my $self = shift;
-    my $req = shift;
+    my $req = shift or confess "Missing request";
 
     my $timeout = ( shift or $TIMEOUT );
 
