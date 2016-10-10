@@ -9,6 +9,9 @@ use JSON::XS;
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
+our $CONNECTOR;
+
+_init_connector();
 
 requires 'name';
 requires 'remove';
@@ -47,8 +50,6 @@ has 'readonly' => (
 ##################################################################################3
 #
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
-$CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
 
 ##################################################################################3
 #
@@ -150,8 +151,8 @@ sub _allowed {
 ##################################################################################3
 
 sub _init_connector {
-	$CONNECTOR = \$Ravada::CONNECTOR;
-	$CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
+    $CONNECTOR = \$Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
 }
 
 =head2 id
@@ -167,11 +168,14 @@ sub id {
 
 }
 
+
 ##################################################################################
 
 sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
+
+    _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
@@ -340,6 +344,9 @@ Returns a list of clones from this virtual machine
 
 sub clones {
     my $self = shift;
+
+    _init_connector();
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
             ." WHERE id_base = ?");
     $sth->execute($self->id);
