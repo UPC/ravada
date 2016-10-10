@@ -244,7 +244,7 @@ sub search_domain_by_id {
 
     lock_hash(%$row);
 
-    return $row;
+    return $self->search_domain($row->{name});
 }
 
 sub domdisplay {
