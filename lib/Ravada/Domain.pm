@@ -48,6 +48,7 @@ has 'readonly' => (
 #
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
+$CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
 
 ##################################################################################3
 #
