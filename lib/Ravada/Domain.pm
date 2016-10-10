@@ -148,6 +148,12 @@ sub _allowed {
 
 }
 ##################################################################################3
+
+sub _init_connector {
+	$CONNECTOR = \$Ravada::CONNECTOR;
+	$CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
+}
+
 =head2 id
 
 Returns the id of  the domain
@@ -242,6 +248,8 @@ sub _prepare_base_db {
 sub _insert_db {
     my $self = shift;
     my %field = @_;
+
+    _init_connector();
 
     for (qw(name id_owner)) {
         confess "Field $_ is mandatory ".Dumper(\%field)
