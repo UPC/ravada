@@ -312,15 +312,23 @@ Returns true or  false if the domain is a prepared base
 sub is_base { 
     my $self = shift;
     my $value = shift;
-
-    $self->_data('is_base',$value)  if defined $value;
-
+    
     $self->_select_domain_db or return 0;
 
-    return 0 if $self->_data('is_base') =~ /n/i;
-    return $self->_data('is_base');
-};
+    if (defined $value ) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE domains SET is_base=? "
+            ." WHERE id=?");
+        $sth->execute($value, $self->id );
+        $sth->finish;
 
+        return $value;
+    }
+    my $ret = $self->_data('is_base');
+    $ret = 0 if $self->_data('is_base') =~ /n/i;
+    
+    return $ret;
+};
 
 sub id_owner {
     my $self = shift;
