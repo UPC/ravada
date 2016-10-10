@@ -9,6 +9,9 @@ use JSON::XS;
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
+our $CONNECTOR;
+
+_init_connector();
 
 requires 'name';
 requires 'remove';
@@ -47,8 +50,6 @@ has 'readonly' => (
 ##################################################################################3
 #
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
-$CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
 
 ##################################################################################3
 #
@@ -148,6 +149,12 @@ sub _allowed {
 
 }
 ##################################################################################3
+
+sub _init_connector {
+    $CONNECTOR = \$Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
+}
+
 =head2 id
 
 Returns the id of  the domain
@@ -161,11 +168,14 @@ sub id {
 
 }
 
+
 ##################################################################################
 
 sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
+
+    _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
@@ -243,6 +253,8 @@ sub _insert_db {
     my $self = shift;
     my %field = @_;
 
+    _init_connector();
+
     for (qw(name id_owner)) {
         confess "Field $_ is mandatory ".Dumper(\%field)
             if !exists $field{$_};
@@ -299,12 +311,24 @@ Returns true or  false if the domain is a prepared base
 
 sub is_base { 
     my $self = shift;
+    my $value = shift;
+    
     $self->_select_domain_db or return 0;
 
-    return 0 if $self->_data('is_base') =~ /n/i;
-    return $self->_data('is_base');
-};
+    if (defined $value ) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE domains SET is_base=? "
+            ." WHERE id=?");
+        $sth->execute($value, $self->id );
+        $sth->finish;
 
+        return $value;
+    }
+    my $ret = $self->_data('is_base');
+    $ret = 0 if $self->_data('is_base') =~ /n/i;
+    
+    return $ret;
+};
 
 sub id_owner {
     my $self = shift;
@@ -332,6 +356,9 @@ Returns a list of clones from this virtual machine
 
 sub clones {
     my $self = shift;
+
+    _init_connector();
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
             ." WHERE id_base = ?");
     $sth->execute($self->id);

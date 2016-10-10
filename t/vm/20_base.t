@@ -103,7 +103,14 @@ sub test_prepare_base {
     eval { $domain->prepare_base($USER) };
 
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
-    ok($domain->is_base);
+    ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
+
+    $domain->is_base(0);
+    ok(!$domain->is_base,"[$vm_name] Expecting domain is_base=0 , got :".$domain->is_base);
+
+    $domain->is_base(1);
+    ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
+
 }
 
 sub touch_mtime {

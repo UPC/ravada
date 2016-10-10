@@ -470,14 +470,6 @@ sub base_id {
     return $base->id;
 }
 
-sub find_uri {
-    my $host = shift;
-    my $url = `virsh domdisplay $host`;
-    warn $url;
-    chomp $url;
-    return $url;
-}
-
 sub provision {
     my $c = shift;
     my $id_base = shift;
@@ -517,7 +509,22 @@ sub show_link {
 
     confess "Domain is not a ref $domain " if !ref $domain;
 
-    my $uri = $RAVADA->domdisplay($domain->name, $USER) if $domain;
+    return access_denied($c) if $USER->id != $domain->id_owner;
+
+    if ( !$domain->is_active ) {
+        my $req = Ravada::Request->start_domain($domain->name);
+
+        $RAVADA->wait_request($req);
+        warn "ERROR: ".$req->error if $req->error();
+
+        return $c->render(data => 'ERROR starting domain '.$req->error)
+            if $req->error && $req->error !~ /already running/i;
+
+        return $c->redirect_to("/request/".$req->id.".html")
+            if !$req->status eq 'done';
+    }
+
+    my $uri = $domain->display($USER);
     if (!$uri) {
         my $name = '';
         $name = $domain->name if $domain;
