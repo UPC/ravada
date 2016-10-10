@@ -151,6 +151,11 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
+    $args{path} = "$DIR_TMP/".$self->name.".$args{name}.img"
+        if !$args{path};
+
+    return if -e $args{path};
+
     my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
 
     for my $arg_name (keys %args) {
@@ -160,8 +165,6 @@ sub add_volume {
     confess "Missing name " if !$args{name};
 #    TODO
 #    confess "Missing size " if !$args{size};
-    $args{path} = "$DIR_TMP/".$self->name.".$args{name}.img"
-        if !$args{path};
 
     my $data = { };
     $data = LoadFile($self->disk_device) if -e $self->disk_device;
