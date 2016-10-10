@@ -301,11 +301,13 @@ sub quick_start {
 
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
+
+    confess "Missing id_base" if !defined $id_base;
     $name = $c->session('login')    if !$name;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
-    my $domain_name = $base->{name}."-".$name;
+    my $domain_name = $base->name."-".$name;
 
     my $domain = $RAVADA->search_domain($domain_name);
     $domain = provision($c,  $id_base,  $domain_name)
@@ -511,19 +513,19 @@ sub provision {
 
 sub show_link {
     my $c = shift;
-    my $domain = shift;# or confess "Missing domain";
+    my $domain = shift or confess "Missing domain";
 
     confess "Domain is not a ref $domain " if !ref $domain;
 
-    my $uri = $RAVADA->domdisplay($domain->{name}, $USER) if $domain;
+    my $uri = $RAVADA->domdisplay($domain->name, $USER) if $domain;
     if (!$uri) {
         my $name = '';
-        $name = $domain->{name} if $domain;
-        $c->render(template => 'fail', name => $domain->{name});
+        $name = $domain->name if $domain;
+        $c->render(template => 'fail', name => $domain->name);
         return;
     }
     $c->redirect_to($uri);
-    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->{name}
+    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
 
@@ -559,7 +561,7 @@ sub manage_machine {
     if (!$domain) {
         return $c->render(text => "Domain no found");
     }
-    return access_denied($c)    if $domain->{id_owner} != $USER->id
+    return access_denied($c)    if $domain->id_owner != $USER->id
         || !$USER->is_admin;
 
     $c->stash(domain => $domain);
@@ -589,7 +591,7 @@ sub clone_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
-    return quick_start_domain($c, $base->{id});
+    return quick_start_domain($c, $base->id);
 }
 
 sub shutdown_machine {
@@ -597,7 +599,7 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain($base->{name});
+    my $req = Ravada::Request->shutdown_domain($base->name);
 
     return $c->redirect_to('/machines');
 }
@@ -609,7 +611,7 @@ sub remove_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->remove_domain(
-        name => $domain->{name}
+        name => $domain->name
         ,uid => $USER->id
     );
 
@@ -623,7 +625,7 @@ sub prepare_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->prepare_base(
-        name => $domain->{name}
+        name => $domain->name
         ,uid => $USER->id
     );
 
