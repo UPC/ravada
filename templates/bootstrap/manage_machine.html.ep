@@ -11,9 +11,10 @@
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2><%= $domain->{name} %></h2>
+                        <h2>Virtual Machine <%= $domain->name %></h2>
                     </div>
                     <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
+                    <a href="/machine/remove/<%= $domain->id %>.html">Remove</a>
                     
                 </div>
             </div>

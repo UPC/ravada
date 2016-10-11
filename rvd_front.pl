@@ -155,7 +155,7 @@ get '/machine/shutdown/*.html' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
-get '/machine/remove/*.html' => sub {
+any '/machine/remove/*.html' => sub {
         my $c = shift;
         return remove_machine($c);
 };
@@ -219,6 +219,7 @@ get '/messages/view/*.html' => sub {
 sub _logged_in {
     my $c = shift;
 
+    confess "missing \$c" if !defined $c;
     $USER = undef;
 
     my $login = $c->session('login');
@@ -430,37 +431,12 @@ sub _show_request {
 sub _search_req_base_error {
     my $name = shift;
 }
+
 sub access_denied {
     
-
     my $c = shift;
 
-    return quick_start($c)    if _logged_in($c);
-
-    my $login = $c->param('login');
-    my $password = $c->param('password');
-    my @error =();
-    if ($c->param('submit') && $login) {
-        push @error,("Empty login name")  if !length $login;
-        push @error,("Empty password")  if !length $password;
-    }
-
-    if ( $login && $password ) {
-        my $auth_ok;
-        eval { $auth_ok = Ravada::Auth::login($login, $password)};
-        if ( $auth_ok) {
-            $c->session('login' => $login);
-            return quick_start($c);
-        } else {
-            warn $@ if $@;
-            push @error,("Access denied");
-        }
-    }
-    $c->render(
-                    template => 'bootstrap/start' 
-                      ,login => $login 
-                      ,error => \@error
-    );
+    return $c->render(text => 'Access denied to '.$c->req->url->to_abs->path.' for user '.$USER->name);
 }
 
 sub base_id {
@@ -569,7 +545,7 @@ sub manage_machine {
         return $c->render(text => "Domain no found");
     }
     return access_denied($c)    if $domain->id_owner != $USER->id
-        || !$USER->is_admin;
+        && !$USER->is_admin;
 
     $c->stash(domain => $domain);
     _enable_buttons($c, $domain);
@@ -611,7 +587,7 @@ sub shutdown_machine {
     return $c->redirect_to('/machines');
 }
 
-sub remove_machine {
+sub _do_remove_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
 
@@ -624,6 +600,24 @@ sub remove_machine {
 
     return $c->redirect_to('/machines');
 }
+
+sub remove_machine {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+    return _do_remove_machine($c,@_)   if $c->param('sure') && $c->param('sure') =~ /y/i;
+
+    return $c->redirect_to('/machines')   if $c->param('sure')
+                                            || $c->param('cancel');
+
+    my $domain = _search_requested_machine($c);
+    return $c->render( text => "Domain not found")  if !$domain;
+    $c->stash(domain => $domain );
+
+    warn "found domain ".$domain->name;
+
+    return $c->render( template => 'bootstrap/remove_machine' );
+}
+
 
 sub prepare_machine {
     my $c = shift;
