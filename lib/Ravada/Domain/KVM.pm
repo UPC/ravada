@@ -281,9 +281,6 @@ Returns the display URI
 sub display {
     my $self = shift;
 
-    if (!$self->is_active ) {
-        $self->start ;
-    }
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics') 
         or die "ERROR: I can't find graphic";
