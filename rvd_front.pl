@@ -488,7 +488,7 @@ sub show_link {
     return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
 
     if ( !$domain->is_active ) {
-        my $req = Ravada::Request->start_domain($domain->name);
+        my $req = Ravada::Request->start_domain(name => $domain->name, uid => $USER->id);
 
         $RAVADA->wait_request($req);
         warn "ERROR: ".$req->error if $req->error();
