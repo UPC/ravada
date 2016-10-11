@@ -14,7 +14,6 @@ use YAML;
 use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
-use Ravada::VM::LXC;
 use Ravada::VM::Void;
 
 =head1 NAME
