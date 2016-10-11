@@ -368,15 +368,33 @@ sub is_base {
     return $ret;
 };
 
+=head2 id_owner
+
+Returns the id of the user that created this domain
+
+=cut
+
 sub id_owner {
     my $self = shift;
     return $self->_data('id_owner',@_);
 }
 
+=head2 id_base
+
+Returns the id from the base this domain is based on, if any.
+
+=cut
+
 sub id_base {
     my $self = shift;
     return $self->_data('id_base',@_);
 }
+
+=head2 vm
+
+Returns a string with the name of the VM ( Virtual Machine ) this domain was created on
+
+=cut
 
 
 sub vm {
@@ -407,6 +425,12 @@ sub clones {
     }
     return @clones;
 }
+
+=head2
+
+Returns a list of the filenames of this base-type domain
+
+=cut
 
 sub list_files_base {
     my $self = shift;
