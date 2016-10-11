@@ -29,6 +29,7 @@ Mark all as Read</a>
 
     </div>
     </div>
+    
     %= include 'bootstrap/scripts'
 </body>
 </html>

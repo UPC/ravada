@@ -64,7 +64,7 @@ sub messages {
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, date_read, date_send FROM messages WHERE id_user=?"
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, date_read, date_send, message FROM messages WHERE id_user=?"
         ." ORDER BY date_send DESC"
         ." LIMIT ?,?");
     $sth->execute($self->id, $skip, $count);
