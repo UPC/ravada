@@ -41,15 +41,16 @@ Grant all permissions to your user:
 
     $ mysql -u root -p
     mysql> grant all on ravada.* to ravada@'localhost' identified by 'figure a password';
+    exit
 
 Review and run the sql files from the sql dir.
 
-    $ mysqladmin -p create ravada
-    $ cd sql/mysql
-    $ cat *.sql | mysql -p ravada
+    $ mysqladmin -p create -u root ravada
+    $ cd ravada/sql/mysql
+    $ cat *.sql | mysql -p -u ravada ravada
     $ cd ..
     $ cd data
-    $ cat *.sql | mysql -p ravada
+    $ cat *.sql | mysql -p -u ravada ravada
 
 #Config file
 
@@ -70,6 +71,7 @@ Install KVM
 
 Add a new user for the ravada web. This command will create a new admin user in the database:
 
+    $ cd ravada
     $ ./bin/rvd_back.pl --add-user user.name
 
 #Next
