@@ -547,9 +547,9 @@ sub manage_machine {
     return access_denied($c)    if $domain->id_owner != $USER->id
         && !$USER->is_admin;
 
-    Ravada::Request->shutdown_domain($domain->name)   if $c->param('shutdown');
-    Ravada::Request->start_domain($domain->name)   if $c->param('start');
-    Ravada::Request->suspend_domain($domain->name)   if $c->param('pause');
+    Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)   if $c->param('shutdown');
+    Ravada::Request->start_domain(name => $domain->name, uid => $USER->id)   if $c->param('start');
+    Ravada::Request->suspend_domain(name => $domain->name, uid => $USER->id)   if $c->param('pause');
 
     $c->stash(domain => $domain);
     $c->stash(uri => $c->req->url->to_abs);
