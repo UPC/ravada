@@ -361,7 +361,8 @@ Shuts down uncleanly the domain
 
 sub shutdown_now {
     my $self = shift;
-    return $self->shutdown(timeout => 1);
+    my $user = shift;
+    return $self->shutdown(timeout => 1, user => $user);
 }
 
 
@@ -372,6 +373,43 @@ Pauses the domain
 =cut
 
 sub pause {
+    my $self = shift;
+    return $self->domain->suspend();
+}
+
+=head2 resume
+
+Resumes a paused the domain
+
+=cut
+
+sub resume {
+    my $self = shift;
+    return $self->domain->resume();
+}
+
+
+=head2 is_paused
+
+Returns if the domain is paused
+
+=cut
+
+sub is_paused {
+    my $self = shift;
+    my ($state, $reason) = $self->domain->get_state();
+
+    return $state && 
+        ($state == Sys::Virt::Domain::STATE_PAUSED_UNKNOWN 
+        || $state == Sys::Virt::Domain::STATE_PAUSED_USER 
+        || $state == Sys::Virt::Domain::STATE_PAUSED_DUMP
+        || $state == Sys::Virt::Domain::STATE_PAUSED_FROM_SNAPSHOT
+        || $state == Sys::Virt::Domain::STATE_PAUSED_IOERROR
+        || $state == Sys::Virt::Domain::STATE_PAUSED_MIGRATION
+        || $state == Sys::Virt::Domain::STATE_PAUSED_SAVE
+        || $state == Sys::Virt::Domain::STATE_PAUSED_SHUTTING_DOWN
+    );
+    return 0;
 }
 
 =head2 add_volume

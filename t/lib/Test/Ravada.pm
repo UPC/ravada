@@ -65,7 +65,7 @@ sub _remove_old_domains_vm {
         my $domain = $vm->search_domain($dom_name);
         next if !$domain;
 
-        $domain->shutdown_now() if $domain;
+        $domain->shutdown_now($USER_ADMIN) if $domain;
 
         eval {
             $domain->remove( $USER_ADMIN );

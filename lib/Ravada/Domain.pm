@@ -18,10 +18,12 @@ requires 'remove';
 requires 'display';
 
 requires 'is_active';
+requires 'is_paused';
 requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
 requires 'pause';
+requires 'resume';
 requires 'prepare_base';
 
 #storage
@@ -65,12 +67,34 @@ before 'prepare_base' => \&_allow_prepare_base;
  after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
 
 before 'start' => \&_allow_manage;
-before 'shutdown' => \&_allow_manage;
+before 'pause' => \&_allow_manage;
+before 'resume' => \&_allow_manage;
+before 'shutdown' => \&_allow_manage_args;
 
-sub _allow_manage {
+sub _allow_manage_args {
     my $self = shift;
+
     confess "Disabled from read only connection"
         if $self->readonly;
+
+    my %args = @_;
+
+    confess "Missing user arg ".Dumper(\%args)
+        if !$args{user} ;
+
+    $self->_allowed($args{user});
+
+}
+sub _allow_manage {
+    my $self = shift;
+
+    confess "Disabled from read only connection"
+        if $self->readonly;
+
+    my ($user) = @_;
+
+    $self->_allowed($user);
+
 }
 
 sub _allow_remove {

@@ -50,12 +50,24 @@ sub is_active {
 
 sub pause {
     my $self = shift;
-    $self->_store(is_active => 0);
+    $self->_store(is_paused => 1);
 }
+
+sub resume {
+    my $self = shift;
+    return $self->_store(is_paused => 0 );
+}
+
 sub remove {
     my $self = shift;
 
     $self->remove_disks();
+}
+
+sub is_paused {
+    my $self = shift;
+
+    return $self->_value('is_paused');
 }
 
 sub _store {
@@ -181,5 +193,6 @@ sub list_volumes {
     return [] if !exists $data->{device};
     return keys %{$data->{device}};
 }
+
 
 1;
