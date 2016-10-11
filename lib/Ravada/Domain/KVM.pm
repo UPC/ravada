@@ -399,6 +399,9 @@ sub is_paused {
     my $self = shift;
     my ($state, $reason) = $self->domain->get_state();
 
+    return 0 if $state == 1;
+    #TODO, find out which one of those id "1" and remove it from this list
+    #
     return $state && 
         ($state == Sys::Virt::Domain::STATE_PAUSED_UNKNOWN 
         || $state == Sys::Virt::Domain::STATE_PAUSED_USER 

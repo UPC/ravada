@@ -76,9 +76,13 @@ sub _store {
     my ($var, $value) = @_;
 
     my $data = {};
-    $data = LoadFile($self->disk_device )   if -e $self->disk_device();
+
+    my ($disk) = $self->disk_device();
+    $data = LoadFile($disk)   if -e $disk;
+
     $data->{$var} = $value;
-    DumpFile($self->disk_device , $data);
+
+    DumpFile($disk, $data);
 
 }
 
@@ -87,7 +91,10 @@ sub _value{
 
     my ($var) = @_;
 
-    my $data = LoadFile($self->disk_device );
+    my ($disk) = $self->disk_device();
+
+    my $data = {} ;
+    $data = LoadFile($disk) if -e $disk;
     
     return $data->{$var};
 
@@ -191,7 +198,7 @@ sub list_volumes {
     my $self = shift;
     my $data = LoadFile($self->disk_device) if -e $self->disk_device;
 
-    return [] if !exists $data->{device};
+    return () if !exists $data->{device};
     return keys %{$data->{device}};
 }
 

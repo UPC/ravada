@@ -32,6 +32,8 @@ our %VALID_ARG = (
        ,id_owner => 1
     ,id_template => 1
     }
+    ,pause_domain  => $args_manage
+    ,resume_domain => $args_manage
     ,remove_domain => $args_manage
     ,prepare_base => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
@@ -173,6 +175,26 @@ sub start_domain {
     bless($self,$class);
 
     return $self->_new_request(command => 'start' , args => encode_json($args));
+}
+
+=head2 pause_domain
+
+Requests to pause a domain
+
+  my $req = Ravada::Request->pause_domain( name => 'name', uid => $user->id );
+
+=cut
+
+sub pause_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('pause_domain', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'pause' , args => encode_json($args));
 }
 
 

@@ -64,7 +64,17 @@ before 'remove' => \&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
 before 'prepare_base' => \&_allow_prepare_base;
- after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
+ after 'prepare_base' => sub { 
+    my $self = shift; 
+
+    my ($user) = @_;
+
+    $self->is_base(1); 
+    if ($self->{_was_active} ) {
+        $self->resume($user);
+    }
+    delete $self->{_was_active};
+};
 
 before 'start' => \&_allow_manage;
 before 'pause' => \&_allow_manage;
@@ -115,6 +125,10 @@ sub _allow_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
+    if ($self->is_active) {
+        $self->pause($user);
+        $self->{_was_active} = 1;
+    }
 };
 
 sub _check_has_clones {
