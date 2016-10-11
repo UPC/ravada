@@ -224,7 +224,7 @@ sub _data {
     return $self->{_data}->{$field};
 }
 
-sub open {
+sub __open {
     my $self = shift;
 
     my %args = @_;
