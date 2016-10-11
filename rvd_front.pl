@@ -134,7 +134,7 @@ get '/machine/info/*.json' => sub {
     $c->render(json => $RAVADA->search_domain($id));
 };
 
-get '/machine/manage/*html' => sub {
+any '/machine/manage/*html' => sub {
     my $c = shift;
     return $c->redirect_to('/login') if !_logged_in($c);
 
@@ -547,8 +547,15 @@ sub manage_machine {
     return access_denied($c)    if $domain->id_owner != $USER->id
         && !$USER->is_admin;
 
+    Ravada::Request->shutdown_domain($domain->name)   if $c->param('shutdown');
+    Ravada::Request->start_domain($domain->name)   if $c->param('start');
+    Ravada::Request->suspend_domain($domain->name)   if $c->param('pause');
+
     $c->stash(domain => $domain);
+    $c->stash(uri => $c->req->url->to_abs);
+
     _enable_buttons($c, $domain);
+
     $c->render( template => 'bootstrap/manage_machine');
 }
 
@@ -557,6 +564,10 @@ sub _enable_buttons {
     my $domain = shift;
     $c->stash(_shutdown_disabled => '');
     $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
+
+    $c->stash(_start_disabled => '');
+    $c->stash(_start_disabled => 'disabled')    if $domain->is_active;
+
 }
 
 sub view_machine {
