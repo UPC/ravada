@@ -91,10 +91,35 @@ sub test_create_domain {
 sub test_manage_domain {
     my $domain = shift;
 
+    $domain->start($USER) if !$domain->is_active();
+
     my $display;
     eval { $display = $domain->display($USER) };
     ok($display,"No display for ".$domain->name." $@");
 }
+
+sub test_pause_domain {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    $domain->start if !$domain->is_active();
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active) or return;
+
+    my $display;
+    eval { $domain->pause($USER) };
+    ok(!$@,"[$vm_name] Pausing domain, expecting '', got '$@'");
+
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active);
+
+    ok($domain->is_paused,"[$vm_name] Expecting domain paused, got ".$domain->is_paused);
+
+    eval { $domain->resume($USER) };
+    ok(!$@,"[$vm_name] Resuming domain, expecting '', got '$@'");
+
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active);
+
+}
+
 
 sub test_remove_domain {
     my $domain = shift;
@@ -146,13 +171,14 @@ sub test_json {
 #######################################################
 
 remove_old_domains();
+remove_old_disks();
 
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS);
+    use_ok($CLASS) or next;
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -172,6 +198,7 @@ for my $vm_name (qw( Void KVM )) {
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_manage_domain($domain);
+        test_pause_domain($vm_name, $domain);
         test_remove_domain($domain);
     };
 }

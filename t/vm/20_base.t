@@ -74,7 +74,7 @@ sub test_prepare_base {
     ok($domain->is_base);
 
     my @disk = $domain->disk_device();
-    $domain->shutdown;
+    $domain->shutdown(user => $USER);
 
     touch_mtime(@disk);
 

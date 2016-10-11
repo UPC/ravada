@@ -14,7 +14,6 @@ use YAML;
 use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
-use Ravada::VM::LXC;
 use Ravada::VM::Void;
 
 =head1 NAME
@@ -714,7 +713,11 @@ sub _cmd_start {
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
-    $domain->start();
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    $domain->start($user);
 
     $request->status('done');
 
@@ -744,6 +747,7 @@ sub _cmd_shutdown {
     my $request = shift;
 
     $request->status('working');
+    my $uid = $request->args('uid');
     my $name = $request->args('name');
     my $timeout = ($request->args('timeout') or 60);
 
@@ -751,7 +755,9 @@ sub _cmd_shutdown {
     $domain = $self->search_domain($name);
     die "Unknown domain '$name'\n" if !$domain;
 
-    $domain->shutdown(timeout => $timeout);
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->shutdown(timeout => $timeout, name => $name, user => $user);
 
 }
 

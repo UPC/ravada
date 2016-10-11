@@ -71,12 +71,12 @@ sub test_start_domain {
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
 
-    eval { $domain_b->shutdown};
+    eval { $domain_b->shutdown(user => $USER)};
     ok(!$@,"[$vm_name] Start domain $name expecting error: '' , got $@");
 
     ok(!$domain_f->is_active);
 
-    eval { $domain_f->start( ) };
+    eval { $domain_f->start($USER ) };
     ok($@,"[$vm_name] Start should be denied from front ");
     ok(!$domain_f->is_active,"[$vm_name] Domain should be active");
 
@@ -87,7 +87,7 @@ sub test_start_domain {
         ok($@,"[$vm_name] domain->create should be denied from front ");
     }
 
-    eval { $domain_b->start() };
+    eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
     ok($domain_f->is_active);# && !$domain_f->is_active);
@@ -123,7 +123,7 @@ sub test_shutdown_domain {
         ok($@,"[$vm_name] Shutdown should be denied from front ");
     }
 
-    eval { $domain_b->shutdown(force => 1) };
+    eval { $domain_b->shutdown(user => $USER,force => 1) };
     ok(!$@,$@);
 
     ok(!$domain_f->is_active);# && !$domain_f->is_active);

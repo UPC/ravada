@@ -103,13 +103,18 @@ for my $vm_name ('kvm','lxc') {
         $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
         .($domain->name or '<UNDEF>'));
 
-    $RVD_FRONT->start_domain($name);
+    $req = $RVD_FRONT->start_domain($name, $USER);
     $RVD_FRONT->wait_request($req,10);
     ok($req->status('done'),"Request ".$req->status);
+    ok(!$req->error,"[$vm_name] Request start domain expecting no error, got '".$req->error
+        ."'") or exit;
+
+    ok($domain->is_active,"[$vm_name] Expecting domain $name active, got ".$domain->is_active)
+        or exit;
 
     my $display = $RVD_FRONT->domdisplay($name, $USER);
-    ok($display,"No display for domain $name found. Is it active ?");
-    ok($display && $display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '"
+    ok($display,"[$vm_name] No display for domain $name found. Is it active ?");
+    ok($display && $display =~ m{\w+://.*?:\d+},"[$vm_name] Expecting display a URL, it is '"
                 .($display or '<UNDEF>')
                 ."'");
 

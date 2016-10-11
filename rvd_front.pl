@@ -134,7 +134,7 @@ get '/machine/info/*.json' => sub {
     $c->render(json => $RAVADA->search_domain($id));
 };
 
-get '/machine/manage/*html' => sub {
+any '/machine/manage/*html' => sub {
     my $c = shift;
     return $c->redirect_to('/login') if !_logged_in($c);
 
@@ -155,7 +155,7 @@ get '/machine/shutdown/*.html' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
-get '/machine/remove/*.html' => sub {
+any '/machine/remove/*.html' => sub {
         my $c = shift;
         return remove_machine($c);
 };
@@ -226,6 +226,7 @@ get '/messages/view/*.html' => sub {
 sub _logged_in {
     my $c = shift;
 
+    confess "missing \$c" if !defined $c;
     $USER = undef;
 
     my $login = $c->session('login');
@@ -432,37 +433,12 @@ sub _show_request {
 sub _search_req_base_error {
     my $name = shift;
 }
+
 sub access_denied {
     
-
     my $c = shift;
 
-    return quick_start($c)    if _logged_in($c);
-
-    my $login = $c->param('login');
-    my $password = $c->param('password');
-    my @error =();
-    if ($c->param('submit') && $login) {
-        push @error,("Empty login name")  if !length $login;
-        push @error,("Empty password")  if !length $password;
-    }
-
-    if ( $login && $password ) {
-        my $auth_ok;
-        eval { $auth_ok = Ravada::Auth::login($login, $password)};
-        if ( $auth_ok) {
-            $c->session('login' => $login);
-            return quick_start($c);
-        } else {
-            warn $@ if $@;
-            push @error,("Access denied");
-        }
-    }
-    $c->render(
-                    template => 'bootstrap/start' 
-                      ,login => $login 
-                      ,error => \@error
-    );
+    return $c->render(text => 'Access denied to '.$c->req->url->to_abs->path.' for user '.$USER->name);
 }
 
 sub base_id {
@@ -511,10 +487,10 @@ sub show_link {
 
     confess "Domain is not a ref $domain " if !ref $domain;
 
-    return access_denied($c) if $USER->id != $domain->id_owner;
+    return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
 
     if ( !$domain->is_active ) {
-        my $req = Ravada::Request->start_domain($domain->name);
+        my $req = Ravada::Request->start_domain(name => $domain->name, uid => $USER->id);
 
         $RAVADA->wait_request($req);
         warn "ERROR: ".$req->error if $req->error();
@@ -526,7 +502,7 @@ sub show_link {
             if !$req->status eq 'done';
     }
 
-    my $uri = $domain->display($USER);
+    my $uri = $domain->display($USER) if $domain->is_active;
     if (!$uri) {
         my $name = '';
         $name = $domain->name if $domain;
@@ -571,10 +547,17 @@ sub manage_machine {
         return $c->render(text => "Domain no found");
     }
     return access_denied($c)    if $domain->id_owner != $USER->id
-        || !$USER->is_admin;
+        && !$USER->is_admin;
+
+    Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)   if $c->param('shutdown');
+    Ravada::Request->start_domain(name => $domain->name, uid => $USER->id)   if $c->param('start');
+    Ravada::Request->suspend_domain(name => $domain->name, uid => $USER->id)   if $c->param('pause');
 
     $c->stash(domain => $domain);
+    $c->stash(uri => $c->req->url->to_abs);
+
     _enable_buttons($c, $domain);
+
     $c->render( template => 'bootstrap/manage_machine');
 }
 
@@ -583,6 +566,10 @@ sub _enable_buttons {
     my $domain = shift;
     $c->stash(_shutdown_disabled => '');
     $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
+
+    $c->stash(_start_disabled => '');
+    $c->stash(_start_disabled => 'disabled')    if $domain->is_active;
+
 }
 
 sub view_machine {
@@ -613,7 +600,7 @@ sub shutdown_machine {
     return $c->redirect_to('/machines');
 }
 
-sub remove_machine {
+sub _do_remove_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
 
@@ -626,6 +613,24 @@ sub remove_machine {
 
     return $c->redirect_to('/machines');
 }
+
+sub remove_machine {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+    return _do_remove_machine($c,@_)   if $c->param('sure') && $c->param('sure') =~ /y/i;
+
+    return $c->redirect_to('/machines')   if $c->param('sure')
+                                            || $c->param('cancel');
+
+    my $domain = _search_requested_machine($c);
+    return $c->render( text => "Domain not found")  if !$domain;
+    $c->stash(domain => $domain );
+
+    warn "found domain ".$domain->name;
+
+    return $c->render( template => 'bootstrap/remove_machine' );
+}
+
 
 sub prepare_machine {
     my $c = shift;

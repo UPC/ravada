@@ -273,7 +273,13 @@ sub add_user {
     my $password = <STDIN>;
     chomp $password;
 
-    Ravada::Auth::SQL::add_user($login, $password);
+    print "is admin ? : [y/n] ";
+    my $is_admin_q = <STDIN>;
+    my $is_admin = 0;
+
+    $is_admin = 1 if $is_admin_q =~ /y/i;
+
+    Ravada::Auth::SQL::add_user($login, $password, $is_admin);
 }
 
 sub add_user_ldap {
