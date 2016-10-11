@@ -91,6 +91,8 @@ sub test_create_domain {
 sub test_manage_domain {
     my $domain = shift;
 
+    $domain->start if !$domain->is_active();
+
     my $display;
     eval { $display = $domain->display($USER) };
     ok($display,"No display for ".$domain->name." $@");
