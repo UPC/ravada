@@ -705,6 +705,43 @@ sub _cmd_remove {
     return;
 }
 
+sub _cmd_pause {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    my $domain = $self->search_domain($name);
+    die "Unknown domain '$name'" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    $domain->pause($user);
+
+    $request->status('done');
+
+}
+
+sub _cmd_resume {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $name = $request->args('name');
+    my $domain = $self->search_domain($name);
+    die "Unknown domain '$name'" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    $domain->resume($user);
+
+    $request->status('done');
+
+}
+
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -785,8 +822,10 @@ sub _req_method {
     my %methods = (
 
           start => \&_cmd_start
+         ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,resume => \&_cmd_resume
       ,shutdown => \&_cmd_shutdown
     ,domdisplay => \&_cmd_domdisplay
   ,ping_backend => \&_cmd_ping_backend

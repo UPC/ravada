@@ -552,7 +552,10 @@ sub manage_machine {
 
     Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)   if $c->param('shutdown');
     Ravada::Request->start_domain(name => $domain->name, uid => $USER->id)   if $c->param('start');
-    Ravada::Request->suspend_domain(name => $domain->name, uid => $USER->id)   if $c->param('pause');
+    Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id)   
+        if $c->param('pause');
+
+    Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id)   if $c->param('resume');
 
     $c->stash(domain => $domain);
     $c->stash(uri => $c->req->url->to_abs);
@@ -565,11 +568,26 @@ sub manage_machine {
 sub _enable_buttons {
     my $c = shift;
     my $domain = shift;
+    warn "is_paused=".$domain->is_paused;
+    if (($c->param('pause') && !$domain->is_paused)
+        ||($c->param('resume') && $domain->is_paused)) {
+        sleep 2;
+        warn "  -> is_paused=".$domain->is_paused;
+    }
     $c->stash(_shutdown_disabled => '');
     $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
 
     $c->stash(_start_disabled => '');
     $c->stash(_start_disabled => 'disabled')    if $domain->is_active;
+
+    $c->stash(_pause_disabled => '');
+    $c->stash(_pause_disabled => 'disabled')    if $domain->is_paused
+                                                    || !$domain->is_active;
+
+    $c->stash(_resume_disabled => '');
+    $c->stash(_resume_disabled => 'disabled')    if !$domain->is_paused;
+
+
 
 }
 

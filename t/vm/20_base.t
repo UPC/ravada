@@ -96,6 +96,7 @@ sub test_prepare_base {
     ok($@ && $@ =~ /has \d+ clones/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
+    test_devices_clone($vm_name, $domain_clone);
 
     $domain_clone->remove($USER);
 
@@ -113,6 +114,27 @@ sub test_prepare_base {
 
 }
 
+sub test_prepare_base_active {
+    my $vm_name = shift;
+
+    my $domain = test_create_domain($vm_name);
+
+    ok(!$domain->is_base,"Domain ".$domain->name." should not be base") or return;
+    eval { $domain->start($USER) if !$domain->is_active() };
+    ok(!$@,$@);
+    eval { $domain->resume($USER)  if $domain->is_paused()  };
+    ok(!$@,$@);
+
+    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
+    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name." should not be paused") or exit;
+
+    eval { $domain->prepare_base($USER) };
+    ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'");
+
+    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or exit;
+    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name." should not be paused") or return;
+}
+
 sub touch_mtime {
     for my $disk (@_) {
 
@@ -125,6 +147,18 @@ sub touch_mtime {
         die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
     }
 
+}
+
+sub test_devices_clone {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    my @volumes = $domain->list_volumes();
+    ok(scalar(@volumes),"[$vm_name] Expecting at least 1 volume cloned "
+        ." got ".scalar(@volumes));
+    for my $disk (@volumes ) {
+        ok(-e $disk,"Checking volume ".Dumper($disk)." exists");
+    }
 }
 
 #######################################################################33
@@ -154,6 +188,7 @@ for my $vm_name (@VMS) {
 
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
+        test_prepare_base_active($vm_name);
     }
 }
 
