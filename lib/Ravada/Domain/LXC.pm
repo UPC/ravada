@@ -258,4 +258,6 @@ sub list_files_base {
 
 sub is_paused {}
 
+sub resume {}
+
 1;
