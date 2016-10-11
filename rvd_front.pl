@@ -374,7 +374,8 @@ sub new_machine {
 
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
-        return _show_request($c, req_new_domain($c))    if !@error;
+        req_new_domain($c);
+        $c->redirect_to("/machines")    if !@error;
     }
     warn join("\n",@error) if @error;
 
