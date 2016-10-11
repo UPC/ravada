@@ -21,6 +21,8 @@ Request a command to the ravada backend
 our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
+our $args_manage = { name => 1 , uid => 1 };
+
 our %VALID_ARG = (
     create_domain => { 
               vm => 1
@@ -30,15 +32,10 @@ our %VALID_ARG = (
        ,id_owner => 1
     ,id_template => 1
     }
-    ,remove_domain => {
-        name => 1
-        ,uid => 1
-    }
-    ,prepare_base => {
-        name => 1
-        ,uid => 1
-
-    }
+    ,remove_domain => $args_manage
+    ,prepare_base => $args_manage
+    ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
+    ,start_domain => $args_manage
 );
 
 our $CONNECTOR;
@@ -162,7 +159,7 @@ sub remove_domain {
 
 Requests to start a domain
 
-  my $req = Ravada::Request->start_domain( name => 'name' );
+  my $req = Ravada::Request->start_domain( name => 'name', uid => $user->id );
 
 =cut
 
@@ -170,23 +167,38 @@ sub start_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
-
-    my %args = ( name => $name )    or confess "Missing domain name";
+    my $args = _check_args('start_domain', @_);
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'start' , args => encode_json({ name => $name }));
+
+    return $self->_new_request(command => 'start' , args => encode_json($args));
 }
 
+
+sub _check_args {
+    my $sub = shift;
+    my $args = { @_ };
+
+    for (keys %{$args}) {
+        confess "Invalid argument $_" if !$VALID_ARG{$sub}->{$_};
+    }
+
+    for (keys %{$VALID_ARG{$sub}}) {
+        next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
+        confess "Missing argument $_"   if !exists $args->{$_};
+    }
+
+    return $args;
+}
 
 =head2 shutdown_domain
 
 Requests to stop a domain
 
-  my $req = Ravada::Request->shutdown_domain( 'name' );
-  my $req = Ravada::Request->shutdown_domain( 'name' , $timeout );
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id );
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id 
+                                            ,timeout => $timeout );
 
 =cut
 
@@ -194,16 +206,14 @@ sub shutdown_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my $args = _check_args('shutdown_domain', @_ );
 
-    my $timeout = ( shift or 10 );
-
-    my %args = ( name => $name, timeout => $timeout )    or confess "Missing domain name";
+    $args->{timeout} = 10 if !exists $args->{timeout};
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'shutdown' , args => encode_json(\%args));
+
+    return $self->_new_request(command => 'shutdown' , args => encode_json($args));
 }
 
 =head2 prepare_base

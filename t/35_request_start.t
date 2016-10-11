@@ -13,6 +13,7 @@ use Test::Ravada;
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $RAVADA = rvd_back($test->connector, 't/etc/ravada.conf');
+my $USER = create_user('foo','bar', 1);
 
 my @ARG_CREATE_DOM;
 
@@ -68,7 +69,8 @@ sub test_start {
 
 
     my $req = Ravada::Request->start_domain(
-        "does not exists"
+        name => "does not exists"
+        ,uid => $USER->id
     );
     $RAVADA->_process_requests_dont_fork();
 
@@ -86,11 +88,11 @@ sub test_start {
     my $domain = $RAVADA->search_domain($name);
     ok(!$domain->is_active,"Domain $name should be inactive") or return;
 
-    my $req2 = Ravada::Request->start_domain($name);
+    my $req2 = Ravada::Request->start_domain(name => $name, uid => $USER->id);
     $RAVADA->process_requests();
 
     ok($req2->status eq 'done');
-    $domain->start()    if !$domain->is_active();
+    $domain->start($USER)    if !$domain->is_active();
 
     ok($domain->is_active);
 
@@ -103,14 +105,15 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->shutdown_domain($name);
+    my $req3 = Ravada::Request->shutdown_domain(name => $name, uid => $USER->id);
     $RAVADA->process_requests();
     ok($req3->status eq 'done');
+    ok(!$req3->error,"Error shutting down domain $name , expecting ''. Got '".$req3->error);
 
-    ok(!$domain->is_active);
+    ok(!$domain->is_active, "Domain $name should not be active");
 
     my $domain3 = $RAVADA->search_domain($name);
-    ok(!$domain3->is_active);
+    ok(!$domain3->is_active,"Domain $name should not be active");
 
     return $domain3;
 
@@ -126,11 +129,11 @@ my $vmm;
 
 eval { 
     $vmm = $RAVADA->search_vm('kvm');
-    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => 1 )  if $vmm;
+    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => $USER->id )  if $vmm;
 
     if (!$vmm) {
         $vmm = $RAVADA->search_vm('lxc');
-        @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => 1 );
+        @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => $USER->id );
     }
 
 } if $RAVADA;
@@ -144,7 +147,7 @@ SKIP: {
     remove_old_disks();
     my $domain = test_start();
 
-    $domain->shutdown_now() if $domain;
+    $domain->shutdown_now($USER) if $domain;
     $domain->remove(user_admin())       if $domain;
 };
 done_testing();

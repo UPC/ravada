@@ -101,7 +101,8 @@ sub shutdown {
 
 sub shutdown_now {
     my $self = shift;
-    return $self->shutdown(@_);
+    my $user = shift;
+    return $self->shutdown(user => $user);
 }
 
 sub start {
