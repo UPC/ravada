@@ -195,6 +195,13 @@ get '/messages.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
+get '/messages/read/all.html' => sub {
+    my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+    $USER->mark_all_messages_read;
+    return $c->redirect_to("/messages.html");
+};
+
 get '/messages/read/*.html' => sub {
     my $c = shift;
     return $c->redirect_to('/login') if !_logged_in($c);
@@ -367,16 +374,12 @@ sub new_machine {
 
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
-        return _show_request($c, req_new_domain($c))    if !@error;
+        req_new_domain($c);
+        $c->redirect_to("/machines")    if !@error;
     }
     warn join("\n",@error) if @error;
 
-    $c->render(template => 'bootstrap/new_machine'
-                    ,name => $c->param('name')
-                    ,ram => $ram
-                    ,disk => $disk
-                    ,error => \@error
-    );
+
 };
 
 sub req_new_domain {

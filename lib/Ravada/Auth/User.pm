@@ -65,6 +65,7 @@ sub messages {
     $count = 50 if !defined $count;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, date_read, date_send FROM messages WHERE id_user=?"
+        ." ORDER BY date_send DESC"
         ." LIMIT ?,?");
     $sth->execute($self->id, $skip, $count);
     
@@ -178,9 +179,9 @@ sub mark_all_messages_read {
     _init_connector() if !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE messages set date_read=?"
+        "UPDATE messages set date_read=now()"
     );
-    $sth->execute('now()');
+    $sth->execute();
     $sth->finish;
 }
 
