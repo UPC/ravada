@@ -524,7 +524,7 @@ sub show_link {
             if !$req->status eq 'done';
     }
 
-    my $uri = $domain->display($USER);
+    my $uri = $domain->display($USER) if $domain->is_active;
     if (!$uri) {
         my $name = '';
         $name = $domain->name if $domain;
