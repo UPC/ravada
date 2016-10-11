@@ -197,6 +197,27 @@ sub pause_domain {
     return $self->_new_request(command => 'pause' , args => encode_json($args));
 }
 
+=head2 resume_domain
+
+Requests to pause a domain
+
+  my $req = Ravada::Request->resume_domain( name => 'name', uid => $user->id );
+
+=cut
+
+sub resume_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('pause_domain', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'resume' , args => encode_json($args));
+}
+
+
 
 sub _check_args {
     my $sub = shift;
