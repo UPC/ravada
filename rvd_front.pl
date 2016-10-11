@@ -377,12 +377,7 @@ sub new_machine {
     }
     warn join("\n",@error) if @error;
 
-    $c->render(template => 'bootstrap/new_machine'
-                    ,name => $c->param('name')
-                    ,ram => $ram
-                    ,disk => $disk
-                    ,error => \@error
-    );
+
 };
 
 sub req_new_domain {
