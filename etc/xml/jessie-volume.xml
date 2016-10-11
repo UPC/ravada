@@ -3,8 +3,8 @@
   <key>/var/lib/libvirt/images/__name__.img</key>
   <source>
   </source>
-  <capacity unit='bytes'>6442450944</capacity>
-  <allocation unit='bytes'>5395775488</allocation>
+  <capacity unit='bytes'>3442450944</capacity>
+  <allocation unit='bytes'>2395775488</allocation>
   <target>
     <path>/var/lib/libvirt/images/__name__.img</path>
     <format type='qcow2'/>
