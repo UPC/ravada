@@ -614,7 +614,7 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain($base->name);
+    my $req = Ravada::Request->shutdown_domain(name => $base->name, uid => $USER->id);
 
     return $c->redirect_to('/machines');
 }

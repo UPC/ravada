@@ -178,10 +178,17 @@ sub mark_all_messages_read {
 
     _init_connector() if !$$CONNECTOR;
 
+    my @now = localtime(time);
+    $now[5]+=1900;
+    $now[4]++;
+    for ( 0 .. 4 ) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE messages set date_read=now()"
+        "UPDATE messages set date_read=?"
     );
-    $sth->execute();
+    # TODO add date
+    $sth->execute("$now[5]$now[4]$now[3]");
     $sth->finish;
 }
 
