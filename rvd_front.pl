@@ -509,7 +509,7 @@ sub show_link {
 
     confess "Domain is not a ref $domain " if !ref $domain;
 
-    return access_denied($c) if $USER->id != $domain->id_owner;
+    return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
 
     if ( !$domain->is_active ) {
         my $req = Ravada::Request->start_domain($domain->name);
