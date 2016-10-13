@@ -181,6 +181,7 @@ sub search_domain {
                 domain => $dom
                 ,storage => $self->storage_pool
                 ,readonly => $self->readonly
+                ,_vm => $self->vm
             );
         };
         warn $@ if $@;
@@ -303,7 +304,9 @@ sub _domain_create_from_iso {
     $dom->create if $args{active};
 
 
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+                , _vm => $self->vm
+    );
 
     $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;

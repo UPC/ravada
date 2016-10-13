@@ -24,9 +24,16 @@ has 'storage' => (
     ,required => 1
 );
 
+has '_vm' => (
+    is => 'ro'
+    ,isa => 'Sys::Virt'
+    ,required => 1
+);
+
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
+our $OUT;
 
 ##################################################
 
@@ -542,22 +549,26 @@ Takes a screenshot, it stores it in file.
 
 sub screenshot {
     my $self = shift;
-    my $stream = shift;
+
+    my $stream = $self->{_vm}->new_stream(Sys::Virt::Stream::NONBLOCK);
 
     my $mimetype = $self->domain->screenshot($stream,0);
     warn $mimetype;
-    $stream->recv_all(\&_store_stream);
-
+    my $data;
+    open $OUT, '>', "/var/tmp/screen.$$.out.dat";
+    while ( my $rv =$stream->recv(\$data,1024)) {
+        warn "$rv";
+        last if $rv<0;
+        print $OUT $data;
+    }
+    close $OUT;
+    $stream->finish;
 }
 
 sub _store_stream {
     my ($st, $data, $count) = @_;
 
-    my $filename = "/var/tmp/$$.out.dat";
-    warn $filename;
-    open my $out, '>', $filename or die "$! $filename";
-    print $out $data;
-    close $out;
+    print $OUT $data;
 
 }
 

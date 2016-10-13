@@ -178,8 +178,12 @@ sub test_screenshot {
 
     return if $vm_name !~ /kvm/i;
 
+    $domain->start($USER)   if !$domain->is_active;
+    sleep 5;
     $domain->screenshot();
+    $domain->pause($USER);
     ok(!$@,"[$vm_name] $@");
+    $domain->shutdown($USER);
     ok(-e $file,"[$vm_name] Checking screenshot ");
 }
 
