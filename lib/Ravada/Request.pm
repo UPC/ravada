@@ -288,26 +288,6 @@ sub prepare_base {
 
 }
 
-=head2 list_vm_types
-
-Returns a list of VM types
-
-    my $req = Ravada::Request->list_vm_types();
-
-    my $types = $req->result;
-
-=cut
-
-sub list_vm_types {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'list_vm_types' );
-
-}
-
 =head2 ping_backend
 
 Returns wether the backend is alive or not
@@ -357,9 +337,10 @@ sub _new_request {
         delete $args{name};
     }
     if ( ref $args{args} ) {
+        $args{args}->{uid} = $args{args}->{id_owner}
+            if !exists $args{args}->{uid};
         $args{args} = encode_json($args{args});
     }
-
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -448,7 +429,7 @@ sub _send_message {
     my $uid;
 
     eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') };
+    eval { $uid = $self->args('uid') }  if !$uid;
     return if !$uid;
 
     my $domain_name;
@@ -472,7 +453,7 @@ sub _remove_unnecessary_messages {
 
     my $uid;
     eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') };
+    eval { $uid = $self->args('uid') }      if !$uid;
     return if !$uid;
 
     my $sth = $$CONNECTOR->dbh->prepare(

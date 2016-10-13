@@ -426,7 +426,7 @@ sub clones {
     return @clones;
 }
 
-=head2
+=head2 list_files_base
 
 Returns a list of the filenames of this base-type domain
 
