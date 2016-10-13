@@ -32,6 +32,7 @@ has 'fork' => (
 
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 5;
+our @VM_TYPES = ('KVM');
 
 =head2 BUILD
 
@@ -85,13 +86,8 @@ sub list_vm_types {
 
     return $self->{cache}->{vm_types} if $self->{cache}->{vm_types};
 
-    my $req = Ravada::Request->list_vm_types();
-    $self->wait_request($req);
+    my $result = [@VM_TYPES];
 
-    die "ERROR: Timeout waiting for request ".$req->id
-        if $req->status() eq 'timeout';
-
-    my $result = $req->result();
     $self->{cache}->{vm_types} = $result if $result->[0];
 
     return $result;
