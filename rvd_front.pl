@@ -75,8 +75,8 @@ get '/ip/*' => sub {
 any '/machines' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c)
-        || !$USER->is_admin;
+    return login($c)            if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin;
 
     return domains($c);
 };
@@ -658,7 +658,7 @@ sub prepare_machine {
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->prepare_base(
-        name => $domain->name
+        id_domain => $domain->id
         ,uid => $USER->id
     );
 

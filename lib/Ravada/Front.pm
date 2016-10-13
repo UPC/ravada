@@ -74,6 +74,7 @@ sub list_domains {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
         $row->{is_active} = 1 if $domain && $domain->is_active;
+        $row->{is_locked} = 1 if $domain && $domain->is_locked;
         push @domains, ($row);
     }
     $sth->finish;

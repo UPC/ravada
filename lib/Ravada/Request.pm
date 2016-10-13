@@ -22,6 +22,7 @@ our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
+our $args_prepare = { id_domain => 1 , uid => 1 };
 
 our %VALID_ARG = (
     create_domain => { 
@@ -32,10 +33,10 @@ our %VALID_ARG = (
        ,id_owner => 1
     ,id_template => 1
     }
-    ,pause_domain  => $args_manage
+     ,prepare_base => $args_prepare
+     ,pause_domain => $args_manage
     ,resume_domain => $args_manage
     ,remove_domain => $args_manage
-    ,prepare_base => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
     ,start_domain => $args_manage
 );
@@ -272,19 +273,16 @@ sub prepare_base {
     my $class=ref($proto) || $proto;
 
     my %args = @_;
-    confess "Missing domain name"   if !$args{name};
     confess "Missing uid"           if !$args{uid};
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
-    }
-
-    $args{name} = $args{name}->name if ref($args{name}) =~ /Domain/;
+    my $args = _check_args('prepare_base', @_);
 
     my $self = {};
     bless($self,$class);
+
     return $self->_new_request(command => 'prepare_base' 
-        , args => encode_json( \%args ));
+        , id_domain => $args{id_domain}
+        , args => encode_json( $args ));
 
 }
 

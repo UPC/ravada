@@ -368,6 +368,27 @@ sub is_base {
     return $ret;
 };
 
+=head2 is_locked
+
+Shows if the domain has running or pending requests. It could be considered
+too as the domain is busy doing something like starting, shutdown or prepare base.
+
+Returns true if locked.
+
+
+=cut
+
+sub is_locked {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT count(*) FROM requests "
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+
+    return $count;
+}
+
 =head2 id_owner
 
 Returns the id of the user that created this domain

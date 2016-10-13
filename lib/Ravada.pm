@@ -296,7 +296,23 @@ sub search_domain {
     return;
 }
 
+=head2 search_domain_by_id
 
+  my $domain = $ravada->search_domain_by_id($id);
+
+=cut
+
+sub search_domain_by_id {
+    my $self = shift;
+    my $id = shift  or confess "ERROR: missing argument id";
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    confess "Unknown domain id=$id" if !$name;
+
+    return $self->search_domain($name);
+}
 
 =head2 list_domains
 
@@ -746,14 +762,14 @@ sub _cmd_prepare_base {
     my $request = shift;
 
     $request->status('working');
-    my $name = $request->args('name')   or confess "Missing argument name";
+    my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    my $domain = $self->search_domain($name);
+    my $domain = $self->search_domain_by_id($id_domain);
 
-    die "Unknown domain '$name'\n" if !$domain;
+    die "Unknown domain id '$id_domain'\n" if !$domain;
 
     $domain->prepare_base($user);
 

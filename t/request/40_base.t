@@ -56,18 +56,6 @@ sub test_remove_domain {
 
 }
 
-sub wait_request {
-    my $req = shift;
-    my $status = '';
-    for ( 1 .. 100 ) {
-        last if $req->status eq 'done';
-        next if $req->status eq $status;
-        diag("Request ".$req->command." ".$req->status);
-        $status=$req->status;
-        sleep 1;
-    }
-
-}
 sub test_req_create_domain_iso {
     my $vm_name = shift;
 
@@ -110,6 +98,7 @@ sub test_req_create_domain_iso {
     my $domain =  $vm->search_domain($name);
 
     ok($domain,"[$vm_name] I can't find domain $name");
+    ok(!$domain->is_locked,"Domain $name should not be locked");
 
     $USER->mark_all_messages_read();
     return $domain;
@@ -152,18 +141,21 @@ sub test_req_prepare_base {
     my $vm = shift;
     my $name = shift;
 
+    my $domain = $vm->search_domain($name);
+    ok($domain, "Searching for domain $name, got ".ref($name)) or return;
+    ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
+
     my $req = Ravada::Request->prepare_base(
-        name => $name
+        id_domain => $domain->id
         ,uid => $USER->id
     );
     ok($req);
     ok($req->status);
 
-    my $domain = $vm->search_domain($name);
-    ok($domain, "Searching for domain $name, got ".ref($name)) or return;
-    ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
+    ok($domain->is_locked,"Domain $name should be locked when preparing base");
 
     $ravada->_process_requests_dont_fork();
+    ok(!$req->error,"Expecting error='', got '".$req->error."'");
     ok($domain->is_base, "Expecting domain base=1 , got: '".$domain->is_base."'");
 }
 

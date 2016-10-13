@@ -92,6 +92,7 @@ sub test_manage_domain {
     my $domain = shift;
 
     $domain->start($USER) if !$domain->is_active();
+    ok(!$domain->is_locked,"Domain ".$domain->name." should not be locked");
 
     my $display;
     eval { $display = $domain->display($USER) };
