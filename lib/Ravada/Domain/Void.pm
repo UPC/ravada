@@ -202,5 +202,6 @@ sub list_volumes {
     return keys %{$data->{device}};
 }
 
+sub screenshot {}
 
 1;

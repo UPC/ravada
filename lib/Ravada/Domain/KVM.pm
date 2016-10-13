@@ -7,6 +7,7 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
 use Moose;
+use Sys::Virt::Stream;
 use XML::LibXML;
 
 with 'Ravada::Domain';
@@ -531,6 +532,33 @@ For KVM it reads from the XML definition of the domain.
 sub list_volumes {
     my $self = shift;
     return $self->disk_device();
+}
+
+=head2 screenshot
+
+Takes a screenshot, it stores it in file.
+
+=cut
+
+sub screenshot {
+    my $self = shift;
+    my $stream = shift;
+
+    my $mimetype = $self->domain->screenshot($stream,0);
+    warn $mimetype;
+    $stream->recv_all(\&_store_stream);
+
+}
+
+sub _store_stream {
+    my ($st, $data, $count) = @_;
+
+    my $filename = "/var/tmp/$$.out.dat";
+    warn $filename;
+    open my $out, '>', $filename or die "$! $filename";
+    print $out $data;
+    close $out;
+
 }
 
 1;

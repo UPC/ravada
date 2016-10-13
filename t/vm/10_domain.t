@@ -123,10 +123,11 @@ sub test_pause_domain {
 
 
 sub test_remove_domain {
+    my $vm_name = shift;
     my $domain = shift;
     diag("Removing domain ".$domain->name);
     my $domain0 = rvd_back()->search_domain($domain->name);
-    ok($domain0, "Domain ".$domain->name." should be there in ".ref $domain);
+    ok($domain0, "[$vm_name] Domain ".$domain->name." should be there in ".ref $domain);
 
 
     eval { $domain->remove($USER) };
@@ -169,6 +170,19 @@ sub test_json {
 
 }
 
+sub test_screenshot {
+    my $vm_name = shift;
+    my $domain= shift;
+
+    my $file = "/var/tmp/$$.png";
+
+    return if $vm_name !~ /kvm/i;
+
+    $domain->screenshot();
+    ok(!$@,"[$vm_name] $@");
+    ok(-e $file,"[$vm_name] Checking screenshot ");
+}
+
 #######################################################
 
 remove_old_domains();
@@ -199,8 +213,9 @@ for my $vm_name (qw( Void KVM )) {
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_manage_domain($domain);
+        test_screenshot($vm_name, $domain);
         test_pause_domain($vm_name, $domain);
-        test_remove_domain($domain);
+        test_remove_domain($vm_name, $domain);
     };
 }
 done_testing();
