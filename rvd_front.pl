@@ -509,6 +509,18 @@ sub show_link {
         return $c->redirect_to("/request/".$req->id.".html")
             if !$req->status eq 'done';
     }
+    if ( $domain->is_paused) {
+        my $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id);
+
+        $RAVADA->wait_request($req);
+        warn "ERROR: ".$req->error if $req->error();
+
+        return $c->render(data => 'ERROR resuming domain '.$req->error)
+            if $req->error && $req->error !~ /already running/i;
+
+        return $c->redirect_to("/request/".$req->id.".html")
+            if !$req->status eq 'done';
+    }
 
     my $uri = $domain->display($USER) if $domain->is_active;
     if (!$uri) {
