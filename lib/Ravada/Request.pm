@@ -22,6 +22,7 @@ our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
+our $args_prepare = { id_domain => 1 , uid => 1 };
 
 our %VALID_ARG = (
     create_domain => { 
@@ -32,11 +33,12 @@ our %VALID_ARG = (
        ,id_owner => 1
     ,id_template => 1
     }
-    ,pause_domain  => $args_manage
+     ,prepare_base => $args_prepare
+     ,pause_domain => $args_manage
     ,resume_domain => $args_manage
     ,remove_domain => $args_manage
-    ,prepare_base => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
+    ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => $args_manage
 );
 
@@ -223,8 +225,10 @@ sub _check_args {
     my $sub = shift;
     my $args = { @_ };
 
+    my $valid_args = $VALID_ARG{$sub};
     for (keys %{$args}) {
-        confess "Invalid argument $_" if !$VALID_ARG{$sub}->{$_};
+        confess "Invalid argument $_ , valid args ".Dumper($valid_args) 
+            if !$valid_args->{$_};
     }
 
     for (keys %{$VALID_ARG{$sub}}) {
@@ -272,39 +276,16 @@ sub prepare_base {
     my $class=ref($proto) || $proto;
 
     my %args = @_;
-    confess "Missing domain name"   if !$args{name};
     confess "Missing uid"           if !$args{uid};
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
-    }
-
-    $args{name} = $args{name}->name if ref($args{name}) =~ /Domain/;
+    my $args = _check_args('prepare_base', @_);
 
     my $self = {};
     bless($self,$class);
+
     return $self->_new_request(command => 'prepare_base' 
-        , args => encode_json( \%args ));
-
-}
-
-=head2 list_vm_types
-
-Returns a list of VM types
-
-    my $req = Ravada::Request->list_vm_types();
-
-    my $types = $req->result;
-
-=cut
-
-sub list_vm_types {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'list_vm_types' );
+        , id_domain => $args{id_domain}
+        , args => encode_json( $args ));
 
 }
 
@@ -357,9 +338,10 @@ sub _new_request {
         delete $args{name};
     }
     if ( ref $args{args} ) {
+        $args{args}->{uid} = $args{args}->{id_owner}
+            if !exists $args{args}->{uid};
         $args{args} = encode_json($args{args});
     }
-
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -448,7 +430,7 @@ sub _send_message {
     my $uid;
 
     eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') };
+    eval { $uid = $self->args('uid') }  if !$uid;
     return if !$uid;
 
     my $domain_name;
@@ -472,7 +454,7 @@ sub _remove_unnecessary_messages {
 
     my $uid;
     eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') };
+    eval { $uid = $self->args('uid') }      if !$uid;
     return if !$uid;
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -556,6 +538,22 @@ sub args {
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
+}
+
+sub screenshot_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('screenshot_domain', @_ );
+
+    $args->{filename} = '' if !exists $args->{filename};
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
+        ,args => encode_json($args));
+
 }
 
 sub AUTOLOAD {

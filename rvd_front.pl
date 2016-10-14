@@ -31,6 +31,8 @@ our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
 our $TIMEOUT = 10;
 our $USER;
 
+our $DOCUMENT_ROOT = "/var/www";
+
 init();
 ############################################################################3
 
@@ -75,8 +77,8 @@ get '/ip/*' => sub {
 any '/machines' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c)
-        || !$USER->is_admin;
+    return login($c)            if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin;
 
     return domains($c);
 };
@@ -162,6 +164,11 @@ any '/machine/remove/*.html' => sub {
 get '/machine/prepare/*.html' => sub {
         my $c = shift;
         return prepare_machine($c);
+};
+
+get '/machine/screenshot/*.html' => sub {
+        my $c = shift;
+        return screenshot_machine($c);
 };
 
 ##############################################
@@ -510,6 +517,18 @@ sub show_link {
         return $c->redirect_to("/request/".$req->id.".html")
             if !$req->status eq 'done';
     }
+    if ( $domain->is_paused) {
+        my $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id);
+
+        $RAVADA->wait_request($req);
+        warn "ERROR: ".$req->error if $req->error();
+
+        return $c->render(data => 'ERROR resuming domain '.$req->error)
+            if $req->error && $req->error !~ /already running/i;
+
+        return $c->redirect_to("/request/".$req->id.".html")
+            if !$req->status eq 'done';
+    }
 
     my $uri = $domain->display($USER) if $domain->is_active;
     if (!$uri) {
@@ -659,14 +678,45 @@ sub remove_machine {
 }
 
 
+sub screenshot_machine {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    warn ref($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    my $req = Ravada::Request->screenshot_domain (
+        id_domain => $domain->id
+        ,filename => $file_screenshot
+    );
+
+    $c->render(template => 'bootstrap/machines');
+}
+
 sub prepare_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
 
     my $domain = _search_requested_machine($c);
 
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    if (! -e $file_screenshot && $domain->can_screenshot() ) {
+        if ( !$domain->is_active() ) {
+            Ravada::Request->start_domain( name => $domain->name
+                ,uid => $USER->id
+            );
+            sleep 3;
+        }
+        Ravada::Request->screenshot_domain (
+            id_domain => $domain->id
+            ,filename => $file_screenshot
+        );
+    }
+
     my $req = Ravada::Request->prepare_base(
-        name => $domain->name
+        id_domain => $domain->id
         ,uid => $USER->id
     );
 

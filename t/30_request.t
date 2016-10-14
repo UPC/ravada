@@ -56,18 +56,6 @@ sub test_remove_domain {
 
 }
 
-sub wait_request {
-    my $req = shift;
-    my $status = '';
-    for ( 1 .. 100 ) {
-        last if $req->status eq 'done';
-        next if $req->status eq $status;
-        diag("Request ".$req->command." ".$req->status);
-        $status=$req->status;
-        sleep 1;
-    }
-
-}
 sub test_req_create_domain_iso {
     my $vm_name = shift;
 
@@ -83,6 +71,7 @@ sub test_req_create_domain_iso {
     );
     ok($req);
     ok($req->status);
+    ok($req->args('id_owner'));
 
     
     ok(defined $req->args->{name} 
@@ -93,14 +82,15 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->_process_requests_dont_fork();
+    $ravada->process_requests();
 
-    wait_request($req);
+    sleep 1;
     $ravada->_wait_pids();
+    wait_request($req);
 
     ok($req->status eq 'done'
-        ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+        ,"Status of request is ".$req->status." it should be done") or exit;
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name) or exit;
     test_unread_messages($USER,1, "[$vm_name] create domain $name");
 
     my $req2 = Ravada::Request->open($req->id);
@@ -180,21 +170,6 @@ sub test_req_remove_domain_name {
 
 }
 
-sub test_list_vm_types {
-    my $vm_name = shift or confess "Missing vm name";
-    return if $vm_name =~ /Void/i;
-
-    my $req = Ravada::Request->list_vm_types();
-    $ravada->process_requests();
-    ok($req->status eq 'done'
-        ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".($req->error or '')." requesting VM types ");
-
-    my $result = $req->result();
-    ok(ref $result eq 'ARRAY',"Expecting ARRAY , got ".ref($result));
-
-}
-
 sub test_unread_messages {
     my ($user, $n_unread, $test) = @_;
     confess "Missing test name" if !$test;
@@ -225,8 +200,6 @@ for my $vm_name ( qw(Void KVM)) {
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
-        remove_old_domains();
-        remove_old_disks();
     
         my $domain_iso0 = test_req_create_domain_iso($vm_name);
         test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;
@@ -237,7 +210,6 @@ for my $vm_name ( qw(Void KVM)) {
         my $domain_base = test_req_create_base($vm);
         test_req_remove_domain_name($vm, $domain_base->name)  if $domain_base;
     
-        test_list_vm_types($vm_name);
     };
 }
 

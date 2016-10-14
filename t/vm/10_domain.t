@@ -89,20 +89,26 @@ sub test_create_domain {
 }
 
 sub test_manage_domain {
+    my $vm_name = shift;
     my $domain = shift;
 
     $domain->start($USER) if !$domain->is_active();
+    ok(!$domain->is_locked,"Domain ".$domain->name." should not be locked");
 
     my $display;
     eval { $display = $domain->display($USER) };
     ok($display,"No display for ".$domain->name." $@");
+
+    ok($domain->is_active(),"[$vm_name] domain should be active");
+    $domain->shutdown(user => $USER, shutdown => 1);
+    ok(!$domain->is_active(),"[$vm_name] domain should not be active");
 }
 
 sub test_pause_domain {
     my $vm_name = shift;
     my $domain = shift;
 
-    $domain->start if !$domain->is_active();
+    $domain->start($USER) if !$domain->is_active();
     ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active) or return;
 
     my $display;
@@ -122,10 +128,11 @@ sub test_pause_domain {
 
 
 sub test_remove_domain {
+    my $vm_name = shift;
     my $domain = shift;
     diag("Removing domain ".$domain->name);
     my $domain0 = rvd_back()->search_domain($domain->name);
-    ok($domain0, "Domain ".$domain->name." should be there in ".ref $domain);
+    ok($domain0, "[$vm_name] Domain ".$domain->name." should be there in ".ref $domain);
 
 
     eval { $domain->remove($USER) };
@@ -168,6 +175,38 @@ sub test_json {
 
 }
 
+sub test_screenshot {
+    my $vm_name = shift;
+    my $domain= shift;
+
+    return if !$domain->can_screenshot;
+
+    my $file = "/var/tmp/screenshot.$$.png";
+
+    diag("[$vm_name] testing screenshot");
+    $domain->start($USER)   if !$domain->is_active;
+    sleep 2;
+
+    eval { $domain->screenshot($file) };
+    ok(!$@,"[$vm_name] $@");
+
+    $domain->shutdown(user => $USER, timeout => 1);
+    ok(-e $file,"[$vm_name] Checking screenshot $file");
+    ok(-e $file && -s $file,"[$vm_name] Checking screenshot $file should not be empty")
+        and do {
+            unlink $file or die "$! unlinking $file";
+        };
+}
+
+sub test_screenshot_file {
+    my $vm_name = shift;
+    my $domain= shift;
+
+    return if !$domain->can_screenshot;
+
+    my $file = $domain->_file_screenshot();
+    ok($file,"Expecting a screnshot filename, got '".($file or '<UNDEF>'));
+}
 #######################################################
 
 remove_old_domains();
@@ -194,12 +233,15 @@ for my $vm_name (qw( Void KVM )) {
 
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
+
         my $domain = test_create_domain($vm_name);
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
-        test_manage_domain($domain);
+        test_screenshot_file($vm_name, $domain);
+        test_manage_domain($vm_name, $domain);
+        test_screenshot($vm_name, $domain);
         test_pause_domain($vm_name, $domain);
-        test_remove_domain($domain);
+        test_remove_domain($vm_name, $domain);
     };
 }
 done_testing();

@@ -27,8 +27,9 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 my $USER = create_user('foo','bar');
 
 my %CREATE_ARGS = (
-    kvm => { id_iso => 1,       id_owner => $USER->id }
-    ,lxc => { id_template => 1, id_owner => $USER->id }
+    Void => { id_iso => 1,       id_owner => $USER->id }
+    ,KVM => { id_iso => 1,       id_owner => $USER->id }
+    ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 
 
@@ -76,7 +77,10 @@ remove_old_disks();
 
 $RVD_FRONT->fork(0);
 
-for my $vm_name ('kvm','lxc') {
+ok(scalar $RVD_FRONT->list_vm_types(),"Expecting some in list_vm_types , got "
+    .scalar $RVD_FRONT->list_vm_types());
+
+for my $vm_name ('Void','KVM','LXC') {
 
     my $vm = $RVD_BACK->search_vm($vm_name);
     if (!$vm) {
@@ -86,7 +90,6 @@ for my $vm_name ('kvm','lxc') {
 
     my $name = new_domain_name();
     my $req = $RVD_FRONT->create_domain( name => $name 
-        , vm => $vm_name
         , create_args($vm_name)
     );
     ok($req, "Request $name not created");
@@ -124,4 +127,8 @@ for my $vm_name ('kvm','lxc') {
 
     test_remove_domain($name);
 }
+
+remove_old_domains();
+remove_old_disks();
+
 done_testing();

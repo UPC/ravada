@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(confess croak cluck);
 use Data::Dumper;
+use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 
@@ -368,6 +369,27 @@ sub is_base {
     return $ret;
 };
 
+=head2 is_locked
+
+Shows if the domain has running or pending requests. It could be considered
+too as the domain is busy doing something like starting, shutdown or prepare base.
+
+Returns true if locked.
+
+
+=cut
+
+sub is_locked {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT count(*) FROM requests "
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+
+    return $count;
+}
+
 =head2 id_owner
 
 Returns the id of the user that created this domain
@@ -426,7 +448,7 @@ sub clones {
     return @clones;
 }
 
-=head2
+=head2 list_files_base
 
 Returns a list of the filenames of this base-type domain
 
@@ -468,4 +490,28 @@ sub json {
 
     return encode_json($data);
 }
+
+=head2 can_screenshot
+
+Returns wether this domain can take an screenshot.
+
+=cut
+
+sub can_screenshot {
+    return 0;
+}
+
+sub _convert_png {
+    my $self = shift;
+    my ($file_in ,$file_out) = @_;
+
+    my $in = Image::Magick->new();
+    my $err = $in->Read($file_in);
+    confess $err if $err;
+
+    $in->Write("png24:$file_out");
+
+    chmod 0755,$file_out or die "$! chmod 0755 $file_out";
+}
+
 1;

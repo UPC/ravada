@@ -25,7 +25,7 @@ with 'Ravada::VM';
 
 has vm => (
     isa => 'Sys::Virt'
-    ,is => 'ro'
+    ,is => 'rw'
     ,builder => 'connect'
     ,lazy => 1
 );
@@ -81,7 +81,12 @@ sub connect {
                               ,readonly => $self->mode
                           );
     }
+    $vm->register_close_callback(\&_reconnect);
     return $vm;
+}
+
+sub _reconnect {
+    warn "Disconnected";
 }
 
 sub _load_storage_pool {
@@ -163,15 +168,20 @@ sub search_domain {
     my $self = shift;
     my $name = shift or confess "Missing name";
 
-    for ($self->vm->list_all_domains()) {
-        next if $_->get_name ne $name;
+    my @all_domains;
+    eval { @all_domains = $self->vm->list_all_domains() };
+    die $@ if $@;
+
+    for my $dom (@all_domains) {
+        next if $dom->get_name ne $name;
 
         my $domain;
         eval {
             $domain = Ravada::Domain::KVM->new(
-                domain => $_
+                domain => $dom
                 ,storage => $self->storage_pool
                 ,readonly => $self->readonly
+                ,_vm => $self->vm
             );
         };
         warn $@ if $@;
@@ -260,6 +270,7 @@ sub search_volume {
 
     my $vol;
     eval { $vol = $self->storage_pool->get_volume_by_name($name) };
+    die $@ if $@;
     return $vol;
 }
 
@@ -292,7 +303,11 @@ sub _domain_create_from_iso {
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
 
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+                , _vm => $self->vm
+    );
+
     $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
@@ -312,7 +327,9 @@ sub _create_disk_qcow2 {
     my @files_out;
 
     for my $file_base ( $base->list_files_base ) {
-        my $file_out = "$file_base.qcow2";
+        my $file_out = $file_base;
+        $file_out =~ s/\.ro\.\w+$//;
+        $file_out .= ".$name.qcow2";
 
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'

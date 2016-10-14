@@ -26,7 +26,7 @@ sub test_req_prepare_base {
     my $domain0 =  $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
 
-    my $req = Ravada::Request->prepare_base(name => $name, uid => $USER->id);
+    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => $USER->id);
     $RAVADA->_process_requests_dont_fork();
 
     ok($req->status('done'),"Request should be done, it is".$req->status);

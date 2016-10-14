@@ -15,7 +15,7 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 
@@ -145,5 +145,16 @@ sub create_user {
     die $@ if !$user;
     return $user;
 }
+
+sub wait_request {
+    my $req = shift;
+    for ( 1 .. 10 ) {
+        last if $req->status eq 'done';
+        diag("Request ".$req->command." ".$req->status." ".localtime(time));
+        sleep 2;
+    }
+
+}
+
 
 1;
