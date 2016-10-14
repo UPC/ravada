@@ -681,6 +681,20 @@ sub prepare_machine {
 
     my $domain = _search_requested_machine($c);
 
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    if (! -e $file_screenshot && $domain->can_screenshot() ) {
+        if ( !$domain->is_active() ) {
+            Ravada::Request->start_domain( name => $domain->name
+                ,uid => $USER->id
+            )   
+            sleep 3;
+        }
+        Ravada::Request->screenshot_domain (
+            id_domain => $domain->id
+            ,filename => $file_screenshot
+        );
+    }
+
     my $req = Ravada::Request->prepare_base(
         id_domain => $domain->id
         ,uid => $USER->id
