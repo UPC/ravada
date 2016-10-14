@@ -12,8 +12,9 @@
                     
                 </tr>
             </thead>
-            <tbody>
-                <tr ng-repeat="message in list_message">
+            <tbody ng-repeat="message in list_message">
+            
+                <tr  data-toggle="collapse" data-target="#demo{{message.id}}" class="accordion-toggle">
                     <td><div ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
                         <div ng-show="{{message.date_read != null}}">{{message.subject}}</div>
                     </td>
@@ -28,8 +29,67 @@
                     </td>
                     
                 </tr>
+                <tr>
+                    <td  colspan="6" class="hiddenRow"><div id="demo{{message.id}}" class="accordian-body collapse" style="none">
+                    <div class="panel panel-warning">
+                        <div class="panel-body">
+                            <b>Subject:</b>{{message.subject}}
+                        </div>
+                        <div class="panel-footer"><b>Message:</b><br>{{message.message}}</div>
+                    </div>
+                        
+                    </div></td>
+                </tr>
+            
             </tbody>
         </table>        
     </div>
 </div>
 
+<!--<table class="table table-condensed" style="border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Credit</th>
+            <th>Debit</th>
+            <th>Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr data-toggle="collapse" data-target="#demo1" class="accordion-toggle">
+            <td>1</td>
+            <td>05 May 2013</td>
+            <td>Credit Account</td>
+            <td class="text-success">$150.00</td>
+            <td class="text-error"></td>
+            <td class="text-success">$150.00</td>
+        </tr>
+        <tr >
+            <td colspan="6" class="hiddenRow"><div class="accordian-body collapse" id="demo1"> Demo1 </div> </td>
+        </tr>
+        <tr data-toggle="collapse" data-target="#demo2" class="accordion-toggle">
+            <td>2</td>
+            <td>05 May 2013</td>
+            <td>Credit Account</td>
+            <td class="text-success">$11.00</td>
+            <td class="text-error"></td>
+            <td class="text-success">$161.00</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="hiddenRow"><div id="demo2" class="accordian-body collapse">Demo2</div></td>
+        </tr>
+        <tr data-toggle="collapse" data-target="#demo3" class="accordion-toggle">
+            <td>3</td>
+            <td>05 May 2013</td>
+            <td>Credit Account</td>
+            <td class="text-success">$500.00</td>
+            <td class="text-error"></td>
+            <td class="text-success">$661.00</td>
+        </tr>
+        <tr>
+            <td colspan="6"  class="hiddenRow"><div id="demo3" class="accordian-body collapse">Demo3</div></td>
+        </tr>
+    </tbody>
+</table>

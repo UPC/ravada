@@ -344,3 +344,7 @@ ul.alert-dropdown {
     margin: 7px 0;
 }
 
+.hiddenRow {
+    padding: 0 !important;
+}
+
