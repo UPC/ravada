@@ -157,6 +157,13 @@ get '/machine/shutdown/*.html' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
+
+get '/machine/shutdown/*.json' => sub {
+        my $c = shift;
+        return shutdown_machine($c);
+};
+
+
 any '/machine/remove/*.html' => sub {
         my $c = shift;
         return remove_machine($c);
@@ -546,23 +553,23 @@ sub init {
 
 sub _search_requested_machine {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    my ($id,$type) = $c->req->url->to_abs->path =~ m{/(\d+)\.(\w+)$};
 
-    return show_failure($c,"I can't find id.html in ".$c->req->url->to_abs->path)
+    return show_failure($c,"I can't find id in ".$c->req->url->to_abs->path)
         if !$id;
 
     my $domain = $RAVADA->search_domain_by_id($id);
     if (!$domain ) {
         return show_failure($c,"I can't find domain id=$id");
     }
-    return $domain;
+    return ($domain,$type);
 }
 
 sub manage_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
 
-    my $domain = _search_requested_machine($c);
+    my ($domain) = _search_requested_machine($c);
     if (!$domain) {
         return $c->render(text => "Domain no found");
     }
@@ -632,10 +639,11 @@ sub shutdown_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
 
-    my $base = _search_requested_machine($c);
+    my ($base, $type) = _search_requested_machine($c);
     my $req = Ravada::Request->shutdown_domain(name => $base->name, uid => $USER->id);
 
-    return $c->redirect_to('/machines');
+    return $c->redirect_to('/machines') if $type eq 'html';
+    return $c->render(json => { req => $req->id });
 }
 
 sub _do_remove_machine {
