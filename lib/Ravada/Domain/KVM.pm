@@ -27,7 +27,7 @@ has 'storage' => (
 has '_vm' => (
     is => 'ro'
     ,isa => 'Sys::Virt'
-    ,required => 1
+    ,required => 0
 );
 
 ##################################################
@@ -549,27 +549,32 @@ Takes a screenshot, it stores it in file.
 
 sub screenshot {
     my $self = shift;
+    my $file = shift;
 
     my $stream = $self->{_vm}->new_stream(Sys::Virt::Stream::NONBLOCK);
 
     my $mimetype = $self->domain->screenshot($stream,0);
     warn $mimetype;
     my $data;
-    open $OUT, '>', "/var/tmp/screen.$$.out.dat";
+    open my $out, '>', $file;
     while ( my $rv =$stream->recv(\$data,1024)) {
         warn "$rv";
         last if $rv<0;
-        print $OUT $data;
+        print $out $data;
     }
-    close $OUT;
+    close $out;
     $stream->finish;
 }
 
-sub _store_stream {
-    my ($st, $data, $count) = @_;
+=head2 can_screenshot
 
-    print $OUT $data;
+Returns if a screenshot of this domain can be taken.
 
+=cut
+
+sub can_screenshot {
+    my $self = shift;
+    return 1 if $self->_vm();
 }
 
 1;

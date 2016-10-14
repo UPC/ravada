@@ -489,4 +489,15 @@ sub json {
 
     return encode_json($data);
 }
+
+=head2 can_screenshot
+
+Returns wether this domain can take an screenshot.
+
+=cut
+
+sub can_screenshot {
+    return 0;
+}
+
 1;

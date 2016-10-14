@@ -174,17 +174,19 @@ sub test_screenshot {
     my $vm_name = shift;
     my $domain= shift;
 
-    my $file = "/var/tmp/$$.png";
+    return if !$domain->can_screenshot;
 
-    return if $vm_name !~ /kvm/i;
+    my $file = "/var/tmp/$$.png";
 
     $domain->start($USER)   if !$domain->is_active;
     sleep 5;
-    $domain->screenshot();
+
     $domain->pause($USER);
+    eval { $domain->screenshot($file) };
     ok(!$@,"[$vm_name] $@");
+
     $domain->shutdown($USER);
-    ok(-e $file,"[$vm_name] Checking screenshot ");
+    ok(-e $file,"[$vm_name] Checking screenshot $file");
 }
 
 #######################################################
