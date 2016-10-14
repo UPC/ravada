@@ -630,17 +630,21 @@ sub _cmd_screenshot {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
+    $request->status("working $$");
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
     $request->error('');
+    my $bytes = 0;
     if (!$domain->can_screenshot) {
-        $request->error("I can't take a screenshot of the domain ".$domain->name);
+        die "I can't take a screenshot of the domain ".$domain->name;
     } else {
-        $domain->screenshot($request->args('filename'));
+        $bytes = $domain->screenshot($request->args('filename'));
+        $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
     }
-
+    warn ''.($bytes or '<NULL>')." bytes received";
+    $request->error("No data received") if !$bytes;
+    warn "done";
     $request->status('done');
 
 }

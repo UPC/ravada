@@ -21,7 +21,9 @@
                         <a href="/machine/view/<%= $domain->id %>.html">View</a>
                         <a href="/machine/prepare/<%= $domain->id %>.html">PrepareBase</a>
                         <a href="/machine/remove/<%= $domain->id %>.html">Remove</a>
+                        <a href="/machine/screenshot/<%= $domain->id %>.html">Screenshot</a>
                     </form>
+                    <img src="/img/screenshots/<%= $domain->id %>.png" width=400>
                     
                 </div>
             </div>

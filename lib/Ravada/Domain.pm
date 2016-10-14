@@ -510,6 +510,8 @@ sub _convert_png {
     confess $err if $err;
 
     $in->Write("png24:$file_out");
+
+    chmod 0755,$file_out or die "$! chmod 0755 $file_out";
 }
 
 1;

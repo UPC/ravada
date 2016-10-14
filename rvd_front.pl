@@ -31,6 +31,8 @@ our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
 our $TIMEOUT = 10;
 our $USER;
 
+our $DOCUMENT_ROOT = "/var/www";
+
 init();
 ############################################################################3
 
@@ -162,6 +164,11 @@ any '/machine/remove/*.html' => sub {
 get '/machine/prepare/*.html' => sub {
         my $c = shift;
         return prepare_machine($c);
+};
+
+get '/machine/screenshot/*.html' => sub {
+        my $c = shift;
+        return screenshot_machine($c);
 };
 
 ##############################################
@@ -650,6 +657,23 @@ sub remove_machine {
     return $c->render( template => 'bootstrap/remove_machine' );
 }
 
+
+sub screenshot_machine {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    warn ref($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    my $req = Ravada::Request->screenshot_domain (
+        id_domain => $domain->id
+        ,filename => $file_screenshot
+    );
+
+    $c->render(template => 'bootstrap/machines');
+}
 
 sub prepare_machine {
     my $c = shift;

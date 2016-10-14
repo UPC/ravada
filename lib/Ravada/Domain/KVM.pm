@@ -557,8 +557,10 @@ sub screenshot {
 
     my $file_tmp = "$file.tmp";
     my $data;
+    my $bytes = 0;
     open my $out, '>', $file_tmp or die "$! $file_tmp";
     while ( my $rv =$stream->recv($data,1024)) {
+        $bytes += $rv;
         last if $rv<=0;
         print $out $data;
     }
@@ -568,6 +570,8 @@ sub screenshot {
     unlink $file_tmp or warn "$! removing $file_tmp";
 
     $stream->finish;
+
+    return $bytes;
 }
 
 sub _file_screenshot {
