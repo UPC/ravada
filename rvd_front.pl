@@ -570,7 +570,9 @@ sub _search_requested_machine {
     if (!$domain ) {
         return show_failure($c,"I can't find domain id=$id");
     }
-    return ($domain,$type);
+
+    return ($domain,$type) if wantarray;
+    return $domain;
 }
 
 sub manage_machine {
