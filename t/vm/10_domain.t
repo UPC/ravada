@@ -181,19 +181,32 @@ sub test_screenshot {
 
     return if !$domain->can_screenshot;
 
-    my $file = "/var/tmp/$$.png";
+    my $file = "/var/tmp/screenshot.$$.png";
 
+    diag("[$vm_name] testing screenshot");
     $domain->start($USER)   if !$domain->is_active;
-    sleep 5;
+    sleep 2;
 
-    $domain->pause($USER);
     eval { $domain->screenshot($file) };
     ok(!$@,"[$vm_name] $@");
 
     $domain->shutdown(user => $USER, timeout => 1);
     ok(-e $file,"[$vm_name] Checking screenshot $file");
+    ok(-e $file && -s $file,"[$vm_name] Checking screenshot $file should not be empty")
+        and do {
+            unlink $file or die "$! unlinking $file";
+        };
 }
 
+sub test_screenshot_file {
+    my $vm_name = shift;
+    my $domain= shift;
+
+    return if !$domain->can_screenshot;
+
+    my $file = $domain->_screenshot_filename();
+    ok($file,"Expecting a screnshot filename, got '".($file or '<UNDEF>'));
+}
 #######################################################
 
 remove_old_domains();
@@ -220,9 +233,11 @@ for my $vm_name (qw( Void KVM )) {
 
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
+
         my $domain = test_create_domain($vm_name);
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
+        test_screenshot_file($vm_name, $domain);
         test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
         test_pause_domain($vm_name, $domain);

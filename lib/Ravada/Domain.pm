@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(confess croak cluck);
 use Data::Dumper;
+use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 
@@ -498,6 +499,17 @@ Returns wether this domain can take an screenshot.
 
 sub can_screenshot {
     return 0;
+}
+
+sub _convert_png {
+    my $self = shift;
+    my ($file_in ,$file_out) = @_;
+
+    my $in = Image::Magick->new();
+    my $err = $in->Read($file_in);
+    confess $err if $err;
+
+    $in->Write("png24:$file_out");
 }
 
 1;
