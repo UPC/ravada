@@ -686,7 +686,7 @@ sub prepare_machine {
         if ( !$domain->is_active() ) {
             Ravada::Request->start_domain( name => $domain->name
                 ,uid => $USER->id
-            )   
+            );
             sleep 3;
         }
         Ravada::Request->screenshot_domain (
