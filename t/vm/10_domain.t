@@ -89,6 +89,7 @@ sub test_create_domain {
 }
 
 sub test_manage_domain {
+    my $vm_name = shift;
     my $domain = shift;
 
     $domain->start($USER) if !$domain->is_active();
@@ -97,13 +98,17 @@ sub test_manage_domain {
     my $display;
     eval { $display = $domain->display($USER) };
     ok($display,"No display for ".$domain->name." $@");
+
+    ok($domain->is_active(),"[$vm_name] domain should be active");
+    $domain->shutdown(user => $USER, shutdown => 1);
+    ok(!$domain->is_active(),"[$vm_name] domain should not be active");
 }
 
 sub test_pause_domain {
     my $vm_name = shift;
     my $domain = shift;
 
-    $domain->start if !$domain->is_active();
+    $domain->start($USER) if !$domain->is_active();
     ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active) or return;
 
     my $display;
@@ -185,7 +190,7 @@ sub test_screenshot {
     eval { $domain->screenshot($file) };
     ok(!$@,"[$vm_name] $@");
 
-    $domain->shutdown($USER);
+    $domain->shutdown(user => $USER, timeout => 1);
     ok(-e $file,"[$vm_name] Checking screenshot $file");
 }
 
@@ -218,7 +223,7 @@ for my $vm_name (qw( Void KVM )) {
         my $domain = test_create_domain($vm_name);
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
-        test_manage_domain($domain);
+        test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
         test_pause_domain($vm_name, $domain);
         test_remove_domain($vm_name, $domain);
