@@ -117,6 +117,12 @@ get '/list_machines.json' => sub {
     $c->render(json => $RAVADA->list_domains);
 };
 
+get '/list_users.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_users);
+};
+
+
 get '/list_lxc_templates.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_lxc_templates);

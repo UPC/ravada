@@ -4,17 +4,19 @@
             .directive("solShowSupportform", swSupForm)
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
+	    .directive("solShowListusers", swListUsers)
             .directive("solShowCardsmachines", swCardsMach)
             .directive("solShowMachinesNotifications", swMachNotif)
             .directive("solShowMessages", swMess)
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
+	    .service("listUsers", gtListUsers)
             .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
             .controller("machines", machinesCrtl)
             .controller("messages", messagesCrtl)
-
+	    .controller("users", usersCrtl)
 
 
 
@@ -118,6 +120,38 @@
         });
 
     };
+
+// list users
+    function usersCrtl($scope, $http, request, listUsers) {
+
+        $http.get('/list_users.json').then(function(response) {
+                $scope.list_users= response.data;
+        });
+
+        request.get(function( res ) {
+            $scope.res = res;
+        });
+
+    };
+
+    function swListUsers() {
+
+        return {
+            restrict: "E",
+            templateUrl: '/templates/list_users.html',
+        };
+
+    };
+
+    function gtListUsers($resource){
+
+        return $resource('/list_users.json',{},{
+            get:{isArray:true}
+        });
+
+    };
+
+
 
 // list messages
     function messagesCrtl($scope, $http, request, listMess) {

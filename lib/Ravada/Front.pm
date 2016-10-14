@@ -125,6 +125,20 @@ sub list_lxc_templates {
 
 }
 
+sub list_users {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
+    $sth->execute();
+    
+    my @users = ();
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @users, ($row);
+    }
+    $sth->finish;
+
+    return \@users;
+}
+
 sub create_domain {
     my $self = shift;
     return Ravada::Request->create_domain(@_);
