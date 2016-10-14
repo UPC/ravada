@@ -116,7 +116,7 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->shutdown_domain(name => $name, uid => $USER->id);
+    my $req3 = Ravada::Request->shutdown_domain(name => $name, uid => $USER->id, timeout => 2);
     $RAVADA->process_requests();
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
@@ -131,6 +131,59 @@ sub test_start {
     return $domain3;
 
 }
+
+sub test_screenshot {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    $domain->start($USER) if !$domain->is_active();
+    return if !$domain->can_screenshot();
+
+    unlink $domain->_file_screenshot or die "$! ".$domain->_file_screenshot
+        if -e $domain->_file_screenshot;
+
+    ok(!-e $domain->_file_screenshot,"File screenshot ".$domain->_file_screenshot
+                                    ." should not exist");
+
+    my $req = Ravada::Request->screenshot_domain(id_domain => $domain->id );
+    ok($req);
+    $RAVADA->process_requests();
+    wait_request($req);
+    ok($req->status('done'),"Request should be done, it is ".$req->status);
+    ok(!$req->error(''),"Error should be '' , it is ".$req->error);
+
+    ok(-e $domain->_file_screenshot,"File screenshot ".$domain->_file_screenshot
+                                    ." should exist");
+}
+
+sub test_screenshot_file {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    $domain->start($USER) if !$domain->is_active();
+    return if !$domain->can_screenshot();
+
+    unlink $domain->_file_screenshot or die "$! ".$domain->_file_screenshot
+        if -e $domain->_file_screenshot;
+
+    ok(!-e $domain->_file_screenshot,"File screenshot should not exist");
+
+    my $file = "/var/tmp/screenshot.$$.png";
+    my $req = Ravada::Request->screenshot_domain(
+        id_domain => $domain->id
+        ,filename => $file);
+    ok($req);
+
+    $RAVADA->process_requests();
+    wait_request($req);
+
+    ok($req->status('done'),"Request should be done, it is ".$req->status);
+    ok(!$req->error(''),"Error should be '' , it is ".$req->error);
+
+    ok(-e $file,"File '$file' screenshot should exist");
+
+}
+
 
 ###############################################################
 #
@@ -151,6 +204,8 @@ for my $vm_name (qw(KVM Void)) {
         diag("Testing VM $vm_name");
         my $domain = test_start($vm_name);
 
+        test_screenshot($vm_name, $domain);
+        test_screenshot_file($vm_name, $domain);
         $domain->shutdown_now($USER) if $domain;
         $domain->remove(user_admin())       if $domain;
     };

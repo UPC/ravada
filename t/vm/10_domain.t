@@ -204,7 +204,7 @@ sub test_screenshot_file {
 
     return if !$domain->can_screenshot;
 
-    my $file = $domain->_screenshot_filename();
+    my $file = $domain->_file_screenshot();
     ok($file,"Expecting a screnshot filename, got '".($file or '<UNDEF>'));
 }
 #######################################################

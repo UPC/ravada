@@ -549,7 +549,7 @@ Takes a screenshot, it stores it in file.
 
 sub screenshot {
     my $self = shift;
-    my $file = shift or $self->_screenshot_filename();
+    my $file = (shift or $self->_file_screenshot);
 
     my $stream = $self->{_vm}->new_stream();
 
@@ -563,12 +563,14 @@ sub screenshot {
         print $out $data;
     }
     close $out;
+
     $self->_convert_png($file_tmp,$file);
     unlink $file_tmp or warn "$! removing $file_tmp";
-#    $stream->finish;
+
+    $stream->finish;
 }
 
-sub _screenshot_filename {
+sub _file_screenshot {
     my $self = shift;
     my $doc = XML::LibXML->load_xml(string => $self->storage->get_xml_description);
     my ($path) = $doc->findnodes('/pool/target/path/text()');

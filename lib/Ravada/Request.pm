@@ -38,6 +38,7 @@ our %VALID_ARG = (
     ,resume_domain => $args_manage
     ,remove_domain => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
+    ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => $args_manage
 );
 
@@ -224,8 +225,10 @@ sub _check_args {
     my $sub = shift;
     my $args = { @_ };
 
+    my $valid_args = $VALID_ARG{$sub};
     for (keys %{$args}) {
-        confess "Invalid argument $_" if !$VALID_ARG{$sub}->{$_};
+        confess "Invalid argument $_ , valid args ".Dumper($valid_args) 
+            if !$valid_args->{$_};
     }
 
     for (keys %{$VALID_ARG{$sub}}) {
@@ -535,6 +538,22 @@ sub args {
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
+}
+
+sub screenshot_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('screenshot_domain', @_ );
+
+    $args->{filename} = '' if !exists $args->{filename};
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
+        ,args => encode_json($args));
+
 }
 
 sub AUTOLOAD {

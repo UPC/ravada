@@ -626,6 +626,26 @@ sub _cmd_domdisplay {
 
 }
 
+sub _cmd_screenshot {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+
+    my $id_domain = $request->args('id_domain');
+    my $domain = $self->search_domain_by_id($id_domain);
+    $request->error('');
+    if (!$domain->can_screenshot) {
+        $request->error("I can't take a screenshot of the domain ".$domain->name);
+    } else {
+        $domain->screenshot($request->args('filename'));
+    }
+
+    $request->status('done');
+
+}
+
+
 sub _cmd_create{
     my $self = shift;
     my $request = shift;
@@ -825,6 +845,7 @@ sub _req_method {
         ,resume => \&_cmd_resume
       ,shutdown => \&_cmd_shutdown
     ,domdisplay => \&_cmd_domdisplay
+    ,screenshot => \&_cmd_screenshot
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,list_vm_types => \&_cmd_list_vm_types
