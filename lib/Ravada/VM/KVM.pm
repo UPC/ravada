@@ -328,7 +328,7 @@ sub _create_disk_qcow2 {
 
     for my $file_base ( $base->list_files_base ) {
         my $file_out = $file_base;
-        $file_out =~ s/\.ro\.\w+$/$1/;
+        $file_out =~ s/\.ro\.\w+$//;
         $file_out .= ".$name.qcow2";
 
         my @cmd = ('qemu-img','create'
