@@ -120,7 +120,7 @@
     };
 
 // list messages
-    function messagesCrtl($scope, $http, request, listMess) {
+    function messagesCrtl($scope, $http, request) {
 
         $http.get('/messages.json').then(function(response) {
                 $scope.list_message= response.data;
@@ -146,3 +146,4 @@
         });
 
     };
+

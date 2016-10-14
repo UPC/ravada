@@ -348,3 +348,9 @@ ul.alert-dropdown {
     padding: 0 !important;
 }
 
+.table>tbody+tbody {
+    border-top: none;
+}
+.modal-backdrop {
+  z-index: -1 !important;
+}

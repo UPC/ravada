@@ -3,11 +3,12 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
+    <div ng-controller="messages">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="messages">
+       
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -24,12 +25,9 @@ Mark all as Read</a>
                     
                 </div>
             </div>
-        </div>
-
-
     </div>
     </div>
-    
+    </div>
     %= include 'bootstrap/scripts'
 </body>
 </html>

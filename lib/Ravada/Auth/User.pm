@@ -162,6 +162,29 @@ sub mark_message_read {
 
 }
 
+=head2 mark_message_unread
+
+Marks a message as unread
+
+    $user->mark_message_unread($id);
+
+Returns nothing
+
+=cut
+
+sub mark_message_unread {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
+        ." SET date_read=null "
+        ." WHERE id_user=? AND id=?");
+
+    $sth->execute($self->id, $id);
+    $sth->finish;
+
+}
+
 =head2 mark_all_messages_read
 
 Marks all message as read
