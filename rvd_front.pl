@@ -210,6 +210,14 @@ get '/messages/read/*.html' => sub {
     return $c->redirect_to("/messages.html");
 };
 
+get '/messages/unread/*.html' => sub {
+    my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    $USER->mark_message_unread($id);
+    return $c->redirect_to("/messages.html");
+};
+
 get '/messages/view/*.html' => sub {
     my $c = shift;
 
