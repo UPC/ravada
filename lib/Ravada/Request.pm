@@ -540,6 +540,18 @@ sub args {
     return $self->{args}->{$name};
 }
 
+=head2 screenshot_domain
+
+Request the screenshot of a domain.
+
+Arguments:
+
+- optional filename , defaults to "storage_path/$id_domain.png"
+
+Returns a Ravada::Request;
+
+=cut
+
 sub screenshot_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
