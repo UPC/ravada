@@ -60,9 +60,18 @@ any '/logout' => sub {
     $c->redirect_to('/');
 };
 
-get '/ip' => sub {
+get '/anonymous.html' => sub {
     my $c = shift;
-    $c->render(template => 'bases', base => list_bases());
+    my $ip = (
+            $c->req->headers->header('X-Forwarded-For')
+                or
+            $c->req->headers->header('Remote-Addr')
+                or
+            $c->tx->remote_address
+        );
+        warn $ip;
+    return $c->render(data => ( $ip or '<UNKNOWN'));
+#    $c->render(template => 'bases', base => list_bases());
 };
 
 get '/ip/*' => sub {
