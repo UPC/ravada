@@ -23,6 +23,7 @@ Clone the sources:
 - libmoose-perl
 - libjson-xs-perl
 - qemu-utils
+- libmoosex-types-netaddr-ip-perl
 
 
 ##Old debian
