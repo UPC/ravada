@@ -13,7 +13,7 @@
             </thead>
             <tbody>
                 <tr ng-repeat="machine in list_machines">
-                    <td><a href="/machine/manage/{{machine.id}}.html">{{machine.name}}</a></td>
+                    <td><a data-toggle="modal" data-target="#modal{{machine.id}}">{{machine.name}}</a></td>
                     <td><i ng-show="{{machine.is_base}}" class="fa fa-check" aria-hidden="true"></i><i ng-hide="{{machine.is_base}}" class="fa fa-times" aria-hidden="true"></i></td>
                     <td><i ng-show="{{machine.is_active}}" class="fa fa-check" aria-hidden="true"></i><i ng-show="{{!machine.is_active}}" class="fa fa-times" aria-hidden="true"></i></td>
                     <td><a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html">View</a>
@@ -26,7 +26,37 @@
                     
                 </tr>
             </tbody>
-        </table>        
+        </table> 
+        <div ng-repeat="machine in list_machines">       
+        <div id="modal{{machine.id}}" class="modal fade" role="dialog">
+          <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">
+                    {{machine.name}}
+                </h4>
+              </div>
+              <div class="modal-body">
+                <img src="/img/screenshots/6.png" width="400" alt="No screenshot avaiable for this machine">
+                <a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html">View</a>
+                        <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html">Clone</a>
+                        <a ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm" href="/machine/screenshot/{{machine.id}}.html">Screenshot</a>
+                        <a class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
+                        <a ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" href="/machine/shutdown/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i></strong> ShutDown</a>
+                        <a  class="btn btn-danger btn-sm" href="/machine/remove/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
+              </div>
+              <div class="modal-footer">
+              
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        </div>       
     </div>
 </div>
 
