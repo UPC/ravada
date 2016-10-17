@@ -91,6 +91,15 @@ any '/machines/new' => sub {
     return new_machine($c);
 };
 
+get '/domain/new.html' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
+    $c->stash(error => []);
+    return $c->render(template => "bootstrap/new_machine");
+
+};
+
 any '/users' => sub {
     my $c = shift;
 
