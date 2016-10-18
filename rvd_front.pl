@@ -50,6 +50,7 @@ any '/index.html' => sub {
 
 any '/login' => sub {
     my $c = shift;
+    $c->session( expires => 3600 );
     return login($c);
 };
 
@@ -63,8 +64,7 @@ any '/logout' => sub {
 get '/anonymous' => sub {
     my $c = shift;
 #    $c->render(template => 'bases', base => list_bases());
-    my $name_mojo = $c->signed_cookie('mojolicious');
-    return $c->render(text => "I can't find RVD cookie") if !$name_mojo;
+    $USER = _anonymous_user($c);
     return list_bases_anonymous($c);
 };
 
@@ -74,14 +74,14 @@ get '/anonymous_logout.html' => sub {
     return $c->redirect_to('/');
 };
 
-get '/anonymous/*' => sub {
+get '/anonymous/*.html' => sub {
     my $c = shift;
 
     $c->stash(_anonymous => 1 , _logged_in => 0);
     my ($base_id) = $c->req->url->to_abs =~ m{/anonymous/(.*).html};
     my $base = $RAVADA->search_domain_by_id($base_id);
 
-    _anonymous_user($c);
+    $USER = _anonymous_user($c);
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
@@ -818,33 +818,45 @@ sub _anonymous_user {
         $name = _new_anonymous_user($c);
         $c->session(anonymous_user => $name);
     }
-    $USER= Ravada::Auth::SQL->new( name => $name );
-    $c->stash(_user => $USER);
+    my $user= Ravada::Auth::SQL->new( name => $name );
 
-    confess "USER ".$USER->name." has no id, may not be in table users"
-        if !$USER->id;
+    confess "user ".$user->name." has no id, may not be in table users"
+        if !$user->id;
+
+    return $user;
+}
+
+sub _random_name {
+    my $length = shift;
+    my $ret = 'O'.substr($$,3);
+    my $max = ord('z') - ord('a');
+    for ( 0 .. $length ) {
+        my $n = int rand($max + 1);
+        $ret .= chr(ord('a') + $n);
+    }
+    return $ret;
 }
 
 sub _new_anonymous_user {
     my $c = shift;
 
     my $name_mojo = $c->signed_cookie('mojolicious');
-    confess "Missing mojolicious cookie"    if !$name_mojo;
+    $name_mojo = _random_name(32)    if !$name_mojo;
 
     $name_mojo =~ tr/[^a-z][^A-Z][^0-9]/___/c;
 
     my $name;
-    for my $n ( 8 .. 32 ) {
+    for my $n ( 4 .. 32 ) {
         $name = substr($name_mojo,0,$n);
-        warn $name;
+        my $user;
         eval { 
-            $USER= Ravada::Auth::SQL->new( name => $name );
-            $USER = undef if !$USER->id;
+            $user = Ravada::Auth::SQL->new( name => $name );
+            $user = undef if !$USER->id;
         };
-        last if !$USER;
+        last if !$user;
     }
     $c->session('anonymous_user' => $name);
-    warn "creating temporary user $name";
+    warn "\n*** creating temporary user $name";
     Ravada::Auth::SQL::add_user($name);
 
     return $name;
