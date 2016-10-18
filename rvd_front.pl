@@ -851,11 +851,10 @@ sub _new_anonymous_user {
         my $user;
         eval { 
             $user = Ravada::Auth::SQL->new( name => $name );
-            $user = undef if !$USER->id;
+            $user = undef if !$user->id;
         };
         last if !$user;
     }
-    $c->session('anonymous_user' => $name);
     warn "\n*** creating temporary user $name";
     Ravada::Auth::SQL::add_user($name);
 
