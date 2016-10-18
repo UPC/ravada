@@ -7,6 +7,7 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
+use Ravada::Network;
 
 use Data::Dumper;
 
@@ -279,6 +280,34 @@ sub start_domain {
     my $user = shift;
 
     return Ravada::Request->start_domain(name => $name, uid => $user->id);
+}
+
+=head2 list_bases_anonymous
+
+List the available bases for anonymous user in a remote IP
+
+    my $list = $rvd_front->list_bases_anonymous($remote_ip);
+
+=cut
+
+sub list_bases_anonymous {
+    my $self = shift;
+    my $ip = shift or confess "Missing remote IP";
+
+    my $net = Ravada::Network->new(address => $ip);
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    $sth->execute();
+    
+    my @bases = ();
+    while ( my $row = $sth->fetchrow_hashref) {
+        next if !$net->allowed_anonymous($row->{id});
+        push @bases, ($row);
+    }
+    $sth->finish;
+
+    return \@bases;
+
 }
 
 1;

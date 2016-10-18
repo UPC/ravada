@@ -60,27 +60,35 @@ any '/logout' => sub {
     $c->redirect_to('/');
 };
 
-get '/anonymous.html' => sub {
+get '/anonymous' => sub {
     my $c = shift;
-    my $ip = (
-            $c->req->headers->header('X-Forwarded-For')
-                or
-            $c->req->headers->header('Remote-Addr')
-                or
-            $c->tx->remote_address
-        );
-        warn $ip;
-    return $c->render(data => ( $ip or '<UNKNOWN'));
 #    $c->render(template => 'bases', base => list_bases());
+    return list_bases_anonymous($c);
 };
 
-get '/ip/*' => sub {
+get '/anonymous/*' => sub {
     my $c = shift;
-    _logged_in($c);
-    my ($base_name) = $c->req->url->to_abs =~ m{/ip/(.*)};
-    my $ip = $c->tx->remote_address();
-    my $base = $RAVADA->search_domain($base_name);
-    return quick_start_domain($c,$base->id,$ip);
+
+    $c->stash(_anonymous => 1 , _logged_in => 0);
+    my ($base_id) = $c->req->url->to_abs =~ m{/anonymous/(.*).html};
+    my $base = $RAVADA->search_domain_by_id($base_id);
+
+    my $name = $c->signed_cookie('mojolicious');
+    $name =~ s/-//g;
+    return $c->render( text => "unknown cookie") if !$name;
+
+    eval { 
+        $USER= Ravada::Auth::SQL->new( name => $name );
+        $USER = undef if !$USER->id;
+    };
+    if (!$USER || $@) {
+        warn "creating temporary user $name";
+        Ravada::Auth::SQL::add_user($name);
+        $USER= Ravada::Auth::SQL->new( name => $name );
+        return $c->render( text => "I can't find user $name") if !$USER;
+    }
+    $c->stash(_user => $USER);
+    return quick_start_domain($c,$base->id, $name);
 };
 
 any '/machines' => sub {
@@ -134,7 +142,15 @@ get '/list_images.json' => sub {
 
 get '/list_machines.json' => sub {
     my $c = shift;
+    # shouldn't this be "list_bases" ?
     $c->render(json => $RAVADA->list_domains);
+};
+
+get '/list_bases_anonymous.json' => sub {
+    my $c = shift;
+
+    # shouldn't this be "list_bases" ?
+    $c->render(json => $RAVADA->list_bases_anonymous(_remote_ip($c)));
 };
 
 get '/list_users.json' => sub {
@@ -275,11 +291,14 @@ sub _logged_in {
     confess "missing \$c" if !defined $c;
     $USER = undef;
 
+    $c->stash(_logged_in => undef , _user => undef, _anonymous => 1);
+
     my $login = $c->session('login');
     $USER = Ravada::Auth::SQL->new(name => $login)  if $login;
 
     $c->stash(_logged_in => $login );
     $c->stash(_user => $USER);
+    $c->stash(_anonymous => !$USER);
 
     return $USER;
 }
@@ -346,9 +365,10 @@ sub quick_start {
     }
 
     $c->render(
-                    template => 'bootstrap/logged' 
+                    template => 'bootstrap/list_bases' 
                     ,id_base => $id_base
                       ,login => $login 
+                  ,_anonymous => 0
                       ,error => \@error
     );
 }
@@ -484,8 +504,11 @@ sub _search_req_base_error {
 sub access_denied {
     
     my $c = shift;
+    my $msg = 'Access denied to '.$c->req->url->to_abs->path;
 
-    return $c->render(text => 'Access denied to '.$c->req->url->to_abs->path.' for user '.$USER->name);
+    $msg .= ' for user '.$USER->name if $USER;
+    
+    return $c->render(text => $msg);
 }
 
 sub base_id {
@@ -506,14 +529,14 @@ sub provision {
     my $domain = $RAVADA->search_domain(name => $name);
     return $domain if $domain;
 
-    warn "requesting the creation of $name";
+    warn "requesting the creation of $name for ".$USER->id;
+
     my $req = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
-        ,id_owner => $USER->id
+       , id_owner => $USER->id
     );
     $RAVADA->wait_request($req, 1);
-
 
     if ( $req->status ne 'done' ) {
         $c->stash(error => "Domain provisioning request ".$req->status);
@@ -763,6 +786,31 @@ sub list_requests {
 
     my $list_requests = $RAVADA->list_requests();
     $c->render(json => $list_requests);
+}
+
+sub list_bases_anonymous {
+    my $c = shift;
+
+    my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
+
+    return access_denied($c)    if !scalar @$bases_anonymous;
+
+    $c->render(template => 'bootstrap/list_bases'
+        , _logged_in => undef
+        , _anonymous => 1
+        , _user => undef
+    );
+}
+
+sub _remote_ip {
+    my $c = shift;
+    return (
+            $c->req->headers->header('X-Forwarded-For')
+                or
+            $c->req->headers->header('Remote-Addr')
+                or
+            $c->tx->remote_address
+    );
 }
 
 app->start;

@@ -15,12 +15,13 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 
 our $CONT = 0;
 our $RVD_BACK;
+our $RVD_FRONT;
 our $USER_ADMIN;
 
 sub user_admin {
@@ -51,6 +52,20 @@ sub rvd_back {
     };
     die $@ if $@;
     return $RVD_BACK;
+}
+
+sub rvd_front {
+    my ($connector, $config ) =@_;
+
+    return $RVD_FRONT if !$config && !$connector;
+
+    eval { $RVD_FRONT = Ravada::Front->new(
+            connector => $connector
+                , config => ( $config or $DEFAULT_CONFIG)
+            );
+    };
+    die $@ if $@;
+    return $RVD_FRONT;
 }
 
 sub _remove_old_domains_vm {

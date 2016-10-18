@@ -16,6 +16,8 @@ use Test::Ravada;
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $rvd_back = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RVD_FRONT = rvd_front( $test->connector , 't/etc/ravada.conf');
+
 my $vm = $rvd_back->search_vm('Void');
 my $USER = create_user('foo','bar');
 
@@ -24,7 +26,8 @@ my $USER = create_user('foo','bar');
 sub test_allow_all {
     my $domain = shift;
 
-    my $net = Ravada::Network->new(address => '192.168.1.2/32');
+    my $ip = '192.168.1.2/32';
+    my $net = Ravada::Network->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     my $sth = $test->dbh->prepare("INSERT INTO networks (name,address,all_domains) "
@@ -39,13 +42,27 @@ sub test_allow_all {
     my $net2 = Ravada::Network->new(address => '192.168.1.22/32');
     ok($net2->allowed($domain->id),"Expecting allowed from known network");
     ok(!$net2->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
+
 }
 
 sub test_allow_domain {
     my $domain = shift;
 
-    my $net = Ravada::Network->new(address => '10.1.1.1/32');
+    my $ip = '10.1.1.1/32';
+    my $net = Ravada::Network->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
+
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
+
 
     my $sth = $test->dbh->prepare("INSERT INTO networks "
         ." (id, name,address,all_domains, no_domains) "
@@ -66,6 +83,12 @@ sub test_allow_domain {
     ok(!$net->allowed_anonymous($domain->id)
         ,"Expecting not allowed anonymous from known network");
 
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
+
     $sth = $test->dbh->prepare("UPDATE domains_network "
         ." SET allowed=0 "
         ." WHERE id_domain=? AND id_network=?");
@@ -76,6 +99,11 @@ sub test_allow_domain {
     ok(!$net->allowed_anonymous($domain->id)
         ,"Expecting not allowed anonymous from known network");
 
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
 
     $sth = $test->dbh->prepare("UPDATE domains_network "
         ." SET allowed=0, anonymous=1 "
@@ -87,6 +115,12 @@ sub test_allow_domain {
     ok(!$net->allowed_anonymous($domain->id)
         ,"Expecting not allowed anonymous from known network");
 
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
+
     $sth = $test->dbh->prepare("UPDATE domains_network "
         ." SET allowed=1, anonymous=1 "
         ." WHERE id_domain=? AND id_network=?");
@@ -96,6 +130,11 @@ sub test_allow_domain {
     ok($net->allowed_anonymous($domain->id)
         ,"Expecting allowed anonymous from known network");
 
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok($n_found == 1, "Expecting 1 anon bases, got '$n_found'");
+    }
 
 
 }
@@ -104,8 +143,16 @@ sub test_allow_domain {
 sub test_deny_all {
     my $domain = shift;
 
-    my $net = Ravada::Network->new(address => '10.0.0.2/32');
+    my $ip = '10.0.0.2/32';
+
+    my $net = Ravada::Network->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
+
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
 
     my $sth = $test->dbh->prepare("INSERT INTO networks (name,address,no_domains) "
         ." VALUES (?,?,?) ");
@@ -116,6 +163,12 @@ sub test_deny_all {
     ok(!$net->allowed($domain->id),"Expecting denied from known network");
     ok(!$net->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
 
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        my $n_found = scalar (@$list_bases);
+        ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
+    }
+
 }
 
 ########################################################################3
@@ -123,6 +176,8 @@ sub test_deny_all {
 my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name
             , id_iso => 1 , id_owner => $USER->id);
+
+$domain->prepare_base($USER);
 
 my $net = Ravada::Network->new(address => '127.0.0.1/32');
 ok($net->allowed($domain->id));

@@ -4,6 +4,9 @@
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
 <div id="wrapper">
 %= include 'bootstrap/navigation'
+<script>
+    $_anonymous=<%= ($_anonymous or 0) %>;
+</script>
     <div id="page-wrapper">
 
         <!--MACHINES SELECTION-->
@@ -12,7 +15,7 @@
         <div class="col-lg-12">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                     <h2>Welcome to SPICE! Choose a Machine to Start</h2>
+                    <h2>Choose a Machine to Start</h2>
                 </div>
                 <div class="panel-body" ng-controller="machines">
                     <sol-show-cardsmachines></sol-show-cardsmachines>

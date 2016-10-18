@@ -70,7 +70,11 @@
 // list machines
     function machinesCrtl($scope, $http, request, listMach) {
 
-        $http.get('/list_machines.json').then(function(response) {
+        $url_list = "/list_machines.json";
+        if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
+            $url_list = "/list_bases_anonymous.json";
+        }
+        $http.get($url_list).then(function(response) {
                 $scope.list_machines= response.data;
         });
 
@@ -91,9 +95,14 @@
 
     function swCardsMach() {
 
+        $url =  '/templates/user_machines.html';
+        if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
+            $url =  '/templates/user_machines_anonymous.html';
+        }
+
         return {
             restrict: "E",
-            templateUrl: '/templates/user_machines.html',
+            templateUrl: $url,
         };
 
     };

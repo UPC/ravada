@@ -7,10 +7,11 @@
             </div>
             <!-- Top Menu Items -->
             <ul class="nav navbar-right top-nav">
+% if ( !$_anonymous ) {
                 <li>
                         <a href="/"><i class="fa fa-fw fa-desktop"></i> Avaiable Machines</a>
                 </li>
-% if (defined $_user ) {
+%          if (defined $_user ) {
                 <li>
                     <a href="/messages.html">
 %                   if ($_user->unread_messages) {
@@ -21,6 +22,7 @@
                     Messages
                     </a>
                 </li>
+%           }
 % }
 % if (defined $_user && $_user->is_admin ) { 
                 <li class="dropdown">
@@ -32,6 +34,7 @@
                 </li>
 % }
                 
+% if ( !$_anonymous ) {
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -40,6 +43,7 @@
                         </li>
                     </ul>
                 </li>
+% }
                 
             </ul>
 
