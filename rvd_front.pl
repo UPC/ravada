@@ -63,7 +63,15 @@ any '/logout' => sub {
 get '/anonymous' => sub {
     my $c = shift;
 #    $c->render(template => 'bases', base => list_bases());
+    my $name_mojo = $c->signed_cookie('mojolicious');
+    return $c->render(text => "I can't find RVD cookie") if !$name_mojo;
     return list_bases_anonymous($c);
+};
+
+get '/anonymous_logout.html' => sub {
+    my $c = shift;
+    $c->session('anonymous_user' => '');
+    return $c->redirect_to('/');
 };
 
 get '/anonymous/*' => sub {
@@ -73,22 +81,8 @@ get '/anonymous/*' => sub {
     my ($base_id) = $c->req->url->to_abs =~ m{/anonymous/(.*).html};
     my $base = $RAVADA->search_domain_by_id($base_id);
 
-    my $name = $c->signed_cookie('mojolicious');
-    $name =~ s/-//g;
-    return $c->render( text => "unknown cookie") if !$name;
-
-    eval { 
-        $USER= Ravada::Auth::SQL->new( name => $name );
-        $USER = undef if !$USER->id;
-    };
-    if (!$USER || $@) {
-        warn "creating temporary user $name";
-        Ravada::Auth::SQL::add_user($name);
-        $USER= Ravada::Auth::SQL->new( name => $name );
-        return $c->render( text => "I can't find user $name") if !$USER;
-    }
-    $c->stash(_user => $USER);
-    return quick_start_domain($c,$base->id, $name);
+    _anonymous_user($c);
+    return quick_start_domain($c,$base->id, $USER->name);
 };
 
 any '/machines' => sub {
@@ -521,7 +515,7 @@ sub base_id {
 sub provision {
     my $c = shift;
     my $id_base = shift;
-    my $name = shift;
+    my $name = shift or confess "Missing name";
 
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
@@ -536,9 +530,10 @@ sub provision {
         , id_base => $id_base
        , id_owner => $USER->id
     );
-    $RAVADA->wait_request($req, 1);
+    $RAVADA->wait_request($req, 60);
 
     if ( $req->status ne 'done' ) {
+        warn "WARNING : req ".$req->id." ".$req->command." ".$req->status();
         $c->stash(error => "Domain provisioning request ".$req->status);
         return;
     }
@@ -811,6 +806,48 @@ sub _remote_ip {
                 or
             $c->tx->remote_address
     );
+}
+
+sub _anonymous_user {
+    my $c = shift;
+
+    $c->stash(_user => undef);
+    my $name = $c->session('anonymous_user');
+
+    if (!$name) {
+        $name = _new_anonymous_user($c);
+        $c->session(anonymous_user => $name);
+    }
+    $USER= Ravada::Auth::SQL->new( name => $name );
+    $c->stash(_user => $USER);
+
+    confess "USER ".$USER->name." has no id, may not be in table users"
+        if !$USER->id;
+}
+
+sub _new_anonymous_user {
+    my $c = shift;
+
+    my $name_mojo = $c->signed_cookie('mojolicious');
+    confess "Missing mojolicious cookie"    if !$name_mojo;
+
+    $name_mojo =~ tr/[^a-z][^A-Z][^0-9]/___/c;
+
+    my $name;
+    for my $n ( 8 .. 32 ) {
+        $name = substr($name_mojo,0,$n);
+        warn $name;
+        eval { 
+            $USER= Ravada::Auth::SQL->new( name => $name );
+            $USER = undef if !$USER->id;
+        };
+        last if !$USER;
+    }
+    $c->session('anonymous_user' => $name);
+    warn "creating temporary user $name";
+    Ravada::Auth::SQL::add_user($name);
+
+    return $name;
 }
 
 app->start;
