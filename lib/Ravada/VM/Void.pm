@@ -32,7 +32,7 @@ sub create_domain {
 
     my $domain = Ravada::Domain::Void->new(name => $args{name}, domain => $args{name}
                                                             , id_owner => $args{id_owner}
-                                           , id_base => ($args{id_base} or undef)
+                                           , id_base => $args{id_base}
     );
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
         , id_base => ($args{id_base} or undef));
@@ -43,7 +43,9 @@ sub create_domain {
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
 
         for my $file_base ($domain_base->list_files_base) {
-            $domain->add_volume(name => $file_base);
+            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*?)(\..*)};
+            my $new_name = "$vol_name-$args{name}$ext";
+            $domain->add_volume(name => $new_name, path => "$dir/$new_name");
         }
     }
 #    $domain->start();

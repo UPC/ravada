@@ -153,7 +153,7 @@ sub _create_vm {
     my @vms = ();
 
     my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
-    warn $err_kvm if $err_kvm;
+    warn $err_kvm if $err_kvm && $0 !~ /\.t$/;
 
     my $err = $err_kvm;
 

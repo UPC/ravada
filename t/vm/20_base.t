@@ -59,9 +59,22 @@ sub test_create_domain {
     return $domain;
 }
 
+sub test_files_base {
+    my $domain = shift;
+    my $n_expected = shift;
+
+    my @files = $domain->list_files_base();
+
+    ok(scalar @files == $n_expected,"Expecting $n_expected files base , got "
+            .scalar @files);
+    return;
+}
+
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
+
+    test_files_base($domain,0);
 
     eval { $domain->prepare_base( $USER) };
     ok(!$@, $@);
@@ -72,6 +85,8 @@ sub test_prepare_base {
         ."prepared and file haven't changed "
         .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
+
+    test_files_base($domain,1);
 
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER);
@@ -91,12 +106,13 @@ sub test_prepare_base {
         ,vm => $vm_name
     );
     ok($domain_clone);
+    test_devices_clone($vm_name, $domain_clone);
+
     touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
     ok($@ && $@ =~ /has \d+ clones/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
-    test_devices_clone($vm_name, $domain_clone);
 
     $domain_clone->remove($USER);
 
@@ -154,10 +170,34 @@ sub test_devices_clone {
     my $domain = shift;
 
     my @volumes = $domain->list_volumes();
-    ok(scalar(@volumes),"[$vm_name] Expecting at least 1 volume cloned "
-        ." got ".scalar(@volumes));
+    ok(scalar(@volumes),"[$vm_name] domain ".$domain->name
+        ." Expecting at least 1 volume cloned "
+        ." got ".scalar(@volumes)) or exit;
     for my $disk (@volumes ) {
-        ok(-e $disk,"Checking volume ".Dumper($disk)." exists");
+        ok(-e $disk,"Checking volume ".Dumper($disk)." exists") or exit;
+    }
+}
+
+sub test_remove_base {
+    my $vm_name = shift;
+
+    my $domain = test_create_domain($vm_name);
+    ok($domain,"Expecting domain, got NONE") or return;
+
+    my @files0 = $domain->list_files_base();
+    ok(!scalar @files0,"Expecting no files base, got ".Dumper(\@files0)) or return;
+
+    $domain->prepare_base($USER);
+    ok($domain->is_base,"Domain ".$domain->name." should be base") or return;
+
+    my @files = $domain->list_files_base();
+    ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
+
+    $domain->remove_base($USER);
+    ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
+
+    for my $file (@files) {
+        ok(!-e $file,"Expecting file base '$file' removed" );
     }
 }
 
@@ -189,6 +229,7 @@ for my $vm_name (@VMS) {
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
         test_prepare_base_active($vm_name);
+        test_remove_base($vm_name);
     }
 }
 

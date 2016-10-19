@@ -29,7 +29,7 @@ sub BUILD {
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
-    $self->add_volume(name => 'voida' , size => 1, path => "$DIR_TMP/".$self->name.".img")
+    $self->add_volume(name => 'void-diska' , size => 1, path => "$DIR_TMP/".$self->name.".img")
         if !$args->{id_base};
 }
 
@@ -174,6 +174,9 @@ sub add_volume {
     $args{path} = "$DIR_TMP/".$self->name.".$args{name}.img"
         if !$args{path};
 
+    confess "Volume path must be absolute , it is '$args{path}'"
+        if $args{path} !~ m{^/};
+
     return if -e $args{path};
 
     my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
@@ -192,6 +195,10 @@ sub add_volume {
     $data->{device}->{$args{name}} = \%args;
     DumpFile($self->disk_device, $data);
 
+    open my $out,'>>',$args{path} or die "$! $args{path}";
+    print $out "";
+    close $out;
+
 }
 
 sub list_volumes {
@@ -199,7 +206,11 @@ sub list_volumes {
     my $data = LoadFile($self->disk_device) if -e $self->disk_device;
 
     return () if !exists $data->{device};
-    return keys %{$data->{device}};
+    my @vol;
+    for my $dev (keys %{$data->{device}}) {
+        push @vol,($data->{device}->{$dev}->{path});
+    }
+    return @vol;
 }
 
 sub screenshot {}

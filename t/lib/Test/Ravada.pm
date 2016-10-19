@@ -132,7 +132,7 @@ sub _remove_old_disks_void {
     my $dir_img =  $Ravada::Domain::Void::DIR_TMP ;
     opendir my $ls,$dir_img or return;
     while (my $file = readdir $ls ) {
-        next if $file !~ /^${name}_\d+\.(img|ro\.qcow2|qcow2)$/;
+        next if $file !~ /^${name}_\d/;
 
         my $disk = "$dir_img/$file";
         next if ! -f $disk;

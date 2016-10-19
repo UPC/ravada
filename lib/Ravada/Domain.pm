@@ -82,6 +82,8 @@ before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
 
+after 'remove_base' => \&_remove_base_db;
+
 sub _allow_manage_args {
     my $self = shift;
 
@@ -512,6 +514,33 @@ sub _convert_png {
     $in->Write("png24:$file_out");
 
     chmod 0755,$file_out or die "$! chmod 0755 $file_out";
+}
+
+=head2 remove_base
+
+Makes the domain a regular, non-base virtual machine and removes the base files.
+
+=cut
+
+sub remove_base {
+    my $self = shift;
+    $self->is_base(0);
+    for my $file ($self->list_files_base) {
+        warn $file;
+        unlink $file or die "$! unlinking $file";
+    }
+
+}
+
+sub _remove_base_db {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM file_base_images "
+        ." WHERE id_domain=?");
+
+    $sth->execute($self->id);
+    $sth->finish;
+
 }
 
 1;
