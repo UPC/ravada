@@ -91,6 +91,7 @@ for my $vm_name ('Void','KVM','LXC') {
     my $name = new_domain_name();
     my $req = $RVD_FRONT->create_domain( name => $name 
         , create_args($vm_name)
+        , vm => $vm_name
     );
     ok($req, "Request $name not created");
 
