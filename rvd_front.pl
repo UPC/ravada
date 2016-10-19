@@ -375,8 +375,8 @@ sub quick_start_domain {
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
+    # TODO : search domain that id_owner = USER->id AND base = $base->id
     my $domain_name = $base->name."-".$name;
-
     my $domain = $RAVADA->search_domain($domain_name);
     $domain = provision($c,  $id_base,  $domain_name)
         if !$domain;
