@@ -82,6 +82,11 @@
             $scope.res = res;
         });
 
+        $scope.shutdown = function(machineId){
+            var toGet = '/machine/shutdown/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
     };
 
     function swListMach() {
@@ -173,6 +178,11 @@
             $scope.res = res;
         });
 
+        $scope.asRead = function(messId){
+            var toGet = '/messages/read/'+messId+'.json';
+            $http.get(toGet);
+        };
+
     };
 
     function swMess() {
@@ -189,3 +199,4 @@
         });
 
     };
+

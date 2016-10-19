@@ -19,12 +19,12 @@
                     <td><i ng-show="{{machine.is_base}}" class="fa fa-check" aria-hidden="true"></i><i ng-hide="{{machine.is_base}}" class="fa fa-times" aria-hidden="true"></i></td>
                     <td><i ng-show="{{machine.is_active}}" class="fa fa-check" aria-hidden="true"></i><i ng-show="{{!machine.is_active}}" class="fa fa-times" aria-hidden="true"></i></td>
                     <td>
-                        <a href="/machine/manage/{{machine.id}}.html">manage</a>
+                        <a class="btn btn-primary btn-sm" href="/machine/manage/{{machine.id}}.html">Manage</a>
                         <a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html">View</a>
                         <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html">Clone</a>
                         <a ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm" href="/machine/screenshot/{{machine.id}}.html">Screenshot</a>
-                        <a class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
-                        <a ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" href="/machine/shutdown/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i></strong> ShutDown</a>
+                        <a ng-hide="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
+                        <button type="button" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" ng-click="shutdown(machine.id)"></strong> ShutDown</button>
                         
                     </td>
                     
@@ -49,7 +49,7 @@
                         <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html">Clone</a>
                         <a ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm" href="/machine/screenshot/{{machine.id}}.html">Screenshot</a>
                         <a class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
-                        <a ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" href="/machine/shutdown/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i></strong> ShutDown</a>
+                        <a ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" ng-click="shutdown(machine.id)"><strong>&nbsp;<i class="fa fa-power-off" aria-hidden="true"></i></strong> ShutDown</a>
                         <a  class="btn btn-danger btn-sm" href="/machine/remove/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
               </div>
               <div class="modal-footer">
