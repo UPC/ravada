@@ -6,16 +6,18 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA;
-eval { $RAVADA = Ravada->new( connector => $test->connector) };
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 
-my $CONT= 0;
+my $RAVADA = rvd_back($test->connector , 't/etc/ravada.conf');
+my $USER = create_user('foo','bar');
 
 sub test_vm_kvm {
     my $vm = $RAVADA->search_vm('kvm');
@@ -28,13 +30,14 @@ sub test_vm_kvm {
 }
 sub test_remove_domain {
     my $name = shift;
+    my $user = (shift or $USER);
 
     my $domain;
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
-        $domain->remove();
+        $domain->remove($user);
     }
     $domain = $RAVADA->search_domain($name);
     die "I can't remove old domain $name"
@@ -47,7 +50,7 @@ sub test_remove_domain_by_name {
     my $name = shift;
 
     diag("Removing domain $name");
-    $RAVADA->remove_domain($name);
+    $RAVADA->remove_domain(name => $name, uid => $USER->id);
 
     my $domain = $RAVADA->search_domain($name, 1);
     die "I can't remove old domain $name"
@@ -68,14 +71,14 @@ sub search_domain_db
 sub test_new_domain {
     my $active = shift;
 
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    $name .= "_".$CONT++;
+    my $name = new_domain_name();
 
     test_remove_domain($name);
 
     diag("Creating domain $name");
     my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
-        , backend => $BACKEND
+        , id_owner => $USER->id
+        , vm => $BACKEND
     );
 
     ok($domain,"Domain not created");
@@ -91,7 +94,7 @@ sub test_new_domain {
     my $row =  search_domain_db($domain->name);
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
 
-    my $domain2 = $RAVADA->search_domain_by_id($domain->id);
+    my $domain2 = $RAVADA->search_domain($domain->name);
     ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
     ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
         .$domain2->name);
@@ -101,7 +104,7 @@ sub test_new_domain {
 
 sub test_prepare_base {
     my $domain = shift;
-    $domain->prepare_base();
+    $domain->prepare_base($USER);
 
     my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
@@ -145,15 +148,16 @@ sub test_domain{
         ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 "
             .Dumper($list_domains_data));
 
+        ok(!$domain->is_active  ,"domain should be inactive") if defined $active && $active==0;
+        ok($domain->is_active   ,"domain should be active")   if defined $active && $active==1;
+
         # test prepare base
         test_prepare_base($domain);
         ok($domain->is_base,"Domain should be base"
             .Dumper($domain->_select_domain_db())
 
         );
-        ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
-        ok($domain->is_active,"domain should active") if defined $active && $active==1;
-
+ 
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
         my $domain2;
         eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
@@ -200,7 +204,7 @@ sub test_domain_missing_in_db {
         ok($RAVADA->list_domains == $n_domains,"There should be only $n_domains domains "
                                         .", there are ".scalar(@list_domains));
 
-        test_remove_domain($domain->name);
+        test_remove_domain($domain->name, user_admin());
     }
 }
 
@@ -218,9 +222,6 @@ sub test_prepare_import {
 
     if (ok($domain,"test domain not created")) {
 
-        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
-        $sth->execute($domain->id);
-
         test_prepare_base($domain);
         ok($domain->is_base,"Domain should be base"
             .Dumper($domain->_select_domain_db())
@@ -230,34 +231,6 @@ sub test_prepare_import {
         test_remove_domain($domain->name);
     }
 
-}
-
-sub remove_old_domains {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    for ( 0 .. 10 ) {
-        my $dom_name = $name."_$_";
-        my $domain = $RAVADA->search_domain($dom_name);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
-}
-
-sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-
-    my $vm = $RAVADA->search_vm('kvm');
-    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
-
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    $vm->storage_pool->refresh();
 }
 
 ################################################################

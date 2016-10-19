@@ -31,12 +31,6 @@ has 'host' => (
     , default => 'localhost'
 );
 
-has 'type' => (
-          isa => 'Str'
-         , is => 'ro',
-    , default => 'qemu'
-);
-
 has 'storage_pool' => (
      isa => 'Object'
     , is => 'ro'

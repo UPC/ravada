@@ -3,13 +3,26 @@
             <!-- Brand and toggle get grouped for better mobile display -->
             <div class="navbar-header">
                 
-                <a class="navbar-brand" href="index.html">RAVADA VDI</a>
+                <a class="navbar-brand" href="/index.html">RAVADA VDI</a>
             </div>
             <!-- Top Menu Items -->
             <ul class="nav navbar-right top-nav">
                 <li>
                         <a href="/"><i class="fa fa-fw fa-desktop"></i> Avaiable Machines</a>
                 </li>
+% if (defined $_user ) {
+                <li>
+                    <a href="/messages/">
+%                   if ($_user->unread_messages) {
+                        <i class="fa fa-fw fa-bell"></i>
+                        <b>NEW </b>
+                        <!-- TODO list of message subjects when clicking -->
+%                   }
+                    Messages
+                    </a>
+                </li>
+% }
+% if (defined $_user && $_user->is_admin ) { 
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-wrench"></i>&nbsp;Tools<span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -17,6 +30,7 @@
                         <li><a href="/users">Users</a></li>
                     </ul>
                 </li>
+% }
                 
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>

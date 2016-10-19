@@ -2,6 +2,7 @@ package Ravada::VM::KVM;
 
 use Carp qw(croak);
 use Data::Dumper;
+use Digest::MD5;
 use Encode;
 use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
@@ -34,6 +35,12 @@ has storage_pool => (
     ,is => 'ro'
     ,builder => '_load_storage_pool'
     ,lazy => 1
+);
+
+has type => (
+    isa => 'Str'
+    ,is => 'ro'
+    ,default => 'qemu'
 );
 
 #########################################################################3
@@ -126,6 +133,7 @@ sub create_domain {
     $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
+    croak "argument id_owner required"   if !$args{id_owner};
     croak "argument id_iso or id_base required ".Dumper(\%args)
         if !$args{id_iso} && !$args{id_base};
 
@@ -268,8 +276,10 @@ sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
 
-    croak "argument id_iso required" 
-        if !$args{id_iso};
+    for (qw(id_iso id_owner)) {
+        croak "argument $_ required" 
+            if !$args{$_};
+    }
 
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
@@ -292,7 +302,7 @@ sub _domain_create_from_iso {
     $dom->create if $args{active};
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
-    $domain->_insert_db(name => $args{name});
+    $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
 sub _create_disk {
@@ -387,19 +397,45 @@ sub _domain_create_from_base {
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
 
-    $domain->_insert_db(name => $args{name}, id_base => $base->id);
+    $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     return $domain;
 }
 
 sub _iso_name {
     my $iso = shift;
+
     my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
+    $iso_name = $iso->{url} if !$iso_name;
+
     my $device = "$DEFAULT_DIR_IMG/$iso_name";
+
+    confess "Missing MD5 field on table iso_images FOR $iso->{url}"
+        if !$iso->{md5};
 
     if (! -e $device || ! -s $device) {
         _download_file_external($iso->{url}, $device);
     }
+    confess "Download failed, MD5 missmatched"
+            if (! _check_md5($device, $iso->{md5}));
     return $device;
+}
+
+sub _check_md5 {
+    my ($file, $md5 ) =@_;
+
+    my  $ctx = Digest::MD5->new;
+    open my $in,'<',$file or die "$! $file";
+    $ctx->addfile($in);
+
+    my $digest = $ctx->hexdigest;
+
+    return 1 if $digest eq $md5;
+
+    warn "$file MD5 fails\n"
+        ." got  : $digest\n"
+        ."expecting: $md5\n"
+        ;
+    return 0;
 }
 
 sub _download_file_lwp_progress {
@@ -449,11 +485,13 @@ sub _download_file_lwp {
 
 sub _download_file_external {
     my ($url,$device) = @_;
-    my @cmd = ("/usr/bin/lwp-download",$url,$device);
+    my @cmd = ("/usr/bin/wget",$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
     print $out if $out;
+    chmod 0755,$device or die "$! chmod 0755 $device"
+        if -e $device;
     die $err if $err;
 }
 
@@ -668,14 +706,14 @@ sub _init_ip {
     my $ip = inet_ntoa(inet_aton($name)) 
         or die "CRITICAL: I can't find IP of $name in the DNS.\n";
 
-    if ($ip eq '127.0.0.1') {
+    if ($ip =~ /^127./) {
         #TODO Net:DNS
         $ip= `host $name`;
         chomp $ip;
         $ip =~ s/.*?address (\d+)/$1/;
     }
     die "I can't find IP with hostname $name ( $ip )\n"
-        if !$ip || $ip eq '127.0.0.1';
+        if !$ip || $ip =~ /^127./;
 
     return $ip;
 }

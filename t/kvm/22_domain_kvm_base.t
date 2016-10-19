@@ -8,21 +8,23 @@ use Test::More;
 use Test::SQL::Data;
 use XML::LibXML;
 
+use lib 't/lib';
+use Test::Ravada;
+
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA;
-
-eval { $RAVADA = Ravada->new( connector => $test->connector) };
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
+my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 $DOMAIN_NAME_SON =~ s/base_//;
 
+my $USER = create_user('foo','bar');
 
 sub test_vm_kvm {
     my $vm = $RAVADA->vm->[0];
@@ -41,7 +43,7 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
+        eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") ;
 
         if ( $domain->file_base_img ) {
@@ -65,7 +67,8 @@ sub test_new_domain_from_iso {
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
                                         , id_iso => 1
-                                        ,backend => $BACKEND
+                                        ,vm => $BACKEND
+                                        ,id_owner => $USER->id
             ) 
     };
     ok(!$@,"Domain $name not created: $@");
@@ -97,7 +100,7 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    $domain->prepare_base();
+    $domain->prepare_base($USER);
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
@@ -123,7 +126,8 @@ sub test_new_domain_from_base {
     my $domain = $RAVADA->create_domain(
                 name => $name
             ,id_base => $base->id
-            ,backend => $BACKEND
+           ,id_owner => $USER->id
+            ,vm => $BACKEND
     );
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';

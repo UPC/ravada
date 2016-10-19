@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Carp qw(confess croak cluck);
+use Data::Dumper;
 use Moose::Role;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -15,7 +16,16 @@ requires 'display';
 requires 'is_active';
 requires 'start';
 requires 'shutdown';
+requires 'shutdown_now';
 requires 'pause';
+requires 'prepare_base';
+
+#storage
+requires 'add_volume';
+requires 'list_volumes';
+requires 'list_files_base';
+
+requires 'disk_device';
 
 has 'domain' => (
     isa => 'Any'
@@ -35,8 +45,88 @@ has 'timeout_shutdown' => (
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##################################################################################3
-
 #
+# Method Modifiers
+# 
+
+before 'display' => \&_allowed;
+before 'remove' => \&_allow_remove;
+before 'prepare_base' => \&_allow_prepare_base;
+after 'prepare_base' => sub { my $self = shift; $self->is_base(1) };
+
+sub _allow_remove {
+    my $self = shift;
+    my ($user) = @_;
+
+    $self->_allowed($user);
+    $self->_check_has_clones();
+}
+
+sub _allow_prepare_base { 
+    my $self = shift; 
+    my ($user) = @_;
+
+    $self->_allowed($user);
+    $self->_check_disk_modified();
+    $self->_check_has_clones();
+
+    $self->shutdown();
+    $self->is_base(0);
+};
+
+sub _check_has_clones {
+    my $self = shift;
+    my @clones;
+    
+    eval { @clones = $self->clones };
+    die $@  if $@ && $@ !~ /No DB info/i;
+    die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+        if $#clones>=0;
+}
+
+sub _check_disk_modified {
+    my $self = shift;
+
+    if ( !$self->is_base() ) {
+        return;
+    }
+    my $file_base = $self->file_base_img;
+    confess "Missing file_base_img" if !$file_base;
+
+    my @stat_base = stat($file_base);
+    
+    my $files_updated = 0;
+    for my $file ( $self->disk_device ) {
+        my @stat = stat($file) or next;
+        $files_updated++ if $stat[9] > $stat_base[9];
+#        warn "\ncheck\t$file ".$stat[9]."\n vs \t$file_base ".$stat_base[9]." $files_updated\n";
+    }
+    die "Base already created and no disk images updated"
+        if !$files_updated;
+}
+
+sub _allowed {
+    my $self = shift;
+
+    my ($user) = @_;
+
+    confess "Missing user"  if !defined $user;
+    confess "ERROR: User '$user' not class user , it is ".(ref($user) or 'SCALAR')
+        if !ref $user || ref($user) !~ /Ravada::Auth/;
+
+    return if $user->is_admin;
+    my $id_owner;
+    eval { $id_owner = $self->id_owner };
+    my $err = $@;
+
+    die "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+        ." owned by ".($id_owner or '<UNDEF>')."\n".Dumper($self)
+            if (defined $id_owner && $id_owner != $user->id );
+
+    confess $err if $err;
+
+}
+##################################################################################3
 sub id {
     return $_[0]->_data('id');
 
@@ -57,6 +147,7 @@ sub _data {
     $self->{_data} = $self->_select_domain_db( name => $self->name);
 
     confess "No DB info for domain ".$self->name    if !$self->{_data};
+    confess "No field $field in domains"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
 }
@@ -104,7 +195,8 @@ sub _prepare_base_db {
     my $file_img = shift;
 
     if (!$self->_select_domain_db) {
-        $self->_insert_db( name => $self->name );
+        confess "CRITICAL: The data should be already inserted";
+#        $self->_insert_db( name => $self->name, id_owner => $self->id_owner );
     }
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set is_base=1,file_base_img=? "
@@ -118,8 +210,12 @@ sub _prepare_base_db {
 sub _insert_db {
     my $self = shift;
     my %field = @_;
-    croak "Field name is mandatory ".Dumper(\%field)
-        if !exists $field{name};
+
+    for (qw(name id_owner)) {
+        confess "Field $_ is mandatory ".Dumper(\%field)
+            if !exists $field{$_};
+    }
+
     my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "
@@ -158,5 +254,37 @@ sub is_base {
     return 0 if $self->_data('is_base') =~ /n/i;
     return $self->_data('is_base');
 };
+
+
+sub id_owner {
+    my $self = shift;
+    return $self->_data('id_owner',@_);
+}
+
+sub vm {
+    my $self = shift;
+    return $self->_data('vm');
+}
+
+=head2 clones
+
+Returns a list of clones from this virtual machine
+
+    my @clones = $domain->clones
+
+=cut
+
+sub clones {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
+            ." WHERE id_base = ?");
+    $sth->execute($self->id);
+    my @clones;
+    while (my $row = $sth->fetchrow_hashref) {
+        # TODO: open the domain, now it returns only the id
+        push @clones , $row;
+    }
+    return @clones;
+}
 
 1;

@@ -11,14 +11,20 @@
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>Machines List <button id="newMButton" style="float: right;" class="btn btn-success">New Machine</button></h2>
+                        <h2>Machines List 
+                        <button id="newMButton" style="float: right; margin: 0 0 0 15px;" class="btn btn-success">New Machine</button>
+                        
+                        <button id="newMButton" style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+
+                        </h2>
                     </div>
+                    
                     <sol-show-listmachines></sol-show-listmachines>
                 </div>
             </div>
             <div class="page-header">
             
-                <sol-show-machines-notifications></sol-show-machines-notifications>            
+                <sol-show-machines-notifications><sol-show-machines-notifications>            
             
             </div>
         </div>
@@ -31,8 +37,6 @@
             </div>
             </div>
         </div>
-
-        <%= join("<br/>",@$error ) %>
 
     </div>
     </div>

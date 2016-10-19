@@ -4,8 +4,11 @@ use strict;
 use warnings;
 
 use Carp qw(confess);
+use Data::Dumper;
 use JSON::XS;
+use Hash::Util;
 use Ravada;
+use Ravada::Front;
 
 use vars qw($AUTOLOAD);
 
@@ -16,18 +19,45 @@ Request a command to the ravada backend
 =cut
 
 our %FIELD = map { $_ => 1 } qw(error);
-our %FIELD_RO = map { $_ => 1 } qw(name);
+our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our %VALID_ARG = (
     create_domain => { 
-            name => 1
+              vm => 1
+           ,name => 1
          ,id_iso => 1
-        ,backend => 1
+        ,id_base => 1
+       ,id_owner => 1
     ,id_template => 1
+    }
+    ,remove_domain => {
+        name => 1
+        ,uid => 1
+    }
+    ,prepare_base => {
+        name => 1
+        ,uid => 1
+
     }
 );
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
+our $CONNECTOR;
+
+sub _init_connector {
+    $CONNECTOR = \$Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+
+}
+
+=head2 BUILD
+
+    Internal object builder, do not call
+
+=Cut
+
+sub BUILD {
+    _init_connector();
+}
 
 sub _request {
     my $proto = shift;
@@ -52,6 +82,8 @@ sub open {
 
     my $id = shift or confess "Missing request id";
 
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
         ." WHERE id=?");
     $sth->execute($id);
@@ -65,7 +97,7 @@ sub open {
 
     $row->{args} = $args;
 
-    bless ($row,$class);
+    bless ($row, $class);
     return $row;
 }
 
@@ -98,8 +130,8 @@ sub create_domain {
 
 =head2 remove_domain
 
-    my $req = Ravada::Request->create_domain( name => 'bla'
-                    , id_iso => 1
+    my $req = Ravada::Request->remove_domain( name => 'bla'
+                    , uid => $user->id
     );
 
 
@@ -110,14 +142,19 @@ sub remove_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my %args = @_;
+    confess "Missing domain name"   if !$args{name};
+    confess "Name is not scalar"    if ref($args{name});
+    confess "Missing uid"           if !$args{uid};
 
-    my %args = ( name => $name )    or confess "Missing domain name";
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
+    }
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'remove' , args => encode_json({ name => $name }));
+
+    return $self->_new_request(command => 'remove' , args => encode_json(\%args));
 
 }
 
@@ -181,15 +218,20 @@ sub prepare_base {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my %args = @_;
+    confess "Missing domain name"   if !$args{name};
+    confess "Missing uid"           if !$args{uid};
 
-    my %args = ( name => $name )    or confess "Missing domain name";
+    for (keys %args) {
+        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
+    }
+
+    $args{name} = $args{name}->name if ref($args{name}) =~ /Domain/;
 
     my $self = {};
     bless($self,$class);
     return $self->_new_request(command => 'prepare_base' 
-        , args => encode_json({ name => $name }));
+        , args => encode_json( \%args ));
 
 }
 
@@ -213,6 +255,44 @@ sub list_vm_types {
 
 }
 
+=head2 ping_backend
+
+Returns wether the backend is alive or not
+
+=cut
+
+sub ping_backend {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'ping_backend' );
+}
+
+=head2 domdisplay
+
+Returns the domdisplay of a domain
+
+Arguments:
+
+* domain name
+
+=cut
+
+sub domdisplay {
+   my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $name = shift;
+    my $uid = shift;
+
+    my $self = {};
+    bless ($self, $class);
+    return $self->_new_request( command => 'domdisplay'
+        ,args => { name => $name, uid => $uid });
+}
+
 sub _new_request {
     my $self = shift;
     my %args = @_;
@@ -223,8 +303,11 @@ sub _new_request {
         $args{domain_name} = $args{name};
         delete $args{name};
     }
+    if ( ref $args{args} ) {
+        $args{args} = encode_json($args{args});
+    }
 
-    $CONNECTOR = \$Ravada::CONNECTOR if !defined$CONNECTOR;
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
@@ -300,8 +383,54 @@ sub status {
             ." WHERE id=?");
     $sth->execute($status, $self->{id});
     $sth->finish;
+
+    $self->_send_message($status)   if $self->command ne 'domdisplay';
     return $status;
 }
+
+sub _send_message {
+    my $self = shift;
+    my $status = shift;
+
+    my $uid;
+
+    eval { $uid = $self->args('id_owner') };
+    eval { $uid = $self->args('uid') };
+    return if !$uid;
+
+    my $domain_name;
+    eval { $domain_name = $self->args('name') };
+    $domain_name = ''               if !$domain_name;
+    $domain_name = "$domain_name "  if length $domain_name;
+
+    $self->_remove_unnecessary_messages() if $self->status eq 'done';
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO messages ( id_user, id_request, subject, message ) "
+        ." VALUES ( ?,?,?,?)"
+    );
+    $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
+        ,$self->error);
+    $sth->finish;
+}
+
+sub _remove_unnecessary_messages {
+    my $self = shift;
+
+    my $uid;
+    eval { $uid = $self->args('id_owner') };
+    eval { $uid = $self->args('uid') };
+    return if !$uid;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM messages WHERE id_user=? AND id_request=?"
+    );
+
+    $sth->execute($uid, $self->id);
+    $sth->finish;
+
+}
+
 
 =head2 result
 
@@ -326,7 +455,7 @@ sub result {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
         $sth->execute($self->{id});
         ($value) = $sth->fetchrow;
-        $value = decode_json($value);
+        $value = decode_json($value)    if defined $value;
         $sth->finish;
 
     }
@@ -371,8 +500,8 @@ sub args {
     my $name = shift;
     return $self->{args}    if !$name;
 
-    confess "Unknown argument $name"
-        if !exists $self->{args}->{name};
+    confess "Unknown argument $name ".Dumper($self->{args})
+        if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
 }
 
@@ -390,7 +519,7 @@ sub AUTOLOAD {
     $name =~ tr/[a-z]/_/c;
 
     confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} || !exists $FIELD{$name};
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
     if (!defined $value) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");
@@ -406,8 +535,11 @@ sub AUTOLOAD {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
-    $sth->execute($value, $self->{id});
-    $sth->finish;
+    eval { 
+        $sth->execute($value, $self->{id});
+        $sth->finish;
+    };
+    warn "$name=$value\n$@" if $@;
     return $value;
 
 }

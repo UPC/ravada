@@ -3,7 +3,7 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
-use Carp qw(cluck croak);
+use Carp qw(cluck confess croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
 use Moose;
@@ -214,6 +214,19 @@ sub _disk_device {
 
 }
 
+=head2 disk_device
+
+Returns the file name of the disk of the domain.
+
+  my $file_name = $domain->disk_device();
+
+=cut
+
+sub disk_device {
+    my $self = shift;
+    return $self->_disk_device();
+}
+
 sub _create_qcow_base {
     my $self = shift;
 
@@ -262,11 +275,14 @@ sub prepare_base {
 Returns the display URI
 
 =cut
+
 sub display {
     my $self = shift;
 
-    $self->start if !$self->is_active;
-
+    if (!$self->is_active ) {
+        warn "starting";
+        $self->start ;
+    }
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics') 
         or die "ERROR: I can't find graphic";
@@ -360,8 +376,25 @@ Pauses the domain
 sub pause {
 }
 
+=head2 add_volume
+
+Adds a new volume to the domain
+
+    $domain->add_volume($size);
+
+=cut
+
+sub add_volume {
+}
+
 #sub BUILD {
 #    warn "Builder KVM.pm";
 #}
+
+sub list_volumes {
+}
+
+sub list_files_base {
+}
 
 1;
