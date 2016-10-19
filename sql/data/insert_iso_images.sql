@@ -23,6 +23,16 @@ VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
 
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Trusty 64 bits','Ubuntu 14.04.1 LTS Trusty 64 bits'
+    ,'amd64'
+    ,'trusty-amd64.xml'
+    ,'trusty-amd64-volume.xml'
+    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04.1-desktop-amd64.iso'
+    ,'17643c29e3c4609818f26becf76d29a3'
+	);
+
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
 VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
