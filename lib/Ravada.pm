@@ -216,8 +216,6 @@ sub create_domain {
 
     my $request = $args{request}            if $args{request};
 
-    $request->status("Searching for VM")    if $request;
-
     my $vm;
     $vm = $self->search_vm($vm_name)   if $vm_name;
     $vm = $self->vm->[0]               if !$vm;
@@ -227,7 +225,6 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    $request->status("creating domain in ".ref($vm))    if $request;
     return $vm->create_domain(@_);
 }
 
@@ -595,7 +592,6 @@ sub _execute {
     if ($pid == 0) {
         $request->status("forked $$");
         eval { 
-            $request->status("calling ".$request->command);
             $sub->($self,$request);
         };
         my $err = ( $@ or '');
@@ -629,8 +625,6 @@ sub _cmd_domdisplay {
 sub _cmd_screenshot {
     my $self = shift;
     my $request = shift;
-
-    $request->status("working $$");
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
