@@ -236,7 +236,9 @@ sub create_volume {
     open my $fh,'<', $file_xml or die "$! $file_xml";
     my $dir_img = $DEFAULT_DIR_IMG;
 
-    my $doc = $XML->load_xml(IO => $fh);
+    my $doc;
+    eval { $doc = $XML->load_xml(IO => $fh) };
+    die "ERROR reading $file_xml $@"    if $@;
 
     $doc->findnodes('/volume/name/text()')->[0]->setData("$name.img");
     $doc->findnodes('/volume/key/text()')->[0]->setData("$dir_img/$name.img");
@@ -278,7 +280,7 @@ sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
 
-    for (qw(id_iso id_owner)) {
+    for (qw(id_iso id_owner name)) {
         croak "argument $_ required" 
             if !$args{$_};
     }
@@ -290,6 +292,9 @@ sub _domain_create_from_iso {
     my $storage = $self->storage_pool;
 
     my $iso = $self->_search_iso($args{id_iso});
+
+    die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
+        if !$iso->{xml_volume};
 
     my $device_cdrom = _iso_name($iso);
 
