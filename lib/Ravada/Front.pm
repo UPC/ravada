@@ -160,7 +160,7 @@ sub wait_request {
         }
     }
 
-    for ( 1 .. $TIMEOUT ) {
+    for ( 1 .. $timeout ) {
         last if $req->status eq 'done';
         sleep 1;
     }
