@@ -653,7 +653,14 @@ sub _cmd_create{
     my $domain;
     $domain = $self->create_domain(%{$request->args},request => $request);
 
-    $request->status('done');
+    my $msg = '';
+    if ($domain) {
+        $msg = 'Domain '.$request->args('name')." created. "
+            ."<a href=\"/machine/view/".$domain->id.".html>Start</a>";
+        ;
+    }
+
+    $request->status('done',$msg);
 
 }
 

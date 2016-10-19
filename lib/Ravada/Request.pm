@@ -403,6 +403,7 @@ Returns or sets the status of a request
 sub status {
     my $self = shift;
     my $status = shift;
+    my $message = shift;
 
     if (!defined $status) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
@@ -419,13 +420,14 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
 
-    $self->_send_message($status)   if $self->command ne 'domdisplay';
+    $self->_send_message($status, $message)   if $self->command ne 'domdisplay';
     return $status;
 }
 
 sub _send_message {
     my $self = shift;
     my $status = shift;
+    my $message = ( shift or $self->error );
 
     my $uid;
 
@@ -445,7 +447,7 @@ sub _send_message {
         ." VALUES ( ?,?,?,?)"
     );
     $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
-        ,$self->error);
+        ,$message);
     $sth->finish;
 }
 
