@@ -389,7 +389,7 @@ sub quick_start_domain {
 sub show_failure {
     my $c = shift;
     my $name = shift;
-    $c->render(template => 'fail', name => $name);
+    $c->render(template => 'bootstrap/fail', name => $name);
 }
 
 
@@ -533,8 +533,12 @@ sub provision {
     $RAVADA->wait_request($req, 60);
 
     if ( $req->status ne 'done' ) {
-        warn "WARNING : req ".$req->id." ".$req->command." ".$req->status();
-        $c->stash(error => "Domain provisioning request ".$req->status);
+        $c->stash(error_title => "Request ".$req->command." ".$req->status());
+        $c->stash(error => 
+            "Domain provisioning request not finished, status='".$req->status."'.");
+
+        $c->stash(link => "/request/".$req->id.".html");
+        $c->stash(link_msg => '');
         return;
     }
     $domain = $RAVADA->search_domain($name);
@@ -904,13 +908,6 @@ __DATA__
 
 Hi <%= $name %>, 
 <a href="<%= $url %>">click here</a>
-
-@@ fail.html.ep
-% layout 'default';
-<h1>Fail</h1>
-
-Sorry <%= $name %>, I couldn't make it.
-<pre>ERROR: <%= my $error %></pre>
 
 @@ layouts/default.html.ep
 <!DOCTYPE html>
