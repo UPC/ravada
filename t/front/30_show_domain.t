@@ -44,6 +44,7 @@ sub test_create_domain {
     my $name = new_domain_name();
 
     my $vm = $RVD_BACK->search_vm($vm_name);
+    ok($vm,"Expecting VM $vm , got '".ref($vm)) or return;
     
     my $domain_b = $vm->create_domain(
         name => $name
@@ -154,6 +155,11 @@ remove_old_domains();
 remove_old_disks();
 
 for my $vm_name (qw(Void KVM)) {
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    if ( !$vm ) {
+        diag("Skipping VM $vm_name in this system");
+        next;
+    }
     test_vm_ro($vm_name);
     my $dom_name = test_create_domain($vm_name);
     test_start_domain($vm_name, $dom_name);
