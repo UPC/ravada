@@ -51,6 +51,14 @@ sub BUILD {
     }
 }
 
+=head2 list_bases
+
+Returns a list of the base domains as a listref
+
+    my $bases = $rvd_front->list_bases();
+
+=cut
+
 sub list_bases {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base='y'");
@@ -64,6 +72,14 @@ sub list_bases {
 
     return \@bases;
 }
+
+=head2 list_domains
+
+Returns a list of the domains as a listref
+
+    my $bases = $rvd_front->list_domains();
+
+=cut
 
 sub list_domains {
     my $self = shift;
@@ -140,6 +156,15 @@ sub list_users {
 
     return \@users;
 }
+
+=head2 create_domain
+
+    Request the creation of a new domain or virtual machine
+
+    # TODO: document the args here
+    my $req = $rvd_front->create_domain( ... );
+
+=cut
 
 sub create_domain {
     my $self = shift;
