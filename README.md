@@ -9,7 +9,7 @@ Remote Access: [Spice](http://www.spice-space.org/)
 
 ## Install
 
-Read docs/INSTALL.md
+Read [docs/INSTALL.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md)
 
 ## Run
 
