@@ -140,15 +140,10 @@ SKIP: {
     remove_old_disks();
     my $domain = test_start();
 
-<<<<<<< HEAD
     if ($domain) {
         $domain->shutdown_now();
         $domain->remove();
     }
-=======
-    $domain->shutdown_now() if $domain;
-    $domain->remove(user_admin())       if $domain;
->>>>>>> master
 };
 done_testing();
 
