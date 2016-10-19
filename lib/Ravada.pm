@@ -37,7 +37,7 @@ our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
-
+our $CAN_LXC = 0;
 
 has 'vm' => (
           is => 'ro'
@@ -155,15 +155,19 @@ sub _create_vm {
     my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
     warn $err_kvm if $err_kvm;
 
+    my $err = $err_kvm;
+
     push @vms,($vm_kvm) if $vm_kvm;
 
     my $vm_lxc;
-    eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
-    push @vms,($vm_lxc) if $vm_lxc;
-    my $err_lxc = $@;
-
+    if ($CAN_LXC) {
+        eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
+        push @vms,($vm_lxc) if $vm_lxc;
+        my $err_lxc = $@;
+        $err .= "\n$err_lxc" if $err_lxc;
+    }
     if (!@vms) {
-        confess "No VMs found: $err_lxc\n$err_kvm\n";
+        confess "No VMs found: $err\n";
     }
     return \@vms;
 
