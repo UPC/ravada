@@ -15,7 +15,9 @@ WriteMakefile(
 	  ,'Net::LDAP'  => 0
       ,'Sys::Virt'  => 0
       ,'XML::LibXML'=> 0
-                ,'YAML' => 0
+             ,'YAML' => 0
+    ,'Image::Magick' => 0
+      ,'MooseX::Types::NetAddr::IP' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'}
