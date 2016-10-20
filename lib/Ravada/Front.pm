@@ -213,6 +213,14 @@ sub wait_request {
 
 }
 
+=head2 ping_backend
+
+Checks if the backend is alive.
+
+Return true if alive, false otherwise.
+
+=cut
+
 sub ping_backend {
     my $self = shift;
 
@@ -222,6 +230,13 @@ sub ping_backend {
     return 1 if $req->status() eq 'done';
     return 0;
 }
+
+=head2 open_vm
+
+Connects to a Virtual Machine Manager ( or VMM ( or VM )).
+Returns a read-only connection to the VM.
+
+=cut
 
 sub open_vm {
     my $self = shift;
