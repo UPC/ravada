@@ -7,7 +7,6 @@ our $LDAP;
 
 use Ravada::Auth::SQL;
 
-$Ravada::DEBUG = 1;
 eval { 
     require Ravada::Auth::LDAP; 
     $LDAP = 1 
