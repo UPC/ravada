@@ -592,4 +592,15 @@ sub can_screenshot {
     return 1 if $self->_vm();
 }
 
+=head2 storage_refresh
+
+Refreshes the internal storage. Used after removing files such as base images.
+
+=cut
+
+sub storage_refresh {
+    my $self = shift;
+    $self->storage->refresh();
+}
+
 1;

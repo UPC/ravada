@@ -50,6 +50,11 @@ has 'readonly' => (
     ,default => 0
 );
 
+has 'storage' => (
+    is => 'ro',
+    ,isa => 'Object'
+    ,required => 0
+);
 ##################################################################################3
 #
 
@@ -526,10 +531,9 @@ sub remove_base {
     my $self = shift;
     $self->is_base(0);
     for my $file ($self->list_files_base) {
-        warn $file;
         unlink $file or die "$! unlinking $file";
     }
-
+    $self->storage_refresh()    if $self->storage();
 }
 
 sub _remove_base_db {
