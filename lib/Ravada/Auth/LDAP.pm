@@ -29,6 +29,10 @@ our @OBJECT_CLASS = ('top'
                     ,'inetOrgPerson'
                    );
 
+our $STATUS_EOF = 1;
+our $STATUS_DISCONNECTED = 81;
+our $STATUS_BAD_FILTER = 89;
+
 =head2 BUILD
 
 Internal OO build
@@ -110,9 +114,11 @@ Search user by uid
 
 sub search_user {
     my $username = shift;
+
     _init_ldap();
 
     my $ldap = (shift or $LDAP_ADMIN);
+    my $retry = shift;
     confess "Missing LDAP" if !$ldap;
 
     my $base = _dc_base();
@@ -124,6 +130,15 @@ sub search_user {
     );
 
     return if $mesg->code == 32;
+    if ( !$retry && (
+             $mesg->code == $STATUS_DISCONNECTED 
+             || $mesg->code == $STATUS_EOF
+            )
+     ) {
+         warn "LDAP disconnected Retrying !";# if $Ravada::DEBUG;
+         $LDAP_ADMIN = 1;
+         return search_user($username,$ldap,1);
+    }
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
         if $mesg->code;
@@ -322,7 +337,6 @@ sub _connect_ldap {
     }
     if ($dn) {
         my $mesg = $ldap->bind($dn, password => $pass);
-        warn "$dn/$pass ".$mesg->error if $mesg->code;
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
