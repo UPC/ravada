@@ -286,6 +286,16 @@ sub search_clone {
 
 }
 
+=head2 search_domain
+
+Searches a domain by name
+
+    my $domain = $rvd_front->search_domain($name);
+
+Returns a Ravada::Domain object
+
+=cut
+
 sub search_domain {
     my $self = shift;
 
