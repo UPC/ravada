@@ -50,8 +50,19 @@ any '/index.html' => sub {
 
 any '/login' => sub {
     my $c = shift;
-    $c->session( expires => 3600 );
     return login($c);
+};
+
+any '/test' => sub {
+    my $c = shift;
+    my $logged = _logged_in($c);
+    my $count = $c->session('count');
+    $c->session(count => ++$count);
+
+    my $name_mojo = $c->signed_cookie('mojolicious');
+
+    my $dump_log = ''.(Dumper($logged) or '');
+    return $c->render(text => "$count ".($name_mojo or '')."<br> ".$dump_log );
 };
 
 any '/logout' => sub {
