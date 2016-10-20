@@ -253,6 +253,8 @@ sub open_vm {
 
 Search for a clone of a domain owned by an user.
 
+    my $domain_clone = $rvd_front->(id_base => $domain_base->id , id_owner => $user->id);
+
 =head3 arguments
 
 =over
@@ -269,19 +271,28 @@ Returns the domain
 
 sub search_clone {
     my $self = shift;
-    my ($id_base, $id_user) = @_;
+    my %args = @_;
+    confess "Missing id_owner " if !$args{id_owner};
+    confess "Missing id_base" if !$args{id_base};
+
+    my ($id_base , $id_owner) = ($args{id_base} , $args{id_owner} );
+
+    delete $args{id_base};
+    delete $args{id_owner};
+
+    confess "Unknown arguments ".Dumper(\%args) if keys %args;
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM domains "
+        "SELECT id,name FROM domains "
         ." WHERE id_base=? AND id_owner=? "
     );
-    $sth->execute($id_base, $id_user);
+    $sth->execute($id_base, $id_owner);
 
     my ($id_domain, $name) = $sth->fetchrow;
     $sth->finish;
 
     return if !$id_domain;
-    warn "Found domain $name" if $name;
+
     return $self->search_domain($name);
 
 }
