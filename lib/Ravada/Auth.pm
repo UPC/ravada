@@ -3,16 +3,17 @@ use strict;
 
 package Ravada::Auth;
 
-our $LDAP=0;
+our $LDAP;
 
 use Ravada::Auth::SQL;
 
+$Ravada::DEBUG = 1;
 eval { 
     require Ravada::Auth::LDAP; 
     $LDAP = 1 
 };
 warn $@  if $Ravada::DEBUG && $@;
-warn "LDAP loaded=$LDAP"    if $Ravada::DEBUG;
+warn "LDAP loaded=".($LDAP or '<UNDEF>')    if $Ravada::DEBUG;
 
 =head2 init
 
@@ -50,7 +51,7 @@ sub login {
 
     warn $@ if $@;
     if ($@ =~ /I can't connect/i) {
-        $LDAP = 0;
+        $LDAP = 0 if !defined $LDAP;
     }
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
