@@ -249,6 +249,43 @@ sub open_vm {
     return $proto->new(readonly => 1);
 }
 
+=head2 search_clone
+
+Search for a clone of a domain owned by an user.
+
+=head3 arguments
+
+=over
+
+=item id_base : The id of the base domain
+
+=item id_user
+
+=back
+
+Returns the domain
+
+=cut
+
+sub search_clone {
+    my $self = shift;
+    my ($id_base, $id_user) = @_;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM domains "
+        ." WHERE id_base=? AND id_owner=? "
+    );
+    $sth->execute($id_base, $id_user);
+
+    my ($id_domain, $name) = $sth->fetchrow;
+    $sth->finish;
+
+    return if !$id_domain;
+    warn "Found domain $name" if $name;
+    return $self->search_domain($name);
+
+}
+
 sub search_domain {
     my $self = shift;
 
