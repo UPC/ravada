@@ -159,7 +159,7 @@ sub list_users {
 
 =head2 create_domain
 
-    Request the creation of a new domain or virtual machine
+Request the creation of a new domain or virtual machine
 
     # TODO: document the args here
     my $req = $rvd_front->create_domain( ... );
@@ -170,6 +170,24 @@ sub create_domain {
     my $self = shift;
     return Ravada::Request->create_domain(@_);
 }
+
+=head2 wait_request
+
+Waits for a request for some seconds.
+
+=head3 Arguments
+
+=over 
+
+=item * request
+
+=item * timeout (optional defaults to $Ravada::Front::TIMEOUT
+
+=back
+
+Returns: the request
+
+=cut
 
 sub wait_request {
     my $self = shift;
