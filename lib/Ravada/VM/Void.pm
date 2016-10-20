@@ -35,7 +35,7 @@ sub create_domain {
                                            , id_base => $args{id_base}
     );
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
-        , id_base => ($args{id_base} or undef));
+        , id_base => $args{id_base} );
 
     if ($args{id_base}) {
         my $domain_base = $self->search_domain_by_id($args{id_base});

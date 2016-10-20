@@ -15,6 +15,7 @@ use_ok('Ravada');
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
+my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
 my %ARG_CREATE_DOM = (
       KVM => [ id_iso => 1 ]
@@ -23,7 +24,7 @@ my %ARG_CREATE_DOM = (
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = keys %ARG_CREATE_DOM;
+my @VMS = reverse keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
 
 #######################################################################33
@@ -107,6 +108,27 @@ sub test_prepare_base {
     );
     ok($domain_clone);
     test_devices_clone($vm_name, $domain_clone);
+    ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
+        ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
+
+    my $domain_clone2 = $RVD_FRONT->search_clone(
+         id_base => $domain->id,
+        id_owner => $USER->id
+    );
+    ok($domain_clone2,"Searching for clone id_base=".$domain->id." user=".$USER->id
+        ." expecting domain , got nothing "
+        ." ".Dumper($domain)) or exit;
+
+    if ($domain_clone2) {
+        ok( $domain_clone2->name eq $domain_clone->name
+        ,"Expecting clone name ".$domain_clone->name." , got:".$domain_clone2->name
+        );
+
+        ok($domain_clone2->id eq $domain_clone->id
+        ,"Expecting clone id ".$domain_clone->id." , got:".$domain_clone2->id
+        );
+    }
+
 
     touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };

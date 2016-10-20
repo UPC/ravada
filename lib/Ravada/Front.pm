@@ -249,6 +249,64 @@ sub open_vm {
     return $proto->new(readonly => 1);
 }
 
+=head2 search_clone
+
+Search for a clone of a domain owned by an user.
+
+    my $domain_clone = $rvd_front->(id_base => $domain_base->id , id_owner => $user->id);
+
+=head3 arguments
+
+=over
+
+=item id_base : The id of the base domain
+
+=item id_user
+
+=back
+
+Returns the domain
+
+=cut
+
+sub search_clone {
+    my $self = shift;
+    my %args = @_;
+    confess "Missing id_owner " if !$args{id_owner};
+    confess "Missing id_base" if !$args{id_base};
+
+    my ($id_base , $id_owner) = ($args{id_base} , $args{id_owner} );
+
+    delete $args{id_base};
+    delete $args{id_owner};
+
+    confess "Unknown arguments ".Dumper(\%args) if keys %args;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name FROM domains "
+        ." WHERE id_base=? AND id_owner=? "
+    );
+    $sth->execute($id_base, $id_owner);
+
+    my ($id_domain, $name) = $sth->fetchrow;
+    $sth->finish;
+
+    return if !$id_domain;
+
+    return $self->search_domain($name);
+
+}
+
+=head2 search_domain
+
+Searches a domain by name
+
+    my $domain = $rvd_front->search_domain($name);
+
+Returns a Ravada::Domain object
+
+=cut
+
 sub search_domain {
     my $self = shift;
 
