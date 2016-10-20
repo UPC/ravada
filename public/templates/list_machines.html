@@ -22,12 +22,12 @@
                         <a class="btn btn-primary btn-sm" href="/machine/manage/{{machine.id}}.html">Manage</a>
                         <a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html">View</a>
                         <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html">Clone</a>
-                        <a ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm" href="/machine/screenshot/{{machine.id}}.html">Screenshot</a>
-                        <a ng-hide="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/prepare/{{machine.id}}.html">Prepare Base</a>
-                        <button type="button" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm" ng-click="shutdown(machine.id)"></strong> ShutDown</button>
-                        
+                        <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm">Screenshot</button>
+                        <button type="button" ng-click="prepare(machine.id)" ng-hide="{{machine.is_base}}" class="btn btn-primary btn-sm">Prepare Base</button>
+                        <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong> ShutDown</button>
+                        <i id="spinn{{machine.id}}" class="fa fa-spinner fa-spin fa-fw" style="float: right; display: none;"></i>
                     </td>
-                    
+
                 </tr>
             </tbody>
         </table> 

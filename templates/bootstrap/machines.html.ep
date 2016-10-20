@@ -47,6 +47,7 @@
 
     </div>
     </div>
+    
     %= include 'bootstrap/scripts'
 </body>
 </html>

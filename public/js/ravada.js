@@ -87,6 +87,16 @@
             $http.get(toGet);
         };
 
+        $scope.prepare = function(machineId){
+            var toGet = '/machine/prepare/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
+        $scope.screenshot = function(machineId){
+            var toGet = '/machine/screenshot/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
     };
 
     function swListMach() {

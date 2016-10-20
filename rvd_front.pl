@@ -213,12 +213,12 @@ any '/machine/remove/*.html' => sub {
         my $c = shift;
         return remove_machine($c);
 };
-get '/machine/prepare/*.html' => sub {
+get '/machine/prepare/*.json' => sub {
         my $c = shift;
         return prepare_machine($c);
 };
 
-get '/machine/screenshot/*.html' => sub {
+get '/machine/screenshot/*.json' => sub {
         my $c = shift;
         return screenshot_machine($c);
 };
