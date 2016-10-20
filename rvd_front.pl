@@ -62,7 +62,11 @@ any '/test' => sub {
     my $name_mojo = $c->signed_cookie('mojolicious');
 
     my $dump_log = ''.(Dumper($logged) or '');
-    return $c->render(text => "$count ".($name_mojo or '')."<br> ".$dump_log );
+    return $c->render(text => "$count ".($name_mojo or '')."<br> ".$dump_log
+        ."<br>"
+        ."<script>alert(window.screen.availWidth"
+        ."+\" \"+window.screen.availHeight)</script>"
+    );
 };
 
 any '/logout' => sub {
