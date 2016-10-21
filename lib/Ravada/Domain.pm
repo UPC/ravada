@@ -92,7 +92,7 @@ after 'remove_base' => \&_remove_base_db;
 
 sub _preconditions{
     _allow_manage(@_);
-    _check_free_memory();
+#    _check_free_memory();
 }
 
 sub _allow_manage_args {

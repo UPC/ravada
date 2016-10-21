@@ -39,7 +39,10 @@ sub name {
 };
 
 sub display {
-    return 'void://hostname:000/';
+    my $self = shift;
+
+    my $ip = (Ravada::display_ip() or '127.0.0.1');
+    return "void://$ip:0000/";
 }
 
 sub is_active {

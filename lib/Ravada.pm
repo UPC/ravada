@@ -11,6 +11,9 @@ use Moose;
 use POSIX qw(WNOHANG);
 use YAML;
 
+use Socket qw( inet_aton inet_ntoa );
+use Sys::Hostname;
+
 use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
@@ -87,6 +90,30 @@ sub _connect_dbh {
     return DBIx::Connector->new("DBI:$driver:$db"
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
+
+}
+
+sub display_ip {
+    my $ip = $CONFIG->{display_ip};
+    return $ip if $ip;
+
+    my $name = hostname() or die "CRITICAL: I can't find the hostname.\n";
+    $ip = inet_ntoa(inet_aton($name)) 
+        or die "CRITICAL: I can't find IP of $name in the DNS.\n";
+
+    if (!$ip || $ip =~ /^127./) {
+        #TODO Net:DNS
+        $ip= `host $name`;
+        chomp $ip;
+        $ip =~ s/.*?address (\d+)/$1/;
+    }
+    if ( !$ip || $ip =~ /^127./ || $ip !~ /^\d+\..*\.\d+$/) {
+        warn "WARNING: I can't find IP with hostname $name ( $ip )"
+            .", using localhost\n";
+        $ip='127.0.0.1';
+    }
+
+    return $ip;
 
 }
 

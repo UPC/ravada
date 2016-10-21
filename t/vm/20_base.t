@@ -27,6 +27,8 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 my @VMS = reverse keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
 
+my $DISPLAY_IP = '99.1.99.1';
+
 #######################################################################33
 
 sub test_create_domain {
@@ -71,6 +73,23 @@ sub test_files_base {
     return;
 }
 
+sub test_display {
+    my ($vm_name, $domain) = @_;
+
+    my $display = $domain->display($USER);
+
+    my ($ip) = $display =~ m{^\w+://(.*):\d+};
+    ok($ip,"Expecting an IP from $display, got none") or return;
+
+    ok($ip ne '127.0.0.1', "Expecting IP no '127.0.0.1', got '$ip'");
+
+    my $expected_ip =  $RAVADA::CONFIG->{display_ip} or die "Missing display_ip in ravada.conf";
+
+    ok($ip eq $expected_ip,"Expecting display IP '$expected_ip', got '$ip'");
+
+    warn "[$vm_name] ".$domain->name." $display";
+}
+
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
@@ -100,6 +119,8 @@ sub test_prepare_base {
 
     my $name_clone = new_domain_name();
 
+    $RAVADA::CONFIG->{display_ip} = $DISPLAY_IP;
+
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
@@ -108,6 +129,8 @@ sub test_prepare_base {
     );
     ok($domain_clone);
     test_devices_clone($vm_name, $domain_clone);
+    test_display($vm_name, $domain_clone);
+
     ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
         ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
 
