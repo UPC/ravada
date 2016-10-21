@@ -141,7 +141,7 @@ get '/list_vm_types.json' => sub {
 
 get '/list_bases.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_bases_data);
+    $c->render(json => $RAVADA->list_bases);
 };
 
 get '/list_images.json' => sub {
@@ -393,14 +393,16 @@ sub quick_start {
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
 
+    return $c->redirect_to('/login') if !$USER;
+
     confess "Missing id_base" if !defined $id_base;
     $name = $c->session('login')    if !$name;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
-    # TODO : search domain that id_owner = USER->id AND base = $base->id
     my $domain_name = $base->name."-".$name;
-    my $domain = $RAVADA->search_domain($domain_name);
+    my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
+
     $domain = provision($c,  $id_base,  $domain_name)
         if !$domain;
 

@@ -69,6 +69,15 @@ sub test_remove_domain {
     ok(!search_domain_db($name),"Domain $name still in db");
 }
 
+sub test_list_bases {
+    my $vm_name = shift;
+    my $expected = shift;
+
+    my $bases = $RVD_FRONT->list_bases();
+
+    ok(scalar @$bases == $expected,"Expecting '$expected' bases, got ".scalar @$bases);
+}
+
 ####################################################################
 #
 
@@ -99,6 +108,8 @@ for my $vm_name ('Void','KVM','LXC') {
 
     ok($req->status eq 'done',"Request for create $vm domain ".$req->status);
     ok(!$req->error,$req->error);
+
+    test_list_bases($vm_name, 0);
 
     my $domain  = $RVD_FRONT->search_domain($name);
 
