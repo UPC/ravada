@@ -100,6 +100,12 @@ sub list_domains {
     return \@domains;
 }
 
+=head2 list_vm_types
+
+Returns a reference to a list of Virtual Machine Managers known by the system
+
+=cut
+
 sub list_vm_types {
     my $self = shift;
 
@@ -111,6 +117,12 @@ sub list_vm_types {
 
     return $result;
 }
+
+=head2 list_iso_images
+
+Returns a reference to a list of the ISO images known by the system
+
+=cut
 
 sub list_iso_images {
     my $self = shift;
@@ -127,6 +139,13 @@ sub list_iso_images {
     return \@iso;
 }
 
+=head2 list_lxc_templates
+
+Returns a reference to a list of the LXC templates known by the system
+
+=cut
+
+
 sub list_lxc_templates {
     my $self = shift;
 
@@ -142,6 +161,12 @@ sub list_lxc_templates {
     return \@template;
 
 }
+
+=head2 list_users
+
+Returns a reference to a list of the users
+
+=cut
 
 sub list_users {
     my $self = shift;
