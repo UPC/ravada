@@ -97,6 +97,21 @@
             $http.get(toGet);
         };
 
+        $scope.pause = function(machineId){
+            var toGet = '/machine/pause/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
+        $scope.resume = function(machineId){
+            var toGet = '/machine/resume/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
+        $scope.start = function(machineId){
+            var toGet = '/machine/start/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
     };
 
     function swListMach() {
