@@ -160,6 +160,24 @@ sub login {
     return;
 }
 
+=head2 make_admin
+
+Makes the user admin. Returns nothing.
+
+     Ravada::Auth::SQL::make_admin($id);
+
+=cut       
+
+sub make_admin {
+    my $id = shift;
+    my $sth = $$CON->dbh->prepare(
+            "UPDATE users SET is_admin=1 WHERE id=?");
+
+    $sth->execute($id);
+    $sth->finish;
+    
+}
+
 =head2 is_admin
 
 Returns true if the user is admin.
