@@ -376,19 +376,6 @@ sub search_domain_by_id {
     return $self->search_domain($row->{name});
 }
 
-sub domdisplay {
-    my $self = shift;
-    my $name = shift    or confess "Missing domain name";
-    my $user = shift    or confess "Missing user";
-
-    my $req = Ravada::Request->domdisplay($name, $user->id);
-    $self->wait_request($req, 10);
-
-    return $req if $req->status() ne 'done';
-
-    my $result = $req->result();
-    return $result->{display};
-}
 
 sub start_domain {
     my $self = shift;
