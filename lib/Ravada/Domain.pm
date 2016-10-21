@@ -8,7 +8,7 @@ use Data::Dumper;
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
-use Sys::MemInfo qw(totalmem freemem totalswap);
+use Sys::Statistics::Linux;
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
@@ -92,7 +92,7 @@ after 'remove_base' => \&_remove_base_db;
 
 sub _preconditions{
     _allow_manage(@_);
-#    _check_free_memory();
+    _check_free_memory();
 }
 
 sub _allow_manage_args {
@@ -156,9 +156,9 @@ sub _check_has_clones {
 }
 
 sub _check_free_memory{
-
-    die "No free memory" if !( (freemem() / 1024) < 500000 );
-
+    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
+    my $stat = $lxs->get;
+    die "No free memory" if ( $stat->memstats->{realfree} < 500000 );
 }
 
 sub _check_disk_modified {
