@@ -25,7 +25,7 @@ Clone the sources:
 - qemu-utils
 - perlmagick
 - libmoosex-types-netaddr-ip-perl
-- libsys-meminfo-perl
+- libsys-statistics-linux-perl
 
 ##Old debian
 
