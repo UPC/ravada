@@ -227,6 +227,20 @@ get '/machine/screenshot/*.json' => sub {
         return screenshot_machine($c);
 };
 
+get '/machine/pause/*.json' => sub {
+        my $c = shift;
+        return pause_machine($c);
+};
+
+get '/machine/resume/*.json' => sub {
+        my $c = shift;
+        return resume_machine($c);
+};
+
+get '/machine/start/*.json' => sub {
+        my $c = shift;
+        return start_machine($c);
+};
 ##############################################
 #
 
@@ -720,8 +734,8 @@ sub shutdown_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
 
-    my ($base, $type) = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain(name => $base->name, uid => $USER->id);
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id);
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
@@ -772,8 +786,7 @@ sub screenshot_machine {
         id_domain => $domain->id
         ,filename => $file_screenshot
     );
-
-    $c->render(template => 'bootstrap/machines');
+    $c->render(json => { request => $req->id});
 }
 
 sub prepare_machine {
@@ -801,8 +814,38 @@ sub prepare_machine {
         ,uid => $USER->id
     );
 
-    $c->render(template => 'bootstrap/machines');
+    $c->render(json => { request => $req->id});
 
+}
+
+sub start_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->start_domain(name => $domain->name, uid => $USER->id);
+
+    return $c->render(json => { req => $req->id });
+}
+
+sub pause_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id);
+
+    return $c->render(json => { req => $req->id });
+}
+
+sub resume_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id);
+
+    return $c->render(json => { req => $req->id });
 }
 
 sub list_requests {
