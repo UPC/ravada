@@ -376,6 +376,24 @@ sub search_domain_by_id {
     return $self->search_domain($row->{name});
 }
 
+=head2 start_domain
+
+Request to start a domain.
+
+=head3 arguments
+
+=over
+
+=item $name : the domain name
+
+=item $user : a Ravada::Auth::SQL user
+
+
+Returns an object: Ravada::Request.
+
+    my $req = $rvd_front->start_domain($name, $user);
+
+=cut
 
 sub start_domain {
     my $self = shift;
