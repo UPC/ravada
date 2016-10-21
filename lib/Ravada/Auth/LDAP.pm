@@ -118,7 +118,7 @@ sub search_user {
     _init_ldap();
 
     my $ldap = (shift or $LDAP_ADMIN);
-    my $retry = shift;
+    my $retry = ( shift or 0 );
     confess "Missing LDAP" if !$ldap;
 
     my $base = _dc_base();
@@ -135,9 +135,11 @@ sub search_user {
              || $mesg->code == $STATUS_EOF
             )
      ) {
-         warn "LDAP disconnected Retrying !";# if $Ravada::DEBUG;
-         $LDAP_ADMIN = 1;
-         return search_user($username,$ldap,1);
+         warn "LDAP disconnected Retrying ! [$retry]";# if $Ravada::DEBUG;
+         $LDAP_ADMIN = undef;
+         sleep ($retry + 1);
+         _init_ldap_admin();
+         return search_user($username,undef, ++$retry);
     }
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
@@ -327,14 +329,18 @@ sub _connect_ldap {
 
     my $ldap;
     
-    if ($port == 636 ) {
-        $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
-            or die "I can't connect to LDAP server at $host / $port : $@";
-    } else {
-         $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
-            or die "I can't connect to LDAP server at $host / $port : $@";
-
+    for my $retry ( 1 .. 3 ) {
+        if ($port == 636 ) {
+            $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
+        } else {
+            $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
+        }
+        last if $ldap;
+        warn "WARNING: I can't connect to LDAP server at $host / $port : $@ [ retry $retry ]";
+        sleep 1 + $retry;
     }
+    die "I can't connect to LDAP server at $host / $port : $@"  if !$ldap;
+
     if ($dn) {
         my $mesg = $ldap->bind($dn, password => $pass);
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
