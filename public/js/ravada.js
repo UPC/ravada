@@ -16,8 +16,8 @@
             .controller("SupportForm", suppFormCtrl)
             .controller("machines", machinesCrtl)
             .controller("messages", messagesCrtl)
-	    .controller("users", usersCrtl)
-
+	        .controller("users", usersCrtl)
+           
 
 
  
@@ -128,9 +128,11 @@
                 $scope.list_users= response.data;
         });
 
-        request.get(function( res ) {
-            $scope.res = res;
-        });
+        $scope.make_admin = function(id) {
+            $http.get('/users/make_admin/' + id + '.json')
+        };
+   
+        
 
     };
 
@@ -150,7 +152,6 @@
         });
 
     };
-
 
 
 // list messages
