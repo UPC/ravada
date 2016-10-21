@@ -156,7 +156,7 @@ sub _check_has_clones {
 }
 
 sub _check_free_memory{
-    die "No free memory" if !( (freemem() / 1024) < 500000 );
+    die "No free memory" if ( (freemem() / 1024) < 500000 );
 }
 
 sub _check_disk_modified {
