@@ -122,7 +122,6 @@ get '/list_users.json' => sub {
     $c->render(json => $RAVADA->list_users);
 };
 
-
 get '/list_lxc_templates.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_lxc_templates);
@@ -165,6 +164,13 @@ get '/machine/remove/*.html' => sub {
 get '/machine/prepare/*.html' => sub {
         my $c = shift;
         return prepare_machine($c);
+};
+
+##make admin
+
+get '/users/make_admin/*.json' => sub {
+       my $c = shift;
+      return make_admin($c);
 };
 
 ##############################################
@@ -546,6 +552,19 @@ sub _search_requested_machine {
     return $domain;
 }
 
+sub make_admin {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    
+    warn "id usuari $id";
+    
+    #my $user= Ravada::Auth::SQL->search_by_id($id);
+    Ravada::Auth::SQL::make_admin($id);
+        
+}
+
 sub manage_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
@@ -612,6 +631,8 @@ sub prepare_machine {
     $c->render(template => 'bootstrap/machines');
 
 }
+
+
 
 sub list_requests {
     my $c = shift;
