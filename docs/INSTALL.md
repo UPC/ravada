@@ -76,6 +76,12 @@ Add a new user for the ravada web. This command will create a new admin user in 
     $ cd ravada
     $ ./bin/rvd_back.pl --add-user user.name
 
+#Screenshots directory
+
+Create a directory to store virtual machines screenshots:
+
+    $ sudo mkdir -p /var/www/img/screenshots/
+
 #Next
 
 Read docs/operation.md
