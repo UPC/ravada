@@ -640,9 +640,7 @@ sub _cmd_screenshot {
         $bytes = $domain->screenshot($request->args('filename'));
         $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
     }
-    warn ''.($bytes or '<NULL>')." bytes received";
     $request->error("No data received") if !$bytes;
-    warn "done";
     $request->status('done');
 
 }
