@@ -116,7 +116,7 @@ for my $vm_name ('Void','KVM','LXC') {
     ok($domain->is_active,"[$vm_name] Expecting domain $name active, got ".$domain->is_active)
         or exit;
 
-    my $display = $RVD_FRONT->domdisplay($name, $USER);
+    my $display = $domain->display($USER);
     ok($display,"[$vm_name] No display for domain $name found. Is it active ?");
     ok($display && $display =~ m{\w+://.*?:\d+},"[$vm_name] Expecting display a URL, it is '"
                 .($display or '<UNDEF>')
