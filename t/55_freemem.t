@@ -84,17 +84,18 @@ sub test_new_domain_from_iso {
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
 
-    _check_free_memory();
-    #virsh setmaxmem $name xG --config
-    #virsh setmem $name xG --config
-
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
     $sth->finish;
     
-
+    #Ckeck free memory
+    my $freemem = _check_free_memory();
+    print "FREEMEM: $freemem";
+    
+    #virsh setmaxmem $name xG --config
+    #virsh setmem $name xG --config
 
     return $domain;
 }
@@ -119,7 +120,9 @@ sub remove_volume {
 sub _check_free_memory{
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
-    die "No free memory" if ( $stat->memstats->{realfree} < 500000 );
+    my $freemem = $stat->memstats->{realfree};
+    #die "No free memory" if ( $stat->memstats->{realfree} < 500000 );
+    return $freemem;
 }
 
 
