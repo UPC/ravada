@@ -8,6 +8,7 @@ use Data::Dumper;
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
+use Sys::MemInfo qw(totalmem freemem totalswap);
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
@@ -82,12 +83,17 @@ before 'prepare_base' => \&_allow_prepare_base;
     delete $self->{_was_active};
 };
 
-before 'start' => \&_allow_manage;
+before 'start' => \&_preconditions;
 before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
 
 after 'remove_base' => \&_remove_base_db;
+
+sub _preconditions{
+    _allow_manage(@_);
+    _check_free_memory();
+}
 
 sub _allow_manage_args {
     my $self = shift;
@@ -147,6 +153,10 @@ sub _check_has_clones {
     die $@  if $@ && $@ !~ /No DB info/i;
     die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
         if $#clones>=0;
+}
+
+sub _check_free_memory{
+    die "No free memory" if !( (freemem() / 1024) < 500000 );
 }
 
 sub _check_disk_modified {
