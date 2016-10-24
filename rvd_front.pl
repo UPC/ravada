@@ -173,6 +173,11 @@ get '/list_lxc_templates.json' => sub {
     $c->render(json => $RAVADA->list_lxc_templates);
 };
 
+get '/pingbackend.json' => sub {
+
+    my $c = shift;
+    $c->render(json => $RAVADA->ping_backend);
+};
 
 # machine commands
 

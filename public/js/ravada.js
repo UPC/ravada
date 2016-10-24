@@ -82,6 +82,10 @@
             $scope.res = res;
         });
 
+        $http.get('/pingbackend.json').then(function(response) {
+            $scope.pingbackend = response.data;
+        });
+
         $scope.shutdown = function(machineId){
             var toGet = '/machine/shutdown/'+machineId+'.json';
             $http.get(toGet);
