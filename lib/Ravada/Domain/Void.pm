@@ -41,7 +41,7 @@ sub name {
 sub display {
     my $self = shift;
 
-    my $ip = (Ravada::display_ip() or '127.0.0.1');
+    my $ip = $self->_vm->ip();
     return "void://$ip:0000/";
 }
 

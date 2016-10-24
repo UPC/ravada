@@ -10,8 +10,6 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use LWP::UserAgent;
 use Moose;
-use Socket qw( inet_aton inet_ntoa );
-use Sys::Hostname;
 use Sys::Virt;
 use URI;
 use XML::LibXML;
@@ -50,7 +48,6 @@ our $DIR_XML = "etc/xml";
 
 our $DEFAULT_DIR_IMG;
 our $XML = XML::LibXML->new();
-our $IP = _init_ip();
 
 #-----------
 #
@@ -181,7 +178,7 @@ sub search_domain {
                 domain => $dom
                 ,storage => $self->storage_pool
                 ,readonly => $self->readonly
-                ,_vm => $self->vm
+                ,_vm => $self
             );
         };
         warn $@ if $@;
@@ -209,6 +206,7 @@ sub list_domains {
         eval { $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
+                        ,_vm => $self
                     );
              $id = $domain->id();
         };
@@ -310,7 +308,7 @@ sub _domain_create_from_iso {
 
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                , _vm => $self->vm
+                , _vm => $self
     );
 
     $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
@@ -397,14 +395,15 @@ sub _domain_create_from_base {
     _xml_modify_disk($xml, \@device_disk);
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
-    _xml_modify_spice_port($xml);
+    $self->_xml_modify_spice_port($xml);
     _xml_modify_video($xml);
 
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create;
 
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+        , _vm => $self);
 
     $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     return $domain;
@@ -530,7 +529,7 @@ sub _define_xml {
 
     $self->_xml_modify_mac($doc);
     $self->_xml_modify_uuid($doc);
-    _xml_modify_spice_port($doc);
+    $self->_xml_modify_spice_port($doc);
     _xml_modify_video($doc);
 
     return $doc;
@@ -560,13 +559,14 @@ sub _xml_modify_video {
 }
 
 sub _xml_modify_spice_port {
-    my $doc = shift;
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics') 
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
-    $graph->setAttribute(listen=> $IP );
+    $graph->setAttribute(listen=> $self->ip() );
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
 
@@ -575,7 +575,7 @@ sub _xml_modify_spice_port {
     }
 
     $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $IP);
+    $listen->setAttribute(address => $self->ip());
 
 }
 
@@ -704,31 +704,6 @@ sub _xml_modify_mac {
     }
     die "I can't find a new unique mac" if !$new_mac;
     $if_mac->setAttribute(address => $new_mac);
-}
-
-
-#############################################################################
-#
-# inits
-#
-sub _init_ip {
-    my $name = hostname() or die "CRITICAL: I can't find the hostname.\n";
-    my $ip = inet_ntoa(inet_aton($name)) 
-        or die "CRITICAL: I can't find IP of $name in the DNS.\n";
-
-    if (!$ip || $ip =~ /^127./) {
-        #TODO Net:DNS
-        $ip= `host $name`;
-        chomp $ip;
-        $ip =~ s/.*?address (\d+)/$1/;
-    }
-    if ( !$ip || $ip =~ /^127./ || $ip !~ /^\d+\..*\.\d+$/) {
-        warn "WARNING: I can't find IP with hostname $name ( $ip )"
-            .", using localhost\n";
-        $ip='127.0.0.1';
-    }
-
-    return $ip;
 }
 
 1;

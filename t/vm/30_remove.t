@@ -69,7 +69,7 @@ sub test_remove_domain {
     ok(!$domain_missing,"Domain ".$domain->name." should be missing");
 }
 
-sub test_remove_base {
+sub test_remove_domain_base {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
@@ -81,6 +81,7 @@ sub test_remove_base {
     ok(!$domain_missing,"Domain ".$domain->name." should be missing");
 
 }
+
 
 sub test_dont_remove_father {
     my $vm_name = shift;
@@ -188,7 +189,7 @@ for my $vm_name (@VMS) {
         skip $msg,10    if !$vm;
 
         test_remove_domain($vm_name);
-        test_remove_base($vm_name);
+        test_remove_domain_base($vm_name);
         test_dont_remove_father($vm_name);
     }
 }

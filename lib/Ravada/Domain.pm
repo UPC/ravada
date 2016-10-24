@@ -56,6 +56,13 @@ has 'storage' => (
     ,isa => 'Object'
     ,required => 0
 );
+
+has '_vm' => (
+    is => 'ro',
+    ,isa => 'Object'
+    ,required => 1
+);
+
 ##################################################################################3
 #
 
@@ -88,6 +95,7 @@ before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
 
+before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
 sub _preconditions{
@@ -546,6 +554,11 @@ sub remove_base {
         unlink $file or die "$! unlinking $file";
     }
     $self->storage_refresh()    if $self->storage();
+}
+
+sub _can_remove_base {
+    _allow_manage(@_);
+    _check_has_clones(@_);
 }
 
 sub _remove_base_db {

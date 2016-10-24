@@ -33,6 +33,7 @@ our %VALID_ARG = (
        ,id_owner => 1
     ,id_template => 1
     }
+      ,remove_base => $args_prepare
      ,prepare_base => $args_prepare
      ,pause_domain => $args_manage
     ,resume_domain => $args_manage
@@ -288,6 +289,37 @@ sub prepare_base {
         , args => encode_json( $args ));
 
 }
+
+=head2 remove_base
+
+Returns a new request for making a base regular domain. It marks it
+as 'non base' and removes the files.
+
+It must have not clones. All clones must be removed before calling
+this method.
+
+  my $req = Ravada::Request->remove_base( $name );
+
+=cut
+
+sub remove_base {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my %args = @_;
+    confess "Missing uid"           if !$args{uid};
+
+    my $args = _check_args('remove_base', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'remove_base' 
+        , id_domain => $args{id_domain}
+        , args => encode_json( $args ));
+
+}
+
 
 =head2 ping_backend
 

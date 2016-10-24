@@ -93,28 +93,16 @@ sub _connect_dbh {
 
 }
 
+=head2 display_ip
+
+Returns the default display IP read from the config file
+
+=cut
+
 sub display_ip {
     my $ip = $CONFIG->{display_ip};
+    
     return $ip if $ip;
-
-    my $name = hostname() or die "CRITICAL: I can't find the hostname.\n";
-    $ip = inet_ntoa(inet_aton($name)) 
-        or die "CRITICAL: I can't find IP of $name in the DNS.\n";
-
-    if (!$ip || $ip =~ /^127./) {
-        #TODO Net:DNS
-        $ip= `host $name`;
-        chomp $ip;
-        $ip =~ s/.*?address (\d+)/$1/;
-    }
-    if ( !$ip || $ip =~ /^127./ || $ip !~ /^\d+\..*\.\d+$/) {
-        warn "WARNING: I can't find IP with hostname $name ( $ip )"
-            .", using localhost\n";
-        $ip='127.0.0.1';
-    }
-
-    return $ip;
-
 }
 
 sub _init_config {
@@ -829,6 +817,25 @@ sub _cmd_prepare_base {
 
 }
 
+sub _cmd_remove_base {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $id_domain = $request->id_domain or confess "Missing request id_domain";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    $domain->remove_base($user);
+
+}
+
+
 
 sub _cmd_shutdown {
     my $self = shift;
@@ -880,6 +887,7 @@ sub _req_method {
       ,shutdown => \&_cmd_shutdown
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
+   ,remove_base => \&_cmd_remove_base
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,list_vm_types => \&_cmd_list_vm_types

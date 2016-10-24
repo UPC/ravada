@@ -81,9 +81,19 @@ sub test_display {
     my ($ip) = $display =~ m{^\w+://(.*):\d+};
     ok($ip,"Expecting an IP from $display, got none") or return;
 
-    ok($ip ne '127.0.0.1', "Expecting IP no '127.0.0.1', got '$ip'");
+    ok($ip ne '127.0.0.1', "[$vm_name] Expecting IP no '127.0.0.1', got '$ip'") or exit;
 
-    my $expected_ip =  $RAVADA::CONFIG->{display_ip} or die "Missing display_ip in ravada.conf";
+
+    # only test this for Void, it will fail on real VMs
+    return if $vm_name ne 'Void';
+
+    $Ravada::CONFIG->{display_ip} = $DISPLAY_IP;
+    $display = $domain->display($USER);
+    ($ip) = $display =~ m{^\w+://(.*):\d+};
+
+    my $expected_ip =  Ravada::display_ip();
+    ok($expected_ip,"[$vm_name] Expecting display_ip '$DISPLAY_IP' , got none in config "
+        .Dumper($Ravada::CONFIG)) or exit;
 
     ok($ip eq $expected_ip,"Expecting display IP '$expected_ip', got '$ip'");
 
@@ -118,8 +128,6 @@ sub test_prepare_base {
     ok($domain->is_base);
 
     my $name_clone = new_domain_name();
-
-    $RAVADA::CONFIG->{display_ip} = $DISPLAY_IP;
 
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
@@ -246,13 +254,54 @@ sub test_remove_base {
     }
 }
 
+sub test_dont_remove_base_cloned {
+    my $vm_name = shift;
+
+    my $domain = test_create_domain($vm_name);
+    $domain->prepare_base($USER);
+    ok($domain->is_base,"[$vm_name] expecting domain is base, got "
+                        .$domain->is_base);
+
+    my @files = $domain->list_files_base();
+
+    my $name_clone = new_domain_name();
+
+    my $clone = rvd_back()->create_domain( name => $name_clone
+            ,id_owner => $USER->id
+            ,id_base => $domain->id
+            ,vm => $vm_name
+    );
+    eval {$domain->remove_base($USER)};
+    ok($@,"Expecting error removing base with clones, got '$@'");
+    ok($domain->is_base,"[$vm_name] expecting domain is base, got "
+                        .$domain->is_base);
+    for my $file (@files) {
+        ok(-e $file,"[$vm_name] Expecting file base '$file' not removed" );
+    }
+
+    ##################################################################3
+    # now we remove the clone, it should work
+
+    $clone->remove($USER);
+
+    eval {$domain->remove_base($USER)};
+    ok(!$@,"Expecting not error removing base with clones, got '$@'");
+    ok(!$domain->is_base,"[$vm_name] expecting domain is base, got "
+                        .$domain->is_base);
+    for my $file (@files) {
+        ok(!-e $file,"[$vm_name] Expecting file base '$file' removed" );
+    }
+
+}
+
+
 #######################################################################33
 
 
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (@VMS) {
+for my $vm_name (reverse sort @VMS) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
@@ -275,6 +324,7 @@ for my $vm_name (@VMS) {
         test_prepare_base($vm_name, $domain);
         test_prepare_base_active($vm_name);
         test_remove_base($vm_name);
+        test_dont_remove_base_cloned($vm_name);
     }
 }
 

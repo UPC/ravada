@@ -206,6 +206,64 @@ sub test_volumes {
 
 }
 
+sub check_files_exist {
+    my $vm_name = shift;
+    for my $file (@_) {
+        ok(-e $file
+            ,"[$vm_name] File '$file' , expected exists , got ".(-e $file));
+    }
+}
+
+sub check_files_removed {
+    my $vm_name = shift;
+    for my $file (@_) {
+        ok(!-e $file
+            ,"[$vm_name] File '$file' , expected removed, got ".(-e $file));
+    }
+}
+
+
+sub test_req_remove_base {
+    my ($vm_name, $domain_base, $domain_clone) = @_;
+
+    ok($domain_base->is_base,"[$vm_name] expecting domain ".$domain_base->id
+        ." is base , got ".$domain_base->is_base) or return;
+
+    my @files_base = $domain_base->list_files_base();
+    ok(scalar @files_base,"Expecting files base, got none") or return;
+
+    my $req = Ravada::Request->remove_base(id_domain => $domain_base->id
+        , uid => $USER->id
+    );
+
+    ok($req->status eq 'requested');
+    $ravada->process_requests();
+    wait_request($req);
+
+    ok($req->status eq 'done', "Expected req->status 'done', got "
+                                ."'".$req->status."'");
+
+    ok($req->error =~ /has \d+ clones/i, "[$vm_name] Expected error 'has X clones'"
+            .", got : '".$req->error."'");
+
+    check_files_exist(@files_base);
+    $domain_clone->remove($USER);
+    check_files_exist(@files_base);
+
+    $req->status('requested');
+    $ravada->process_requests();
+    wait_request($req);
+
+    ok($req->status eq 'done', "[$vm_name] Expected req->status 'done', got "
+                                ."'".$req->status."'");
+
+    ok(!$req->error, "Expected error ''"
+            .", got : '".$req->error."'");
+
+    ok(!$domain_base->is_base());
+    check_files_removed(@files_base);
+}
+
 ################################################
 eval { $ravada = Ravada->new(connector => $test->connector) };
 
@@ -226,11 +284,13 @@ for my $vm_name ( qw(Void KVM)) {
         remove_old_domains();
         remove_old_disks();
     
-        my $domain_base = test_req_create_domain($vm);
-        test_req_prepare_base($vm, $domain_base->name)                  if $domain_base;
-        my $domain_clone = test_req_create_from_base($vm, $domain_base) if $domain_base;
-        test_volumes($vm_name,$domain_base, $domain_clone)              if $domain_base;
+        my $domain_base = test_req_create_domain($vm) or next;
+        test_req_prepare_base($vm, $domain_base->name);
+        my $domain_clone = test_req_create_from_base($vm, $domain_base) 
+            or next;
+        test_volumes($vm_name,$domain_base, $domain_clone);
     
+        test_req_remove_base($vm_name, $domain_base, $domain_clone);
     };
 }
 
