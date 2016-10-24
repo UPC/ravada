@@ -71,7 +71,7 @@ Install KVM
 
 #Ravada user
 
-Add a new user for the ravada web. This command will create a new admin user in the database:
+Add a new user for the ravada web. This command will create a new user (not admin) in the database:
 
     $ cd ravada
     $ ./bin/rvd_back.pl --add-user user.name
