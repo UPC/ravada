@@ -97,7 +97,6 @@ sub test_display {
 
     ok($ip eq $expected_ip,"Expecting display IP '$expected_ip', got '$ip'");
 
-    warn "[$vm_name] ".$domain->name." $display";
 }
 
 sub test_prepare_base {
