@@ -26,8 +26,8 @@ has 'storage' => (
 
 has '_vm' => (
     is => 'ro'
-    ,isa => 'Sys::Virt'
-    ,required => 0
+    ,isa => 'Ravada::VM::KVM'
+    ,required => 1
 );
 
 ##################################################
@@ -553,7 +553,7 @@ sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
 
-    my $stream = $self->{_vm}->new_stream();
+    my $stream = $self->{_vm}->vm->new_stream();
 
     my $mimetype = $self->domain->screenshot($stream,0);
 

@@ -11,6 +11,9 @@ use Moose;
 use POSIX qw(WNOHANG);
 use YAML;
 
+use Socket qw( inet_aton inet_ntoa );
+use Sys::Hostname;
+
 use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
@@ -88,6 +91,18 @@ sub _connect_dbh {
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
 
+}
+
+=head2 display_ip
+
+Returns the default display IP read from the config file
+
+=cut
+
+sub display_ip {
+    my $ip = $CONFIG->{display_ip};
+    
+    return $ip if $ip;
 }
 
 sub _init_config {
@@ -802,6 +817,25 @@ sub _cmd_prepare_base {
 
 }
 
+sub _cmd_remove_base {
+    my $self = shift;
+    my $request = shift;
+
+    $request->status('working');
+    my $id_domain = $request->id_domain or confess "Missing request id_domain";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    $domain->remove_base($user);
+
+}
+
+
 
 sub _cmd_shutdown {
     my $self = shift;
@@ -853,6 +887,7 @@ sub _req_method {
       ,shutdown => \&_cmd_shutdown
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
+   ,remove_base => \&_cmd_remove_base
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,list_vm_types => \&_cmd_list_vm_types

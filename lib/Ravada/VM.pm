@@ -5,13 +5,16 @@ package Ravada::VM;
 
 use Carp qw(croak);
 use Data::Dumper;
+use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
+use Sys::Hostname;
 
 requires 'connect';
 
 # global DB Connection
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
+our $CONFIG = \$Ravada::CONFIG;
 
 # domain
 requires 'create_domain';
@@ -119,5 +122,41 @@ sub search_domain_by_id {
     return $self->search_domain($name);
 }
 
+=head2 ip
+
+Returns the external IP this for this VM
+
+=cut
+
+sub ip {
+    my $self = shift;
+
+    my $name = $self->host();
+    my $ip = inet_ntoa(inet_aton($name)) ;
+
+    return $ip if $ip && $ip !~ /^127\./;
+
+    $name = Ravada::display_ip();
+
+    if ($name) {
+        if ($name =~ /^\d+\.\d+\.\d+\.\d+$/) {
+            $ip = $name;
+        } else {
+            $ip = inet_ntoa(inet_aton($name));
+        }
+    }
+    return $ip if $ip && $ip !~ /^127\./;
+
+    $name = hostname();
+    $ip = `host $name`;
+    chomp $ip;
+    $ip =~ s/.*?address (\d+)/$1/;
+    return $ip if $ip && $ip !~ /^127\./;
+
+    warn "WARNING: I can't find the IP of host $name, using localhost."
+        ." This virtual machine won't be available from the network.";
+
+    return '127.0.0.1';
+}
 
 1;

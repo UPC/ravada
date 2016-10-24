@@ -187,6 +187,8 @@ sub test_unread_messages {
 eval { $ravada = Ravada->new(connector => $test->connector) };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
+remove_old_domains();
+remove_old_disks();
 
 for my $vm_name ( qw(Void KVM)) {
     my $vm;
