@@ -316,12 +316,22 @@ get '/messages/view/*.html' => sub {
 
 ###################################################
 
+sub _init_error {
+    my $c = shift;
+    $c->stash(error_title => '');
+    $c->stash(error => []);
+    $c->stash(link => '');
+    $c->stash(link_msg => '');
+
+}
+
 sub _logged_in {
     my $c = shift;
 
     confess "missing \$c" if !defined $c;
     $USER = undef;
 
+    _init_error($c);
     $c->stash(_logged_in => undef , _user => undef, _anonymous => 1);
 
     my $login = $c->session('login');
@@ -651,10 +661,10 @@ sub _search_requested_machine {
     return show_failure($c,"I can't find id in ".$c->req->url->to_abs->path)
         if !$id;
 
-    my $domain = $RAVADA->search_domain_by_id($id);
-    if (!$domain ) {
-        return show_failure($c,"I can't find domain id=$id");
-    }
+    my $domain = $RAVADA->search_domain_by_id($id) or do {
+        $c->stash( error => "Unknown base id=$id");
+        return;
+    };
 
     return ($domain,$type) if wantarray;
     return $domain;
@@ -727,6 +737,10 @@ sub clone_machine {
     return login($c) if !_logged_in($c);
 
     my $base = _search_requested_machine($c);
+    if (!$base ) {
+        $c->stash( error => "Unknown base ") if !$c->stash('error');
+        return $c->render(template => 'bootstrap/fail');
+    };
     return quick_start_domain($c, $base->id);
 }
 
