@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(cluck confess croak);
 use Data::Dumper;
+use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
 use Sys::Virt::Stream;
@@ -605,4 +606,95 @@ sub storage_refresh {
     $self->storage->refresh();
 }
 
+
+=head2 get_info
+
+This is taken directly from Sys::Virt::Domain.
+
+Returns a hash reference summarising the execution state of the
+domain. The elements of the hash are as follows:
+
+=over
+
+=item maxMem
+
+The maximum memory allowed for this domain, in kilobytes
+
+=item memory
+
+The current memory allocated to the domain in kilobytes
+
+=item cpu_time
+
+The amount of CPU time used by the domain
+
+=item n_virt_cpu
+
+The current number of virtual CPUs enabled in the domain
+
+=item state
+
+The execution state of the machine, which will be one of the
+constants &Sys::Virt::Domain::STATE_*.
+
+=back
+
+=cut
+
+sub get_info {
+    my $self = shift;
+    my $info = $self->domain->get_info;
+
+    if ($self->is_active) {
+        my $mem_stats = $self->domain->memory_stats();
+        $info->{actual_ballon} = $mem_stats->{actual_balloon};
+    }
+
+    $info->{max_mem} = $info->{maxMem};
+    $info->{memory} = $info->{memory};
+    $info->{cpu_time} = $info->{cpuTime};
+    $info->{n_virt_cpu} = $info->{nVirtCpu};
+
+    lock_keys(%$info);
+    return $info;
+}
+
+sub set_max_mem {
+    my $self = shift;
+    my $value = shift;
+
+    confess "ERROR: Requested operation is not valid: domain is already running"
+        if $self->domain->is_active();
+
+    $self->domain->set_max_memory($value);
+
+}
+
+sub get_max_mem {
+    return $_[0]->domain->get_max_memory();
+}
+
+sub set_memory {
+    my $self = shift;
+    my $value = shift;
+
+    my $max_mem = $self->get_max_mem();
+    confess "ERROR: invalid argument '$value': cannot set memory higher than max memory"
+            ." ($max_mem)"
+        if $value > $max_mem;
+
+    confess "ERROR: Requested operation is not valid: domain is not running"
+        if !$self->domain->is_active();
+
+    $self->domain->set_memory($value,Sys::Virt::Domain::MEM_CONFIG);
+#    if (!$self->is_active) {
+#        $self->domain->set_memory($value,Sys::Virt::Domain::MEM_MAXIMUM);
+#        return;
+#    }
+
+    $self->domain->set_memory($value,Sys::Virt::Domain::MEM_LIVE);
+    $self->domain->set_memory($value,Sys::Virt::Domain::MEM_CURRENT);
+#    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_HARD_LIMIT);
+#    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_SOFT_LIMIT);
+}
 1;

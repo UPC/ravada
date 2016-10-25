@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(cluck croak);
 use Data::Dumper;
+use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(LoadFile DumpFile);
@@ -29,8 +30,9 @@ sub BUILD {
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
-    $self->add_volume(name => 'void-diska' , size => 1, path => "$DIR_TMP/".$self->name.".img")
-        if !$args->{id_base};
+    return if $args->{id_base};
+    $self->add_volume(name => 'void-diska' , size => 1, path => "$DIR_TMP/".$self->name.".img");
+    $self->_set_default_info();
 }
 
 sub name { 
@@ -218,4 +220,52 @@ sub list_volumes {
 
 sub screenshot {}
 
+sub get_info {
+    my $self = shift;
+    my $info = $self->_value('info');
+    lock_keys(%$info);
+    return $info;
+}
+
+sub _set_default_info {
+    my $self = shift;
+    my $info = {
+            max_mem => 512*1024
+            ,memory => 512*1024,
+            ,cpu_time => 1
+            ,n_virt_cpu => 1
+            ,state => 'UNKNOWN'
+    };
+    $self->_store(info => $info);
+
+}
+
+sub set_max_memory {
+    my $self = shift;
+    my $value = shift;
+
+    $self->_set_info(max_mem => $value);
+
+}
+
+sub set_memory {
+    my $self = shift;
+    my $value = shift;
+    
+    $self->_set_info(memory => $value );
+}
+
+sub set_max_mem {
+    $_[0]->_set_info(max_mem => $_[1]);
+}
+
+sub _set_info {
+    my $self = shift;
+    my ($field, $value) = @_;
+    my $info = $self->get_info();
+    confess "Unknown field $field" if !exists $info->{$field};
+
+    $info->{$field} = $value;
+    $self->_store(info => $info);
+}
 1;

@@ -34,6 +34,13 @@ requires 'list_volumes';
 
 requires 'disk_device';
 
+#hardware info
+
+requires 'get_info';
+requires 'set_memory';
+requires 'set_max_mem';
+##########################################################
+
 has 'domain' => (
     isa => 'Any'
     ,is => 'ro'
