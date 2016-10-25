@@ -659,6 +659,12 @@ sub get_info {
     return $info;
 }
 
+=head2 set_max_mem
+
+Set the maximum memory for the domain
+
+=cut
+
 sub set_max_mem {
     my $self = shift;
     my $value = shift;
@@ -670,9 +676,21 @@ sub set_max_mem {
 
 }
 
+=head2 get_max_mem
+
+Get the maximum memory for the domain
+
+=cut
+
 sub get_max_mem {
     return $_[0]->domain->get_max_memory();
 }
+
+=head2 set_memory
+
+Sets the current available memory for the domain
+
+=cut
 
 sub set_memory {
     my $self = shift;
