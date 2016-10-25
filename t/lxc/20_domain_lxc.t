@@ -7,8 +7,14 @@ use Test::More;
 use Test::SQL::Data;
 
 use_ok('Ravada');
-use_ok('Ravada::Domain::LXC');
-use_ok('Ravada::VM::LXC');
+
+my $CAN_LXC = 0;
+SKIP: {
+    skip("LXC disabled in this release",3);
+    use_ok('Ravada::Domain::LXC');
+    use_ok('Ravada::VM::LXC');
+    $CAN_LXC = 1;
+};
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
@@ -179,7 +185,7 @@ sub remove_old_domains {
 }
 
 ################################################################
-eval { $vm_lxc = Ravada::VM::LXC->new() };
+eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {
     my $msg = ($@ or "No LXC vitual manager found");
 

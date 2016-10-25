@@ -6,9 +6,14 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
+my $CAN_LXC = 0;
 use_ok('Ravada');
-use_ok('Ravada::Domain::LXC');
-use_ok('Ravada::VM::LXC');
+SKIP: {
+    skip("LXC disabled in this release",2);
+    use_ok('Ravada::Domain::LXC');
+    use_ok('Ravada::VM::LXC');
+    $CAN_LXC = 1;
+}
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
@@ -137,7 +142,7 @@ sub test_domain{
 
 
 ################################################################
-eval { $vm_lxc = Ravada::VM::LXC->new() };
+eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {
 
     my $msg = ($@ or "No LXC vitual manager found");
