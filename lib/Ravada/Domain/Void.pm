@@ -31,8 +31,10 @@ sub BUILD {
         if ! -e $DIR_TMP;
 
     return if $args->{id_base};
-    $self->add_volume(name => 'void-diska' , size => 1, path => "$DIR_TMP/".$self->name.".img");
+    $self->add_volume(name => 'void-diska' , size => $args->{disk}
+                      , path => "$DIR_TMP/".$self->name.".img");
     $self->_set_default_info();
+    $self->set_memory($args->{memory}) if $args->{memory};
 }
 
 sub name { 

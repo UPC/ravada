@@ -244,11 +244,10 @@ sub create_volume {
                 "$dir_img/$name.img");
 
     if ($size) {
-#        TODO
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size/10));
+        my ($prev_size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size*0.9));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
     }
-#    warn $doc->toString();
     my $vol = $self->storage_pool->create_volume($doc->toString);
     warn "volume $dir_img/$name.img does not exists after creating volume"
             if ! -e "$dir_img/$name.img";
@@ -296,9 +295,13 @@ sub _domain_create_from_iso {
 
     my $device_cdrom = _iso_name($iso);
 
-    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume});
+    my $disk_size = $args{disk} if $args{disk};
+    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume}
+                                            , $disk_size);
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
+
+    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
 
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
@@ -611,6 +614,22 @@ sub _xml_modify_cdrom {
     }
     die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
 }
+
+sub _xml_modify_memory {
+    my $self = shift;
+     my $doc = shift;
+  my $memory = shift;
+
+    my $found++;
+    my ($mem) = $doc->findnodes('/domain/currentMemory/text()');
+    $mem->setData(int($memory * 0.9));
+
+    ($mem) = $doc->findnodes('/domain/memory/text()');
+    $mem->setData($memory);
+
+}
+
+
 
 sub _xml_remove_cdrom {
     my $doc = shift;
