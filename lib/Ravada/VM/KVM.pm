@@ -622,7 +622,7 @@ sub _xml_modify_memory {
 
     my $found++;
     my ($mem) = $doc->findnodes('/domain/currentMemory/text()');
-    $mem->setData(int($memory * 0.9));
+    $mem->setData($memory);
 
     ($mem) = $doc->findnodes('/domain/memory/text()');
     $mem->setData($memory);

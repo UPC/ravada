@@ -28,7 +28,8 @@ my %TEST_DISK = (
     ,KVM => \&test_disk_kvm
 );
 
-rvd_back($test->connector, $FILE_CONFIG);
+my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
+my $RVD_FRONT = rvd_front ( $test->connector , 't/etc/ravada.conf');
 
 my $USER = create_user("foo","bar");
 
@@ -54,7 +55,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , memory => $mem
+                    , memory => $mem * 1024
                     , disk => $disk
                     , @{$ARG_CREATE_DOM{$vm_name}})
     };
@@ -66,23 +67,56 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
 
+    return $domain;
+}
+
+sub test_req_create_domain {
+    my $vm_name = shift;
+    my ($mem, $disk) = @_;
+
+    my $name = new_domain_name();
+
+    my $req = $RVD_FRONT->create_domain( name => $name
+                    , id_owner => $USER->id
+                    , memory => $mem * 1024
+                    , disk => $disk
+                    , vm => $vm_name
+                    , @{$ARG_CREATE_DOM{$vm_name}}
+    );
+   
+    ok($req,"Expecting request to create_domain");
+
+    $RVD_BACK->process_requests();
+
+    wait_request($req);
+    ok($req->status('done'),"Expecting status='done' , got ".$req->status);
+    ok(!$req->error,"Expecting error='' , got '".($req->error or '<UNDEF>')."'");
+
+    my $domain = $RVD_FRONT->search_domain($name);
+    ok($domain,"Expecting exists domain '$name'");
+
+    my $domain2 = $RVD_BACK->search_domain($name);
+    $domain2->start($USER);
 
     return $domain;
 }
 
 sub test_memory {
-    my ($vm_name, $domain, $memory) = @_;
-
-    $domain->start($USER);
+    my ($vm_name, $domain, $memory , $msg) = @_;
+    $msg = "" if !$msg;
+    $msg = "-$msg" if $msg;
 
     my $info2 = $domain->get_info();
-    my $memory2 = $info2->{memory};
-            ok($memory2 == $memory,"[$vm_name] Expecting memory: '$memory' "
-                                        ." , got $memory2 ");
+    my $memory2 = int ( $info2->{memory} / 1024 );
+    ok($memory2 == $memory,"[$vm_name$msg] Expecting memory: '$memory' "
+                                        ." , got $memory2 ") or exit;
 }
 
 sub test_disk {
-    my ($vm_name, $domain, $size_exp) = @_;
+    my ($vm_name, $domain, $size_exp, $msg) = @_;
+
+    $msg = "" if !$msg;
+    $msg = "-$msg" if $msg;
 
     my ($disk) = $domain->list_volumes();
 
@@ -93,7 +127,7 @@ sub test_disk {
     ok($size,"Expecting size for volume $disk") or return;
 
     my $sub_test_disk = $TEST_DISK{$vm_name};
-    ok($sub_test_disk,"Expecting a test for disks of type $vm_name") or return;
+    ok($sub_test_disk,"[$vm_name$msg] Expecting a test for disks of type $vm_name") or return;
 
     $sub_test_disk->($vm_name, $disk, $size_exp);
 
@@ -152,12 +186,18 @@ for my $vm_name (qw( Void KVM )) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        my ($memory , $disk ) = (111*1024 , 3*1024*1024);
-        my $domain = test_create_domain($vm_name, $memory, $disk);
+        my ($memory , $disk ) = (53 , 3*1024*1024);
 
-        test_memory($vm_name, $domain, $memory);
-        
-        test_disk($vm_name, $domain, $disk);
+        {
+        my $domain = test_create_domain($vm_name, $memory, $disk,"Direct");
+        test_memory($vm_name, $domain, $memory, 'Direct');
+        test_disk($vm_name, $domain, $disk,'Direct');
+        }
+        {
+        my $domain = test_req_create_domain($vm_name, $memory, $disk, "Request");
+        test_memory($vm_name, $domain, $memory, "Request") if $domain;
+        test_disk($vm_name, $domain, $disk)     if $domain;
+        }
     };
 }
 

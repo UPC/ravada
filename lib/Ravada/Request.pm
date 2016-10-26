@@ -32,6 +32,8 @@ our %VALID_ARG = (
         ,id_base => 1
        ,id_owner => 1
     ,id_template => 1
+         ,memory => 2
+           ,disk => 2
     }
       ,remove_base => $args_prepare
      ,prepare_base => $args_prepare
