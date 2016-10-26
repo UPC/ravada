@@ -480,12 +480,6 @@ sub users {
 sub new_machine {
     my $c = shift;
     my @error = ();
-    my $ram = ($c->param('ram') or 2);
-    my $disk = ($c->param('disk') or 8);
-    my $backend = $c->param('backend');
-    my $id_iso = $c->param('id_iso');
-    my $id_template = $c->param('id_template');
-
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         req_new_domain($c);
@@ -505,6 +499,8 @@ sub req_new_domain {
         ,id_template => $c->param('id_template')
         ,vm=> $c->param('backend')
         ,id_owner => $USER->id
+        ,memory => int($c->param('memory')*1024*1024)
+        ,disk => int($c->param('disk')*1024*1024*1024)
     );
 
     return $req;
