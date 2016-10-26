@@ -68,7 +68,7 @@ sub test_add_volume {
 
 #    diag("[".$domain->vm."] adding volume $volume_name to domain ".$domain->name);
 
-    $domain->add_volume(name => $domain->name.".$volume_name", size => 1024 , vm => $vm);
+    $domain->add_volume(name => $domain->name.".$volume_name", size => 512*1024 , vm => $vm);
 
     my @volumes2 = $domain->list_volumes();
 

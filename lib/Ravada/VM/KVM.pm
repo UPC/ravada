@@ -246,7 +246,6 @@ sub create_volume {
     if ($size) {
         my ($prev_size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
         confess "Size '$size' too small" if $size < 1024*512;
-        warn "Creating a disk ".int($prev_size/(1024*1024*1024))." -> ".int($size/(1024*1024*1024));
         $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size*0.9));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
     }
