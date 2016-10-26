@@ -53,7 +53,7 @@ has 'readonly' => (
 # Method Modifiers
 # 
 #
-before 'create_domain' => \&_check_readonly;
+before 'create_domain' => \&_check_create_domain;
 
 sub _check_readonly {
     my $self = shift;
@@ -157,6 +157,32 @@ sub ip {
         ." This virtual machine won't be available from the network.";
 
     return '127.0.0.1';
+}
+
+sub _check_memory {
+    my $self = shift;
+    my %args = @_;
+    return if !exists $args{memory};
+
+    die "ERROR: Low memory '$args{memory}' required 128 Mb " if $args{memory} < 128*1024;
+}
+
+sub _check_disk {
+    my $self = shift;
+    my %args = @_;
+    return if !exists $args{disk};
+
+    die "ERROR: Low Disk '$args{disk}' required 1 Gb " if $args{disk} < 1024*1024;
+}
+
+
+sub _check_create_domain {
+    my $self = shift;
+
+    $self->_check_readonly(@_);
+    $self->_check_memory(@_);
+    $self->_check_disk(@_);
+
 }
 
 1;
