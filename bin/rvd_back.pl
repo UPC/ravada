@@ -5,6 +5,7 @@ use strict;
 
 use lib './lib';
 
+use Getopt::Long;
 use Proc::PID::File;
 
 use Ravada;
@@ -26,12 +27,12 @@ my $USAGE = "$0 "
         ." -X : start in foreground\n"
     ;
 
-#GetOptions (       help => \$help
-#                 ,debug => \$DEBUG
-#             ,'config=s'=> \$FILE_CONFIG
-#           ,'add-user=s'=> \$ADD_USER
-#      ,'add-user-ldap=s'=> \$ADD_USER_LDAP
-#);
+GetOptions (       help => \$help
+                 ,debug => \$DEBUG
+             ,'config=s'=> \$FILE_CONFIG
+           ,'add-user=s'=> \$ADD_USER
+      ,'add-user-ldap=s'=> \$ADD_USER_LDAP
+);
 
 #####################################################################
 #
