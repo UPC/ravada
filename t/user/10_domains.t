@@ -83,6 +83,9 @@ sub create_admin_user {
 
 ######################################3
 
+remove_old_domains();
+remove_old_disks();
+
 my $user_foo = test_create_user('foo');
 my $user_bar = test_create_user('bar');
 my $domain = test_create_domain($user_foo);
@@ -90,6 +93,9 @@ test_display($domain,$user_foo , $user_bar );
 
 my $user_admin = create_admin_user('mcnulty');
 test_display($domain,$user_admin , $user_bar );
+
+remove_old_domains();
+remove_old_disks();
 
 done_testing();
 

@@ -172,6 +172,10 @@ sub test_deny_all {
 }
 
 ########################################################################3
+#
+#
+remove_old_domains();
+remove_old_disks();
 
 my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name
@@ -189,5 +193,8 @@ test_allow_all($domain);
 test_deny_all($domain);
 
 test_allow_domain($domain);
+
+remove_old_domains();
+remove_old_disks();
 
 done_testing();
