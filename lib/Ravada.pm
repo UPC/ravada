@@ -672,8 +672,9 @@ sub _cmd_create{
     $domain = $self->create_domain(%{$request->args},request => $request);
 
     my $msg = '';
+
     if ($domain) {
-       my $msg = 'Domain '
+       $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$request->args('name')."</a>"
             ."created."
