@@ -154,10 +154,10 @@ sub mark_message_read {
     my $id = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
-        ." SET date_read=now() "
+        ." SET date_read=? "
         ." WHERE id_user=? AND id=?");
 
-    $sth->execute($self->id, $id);
+    $sth->execute(_now(), $self->id, $id);
     $sth->finish;
 
 }
@@ -201,18 +201,22 @@ sub mark_all_messages_read {
 
     _init_connector() if !$$CONNECTOR;
 
-    my @now = localtime(time);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE messages set date_read=?"
+    );
+    $sth->execute(_now());
+    $sth->finish;
+}
+
+sub _now {
+     my @now = localtime(time);
     $now[5]+=1900;
     $now[4]++;
     for ( 0 .. 4 ) {
         $now[$_] = "0".$now[$_] if length($now[$_])<2;
     }
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE messages set date_read=?"
-    );
-    # TODO add date
-    $sth->execute("$now[5]$now[4]$now[3]");
-    $sth->finish;
+
+    return "$now[5]-$now[4]-$now[3] $now[2]:$now[1]:$now[0].0";
 }
 
 1;
