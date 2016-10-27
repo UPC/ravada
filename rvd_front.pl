@@ -199,6 +199,8 @@ any '/machine/manage/*html' => sub {
 
 get '/machine/view/*.html' => sub {
     my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+
     return view_machine($c);
 };
 
