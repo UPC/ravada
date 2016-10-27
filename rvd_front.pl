@@ -663,7 +663,7 @@ sub _search_requested_machine {
         if !$id;
 
     my $domain = $RAVADA->search_domain_by_id($id) or do {
-        $c->stash( error => "Unknown base id=$id");
+        $c->stash( error => "Unknown domain id=$id");
         return;
     };
 
@@ -730,6 +730,7 @@ sub view_machine {
     return login($c) if !_logged_in($c);
 
     $domain =  _search_requested_machine($c) if !$domain;
+    return $c->render(template => 'bootstrap/fail') if !$domain;
     return show_link($c, $domain);
 }
 
