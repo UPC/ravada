@@ -55,4 +55,11 @@ sub login {
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
+sub LDAP {
+    my $value = shift;
+    return $LDAP if !defined $value;
+
+    $LDAP = $value;
+    return $value;
+}
 1;

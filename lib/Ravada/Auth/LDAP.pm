@@ -92,7 +92,7 @@ Removes the user
 sub remove_user {
     my $name = shift;
     _init_ldap_admin();
-    my $entry = search_user($name, $LDAP_ADMIN);
+    my ($entry) = search_user($name, $LDAP_ADMIN);
     die "ERROR: Entry for user $name not found\n" if !$entry;
 
 #    $LDAP->delete($entry);
@@ -238,7 +238,12 @@ Adds user to group
 sub add_to_group {
     my ($uid, $group_name) = @_;
 
-    my $user = search_user($uid)                        or die "No such user $uid";
+    my @user = search_user($uid)                        or die "No such user $uid";
+    warn "Found ".scalar(@user)." users $uid , getting the first one ".Dumper(\@user)
+        if scalar(@user)>1;
+
+    my $user = $user[0];
+
     my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)   
         or die "No such group $group_name";
 
@@ -361,6 +366,8 @@ sub _init_ldap_admin {
     } else {
         confess "ERROR: Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
+    confess "ERROR: Missing ldap -> admin_user -> dn "
+        if !$dn;
     $LDAP_ADMIN = _connect_ldap($dn, $pass) ;
     return $LDAP_ADMIN;
 }
@@ -390,7 +397,9 @@ sub is_admin {
             return 0;
         };
 
-    my $dn = search_user($self->name)->dn;
+
+    my ($user) = search_user($self->name);
+    my $dn = $user->dn;
     return grep /^$dn$/,$group->get_value('uniqueMember');
 
 }

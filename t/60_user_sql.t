@@ -14,6 +14,8 @@ my $ravada = Ravada->new(connector => $test->connector);
 
 Ravada::Auth::SQL::add_user('root','root', 1);
 
+Ravada::Auth::LDAP(0);
+
 {
     my $user_fail;
     eval { $user_fail = Ravada::Auth::SQL->new(name => 'root',password => 'fail')};
