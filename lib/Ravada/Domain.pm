@@ -553,4 +553,42 @@ sub _remove_base_db {
 
 }
 
+=head2 clone
+
+Clones a domain
+
+=head3 arguments
+
+=over
+
+=item user => $user : The user that owns the clone
+
+=item name => $name : Name of the new clone
+
+=back
+
+=cut
+
+sub clone {
+    my $self = shift;
+    my %args = @_;
+
+    my $name = $args{name} or confess "ERROR: Missing domain cloned name";
+    confess "ERROR: Missing request user" if !$args{user};
+
+    my $uid = $args{user}->id;
+
+    $self->prepare_base($args{user})  if !$self->is_base();
+
+    my $id_base = $self->id;
+
+
+    return $self->_vm->create_domain(
+        name => $name
+        ,id_base => $id_base
+        ,id_owner => $uid
+        ,vm => $self->vm
+    );
+}
+
 1;
