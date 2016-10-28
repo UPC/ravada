@@ -74,7 +74,9 @@ sub add_user {
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
-    Ravada::Auth::SQL::add_user($login, $password, $is_admin);
+    Ravada::Auth::SQL::add_user(      name => $login
+                                , password => $password
+                                , is_admin => $is_admin);
 }
 
 sub add_user_ldap {

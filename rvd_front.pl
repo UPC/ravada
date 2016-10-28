@@ -985,7 +985,7 @@ sub _new_anonymous_user {
         last if !$user;
     }
     warn "\n*** creating temporary user $name";
-    Ravada::Auth::SQL::add_user($name);
+    Ravada::Auth::SQL::add_user(name => $name, is_temporary => 1);
 
     return $name;
 }

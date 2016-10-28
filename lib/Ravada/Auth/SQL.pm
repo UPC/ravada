@@ -61,13 +61,30 @@ sub search_by_id {
 
 Adds a new user in the SQL database. Returns nothing.
 
-    Ravada::Auth::SQL::add_user($user, $pass, $is_admin);
+    Ravada::Auth::SQL::add_user( 
+                 name => $user
+           , password => $pass
+           , is_admin => 0
+       , is_temporary => 0
+    );
 
 =cut
 
 sub add_user {
+    my %args = @_;
+
     _init_connector();
-    my ($login,$password, $is_admin ) = @_;
+
+    my $name= $args{name};
+    my $password = $args{password};
+    my $is_admin = ($args{is_admin} or 0);
+    my $is_temporary= ($args{is_temporary} or 0);
+
+    delete @args{'name','password','is_admin','is_temporary'};
+
+    confess "WARNING: Unknown arguments ".Dumper(\%args)
+        if keys %args;
+
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password,is_admin) VALUES(?,?,?)");
 
@@ -76,7 +93,7 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($login,$password,$is_admin);
+    $sth->execute($name,$password,$is_admin);
     $sth->finish;
 }
 

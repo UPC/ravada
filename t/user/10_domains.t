@@ -24,7 +24,7 @@ sub test_create_user {
     my $name = shift;
     my $is_admin = shift or 0;
 
-    Ravada::Auth::SQL::add_user($name, 'bar', $is_admin);
+    Ravada::Auth::SQL::add_user(name => $name, password => 'bar', is_admin => $is_admin);
 
     my $user = Ravada::Auth::SQL->new(name => $name, password => 'bar');
     if ($is_admin) {

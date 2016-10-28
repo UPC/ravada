@@ -1,6 +1,6 @@
 
 
-    angular.module("ravada.app",['ngResource'])
+    angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)

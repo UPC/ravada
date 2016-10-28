@@ -291,7 +291,7 @@ sub _check_user_profile {
     my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
     return if $user_sql->id;
 
-    Ravada::Auth::SQL::add_user($self->name , undef, 0);
+    Ravada::Auth::SQL::add_user(name => $self->name);
 }
 
 sub _match_password {

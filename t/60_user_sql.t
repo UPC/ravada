@@ -12,7 +12,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada = Ravada->new(connector => $test->connector);
 
-Ravada::Auth::SQL::add_user('root','root', 1);
+Ravada::Auth::SQL::add_user(name => 'root', password => 'root', is_admin => 1);
 
 Ravada::Auth::LDAP(0);
 
@@ -43,7 +43,7 @@ Ravada::Auth::LDAP(0);
 
 }
     
-Ravada::Auth::SQL::add_user('mcnulty','jameson');
+Ravada::Auth::SQL::add_user(name => 'mcnulty', password => 'jameson');
     
 {
     my $mcnulty= Ravada::Auth::SQL->new(name => 'mcnulty',password => 'jameson');

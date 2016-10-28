@@ -151,7 +151,7 @@ sub remove_old_disks {
 
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
-    Ravada::Auth::SQL::add_user($name, $pass, $is_admin);
+    Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
     eval {
