@@ -677,7 +677,7 @@ sub _cmd_create{
        $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$request->args('name')."</a>"
-            ."created."
+            ." created."
         ;
     }
 
@@ -801,7 +801,7 @@ sub _cmd_start {
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$request->args('name')."</a>"
-            ."started"
+            ." started"
         ;
     $request->status('done', $msg);
 
