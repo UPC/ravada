@@ -173,6 +173,13 @@ get '/users/make_admin/*.json' => sub {
       return make_admin($c);
 };
 
+##remove admin
+
+get '/users/remove_admin/*.json' => sub {
+       my $c = shift;
+       return remove_admin($c);
+};
+
 ##############################################
 #
 
@@ -560,8 +567,19 @@ sub make_admin {
     
     warn "id usuari $id";
     
-    #my $user= Ravada::Auth::SQL->search_by_id($id);
     Ravada::Auth::SQL::make_admin($id);
+        
+}
+
+sub remove_admin {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    
+    warn "id usuari $id";
+    
+    Ravada::Auth::SQL::remove_admin($id);
         
 }
 

@@ -178,6 +178,24 @@ sub make_admin {
     
 }
 
+=head2 remove_admin
+
+Remove user admin privileges. Returns nothing.
+
+     Ravada::Auth::SQL::remove_admin($id);
+
+=cut       
+
+sub remove_admin {
+    my $id = shift;
+    my $sth = $$CON->dbh->prepare(
+            "UPDATE users SET is_admin=NULL WHERE id=?");
+
+    $sth->execute($id);
+    $sth->finish;
+    
+}
+
 =head2 is_admin
 
 Returns true if the user is admin.
