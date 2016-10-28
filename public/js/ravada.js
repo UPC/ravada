@@ -16,8 +16,8 @@
             .controller("SupportForm", suppFormCtrl)
             .controller("machines", machinesCrtl)
             .controller("messages", messagesCrtl)
-	    .controller("users", usersCrtl)
-
+	        .controller("users", usersCrtl)
+           
 
 
  
@@ -171,9 +171,29 @@
                 $scope.list_users= response.data;
         });
 
-        request.get(function( res ) {
-            $scope.res = res;
-        });
+        $scope.make_admin = function(id) {
+            $http.get('/users/make_admin/' + id + '.json')
+            location.reload();
+        };
+
+        $scope.remove_admin = function(id) {
+            $http.get('/users/remove_admin/' + id + '.json')
+            location.reload();
+        };
+
+        $scope.checkbox = [];
+
+        //if it is checked make the user admin, otherwise remove admin
+        $scope.stateChanged = function(id,userid) { 
+           if($scope.checkbox[id]) { //if it is checked
+                $http.get('/users/make_admin/' + userid + '.json')
+                location.reload();
+           }
+           else {
+                $http.get('/users/remove_admin/' + userid + '.json')
+                location.reload();
+           }
+        };
 
     };
 
@@ -193,7 +213,6 @@
         });
 
     };
-
 
 
 // list messages

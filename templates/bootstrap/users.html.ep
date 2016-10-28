@@ -13,7 +13,6 @@
                     <div class="panel-heading">
                         <h2>Users List
                         <button id="newMButton" style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
-
                         </h2>
                     </div>
                     

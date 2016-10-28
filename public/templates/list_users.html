@@ -5,16 +5,19 @@
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>ID</th>
+                    <th>Admin</th>
                 </tr>
             </thead>
             <tbody>
                 <tr ng-repeat="user in list_users">
 			<td>{{user.name}}</td>
-			<td>{{user.id}}</td>
+            <td><a ng-show="{{user.is_admin}}" ng-click="remove_admin(user.id)" class="fa fa-check" aria-hidden="true"</a>
+                <a ng-show="{{user.is_admin!=1}}" ng-click="make_admin(user.id)" class="fa fa-times" aria-hiden="true"</a></td>                
                 </tr>
-            </tbody>
-        </table>        
+        </tbody>
+        </table>       
     </div>
 </div>
+
+
 
