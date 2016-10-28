@@ -306,6 +306,7 @@ sub _domain_create_from_iso {
 
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    $self->_xml_modify_usb($xml);
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
@@ -627,6 +628,105 @@ sub _xml_modify_memory {
 
     ($mem) = $doc->findnodes('/domain/memory/text()');
     $mem->setData($memory);
+
+}
+
+sub _xml_modify_usb {
+    my $self = shift;
+     my $doc = shift;
+
+    for my $ctrl ($doc->findnodes('/domain/devices/controller')) {
+        next if $ctrl->getAttribute('type') ne 'usb';
+        $ctrl->setAttribute(model => 'ich9-ehci1');
+
+        for my $child ($ctrl->childNodes) {
+            if ($child->nodeName eq 'address') {
+                $child->setAttribute(slot => '0x08');
+                $child->setAttribute(function => '0x7');
+            }
+        }
+    }
+    my ($devices) = $doc->findnodes('/domain/devices');
+
+    $self->_xml_add_usb_uhci1($devices);
+    $self->_xml_add_usb_uhci2($devices);
+    $self->_xml_add_usb_uhci3($devices);
+
+    $self->_xml_add_usb_redirect($devices);
+
+}
+
+sub _xml_add_usb_redirect {
+    my $self = shift;
+    my $devices = shift;
+
+    my $dev = $devices->addNewChild(undef,'redirdev');
+    $dev->setAttribute( bus => 'usb');
+    $dev->setAttribute(type => 'spicevmc');
+
+}
+
+sub _xml_add_usb_uhci1 {
+    my $self = shift;
+    my $devices = shift;
+    # USB uhci1
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci1');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 0);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x0');
+    $address->setAttribute(multifunction => 'on');
+}
+
+sub _xml_add_usb_uhci2 {
+    my $self = shift;
+    my $devices = shift;
+
+    # USB uhci2
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci2');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 2);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x1');
+}
+
+sub _xml_add_usb_uhci3 {
+    my $self = shift;
+    my $devices = shift;
+
+    # USB uhci2
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci3');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 4);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x2');
 
 }
 
