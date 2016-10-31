@@ -34,6 +34,7 @@ our %VALID_ARG = (
     ,id_template => 1
          ,memory => 2
            ,disk => 2
+        ,network => 2
     }
       ,remove_base => $args_prepare
      ,prepare_base => $args_prepare
@@ -127,6 +128,9 @@ sub create_domain {
         confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
     }
     my $self = {};
+    if ($args{network}) {
+        $args{network} = JSON::XS->new->convert_blessed->encode($args{network});
+    }
 
     bless($self,$class);
     return $self->_new_request(command => 'create' , args => encode_json(\%args));

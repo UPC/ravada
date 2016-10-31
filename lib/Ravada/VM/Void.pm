@@ -14,6 +14,8 @@ use Sys::Hostname;
 use URI;
 
 use Ravada::Domain::Void;
+use Ravada::NetInterface::Void;
+
 with 'Ravada::VM';
 
 ##########################################################################
@@ -88,6 +90,10 @@ sub search_domain {
         return if !defined $id;#
         return $domain;
     }
+}
+
+sub list_networks {
+    return Ravada::NetInterface::Void->new();
 }
 
 #########################################################################3

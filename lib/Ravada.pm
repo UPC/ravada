@@ -903,6 +903,19 @@ sub _req_method {
     return $methods{$cmd};
 }
 
+=head2 open_vm
+
+Opens a VM of a given type
+
+
+  my $vm = $ravada->open_vm('KVM');
+
+=cut
+
+sub open_vm {
+    return search_vm(@_);
+}
+
 =head2 search_vm
 
 Searches for a VM of a given type

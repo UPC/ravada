@@ -25,6 +25,9 @@ requires 'list_domains';
 # storage volume
 requires 'create_volume';
 
+# networks
+requires 'list_networks';
+
 ############################################################
 
 has 'host' => (
