@@ -276,6 +276,11 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
+any '/messages.html' => sub {
+    my $c = shift;
+    return access_denied($c) if !_logged_in($c);
+    return messages($c);
+};
 
 get '/messages.json' => sub {
     my $c = shift;
