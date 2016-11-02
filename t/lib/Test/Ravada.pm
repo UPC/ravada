@@ -4,6 +4,7 @@ use warnings;
 
 use  Carp qw(carp confess);
 use  Data::Dumper;
+use  IPC::Run3 qw(run3);
 use  Test::More;
 
 use Ravada;
@@ -74,6 +75,7 @@ sub _remove_old_domains_vm {
     my $domain;
     my $vm = rvd_back()->search_vm($vm_name);
     return if !$vm;
+    _remove_old_domains_lxc() if $vm_name =~ /LXC/i;
 
     for (reverse 0 .. 20 ) {
         my $dom_name = base_domain_name()."_$_";
@@ -91,11 +93,24 @@ sub _remove_old_domains_vm {
         }
         ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
     }
-
 }
+
+sub _remove_old_domains_lxc {
+    for (reverse 0 .. 20 ) {
+        my $dom_name = base_domain_name()."_$_";
+        my @cmd = ('lxc-info','--name',$dom_name);
+        my ($in, $out,$err);
+        run3(\@cmd, \$in, \$out, \$err);
+        next if $out !~ /Name:\s+$dom_name$/;
+        # TODO
+        warn "TODO remove found domain !! $out";
+    }
+}
+
 sub remove_old_domains {
     _remove_old_domains_vm('KVM');
     _remove_old_domains_vm('Void');
+    _remove_old_domains_vm('LXC');
 }
 
 sub _remove_old_disks_kvm {
@@ -104,7 +119,6 @@ sub _remove_old_disks_kvm {
 
     my $vm = $RVD_BACK->search_vm('kvm');
     if (!$vm) {
-        warn "I can't find a kvm backend";
         return;
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;

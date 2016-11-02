@@ -6,9 +6,12 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 use_ok('Ravada');
 
-my $CAN_LXC = 0;
+my $CAN_LXC = 1;
 SKIP: {
     skip("LXC disabled in this release",3);
     use_ok('Ravada::Domain::LXC');
@@ -21,15 +24,14 @@ my $RAVADA= Ravada->new( connector => $test->connector);
 
 my $vm_lxc;
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
-my $CONT= 0;
-
+my $RVD_BACK = rvd_back($test->connector, 't/etc/sql.conf');
+my $USER = create_user('foo','bar');
 
 sub test_remove_domain {
     my $name = shift;
     my $domain = $vm_lxc->search_domain($name,1) or return;
     diag("Removing domain $name");
-    $domain->remove() if $domain;
+    $domain->remove($USER) if $domain;
     diag ("$@");
     ok(!$@ , "Error removing domain $name : $@") or exit;
   
@@ -61,15 +63,11 @@ sub search_domain_db {
     return $row;
 }
 
-sub _new_name {
-    return $DOMAIN_NAME."_".$CONT++;
-}
-
 sub test_domain_from_base {
     my $base_name = shift;
     my $base = $vm_lxc->search_domain($base_name,1) or die "Unknown domain $base_name";
 
-    my $name = _new_name();
+    my $name = new_domain_name();
     test_remove_domain($name);
     my $domain = $vm_lxc->create_domain(name => $name
         , id_base => $base->id);#, active => $active);
@@ -90,7 +88,7 @@ sub test_domain_from_base {
 sub test_new_domain {
     my $active = shift;
     
-    my $name = _new_name();
+    my $name = new_domain_name();
     diag ("Test remove domain");
     test_remove_domain($name);
 
@@ -175,19 +173,12 @@ sub test_domain{
     return $domain->name;
 }
 
-sub remove_old_domains {
-    for ( 0 .. 10 ) {
-        my $dom_name = $DOMAIN_NAME."_$_";
-
-        my $domain = $RAVADA->search_domain($dom_name,1);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
-
-}
-
 ################################################################
 eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
+
+remove_old_domains();
+remove_old_disks();
+
 SKIP: {
     my $msg = ($@ or "No LXC vitual manager found");
 
@@ -207,7 +198,6 @@ SKIP: {
         my $vm2 = $ravada2->search_vm('lxc')    if $ravada2;
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
         $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
-        remove_old_domains();
         my $domain = test_domain();
         my $domain2 = test_domain_from_base($domain);
         test_remove_domain($domain);
@@ -216,5 +206,8 @@ SKIP: {
     ok($vm,"I can't find a LXC virtual manager from ravada");
 
 }
+
+remove_old_domains();
+remove_old_disks();
 
 done_testing();
