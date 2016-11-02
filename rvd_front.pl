@@ -331,14 +331,20 @@ get '/messages/view/*.html' => sub {
     return $c->render( json => $USER->show_message($id_message) );
 };
 
-get '/requirements' => sub {
+any '/about' => sub {
     my $c = shift;
+    return login($c)            if !_logged_in($c);
 
-    return access_denied($c) if !_logged_in($c);
-
-    return requirements($c);
+    $c->render(template => 'bootstrap/about');
 };
 
+
+any '/requirements' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->render(template => 'bootstrap/requirements');
+};
 
 ###################################################
 
@@ -1042,8 +1048,6 @@ Hi <%= $name %>,
 
 @@ layouts/default.html.ep
 
-@@ about.html.ep
-% layout 'default';
 <h1>Run</h1>
 
 
