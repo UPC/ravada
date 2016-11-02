@@ -14,6 +14,8 @@ use Sys::Hostname;
 use URI;
 
 use Ravada::Domain::Void;
+use Ravada::NetInterface::Void;
+
 with 'Ravada::VM';
 
 ##########################################################################
@@ -25,17 +27,29 @@ sub create_domain {
     my $self = shift;
     my %args = @_;
 
-    $args{active} = 1 if !defined $args{active};
-    
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"       if !$args{id_owner};
 
-    my $domain = Ravada::Domain::Void->new(name => $args{name}, domain => $args{name}
-                                                            , id_owner => $args{id_owner}
+    my $domain = Ravada::Domain::Void->new(
+                                           %args
+                                           , domain => $args{name}
+                                           , _vm => $self
     );
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
-        , id_base => ($args{id_base} or undef));
+        , id_base => $args{id_base} );
 
+    if ($args{id_base}) {
+        my $domain_base = $self->search_domain_by_id($args{id_base});
+
+        confess "I can't find base domain id=$args{id_base}" if !$domain_base;
+
+        for my $file_base ($domain_base->list_files_base) {
+            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*?)(\..*)};
+            my $new_name = "$vol_name-$args{name}$ext";
+            $domain->add_volume(name => $new_name, path => "$dir/$new_name");
+        }
+    }
+#    $domain->start();
     return $domain;
 }
 
@@ -43,33 +57,43 @@ sub create_volume {
 }
 
 sub list_domains {
-    opendir my $ls,$Ravada::Domain::DIR_TMP or return;
+    opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
     my %domain;
     while (my $file = readdir $ls ) {
         $file =~ s/\.\w+//;
+        $file =~ s/(.*)\.qcow.*$/$1/;
+        next if $file !~ /\w/;
         $domain{$file}++;
     }
 
     closedir $ls;
 
-    return [keys %domain];
+    return sort keys %domain;
 }
 
 sub search_domain {
     my $self = shift;
     my $name = shift;
 
-    my $domain = Ravada::Domain::Void->new( domain => $name);
-    my $id;
+    for my $name_vm ( $self->list_domains ) {
+        next if $name_vm ne $name;
 
-    eval { $id = $domain->id };
-    return if !defined $id && ! -e $domain->disk_device();
+        my $domain = Ravada::Domain::Void->new( 
+            domain => $name
+            ,readonly => $self->readonly
+                 ,_vm => $self
+        );
+        my $id;
 
-    return $domain;
+        eval { $id = $domain->id };
+        return if !defined $id;#
+        return $domain;
+    }
 }
 
-sub search_domain_by_id {
+sub list_networks {
+    return Ravada::NetInterface::Void->new();
 }
 
 #########################################################################3

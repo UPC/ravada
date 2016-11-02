@@ -43,12 +43,12 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
+        my @files_base = $domain->list_files_base;
         eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") ;
 
-        if ( $domain->file_base_img ) {
-            ok(! -e $domain->file_base_img ,"Image file was not removed "
-                                        .$domain->file_base_img )
+        for my $file ( @files_base) {
+            ok(! -e $file,"Image file $file should beremoved ");
         }
 
     }

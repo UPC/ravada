@@ -29,6 +29,10 @@ our @OBJECT_CLASS = ('top'
                     ,'inetOrgPerson'
                    );
 
+our $STATUS_EOF = 1;
+our $STATUS_DISCONNECTED = 81;
+our $STATUS_BAD_FILTER = 89;
+
 =head2 BUILD
 
 Internal OO build
@@ -88,7 +92,7 @@ Removes the user
 sub remove_user {
     my $name = shift;
     _init_ldap_admin();
-    my $entry = search_user($name, $LDAP_ADMIN);
+    my ($entry) = search_user($name, $LDAP_ADMIN);
     die "ERROR: Entry for user $name not found\n" if !$entry;
 
 #    $LDAP->delete($entry);
@@ -110,9 +114,11 @@ Search user by uid
 
 sub search_user {
     my $username = shift;
+
     _init_ldap();
 
     my $ldap = (shift or $LDAP_ADMIN);
+    my $retry = ( shift or 0 );
     confess "Missing LDAP" if !$ldap;
 
     my $base = _dc_base();
@@ -124,6 +130,17 @@ sub search_user {
     );
 
     return if $mesg->code == 32;
+    if ( !$retry && (
+             $mesg->code == $STATUS_DISCONNECTED 
+             || $mesg->code == $STATUS_EOF
+            )
+     ) {
+         warn "LDAP disconnected Retrying ! [$retry]";# if $Ravada::DEBUG;
+         $LDAP_ADMIN = undef;
+         sleep ($retry + 1);
+         _init_ldap_admin();
+         return search_user($username,undef, ++$retry);
+    }
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
         if $mesg->code;
@@ -221,7 +238,12 @@ Adds user to group
 sub add_to_group {
     my ($uid, $group_name) = @_;
 
-    my $user = search_user($uid)                        or die "No such user $uid";
+    my @user = search_user($uid)                        or die "No such user $uid";
+    warn "Found ".scalar(@user)." users $uid , getting the first one ".Dumper(\@user)
+        if scalar(@user)>1;
+
+    my $user = $user[0];
+
     my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)   
         or die "No such group $group_name";
 
@@ -269,7 +291,7 @@ sub _check_user_profile {
     my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
     return if $user_sql->id;
 
-    Ravada::Auth::SQL::add_user($self->name , undef, 0);
+    Ravada::Auth::SQL::add_user(name => $self->name);
 }
 
 sub _match_password {
@@ -312,17 +334,20 @@ sub _connect_ldap {
 
     my $ldap;
     
-    if ($port == 636 ) {
-        $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
-            or die "I can't connect to LDAP server at $host / $port : $@";
-    } else {
-         $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
-            or die "I can't connect to LDAP server at $host / $port : $@";
-
+    for my $retry ( 1 .. 3 ) {
+        if ($port == 636 ) {
+            $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
+        } else {
+            $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
+        }
+        last if $ldap;
+        warn "WARNING: I can't connect to LDAP server at $host / $port : $@ [ retry $retry ]";
+        sleep 1 + $retry;
     }
+    die "I can't connect to LDAP server at $host / $port : $@"  if !$ldap;
+
     if ($dn) {
         my $mesg = $ldap->bind($dn, password => $pass);
-        warn "$dn/$pass ".$mesg->error if $mesg->code;
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
@@ -341,6 +366,8 @@ sub _init_ldap_admin {
     } else {
         confess "ERROR: Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
+    confess "ERROR: Missing ldap -> admin_user -> dn "
+        if !$dn;
     $LDAP_ADMIN = _connect_ldap($dn, $pass) ;
     return $LDAP_ADMIN;
 }
@@ -370,7 +397,9 @@ sub is_admin {
             return 0;
         };
 
-    my $dn = search_user($self->name)->dn;
+
+    my ($user) = search_user($self->name);
+    my $dn = $user->dn;
     return grep /^$dn$/,$group->get_value('uniqueMember');
 
 }

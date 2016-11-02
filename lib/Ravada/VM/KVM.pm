@@ -8,15 +8,17 @@ use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
+use IO::Interface::Simple;
+use JSON::XS;
 use LWP::UserAgent;
 use Moose;
-use Socket qw( inet_aton inet_ntoa );
-use Sys::Hostname;
 use Sys::Virt;
 use URI;
 use XML::LibXML;
 
 use Ravada::Domain::KVM;
+use Ravada::NetInterface::KVM;
+use Ravada::NetInterface::MacVTap;
 
 with 'Ravada::VM';
 
@@ -25,7 +27,7 @@ with 'Ravada::VM';
 
 has vm => (
     isa => 'Sys::Virt'
-    ,is => 'ro'
+    ,is => 'rw'
     ,builder => 'connect'
     ,lazy => 1
 );
@@ -50,7 +52,6 @@ our $DIR_XML = "etc/xml";
 
 our $DEFAULT_DIR_IMG;
 our $XML = XML::LibXML->new();
-our $IP = _init_ip();
 
 #-----------
 #
@@ -75,11 +76,18 @@ sub connect {
     confess "undefined host" if !defined $self->host;
 
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $self->type.":///system");
+        $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
     } else {
-        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system");
+        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
+                              ,readonly => $self->mode
+                          );
     }
+    $vm->register_close_callback(\&_reconnect);
     return $vm;
+}
+
+sub _reconnect {
+    warn "Disconnected";
 }
 
 sub _load_storage_pool {
@@ -161,14 +169,20 @@ sub search_domain {
     my $self = shift;
     my $name = shift or confess "Missing name";
 
-    for ($self->vm->list_all_domains()) {
-        next if $_->get_name ne $name;
+    my @all_domains;
+    eval { @all_domains = $self->vm->list_all_domains() };
+    die $@ if $@;
+
+    for my $dom (@all_domains) {
+        next if $dom->get_name ne $name;
 
         my $domain;
         eval {
             $domain = Ravada::Domain::KVM->new(
-                domain => $_
+                domain => $dom
                 ,storage => $self->storage_pool
+                ,readonly => $self->readonly
+                ,_vm => $self
             );
         };
         warn $@ if $@;
@@ -177,26 +191,6 @@ sub search_domain {
     return;
 }
 
-=head2 search_domain_by_id
-
-Returns a domain searching by its id
-
-    $domain = $vm->search_domain_by_id($id);
-
-=cut
-
-sub search_domain_by_id {
-    my $self = shift;
-      my $id = shift;
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
-        ." WHERE id=?");
-    $sth->execute($id);
-    my ($name) = $sth->fetchrow;
-    return if !$name;
-
-    return $self->search_domain($name);
-}
 
 =head2 list_domains
 
@@ -216,6 +210,7 @@ sub list_domains {
         eval { $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
+                        ,_vm => $self
                     );
              $id = $domain->id();
         };
@@ -234,20 +229,30 @@ Creates a new storage volume. It requires a name and a xml template file definin
 
 sub create_volume {
     my $self = shift;
-    my ($name, $file_xml) = @_;
+    my ($name, $file_xml, $size) = @_;
+
     confess "Missing volume name"   if !$name;
     confess "Missing xml template"  if !$file_xml;
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
 
     open my $fh,'<', $file_xml or die "$! $file_xml";
     my $dir_img = $DEFAULT_DIR_IMG;
 
-    my $doc = $XML->load_xml(IO => $fh);
+    my $doc;
+    eval { $doc = $XML->load_xml(IO => $fh) };
+    die "ERROR reading $file_xml $@"    if $@;
 
     $doc->findnodes('/volume/name/text()')->[0]->setData("$name.img");
     $doc->findnodes('/volume/key/text()')->[0]->setData("$dir_img/$name.img");
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                 "$dir_img/$name.img");
 
+    if ($size) {
+        my ($prev_size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
+        confess "Size '$size' too small" if $size < 1024*512;
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size*0.9));
+        $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
+    }
     my $vol = $self->storage_pool->create_volume($doc->toString);
     warn "volume $dir_img/$name.img does not exists after creating volume"
             if ! -e "$dir_img/$name.img";
@@ -269,6 +274,7 @@ sub search_volume {
 
     my $vol;
     eval { $vol = $self->storage_pool->get_volume_by_name($name) };
+    die $@ if $@;
     return $vol;
 }
 
@@ -276,7 +282,7 @@ sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
 
-    for (qw(id_iso id_owner)) {
+    for (qw(id_iso id_owner name)) {
         croak "argument $_ required" 
             if !$args{$_};
     }
@@ -289,19 +295,33 @@ sub _domain_create_from_iso {
 
     my $iso = $self->_search_iso($args{id_iso});
 
+    die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
+        if !$iso->{xml_volume};
+
     my $device_cdrom = _iso_name($iso);
 
-    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume});
+    my $disk_size = $args{disk} if $args{disk};
+    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume}
+                                            , $disk_size);
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
+    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
+
     _xml_modify_cdrom($xml, $device_cdrom);
-    _xml_modify_disk($xml, $device_disk)    if $device_disk;
+    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    $self->_xml_modify_usb($xml);
+
+    $self->_xml_modify_network($xml , $args{network})   if $args{network};
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
 
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+                , _vm => $self
+    );
+
     $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
@@ -318,35 +338,33 @@ sub _create_disk_qcow2 {
 
     my $dir_img  = $DEFAULT_DIR_IMG;
 
-    my $file_out = "$dir_img/$name.qcow2";
+    my @files_out;
 
-    if (-e $file_out ) {
-        die "WARNING: output file $file_out already existed [skipping]\n";
-    }
+    for my $file_base ( $base->list_files_base ) {
+        my $file_out = $file_base;
+        $file_out =~ s/\.ro\.\w+$//;
+        $file_out .= ".$name.qcow2";
 
-    die "ERROR: Missing file_base_img in base ".$base->id
-        ." "
-        .Dumper($base->_select_domain_db)
-            if ! $base->file_base_img;
-
-    my @cmd = ('qemu-img','create'
+        my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
-                ,"-b", $base->file_base_img
+                ,"-b", $file_base
                 ,$file_out
-    );
+        );
 #    warn join(" ",@cmd)."\n";
 
-    my ($in, $out, $err);
-    run3(\@cmd,\$in,\$out,\$err);
-    print $out  if $out;
-    warn $err   if $err;
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        print $out  if $out;
+        warn $err   if $err;
 
-    if (! -e $file_out) {
-        warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n";
-        exit;
+        if (! -e $file_out) {
+            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n";
+            exit;
+        }
+        push @files_out,($file_out);
     }
+    return @files_out;
     
-    return $file_out;
 }
 
 sub _search_domain_by_id {
@@ -379,23 +397,24 @@ sub _domain_create_from_base {
     my $storage = $self->storage_pool;
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
-    my $device_disk = $self->_create_disk($base, $args{name});
+    my @device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
-    _xml_modify_disk($xml, $device_disk);
+    _xml_modify_disk($xml, \@device_disk);
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
-    _xml_modify_spice_port($xml);
+    $self->_xml_modify_spice_port($xml);
     _xml_modify_video($xml);
 
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create;
 
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool);
+    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
+        , _vm => $self);
 
     $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     return $domain;
@@ -485,7 +504,7 @@ sub _download_file_lwp {
 
 sub _download_file_external {
     my ($url,$device) = @_;
-    my @cmd = ("/usr/bin/wget",$url,'-O',$device);
+    my @cmd = ("/usr/bin/wget",,'--quiet',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
@@ -521,7 +540,7 @@ sub _define_xml {
 
     $self->_xml_modify_mac($doc);
     $self->_xml_modify_uuid($doc);
-    _xml_modify_spice_port($doc);
+    $self->_xml_modify_spice_port($doc);
     _xml_modify_video($doc);
 
     return $doc;
@@ -551,13 +570,14 @@ sub _xml_modify_video {
 }
 
 sub _xml_modify_spice_port {
-    my $doc = shift;
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics') 
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
-    $graph->setAttribute(listen=> $IP );
+    $graph->setAttribute(listen=> $self->ip() );
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
 
@@ -566,7 +586,7 @@ sub _xml_modify_spice_port {
     }
 
     $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $IP);
+    $listen->setAttribute(address => $self->ip());
 
 }
 
@@ -603,6 +623,151 @@ sub _xml_modify_cdrom {
     die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
 }
 
+sub _xml_modify_memory {
+    my $self = shift;
+     my $doc = shift;
+  my $memory = shift;
+
+    my $found++;
+    my ($mem) = $doc->findnodes('/domain/currentMemory/text()');
+    $mem->setData($memory);
+
+    ($mem) = $doc->findnodes('/domain/memory/text()');
+    $mem->setData($memory);
+
+}
+
+sub _xml_modify_network {
+    my $self = shift;
+     my $doc = shift;
+    my $network = shift;
+
+    my ($type, $source );
+    if (ref($network) =~ /^Ravada/) {
+        ($type, $source) = ($network->type , $network->source);
+    } else {
+        $network = decode_json($network);
+        ($type, $source) = ($network->{type} , $network->{source});
+    }
+
+    confess "Unknown network type " if !defined $type;
+    confess "Unknown network xml_source" if !defined $source;
+
+    my @interfaces = $doc->findnodes('/domain/devices/interface');
+    if (scalar @interfaces>1) {
+        warn "WARNING: ".scalar @interfaces." found, changing the first one";
+    }
+    my $if = $interfaces[0];
+    $if->setAttribute(type => $type);
+
+    my ($node_source) = $if->findnodes('./source');
+    $node_source->removeAttribute('network');
+    for my $field (keys %$source) {
+        $node_source->setAttribute($field => $source->{$field});
+    }
+}
+
+sub _xml_modify_usb {
+    my $self = shift;
+     my $doc = shift;
+
+    for my $ctrl ($doc->findnodes('/domain/devices/controller')) {
+        next if $ctrl->getAttribute('type') ne 'usb';
+        $ctrl->setAttribute(model => 'ich9-ehci1');
+
+        for my $child ($ctrl->childNodes) {
+            if ($child->nodeName eq 'address') {
+                $child->setAttribute(slot => '0x08');
+                $child->setAttribute(function => '0x7');
+            }
+        }
+    }
+    my ($devices) = $doc->findnodes('/domain/devices');
+
+    $self->_xml_add_usb_uhci1($devices);
+    $self->_xml_add_usb_uhci2($devices);
+    $self->_xml_add_usb_uhci3($devices);
+
+    $self->_xml_add_usb_redirect($devices);
+
+}
+
+sub _xml_add_usb_redirect {
+    my $self = shift;
+    my $devices = shift;
+
+    my $dev = $devices->addNewChild(undef,'redirdev');
+    $dev->setAttribute( bus => 'usb');
+    $dev->setAttribute(type => 'spicevmc');
+
+}
+
+sub _xml_add_usb_uhci1 {
+    my $self = shift;
+    my $devices = shift;
+    # USB uhci1
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci1');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 0);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x0');
+    $address->setAttribute(multifunction => 'on');
+}
+
+sub _xml_add_usb_uhci2 {
+    my $self = shift;
+    my $devices = shift;
+
+    # USB uhci2
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci2');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 2);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x1');
+}
+
+sub _xml_add_usb_uhci3 {
+    my $self = shift;
+    my $devices = shift;
+
+    # USB uhci2
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci3');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 4);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x2');
+
+}
+
+
+
 sub _xml_remove_cdrom {
     my $doc = shift;
 
@@ -635,12 +800,13 @@ sub _xml_modify_disk {
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
 
-        die "ERROR: base disks only can have one device" if $cont++>1;
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'driver') {
                 $child->setAttribute(type => 'qcow2');
             } elsif ($child->nodeName eq 'source') {
-                $child->setAttribute(file => $device);
+                my $new_device = $device->[$cont++] or confess "Missing device $cont "
+                    .Dumper($device);
+                $child->setAttribute(file => $new_device);
             }
         }
     }
@@ -696,26 +862,31 @@ sub _xml_modify_mac {
     $if_mac->setAttribute(address => $new_mac);
 }
 
+=head2 list_networks
 
-#############################################################################
-#
-# inits
-#
-sub _init_ip {
-    my $name = hostname() or die "CRITICAL: I can't find the hostname.\n";
-    my $ip = inet_ntoa(inet_aton($name)) 
-        or die "CRITICAL: I can't find IP of $name in the DNS.\n";
+Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
 
-    if ($ip =~ /^127./) {
-        #TODO Net:DNS
-        $ip= `host $name`;
-        chomp $ip;
-        $ip =~ s/.*?address (\d+)/$1/;
+=cut
+
+sub list_networks {
+    my $self = shift;
+    
+    my @nets = $self->vm->list_all_networks();
+    my @ret_nets;
+
+    for my $net (@nets) {
+        push @ret_nets ,( Ravada::NetInterface::KVM->new( _net => $net ) );
     }
-    die "I can't find IP with hostname $name ( $ip )\n"
-        if !$ip || $ip =~ /^127./;
 
-    return $ip;
+    for my $if (IO::Interface::Simple->interfaces) {
+        next if $if->is_loopback();
+
+        # that should catch bridges
+        next if $if->hwaddr =~ /^[00:]+00$/;
+
+        push @ret_nets, ( Ravada::NetInterface::MacVTap->new(interface => $if));
+    }
+    return @ret_nets;
 }
 
 1;

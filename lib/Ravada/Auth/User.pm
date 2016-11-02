@@ -64,7 +64,8 @@ sub messages {
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject FROM messages WHERE id_user=?"
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, date_read, date_send, message FROM messages WHERE id_user=?"
+        ." ORDER BY date_send DESC"
         ." LIMIT ?,?");
     $sth->execute($self->id, $skip, $count);
     
@@ -153,7 +154,30 @@ sub mark_message_read {
     my $id = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
-        ." SET date_read=now() "
+        ." SET date_read=? "
+        ." WHERE id_user=? AND id=?");
+
+    $sth->execute(_now(), $self->id, $id);
+    $sth->finish;
+
+}
+
+=head2 mark_message_unread
+
+Marks a message as unread
+
+    $user->mark_message_unread($id);
+
+Returns nothing
+
+=cut
+
+sub mark_message_unread {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
+        ." SET date_read=null "
         ." WHERE id_user=? AND id=?");
 
     $sth->execute($self->id, $id);
@@ -180,8 +204,19 @@ sub mark_all_messages_read {
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE messages set date_read=?"
     );
-    $sth->execute('now()');
+    $sth->execute(_now());
     $sth->finish;
+}
+
+sub _now {
+     my @now = localtime(time);
+    $now[5]+=1900;
+    $now[4]++;
+    for ( 0 .. 4 ) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+
+    return "$now[5]-$now[4]-$now[3] $now[2]:$now[1]:$now[0].0";
 }
 
 1;

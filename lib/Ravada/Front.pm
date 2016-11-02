@@ -7,6 +7,7 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
+use Ravada::Network;
 
 use Data::Dumper;
 
@@ -32,6 +33,7 @@ has 'fork' => (
 
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 5;
+our @VM_TYPES = ('KVM');
 
 =head2 BUILD
 
@@ -49,6 +51,14 @@ sub BUILD {
     }
 }
 
+=head2 list_bases
+
+Returns a list of the base domains as a listref
+
+    my $bases = $rvd_front->list_bases();
+
+=cut
+
 sub list_bases {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base='y'");
@@ -63,6 +73,14 @@ sub list_bases {
     return \@bases;
 }
 
+=head2 list_domains
+
+Returns a list of the domains as a listref
+
+    my $bases = $rvd_front->list_domains();
+
+=cut
+
 sub list_domains {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains ");
@@ -70,6 +88,11 @@ sub list_domains {
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        my $domain ;
+        eval { $domain   = $self->search_domain($row->{name}) };
+        $row->{is_active} = 1 if $domain && $domain->is_active;
+        $row->{is_locked} = 1 if $domain && $domain->is_locked;
+        $row->{is_paused} = 1 if $domain && $domain->is_paused;
         push @domains, ($row);
     }
     $sth->finish;
@@ -77,22 +100,29 @@ sub list_domains {
     return \@domains;
 }
 
+=head2 list_vm_types
+
+Returns a reference to a list of Virtual Machine Managers known by the system
+
+=cut
+
 sub list_vm_types {
     my $self = shift;
 
     return $self->{cache}->{vm_types} if $self->{cache}->{vm_types};
 
-    my $req = Ravada::Request->list_vm_types();
-    $self->wait_request($req);
+    my $result = [@VM_TYPES];
 
-    die "ERROR: Timeout waiting for request ".$req->id
-        if $req->status() eq 'timeout';
-
-    my $result = $req->result();
     $self->{cache}->{vm_types} = $result if $result->[0];
 
     return $result;
 }
+
+=head2 list_iso_images
+
+Returns a reference to a list of the ISO images known by the system
+
+=cut
 
 sub list_iso_images {
     my $self = shift;
@@ -108,6 +138,13 @@ sub list_iso_images {
     $sth->finish;
     return \@iso;
 }
+
+=head2 list_lxc_templates
+
+Returns a reference to a list of the LXC templates known by the system
+
+=cut
+
 
 sub list_lxc_templates {
     my $self = shift;
@@ -125,14 +162,61 @@ sub list_lxc_templates {
 
 }
 
+=head2 list_users
+
+Returns a reference to a list of the users
+
+=cut
+
+sub list_users {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
+    $sth->execute();
+    
+    my @users = ();
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @users, ($row);
+    }
+    $sth->finish;
+
+    return \@users;
+}
+
+=head2 create_domain
+
+Request the creation of a new domain or virtual machine
+
+    # TODO: document the args here
+    my $req = $rvd_front->create_domain( ... );
+
+=cut
+
 sub create_domain {
     my $self = shift;
     return Ravada::Request->create_domain(@_);
 }
 
+=head2 wait_request
+
+Waits for a request for some seconds.
+
+=head3 Arguments
+
+=over 
+
+=item * request
+
+=item * timeout (optional defaults to $Ravada::Front::TIMEOUT
+
+=back
+
+Returns: the request
+
+=cut
+
 sub wait_request {
     my $self = shift;
-    my $req = shift;
+    my $req = shift or confess "Missing request";
 
     my $timeout = ( shift or $TIMEOUT );
 
@@ -144,7 +228,7 @@ sub wait_request {
         }
     }
 
-    for ( 1 .. $TIMEOUT ) {
+    for ( 1 .. $timeout ) {
         last if $req->status eq 'done';
         sleep 1;
     }
@@ -153,6 +237,14 @@ sub wait_request {
     return $req;
 
 }
+
+=head2 ping_backend
+
+Checks if the backend is alive.
+
+Return true if alive, false otherwise.
+
+=cut
 
 sub ping_backend {
     my $self = shift;
@@ -163,6 +255,82 @@ sub ping_backend {
     return 1 if $req->status() eq 'done';
     return 0;
 }
+
+=head2 open_vm
+
+Connects to a Virtual Machine Manager ( or VMM ( or VM )).
+Returns a read-only connection to the VM.
+
+=cut
+
+sub open_vm {
+    my $self = shift;
+    my $type = shift or confess "I need vm type";
+    my $class = "Ravada::VM::$type";
+
+    my $proto = {};
+    bless $proto,$class;
+
+    return $proto->new(readonly => 1);
+}
+
+=head2 search_clone
+
+Search for a clone of a domain owned by an user.
+
+    my $domain_clone = $rvd_front->(id_base => $domain_base->id , id_owner => $user->id);
+
+=head3 arguments
+
+=over
+
+=item id_base : The id of the base domain
+
+=item id_user
+
+=back
+
+Returns the domain
+
+=cut
+
+sub search_clone {
+    my $self = shift;
+    my %args = @_;
+    confess "Missing id_owner " if !$args{id_owner};
+    confess "Missing id_base" if !$args{id_base};
+
+    my ($id_base , $id_owner) = ($args{id_base} , $args{id_owner} );
+
+    delete $args{id_base};
+    delete $args{id_owner};
+
+    confess "Unknown arguments ".Dumper(\%args) if keys %args;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name FROM domains "
+        ." WHERE id_base=? AND id_owner=? "
+    );
+    $sth->execute($id_base, $id_owner);
+
+    my ($id_domain, $name) = $sth->fetchrow;
+    $sth->finish;
+
+    return if !$id_domain;
+
+    return $self->search_domain($name);
+
+}
+
+=head2 search_domain
+
+Searches a domain by name
+
+    my $domain = $rvd_front->search_domain($name);
+
+Returns a Ravada::Domain object
+
+=cut
 
 sub search_domain {
     my $self = shift;
@@ -176,8 +344,12 @@ sub search_domain {
 
     return if !keys %$row;
 
-    lock_hash(%$row);
-    return $row;
+    my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
+
+    my $vm = $self->open_vm($vm_name);
+    my $domain = $vm->search_domain($name);
+
+    return $domain;
 }
 
 =head2 list_requests
@@ -226,28 +398,62 @@ sub search_domain_by_id {
 
     lock_hash(%$row);
 
-    return $row;
+    return $self->search_domain($row->{name});
 }
 
-sub domdisplay {
-    my $self = shift;
-    my $name = shift    or confess "Missing domain name";
-    my $user = shift    or confess "Missing user";
+=head2 start_domain
 
-    my $req = Ravada::Request->domdisplay($name, $user->id);
-    $self->wait_request($req, 10);
+Request to start a domain.
 
-    return if $req->status() ne 'done';
+=head3 arguments
 
-    my $result = $req->result();
-    return $result->{display};
-}
+=over
+
+=item $name : the domain name
+
+=item $user : a Ravada::Auth::SQL user
+
+
+Returns an object: Ravada::Request.
+
+    my $req = $rvd_front->start_domain($name, $user);
+
+=cut
 
 sub start_domain {
     my $self = shift;
     my $name = shift;
+    my $user = shift;
 
-    return Ravada::Request->start_domain($name);
+    return Ravada::Request->start_domain(name => $name, uid => $user->id);
+}
+
+=head2 list_bases_anonymous
+
+List the available bases for anonymous user in a remote IP
+
+    my $list = $rvd_front->list_bases_anonymous($remote_ip);
+
+=cut
+
+sub list_bases_anonymous {
+    my $self = shift;
+    my $ip = shift or confess "Missing remote IP";
+
+    my $net = Ravada::Network->new(address => $ip);
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    $sth->execute();
+    
+    my @bases = ();
+    while ( my $row = $sth->fetchrow_hashref) {
+        next if !$net->allowed_anonymous($row->{id});
+        push @bases, ($row);
+    }
+    $sth->finish;
+
+    return \@bases;
+
 }
 
 1;

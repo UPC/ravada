@@ -9,15 +9,15 @@ Remote Access: [Spice](http://www.spice-space.org/)
 
 ## Install
 
-Read docs/INSTALL.md
+Read [docs/INSTALL.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md)
 
 ## Run
 
 ### Development
-To run it in development mode issue those commands in two different terminals:
+To run it in development mode run those commands in two different terminals:
 
     $ morbo ./rvd_front.pl
-    $ sudo ./bin/rvd_back.pl
+    $ sudo ./bin/rvd_back.pl --debug
 
 Connect to the server with a web browser at http://servername:3000/
 

@@ -1,6 +1,7 @@
+
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(1,'Debian Jessie 32 bits netinst'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Debian Jessie 32 bits netinst'
     ,'Debian 8.5.0 Jessie 32 bits (netsinst)'
     ,'i386'
     ,'jessie-i386.xml'
@@ -11,8 +12,8 @@ VALUES(1,'Debian Jessie 32 bits netinst'
 
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(2,'Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
     ,'trusty-i386.xml'
     ,'trusty-volume.xml'
@@ -21,8 +22,18 @@ VALUES(2,'Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
 	);
 
 INSERT INTO iso_images
-(id,name,description,arch,xml,xml_volume,url,md5)
-VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Trusty 64 bits','Ubuntu 14.04.1 LTS Trusty 64 bits'
+    ,'amd64'
+    ,'trusty-amd64.xml'
+    ,'trusty-amd64-volume.xml'
+    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04.1-desktop-amd64.iso'
+    ,'17643c29e3c4609818f26becf76d29a3'
+	);
+
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
     ,'xenial-volume.xml'
@@ -31,9 +42,11 @@ VALUES(3,'Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
 );
 
 INSERT INTO iso_images
-(id,name,description,arch,url,md5)
-VALUES(4,'Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
         ,'amd64'
+        ,'xenial64-amd64.xml'
+        ,'xenial64-volume.xml'
         ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-amd64.iso'
         ,'c94d54942a2954cf852884d656224186'
     );

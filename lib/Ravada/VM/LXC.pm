@@ -82,7 +82,7 @@ sub _domain_create_from_template {
     my $name = $args{name};
 
     my @cmd = ('lxc-create','-n',$name,'-t', $template->{name}
-            ,'-B','overlayfs');
+            ,'-B','loop','--fssize','5G');
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;

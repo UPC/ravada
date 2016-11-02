@@ -15,12 +15,13 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 
 our $CONT = 0;
 our $RVD_BACK;
+our $RVD_FRONT;
 our $USER_ADMIN;
 
 sub user_admin {
@@ -53,6 +54,20 @@ sub rvd_back {
     return $RVD_BACK;
 }
 
+sub rvd_front {
+    my ($connector, $config ) =@_;
+
+    return $RVD_FRONT if !$config && !$connector;
+
+    eval { $RVD_FRONT = Ravada::Front->new(
+            connector => $connector
+                , config => ( $config or $DEFAULT_CONFIG)
+            );
+    };
+    die $@ if $@;
+    return $RVD_FRONT;
+}
+
 sub _remove_old_domains_vm {
     my $vm_name = shift;
 
@@ -65,11 +80,15 @@ sub _remove_old_domains_vm {
         my $domain = $vm->search_domain($dom_name);
         next if !$domain;
 
-        $domain->shutdown_now() if $domain;
+        eval { $domain->shutdown_now($USER_ADMIN); };
+        warn "Error shutdown $dom_name $@" if $@;
 
         eval {
             $domain->remove( $USER_ADMIN );
         };
+        if ( $@ && $@ =~ /No DB info/i ) {
+            eval { $domain->domain->undefine() if $domain->domain };
+        }
         ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
     }
 
@@ -83,16 +102,21 @@ sub _remove_old_disks_kvm {
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
-    my $vm = $RVD_BACK->search_vm('kvm') or return;
+    my $vm = $RVD_BACK->search_vm('kvm');
+    if (!$vm) {
+        warn "I can't find a kvm backend";
+        return;
+    }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
 
-    $vm->storage_pool->refresh();
+    eval { $vm->storage_pool->refresh() };
+    ok(!$@,$@) or return;
     opendir my $ls,$dir_img or die "$! $dir_img";
     while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+\.(img|ro\.qcow2|qcow2)$/;
+        next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
 
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
@@ -105,10 +129,10 @@ sub _remove_old_disks_kvm {
 sub _remove_old_disks_void {
     my $name = base_domain_name();
 
-    my $dir_img =  $Ravada::Domain::Void::TMP_DIR ;
+    my $dir_img =  $Ravada::Domain::Void::DIR_TMP ;
     opendir my $ls,$dir_img or return;
     while (my $file = readdir $ls ) {
-        next if $file !~ /^${name}_\d+\.(img|ro\.qcow2|qcow2)$/;
+        next if $file !~ /^${name}_\d/;
 
         my $disk = "$dir_img/$file";
         next if ! -f $disk;
@@ -120,14 +144,14 @@ sub _remove_old_disks_void {
 }
 
 sub remove_old_disks {
-    return _remove_old_disks_void();
-    return _remove_old_disks_kvm();
+    _remove_old_disks_void();
+    _remove_old_disks_kvm();
 
 }
 
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
-    Ravada::Auth::SQL::add_user($name, $pass, $is_admin);
+    Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
     eval {
@@ -136,5 +160,16 @@ sub create_user {
     die $@ if !$user;
     return $user;
 }
+
+sub wait_request {
+    my $req = shift;
+    for ( 1 .. 10 ) {
+        last if $req->status eq 'done';
+        diag("Request ".$req->command." ".$req->status." ".localtime(time));
+        sleep 2;
+    }
+
+}
+
 
 1;

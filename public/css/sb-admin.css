@@ -344,3 +344,13 @@ ul.alert-dropdown {
     margin: 7px 0;
 }
 
+.hiddenRow {
+    padding: 0 !important;
+}
+
+.table>tbody+tbody {
+    border-top: none;
+}
+.modal-backdrop {
+  z-index: -1 !important;
+}

@@ -26,7 +26,7 @@ sub test_req_prepare_base {
     my $domain0 =  $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
 
-    my $req = Ravada::Request->prepare_base(name => $name, uid => $USER->id);
+    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => $USER->id);
     $RAVADA->_process_requests_dont_fork();
 
     ok($req->status('done'),"Request should be done, it is".$req->status);
@@ -34,7 +34,8 @@ sub test_req_prepare_base {
 
     my $domain =  $RAVADA->search_domain($name);
     ok($domain->is_base,"Domain $name should be base");
-    ok($domain->file_base_img,"Domain $name has no file_base_img");
+    ok(scalar $domain->list_files_base," Domain $name should have files_base, got ".
+        scalar $domain->list_files_base);
 
 }
 
@@ -49,10 +50,9 @@ sub test_remove_domain {
         eval { $domain->remove($USER) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
-        ok(! -e $domain->file_base_img ,"Image file was not removed "
-                    . $domain->file_base_img )
-                if  $domain->file_base_img;
-
+        for my $file ( $domain->list_files_base ) {
+            ok(! -e $file,"Image file $file should be removed");
+        }
     }
     $domain = $RAVADA->search_domain($name,1);
     ok(!$domain, "I can't remove old domain $name") or exit;
@@ -70,9 +70,10 @@ sub test_dont_remove_father {
         eval { $domain->remove($USER) };
         ok($@ , "Error removing domain $name with clones should not be allowed");
 
-        ok( -e $domain->file_base_img ,"Image file was removed "
-                    . $domain->file_base_img )
-                if  $domain->file_base_img;
+        for my $file ( $domain->list_files_base ) {
+            ok( -e $file,"Image file $file should not be removed") or exit;
+        }
+
 
     }
     $domain = $RAVADA->search_domain($name,1);
@@ -144,7 +145,7 @@ sub test_req_create_domain_iso {
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+    ok(!$req->error,"Error '".$req->error."' creating domain ".$name);
 
     my $domain =  $RAVADA->search_domain($name);
 

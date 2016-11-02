@@ -37,7 +37,8 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        $domain->remove($user);
+        eval { $domain->remove($user) };
+        ok(!$@,"Domain $name should be removed ".$@) or exit;
     }
     $domain = $RAVADA->search_domain($name);
     die "I can't remove old domain $name"

@@ -62,14 +62,14 @@
                 </select>
             </div><br/>
             
-            <!--<div ng-if="backend == 'KVM'" class="from-group">
+            <div ng-if="backend == 'KVM'" class="from-group">
                 <label for="disk">Disk Size: (GB)</label>
-                <input class="form-control" ng-model="ddsize" type="number" name="ddsize" min="1" max="10" required="">
+                <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="10" required="">
             </div>
             <div ng-show="backend == 'KVM' || backend == 'LXC'" class="from-group">
-                <label fro="ram">Ram: (GB)</label>
-                <input class="form-control" ng-model="ramsize" type="number" name="ramsize" min="1" max="4" required="">
-            </div><br/>-->
+                <label for="memory">Ram: (GB)</label>
+                <input class="form-control" ng-model="ramsize" type="number" name="memory" min="1" max="4" required="">
+            </div><br/>
             
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
