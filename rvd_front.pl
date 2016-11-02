@@ -276,13 +276,6 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
-any '/messages.html' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c);
-
-    return messages($c);
-};
 
 get '/messages.json' => sub {
     my $c = shift;
@@ -331,6 +324,14 @@ get '/messages/view/*.html' => sub {
     my ($id_message) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
 
     return $c->render( json => $USER->show_message($id_message) );
+};
+
+get '/requirements' => sub {
+    my $c = shift;
+
+    return access_denied($c) if !_logged_in($c);
+
+    return requirements($c);
 };
 
 
@@ -1035,6 +1036,12 @@ Hi <%= $name %>,
 <a href="<%= $url %>">click here</a>
 
 @@ layouts/default.html.ep
+
+@@ about.html.ep
+% layout 'default';
+<h1>Run</h1>
+
+
 <!DOCTYPE html>
 <html>
   <head><title><%= title %></title></head>

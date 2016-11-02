@@ -26,7 +26,7 @@ Clone the sources:
 - perlmagick
 - libmoosex-types-netaddr-ip-perl
 - libsys-statistics-linux-perl
-- libio-interace-perl
+- libio-interface-perl
 
 ##Old debian
 
