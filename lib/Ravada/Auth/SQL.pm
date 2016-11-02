@@ -37,7 +37,7 @@ sub BUILD {
 
     return $self if !$self->password();
 
-    die "ERROR: Login failed ".$self->name
+    confess "ERROR: Login failed ".$self->name
         if !$self->login();#$self->name, $self->password);
     return $self;
 }

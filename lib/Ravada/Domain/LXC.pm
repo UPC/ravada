@@ -275,4 +275,9 @@ sub is_paused {}
 
 sub resume {}
 
+sub get_info { }
+sub max_mem {}
+sub set_memory {}
+sub set_max_mem {}
+
 1;
