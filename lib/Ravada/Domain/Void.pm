@@ -26,13 +26,19 @@ sub BUILD {
     my $self = shift;
 
     my $args = $_[0];
-    
+
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
     return if $args->{id_base};
-    $self->add_volume(name => 'void-diska' , size => 1, path => "$DIR_TMP/".$self->name.".img");
+
+    my $file_img = "$DIR_TMP/".$self->name.".img";
+    return if -e $file_img;
+
+    $self->add_volume(name => 'void-diska' , size => $args->{disk}
+                      , path => $file_img);
     $self->_set_default_info();
+    $self->set_memory($args->{memory}) if $args->{memory};
 }
 
 sub name { 

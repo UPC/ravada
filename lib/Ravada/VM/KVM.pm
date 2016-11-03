@@ -8,6 +8,8 @@ use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
+use IO::Interface::Simple;
+use JSON::XS;
 use LWP::UserAgent;
 use Moose;
 use Sys::Virt;
@@ -15,6 +17,8 @@ use URI;
 use XML::LibXML;
 
 use Ravada::Domain::KVM;
+use Ravada::NetInterface::KVM;
+use Ravada::NetInterface::MacVTap;
 
 with 'Ravada::VM';
 
@@ -244,11 +248,11 @@ sub create_volume {
                 "$dir_img/$name.img");
 
     if ($size) {
-#        TODO
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size/10));
+        my ($prev_size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
+        confess "Size '$size' too small" if $size < 1024*512;
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size*0.9));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
     }
-#    warn $doc->toString();
     my $vol = $self->storage_pool->create_volume($doc->toString);
     warn "volume $dir_img/$name.img does not exists after creating volume"
             if ! -e "$dir_img/$name.img";
@@ -296,12 +300,19 @@ sub _domain_create_from_iso {
 
     my $device_cdrom = _iso_name($iso);
 
-    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume});
+    my $disk_size = $args{disk} if $args{disk};
+    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume}
+                                            , $disk_size);
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
+    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
+
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    $self->_xml_modify_usb($xml);
+
+    $self->_xml_modify_network($xml , $args{network})   if $args{network};
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
@@ -612,6 +623,151 @@ sub _xml_modify_cdrom {
     die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
 }
 
+sub _xml_modify_memory {
+    my $self = shift;
+     my $doc = shift;
+  my $memory = shift;
+
+    my $found++;
+    my ($mem) = $doc->findnodes('/domain/currentMemory/text()');
+    $mem->setData($memory);
+
+    ($mem) = $doc->findnodes('/domain/memory/text()');
+    $mem->setData($memory);
+
+}
+
+sub _xml_modify_network {
+    my $self = shift;
+     my $doc = shift;
+    my $network = shift;
+
+    my ($type, $source );
+    if (ref($network) =~ /^Ravada/) {
+        ($type, $source) = ($network->type , $network->source);
+    } else {
+        $network = decode_json($network);
+        ($type, $source) = ($network->{type} , $network->{source});
+    }
+
+    confess "Unknown network type " if !defined $type;
+    confess "Unknown network xml_source" if !defined $source;
+
+    my @interfaces = $doc->findnodes('/domain/devices/interface');
+    if (scalar @interfaces>1) {
+        warn "WARNING: ".scalar @interfaces." found, changing the first one";
+    }
+    my $if = $interfaces[0];
+    $if->setAttribute(type => $type);
+
+    my ($node_source) = $if->findnodes('./source');
+    $node_source->removeAttribute('network');
+    for my $field (keys %$source) {
+        $node_source->setAttribute($field => $source->{$field});
+    }
+}
+
+sub _xml_modify_usb {
+    my $self = shift;
+     my $doc = shift;
+
+    for my $ctrl ($doc->findnodes('/domain/devices/controller')) {
+        next if $ctrl->getAttribute('type') ne 'usb';
+        $ctrl->setAttribute(model => 'ich9-ehci1');
+
+        for my $child ($ctrl->childNodes) {
+            if ($child->nodeName eq 'address') {
+                $child->setAttribute(slot => '0x08');
+                $child->setAttribute(function => '0x7');
+            }
+        }
+    }
+    my ($devices) = $doc->findnodes('/domain/devices');
+
+    $self->_xml_add_usb_uhci1($devices);
+    $self->_xml_add_usb_uhci2($devices);
+    $self->_xml_add_usb_uhci3($devices);
+
+    $self->_xml_add_usb_redirect($devices);
+
+}
+
+sub _xml_add_usb_redirect {
+    my $self = shift;
+    my $devices = shift;
+
+    my $dev = $devices->addNewChild(undef,'redirdev');
+    $dev->setAttribute( bus => 'usb');
+    $dev->setAttribute(type => 'spicevmc');
+
+}
+
+sub _xml_add_usb_uhci1 {
+    my $self = shift;
+    my $devices = shift;
+    # USB uhci1
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci1');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 0);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x0');
+    $address->setAttribute(multifunction => 'on');
+}
+
+sub _xml_add_usb_uhci2 {
+    my $self = shift;
+    my $devices = shift;
+
+    # USB uhci2
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci2');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 2);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x1');
+}
+
+sub _xml_add_usb_uhci3 {
+    my $self = shift;
+    my $devices = shift;
+
+    # USB uhci2
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => 'ich9-uhci3');
+
+    my $master = $controller->addNewChild(undef,'master');
+    $master->setAttribute(startport => 4);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x08');
+    $address->setAttribute(function => '0x2');
+
+}
+
+
+
 sub _xml_remove_cdrom {
     my $doc = shift;
 
@@ -704,6 +860,33 @@ sub _xml_modify_mac {
     }
     die "I can't find a new unique mac" if !$new_mac;
     $if_mac->setAttribute(address => $new_mac);
+}
+
+=head2 list_networks
+
+Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
+
+=cut
+
+sub list_networks {
+    my $self = shift;
+    
+    my @nets = $self->vm->list_all_networks();
+    my @ret_nets;
+
+    for my $net (@nets) {
+        push @ret_nets ,( Ravada::NetInterface::KVM->new( _net => $net ) );
+    }
+
+    for my $if (IO::Interface::Simple->interfaces) {
+        next if $if->is_loopback();
+
+        # that should catch bridges
+        next if $if->hwaddr =~ /^[00:]+00$/;
+
+        push @ret_nets, ( Ravada::NetInterface::MacVTap->new(interface => $if));
+    }
+    return @ret_nets;
 }
 
 1;

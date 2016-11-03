@@ -167,7 +167,6 @@ get '/list_users.json' => sub {
     $c->render(json => $RAVADA->list_users);
 };
 
-
 get '/list_lxc_templates.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_lxc_templates);
@@ -199,6 +198,8 @@ any '/machine/manage/*html' => sub {
 
 get '/machine/view/*.html' => sub {
     my $c = shift;
+    return $c->redirect_to('/login') if !_logged_in($c);
+
     return view_machine($c);
 };
 
@@ -246,6 +247,20 @@ get '/machine/start/*.json' => sub {
         my $c = shift;
         return start_machine($c);
 };
+##make admin
+
+get '/users/make_admin/*.json' => sub {
+       my $c = shift;
+      return make_admin($c);
+};
+
+##remove admin
+
+get '/users/remove_admin/*.json' => sub {
+       my $c = shift;
+       return remove_admin($c);
+};
+
 ##############################################
 #
 
@@ -263,9 +278,7 @@ get '/requests.json' => sub {
 
 any '/messages.html' => sub {
     my $c = shift;
-
     return access_denied($c) if !_logged_in($c);
-
     return messages($c);
 };
 
@@ -318,6 +331,20 @@ get '/messages/view/*.html' => sub {
     return $c->render( json => $USER->show_message($id_message) );
 };
 
+any '/about' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->render(template => 'bootstrap/about');
+};
+
+
+any '/requirements' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->render(template => 'bootstrap/requirements');
+};
 
 ###################################################
 
@@ -480,12 +507,6 @@ sub users {
 sub new_machine {
     my $c = shift;
     my @error = ();
-    my $ram = ($c->param('ram') or 2);
-    my $disk = ($c->param('disk') or 8);
-    my $backend = $c->param('backend');
-    my $id_iso = $c->param('id_iso');
-    my $id_template = $c->param('id_template');
-
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         req_new_domain($c);
@@ -505,6 +526,8 @@ sub req_new_domain {
         ,id_template => $c->param('id_template')
         ,vm=> $c->param('backend')
         ,id_owner => $USER->id
+        ,memory => int($c->param('memory')*1024*1024)
+        ,disk => int($c->param('disk')*1024*1024*1024)
     );
 
     return $req;
@@ -667,12 +690,36 @@ sub _search_requested_machine {
         if !$id;
 
     my $domain = $RAVADA->search_domain_by_id($id) or do {
-        $c->stash( error => "Unknown base id=$id");
+        $c->stash( error => "Unknown domain id=$id");
         return;
     };
 
     return ($domain,$type) if wantarray;
     return $domain;
+}
+
+sub make_admin {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    
+    warn "id usuari $id";
+    
+    Ravada::Auth::SQL::make_admin($id);
+        
+}
+
+sub remove_admin {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    
+    warn "id usuari $id";
+    
+    Ravada::Auth::SQL::remove_admin($id);
+        
 }
 
 sub manage_machine {
@@ -734,6 +781,7 @@ sub view_machine {
     return login($c) if !_logged_in($c);
 
     $domain =  _search_requested_machine($c) if !$domain;
+    return $c->render(template => 'bootstrap/fail') if !$domain;
     return show_link($c, $domain);
 }
 
@@ -867,6 +915,8 @@ sub resume_machine {
     return $c->render(json => { req => $req->id });
 }
 
+
+
 sub list_requests {
     my $c = shift;
 
@@ -947,7 +997,7 @@ sub _new_anonymous_user {
         last if !$user;
     }
     warn "\n*** creating temporary user $name";
-    Ravada::Auth::SQL::add_user($name);
+    Ravada::Auth::SQL::add_user(name => $name, is_temporary => 1);
 
     return $name;
 }
@@ -997,6 +1047,10 @@ Hi <%= $name %>,
 <a href="<%= $url %>">click here</a>
 
 @@ layouts/default.html.ep
+
+<h1>Run</h1>
+
+
 <!DOCTYPE html>
 <html>
   <head><title><%= title %></title></head>

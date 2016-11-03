@@ -17,104 +17,47 @@ my $BACKEND = 'KVM';
 use_ok('Ravada');
 use_ok("Ravada::Domain::$BACKEND");
 
-
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
-
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
-my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
-$DOMAIN_NAME_SON =~ s/base_//;
+my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
 
 my $USER = create_user('foo','bar');
 
-sub test_vm_kvm {
-    my $vm = $RAVADA->vm->[0];
-    ok($vm,"No vm found") or exit;
-    ok(ref($vm) =~ /KVM$/,"vm is no kvm ".ref($vm)) or exit;
+sub test_new_domain {
+    my $vm = shift;
 
-    ok($vm->type, "Not defined $vm->type") or exit;
-    ok($vm->host, "Not defined $vm->host") or exit;
+    my $name = new_domain_name();
 
-}
-sub test_remove_domain {
-    my $name = shift;
-
+    my $freemem = _check_free_memory();
     my $domain;
-    $domain = $RAVADA->search_domain($name,1);
-
-    if ($domain) {
-        diag("Removing domain $name");
-        my @files_base = $domain->list_files_base;
-        eval { $domain->remove(user_admin()) };
-        ok(!$@ , "Error removing domain $name : $@") ;
-
-        for my $file ( @files_base) {
-            ok(! -e $file,"Image file $file should beremoved ");
-        }
-
-    }
-    $domain = $RAVADA->search_domain($name,1);
-    ok(!$domain, "I can't remove old domain $name") or exit;
-
-
-}
-
-sub test_new_domain_from_iso {
-    my $name = $DOMAIN_NAME;
-
-    test_remove_domain($name);
-
-    diag("Creating domain $name from iso");
-    my $domain;
-    eval { $domain = $RAVADA->create_domain(name => $name
+    eval { $domain = $vm->create_domain(name => $name
                                         , id_iso => 1
-                                        ,vm => $BACKEND
+                                        ,vm => $vm->type
                                         ,id_owner => $USER->id
+                                        ,memory => 1.5*1024*1024
             ) 
     };
+    if ($freemem < 1 ) {
+        ok($@,"Expecting failed because we ran out of free RAM");
+        return;
+    }
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
-    my $exp_ref= 'Ravada::Domain::KVM';
-    ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
-        if $domain;
+    eval { $domain->start($USER); sleep 1; };
 
-    my @cmd = ('virsh','desc',$name);
-    my ($in,$out,$err);
-    run3(\@cmd,\$in,\$out,\$err);
-    ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
+    if ($freemem < 1 || $@ =~ /free memory/) {
+        ok($@,"Expecting failed start because we ran out of free RAM ($freemem MB Free)");
+        return;
+    }
+    ok(!$@,"Expected start domain with $freemem MB Free $@");
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
-    $sth->execute($domain->name);
-    my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
-    $sth->finish;
     
     #Ckeck free memory
-    my $freemem = _check_free_memory();
-    print "FREEMEM: $freemem";
     
     #virsh setmaxmem $name xG --config
     #virsh setmem $name xG --config
 
     return $domain;
-}
-sub remove_old_volumes {
-
-    my $name = "$DOMAIN_NAME_SON.qcow2";
-    my $file = "/var/lib/libvirt/images/$name";
-    remove_volume($file);
-
-    remove_volume("/var/lib/libvirt/images/$DOMAIN_NAME.img");
-}
-
-sub remove_volume {
-    my $file = shift;
-
-    return if !-e $file;
-    diag("removing old $file");
-    $RAVADA->remove_volume($file);
-    ok(! -e $file,"file $file not removed" );
 }
 
 sub _check_free_memory{
@@ -122,7 +65,10 @@ sub _check_free_memory{
     my $stat = $lxs->get;
     my $freemem = $stat->memstats->{realfree};
     #die "No free memory" if ( $stat->memstats->{realfree} < 500000 );
-    return $freemem;
+    my $free = int( $freemem / 1024 );
+    $free = $free / 1024;
+    $free =~ s/(\d+\.\d+)/$1/;
+    return $free;
 }
 
 
@@ -130,19 +76,28 @@ sub _check_free_memory{
 ################################################################
 my $vm;
 
-eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+remove_old_domains();
+remove_old_disks();
 
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    my $vm = $RVD_BACK->search_vm('KVM');
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-test_vm_kvm();
-test_remove_domain($DOMAIN_NAME);
-remove_old_volumes();
-my $domain = test_new_domain_from_iso();
-test_remove_domain($domain);
+    my $freemem = _check_free_memory();
+    my $n_domains = int($freemem)+2;
+
+    diag("Checking it won't start no more than $n_domains domains with $freemem free memory");
+
+    for ( 0 .. $n_domains ) {
+        diag("Creating domain $_");
+        test_new_domain($vm) or last;
+    }
 
 };
+
+remove_old_domains();
+remove_old_disks();
 
 done_testing();

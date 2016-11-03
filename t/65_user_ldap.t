@@ -64,6 +64,8 @@ sub test_user{
     eval { $mcnulty = Ravada::Auth::LDAP->new(name => $name,password => 'jameson') };
     
     ok($mcnulty,($@ or "ldap login failed for $name")) or return;
+    ok(ref($mcnulty) =~ /Ravada/i,"User must be Ravada::Auth::LDAP , it is '".ref($mcnulty));
+
     ok(!$mcnulty->is_admin,"User ".$mcnulty->name." should not be admin "
             .Dumper($mcnulty->{_data}));
 
@@ -145,7 +147,6 @@ sub test_manage_group {
     my $group0 = Ravada::Auth::LDAP::search_group(name => $name);
     ok(!$group0,"Group $name shouldn't exist") or return;
 
-    diag("Adding group $name");
     Ravada::Auth::LDAP::add_group($name);
 
     my $group = Ravada::Auth::LDAP::search_group(name => $name);
@@ -154,7 +155,10 @@ sub test_manage_group {
     my $uid = 'ragnar.lothbrok';
     my $user = test_user($uid);
     
-    ok(!$user->is_admin,"User $uid should not be admin");
+    my $is_admin;
+    eval { $is_admin = $user->is_admin };
+    ok(!$@,$@);
+    ok(!$is_admin,"User $uid should not be admin");
 
     Ravada::Auth::LDAP::add_to_group($uid, $name);
     ok($user->is_admin,"User $uid should be admin") or exit;
@@ -181,7 +185,7 @@ SKIP: {
 
     skip( ($@ or "No LDAP server found"),6) if !$ldap && $@ !~ /Bad credentials/;
 
-    ok(!$@ ) and do {
+    ok($ldap) and do {
         test_user_fail();
         test_user();
 

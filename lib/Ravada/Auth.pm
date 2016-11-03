@@ -55,4 +55,21 @@ sub login {
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
+=head2 LDAP
+
+Sets or get LDAP support.
+
+    Ravada::Auth::LDAP(0);
+
+    print "LDAP is supported" if Ravada::Auth::LDAP();
+
+=cut
+
+sub LDAP {
+    my $value = shift;
+    return $LDAP if !defined $value;
+
+    $LDAP = $value;
+    return $value;
+}
 1;

@@ -46,7 +46,7 @@
                 </h4>
               </div>
               <div class="modal-body">
-                <p>     <div ng-show="{{message.message != ''}}">{{message.message}}</div>
+                <p>     <div ng-bind-html='message.message' ng-show="{{message.message != ''}}">{{message.message}}</div>
                         <div ng-show="{{message.message == ''}}"><b>No message to show!</b></div>
                 </p>
               </div>

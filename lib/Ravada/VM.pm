@@ -7,6 +7,8 @@ use Carp qw(croak);
 use Data::Dumper;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
+use IO::Socket;
+use IO::Interface;
 use Sys::Hostname;
 
 requires 'connect';
@@ -53,7 +55,7 @@ has 'readonly' => (
 # Method Modifiers
 # 
 #
-before 'create_domain' => \&_check_readonly;
+before 'create_domain' => \&_check_create_domain;
 
 sub _check_readonly {
     my $self = shift;
@@ -153,10 +155,49 @@ sub ip {
     $ip =~ s/.*?address (\d+)/$1/;
     return $ip if $ip && $ip !~ /^127\./;
 
+    $ip = $self->_interface_ip();
+    return $ip if $ip && $ip !~ /^127/ && $ip =~ /^\d+\.\d+\.\d+\.\d+$/;
+
     warn "WARNING: I can't find the IP of host $name, using localhost."
         ." This virtual machine won't be available from the network.";
 
     return '127.0.0.1';
+}
+
+sub _interface_ip {
+    my $s = IO::Socket::INET->new(Proto => 'tcp');
+
+    for my $if ( $s->if_list) {
+        my $addr = $s->if_addr($if);
+        return $addr if $addr;
+    }
+    return;
+}
+
+sub _check_memory {
+    my $self = shift;
+    my %args = @_;
+    return if !exists $args{memory};
+
+    die "ERROR: Low memory '$args{memory}' required 128 Mb " if $args{memory} < 128*1024;
+}
+
+sub _check_disk {
+    my $self = shift;
+    my %args = @_;
+    return if !exists $args{disk};
+
+    die "ERROR: Low Disk '$args{disk}' required 1 Gb " if $args{disk} < 1024*1024;
+}
+
+
+sub _check_create_domain {
+    my $self = shift;
+
+    $self->_check_readonly(@_);
+    $self->_check_memory(@_);
+    $self->_check_disk(@_);
+
 }
 
 1;

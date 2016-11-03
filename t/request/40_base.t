@@ -56,6 +56,18 @@ sub test_remove_domain {
 
 }
 
+sub test_unread_messages {
+    my ($user, $n_unread, $test) = @_;
+    confess "Missing test name" if !$test;
+
+    my @messages = $user->unread_messages();
+
+    ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
+        .scalar@messages." ".Dumper(\@messages));
+
+    $user->mark_all_messages_read();
+}
+
 sub test_req_create_domain_iso {
     my $vm_name = shift;
 
@@ -89,7 +101,9 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
     ok(!$req->error,"Error ".$req->error." creating domain ".$name);
-    test_unread_messages($USER,1, "[$vm_name] create domain $name");
+
+#    test_unread_messages($USER,1, "[$vm_name] create domain $name");
+    test_message_new_domain($vm_name, $USER);
 
     my $req2 = Ravada::Request->open($req->id);
     ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
@@ -102,6 +116,17 @@ sub test_req_create_domain_iso {
 
     $USER->mark_all_messages_read();
     return $domain;
+}
+
+sub test_message_new_domain {
+    my ($vm_name, $user) = @_;
+    my @messages = $user->unread_messages();
+    ok(scalar(@messages) == 1,"Expecting 1 new message , got ".Dumper(\@messages));
+    
+    my $message = $user->show_message($messages[0]->{id});
+
+    ok($message->{message} && $message->{message} =~ /\w+/
+            , "Expecting message content not empty, got ''") or exit;
 }
 
 sub test_req_create_domain {
@@ -269,6 +294,9 @@ eval { $ravada = Ravada->new(connector => $test->connector) };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 
+remove_old_domains();
+remove_old_disks();
+
 for my $vm_name ( qw(Void KVM)) {
     my $vm;
     eval {
@@ -281,9 +309,9 @@ for my $vm_name ( qw(Void KVM)) {
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
-        remove_old_domains();
-        remove_old_disks();
     
+        test_req_create_domain_iso($vm_name);
+
         my $domain_base = test_req_create_domain($vm) or next;
         test_req_prepare_base($vm, $domain_base->name);
         my $domain_clone = test_req_create_from_base($vm, $domain_base) 
@@ -291,6 +319,7 @@ for my $vm_name ( qw(Void KVM)) {
         test_volumes($vm_name,$domain_base, $domain_clone);
     
         test_req_remove_base($vm_name, $domain_base, $domain_clone);
+
     };
 }
 

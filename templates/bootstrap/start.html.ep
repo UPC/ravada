@@ -68,9 +68,10 @@
 
 
     <!-- Footer -->
-    <footer>
+    <footer class="footer">
         <div class="container text-center">
-            <p>Footer text</p>
+            <span class="text-muted">Source code on <a href="https://github.com/frankiejol">GitHub</a></span> 
+            <span class="text-muted">& licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html"><img src="https://www.gnu.org/graphics/lgplv3-88x31.png"</a></span>
         </div>
     </footer>
 
