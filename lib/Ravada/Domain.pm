@@ -13,6 +13,8 @@ use Sys::Statistics::Linux;
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
 
+our $MIN_FREE_MEMORY = 1024*1024;
+
 _init_connector();
 
 requires 'name';
@@ -97,7 +99,7 @@ before 'prepare_base' => \&_allow_prepare_base;
     delete $self->{_was_active};
 };
 
-before 'start' => \&_preconditions;
+before 'start' => \&_start_preconditions;
 before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
@@ -105,9 +107,10 @@ before 'shutdown' => \&_allow_manage_args;
 before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
-sub _preconditions{
+sub _start_preconditions{
     _allow_manage(@_);
     _check_free_memory();
+    _check_used_memory(@_);
 }
 
 sub _allow_manage_args {
@@ -173,7 +176,29 @@ sub _check_has_clones {
 sub _check_free_memory{
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
-    die "No free memory" if ( $stat->memstats->{realfree} < 500000 );
+    die "No free memory" if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
+}
+
+sub _check_used_memory {
+    my $self = shift;
+    my $used_memory = 0;
+
+    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
+    my $stat = $lxs->get;
+
+    # We get mem total less the used for the system
+    my $mem_total = $stat->{memstats}->{memtotal} - 1*1024*1024;
+
+    for my $domain ( $self->_vm->list_domains ) {
+        my $alive;
+        eval { $alive = 1 if $domain->is_active && !$domain->is_paused };
+        next if !$alive;
+
+        my $info = $domain->get_info;
+        $used_memory += $info->{memory};
+    }
+
+    die "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
 sub _check_disk_modified {
