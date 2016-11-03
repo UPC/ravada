@@ -8,6 +8,10 @@
 
         <!--BASES AND DOMAINS LIST-->
         <div ng-controller="machines">
+        <div ng-hide="{{pingbe}}" class="alert alert-danger">
+          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+          <strong>Error!</strong> Backend no available!
+        </div>
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">

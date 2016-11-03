@@ -83,7 +83,8 @@
         });
 
         $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbackend = response.data;
+            $scope.pingbe = response.data;
+            
         });
 
         $scope.shutdown = function(machineId){
@@ -211,7 +212,9 @@
             var toGet = '/messages/read/'+messId+'.json';
             $http.get(toGet);
         };
-
+        $http.get('/pingbackend.json').then(function(response) {
+            $scope.pingbe = response.data;
+        });
     };
 
     function swMess() {

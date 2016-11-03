@@ -6,7 +6,10 @@
     <div ng-controller="messages">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
-
+        <div ng-hide="{{pingbe}}" class="alert alert-danger">
+          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+          <strong>Error!</strong> Backend no available!
+        </div>
         <!--BASES AND DOMAINS LIST-->
        
             <div class="page-header">
