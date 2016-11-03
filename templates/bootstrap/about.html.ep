@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    <div ng-controller="about">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2>About</h2>
+                        <p> Ravada is a broker VDI</p>
+                        <h3>Development</h3>
+                        <p> Below are listed the technologies used in this project:</p>
+                        <ul>
+                        <li>It's programmed in <a href="https://www.perl.org/">Perl</a>,</li>
+                        <li>with perl framework <a href="http://www.mojolicious.org/">Mojolicious</a>,</li>
+                        <li>and HTML, CSS, and JS framework <a href="http://getbootstrap.com/">Bootstrap</a></li>
+                        </ul>
+
+                        
+                        <p> The code is available on <a href="http://bit.ly/get_ravada">Github</a>.</p>
+                        <h3>License</h3>
+                        <p> The code is <a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a> licensed</p>
+                    </div>
+                </div>
+            </div>
+    </div>
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
+

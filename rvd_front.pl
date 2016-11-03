@@ -278,9 +278,7 @@ get '/requests.json' => sub {
 
 any '/messages.html' => sub {
     my $c = shift;
-
     return access_denied($c) if !_logged_in($c);
-
     return messages($c);
 };
 
@@ -333,6 +331,20 @@ get '/messages/view/*.html' => sub {
     return $c->render( json => $USER->show_message($id_message) );
 };
 
+any '/about' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->render(template => 'bootstrap/about');
+};
+
+
+any '/requirements' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->render(template => 'bootstrap/requirements');
+};
 
 ###################################################
 
@@ -1035,6 +1047,10 @@ Hi <%= $name %>,
 <a href="<%= $url %>">click here</a>
 
 @@ layouts/default.html.ep
+
+<h1>Run</h1>
+
+
 <!DOCTYPE html>
 <html>
   <head><title><%= title %></title></head>
