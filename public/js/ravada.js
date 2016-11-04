@@ -17,10 +17,10 @@
             .controller("machines", machinesCrtl)
             .controller("messages", messagesCrtl)
 	        .controller("users", usersCrtl)
-           
 
 
- 
+
+
     function newMachineCtrl($scope, $http) {
 
         $http.get('/list_images.json').then(function(response) {
@@ -84,7 +84,7 @@
 
         $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe = response.data;
-            
+
         });
 
         $scope.shutdown = function(machineId){
@@ -114,6 +114,11 @@
 
         $scope.start = function(machineId){
             var toGet = '/machine/start/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
+        $scope.removeb = function(machineId){
+            var toGet = '/machine/remove_b/'+machineId+'.json';
             $http.get(toGet);
         };
 
@@ -185,7 +190,7 @@
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
-        $scope.stateChanged = function(id,userid) { 
+        $scope.stateChanged = function(id,userid) {
            if($scope.checkbox[id]) { //if it is checked
                 $http.get('/users/make_admin/' + userid + '.json')
                 location.reload();
@@ -250,4 +255,3 @@
         });
 
     };
-

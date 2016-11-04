@@ -11,8 +11,7 @@
 
         <!--MACHINES SELECTION-->
         <div class="page-header" ng-controller="machines">
-        <div ng-hide="{{pingbe}}" class="alert alert-danger">
-          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+        <div ng-hide="pingbe" class="alert alert-danger">
           <strong>Error!</strong> Backend no available!
         </div>
         <div class="row">

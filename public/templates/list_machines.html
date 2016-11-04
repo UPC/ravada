@@ -1,6 +1,9 @@
 
 <div class="panel-body">
     <div class="col-lg-12">
+      <div ng-hide="pingbe" class="alert alert-danger">
+        <strong>Error!</strong> Backend no available!
+      </div>
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -8,7 +11,7 @@
                     <th>Base</th>
                     <th>Active</th>
                     <th>Actions</th>
-                    
+
                 </tr>
             </thead>
             <tbody>
@@ -33,7 +36,7 @@
                         <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbspScreenshot</button>
-                        
+
                         <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
 
 
@@ -44,8 +47,8 @@
 
                 </tr>
             </tbody>
-        </table> 
-        <div ng-repeat="machine in list_machines">       
+        </table>
+        <div ng-repeat="machine in list_machines">
         <div id="modal{{machine.id}}" class="modal fade" role="dialog">
           <div class="modal-dialog">
 
@@ -61,7 +64,7 @@
                 <div style="width:100%; margin-bottom:10px;">
                     <img src="/img/screenshots/{{machine.id}}.png" width="400" alt="No screenshot available for this machine">
                 </div>
-                
+
                 <div style="width:100%; margin-bottom:10px;">
                     <a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
@@ -70,33 +73,32 @@
                     <button type="button" ng-click="resume(machine.id)" ng-show="{{machine.is_active && machine.is_paused}}" class="btn btn-success btn-sm"><i class="fa fa-repeat" aria-hidden="true"></i>&nbsp Resume</button>
 
                     <button type="button" ng-click="pause(machine.id)" ng-show="{{machine.is_active && !machine.is_paused}}" class="btn btn-success btn-sm"><i class="fa fa-pause" aria-hidden="true"></i>&nbsp Pause</button>
-                </div>       
+                </div>
 
                 <div style="width:100%; margin-bottom:10px;">
                     <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
-                    <button type="button" ng-click="prepare(machine.id)" ng-hide="{{machine.is_base}}" class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp Prepare Base</button>
+                    <button type="button" ng-click="prepare(machine.id)" class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp Prepare Base</button>
 
                     <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
 
                     <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
-
+                    <button type="button" ng-click="removeb(machine.id)" ng-show="{{machine.is_base}}" class="btn btn-warning btn-sm"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button>
                     <a  class="btn btn-danger btn-sm" href="/machine/remove/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
                 </div>
-                        
 
-                        
+
+
 
               </div>
               <div class="modal-footer">
-              
+
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
               </div>
             </div>
 
           </div>
         </div>
-        </div>       
+        </div>
     </div>
 </div>
-
