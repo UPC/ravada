@@ -41,6 +41,9 @@ our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
+our $LIMIT_PROCESS = 2;
+
+our %FAT_COMMAND =  map { $_ => 1 } qw(start create prepare_base remove);
 
 has 'vm' => (
           is => 'ro'
@@ -112,6 +115,9 @@ sub _init_config {
     confess "Deprecated connector" if $connector;
 
     $CONFIG = YAML::LoadFile($file);
+
+    $LIMIT_PROCESS = $CONFIG->{limit_process} 
+        if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
 }
 
@@ -606,6 +612,7 @@ sub _execute {
         return $err;
     }
 
+    $self->_wait_children($request) if $FAT_COMMAND{$request->command};
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ($pid == 0) {
@@ -683,6 +690,26 @@ sub _cmd_create{
 
     $request->status('done',$msg);
 
+}
+
+sub _wait_children {
+    my $self = shift;
+    my $req = shift or confess "Missing request";
+
+    my $try = 0;
+    for (;;) {
+        my $n_pids = scalar keys %{$self->{pids}};
+        my $msg = $req->id." ".$req->command." waiting for processes to finish $n_pids of $LIMIT_PROCESS running";
+        warn $msg if $DEBUG;
+
+        return if $n_pids <= $LIMIT_PROCESS;
+
+        $self->_wait_pids_nohang();
+        sleep 1;
+        $req->error($msg)
+            if !$try++;
+
+    }
 }
 
 sub _wait_pids_nohang {
