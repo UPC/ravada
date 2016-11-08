@@ -35,6 +35,8 @@ our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 5;
 our @VM_TYPES = ('KVM');
 
+our %VM;
+
 =head2 BUILD
 
 Internal constructor
@@ -268,10 +270,13 @@ sub open_vm {
     my $type = shift or confess "I need vm type";
     my $class = "Ravada::VM::$type";
 
+    return $VM{$type} if $VM{$type};
+
     my $proto = {};
     bless $proto,$class;
 
-    return $proto->new(readonly => 1);
+    $VM{$type} = $proto->new(readonly => 1);
+    return $VM{$type};
 }
 
 =head2 search_clone
