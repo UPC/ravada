@@ -8,37 +8,38 @@
 
         <!--BASES AND DOMAINS LIST-->
         <div ng-controller="machines">
+        
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>Machines List 
+                        <h2>Machines List
                         <button type="button" style="float: right; margin: 0 0 0 15px;" class="btn btn-success" data-toggle="modal" data-target="#modalNM">New Machine</button>
 
                         <a style="float: right; margin: 0 10px;" class="btn btn-info" href="/machines"><i class="fa fa-refresh" aria-hidden="true"></i></A>
 
                         </h2>
                     </div>
-                    
+
                     <sol-show-listmachines></sol-show-listmachines>
                 </div>
             </div>
             <div class="page-header">
-            
-                <sol-show-machines-notifications><sol-show-machines-notifications>            
-            
+
+                <sol-show-machines-notifications><sol-show-machines-notifications>
+
             </div>
         </div>
 
-        
+
         <div id="modalNM" class="modal fade" role="dialog" ng-controller="new_machine">
           <div class="modal-dialog">
 
             <!-- Modal content-->
             <div class="modal-content">
-              
-              
+
+
               <sol-show-newmachine></sol-show-newmachine>
-              
+
 
             </div>
           </div>
@@ -47,7 +48,7 @@
 
     </div>
     </div>
-    
+
     %= include 'bootstrap/scripts'
 </body>
 </html>

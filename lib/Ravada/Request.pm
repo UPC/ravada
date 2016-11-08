@@ -25,7 +25,7 @@ our $args_manage = { name => 1 , uid => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
 
 our %VALID_ARG = (
-    create_domain => { 
+    create_domain => {
               vm => 1
            ,name => 1
          ,id_iso => 1
@@ -234,7 +234,7 @@ sub _check_args {
 
     my $valid_args = $VALID_ARG{$sub};
     for (keys %{$args}) {
-        confess "Invalid argument $_ , valid args ".Dumper($valid_args) 
+        confess "Invalid argument $_ , valid args ".Dumper($valid_args)
             if !$valid_args->{$_};
     }
 
@@ -251,7 +251,7 @@ sub _check_args {
 Requests to stop a domain
 
   my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id );
-  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id 
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id
                                             ,timeout => $timeout );
 
 =cut
@@ -290,7 +290,7 @@ sub prepare_base {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'prepare_base' 
+    return $self->_new_request(command => 'prepare_base'
         , id_domain => $args{id_domain}
         , args => encode_json( $args ));
 
@@ -320,7 +320,7 @@ sub remove_base {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'remove_base' 
+    return $self->_new_request(command => 'remove_base'
         , id_domain => $args{id_domain}
         , args => encode_json( $args ));
 
@@ -638,7 +638,7 @@ sub AUTOLOAD {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
-    eval { 
+    eval {
         $sth->execute($value, $self->{id});
         $sth->finish;
     };

@@ -77,7 +77,7 @@ sub BUILD {
     }
 
     if ( $self->connector ) {
-        $CONNECTOR = $self->connector 
+        $CONNECTOR = $self->connector
     } else {
         $CONNECTOR = $self->_connect_dbh();
         $self->connector($CONNECTOR);
@@ -104,7 +104,7 @@ Returns the default display IP read from the config file
 
 sub display_ip {
     my $ip = $CONFIG->{display_ip};
-    
+
     return $ip if $ip;
 }
 
@@ -213,13 +213,13 @@ sub _check_vms {
 
 Creates a new domain based on an ISO image or another domain.
 
-  my $domain = $ravada->create_domain( 
+  my $domain = $ravada->create_domain(
          name => $name
     , id_iso => 1
   );
 
 
-  my $domain = $ravada->create_domain( 
+  my $domain = $ravada->create_domain(
          name => $name
     , id_base => 3
   );
@@ -386,11 +386,11 @@ sub list_domains_data {
 #         eval { $domain->id };
 #         warn $@ if $@;
 #         next if $@;
-#         push @domains, {                id => $domain->id 
+#         push @domains, {                id => $domain->id
 #                                     , name => $domain->name
 #                                   ,is_base => $domain->is_base
 #                                 ,is_active => $domain->is_active
-                               
+
 #                            }
 #     }
 #     return \@domains;
@@ -559,11 +559,11 @@ sub process_requests {
         if ($err && $err =~ /libvirt error code: 38/) {
             if ( $n_retry < 3) {
                 warn $req->id." ".$req->command." to retry" if $DEBUG;
-                $req->status("retry ".++$n_retry)   
+                $req->status("retry ".++$n_retry)
             }
         }
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'" 
+            ." , error: '".($req->error or 'NONE')."'"
                 if $DEBUG || $debug;
 
     }
@@ -584,7 +584,7 @@ Returnsa list ofthe types of Virtual Machines available on this system
 
 sub list_vm_types {
     my $self = shift;
-    
+
     my %type;
     for my $vm (@{$self->vm}) {
             my ($name) = ref($vm) =~ /.*::(.*)/;
@@ -604,7 +604,7 @@ sub _execute {
             if !$sub;
 
     if ($dont_fork || !$CAN_FORK ) {
-        
+
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
         $request->error($err);
@@ -617,7 +617,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
     if ($pid == 0) {
         $request->status("forked $$");
-        eval { 
+        eval {
             $sub->($self,$request);
         };
         my $err = ( $@ or '');

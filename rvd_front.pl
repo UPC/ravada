@@ -228,6 +228,11 @@ get '/machine/prepare/*.json' => sub {
         return prepare_machine($c);
 };
 
+get '/machine/remove_b/*.json' => sub {
+        my $c = shift;
+        return remove_base($c);
+};
+
 get '/machine/screenshot/*.json' => sub {
         my $c = shift;
         return screenshot_machine($c);
@@ -402,8 +407,8 @@ sub login {
         }
     }
     $c->render(
-                    template => 'bootstrap/start' 
-                      ,login => $login 
+                    template => 'bootstrap/start'
+                      ,login => $login
                       ,error => \@error
     );
 
@@ -438,9 +443,9 @@ sub quick_start {
     }
 
     $c->render(
-                    template => 'bootstrap/list_bases' 
+                    template => 'bootstrap/list_bases'
                     ,id_base => $id_base
-                      ,login => $login 
+                      ,login => $login
                   ,_anonymous => 0
                       ,error => \@error
     );
@@ -573,12 +578,12 @@ sub _search_req_base_error {
 }
 
 sub access_denied {
-    
+
     my $c = shift;
     my $msg = 'Access denied to '.$c->req->url->to_abs->path;
 
     $msg .= ' for user '.$USER->name if $USER;
-    
+
     return $c->render(text => $msg);
 }
 
@@ -611,7 +616,7 @@ sub provision {
 
     if ( $req->status ne 'done' ) {
         $c->stash(error_title => "Request ".$req->command." ".$req->status());
-        $c->stash(error => 
+        $c->stash(error =>
             "Domain provisioning request not finished, status='".$req->status."'.");
 
         $c->stash(link => "/request/".$req->id.".html");
@@ -620,7 +625,7 @@ sub provision {
     }
     $domain = $RAVADA->search_domain($name);
     if ( $req->error ) {
-        $c->stash(error => $req->error) 
+        $c->stash(error => $req->error)
     } elsif (!$domain) {
         $c->stash(error => "I dunno why but no domain $name");
     }
@@ -703,11 +708,11 @@ sub make_admin {
     return login($c) if !_logged_in($c);
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
-    
+
     warn "id usuari $id";
-    
+
     Ravada::Auth::SQL::make_admin($id);
-        
+
 }
 
 sub remove_admin {
@@ -715,11 +720,11 @@ sub remove_admin {
     return login($c) if !_logged_in($c);
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
-    
+
     warn "id usuari $id";
-    
+
     Ravada::Auth::SQL::remove_admin($id);
-        
+
 }
 
 sub manage_machine {
@@ -735,7 +740,7 @@ sub manage_machine {
 
     Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)   if $c->param('shutdown');
     Ravada::Request->start_domain(name => $domain->name, uid => $USER->id)   if $c->param('start');
-    Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id)   
+    Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id)
         if $c->param('pause');
 
     Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id)   if $c->param('resume');
@@ -839,6 +844,19 @@ sub remove_machine {
     return $c->render( template => 'bootstrap/remove_machine' );
 }
 
+sub remove_base {
+  my $c = shift;
+  return login($c)    if !_logged_in($c);
+
+  my $domain = _search_requested_machine($c);
+
+  my $req = Ravada::Request->remove_base(
+      id_domain => $domain->id
+      ,uid => $USER->id
+  );
+
+  $c->render(json => { request => $req->id});
+}
 
 sub screenshot_machine {
     my $c = shift;
@@ -990,7 +1008,7 @@ sub _new_anonymous_user {
     for my $n ( 4 .. 32 ) {
         $name = substr($name_mojo,0,$n);
         my $user;
-        eval { 
+        eval {
             $user = Ravada::Auth::SQL->new( name => $name );
             $user = undef if !$user->id;
         };
@@ -1010,7 +1028,7 @@ __DATA__
 <h1>Welcome to SPICE !</h1>
 
 <form method="post">
-    User Name: <input name="login" value ="<%= $login %>" 
+    User Name: <input name="login" value ="<%= $login %>"
             type="text"><br/>
     Password: <input type="password" name="password" value=""><br/>
     Base: <select name="id_base">
@@ -1018,7 +1036,7 @@ __DATA__
             <option value="<%= $option %>"><%= $base->{$option} %></option>
 %       }
     </select><br/>
-    
+
     <input type="submit" name="submit" value="launch">
 </form>
 % if (scalar @$error) {
@@ -1043,7 +1061,7 @@ __DATA__
 % layout 'default';
 <h1>Run</h1>
 
-Hi <%= $name %>, 
+Hi <%= $name %>,
 <a href="<%= $url %>">click here</a>
 
 @@ layouts/default.html.ep
