@@ -10,8 +10,8 @@
     <div id="page-wrapper">
 
         <!--MACHINES SELECTION-->
-        <div class="page-header" ng-controller="machines">
-        <div ng-hide="pingbe" class="alert alert-danger">
+        <div class="page-header" ng-controller="bases">
+        <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
           <strong>Error!</strong> Backend no available!
         </div>
         <div class="row">
@@ -29,7 +29,7 @@
         </div>
 <!--/row-->
 
-<!--SUPPORT CONTACT-->
+<!--SUPPORT CONTACT
     <div class="page-header" ng-controller="SupportForm as formCtrl">
     <div class="row">
     <div class="col-lg-12">
@@ -37,7 +37,7 @@
     </div>
     </div>
     </div>
-<!--/row-->
+/row-->
 </div>
 %= include 'bootstrap/scripts'
 </div>

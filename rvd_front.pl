@@ -252,6 +252,11 @@ get '/machine/start/*.json' => sub {
         my $c = shift;
         return start_machine($c);
 };
+
+get '/machine/clones/*.json' => sub {
+        my $c = shift;
+        return machine_num_clones($c);
+};
 ##make admin
 
 get '/users/make_admin/*.json' => sub {

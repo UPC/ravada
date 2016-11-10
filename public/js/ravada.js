@@ -15,6 +15,7 @@
             .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
             .controller("machines", machinesCrtl)
+            .controller("bases", mainpageCrtl)
             .controller("messages", messagesCrtl)
 	        .controller("users", usersCrtl)
 
@@ -78,12 +79,17 @@
                 $scope.list_machines= response.data;
         });
 
+
+        $http.get('/list_bases.json').then(function(response) {
+                $scope.list_bases= response.data;
+        });
+
         request.get(function( res ) {
             $scope.res = res;
         });
 
         $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe = response.data;
+            $scope.pingbe_fail = !response.data;
 
         });
 
@@ -123,6 +129,29 @@
         };
 
     };
+
+    // list machines
+        function mainpageCrtl($scope, $http, request, listMach) {
+
+            $url_list = "/list_bases.json";
+            if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
+                $url_list = "/list_bases_anonymous.json";
+            }
+            $http.get($url_list).then(function(response) {
+                    $scope.list_bases= response.data;
+            });
+
+            request.get(function( res ) {
+                $scope.res = res;
+            });
+
+            $http.get('/pingbackend.json').then(function(response) {
+                $scope.pingbe_fail = !response.data;
+
+            });
+
+        };
+
 
     function swListMach() {
 

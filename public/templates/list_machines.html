@@ -1,7 +1,7 @@
 
 <div class="panel-body">
     <div class="col-lg-12">
-      <div ng-hide="pingbe" class="alert alert-danger">
+      <div ng-show="!pingbe" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
         <table class="table table-striped">

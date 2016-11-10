@@ -79,7 +79,7 @@ has '_vm' => (
 ##################################################################################3
 #
 # Method Modifiers
-# 
+#
 
 before 'display' => \&_allowed;
 
@@ -87,12 +87,12 @@ before 'remove' => \&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
 before 'prepare_base' => \&_allow_prepare_base;
- after 'prepare_base' => sub { 
-    my $self = shift; 
+ after 'prepare_base' => sub {
+    my $self = shift;
 
     my ($user) = @_;
 
-    $self->is_base(1); 
+    $self->is_base(1);
     if ($self->{_was_active} ) {
         $self->resume($user);
     }
@@ -148,8 +148,8 @@ sub _allow_remove {
 
 }
 
-sub _allow_prepare_base { 
-    my $self = shift; 
+sub _allow_prepare_base {
+    my $self = shift;
     my ($user) = @_;
 
     $self->_allowed($user);
@@ -166,7 +166,7 @@ sub _allow_prepare_base {
 sub _check_has_clones {
     my $self = shift;
     my @clones;
-    
+
     eval { @clones = $self->clones };
     die $@  if $@ && $@ !~ /No DB info/i;
     die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
@@ -214,7 +214,7 @@ sub _check_disk_modified {
         $last_stat_base = $stat_base[9] if$stat_base[9] > $last_stat_base;
 #        warn $last_stat_base;
     }
-    
+
     my $files_updated = 0;
     for my $file ( $self->disk_device ) {
         my @stat = stat($file) or next;
@@ -296,7 +296,7 @@ sub __open {
 
 sub _select_domain_db {
     my $self = shift;
-    my %args = @_; 
+    my %args = @_;
 
     if (!keys %args) {
         my $id;
@@ -402,10 +402,10 @@ sub _remove_files_base {
 Returns true or  false if the domain is a prepared base
 =cut
 
-sub is_base { 
+sub is_base {
     my $self = shift;
     my $value = shift;
-    
+
     $self->_select_domain_db or return 0;
 
     if (defined $value ) {
@@ -419,7 +419,7 @@ sub is_base {
     }
     my $ret = $self->_data('is_base');
     $ret = 0 if $self->_data('is_base') =~ /n/i;
-    
+
     return $ret;
 };
 
@@ -488,6 +488,7 @@ sub clones {
     }
     return @clones;
 }
+
 
 =head2 list_files_base
 Returns a list of the filenames of this base-type domain

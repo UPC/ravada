@@ -34,7 +34,7 @@ body {
 
 @media(min-width:768px) {
     #wrapper {
-      
+
     }
 
     #page-wrapper {
@@ -346,6 +346,10 @@ ul.alert-dropdown {
 
 .hiddenRow {
     padding: 0 !important;
+}
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
 }
 
 .table>tbody+tbody {
