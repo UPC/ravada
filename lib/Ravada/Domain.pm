@@ -9,7 +9,6 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use Sys::Statistics::Linux;
-use IPTables::ChainMgr;
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
@@ -658,8 +657,6 @@ sub _post_start {
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
     warn "$remote_ip -> $local_ip, $local_port ".$display;
 
-	my $ipt_bin = '/sbin/iptables'; # can set this to /sbin/ip6tables
-
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
 	    'ipt_rules_file' => '',  # optional file path from
@@ -695,8 +692,8 @@ sub _post_start {
     $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 	# append rule at the end of the RAVADA chain in the filter table to
 	# allow all traffic from $local_ip to $remote_ip via port $local_port
-	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule('$local_ip',
-    '$remote_ip', 'filter', 'RAVADA', 'ACCEPT',
+	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule($local_ip,
+    $remote_ip, 'filter', 'RAVADA', 'ACCEPT',
     {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 }
 

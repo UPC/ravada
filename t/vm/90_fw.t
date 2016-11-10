@@ -5,6 +5,7 @@ use Data::Dumper;
 use JSON::XS;
 use Test::More;
 use Test::SQL::Data;
+use IPTables::ChainMgr;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -62,9 +63,41 @@ sub test_create_domain {
 sub test_fw_domain {
     my ($vm_name, $domain) = @_;
     my $remote_ip = '99.88.77.66';
+    my $local_ip = '127.0.0.1';
+    my $local_port = '5900';
+	my %opts = (
+    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
+	    'ipt_rules_file' => '',  # optional file path from
+	                             # which to read iptables rules
+	    'iptout'   => '/tmp/iptables.out',
+	    'ipterr'   => '/tmp/iptables.err',
+	    'debug'    => 0,
+	    'verbose'  => 0,
+# in the filter table
 
+	    ### advanced options
+	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
+	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
+	                                    ### 'system', or 'popen'.
+	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
+	                           ### iptables commands (default is 0).
+	);
+    my $ipt_obj = IPTables::ChainMgr->new(%opts)
+        or die "[*] Could not acquire IPTables::ChainMgr object";
+    $ipt_obj->flush_chain('filter', 'RAVADA');
+    #my $rv = 0;
+    #my $out_ar = [];
+    #my $errs_ar = [];
+    #($rv, $out_ar, $errs_ar) = $ipt_obj->add_ip_rule($local_ip,
+    #    $remote_ip, 4, 'filter', 'RAVADA', 'DROP',
+    #        {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
     $domain->start( user => $USER, remote_ip => $remote_ip);
-    ok($domain->is_alive);
+    
+    #($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule($local_ip,
+    #    $remote_ip, 'filter', 'RAVADA', 'ACCEPT',
+    #        {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+    
+    ok($domain->is_active);
     
     #TODO check iptables for an entry allowing 127.0.0.1 to $domain->display
 }
