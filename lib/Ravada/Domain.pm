@@ -621,7 +621,6 @@ sub _post_shutdown {
     my $self = shift;
     my %args = @_;
     my $user = Ravada::Auth::SQL->search_by_id($self->id_owner);
-    warn Dumper($user);
     if ($user->is_temporary) {
         $self->remove($user);
         my $req= $args{request};
