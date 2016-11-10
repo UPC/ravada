@@ -11,5 +11,5 @@ Vim Example
 -----------
 Set those options in your .vimrc to match ours
 
-`set tabstop=4
-set expandtab`
+    set tabstop=4
+    set expandtab
