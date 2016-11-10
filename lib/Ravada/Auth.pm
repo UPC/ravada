@@ -32,7 +32,6 @@ sub init {
     } else {
         $LDAP = 0;
     }
-    warn "init LDAP :$LDAP";
 #    Ravada::Auth::SQL::init($config, $db_con);
 }
 
