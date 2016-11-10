@@ -93,6 +93,7 @@ get '/anonymous/*.html' => sub {
     my $c = shift;
 
     $c->stash(_anonymous => 1 , _logged_in => 0);
+    _init_error($c);
     my ($base_id) = $c->req->url->to_abs =~ m{/anonymous/(.*).html};
     my $base = $RAVADA->search_domain_by_id($base_id);
 
@@ -544,9 +545,7 @@ sub _show_request {
 
     my $request;
     if (!ref $id_request) {
-        warn "opening request $id_request";
         eval { $request = Ravada::Request->open($id_request) };
-        warn $@ if $@;
         return $c->render(data => "Request $id_request unknown")   if !$request;
     } else {
         $request = $id_request;
@@ -582,7 +581,7 @@ sub access_denied {
     my $c = shift;
     my $msg = 'Access denied to '.$c->req->url->to_abs->path;
 
-    $msg .= ' for user '.$USER->name if $USER;
+    $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
 
     return $c->render(text => $msg);
 }
@@ -604,8 +603,6 @@ sub provision {
 
     my $domain = $RAVADA->search_domain(name => $name);
     return $domain if $domain;
-
-    warn "requesting the creation of $name for ".$USER->id;
 
     my $req = Ravada::Request->create_domain(
              name => $name
@@ -709,8 +706,6 @@ sub make_admin {
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
 
-    warn "id usuari $id";
-
     Ravada::Auth::SQL::make_admin($id);
 
 }
@@ -720,8 +715,6 @@ sub remove_admin {
     return login($c) if !_logged_in($c);
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
-
-    warn "id usuari $id";
 
     Ravada::Auth::SQL::remove_admin($id);
 
@@ -756,11 +749,9 @@ sub manage_machine {
 sub _enable_buttons {
     my $c = shift;
     my $domain = shift;
-    warn "is_paused=".$domain->is_paused;
     if (($c->param('pause') && !$domain->is_paused)
         ||($c->param('resume') && $domain->is_paused)) {
         sleep 2;
-        warn "  -> is_paused=".$domain->is_paused;
     }
     $c->stash(_shutdown_disabled => '');
     $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
@@ -793,6 +784,7 @@ sub view_machine {
 sub clone_machine {
     my $c = shift;
     return login($c) if !_logged_in($c);
+    _init_error($c);
 
     my $base = _search_requested_machine($c);
     if (!$base ) {
@@ -839,8 +831,6 @@ sub remove_machine {
     return $c->render( text => "Domain not found")  if !$domain;
     $c->stash(domain => $domain );
 
-    warn "found domain ".$domain->name;
-
     return $c->render( template => 'bootstrap/remove_machine' );
 }
 
@@ -861,8 +851,6 @@ sub remove_base {
 sub screenshot_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
-
-    warn ref($c);
 
     my $domain = _search_requested_machine($c);
 
@@ -1014,7 +1002,6 @@ sub _new_anonymous_user {
         };
         last if !$user;
     }
-    warn "\n*** creating temporary user $name";
     Ravada::Auth::SQL::add_user(name => $name, is_temporary => 1);
 
     return $name;
