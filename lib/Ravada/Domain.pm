@@ -9,6 +9,7 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use Sys::Statistics::Linux;
+use IPTables::ChainMgr;
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
@@ -79,7 +80,7 @@ has '_vm' => (
 ##################################################################################3
 #
 # Method Modifiers
-# 
+#
 
 before 'display' => \&_allowed;
 
@@ -87,12 +88,12 @@ before 'remove' => \&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
 before 'prepare_base' => \&_allow_prepare_base;
- after 'prepare_base' => sub { 
-    my $self = shift; 
+ after 'prepare_base' => sub {
+    my $self = shift;
 
     my ($user) = @_;
 
-    $self->is_base(1); 
+    $self->is_base(1);
     if ($self->{_was_active} ) {
         $self->resume($user);
     }
@@ -155,8 +156,8 @@ sub _allow_remove {
 
 }
 
-sub _allow_prepare_base { 
-    my $self = shift; 
+sub _allow_prepare_base {
+    my $self = shift;
     my ($user) = @_;
 
     $self->_allowed($user);
@@ -173,7 +174,7 @@ sub _allow_prepare_base {
 sub _check_has_clones {
     my $self = shift;
     my @clones;
-    
+
     eval { @clones = $self->clones };
     die $@  if $@ && $@ !~ /No DB info/i;
     die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
@@ -221,7 +222,7 @@ sub _check_disk_modified {
         $last_stat_base = $stat_base[9] if$stat_base[9] > $last_stat_base;
 #        warn $last_stat_base;
     }
-    
+
     my $files_updated = 0;
     for my $file ( $self->disk_device ) {
         my @stat = stat($file) or next;
@@ -303,7 +304,7 @@ sub __open {
 
 sub _select_domain_db {
     my $self = shift;
-    my %args = @_; 
+    my %args = @_;
 
     if (!keys %args) {
         my $id;
@@ -409,10 +410,10 @@ sub _remove_files_base {
 Returns true or  false if the domain is a prepared base
 =cut
 
-sub is_base { 
+sub is_base {
     my $self = shift;
     my $value = shift;
-    
+
     $self->_select_domain_db or return 0;
 
     if (defined $value ) {
@@ -426,7 +427,7 @@ sub is_base {
     }
     my $ret = $self->_data('is_base');
     $ret = 0 if $self->_data('is_base') =~ /n/i;
-    
+
     return $ret;
 };
 
@@ -656,5 +657,48 @@ sub _post_start {
     my $display = $self->display($owner);
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
     warn "$remote_ip -> $local_ip, $local_port ".$display;
+
+	my $ipt_bin = '/sbin/iptables'; # can set this to /sbin/ip6tables
+
+	my %opts = (
+    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
+	    'ipt_rules_file' => '',  # optional file path from
+	                             # which to read iptables rules
+	    'iptout'   => '/tmp/iptables.out',
+	    'ipterr'   => '/tmp/iptables.err',
+	    'debug'    => 0,
+	    'verbose'  => 0,
+
+	    ### advanced options
+	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
+	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
+	                                    ### 'system', or 'popen'.
+	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
+	                           ### iptables commands (default is 0).
+	);
+
+	my $ipt_obj = IPTables::ChainMgr->new(%opts)
+    	or die "[*] Could not acquire IPTables::ChainMgr object";
+
+	my $rv = 0;
+	my $out_ar = [];
+	my $errs_ar = [];
+
+	#check_chain_exists
+	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', 'RAVADA');
+    if ($rv) {
+    	print "$self chain exists.\n";
+	} else {
+		$ipt_obj->create_chain('filter', 'RAVADA');
+	}
+	# set the policy on the FORWARD table to DROP
+    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
+	# append rule at the end of the RAVADA chain in the filter table to
+	# allow all traffic from $local_ip to $remote_ip via port $local_port
+	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule('$local_ip',
+    '$remote_ip', 'filter', 'RAVADA', 'ACCEPT',
+    {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 }
+
+
 1;
