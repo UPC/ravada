@@ -9,6 +9,7 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use Sys::Statistics::Linux;
+use IPTables::ChainMgr;
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
