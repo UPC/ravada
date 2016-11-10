@@ -3,7 +3,7 @@ CREATE TABLE `messages` (
   `id_user` int(11) NOT NULL,
   `id_request` int,
   `subject` varchar(120) DEFAULT NULL,
-  `message` text,
+  `message` text DEFAULT '',
   `date_send` datetime default now,
   `date_read` datetime
 );

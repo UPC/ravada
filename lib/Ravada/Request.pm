@@ -498,7 +498,8 @@ sub _remove_unnecessary_messages {
     return if !$uid;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "DELETE FROM messages WHERE id_user=? AND id_request=?"
+        "DELETE FROM messages WHERE id_user=? AND id_request=? "
+        ." AND (message='' OR message IS NULL)"
     );
 
     $sth->execute($uid, $self->id);

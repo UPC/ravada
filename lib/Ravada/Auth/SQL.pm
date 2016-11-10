@@ -86,14 +86,14 @@ sub add_user {
         if keys %args;
 
     my $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin) VALUES(?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary) VALUES(?,?,?,?)");
 
     if ($password) {
         $password = sha1_hex($password);
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin);
+    $sth->execute($name,$password,$is_admin,$is_temporary);
     $sth->finish;
 }
 
@@ -226,6 +226,21 @@ sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
 }
+
+=head2 is_temporary
+
+Returns true if the user is admin.
+
+    my $is = $user->is_temporary;
+
+=cut
+
+
+sub is_temporary{
+    my $self = shift;
+    return $self->{_data}->{is_temporary};
+}
+
 
 =head2 id
 

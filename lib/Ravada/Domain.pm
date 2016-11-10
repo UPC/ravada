@@ -103,6 +103,7 @@ before 'start' => \&_start_preconditions;
 before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
+after 'shutdown' => \&_post_shutdown;
 
 before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
@@ -615,6 +616,22 @@ sub clone {
         ,id_owner => $uid
         ,vm => $self->vm
     );
+}
+
+sub _post_shutdown {
+    my $self = shift;
+    my %args = @_;
+    my $user = Ravada::Auth::SQL->search_by_id($self->id_owner);
+    if ($user->is_temporary) {
+        $self->remove($user);
+        my $req= $args{request};
+        $req->status(
+            "removing"
+            ,"Removing domain ".$self->name." after shutdown"
+            ." because user "
+            .$user->name." is temporary")
+                if $req;
+    }
 }
 
 1;

@@ -9,9 +9,11 @@ use Ravada::Auth::SQL;
 
 eval { 
     require Ravada::Auth::LDAP; 
-    $LDAP = 1 
 };
-warn $@  if $Ravada::DEBUG && $@;
+if ($@) {
+    warn $@;
+    $LDAP = 0;
+}
 warn "LDAP loaded=".($LDAP or '<UNDEF>')    if $Ravada::DEBUG;
 
 =head2 init
@@ -23,10 +25,14 @@ Initializes the submodules
 sub init {
     my ($config, $db_con) = @_;
     if ($config->{ldap}) {
-        Ravada::Auth::LDAP::init($config);
+        eval { 
+            Ravada::Auth::LDAP::init($config); 
+            $LDAP = 1;
+        };
     } else {
         $LDAP = 0;
     }
+    warn "init LDAP :$LDAP";
 #    Ravada::Auth::SQL::init($config, $db_con);
 }
 
@@ -42,13 +48,14 @@ sub login {
     my ($name, $pass) = @_;
 
     my $login_ok;
-    eval {
-        warn "Trying LDAP" if $Ravada::DEBUG;
-        $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
-    } if $LDAP;
-    return $login_ok if $login_ok;
+    if (!defined $LDAP || $LDAP) {
+        eval {
+            $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
+        };
+        warn $@ if $@ && $LDAP;
+        return $login_ok if $login_ok;
+    }
 
-    warn $@ if $@;
     if ($@ =~ /I can't connect/i) {
         $LDAP = 0 if !defined $LDAP;
     }
