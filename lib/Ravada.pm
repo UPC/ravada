@@ -824,7 +824,7 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->start($user);
+    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$request->args('name')."</a>"

@@ -100,6 +100,8 @@ before 'prepare_base' => \&_allow_prepare_base;
 };
 
 before 'start' => \&_start_preconditions;
+ after 'start' => \&_post_start;
+
 before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
@@ -109,7 +111,11 @@ before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
 sub _start_preconditions{
-    _allow_manage(@_);
+    if (scalar @_ %2 ) {
+        _allow_manage_args(@_);
+    } else {
+        _allow_manage(@_);
+    }
     _check_free_memory();
     _check_used_memory(@_);
 }
@@ -620,7 +626,11 @@ sub clone {
 sub _post_shutdown {
     my $self = shift;
     my %args = @_;
-    my $user = Ravada::Auth::SQL->search_by_id($self->id_owner);
+    my $user;
+
+    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
+    return if !$user;
+
     if ($user->is_temporary) {
         $self->remove($user);
         my $req= $args{request};
@@ -633,4 +643,18 @@ sub _post_shutdown {
     }
 }
 
+sub _post_start {
+    my $self = shift;
+
+    return if scalar @_ % 2;
+    my %args = @_;
+
+    my $remote_ip = $args{remote_ip} or return;
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->id_owner);
+
+    my $display = $self->display($owner);
+    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+    warn "$remote_ip -> $local_ip, $local_port ".$display;
+}
 1;
