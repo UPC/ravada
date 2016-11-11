@@ -43,7 +43,7 @@ our %VALID_ARG = (
     ,remove_domain => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
-    ,start_domain => $args_manage
+    ,start_domain => {%$args_manage, remote_ip => 1 }
 );
 
 our $CONNECTOR;

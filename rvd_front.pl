@@ -643,7 +643,11 @@ sub show_link {
     return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
 
     if ( !$domain->is_active ) {
-        my $req = Ravada::Request->start_domain(name => $domain->name, uid => $USER->id);
+        my $req = Ravada::Request->start_domain(
+                                         uid => $USER->id
+                                       ,name => $domain->name
+                                  ,remote_ip => _remote_ip($c)
+        );
 
         $RAVADA->wait_request($req);
         warn "ERROR: ".$req->error if $req->error();
@@ -737,7 +741,10 @@ sub manage_machine {
         && !$USER->is_admin;
 
     Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)   if $c->param('shutdown');
-    Ravada::Request->start_domain(name => $domain->name, uid => $USER->id)   if $c->param('start');
+    Ravada::Request->start_domain( uid => $USER->id
+                                 ,name => $domain->name
+                           , remote_ip => _remote_ip($c)
+    )   if $c->param('start');
     Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id)
         if $c->param('pause');
 
@@ -876,8 +883,10 @@ sub prepare_machine {
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
     if (! -e $file_screenshot && $domain->can_screenshot() ) {
         if ( !$domain->is_active() ) {
-            Ravada::Request->start_domain( name => $domain->name
-                ,uid => $USER->id
+            Ravada::Request->start_domain( 
+                       uid => $USER->id
+                     ,name => $domain->name
+                ,remote_ip => _remote_ip($c)
             );
             sleep 3;
         }
@@ -901,7 +910,10 @@ sub start_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
-    my $req = Ravada::Request->start_domain(name => $domain->name, uid => $USER->id);
+    my $req = Ravada::Request->start_domain( uid => $USER->id
+                                           ,name => $domain->name
+                                      ,remote_ip => _remote_ip($c)
+    );
 
     return $c->render(json => { req => $req->id });
 }

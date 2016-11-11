@@ -9,6 +9,7 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use Sys::Statistics::Linux;
+use IPTables::ChainMgr;
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
@@ -100,6 +101,8 @@ before 'prepare_base' => \&_allow_prepare_base;
 };
 
 before 'start' => \&_start_preconditions;
+ after 'start' => \&_post_start;
+
 before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_allow_manage_args;
@@ -109,7 +112,11 @@ before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
 sub _start_preconditions{
-    _allow_manage(@_);
+    if (scalar @_ %2 ) {
+        _allow_manage_args(@_);
+    } else {
+        _allow_manage(@_);
+    }
     _check_free_memory();
     _check_used_memory(@_);
 }
@@ -621,7 +628,11 @@ sub clone {
 sub _post_shutdown {
     my $self = shift;
     my %args = @_;
-    my $user = Ravada::Auth::SQL->search_by_id($self->id_owner);
+    my $user;
+
+    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
+    return if !$user;
+
     if ($user->is_temporary) {
         $self->remove($user);
         my $req= $args{request};
@@ -633,5 +644,60 @@ sub _post_shutdown {
                 if $req;
     }
 }
+
+sub _post_start {
+    my $self = shift;
+
+    return if scalar @_ % 2;
+    my %args = @_;
+
+    my $remote_ip = $args{remote_ip} or return;
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->id_owner);
+
+    my $display = $self->display($owner);
+    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+    warn "$remote_ip -> $local_ip, $local_port ".$display;
+
+	my %opts = (
+    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
+	    'ipt_rules_file' => '',  # optional file path from
+	                             # which to read iptables rules
+	    'iptout'   => '/tmp/iptables.out',
+	    'ipterr'   => '/tmp/iptables.err',
+	    'debug'    => 0,
+	    'verbose'  => 0,
+
+	    ### advanced options
+	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
+	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
+	                                    ### 'system', or 'popen'.
+	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
+	                           ### iptables commands (default is 0).
+	);
+
+	my $ipt_obj = IPTables::ChainMgr->new(%opts)
+    	or die "[*] Could not acquire IPTables::ChainMgr object";
+
+	my $rv = 0;
+	my $out_ar = [];
+	my $errs_ar = [];
+
+	#check_chain_exists
+	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', 'RAVADA');
+    if ($rv) {
+    	print "$self chain exists.\n";
+	} else {
+		$ipt_obj->create_chain('filter', 'RAVADA');
+	}
+	# set the policy on the FORWARD table to DROP
+    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
+	# append rule at the end of the RAVADA chain in the filter table to
+	# allow all traffic from $local_ip to $remote_ip via port $local_port
+	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule($local_ip,
+    $remote_ip, 'filter', 'RAVADA', 'ACCEPT',
+    {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+}
+
 
 1;
