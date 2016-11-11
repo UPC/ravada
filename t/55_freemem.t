@@ -88,7 +88,9 @@ SKIP: {
     my $freemem = _check_free_memory();
     my $n_domains = int($freemem)+2;
 
-    diag("Checking it won't start no more than $n_domains domains with $freemem free memory");
+    $freemem =~ s/(\d+\.\d)\d+/$1/;
+
+    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
 
     my @domains;
     for ( 0 .. $n_domains ) {
