@@ -490,6 +490,19 @@ sub clones {
     return @clones;
 }
 
+=head2 has_clones
+Returns the number of clones from this virtual machine
+    my $has_clones = $domain->has_clones
+=cut
+
+sub has_clones {
+    my $self = shift;
+
+    _init_connector();
+
+    return scalar $self->clones;
+}
+
 
 =head2 list_files_base
 Returns a list of the filenames of this base-type domain
