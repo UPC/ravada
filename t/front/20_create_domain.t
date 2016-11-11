@@ -118,7 +118,9 @@ for my $vm_name ('Void','KVM','LXC') {
         $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
         .($domain->name or '<UNDEF>'));
 
-    $req = $RVD_FRONT->start_domain($name, $USER);
+    my $ip = '99.88.77.66';
+
+    $req = $RVD_FRONT->start_domain(name => $name, user =>  $USER, remote_ip => $ip);
     $RVD_FRONT->wait_request($req,10);
     ok($req->status('done'),"Request ".$req->status);
     ok(!$req->error,"[$vm_name] Request start domain expecting no error, got '".$req->error
