@@ -99,6 +99,8 @@ SKIP: {
 
     for (@domains) {
         $_->shutdown_now($USER);
+    }
+    for (@domains) {
         $_->remove($USER);
     }
 };

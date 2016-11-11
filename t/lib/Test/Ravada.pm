@@ -115,7 +115,7 @@ sub _remove_old_domains_kvm {
     my $vm = rvd_back()->search_vm('KVM');
 
     my $base_name = base_domain_name();
-    for my $domain ( $vm->vm->list_domains ) {
+    for my $domain ( $vm->vm->list_defined_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         warn "removing ".$domain->get_name;
         eval { 
