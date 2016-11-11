@@ -74,17 +74,17 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}}) 
+                    , @{$ARG_CREATE_DOM{$vm_name}})
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
-    ok($domain->name 
+    ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
         ." for VM $vm_name"
     );
 
- 
+
     return $domain;
 }
 
@@ -158,17 +158,17 @@ sub test_json {
     my $json = $domain->json();
     ok($json);
     my $dec_json = decode_json($json);
-    ok($dec_json->{name} && $dec_json->{name} eq $domain->name 
+    ok($dec_json->{name} && $dec_json->{name} eq $domain->name
         ,"[$vm_name] expecting json->{name} = '".$domain->name."'"
         ." , got ".($dec_json->{name} or '<UNDEF>')." for json ".Dumper($dec_json)
     );
-    
+
     my $vm = rvd_back()->search_vm($vm_name);
     my $domain2 = $vm->search_domain_by_id($domain->id);
     my $json2 = $domain2->json();
     ok($json2);
     my $dec_json2 = decode_json($json2);
-    ok($dec_json2->{name} && $dec_json2->{name} eq $domain2->name 
+    ok($dec_json2->{name} && $dec_json2->{name} eq $domain2->name
         ,"[$vm_name] expecting json->{name} = '".$domain2->name."'"
         ." , got ".($dec_json2->{name} or '<UNDEF>')." for json ".Dumper($dec_json2)
     );
@@ -235,6 +235,11 @@ for my $vm_name (qw( Void KVM )) {
         test_search_vm($vm_name);
 
         my $domain = test_create_domain($vm_name);
+        ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
+        ok($domain->clone(user=>$USER,name=>new_domain_name));
+        ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
+        ok($domain->clone(user=>$USER,name=>new_domain_name));
+        ok($domain->has_clones==2,"[$vm_name] has_clones expecting 2, got ".$domain->has_clones);
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_screenshot_file($vm_name, $domain);
