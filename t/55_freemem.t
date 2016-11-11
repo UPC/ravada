@@ -90,11 +90,17 @@ SKIP: {
 
     diag("Checking it won't start no more than $n_domains domains with $freemem free memory");
 
+    my @domains;
     for ( 0 .. $n_domains ) {
         diag("Creating domain $_");
-        test_new_domain($vm) or last;
+        my $domain = test_new_domain($vm) or last;
+        push @domains,($domain) if $domain;
     }
 
+    for (@domains) {
+        $_->shutdown_now($USER);
+        $_->remove($USER);
+    }
 };
 
 remove_old_domains();
