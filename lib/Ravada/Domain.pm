@@ -657,7 +657,6 @@ sub _post_start {
 
     my $display = $self->display($owner);
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
-    warn "$remote_ip -> $local_ip, $local_port ".$display;
 
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
