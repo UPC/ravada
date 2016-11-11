@@ -128,13 +128,16 @@ sub test_prepare_base {
 
     my $name_clone = new_domain_name();
 
-    my $domain_clone = $RVD_BACK->create_domain(
+    my $domain_clone;
+    eval { $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
         ,id_base => $domain->id
         ,vm => $vm_name
-    );
-    ok($domain_clone);
+        );
+    };
+    ok(!$@,"Clone domain, expecting error='' , got='".($@ or '')."'") or exit;
+    ok($domain_clone,"Trying to clone from ".$domain->name." to $name_clone");
     test_devices_clone($vm_name, $domain_clone);
     test_display($vm_name, $domain_clone);
 
@@ -189,7 +192,7 @@ sub test_prepare_base_active {
 
     ok(!$domain->is_base,"Domain ".$domain->name." should not be base") or return;
     eval { $domain->start($USER) if !$domain->is_active() };
-    ok(!$@,$@);
+    ok(!$@,$@) or exit;
     eval { $domain->resume($USER)  if $domain->is_paused()  };
     ok(!$@,$@);
 

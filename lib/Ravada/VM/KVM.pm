@@ -310,7 +310,7 @@ sub _domain_create_from_iso {
 
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
-    $self->_xml_modify_usb($xml);
+#    $self->_xml_modify_usb($xml);
 
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
 
