@@ -63,7 +63,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base='y'");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();
