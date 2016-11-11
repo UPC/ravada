@@ -408,7 +408,7 @@ sub _domain_create_from_base {
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml);
     _xml_modify_video($xml);
-
+    $self->_xml_modify_usb($xml);
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create;
