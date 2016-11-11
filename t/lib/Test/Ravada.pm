@@ -74,14 +74,13 @@ sub _remove_old_domains_vm {
     my $domain;
     my $vm = rvd_back()->search_vm($vm_name);
     return if !$vm;
-
     for (reverse 0 .. 20 ) {
         my $dom_name = base_domain_name()."_$_";
         my $domain = $vm->search_domain($dom_name);
         next if !$domain;
 
         eval { $domain->shutdown_now($USER_ADMIN); };
-        warn "Error shutdown $dom_name $@" if $@;
+        warn "Error shutdown $dom_name $@" if $@ && $@ !~ /No DB info/i;
 
         eval {
             $domain->remove( $USER_ADMIN );
@@ -93,9 +92,30 @@ sub _remove_old_domains_vm {
     }
 
 }
+
+sub _remove_old_domains_kvm {
+    my $vm = rvd_back()->search_vm('KVM');
+
+    my $base_name = base_domain_name();
+    for my $domain ( $vm->vm->list_domains ) {
+        next if $domain->get_name !~ /^$base_name/;
+        warn "removing ".$domain->get_name;
+        eval { 
+            $domain->shutdown();
+            sleep 1; 
+            $domain->destroy() if $domain->is_active;
+        }
+            if $domain->is_active;
+        warn "WARNING: error $@ trying to shutdown ".$domain->get_name if $@;
+        eval { $domain->undefine };
+        warn $@ if $@;
+    }
+}
+
 sub remove_old_domains {
     _remove_old_domains_vm('KVM');
     _remove_old_domains_vm('Void');
+    _remove_old_domains_kvm();
 }
 
 sub _remove_old_disks_kvm {
