@@ -74,6 +74,24 @@ sub _remove_old_domains_vm {
     my $domain;
     my $vm = rvd_back()->search_vm($vm_name);
     return if !$vm;
+
+    my $base_name = base_domain_name();
+    for my $dom_name ( sort { $b cmp $a }  $vm->list_domains) {
+        next if $dom_name !~ /^$base_name/i;
+
+        my $domain = $vm->search_domain($dom_name);
+        next if !$domain;
+
+        eval { $domain->shutdown_now($USER_ADMIN); };
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
+
+        eval {$domain->remove( $USER_ADMIN ) };
+        if ( $@ && $@ =~ /No DB info/i ) {
+            eval { $domain->domain->undefine() if $domain->domain };
+        }
+
+    }
+
     for (reverse 0 .. 20 ) {
         my $dom_name = base_domain_name()."_$_";
         my $domain = $vm->search_domain($dom_name);
