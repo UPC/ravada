@@ -46,6 +46,8 @@ if ($help) {
     exit;
 }
 
+die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
+
 $Ravada::DEBUG=1    if $DEBUG;
 ###################################################################
 
