@@ -889,4 +889,29 @@ sub list_networks {
     return @ret_nets;
 }
 
+=head2 import_domain
+
+Imports a KVM domain in Ravada
+
+    my $domain = $vm->import_domain($name, $user);
+
+=cut
+
+sub import_domain {
+    my $self = shift;
+    my ($name, $user) = @_;
+
+    my $domain_kvm = $self->vm->get_domain_by_name($name);
+    confess "ERROR: unknown domain $name in KVM" if !$domain_kvm;
+
+    my $domain = Ravada::Domain::KVM->new(
+                      _vm => $self
+                  ,domain => $domain_kvm 
+                , storage => $self->storage_pool
+    );
+
+    $domain->_insert_db(name => $name, id_owner => $user->id);
+    return $domain;
+}
+
 1;
