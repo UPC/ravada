@@ -17,6 +17,7 @@ my $help;
 my ($DEBUG, $ADD_USER );
 my $FILE_CONFIG = "/etc/ravada.conf";
 my $ADD_USER_LDAP;
+my $IMPORT_DOMAIN;
 
 my $USAGE = "$0 "
         ." [--debug] [--file-config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
@@ -24,6 +25,7 @@ my $USAGE = "$0 "
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
+        ." --import-domain : import a domain\n"
         ." -X : start in foreground\n"
     ;
 
@@ -32,7 +34,8 @@ GetOptions (       help => \$help
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
-);
+      ,'import-domain=s' => \$IMPORT_DOMAIN
+) or exit;
 
 #####################################################################
 #
@@ -42,6 +45,8 @@ if ($help) {
     print $USAGE;
     exit;
 }
+
+die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
 
 $Ravada::DEBUG=1    if $DEBUG;
 ###################################################################
@@ -89,12 +94,24 @@ sub add_user_ldap {
     Ravada::Auth::LDAP::add_user($login, $password);
 }
 
+sub import_domain {
+    my $name = shift;
+    print "Virtual Manager: KVM\n";
+    print "User name : ";
+    my $user = <STDIN>;
+    chomp $user;
+    $RAVADA->import_domain(name => $name, vm => 'KVM', user => $user);
+}
+
 #################################################################
 if ($ADD_USER) {
     add_user($ADD_USER);
     exit;
 } elsif ($ADD_USER_LDAP) {
     add_user($ADD_USER_LDAP);
+    exit;
+} elsif ($IMPORT_DOMAIN) {
+    import_domain($IMPORT_DOMAIN);
     exit;
 }
 die "Already started" if Proc::PID::File->running();

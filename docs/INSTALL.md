@@ -27,6 +27,7 @@ Clone the sources:
 - libmoosex-types-netaddr-ip-perl
 - libsys-statistics-linux-perl
 - libio-interface-perl
+- libiptables-chainmgr-perl
 
 ##Old debian
 
@@ -85,4 +86,4 @@ Create a directory to store virtual machines screenshots:
 
 #Next
 
-Read docs/operation.md
+Read docs/production.md or devel-docs/development.md to learn how to start it.

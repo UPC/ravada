@@ -310,7 +310,7 @@ sub _domain_create_from_iso {
 
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
-    $self->_xml_modify_usb($xml);
+#    $self->_xml_modify_usb($xml);
 
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
 
@@ -887,6 +887,31 @@ sub list_networks {
         push @ret_nets, ( Ravada::NetInterface::MacVTap->new(interface => $if));
     }
     return @ret_nets;
+}
+
+=head2 import_domain
+
+Imports a KVM domain in Ravada
+
+    my $domain = $vm->import_domain($name, $user);
+
+=cut
+
+sub import_domain {
+    my $self = shift;
+    my ($name, $user) = @_;
+
+    my $domain_kvm = $self->vm->get_domain_by_name($name);
+    confess "ERROR: unknown domain $name in KVM" if !$domain_kvm;
+
+    my $domain = Ravada::Domain::KVM->new(
+                      _vm => $self
+                  ,domain => $domain_kvm 
+                , storage => $self->storage_pool
+    );
+
+    $domain->_insert_db(name => $name, id_owner => $user->id);
+    return $domain;
 }
 
 1;

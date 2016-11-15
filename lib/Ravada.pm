@@ -824,7 +824,7 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->start($user);
+    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$request->args('name')."</a>"
@@ -973,6 +973,37 @@ sub search_vm {
         return $vm if ref($vm) eq $class;
     }
     return;
+}
+
+=head2 import_domain
+
+Imports a domain in Ravada
+
+    my $domain = $ravada->import_domain(
+                            vm => 'KVM'
+                            ,name => $name
+                            ,user => $user_name
+    );
+
+=cut
+
+sub import_domain {
+    my $self = shift;
+    my %args = @_;
+
+    my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
+    my $name = $args{name} or die "ERROR: mandatory argument domain name required";
+    my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+
+    my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
+    my $user = Ravada::Auth::SQL->new(name => $user_name);
+    die "ERROR: unknown user '$user_name'" if !$user || !$user->id;
+    
+    my $domain;
+    eval { $domain = $self->search_domain($name) };
+    die "ERROR: Domain '$name' already in RVD"  if $domain;
+
+    return $vm->import_domain($name, $user);
 }
 
 =head1 AUTHOR

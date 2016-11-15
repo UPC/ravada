@@ -136,7 +136,7 @@ sub test_remove_domain {
 
 
     eval { $domain->remove($USER) };
-    ok(!$@ , "Error removing domain ".$domain->name." ".ref($domain).": $@") or exit;
+    ok(!$@ , "[$vm_name] Error removing domain ".$domain->name." ".ref($domain).": $@") or exit;
 
     my $domain2 = rvd_back()->search_domain($domain->name);
     ok(!$domain2, "Domain ".$domain->name." should be removed in ".ref $domain);
@@ -236,9 +236,11 @@ for my $vm_name (qw( Void KVM )) {
 
         my $domain = test_create_domain($vm_name);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
-        ok($domain->clone(user=>$USER,name=>new_domain_name));
+        my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
+        ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
-        ok($domain->clone(user=>$USER,name=>new_domain_name));
+        my $clone2 = $domain->clone(user=>$USER,name=>new_domain_name);
+        ok($clone2, "Expecting clone ");
         ok($domain->has_clones==2,"[$vm_name] has_clones expecting 2, got ".$domain->has_clones);
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
@@ -246,7 +248,12 @@ for my $vm_name (qw( Void KVM )) {
         test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
         test_pause_domain($vm_name, $domain);
+        test_remove_domain($vm_name, $clone1);
+        test_remove_domain($vm_name, $clone2);
         test_remove_domain($vm_name, $domain);
     };
 }
+remove_old_domains();
+remove_old_disks();
+
 done_testing();

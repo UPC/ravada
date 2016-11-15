@@ -74,9 +74,12 @@ sub test_start {
 
     my $vm = rvd_back->search_vm($vm_name);
 
+    my $remote_ip = '99.88.77.66';
+
     my $req = Ravada::Request->start_domain(
         name => "does not exists"
         ,uid => $USER->id
+        ,remote_ip => $remote_ip
     );
     $RAVADA->process_requests();
 
@@ -97,6 +100,7 @@ sub test_start {
     ok(!$domain->is_active,"Domain $name should be inactive") or return;
 
     my $req2 = Ravada::Request->start_domain(name => $name, uid => $USER->id
+        ,remote_ip => $remote_ip
     );
     $RAVADA->process_requests();
 
