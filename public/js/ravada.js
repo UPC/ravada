@@ -79,11 +79,6 @@
                 $scope.list_machines= response.data;
         });
 
-
-        $http.get('/list_bases.json').then(function(response) {
-                $scope.list_bases= response.data;
-        });
-
         request.get(function( res ) {
             $scope.res = res;
         });
