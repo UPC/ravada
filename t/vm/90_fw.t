@@ -26,6 +26,8 @@ my %ARG_CREATE_DOM = (
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $USER = create_user("foo","bar");
 
+my $CHAIN = 'RAVADA';
+
 ##########################################################
 
 sub test_create_domain {
@@ -63,9 +65,26 @@ sub test_create_domain {
 sub test_fw_domain {
     my ($vm_name, $domain) = @_;
     my $remote_ip = '99.88.77.66';
-    my $local_ip = '127.0.0.1';
-    my $local_port = '5900';
-	my %opts = (
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $local_ip = $vm->ip;
+
+    $domain->start( user => $USER, remote_ip => $remote_ip);
+
+    my $display = $domain->display($USER);
+    my ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+    ok(defined $local_port, "Expecting a port in display '$display'") or return;
+    
+    ok($domain->is_active);
+    test_chain($vm_name, $local_ip,$local_port, $remote_ip, 1);
+
+    $domain->shutdown_now( $USER );
+    test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
+}
+
+sub open_ipt {
+    my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
 	    'ipt_rules_file' => '',  # optional file path from
 	                             # which to read iptables rules
@@ -73,7 +92,6 @@ sub test_fw_domain {
 	    'ipterr'   => '/tmp/iptables.err',
 	    'debug'    => 0,
 	    'verbose'  => 0,
-# in the filter table
 
 	    ### advanced options
 	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
@@ -82,30 +100,43 @@ sub test_fw_domain {
 	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
 	                           ### iptables commands (default is 0).
 	);
-    my $ipt_obj = IPTables::ChainMgr->new(%opts)
-        or die "[*] Could not acquire IPTables::ChainMgr object";
-    $ipt_obj->flush_chain('filter', 'RAVADA');
-    #my $rv = 0;
-    #my $out_ar = [];
-    #my $errs_ar = [];
-    #($rv, $out_ar, $errs_ar) = $ipt_obj->add_ip_rule($local_ip,
-    #    $remote_ip, 4, 'filter', 'RAVADA', 'DROP',
-    #        {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-    $domain->start( user => $USER, remote_ip => $remote_ip);
-    
-    #($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule($local_ip,
-    #    $remote_ip, 'filter', 'RAVADA', 'ACCEPT',
-    #        {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-    
-    ok($domain->is_active);
-    
-    #TODO check iptables for an entry allowing 127.0.0.1 to $domain->display
+
+	my $ipt_obj = IPTables::ChainMgr->new(%opts)
+    	or die "[*] Could not acquire IPTables::ChainMgr object";
+
 }
 
+sub test_chain {
+    my $vm_name = shift;
+
+    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
+    my $ipt = open_ipt();
+
+    my ($rule_num , $chain_rules) 
+        = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, 'ACCEPT'
+                              , {normalize => 1 , d_port => $local_port });
+
+    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
+        if $enabled;
+    ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip -> $local_ip: $local_port"
+                        .", got $rule_num ")
+        if !$enabled;
+
+}
+
+sub flush_rules {
+    my $ipt = open_ipt();
+    $ipt->flush_chain('filter', $CHAIN);
+    $ipt->delete_chain('filter', 'INPUT', $CHAIN);
+}
 #######################################################
 
 remove_old_domains();
 remove_old_disks();
+
+#TODO: dump current chain and restore in the end
+#      maybe ($rv, $out_ar, $errs_ar) = $ipt_obj->run_ipt_cmd('/sbin/iptables
+#           -t filter -v -n -L RAVADA');
 
 for my $vm_name (qw( Void KVM )) {
 
@@ -118,12 +149,19 @@ for my $vm_name (qw( Void KVM )) {
     eval { $vm = $RVD_BACK->search_vm($vm_name) };
 
     SKIP: {
+        #TODO: find out if this system has iptables
         my $msg = "SKIPPED test: No $vm_name VM found ";
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        flush_rules();
 
         my $domain = test_create_domain($vm_name);
         test_fw_domain($vm_name, $domain);
     };
 }
+flush_rules();
+remove_old_domains();
+remove_old_disks();
+
 done_testing();

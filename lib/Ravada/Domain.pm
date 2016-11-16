@@ -15,6 +15,7 @@ our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
 
 our $MIN_FREE_MEMORY = 1024*1024;
+our $IPTABLES_CHAIN = 'RAVADA';
 
 _init_connector();
 
@@ -640,8 +641,28 @@ sub clone {
 
 sub _post_shutdown {
     my $self = shift;
+
+    $self->_remove_temporary_machine(@_);
+    $self->_remove_iptables(@_);
+
+}
+
+sub _remove_iptables {
+    my $self = shift;
+
+    my $ipt_obj = _open_iptables();
+
+    my $iptables = $self->{_iptables};
+
+    $ipt_obj->delete_ip_rule(@$iptables)    if $iptables;
+}
+
+sub _remove_temporary_machine {
+    my $self = shift;
+
     my %args = @_;
     my $user;
+
 
     eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
     return if !$user;
@@ -671,6 +692,21 @@ sub _post_start {
     my $display = $self->display($owner);
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
 
+
+    my $ipt_obj = _open_iptables();
+	# append rule at the end of the RAVADA chain in the filter table to
+	# allow all traffic from $local_ip to $remote_ip via port $local_port
+    #
+    my @iptables_arg = ($remote_ip
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    $self->{_iptables} = \@iptables_arg;
+}
+
+sub _open_iptables {
+
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
 	    'ipt_rules_file' => '',  # optional file path from
@@ -696,20 +732,13 @@ sub _post_start {
 	my $errs_ar = [];
 
 	#check_chain_exists
-	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', 'RAVADA');
-    if ($rv) {
-    	print "$self chain exists.\n";
-	} else {
-		$ipt_obj->create_chain('filter', 'RAVADA');
+	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
+    if (!$rv) {
+		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
 	}
 	# set the policy on the FORWARD table to DROP
     $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
-	# append rule at the end of the RAVADA chain in the filter table to
-	# allow all traffic from $local_ip to $remote_ip via port $local_port
-	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule($local_ip,
-    $remote_ip, 'filter', 'RAVADA', 'ACCEPT',
-    {'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+    return $ipt_obj;
 }
-
-
 1;
