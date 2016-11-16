@@ -50,7 +50,7 @@ sub display {
     my $self = shift;
 
     my $ip = $self->_vm->ip();
-    return "void://$ip:0000/";
+    return "void://$ip:0/";
 }
 
 sub is_active {
