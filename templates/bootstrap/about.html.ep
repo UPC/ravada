@@ -6,11 +6,11 @@
     <div ng-controller="about">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
-      <div class="page-header">
+      <div class="page-header col-md-8 col-md-offset-2">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>About</h2>
-                        <p> Ravada is a broker VDI</p>
+                        <h2 class="text-center">About</h2>
+                        <img class="img-responsive center-block" src="img/logo.png">
                         <h3>Development</h3>
                         <p> Below are listed the technologies used in this project:</p>
                         <ul>

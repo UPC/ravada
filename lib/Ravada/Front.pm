@@ -68,6 +68,9 @@ sub list_bases {
     
     my @bases = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        my $domain;
+        eval { $domain   = $self->search_domain($row->{name}) };
+        $row->{has_clones} = $domain->has_clones if $domain;
         push @bases, ($row);
     }
     $sth->finish;
@@ -95,6 +98,7 @@ sub list_domains {
         $row->{is_active} = 1 if $domain && $domain->is_active;
         $row->{is_locked} = 1 if $domain && $domain->is_locked;
         $row->{is_paused} = 1 if $domain && $domain->is_paused;
+        $row->{has_clones} = $domain->has_clones if $domain;
         push @domains, ($row);
     }
     $sth->finish;
