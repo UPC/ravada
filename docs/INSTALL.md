@@ -84,6 +84,23 @@ Create a directory to store virtual machines screenshots:
 
     $ sudo mkdir -p /var/www/img/screenshots/
 
+#Firewall
+
+The server must be able to send _DHCP_ packets to its own virtual interface.
+
+KVM should be using a virtual interface for the NAT domnains. Look what is the address range
+and add it to your _iptables_ configuration.
+
+First we try to find out what is the new internal network:
+
+    $  sudo route -n
+    ...
+    192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
+
+So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
+
+    -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
 #Next
 
 Read docs/production.md or devel-docs/development.md to learn how to start it.
