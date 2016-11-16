@@ -51,10 +51,10 @@ Review and run the sql files from the sql dir.
 
     $ mysqladmin -p create -u root ravada
     $ cd ravada/sql/mysql
-    $ cat *.sql | mysql -p -u ravada ravada
+    $ cat *.sql | mysql -p -u rvd_user ravada
     $ cd ..
     $ cd data
-    $ cat *.sql | mysql -p -u ravada ravada
+    $ cat *.sql | mysql -p -u rvd_user ravada
 
 #Config file
 
