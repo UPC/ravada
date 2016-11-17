@@ -34,7 +34,7 @@ Clone the sources:
 In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:
 
     $ sudo apt-get purge libmojolicious-perl
-    $ sudo apt-get install cpanminus
+    $ sudo apt-get install cpanminus build-essential
     $ sudo cpanm Mojolicious
 
 #Mysql Database
@@ -44,7 +44,7 @@ Create a database named "ravada".
 Grant all permissions to your user:
 
     $ mysql -u root -p
-    mysql> grant all on ravada.* to ravada@'localhost' identified by 'figure a password';
+    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'figure a password';
     exit
 
 Review and run the sql files from the sql dir.
@@ -70,6 +70,8 @@ Install KVM
 
     $ sudo apt-get install qemu-kvm qemu-utils
     $ sudo virsh pool-define-as default dir - - - - "/var/lib/libvirt/images"
+    $ sudo virsh pool-autostart default
+    $ sudo virsh pool-start default
 
 #Ravada user
 
