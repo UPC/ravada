@@ -55,14 +55,14 @@ sub test_add_domain_db {
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
     
-    $test->dbh->do("UPDATE DOMAINS set is_base='y' WHERE name='a'");
+    $test->dbh->do("UPDATE DOMAINS set is_base=1 WHERE name='a'");
     
     $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 1, "There should 1 base");
     
     for my $base ( @$bases ) {
-        ok($base->{is_base} =~ /y/i);
+        ok($base->{is_base} );
     }
 }
 
