@@ -7,6 +7,7 @@ use Carp qw(croak);
 use Data::Dumper;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
+use Net::DNS;
 use IO::Socket;
 use IO::Interface;
 use Sys::Hostname;
@@ -149,10 +150,7 @@ sub ip {
     }
     return $ip if $ip && $ip !~ /^127\./;
 
-    $name = hostname();
-    $ip = `host $name`;
-    chomp $ip;
-    $ip =~ s/.*?address (\d+)/$1/;
+    $ip = _ip_from_hostname();
     return $ip if $ip && $ip !~ /^127\./;
 
     $ip = $self->_interface_ip();
@@ -162,6 +160,16 @@ sub ip {
         ." This virtual machine won't be available from the network.";
 
     return '127.0.0.1';
+}
+
+sub _ip_from_hostname {
+    my $res = Net::DNS::Resolver->new();
+    my $reply = $res->search(hostname());
+    return if !$reply;
+
+    for my $rr ($reply->answer) {
+        return $rr->address if $rr->type eq 'A';
+    }
 }
 
 sub _interface_ip {
