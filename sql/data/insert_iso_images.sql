@@ -54,7 +54,7 @@ INSERT INTO iso_images
 VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
     ,'amd64'
     ,'yakkety64-amd64.xml'
-    ,'yaketty64-volume.xml'
+    ,'yakkety64-volume.xml'
     ,'http://releases.ubuntu.com/16.10/ubuntu-16.10-desktop-amd64.iso'
     ,'3f50877c05121f7fd8544bef2d722824'
     );
