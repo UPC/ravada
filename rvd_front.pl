@@ -92,7 +92,7 @@ any '/machines/new' => sub {
 any '/users' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c);
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin;
     return users($c);
 
 };
@@ -437,7 +437,6 @@ sub _search_req_base_error {
     my $name = shift;
 }
 sub access_denied {
-    
 
     my $c = shift;
 
