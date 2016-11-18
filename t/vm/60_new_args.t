@@ -120,6 +120,7 @@ sub test_req_create_domain{
    
     ok($req,"Expecting request to create_domain");
 
+    $RVD_FRONT->disconnect_vm();
     $RVD_BACK->process_requests();
 
     wait_request($req);
@@ -127,7 +128,7 @@ sub test_req_create_domain{
     ok(!$req->error,"Expecting error '' , got '".($req->error or '')."'");
 
     my $domain = $RVD_FRONT->search_domain($name);
-    ok($domain,"Expecting domain doesn't exists domain '$name'");
+    ok($domain,"Expecting domain '$name' , found : ".(defined $domain or 0));
 
     return $domain;
 }
@@ -270,6 +271,7 @@ for my $vm_name (qw( Void KVM )) {
 
     my $ravada;
     eval { $ravada = Ravada->new(@ARG_RVD) };
+    $ravada = undef;
 
     my $vm;
 

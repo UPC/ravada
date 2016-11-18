@@ -28,6 +28,9 @@ requires 'list_domains';
 # storage volume
 requires 'create_volume';
 
+requires 'connect';
+requires 'disconnect';
+
 ############################################################
 
 has 'host' => (

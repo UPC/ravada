@@ -202,7 +202,7 @@ sub wait_request {
     my $req = shift;
     for ( 1 .. 10 ) {
         last if $req->status eq 'done';
-        diag("Request ".$req->command." ".$req->status." ".localtime(time));
+        diag("Request ".$req->id." ".$req->command." ".$req->status." ".localtime(time));
         sleep 2;
     }
 

@@ -1,6 +1,6 @@
 package Ravada::VM::KVM;
 
-use Carp qw(croak);
+use Carp qw(croak carp);
 use Data::Dumper;
 use Digest::MD5;
 use Encode;
@@ -26,15 +26,15 @@ with 'Ravada::VM';
 #
 
 has vm => (
-    isa => 'Sys::Virt'
-    ,is => 'rw'
+#    isa => 'Sys::Virt'
+    is => 'rw'
     ,builder => 'connect'
     ,lazy => 1
 );
 
 has storage_pool => (
-    isa => 'Sys::Virt::StoragePool'
-    ,is => 'ro'
+#    isa => 'Sys::Virt::StoragePool'
+    is => 'rw'
     ,builder => '_load_storage_pool'
     ,lazy => 1
 );
@@ -82,12 +82,33 @@ sub connect {
                               ,readonly => $self->mode
                           );
     }
-    $vm->register_close_callback(\&_reconnect);
+#    $vm->register_close_callback(\&_reconnect);
     return $vm;
 }
 
-sub _reconnect {
-    warn "Disconnected";
+=head2 disconnect
+
+Disconnect from the Virtual Machine Manager
+
+=cut
+
+sub disconnect {
+    my $self = shift;
+
+    $self->vm(undef);
+    $self->storage_pool(undef);
+}
+
+=head2 reconnect
+
+Reconnect the internal virtual manager
+
+=cut
+
+sub reconnect {
+    my $self = shift;
+    $self->vm($self->connect);
+    $self->storage_pool($self->_load_storage_pool);
 }
 
 sub _load_storage_pool {
@@ -145,6 +166,7 @@ sub create_domain {
     croak "argument id_iso or id_base required ".Dumper(\%args)
         if !$args{id_iso} && !$args{id_base};
 
+    $self->reconnect()  if !defined $self->vm;
     my $domain;
     if ($args{id_iso}) {
         $domain = $self->_domain_create_from_iso(@_);
@@ -168,6 +190,8 @@ Returns true or false if domain exists.
 sub search_domain {
     my $self = shift;
     my $name = shift or confess "Missing name";
+
+    $self->reconnect   if !defined $self->vm();
 
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
@@ -203,6 +227,7 @@ Returns a list of the created domains
 sub list_domains {
     my $self = shift;
 
+    $self->reconnect if !defined $self->vm();
     my @list;
     for my $name ($self->vm->list_all_domains()) {
         my $domain ;
@@ -316,7 +341,6 @@ sub _domain_create_from_iso {
 
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create if $args{active};
-
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
                 , _vm => $self
@@ -871,21 +895,27 @@ Returns a list of networks known to this VM. Each element is a Ravada::NetInterf
 sub list_networks {
     my $self = shift;
     
+    $self->reconnect() if !defined $self->vm();
+
     my @nets = $self->vm->list_all_networks();
     my @ret_nets;
 
     for my $net (@nets) {
-        push @ret_nets ,( Ravada::NetInterface::KVM->new( _net => $net ) );
+        push @ret_nets ,( Ravada::NetInterface::KVM->new( name => $net->get_name ) );
     }
 
     for my $if (IO::Interface::Simple->interfaces) {
         next if $if->is_loopback();
+        next if !$if->address();
+        next if $if =~ /virbr/i;
 
         # that should catch bridges
         next if $if->hwaddr =~ /^[00:]+00$/;
 
         push @ret_nets, ( Ravada::NetInterface::MacVTap->new(interface => $if));
     }
+
+    $self->vm(undef);
     return @ret_nets;
 }
 

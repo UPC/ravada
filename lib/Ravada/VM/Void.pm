@@ -22,6 +22,7 @@ with 'Ravada::VM';
 #
 
 sub connect {}
+sub disconnect {}
 
 sub create_domain {
     my $self = shift;

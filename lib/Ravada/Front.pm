@@ -3,6 +3,7 @@ package Ravada::Front;
 use strict;
 use warnings;
 
+use Carp qw(carp);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
@@ -75,6 +76,7 @@ sub list_bases {
     }
     $sth->finish;
 
+    $self->disconnect_vm();
     return \@bases;
 }
 
@@ -103,6 +105,7 @@ sub list_domains {
     }
     $sth->finish;
 
+    $self->disconnect_vm();
     return \@domains;
 }
 
@@ -474,6 +477,16 @@ sub list_bases_anonymous {
 
     return \@bases;
 
+}
+
+=head2 disconnect_vm 
+
+Disconnects all the conneted VMs
+
+=cut
+
+sub disconnect_vm {
+    %VM = ();
 }
 
 1;

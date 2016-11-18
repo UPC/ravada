@@ -207,7 +207,7 @@ sub _check_used_memory {
         $used_memory += $info->{memory};
     }
 
-    die "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
+    confess "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
 sub _check_disk_modified {

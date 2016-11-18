@@ -148,9 +148,29 @@ sub _create_vm_kvm {
     return ($vm_kvm,$err_kvm);
 }
 
-sub _refresh_vm_kvm {
+=head2 disconnect_vm
+
+Disconnect all the Virtual Managers connections.
+
+=cut
+
+
+sub disconnect_vm {
     my $self = shift;
-    sleep 1;
+    $self->_disconnect_vm();
+}
+
+sub _disconnect_vm{
+    my $self = shift;
+    return $self->_connect_vm(0);
+}
+
+sub _connect_vm {
+    my $self = shift;
+
+    my $connect = shift;
+    $connect = 1 if !defined $connect;
+
     my @vms;
     eval { @vms = $self->vm };
     warn $@ if $@;
@@ -160,11 +180,15 @@ sub _refresh_vm_kvm {
     return if !scalar @vms;
     for my $n ( 0 .. $#{$self->vm}) {
         my $vm = $self->vm->[$n];
-        next if ref $vm !~ /KVM/i;
-        warn "Refreshing VM $n $vm" if $DEBUG;
-        my ($vm2, $err) = $self->_create_vm_kvm();
-        $self->vm->[$n] = $vm2;
-        warn $err if $err;
+
+        if (!$connect) {
+            warn "disconnect VM $n $vm" if $DEBUG;
+            $vm->disconnect();
+            next;
+        }
+        warn "connect VM $n $vm"    if $DEBUG;
+
+        $vm->reconnect();
     }
 }
 
@@ -603,6 +627,8 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
+    $self->_disconnect_vm();
+
     if ($dont_fork || !$CAN_FORK ) {
 
         eval { $sub->($self,$request) };
@@ -626,7 +652,7 @@ sub _execute {
         exit;
     }
     $self->_add_pid($pid, $request->id);
-    $self->_refresh_vm_kvm();
+#    $self->_connect_vm_kvm();
     return '';
 }
 
@@ -645,7 +671,6 @@ sub _cmd_domdisplay {
     $request->result({display => $display});
 
     $request->status('done');
-
 }
 
 sub _cmd_screenshot {
