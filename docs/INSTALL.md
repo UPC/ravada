@@ -50,6 +50,7 @@ Clone the sources:
 - libsys-statistics-linux-perl
 - libio-interface-perl
 - libiptables-chainmgr-perl
+- libnet-dns-perl
 
 ##Old debian
 
