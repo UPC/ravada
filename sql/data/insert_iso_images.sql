@@ -1,4 +1,3 @@
-
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,md5)
 VALUES('Debian Jessie 32 bits netinst'
@@ -9,7 +8,6 @@ VALUES('Debian Jessie 32 bits netinst'
     ,'http://cdimage.debian.org/cdimage/archive/8.5.0/i386/iso-cd/debian-8.5.0-i386-netinst.iso'
     ,'b3cd3e2e6a74b93ab41059c47c2b43fd'
    );
-
 
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,md5)
@@ -39,14 +37,24 @@ VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'xenial-volume.xml'
     ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso'
     ,'610c4a399df39a78866f9236b8c658da'
-);
+    );
 
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,md5)
 VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
-        ,'amd64'
-        ,'xenial64-amd64.xml'
-        ,'xenial64-volume.xml'
-        ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-amd64.iso'
-        ,'c94d54942a2954cf852884d656224186'
+    ,'amd64'
+    ,'xenial64-amd64.xml'
+    ,'xenial64-volume.xml'
+    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-amd64.iso'
+    ,'c94d54942a2954cf852884d656224186'
+    );
+
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
+    ,'amd64'
+    ,'yakkety64-amd64.xml'
+    ,'yaketty64-volume.xml'
+    ,'http://releases.ubuntu.com/16.10/ubuntu-16.10-desktop-amd64.iso'
+    ,'3f50877c05121f7fd8544bef2d722824'
     );
