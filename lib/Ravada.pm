@@ -185,10 +185,10 @@ sub _connect_vm {
             warn "disconnect VM $n $vm" if $DEBUG;
             $vm->disconnect();
             next;
+        } else {
+            warn "connect VM $n $vm"    if $DEBUG;
+            $vm->connect();
         }
-        warn "connect VM $n $vm"    if $DEBUG;
-
-        $vm->reconnect();
     }
 }
 

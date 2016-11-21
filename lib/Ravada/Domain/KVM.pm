@@ -14,7 +14,7 @@ use XML::LibXML;
 with 'Ravada::Domain';
 
 has 'domain' => (
-      is => 'ro'
+      is => 'rw'
     ,isa => 'Sys::Virt::Domain'
     ,required => 1
 );
@@ -192,9 +192,11 @@ sub _remove_file_image {
 
 sub _disk_device {
     my $self = shift;
+    $self->_vm->connect();
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
         or die "ERROR: $!\n";
 
+    $self->_vm->disconnect();
     my @img;
     my $list_disks = '';
 
@@ -526,9 +528,16 @@ sub _new_pci_slot{
     }
 }
 
-#sub BUILD {
-#    warn "Builder KVM.pm";
-#}
+=head2 BUILD
+
+internal build method
+
+=cut
+
+sub BUILD {
+    my $self = shift;
+    $self->_vm->disconnect();
+}
 
 =head2 list_volumes
 
@@ -554,6 +563,8 @@ sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
 
+    $self->_vm->connect();
+    $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
 
     my $mimetype = $self->domain->screenshot($stream,0);
@@ -573,6 +584,7 @@ sub screenshot {
     unlink $file_tmp or warn "$! removing $file_tmp";
 
     $stream->finish;
+    $self->_vm->disconnect();
 
     return $bytes;
 }

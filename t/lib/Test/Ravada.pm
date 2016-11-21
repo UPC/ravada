@@ -115,6 +115,7 @@ sub _remove_old_domains_kvm {
     my $vm = rvd_back()->search_vm('KVM');
 
     my $base_name = base_domain_name();
+    $vm->connect();
     for my $domain ( $vm->vm->list_defined_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         eval { 
@@ -127,6 +128,7 @@ sub _remove_old_domains_kvm {
         eval { $domain->undefine };
         warn $@ if $@;
     }
+    $vm->disconnect();
 }
 
 sub remove_old_domains {
@@ -149,6 +151,7 @@ sub _remove_old_disks_kvm {
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
 
+    $vm->connect;
     eval { $vm->storage_pool->refresh() };
     ok(!$@,$@) or return;
     opendir my $ls,$dir_img or die "$! $dir_img";
@@ -161,6 +164,7 @@ sub _remove_old_disks_kvm {
         unlink $disk or die "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
+    $vm->disconnect();
 }
 
 sub _remove_old_disks_void {

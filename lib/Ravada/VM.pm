@@ -56,16 +56,42 @@ has 'readonly' => (
 );
 ############################################################
 #
-# Method Modifiers
+# Method Modifiers definition
 # 
 #
-before 'create_domain' => \&_check_create_domain;
+before 'create_domain' => \&_pre_create_domain;
+ after 'create_domain' => \&_disconnect;
 
+before 'search_domain' => \&_connect;
+ after 'search_domain' => \&_disconnect;
+
+before 'create_volume' => \&_connect;
+ after 'create_volume' => \&_disconnect;
+
+#############################################################
+#
+# method modifiers
+#
 sub _check_readonly {
     my $self = shift;
     confess "ERROR: You can't create domains in read-only mode "
         if $self->readonly 
 
+}
+
+sub _connect {
+    my $self = shift;
+    $self->connect();
+}
+
+sub _disconnect {
+    my $self = shift;
+    $self->disconnect();
+}
+
+sub _pre_create_domain {
+    _check_create_domain(@_);
+    _connect(@_);
 }
 
 ############################################################

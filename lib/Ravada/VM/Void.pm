@@ -18,11 +18,16 @@ use Ravada::NetInterface::Void;
 
 with 'Ravada::VM';
 
+has 'vm' => (
+    is => 'rw'
+);
+
 ##########################################################################
 #
 
 sub connect {}
 sub disconnect {}
+sub reconnect {}
 
 sub create_domain {
     my $self = shift;

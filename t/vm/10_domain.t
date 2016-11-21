@@ -22,9 +22,13 @@ my %ARG_CREATE_DOM = (
     ,Void => [ ]
 );
 
-rvd_back($test->connector, $FILE_CONFIG);
+my $RVD_BACK;
+
+eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
+ok($RVD_BACK) or exit;
 
 my $USER = create_user("foo","bar");
+ok($USER);
 
 ##########################################################
 
