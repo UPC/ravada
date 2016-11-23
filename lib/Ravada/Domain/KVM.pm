@@ -22,13 +22,13 @@ has 'domain' => (
 has 'storage' => (
     is => 'ro'
     ,isa => 'Sys::Virt::StoragePool'
-    ,required => 1
+    ,required => 0
 );
 
 has '_vm' => (
     is => 'ro'
     ,isa => 'Ravada::VM::KVM'
-    ,required => 1
+    ,required => 0
 );
 
 ##################################################
@@ -192,11 +192,9 @@ sub _remove_file_image {
 
 sub _disk_device {
     my $self = shift;
-    $self->_vm->connect();
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
         or die "ERROR: $!\n";
 
-    $self->_vm->disconnect();
     my @img;
     my $list_disks = '';
 
@@ -536,7 +534,6 @@ internal build method
 
 sub BUILD {
     my $self = shift;
-    $self->_vm->disconnect();
 }
 
 =head2 list_volumes
@@ -563,7 +560,6 @@ sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
 
-    $self->_vm->connect();
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
 
@@ -584,7 +580,6 @@ sub screenshot {
     unlink $file_tmp or warn "$! removing $file_tmp";
 
     $stream->finish;
-    $self->_vm->disconnect();
 
     return $bytes;
 }
