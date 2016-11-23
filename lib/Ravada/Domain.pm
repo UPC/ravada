@@ -112,6 +112,18 @@ after 'shutdown' => \&_post_shutdown;
 before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
+##################################################
+
+sub _vm_connect {
+    my $self = shift;
+    $self->_vm->connect();
+}
+
+sub _vm_disconnect {
+    my $self = shift;
+    $self->_vm->disconnect();
+}
+
 sub _start_preconditions{
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
@@ -207,7 +219,7 @@ sub _check_used_memory {
         $used_memory += $info->{memory};
     }
 
-    die "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
+    confess "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
 sub _check_disk_modified {
@@ -588,6 +600,12 @@ sub remove_base {
 sub _can_remove_base {
     _allow_manage(@_);
     _check_has_clones(@_);
+}
+
+sub _post_remove_base {
+    my $self = shift;
+    $self->_vm->disconnect();
+    $self->_remove_base_db(@_);
 }
 
 sub _remove_base_db {

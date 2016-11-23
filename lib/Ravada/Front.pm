@@ -3,6 +3,7 @@ package Ravada::Front;
 use strict;
 use warnings;
 
+use Carp qw(carp);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
@@ -75,6 +76,7 @@ sub list_bases {
     }
     $sth->finish;
 
+    $self->disconnect_vm();
     return \@bases;
 }
 
@@ -103,6 +105,7 @@ sub list_domains {
     }
     $sth->finish;
 
+    $self->disconnect_vm();
     return \@domains;
 }
 
@@ -274,13 +277,27 @@ sub open_vm {
     my $type = shift or confess "I need vm type";
     my $class = "Ravada::VM::$type";
 
-    return $VM{$type} if $VM{$type};
+    if ($VM{$type}) {
+        $VM{$type}->disconnect();
+        return $VM{$type} 
+    }
 
     my $proto = {};
     bless $proto,$class;
 
     $VM{$type} = $proto->new(readonly => 1);
+    $VM{$type}->disconnect();
     return $VM{$type};
+}
+
+=head2 search_vm
+
+Calls to open_vm
+
+=cut
+
+sub search_vm {
+    return open_vm(@_);
 }
 
 =head2 search_clone
@@ -357,6 +374,7 @@ sub search_domain {
 
     my $vm = $self->open_vm($vm_name);
     my $domain = $vm->search_domain($name);
+    $domain->_vm->disconnect();
 
     return $domain;
 }
@@ -474,6 +492,16 @@ sub list_bases_anonymous {
 
     return \@bases;
 
+}
+
+=head2 disconnect_vm 
+
+Disconnects all the conneted VMs
+
+=cut
+
+sub disconnect_vm {
+    %VM = ();
 }
 
 1;

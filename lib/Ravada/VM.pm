@@ -7,6 +7,7 @@ use Carp qw(croak);
 use Data::Dumper;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
+use Net::DNS;
 use IO::Socket;
 use IO::Interface;
 use Sys::Hostname;
@@ -26,6 +27,9 @@ requires 'list_domains';
 
 # storage volume
 requires 'create_volume';
+
+requires 'connect';
+requires 'disconnect';
 
 ############################################################
 
@@ -52,16 +56,42 @@ has 'readonly' => (
 );
 ############################################################
 #
-# Method Modifiers
+# Method Modifiers definition
 # 
 #
-before 'create_domain' => \&_check_create_domain;
+before 'create_domain' => \&_pre_create_domain;
+ after 'create_domain' => \&_disconnect;
 
+before 'search_domain' => \&_connect;
+ after 'search_domain' => \&_disconnect;
+
+before 'create_volume' => \&_connect;
+ after 'create_volume' => \&_disconnect;
+
+#############################################################
+#
+# method modifiers
+#
 sub _check_readonly {
     my $self = shift;
     confess "ERROR: You can't create domains in read-only mode "
         if $self->readonly 
 
+}
+
+sub _connect {
+    my $self = shift;
+    $self->connect();
+}
+
+sub _disconnect {
+    my $self = shift;
+    $self->disconnect();
+}
+
+sub _pre_create_domain {
+    _check_create_domain(@_);
+    _connect(@_);
 }
 
 ############################################################
@@ -149,10 +179,7 @@ sub ip {
     }
     return $ip if $ip && $ip !~ /^127\./;
 
-    $name = hostname();
-    $ip = `host $name`;
-    chomp $ip;
-    $ip =~ s/.*?address (\d+)/$1/;
+    $ip = _ip_from_hostname();
     return $ip if $ip && $ip !~ /^127\./;
 
     $ip = $self->_interface_ip();
@@ -162,6 +189,16 @@ sub ip {
         ." This virtual machine won't be available from the network.";
 
     return '127.0.0.1';
+}
+
+sub _ip_from_hostname {
+    my $res = Net::DNS::Resolver->new();
+    my $reply = $res->search(hostname());
+    return if !$reply;
+
+    for my $rr ($reply->answer) {
+        return $rr->address if $rr->type eq 'A';
+    }
 }
 
 sub _interface_ip {

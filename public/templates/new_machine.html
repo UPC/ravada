@@ -64,7 +64,7 @@
             
             <div ng-if="backend == 'KVM'" class="from-group">
                 <label for="disk">Disk Size: (GB)</label>
-                <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="10" required="">
+                <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="40" required="">
             </div>
             <div ng-show="backend == 'KVM' || backend == 'LXC'" class="from-group">
                 <label for="memory">Ram: (GB)</label>

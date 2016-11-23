@@ -7,7 +7,6 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use Hash::Util qw(lock_keys);
 use Moose;
-use Sys::Virt::Network;
 
 use XML::LibXML;
 
@@ -15,14 +14,18 @@ with 'Ravada::NetInterface';
 
 ###########################################################################
 
-has '_net' => (
-    isa => 'Sys::Virt::Network'
+has 'name' => (
+    isa => 'Str'
     ,is => 'ro'
 );
 #
 #
 
 ###########################################################################
+
+sub BUILD {
+}
+
 
 =head2 type
 
@@ -44,7 +47,7 @@ Returns the XML description for the domain source tag
 sub xml_source {
     my $self = shift;
 
-    return "<source network=\"".$self->_net->get_name."\"/>";
+    return "<source network=\"".$self->name."\"/>";
 
 }
 
@@ -57,7 +60,7 @@ Returns a hash with the attributes of the source element
 
 sub source {
     my $self = shift;
-    return { network => $self->_net->get_name };
+    return { network => $self->name };
 }
 
 1;

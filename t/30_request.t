@@ -4,7 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
-use Test::More;
+use Test::More;# tests => 82;
 use Test::SQL::Data;
 
 use_ok('Ravada');
@@ -22,12 +22,14 @@ my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
 my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
 my $USER = create_user("foo","bar");
+$RVD_BACK = undef;
 
 my @ARG_CREATE_DOM = (
         id_iso => 1
         ,id_owner => $USER->id
 );
 
+$Ravada::CAN_FORK = 0;
 
 #######################################################################
 
@@ -80,11 +82,10 @@ sub test_req_create_domain_iso {
              ." ,got '".($req->args->{name} or '<UNDEF>')."'");
 
     ok($req->status eq 'requested'
-        ,"Status of request is ".$req->status." it should be requested");
+        ,"$$ Status of request is ".$req->status." it should be requested");
 
     $ravada->process_requests();
 
-    sleep 1;
     $ravada->_wait_pids();
     wait_request($req);
 
@@ -94,9 +95,9 @@ sub test_req_create_domain_iso {
     test_unread_messages($USER,1, "[$vm_name] create domain $name");
 
     my $req2 = Ravada::Request->open($req->id);
-    ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
+    ok($req2->{id} == $req->id,"iso req2->{id} = ".$req2->{id}." , expecting ".$req->id);
 
-    my $vm = $RVD_BACK->search_vm($vm_name);
+    my $vm = $ravada->search_vm($vm_name);
     my $domain =  $vm->search_domain($name);
 
     ok($domain,"[$vm_name] I can't find domain $name");

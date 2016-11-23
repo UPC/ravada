@@ -22,9 +22,13 @@ my %ARG_CREATE_DOM = (
     ,Void => [ ]
 );
 
-rvd_back($test->connector, $FILE_CONFIG);
+my $RVD_BACK;
+
+eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
+ok($RVD_BACK) or exit;
 
 my $USER = create_user("foo","bar");
+ok($USER);
 
 ##########################################################
 
@@ -239,9 +243,13 @@ for my $vm_name (qw( Void KVM )) {
         my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
+        $clone1->shutdown_now($USER);
+
         my $clone2 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone2, "Expecting clone ");
         ok($domain->has_clones==2,"[$vm_name] has_clones expecting 2, got ".$domain->has_clones);
+        $clone2->shutdown_now($USER);
+
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_screenshot_file($vm_name, $domain);

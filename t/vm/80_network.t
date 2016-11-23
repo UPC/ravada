@@ -13,6 +13,9 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
+$Ravada::DEBUG = 0;
+$Ravada::CAN_FORK = 1;
+
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
@@ -33,25 +36,37 @@ my %SUB_CHECK_NET =(
 );
 ###############################################################################
 
-sub test_vm {
-    my ($vm_name) = @_;
+sub test_vm_rvd {
+    my ($vm_name, $rvd ) = @_;
 
-    for my $rvd ($RVD_FRONT,$RVD_BACK) {
-        my $vm = $rvd->open_vm($vm_name);
-        ok($vm,"Expecting $vm_name VM");
-        my @networks =  $vm->list_networks();
-        ok(scalar @networks
-            , "[$vm_name] Expecting at least 1 network, got ".scalar @networks);
-        ok(scalar @networks > 1
-            , "[$vm_name] Expecting at least 2 networks, got ".scalar @networks)
-                if $vm_name !~ /Void/i;
+    my $vm = $rvd->open_vm($vm_name);
+    ok($vm,"Expecting $vm_name VM");
+    my @networks =  $vm->list_networks();
+    ok(scalar @networks
+        , "[$vm_name] Expecting at least 1 network, got ".scalar @networks);
+    ok(scalar @networks > 1
+        , "[$vm_name] Expecting at least 2 networks, got ".scalar @networks)
+            if $vm_name !~ /Void/i;
 
-        for my $net (@networks) {
-            ok($net->type =~ /\w/,"Expecting type , got '".$net->type."'");
-            ok($net->xml_source =~ /<source/,"Expecting source, got '".$net->xml_source."'");
-            test_create_domain($vm_name, $vm, $net);
-        }
+    for my $net (@networks) {
+        $rvd->disconnect_vm();
+        $vm->disconnect;
+        ok($net->type =~ /\w/,"Expecting type , got '".$net->type."'");
+        ok($net->xml_source =~ /<source/,"Expecting source, got '".$net->xml_source."'");
+        test_create_domain($vm_name, $vm, $net);
     }
+}
+
+sub test_vm {
+    my $vm_name = shift;
+
+    $RVD_FRONT = undef;
+    test_vm_rvd($vm_name, $RVD_BACK);
+
+    $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
+    test_vm_rvd($vm_name, $RVD_FRONT);
+
+    $RVD_FRONT = undef;
 
 }
 
@@ -68,18 +83,25 @@ sub test_create_domain {
      ,id_owner => $USER->id
     );
 
+
     if ($vm->readonly) {
+
+        $RVD_BACK->disconnect_vm();
+        $RVD_FRONT->disconnect_vm();
         my $req = $RVD_FRONT->create_domain(@args_create);
         $RVD_BACK->process_requests();
         wait_request($req);
-        ok($req->status eq 'done',"Expecting req 'done', got '".$req->status."'") or return;
-        ok(!$req->error ,"Expecting no req error , got '".$req->error."'") or return;
+
+        ok($req->status eq 'done',"Expecting req 'done', got '".$req->status."'");
+        ok(!$req->error ,"Expecting no req error , got '".($req->error or '<UNDEF>')."'");
+        exit if $req->status() ne 'done';
 
     } else {
         my $domain0 = $vm->create_domain(@args_create);
     }
+    $vm = undef;
 
-    my $domain = $vm->search_domain($domain_name);
+    my $domain = $RVD_BACK->search_domain($domain_name);
     ok($domain,"Expecting domain '$domain_name' created") or return;
 
     return if $vm_name =~ /Void/i;
@@ -144,7 +166,7 @@ sub test_interface_macvtap {
     my ($exp_mode) = $net->mode;
 
     ok(defined$mode && $mode eq $exp_mode
-        ,"[$vm_name - macVTap] Expecting mode='$exp_mode', got '".($mode or '<UNDEF>'));
+        ,"[$vm_name - macVTap] Expecting mode='$exp_mode', got '".($mode or '<UNDEF>')."'");
 
 
 
@@ -157,7 +179,6 @@ remove_old_disks();
 for my $vm_name (@VMS) {
     test_vm($vm_name);
 }
-
 remove_old_domains();
 remove_old_disks();
 

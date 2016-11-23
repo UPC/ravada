@@ -1,3 +1,25 @@
+#Requirements
+
+##OS
+
+Ravada has been tested only on Ubuntu Xenial. It should also work in recent RedHat based
+systems. Debian jessie has been tried but kvm spice wasn't available there, so it won't
+work.
+
+##Hardware
+
+It depends on the number and the type of the virtual machines. For most places 
+
+###Memory
+RAM is
+the main issue. Multiply the number of concurrent workstations by the amount of memory
+each one requires and that is the RAM that must have the server.
+
+###Disks
+The faster the disks, the better. Ravada uses incremental files for the disks images, so
+clones won't require many space.
+
+
 #Install Ravada
 
 Clone the sources:
@@ -29,13 +51,14 @@ Clone the sources:
 - libsys-statistics-linux-perl
 - libio-interface-perl
 - libiptables-chainmgr-perl
+- libnet-dns-perl
 
 ##Old debian
 
 In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:
 
     $ sudo apt-get purge libmojolicious-perl
-    $ sudo apt-get install cpanminus
+    $ sudo apt-get install cpanminus build-essential
     $ sudo cpanm Mojolicious
 
 #Mysql Database
@@ -45,7 +68,7 @@ Create a database named "ravada".
 Grant all permissions to your user:
 
     $ mysql -u root -p
-    mysql> grant all on ravada.* to ravada@'localhost' identified by 'figure a password';
+    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'figure a password';
     exit
 
 Review and run the sql files from the sql dir.
@@ -71,6 +94,8 @@ Install KVM
 
     $ sudo apt-get install qemu-kvm qemu-utils
     $ sudo virsh pool-define-as default dir - - - - "/var/lib/libvirt/images"
+    $ sudo virsh pool-autostart default
+    $ sudo virsh pool-start default
 
 #Ravada user
 
