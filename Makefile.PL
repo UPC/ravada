@@ -20,6 +20,7 @@ WriteMakefile(
       ,'MooseX::Types::NetAddr::IP' => 0
 	,'IO::Interface' => 0
 	,'Sys::Statistics::Linux' => 0
+    ,'Test::Pod::Coverage' => 0
   },
   TEST_REQUIRES => {
     'Test::SQL::Data' => 0
