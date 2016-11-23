@@ -18,6 +18,11 @@ WriteMakefile(
              ,'YAML' => 0
     ,'Image::Magick' => 0
       ,'MooseX::Types::NetAddr::IP' => 0
+	,'IO::Interface' => 0
+	,'Sys::Statistics::Linux' => 0
+  },
+  TEST_REQUIRES => {
+    'Test::SQL::Data' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'}
