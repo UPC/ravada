@@ -3,6 +3,8 @@ package Ravada::Auth::SQL;
 use warnings;
 use strict;
 
+use Carp qw(carp);
+
 use Ravada;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
@@ -17,8 +19,15 @@ with 'Ravada::Auth::User';
 our $CON;
 
 sub _init_connector {
-    $CON= \$Ravada::CONNECTOR;
-    $CON= \$Ravada::Front::CONNECTOR   if !$$CON;
+    my $connector = shift;
+
+    $CON = \$connector                 if defined $connector;
+    return if $CON;
+
+    $CON= \$Ravada::CONNECTOR          if !$CON || !$$CON;
+    $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
+
+    confess "undefined connector"   if !$CON || !$$CON;
 }
 
 
