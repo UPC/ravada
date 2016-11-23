@@ -177,7 +177,12 @@ remove_old_domains();
 remove_old_disks();
 
 for my $vm_name (@VMS) {
-    test_vm($vm_name);
+    my $vm;
+    eval { $vm = rvd_back->search_vm($vm_name); };
+    SKIP: {
+        skip("No $vm_name virtual manager found",3);
+        test_vm($vm_name);
+    }
 }
 remove_old_domains();
 remove_old_disks();
