@@ -631,6 +631,8 @@ sub _execute {
 
     if ($dont_fork || !$CAN_FORK ) {
 
+        $self->_connect_vm();
+
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
         $request->error($err);
@@ -643,6 +645,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
     if ($pid == 0) {
         $request->status("forked $$");
+        $self->_connect_vm();
         eval {
             $sub->($self,$request);
         };
