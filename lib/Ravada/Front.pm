@@ -76,7 +76,6 @@ sub list_bases {
     }
     $sth->finish;
 
-    $self->disconnect_vm();
     return \@bases;
 }
 
@@ -105,7 +104,6 @@ sub list_domains {
     }
     $sth->finish;
 
-    $self->disconnect_vm();
     return \@domains;
 }
 
@@ -278,16 +276,17 @@ sub open_vm {
     my $class = "Ravada::VM::$type";
 
     if ($VM{$type}) {
-        $VM{$type}->disconnect();
         return $VM{$type} 
     }
 
     my $proto = {};
     bless $proto,$class;
 
-    $VM{$type} = $proto->new(readonly => 1);
-    $VM{$type}->disconnect();
-    return $VM{$type};
+    my $vm = $proto->new(readonly => 1);
+    return $vm if $0 =~ /\.t$/;
+
+    $VM{$type} = $vm;
+    return $vm;
 }
 
 =head2 search_vm
@@ -373,10 +372,7 @@ sub search_domain {
     my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
 
     my $vm = $self->open_vm($vm_name);
-    my $domain = $vm->search_domain($name);
-    $domain->_vm->disconnect();
-
-    return $domain;
+    return $vm->search_domain($name);
 }
 
 =head2 list_requests
