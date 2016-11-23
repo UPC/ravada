@@ -72,14 +72,29 @@ sub _remove_old_domains_vm {
     my $vm_name = shift;
 
     my $domain;
-    my $vm = rvd_back()->search_vm($vm_name);
+
+    my $vm;
+    eval {
+        my $rvd_back=rvd_back();
+        return if !$rvd_back;
+        $vm = $rvd_back->search_vm($vm_name);
+    };
+
     return if !$vm;
 
     my $base_name = base_domain_name();
-    for my $dom_name ( sort { $b cmp $a }  $vm->list_domains) {
+
+    my @domains;
+    eval { @domains = $vm->list_domains() };
+
+
+    for my $dom_name ( sort { $b cmp $a }  @domains) {
         next if $dom_name !~ /^$base_name/i;
 
-        my $domain = $vm->search_domain($dom_name);
+        my $domain;
+        eval {
+            $domain = $vm->search_domain($dom_name);
+        };
         next if !$domain;
 
         eval { $domain->shutdown_now($USER_ADMIN); };
@@ -94,7 +109,9 @@ sub _remove_old_domains_vm {
 
     for (reverse 0 .. 20 ) {
         my $dom_name = base_domain_name()."_$_";
-        my $domain = $vm->search_domain($dom_name);
+        my $domain;
+
+        eval { $domain = $vm->search_domain($dom_name) };
         next if !$domain;
 
         eval { $domain->shutdown_now($USER_ADMIN); };
@@ -112,10 +129,15 @@ sub _remove_old_domains_vm {
 }
 
 sub _remove_old_domains_kvm {
-    my $vm = rvd_back()->search_vm('KVM');
 
+    my $vm;
+    
+    eval {
+        $vm = rvd_back()->search_vm('KVM');
+    };
+    return if !$vm;
     my $base_name = base_domain_name();
-    $vm->connect();
+
     for my $domain ( $vm->vm->list_defined_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         eval { 
@@ -143,13 +165,13 @@ sub _remove_old_disks_kvm {
 
     my $vm = $RVD_BACK->search_vm('kvm');
     if (!$vm) {
-        warn "I can't find a kvm backend";
         return;
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
+    my $dir_img;
+    eval { $dir_img = $vm->dir_img() };
+    return if !$dir_img;
 
     $vm->connect;
     eval { $vm->storage_pool->refresh() };
