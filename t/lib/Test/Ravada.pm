@@ -43,25 +43,19 @@ sub rvd_back {
     init($connector,$config)    if $connector;
 
     my $rvd_back;
-    eval { $rvd_back = Ravada->new(
+    return Ravada->new(
             connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
-            );
-    };
-    die $@ if $@;
-    return $rvd_back;
+    );
 }
 
 sub rvd_front {
     my $rvd_front;
 
-    eval { $rvd_front = Ravada::Front->new(
+    return Ravada::Front->new(
             connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
-            );
-    };
-    die $@ if $@;
-    return $rvd_front;
+    );
 }
 
 sub init {
@@ -69,6 +63,7 @@ sub init {
 
     confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
 
+    $Ravada::CONNECTOR = $CONNECTOR if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
     $USER_ADMIN = create_user('admin','admin',1);
 
@@ -92,7 +87,6 @@ sub _remove_old_domains_vm {
 
     my @domains;
     eval { @domains = $vm->list_domains() };
-
 
     for my $dom_name ( sort { $b cmp $a }  @domains) {
         next if $dom_name !~ /^$base_name/i;
