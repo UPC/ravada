@@ -58,3 +58,12 @@ VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
     ,'http://releases.ubuntu.com/16.10/ubuntu-16.10-desktop-amd64.iso'
     ,'3f50877c05121f7fd8544bef2d722824'
     );
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES("Mint/Mate 18 - 64 bits","Linux Mint Mate 18 (Sarah) 64 bits"
+,'amd64'
+,'sarah-amd64.xml'
+,'sarah64-volume.xml'
+,'http://mirrors.evowise.com/linuxmint/stable/18/linuxmint-18-mate-64bit.iso'
+,'629d138d03ae594d403df0cd2502d26c'
+);
