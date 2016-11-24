@@ -23,6 +23,7 @@ our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
+our $args_remove_base = { domain => 1 , uid => 1 };
 
 our %VALID_ARG = (
     create_domain => {
@@ -36,7 +37,7 @@ our %VALID_ARG = (
            ,disk => 2
         ,network => 2
     }
-      ,remove_base => $args_prepare
+      ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
      ,pause_domain => $args_manage
     ,resume_domain => $args_manage
@@ -312,18 +313,29 @@ sub remove_base {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my %args = @_;
-    confess "Missing uid"           if !$args{uid};
+    my %_args = @_;
+    confess "Missing uid"           if !$_args{uid};
 
     my $args = _check_args('remove_base', @_);
 
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'remove_base'
-        , id_domain => $args{id_domain}
+    my $domain = $args->{domain};
+
+    $args->{id_domain} = $domain->id;
+    delete $args->{domain};
+
+    my $req = $self->_new_request(command => 'remove_base'
+        , id_domain => $domain->id
         , args => encode_json( $args ));
 
+    if ($domain->has_clones()) {
+        $req->status('done');
+        $req->error("Domain ".$domain->name." can't be removed."
+                    ."It has ".$domain->has_clones." clones");
+    }
+    return $req;
 }
 
 
@@ -469,12 +481,11 @@ sub _send_message {
 
     my $uid;
 
-    eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') }  if !$uid;
+    $uid = $self->args('id_owner') if $self->defined_arg('id_owner');
+    $uid = $self->args('uid')      if !$uid && $self->defined_arg('uid');
     return if !$uid;
 
-    my $domain_name;
-    eval { $domain_name = $self->args('name') };
+    my $domain_name = $self->defined_arg('name');
     $domain_name = ''               if !$domain_name;
     $domain_name = "$domain_name "  if length $domain_name;
 
@@ -493,9 +504,10 @@ sub _remove_unnecessary_messages {
     my $self = shift;
 
     my $uid;
-    eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') }      if !$uid;
+    $uid = $self->defined_arg('id_owner');
+    $uid = $self->defined_arg('uid')        if !$uid;
     return if !$uid;
+    
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM messages WHERE id_user=? AND id_request=? "
@@ -578,6 +590,19 @@ sub args {
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name};
+    return $self->{args}->{$name};
+}
+
+=head2 defined_arg
+
+Returns if an argument is defined
+
+=cut
+
+sub defined_arg {
+    my $self = shift;
+    my $name = shift;
+    confess "ERROR: missing arg name" if !defined $name;
     return $self->{args}->{$name};
 }
 
