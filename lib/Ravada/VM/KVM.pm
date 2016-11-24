@@ -1,6 +1,6 @@
 package Ravada::VM::KVM;
 
-use Carp qw(croak carp);
+use Carp qw(croak carp cluck);
 use Data::Dumper;
 use Digest::MD5;
 use Encode;
@@ -62,7 +62,7 @@ our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##########################################################################
-
+ 
 
 sub _connect {
     my $self = shift;
@@ -77,7 +77,7 @@ sub _connect {
                               ,readonly => $self->mode
                           );
     }
-#    $vm->register_close_callback(\&_reconnect);
+    $vm->register_close_callback(\&_reconnect);
     return $vm;
 }
 
@@ -90,8 +90,8 @@ Disconnect from the Virtual Machine Manager
 sub disconnect {
     my $self = shift;
 
-    $self->vm(undef);
     $self->storage_pool(undef);
+    $self->vm(undef);
 }
 
 =head2 connect
@@ -102,6 +102,8 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
+    return if $self->vm;
+
     $self->vm($self->_connect);
     $self->storage_pool($self->_load_storage_pool);
 }
@@ -185,31 +187,33 @@ sub search_domain {
     my $self = shift;
     my $name = shift or confess "Missing name";
 
-    $self->connect;#   if !defined $self->vm();
-
+    $self->connect();
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
-    die $@ if $@;
+    confess $@ if $@;
 
     for my $dom (@all_domains) {
         next if $dom->get_name ne $name;
 
         my $domain;
+
+        my @args_create = ();
+        @args_create = ( storage => $self->storage_pool
+                    ,_vm => $self)
+        if !$self->readonly;
+
         eval {
             $domain = Ravada::Domain::KVM->new(
                 domain => $dom
-                ,storage => $self->storage_pool
                 ,readonly => $self->readonly
-                ,_vm => $self
+                ,@args_create
             );
         };
         warn $@ if $@;
         if ($domain) {
-            $self->disconnect;#   if !defined $self->vm();
             return $domain;
         }
     }
-    $self->disconnect;#   if !defined $self->vm();
     return;
 }
 
@@ -225,12 +229,11 @@ Returns a list of the created domains
 sub list_domains {
     my $self = shift;
 
-    $self->connect();
     my @list;
-    for my $name ($self->vm->list_all_domains()) {
+    my @domains = $self->vm->list_all_domains();
+    for my $name (@domains) {
         my $domain ;
         my $id;
-        $self->connect();
         eval { $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
@@ -241,7 +244,6 @@ sub list_domains {
         warn $@ if $@ && $@ !~ /No DB info/i;
         push @list,($domain) if $domain && $id;
     }
-    $self->disconnect();
     return @list;
 }
 
@@ -298,11 +300,9 @@ sub search_volume {
     my $self = shift;
     my $name = shift or confess "Missing volume name";
 
-    $self->connect();
     my $vol;
     eval { $vol = $self->storage_pool->get_volume_by_name($name) };
     die $@ if $@;
-    $self->disconnect();
 
     return $vol;
 }
@@ -319,7 +319,6 @@ sub _domain_create_from_iso {
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
 
-    $self->connect()  if !defined $self->vm;
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
 
@@ -426,9 +425,7 @@ sub _domain_create_from_base {
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
 
-    $base->_vm->connect();
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
-    $base->_vm->disconnect();
 
     my @device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml);
@@ -853,7 +850,6 @@ sub _unique_mac {
 
     $mac = lc($mac);
 
-    $self->connect()  if !$self->vm;
     for my $dom ($self->vm->list_all_domains) {
         my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
 
@@ -905,8 +901,7 @@ Returns a list of networks known to this VM. Each element is a Ravada::NetInterf
 sub list_networks {
     my $self = shift;
     
-    $self->connect() if !defined $self->vm();
-
+    $self->connect() if !$self->vm;
     my @nets = $self->vm->list_all_networks();
     my @ret_nets;
 
@@ -941,8 +936,6 @@ sub import_domain {
     my $self = shift;
     my ($name, $user) = @_;
 
-    $self->connect();
-
     my $domain_kvm = $self->vm->get_domain_by_name($name);
     confess "ERROR: unknown domain $name in KVM" if !$domain_kvm;
 
@@ -953,7 +946,6 @@ sub import_domain {
     );
 
     $domain->_insert_db(name => $name, id_owner => $user->id);
-    $self->disconnect();
 
     return $domain;
 }
