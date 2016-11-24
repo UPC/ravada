@@ -130,7 +130,7 @@ get '/domain/new.html' => sub {
 any '/users' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c);
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin;
     return users($c);
 
 };

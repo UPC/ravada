@@ -30,6 +30,7 @@ Clone the sources:
 
 ##Debian
 
+- libmojolicious-perl
 - mysql-server
 - libauthen-passphrase-perl
 - libdbd-mysql-perl

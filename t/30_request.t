@@ -92,8 +92,8 @@ sub test_req_create_domain_iso {
     wait_request($req);
 
     ok($req->status eq 'done'
-        ,"Status of request is ".$req->status." it should be done") or exit;
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name) or exit;
+        ,"Status of request is ".$req->status." it should be done") or return ;
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name) or return ;
     test_unread_messages($USER,1, "[$vm_name] create domain $name");
 
     my $req2 = Ravada::Request->open($req->id);

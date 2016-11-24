@@ -133,15 +133,11 @@ sub _create_vm_kvm {
 
     eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
     my $err_kvm = $@;
-    return (undef, $err_kvm)    if !$vm_kvm;
-    return ($vm_kvm,$err_kvm);
 
     my ($internal_vm , $storage);
     eval {
-        $internal_vm = $vm_kvm->vm;
-        $internal_vm->list_all_domains();
-
         $storage = $vm_kvm->dir_img();
+        $internal_vm = $vm_kvm->vm;
     };
     $vm_kvm = undef if $@ || !$internal_vm || !$storage;
     $err_kvm .= ($@ or '');
@@ -212,7 +208,7 @@ sub _create_vm {
         $err .= "\n$err_lxc" if $err_lxc;
     }
     if (!@vms) {
-        confess "No VMs found: $err\n";
+        warn "No VMs found: $err\n";
     }
     return \@vms;
 
