@@ -641,9 +641,10 @@ sub _execute {
     die "I can't fork" if !defined $pid;
     if ($pid == 0) {
         $request->status("forked $$");
-        $self->_connect_vm();
         eval {
+            $self->_connect_vm();
             $sub->($self,$request);
+            $self->_disconnect_vm();
         };
         my $err = ( $@ or '');
         $request->error($err);
@@ -890,6 +891,8 @@ sub _cmd_remove_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
+    $domain->_vm->disconnect();
+    $self->_disconnect_vm();
     $domain->remove_base($user);
 
 }
@@ -1029,6 +1032,7 @@ sub import_domain {
 
     return $vm->import_domain($name, $user);
 }
+
 
 =head1 AUTHOR
 
