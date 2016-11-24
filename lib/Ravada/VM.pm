@@ -60,13 +60,10 @@ has 'readonly' => (
 # 
 #
 before 'create_domain' => \&_pre_create_domain;
- after 'create_domain' => \&_disconnect;
 
 before 'search_domain' => \&_connect;
- after 'search_domain' => \&_disconnect;
 
 before 'create_volume' => \&_connect;
- after 'create_volume' => \&_disconnect;
 
 #############################################################
 #
@@ -82,11 +79,6 @@ sub _check_readonly {
 sub _connect {
     my $self = shift;
     $self->connect();
-}
-
-sub _disconnect {
-    my $self = shift;
-    $self->disconnect();
 }
 
 sub _pre_create_domain {
