@@ -77,7 +77,7 @@ sub _connect {
                               ,readonly => $self->mode
                           );
     }
-    $vm->register_close_callback(\&_reconnect);
+#    $vm->register_close_callback(\&_reconnect);
     return $vm;
 }
 
@@ -234,13 +234,13 @@ sub list_domains {
     for my $name (@domains) {
         my $domain ;
         my $id;
-        eval { $domain = Ravada::Domain::KVM->new(
+        $domain = Ravada::Domain::KVM->new(
                           domain => $name
                         ,storage => $self->storage_pool
                         ,_vm => $self
-                    );
-             $id = $domain->id();
-        };
+        );
+        next if !$domain->is_known();
+        $id = $domain->id();
         warn $@ if $@ && $@ !~ /No DB info/i;
         push @list,($domain) if $domain && $id;
     }
