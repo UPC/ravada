@@ -28,10 +28,9 @@ my %TEST_DISK = (
     ,KVM => \&test_disk_kvm
 );
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $RVD_FRONT = rvd_front ( $test->connector , 't/etc/ravada.conf');
+my $USER;
 
-my $USER = create_user("foo","bar");
+init($test->connector, $FILE_CONFIG);
 
 #######################################################################
 
@@ -99,7 +98,7 @@ sub test_create_fail {
 
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
-    my $domain2 = $RVD_FRONT->search_domain($name);
+    my $domain2 = rvd_front()->search_domain($name);
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
 }
@@ -110,24 +109,27 @@ sub test_req_create_domain{
 
     my $name = new_domain_name();
 
-    my $req = $RVD_FRONT->create_domain( name => $name
+    my $req;
+    {
+        my $rvd_front = rvd_front();
+        $req = $rvd_front->create_domain( name => $name
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
                     , @{$ARG_CREATE_DOM{$vm_name}}
-    );
+        );
    
+    }
     ok($req,"Expecting request to create_domain");
 
-    $RVD_FRONT->disconnect_vm();
-    $RVD_BACK->process_requests();
+    rvd_back()->process_requests();
 
     wait_request($req);
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok(!$req->error,"Expecting error '' , got '".($req->error or '')."'");
 
-    my $domain = $RVD_FRONT->search_domain($name);
+    my $domain = rvd_front()->search_domain($name);
     ok($domain,"Expecting domain '$name' , found : ".(defined $domain or 0));
 
     return $domain;
@@ -139,23 +141,26 @@ sub test_req_create_fail {
 
     my $name = new_domain_name();
 
-    my $req = $RVD_FRONT->create_domain( name => $name
+    my $req;
+    {
+        my $rvd_front = rvd_front();
+        $req = $rvd_front->create_domain( name => $name
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
                     , @{$ARG_CREATE_DOM{$vm_name}}
-    );
+        );
    
-    ok($req,"Expecting request to create_domain");
-
-    $RVD_BACK->process_requests();
+        ok($req,"Expecting request to create_domain");
+    }
+    rvd_back->process_requests();
 
     wait_request($req);
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok($req->error,"Expecting error , got '".($req->error or '')."'");
 
-    my $domain = $RVD_FRONT->search_domain($name);
+    my $domain = rvd_back->search_domain($name);
     ok(!$domain,"Expecting domain doesn't exist domain '$name'");
 
 }
@@ -269,18 +274,19 @@ for my $vm_name (qw( Void KVM )) {
 
     use_ok($CLASS) or next;
 
-    my $ravada;
-    eval { $ravada = Ravada->new(@ARG_RVD) };
-    $ravada = undef;
+    my $vm_ok;
+    eval { 
+        my $ravada = Ravada->new(@ARG_RVD);
+        $USER = create_user("foo","bar")    if !$USER;
 
-    my $vm;
+        my $vm = $ravada->search_vm($vm_name)  if $ravada;
 
-    eval { $vm = $ravada->search_vm($vm_name) } if $ravada;
-
+        $vm_ok = 1 if $vm;
+    };
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        diag($msg)      if !$vm;
-        skip $msg,10    if !$vm;
+        diag($msg)      if !$vm_ok;
+        skip $msg,10    if !$vm_ok;
         test_args($vm_name);
         test_small($vm_name);
     };
