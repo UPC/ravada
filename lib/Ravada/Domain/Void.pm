@@ -36,7 +36,9 @@ sub BUILD {
     return if -e $file_img;
 
     $self->add_volume(name => 'void-diska' , size => $args->{disk}
-                      , path => $file_img);
+                      , path => $file_img)
+         if !$args->{is_readonly};
+
     $self->_set_default_info();
     $self->set_memory($args->{memory}) if $args->{memory};
 }

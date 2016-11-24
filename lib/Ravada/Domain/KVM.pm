@@ -47,7 +47,8 @@ Returns the name of the domain
 
 sub name {
     my $self = shift;
-    return $self->domain->get_name;
+    $self->{_name} = $self->domain->get_name if !$self->{_name};
+    return $self->{_name};
 }
 
 sub _wait_down {
@@ -101,10 +102,14 @@ sub remove_disks {
 
     my $removed = 0;
 
+    return if !$self->is_known();
+
     my $id;
     eval { $id = $self->id };
     return if $@ && $@ =~ /No DB info/i;
     die $@ if $@;
+
+    $self->_vm->connect();
     for my $file ($self->list_disks) {
         if (! -e $file ) {
             warn "WARNING: $file already removed for ".$self->domain->get_name."\n"
@@ -118,6 +123,7 @@ sub remove_disks {
         $removed++;
 
     }
+    $self->_vm->disconnect();
 
     warn "WARNING: No disk files removed for ".$self->domain->get_name."\n"
         if !$removed;
@@ -131,13 +137,10 @@ sub _vol_remove {
 
     my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
-    my $vol;
-    eval { $vol = $self->storage->get_volume_by_name($name) };
-    if (!$vol) {
-#        cluck "WARNING: I can't find volume $name" if !$warning;
-        return;
+    my @vols = $self->storage->list_volumes();
+    for my $vol ( @vols ) {
+        $vol->delete() if$vol->get_name eq $name;
     }
-    $vol->delete();
     return 1;
 }
 

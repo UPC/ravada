@@ -165,7 +165,7 @@ sub _allow_remove {
     my ($user) = @_;
 
     $self->_allowed($user);
-    $self->_check_has_clones();
+    $self->_check_has_clones() if $self->is_known();
 
 }
 
@@ -186,10 +186,9 @@ sub _allow_prepare_base {
 
 sub _check_has_clones {
     my $self = shift;
-    my @clones;
+    return if !$self->is_known();
 
-    eval { @clones = $self->clones };
-    die $@  if $@ && $@ !~ /No DB info/i;
+    my @clones = $self->clones;
     die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
         if $#clones>=0;
 }
@@ -270,8 +269,10 @@ sub _allowed {
 ##################################################################################3
 
 sub _init_connector {
-    $CONNECTOR = \$Ravada::CONNECTOR;
-    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
+    return if $CONNECTOR && $$CONNECTOR;
+    $CONNECTOR = \$Ravada::CONNECTOR if $Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR
+                                                && defined $Ravada::Front::CONNECTOR;
 }
 
 =head2 id
@@ -315,9 +316,22 @@ sub __open {
 #    confess $row;
 }
 
+=head2 is_known
+
+Returns if the domain is known in Ravada.
+
+=cut
+
+sub is_known {
+    my $self = shift;
+    return $self->_select_domain_db(name => $self->name);
+}
+
 sub _select_domain_db {
     my $self = shift;
     my %args = @_;
+
+    _init_connector();
 
     if (!keys %args) {
         my $id;
@@ -337,7 +351,7 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
-    return $row;
+    return $row if $row->{id};
 }
 
 sub _prepare_base_db {
@@ -402,6 +416,8 @@ sub _after_remove_domain {
 
 sub _remove_domain_db {
     my $self = shift;
+
+    return if !$self->is_known();
 
     $self->_select_domain_db or return;
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
@@ -530,6 +546,8 @@ Returns a list of the filenames of this base-type domain
 
 sub list_files_base {
     my $self = shift;
+
+    return if !$self->is_known();
 
     my $id;
     eval { $id = $self->id };
@@ -681,6 +699,7 @@ sub _remove_temporary_machine {
     my %args = @_;
     my $user;
 
+    return if !$self->is_known();
 
     eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
     return if !$user;
