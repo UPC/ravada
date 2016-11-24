@@ -178,11 +178,8 @@ sub _connect_vm {
         my $vm = $self->vm->[$n];
 
         if (!$connect) {
-            warn "disconnect VM $n $vm" if $DEBUG;
             $vm->disconnect();
-            next;
         } else {
-            warn "connect VM $n $vm"    if $DEBUG;
             $vm->connect();
         }
     }

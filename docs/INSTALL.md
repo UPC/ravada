@@ -52,6 +52,7 @@ Clone the sources:
 - libio-interface-perl
 - libiptables-chainmgr-perl
 - libnet-dns-perl
+- wget
 
 ##Old debian
 
