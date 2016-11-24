@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw(carp confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
@@ -15,11 +15,8 @@ use Test::Ravada;
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
-my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
+init($test->connector, 't/etc/ravada.conf');
 
-my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
-my $RVD_FRONT = rvd_front( $test->connector , 't/etc/ravada.conf');
 my $USER = create_user("foo","bar");
 
 my @ARG_CREATE_DOM = (
@@ -27,11 +24,12 @@ my @ARG_CREATE_DOM = (
         ,id_owner => $USER->id
 );
 
+$Ravada::CAN_FORK = 1;
 
 #######################################################################
 
 sub test_empty_request {
-    my $request = $RVD_BACK->request();
+    my $request = rvd_back()->request();
     ok($request);
 }
 
@@ -72,14 +70,14 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $RVD_BACK->process_requests();
+    my $rvd_back = rvd_back();
+    $rvd_back->process_requests();
     wait_request($req);
-
-    $RVD_BACK->_wait_pids();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name)
+        or return;
 
 #    test_unread_messages($USER,1, "[$vm_name] create domain $name");
     test_message_new_domain($vm_name, $USER);
@@ -87,7 +85,7 @@ sub test_req_create_domain_iso {
     my $req2 = Ravada::Request->open($req->id);
     ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
 
-    my $vm = $RVD_FRONT->search_vm($vm_name);
+    my $vm = rvd_front()->search_vm($vm_name);
     my $domain =  $vm->search_domain($name);
 
     ok($domain,"[$vm_name] I can't find domain $name");
@@ -95,9 +93,7 @@ sub test_req_create_domain_iso {
 
     $USER->mark_all_messages_read();
 
-    $domain->_vm->disconnect();
-    ok(!$domain->_vm->vm) or exit;
-    return $domain;
+    return $domain->name;
 }
 
 sub test_message_new_domain {
@@ -129,37 +125,40 @@ sub test_req_create_domain {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $RVD_BACK->process_requests();
+    my $rvd_back = rvd_back();
+    $rvd_back->process_requests();
     wait_request($req);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+    ok(!$req->error,"Error '".$req->error."' creating domain ".$name);
 
-    my $domain =  $RVD_FRONT->search_domain($name);
+    diag("search domain $name");
+    my $rvd_front = rvd_front();
+    my $domain =  $rvd_front->search_domain($name);
+    diag("found domain $name");
 
     ok($domain,"Searching for domain $name") or return;
     ok($domain->name eq $name,"Expecting domain name '$name', got ".$domain->name);
     ok(!$domain->is_base,"Expecting domain not base , got: ".$domain->is_base());
 
-    ok(!$domain->_vm->vm) or exit;
-    $domain->_vm->disconnect();
-
-    return $domain;
+    return $name;
 }
 
 sub test_req_prepare_base {
     my $vm_name = shift;
     my $name = shift;
 
+    diag("prepare base $name");
+
+    my $rvd_back = rvd_back();
     my $req;
     { 
-        my $vm = $RVD_FRONT->search_vm($vm_name);
+        my $vm = rvd_front()->search_vm($vm_name);
         my $domain = $vm->search_domain($name);
         ok($domain, "Searching for domain $name, got ".ref($name)) or return;
         ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
 
-        ok(!$domain->_vm->vm);
         $req = Ravada::Request->prepare_base(
             id_domain => $domain->id
             ,uid => $USER->id
@@ -170,21 +169,23 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    $RVD_BACK->process_requests();
+    $rvd_back->process_requests();
     wait_request($req);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");
 
-    wait_request($req);
-
-    my $vm = $RVD_FRONT->search_vm($vm_name);
+    my $vm = rvd_front()->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
     ok($domain2->is_base, "Expecting domain base=1 , got: '".$domain2->is_base."'") or exit;
-    ok(!$domain2->_vm->vm) or exit;
+
 }
 
 sub test_req_create_from_base {
     my $vm_name = shift;
-    my $domain_base = shift;
+    my $base_name = shift;
+
+    my $rvd_back = rvd_back();
+    my $vm = $rvd_back->search_vm($vm_name);
+    my $domain_base = $vm->search_domain($base_name);
 
     diag("create from base");
 
@@ -199,28 +200,33 @@ sub test_req_create_from_base {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $RVD_BACK->process_requests(1);
+    $rvd_back->process_requests();
     wait_request($req);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
     ok(!$req->error,"Error ".$req->error." creating domain ".$clone_name);
 
-    my $domain =  $RVD_FRONT->search_domain($clone_name);
+    my $domain =  rvd_front()->search_domain($clone_name);
 
     ok($domain,"Searching for domain $clone_name") or return;
     ok($domain->name eq $clone_name
         ,"Expecting domain name '$clone_name', got ".$domain->name);
-    ok(!$domain->is_base,"Expecting domain not base , got: ".$domain->is_base());
+    ok(!$domain->is_base,"Expecting clone not base , got: "
+        .$domain->is_base()." ".$domain->name);
 
-    ok(!$domain_base->_vm->vm) or exit;
-    ok(!$domain->_vm->vm) or exit;
-    return $domain;
+    return $clone_name;
 
 }
 
 sub test_volumes {
-    my ($vm_name, $domain1 , $domain2) = @_;
+    my ($vm_name, $domain1_name , $domain2_name) = @_;
+
+    my $rvd_back = rvd_back();
+    my $vm = $rvd_back->search_vm($vm_name);
+
+    my $domain1 = $vm->search_domain($domain1_name);
+    my $domain2 = $vm->search_domain($domain2_name);
 
     diag("test volumes");
 
@@ -254,7 +260,13 @@ sub check_files_removed {
 
 
 sub test_req_remove_base {
-    my ($vm_name, $domain_base, $domain_clone) = @_;
+    my ($vm_name, $name_base, $name_clone) = @_;
+
+    my $rvd_back = rvd_back();
+    my $vm = $rvd_back->search_vm($vm_name);
+
+    my $domain_base = $vm->search_domain($name_base);
+    my $domain_clone= $vm->search_domain($name_clone);
 
     diag("remove base");
 
@@ -264,15 +276,13 @@ sub test_req_remove_base {
     my @files_base = $domain_base->list_files_base();
     ok(scalar @files_base,"Expecting files base, got none") or return;
 
-    ok(!$domain_base->_vm->vm,"Expecting no vm in base");
-    ok(!$domain_clone->_vm->vm,"Expecting no vm in clone");
 
     my $req = Ravada::Request->remove_base(id_domain => $domain_base->id
         , uid => $USER->id
     );
 
     ok($req->status eq 'requested');
-    $RVD_BACK->process_requests();
+    $rvd_back->process_requests();
     wait_request($req);
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
@@ -287,10 +297,7 @@ sub test_req_remove_base {
 
     $req->status('requested');
 
-    ok(!$domain_base->_vm->vm);
-    ok(!$domain_clone->_vm->vm);
-
-    $RVD_BACK->process_requests();
+    $rvd_back->process_requests();
     wait_request($req);
 
     ok($req->status eq 'done', "[$vm_name] Expected req->status 'done', got "
@@ -305,46 +312,42 @@ sub test_req_remove_base {
 }
 
 ################################################
-eval { $RVD_BACK = Ravada->new(connector => $test->connector) };
 
-ok($RVD_BACK,"I can't launch a new Ravada");# or exit;
+{
+my $rvd_back = rvd_back();
+ok($rvd_back,"Launch Ravada");# or exit;
+}
 
 remove_old_domains();
 remove_old_disks();
 
 for my $vm_name ( qw(KVM Void)) {
-    my $vm;
+    my $vm_connected;
     eval {
-        $vm= $RVD_BACK->search_vm($vm_name)  if $RVD_BACK;
+        my $rvd_back = rvd_back();
+        my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
+        $vm_connected = 1;
         @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id )       if $vm;
     };
 
     SKIP: {
         my $msg = "SKIPPED: No virtual managers found";
-        skip($msg,10)   if !$vm;
+        skip($msg,10)   if !$vm_connected;
     
         diag("Testing requests with $vm_name");
-        $vm = undef;
     
         test_req_create_domain_iso($vm_name);
 
-        my $domain_base = test_req_create_domain($vm_name) or next;
+        my $base_name = test_req_create_domain($vm_name) or next;
 
-        ok(!$domain_base->_vm->vm,"Expecting no vm in base");
+        test_req_prepare_base($vm_name, $base_name);
+        my $clone_name = test_req_create_from_base($vm_name, $base_name);
+ 
+        ok($clone_name) or next;
 
-        test_req_prepare_base($vm_name, $domain_base->name);
-        my $domain_clone = test_req_create_from_base($vm_name, $domain_base) 
-            or next;
-
-        ok(!$domain_base->_vm->vm,"Expecting no vm in base");
-        ok(!$domain_clone->_vm->vm,"Expecting no vm in clone");
-
-        test_volumes($vm_name,$domain_base, $domain_clone);
+        test_volumes($vm_name,$base_name, $clone_name);
     
-        ok(!$domain_base->_vm->vm,"Expecting no vm in base before remove base");
-        ok(!$domain_clone->_vm->vm,"Expecting no vm in clone before remove base");
-
-        test_req_remove_base($vm_name, $domain_base, $domain_clone);
+        test_req_remove_base($vm_name, $base_name, $clone_name);
 
     };
 }

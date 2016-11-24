@@ -15,13 +15,12 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
+our ($CONNECTOR, $CONFIG);
 
 our $CONT = 0;
-our $RVD_BACK;
-our $RVD_FRONT;
 our $USER_ADMIN;
 
 sub user_admin {
@@ -40,32 +39,39 @@ sub new_domain_name {
 }
 
 sub rvd_back {
-    my ($connector, $config ) =@_;
+    my ($connector, $config) = @_;
+    init($connector,$config)    if $connector;
 
-    return $RVD_BACK if !$config && !$connector;
-
-    eval { $RVD_BACK = Ravada->new(
-            connector => $connector
-                , config => ( $config or $DEFAULT_CONFIG)
+    my $rvd_back;
+    eval { $rvd_back = Ravada->new(
+            connector => $CONNECTOR
+                , config => ( $CONFIG or $DEFAULT_CONFIG)
             );
-            $USER_ADMIN = create_user('admin','admin',1);
     };
     die $@ if $@;
-    return $RVD_BACK;
+    return $rvd_back;
 }
 
 sub rvd_front {
-    my ($connector, $config ) =@_;
+    my $rvd_front;
 
-    return $RVD_FRONT if !$config && !$connector;
-
-    eval { $RVD_FRONT = Ravada::Front->new(
-            connector => $connector
-                , config => ( $config or $DEFAULT_CONFIG)
+    eval { $rvd_front = Ravada::Front->new(
+            connector => $CONNECTOR
+                , config => ( $CONFIG or $DEFAULT_CONFIG)
             );
     };
     die $@ if $@;
-    return $RVD_FRONT;
+    return $rvd_front;
+}
+
+sub init {
+    ($CONNECTOR,$CONFIG) = @_;
+
+    confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
+
+    Ravada::Auth::SQL::_init_connector($CONNECTOR);
+    $USER_ADMIN = create_user('admin','admin',1);
+
 }
 
 sub _remove_old_domains_vm {
@@ -76,6 +82,7 @@ sub _remove_old_domains_vm {
     return if !$vm;
 
     my $base_name = base_domain_name();
+
     for my $dom_name ( sort { $b cmp $a }  $vm->list_domains) {
         next if $dom_name !~ /^$base_name/i;
 
@@ -108,14 +115,12 @@ sub _remove_old_domains_vm {
         }
         ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
     }
-
 }
 
 sub _remove_old_domains_kvm {
     my $vm = rvd_back()->search_vm('KVM');
 
     my $base_name = base_domain_name();
-    $vm->connect();
     for my $domain ( $vm->vm->list_defined_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         eval { 
@@ -128,7 +133,6 @@ sub _remove_old_domains_kvm {
         eval { $domain->undefine };
         warn $@ if $@;
     }
-    $vm->disconnect();
 }
 
 sub remove_old_domains {
@@ -141,7 +145,8 @@ sub _remove_old_disks_kvm {
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
-    my $vm = $RVD_BACK->search_vm('kvm');
+    my $rvd_back= rvd_back();
+    my $vm = rvd_back()->search_vm('kvm');
     if (!$vm) {
         warn "I can't find a kvm backend";
         return;
@@ -151,7 +156,6 @@ sub _remove_old_disks_kvm {
     my $dir_img = $vm->dir_img();
     ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
 
-    $vm->connect;
     eval { $vm->storage_pool->refresh() };
     ok(!$@,$@) or return;
     opendir my $ls,$dir_img or die "$! $dir_img";
@@ -164,7 +168,6 @@ sub _remove_old_disks_kvm {
         unlink $disk or die "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
-    $vm->disconnect();
 }
 
 sub _remove_old_disks_void {
@@ -192,6 +195,7 @@ sub remove_old_disks {
 
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;

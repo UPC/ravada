@@ -20,7 +20,9 @@ my $ravada;
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
-my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
+init($test->connector, 't/etc/ravada.conf');
+
+my $RVD_BACK = rvd_back();# $test->connector , 't/etc/ravada.conf');
 my $USER = create_user("foo","bar");
 $RVD_BACK = undef;
 

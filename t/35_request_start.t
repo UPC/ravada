@@ -14,7 +14,8 @@ use Test::Ravada;
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
-my $RAVADA = rvd_back($test->connector, 't/etc/ravada.conf');
+init($test->connector, 't/etc/ravada.conf');
+my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
 my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => 1 );
@@ -58,6 +59,7 @@ sub test_new_domain {
 #    test_remove_domain($vm_name, $name);
 
     diag("[$vm_name] Creating domain $name");
+    $vm->connect();
     my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0);
 
     ok($domain,"Domain not created");
@@ -217,10 +219,10 @@ for my $vm_name (qw(KVM Void)) {
         diag($msg) if !$vmm;
         skip($msg,10) if !$vmm;
 
-        $vmm->disconnect() if $vmm;
+#        $vmm->disconnect() if $vmm;
         diag("Testing VM $vm_name");
         my $domain = test_start($vm_name);
-        $domain->_vm->disconnect;
+#        $domain->_vm->disconnect;
         my $domain_name = $domain->name;
         $domain = undef;
 
