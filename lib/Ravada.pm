@@ -3,6 +3,8 @@ package Ravada;
 use warnings;
 use strict;
 
+our $VERSION = '0.1.0';
+
 use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
@@ -1028,6 +1030,16 @@ sub import_domain {
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
     return $vm->import_domain($name, $user);
+}
+
+=head2 version
+
+Returns the version of the module
+
+=cut
+
+sub version {
+    return $VERSION;
 }
 
 

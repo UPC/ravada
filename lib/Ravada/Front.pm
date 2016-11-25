@@ -500,4 +500,14 @@ sub disconnect_vm {
     %VM = ();
 }
 
+=head2 version
+
+Returns the version of the main module
+
+=cut
+
+sub version {
+    return Ravada::version();
+}
+
 1;
