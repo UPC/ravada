@@ -343,6 +343,8 @@ any '/about' => sub {
     my $c = shift;
     return login($c)            if !_logged_in($c);
 
+    $c->stash(version => $RAVADA->version );
+
     $c->render(template => 'bootstrap/about');
 };
 
