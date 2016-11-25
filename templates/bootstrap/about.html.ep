@@ -11,6 +11,12 @@
                     <div class="panel-heading">
                         <h2 class="text-center">About</h2>
                         <img class="img-responsive center-block" src="img/logo.png">
+                        <h3>Version</h3>
+                        <%= $version %>
+                        <h3>Authors</h3>
+                        <p>
+                        %= include 'bootstrap/authors'
+                        </p>
                         <h3>Development</h3>
                         <p> Below are listed the technologies used in this project:</p>
                         <ul>
