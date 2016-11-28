@@ -25,7 +25,6 @@ our $args_manage = { name => 1 , uid => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
 our $args_remove_base = { domain => 1 , uid => 1 };
 
-our $PID_FILE_BACKEND = '/var/run/rvd_back.pl.pid';
 
 our %VALID_ARG = (
     create_domain => {
