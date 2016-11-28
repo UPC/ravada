@@ -247,6 +247,10 @@
 
 // list messages
     function messagesCrtl($scope, $http, request) {
+        $http.get('/pingbackend.json').then(function(response) {
+            $scope.pingbe_fail = !response.data;
+
+        });
 
         $http.get('/messages.json').then(function(response) {
                 $scope.list_message= response.data;

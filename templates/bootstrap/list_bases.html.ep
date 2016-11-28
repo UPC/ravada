@@ -11,18 +11,15 @@
 
         <!--MACHINES SELECTION-->
         <div class="page-header" ng-controller="bases">
-        <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
-          <strong>Error!</strong> Backend no available!
-        </div>
         <div class="row">
         <div class="col-lg-12">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h2>Choose a Machine to Start</h2>
                 </div>
-                <div class="panel-body">
+                
                     <sol-show-cardsmachines></sol-show-cardsmachines>
-                </div>
+                
             </div>
         </div>
         </div>
