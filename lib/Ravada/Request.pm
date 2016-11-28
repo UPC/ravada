@@ -353,16 +353,9 @@ sub ping_backend {
 
     my $self = {};
     bless ($self, $class);
-    return ( $self->_ping_backend_localhost()
-        or $self->_new_request( command => 'ping_backend' ));
+    return $self->_new_request( command => 'ping_backend' );
 }
 
-sub _ping_backend_localhost {
-    my $self = shift;
-    return 1 if -e $PID_FILE_BACKEND;
-    # TODO check the process with pid $PID_FILE_BACKEND is really alive
-    return;
-}
 
 =head2 domdisplay
 

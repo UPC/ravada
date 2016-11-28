@@ -37,6 +37,7 @@ our $TIMEOUT = 5;
 our @VM_TYPES = ('KVM');
 
 our %VM;
+our $PID_FILE_BACKEND = '/var/run/rvd_back.pl.pid';
 
 =head2 BUILD
 
@@ -256,11 +257,20 @@ Return true if alive, false otherwise.
 sub ping_backend {
     my $self = shift;
 
+    return 1 if $self->_ping_backend_localhost();
+
     my $req = Ravada::Request->ping_backend();
     $self->wait_request($req, 2);
 
     return 1 if $req->status() eq 'done';
     return 0;
+}
+
+sub _ping_backend_localhost {
+    my $self = shift;
+    return 1 if -e $PID_FILE_BACKEND;
+    # TODO check the process with pid $PID_FILE_BACKEND is really alive
+    return;
 }
 
 =head2 open_vm
