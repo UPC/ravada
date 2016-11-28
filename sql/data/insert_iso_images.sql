@@ -67,3 +67,13 @@ VALUES("Mint/Mate 18 - 64 bits","Linux Mint Mate 18 (Sarah) 64 bits"
 ,'http://mirrors.evowise.com/linuxmint/stable/18/linuxmint-18-mate-64bit.iso'
 ,'629d138d03ae594d403df0cd2502d26c'
 );
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES("Mint/Mate 18 - 32 bits","Linux Mint Mate 18 (Sarah) 32 bits"
+,'i386'
+,'sarah-i386.xml'
+,'sarah-volume.xml'
+,'http://mirrors.evowise.com/linuxmint/stable/18/linuxmint-18-mate-32bit.iso'
+,'b5b804b0cfb7c91a90ea97e038007f07'
+);
+

@@ -83,6 +83,33 @@ sub test_fw_domain {
     test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
 }
 
+sub test_fw_domain_stored {
+    my ($vm_name, $domain_name) = @_;
+    my $remote_ip = '99.88.77.66';
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    my $local_ip = $vm->ip;
+    my $local_port;
+
+    {
+        my $domain = $vm->search_domain($domain_name);
+        ok($domain,"Searching for domain $domain_name") or return;
+        $domain->start( user => $USER, remote_ip => $remote_ip);
+
+        my $display = $domain->display($USER);
+        ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+        ok(defined $local_port, "Expecting a port in display '$display'") or return;
+    
+        ok($domain->is_active);
+        test_chain($vm_name, $local_ip,$local_port, $remote_ip, 1);
+    }
+
+    my $domain = $vm->search_domain($domain_name);
+    $domain->shutdown_now( $USER );
+    test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
+}
+
+
 sub open_ipt {
     my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
@@ -158,6 +185,9 @@ for my $vm_name (qw( Void KVM )) {
 
         my $domain = test_create_domain($vm_name);
         test_fw_domain($vm_name, $domain);
+
+        my $domain2 = test_create_domain($vm_name);
+        test_fw_domain_stored($vm_name, $domain2->name);
     };
 }
 flush_rules();

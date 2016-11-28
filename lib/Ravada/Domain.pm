@@ -3,13 +3,16 @@ package Ravada::Domain;
 use warnings;
 use strict;
 
-use Carp qw(confess croak cluck);
+use Carp qw(carp confess croak cluck);
 use Data::Dumper;
+use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
+
+use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
 our $CONNECTOR;
@@ -125,6 +128,7 @@ sub _vm_disconnect {
 }
 
 sub _start_preconditions{
+    
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
     } else {
@@ -132,6 +136,7 @@ sub _start_preconditions{
     }
     _check_free_memory();
     _check_used_memory(@_);
+
 }
 
 sub _allow_manage_args {
@@ -686,9 +691,11 @@ sub _post_shutdown {
 sub _remove_iptables {
     my $self = shift;
 
+    my $args = {@_};
+
     my $ipt_obj = _open_iptables();
 
-    my $iptables = $self->{_iptables};
+    my $iptables = $self->_last_iptable($args->{user});
 
     $ipt_obj->delete_ip_rule(@$iptables)    if $iptables;
 }
@@ -719,6 +726,11 @@ sub _remove_temporary_machine {
 sub _post_start {
     my $self = shift;
 
+    $self->_add_iptable(@_);
+}
+
+sub _add_iptable {
+    my $self = shift;
     return if scalar @_ % 2;
     my %args = @_;
 
@@ -740,6 +752,8 @@ sub _post_start {
 
 	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
     $self->{_iptables} = \@iptables_arg;
+
+    $self->_store_log(command => 'create', iptables => \@iptables_arg, @_);
 }
 
 sub _open_iptables {
@@ -777,5 +791,47 @@ sub _open_iptables {
     $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
+}
+
+sub _store_log {
+    my $self = shift;
+    if (scalar(@_) %2 ) {
+        carp "Odd number ".Dumper(\@_);
+        return;
+    }
+    my %args = @_;
+    lock_hash(%args);
+    my $remote_ip = $args{remote_ip};#~ or return;
+    my $user = $args{user};
+    my $command = $args{command};
+    my $iptables = $args{iptables};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO log_commands"
+        ."(id_domain, id_user, command, remote_ip, timereq, iptables)"
+        ."VALUES(?, ?, ?, ?, ?, ?)"
+    );
+    $sth->execute($self->id, $user->id,$command, $remote_ip, Ravada::Utils::now()
+        ,encode_json($iptables));
+    $sth->finish;
+
+}
+
+sub _last_iptable {
+    my $self = shift;
+    my $user = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT iptables FROM log_commands"
+        ." WHERE command='create' "
+        ."    AND id_domain=?"
+        ."    AND id_user=? "
+        ." ORDER BY timereq DESC "
+    );
+    $sth->execute($self->id, $user->id);
+    while (my ($iptables) = $sth->fetchrow) {
+        return decode_json($iptables);
+    }
+    return;
 }
 1;
