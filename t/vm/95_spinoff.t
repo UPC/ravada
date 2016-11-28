@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
@@ -62,10 +63,20 @@ sub test_create_domain {
     return $domain;
 }
 
-sub test_files_base {
-    my $domain = shift;
-    my $n_expected = shift;
+sub test_clone {
+    my ($vm_name, $domain) = @_;
 
+    my $clone = $domain->clone(name => new_domain_name(), user => $USER);
+    ok($clone);
+
+    return $clone;
+}
+
+sub test_files_base {
+    my ($domain, $n_expected) = @_;
+
+    confess("Expecting a domain , got ".Dumper(\@_))
+        if !ref $domain;
     my @files = $domain->list_files_base();
 
     ok(scalar @files == $n_expected,"Expecting $n_expected files base , got "
@@ -91,72 +102,7 @@ sub test_prepare_base {
 
     test_files_base($domain,1);
 
-    my @disk = $domain->disk_device();
-    $domain->shutdown(user => $USER);
-
-    touch_mtime(@disk);
-
-    eval { $domain->prepare_base( $USER) };
-    ok(!$@,"Trying to prepare base again failed, it should have worked. ");
-    ok($domain->is_base);
-
-    my $name_clone = new_domain_name();
-
-    my $domain_clone;
-    eval { $domain_clone = $RVD_BACK->create_domain(
-        name => $name_clone
-        ,id_owner => $USER->id
-        ,id_base => $domain->id
-        ,vm => $vm_name
-        );
-    };
-    ok(!$@,"Clone domain, expecting error='' , got='".($@ or '')."'") or exit;
-    ok($domain_clone,"Trying to clone from ".$domain->name." to $name_clone");
-    test_devices_clone($vm_name, $domain_clone);
-    test_display($vm_name, $domain_clone);
-
-    ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
-        ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
-
-    my $domain_clone2 = $RVD_FRONT->search_clone(
-         id_base => $domain->id,
-        id_owner => $USER->id
-    );
-    ok($domain_clone2,"Searching for clone id_base=".$domain->id." user=".$USER->id
-        ." expecting domain , got nothing "
-        ." ".Dumper($domain)) or exit;
-
-    if ($domain_clone2) {
-        ok( $domain_clone2->name eq $domain_clone->name
-        ,"Expecting clone name ".$domain_clone->name." , got:".$domain_clone2->name
-        );
-
-        ok($domain_clone2->id eq $domain_clone->id
-        ,"Expecting clone id ".$domain_clone->id." , got:".$domain_clone2->id
-        );
-    }
-
-
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
-        ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
-    ok($domain->is_base);
-
-    $domain_clone->remove($USER);
-
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
-
-    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
-    ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
-
-    $domain->is_base(0);
-    ok(!$domain->is_base,"[$vm_name] Expecting domain is_base=0 , got :".$domain->is_base);
-
-    $domain->is_base(1);
-    ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
-
+    is($domain->id_base,undef);
 }
 
 sub test_remove_base {
@@ -176,6 +122,23 @@ sub test_remove_base {
     for my $file (@files) {
         ok(!-e $file,"Expecting file base '$file' removed" );
     }
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain_clone2 = $vm->search_domain($domain_clone->name);
+    ok($domain_clone2,"Expecting clone still there");
+}
+
+sub test_remove_domain {
+    my $vm_name = shift;
+    my $domain = shift;
+    my $domain_clone = shift;
+
+    $domain->remove($USER);
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain2 = $vm->search_domain($domain->name);
+    ok(!$domain2,"Expecting no domain after remove");
+
 }
 
 #######################################################################33

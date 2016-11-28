@@ -92,18 +92,8 @@ before 'remove' => \&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
 before 'prepare_base' => \&_allow_prepare_base;
- after 'prepare_base' => sub {
-    my $self = shift;
-
-    my ($user) = @_;
-
-    $self->is_base(1);
-    if ($self->{_was_active} ) {
-        $self->resume($user);
-    }
-    delete $self->{_was_active};
-};
-
+ after 'prepare_base' => \&_post_prepare_base;
+ 
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
@@ -188,6 +178,21 @@ sub _allow_prepare_base {
         $self->{_was_active} = 1;
     }
 };
+
+sub _post_prepare_base {
+    my $self = shift;
+
+    my ($user) = @_;
+
+    $self->is_base(1);
+    if ($self->{_was_active} ) {
+        $self->resume($user);
+    }
+    delete $self->{_was_active};
+
+    $self->_remove_id_base();
+};
+
 
 sub _check_has_clones {
     my $self = shift;
@@ -439,6 +444,18 @@ sub _remove_files_base {
     }
 }
 
+
+sub _remove_id_base {
+
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set id_base=NULL "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+    $sth->finish;
+}
 
 =head2 is_base
 Returns true or  false if the domain is a prepared base
