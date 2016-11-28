@@ -678,7 +678,6 @@ sub show_link {
         $c->render(template => 'fail', name => $domain->name);
         return;
     }
-    $c->redirect_to($uri);
     $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
