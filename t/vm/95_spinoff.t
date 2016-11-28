@@ -110,9 +110,6 @@ sub test_remove_base {
     my $domain = shift;
     my $domain_clone = shift;
 
-    my @files0 = $domain->list_files_base();
-    ok(!scalar @files0,"Expecting no files base, got ".Dumper(\@files0)) or return;
-
     my @files = $domain->list_files_base();
     ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
 
