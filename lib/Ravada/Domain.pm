@@ -473,6 +473,9 @@ Returns true if locked.
 
 sub is_locked {
     my $self = shift;
+
+    $self->_init_connector() if !defined $$CONNECTOR;
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT count(*) FROM requests "
         ." WHERE id_domain=?");
     $sth->execute($self->id);
