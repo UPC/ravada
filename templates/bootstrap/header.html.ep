@@ -4,6 +4,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
+% if ($url) {
+    <meta HTTP-EQUIV="REFRESH" content="0; url=<%= $url %>">
+% }
     <title>Ravada VDI</title>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">

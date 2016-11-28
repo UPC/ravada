@@ -8,7 +8,7 @@
     <div class="jumbotron">
         <h2>Running <%= $name %></h2>
         Hi <%= $login %>, 
-        <a href="<%= $url %>">click here</a> if your host won't come out.
+        click <a href="<%= $url %>"><%= $url %></a> if your host won't come out.
 
     </div>
     </div>

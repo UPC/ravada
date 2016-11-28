@@ -382,6 +382,7 @@ sub _logged_in {
     $c->stash(_logged_in => $login );
     $c->stash(_user => $USER);
     $c->stash(_anonymous => !$USER);
+    $c->stash(url => undef);
 
     return $USER;
 }
@@ -957,6 +958,7 @@ sub list_bases_anonymous {
         , _logged_in => undef
         , _anonymous => 1
         , _user => undef
+        , url => undef
     );
 }
 
