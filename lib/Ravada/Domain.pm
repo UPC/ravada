@@ -98,7 +98,11 @@ before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
 before 'pause' => \&_allow_manage;
+ after 'pause' => \&_post_pause;
+
 before 'resume' => \&_allow_manage;
+ after 'resume' => \&_post_resume;
+
 before 'shutdown' => \&_allow_manage_args;
 after 'shutdown' => \&_post_shutdown;
 
@@ -700,6 +704,13 @@ sub clone {
     );
 }
 
+sub _post_pause {
+    my $self = shift;
+    my $user = shift;
+
+    $self->_remove_iptables(user => $user);
+}
+
 sub _post_shutdown {
     my $self = shift;
 
@@ -713,11 +724,17 @@ sub _remove_iptables {
 
     my $args = {@_};
 
-    my $ipt_obj = _open_iptables();
+    my $ipt_obj = _obj_iptables();
 
-    my $iptables = $self->_last_iptable($args->{user});
-
-    $ipt_obj->delete_ip_rule(@$iptables)    if $iptables;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iptables SET time_deleted=?"
+        ." WHERE id=?"
+    );
+    for my $row ($self->_active_iptables($args->{user})) {
+        my ($id, $iptables) = @$row;
+        $ipt_obj->delete_ip_rule(@$iptables);
+        $sth->execute(Ravada::Utils::now(), $id);
+    }
 }
 
 sub _remove_temporary_machine {
@@ -743,6 +760,10 @@ sub _remove_temporary_machine {
     }
 }
 
+sub _post_resume {
+    return _post_start(@_);
+}
+
 sub _post_start {
     my $self = shift;
 
@@ -756,13 +777,13 @@ sub _add_iptable {
 
     my $remote_ip = $args{remote_ip} or return;
 
-    my $owner = Ravada::Auth::SQL->search_by_id($self->id_owner);
+    my $user = $args{user};
+    my $uid = $user->id;
 
-    my $display = $self->display($owner);
+    my $display = $self->display($user);
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
 
-
-    my $ipt_obj = _open_iptables();
+    my $ipt_obj = _obj_iptables();
 	# append rule at the end of the RAVADA chain in the filter table to
 	# allow all traffic from $local_ip to $remote_ip via port $local_port
     #
@@ -771,12 +792,44 @@ sub _add_iptable {
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
 	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    $self->{_iptables} = \@iptables_arg;
 
-    $self->_store_log(command => 'create', iptables => \@iptables_arg, @_);
+    $self->_log_iptable(iptables => \@iptables_arg, @_);
+
+#    @iptables_arg = ( '0.0.0.0'
+#                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
+#                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+    #
+    #($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    #
+    #$self->_log_iptable(iptables => \@iptables_arg, %args);
+
 }
 
-sub _open_iptables {
+=head2 open_iptables
+
+Open iptables for a remote client
+
+=over
+
+=item user
+
+=item  remote_ip
+
+=back
+
+=cut
+
+sub open_iptables {
+    my $self = shift;
+
+    my %args = @_;
+    my $user = Ravada::Auth::SQL->search_by_id($args{uid});
+    $args{user} = $user;
+    delete $args{uid};
+    $self->_add_iptable(%args);
+}
+
+sub _obj_iptables {
 
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
@@ -806,52 +859,61 @@ sub _open_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
+        $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
 	}
 	# set the policy on the FORWARD table to DROP
-    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
+#    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
 }
 
-sub _store_log {
+sub _log_iptable {
     my $self = shift;
     if (scalar(@_) %2 ) {
         carp "Odd number ".Dumper(\@_);
         return;
     }
     my %args = @_;
-    lock_hash(%args);
     my $remote_ip = $args{remote_ip};#~ or return;
+
     my $user = $args{user};
-    my $command = $args{command};
+    my $uid = $args{uid};
+    confess "Chyoose wehter uid or user "
+        if $user && $uid;
+    lock_hash(%args);
+
+    $uid = $args{user}->id if !$uid;
+
     my $iptables = $args{iptables};
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO log_commands"
-        ."(id_domain, id_user, command, remote_ip, timereq, iptables)"
-        ."VALUES(?, ?, ?, ?, ?, ?)"
+        "INSERT INTO iptables "
+        ."(id_domain, id_user, remote_ip, time_req, iptables)"
+        ."VALUES(?, ?, ?, ?, ?)"
     );
-    $sth->execute($self->id, $user->id,$command, $remote_ip, Ravada::Utils::now()
+    $sth->execute($self->id, $uid, $remote_ip, Ravada::Utils::now()
         ,encode_json($iptables));
     $sth->finish;
 
 }
 
-sub _last_iptable {
+sub _active_iptables {
     my $self = shift;
     my $user = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT iptables FROM log_commands"
-        ." WHERE command='create' "
-        ."    AND id_domain=?"
+        "SELECT id,iptables FROM iptables "
+        ." WHERE "
+        ."    id_domain=?"
         ."    AND id_user=? "
-        ." ORDER BY timereq DESC "
+        ."    AND time_deleted IS NULL"
+        ." ORDER BY time_req DESC "
     );
     $sth->execute($self->id, $user->id);
-    while (my ($iptables) = $sth->fetchrow) {
-        return decode_json($iptables);
+    my @iptables;
+    while (my ($id, $iptables) = $sth->fetchrow) {
+        push @iptables, [ $id, decode_json($iptables)];
     }
-    return;
+    return @iptables;
 }
 1;

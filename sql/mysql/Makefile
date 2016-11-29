@@ -1,4 +1,4 @@
-SQL:= ../sqlite/bases.sql ../sqlite/iso_images.sql ../sqlite/lxc_templates.sql ../sqlite/requests.sql ../sqlite/file_base_images.sql ../sqlite/domains_network.sql ../sqlite/messages.sql ../sqlite/networks.sql ../sqlite/domains.sql ../sqlite/users.sql ../sqlite/log_commands.sql
+SQL:= ../sqlite/bases.sql ../sqlite/iso_images.sql ../sqlite/lxc_templates.sql ../sqlite/requests.sql ../sqlite/file_base_images.sql ../sqlite/domains_network.sql ../sqlite/messages.sql ../sqlite/networks.sql ../sqlite/domains.sql ../sqlite/users.sql ../sqlite/iptables.sql
 
 ALL: $(SQL)
 
