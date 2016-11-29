@@ -795,13 +795,13 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
-    @iptables_arg = ( '0.0.0.0'
-                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
-                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-
-    $self->_log_iptable(iptables => \@iptables_arg, %args);
+#    @iptables_arg = ( '0.0.0.0'
+#                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
+#                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+    #
+    #($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    #
+    #$self->_log_iptable(iptables => \@iptables_arg, %args);
 
 }
 
@@ -859,10 +859,10 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-        $ipt_obj->add_jump_rule('filter','INPUT', 0, $IPTABLES_CHAIN);
+        $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
 	}
 	# set the policy on the FORWARD table to DROP
-    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
+#    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
 }
