@@ -98,7 +98,11 @@ before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
 before 'pause' => \&_allow_manage;
+ after 'pause' => \&_post_pause;
+
 before 'resume' => \&_allow_manage;
+ after 'resume' => \&_post_resume;
+
 before 'shutdown' => \&_allow_manage_args;
 after 'shutdown' => \&_post_shutdown;
 
@@ -700,6 +704,13 @@ sub clone {
     );
 }
 
+sub _post_pause {
+    my $self = shift;
+    my $user = shift;
+
+    $self->_remove_iptables(user => $user);
+}
+
 sub _post_shutdown {
     my $self = shift;
 
@@ -715,9 +726,15 @@ sub _remove_iptables {
 
     my $ipt_obj = _open_iptables();
 
-    my $iptables = $self->_last_iptable($args->{user});
-
-    $ipt_obj->delete_ip_rule(@$iptables)    if $iptables;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iptables SET time_deleted=?"
+        ." WHERE id=?"
+    );
+    for my $row ($self->_active_iptables($args->{user})) {
+        my ($id, $iptables) = @$row;
+        $ipt_obj->delete_ip_rule(@$iptables);
+        $sth->execute(Ravada::Utils::now(), $id);
+    }
 }
 
 sub _remove_temporary_machine {
@@ -741,6 +758,10 @@ sub _remove_temporary_machine {
             .$user->name." is temporary")
                 if $req;
     }
+}
+
+sub _post_resume {
+    return _post_start(@_);
 }
 
 sub _post_start {
@@ -771,9 +792,17 @@ sub _add_iptable {
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
 	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    $self->{_iptables} = \@iptables_arg;
 
-    $self->_store_log(command => 'create', iptables => \@iptables_arg, @_);
+    $self->_log_iptable(iptables => \@iptables_arg, @_);
+
+    @iptables_arg = ( '0.0.0.0'
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+
+    $self->_log_iptable(iptables => \@iptables_arg, @_);
+
 }
 
 sub _open_iptables {
@@ -813,7 +842,7 @@ sub _open_iptables {
     return $ipt_obj;
 }
 
-sub _store_log {
+sub _log_iptable {
     my $self = shift;
     if (scalar(@_) %2 ) {
         carp "Odd number ".Dumper(\@_);
@@ -823,35 +852,36 @@ sub _store_log {
     lock_hash(%args);
     my $remote_ip = $args{remote_ip};#~ or return;
     my $user = $args{user};
-    my $command = $args{command};
     my $iptables = $args{iptables};
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO log_commands"
-        ."(id_domain, id_user, command, remote_ip, timereq, iptables)"
-        ."VALUES(?, ?, ?, ?, ?, ?)"
+        "INSERT INTO iptables "
+        ."(id_domain, id_user, remote_ip, time_req, iptables)"
+        ."VALUES(?, ?, ?, ?, ?)"
     );
-    $sth->execute($self->id, $user->id,$command, $remote_ip, Ravada::Utils::now()
+    $sth->execute($self->id, $user->id, $remote_ip, Ravada::Utils::now()
         ,encode_json($iptables));
     $sth->finish;
 
 }
 
-sub _last_iptable {
+sub _active_iptables {
     my $self = shift;
     my $user = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT iptables FROM log_commands"
-        ." WHERE command='create' "
-        ."    AND id_domain=?"
+        "SELECT id,iptables FROM iptables "
+        ." WHERE "
+        ."    id_domain=?"
         ."    AND id_user=? "
-        ." ORDER BY timereq DESC "
+        ."    AND time_deleted IS NULL"
+        ." ORDER BY time_req DESC "
     );
     $sth->execute($self->id, $user->id);
-    while (my ($iptables) = $sth->fetchrow) {
-        return decode_json($iptables);
+    my @iptables;
+    while (my ($id, $iptables) = $sth->fetchrow) {
+        push @iptables, [ $id, decode_json($iptables)];
     }
-    return;
+    return @iptables;
 }
 1;

@@ -24,7 +24,7 @@ our %FIELD_RO = map { $_ => 1 } qw(id name);
 our $args_manage = { name => 1 , uid => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
 our $args_remove_base = { domain => 1 , uid => 1 };
-
+our $args_manage_ip = {%$args_manage, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
@@ -38,10 +38,11 @@ our %VALID_ARG = (
            ,disk => 2
         ,network => 2
     }
+    ,open_iptables => $args_manage_ip
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
      ,pause_domain => $args_manage
-    ,resume_domain => $args_manage
+    ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
