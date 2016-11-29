@@ -31,9 +31,9 @@
                     <td>
                        
 
-                        <a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
+                        <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
-                        <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
+                        <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbspScreenshot</button>
 
@@ -47,6 +47,10 @@
                 </tr>
             </tbody>
         </table>
+
+
+
+
         <div ng-repeat="machine in list_machines">
         <div id="modal{{machine.id}}" class="modal fade" role="dialog">
           <div class="modal-dialog">
@@ -61,11 +65,11 @@
               </div>
               <div class="modal-body">
                 <div style="width:100%; margin-bottom:10px;">
-                    <img src="/img/screenshots/{{machine.id}}.png" width="400" alt="No screenshot available for this machine">
+                    <img ng-src="/img/screenshots/{{machine.id}}.png" width="400" alt="No screenshot available for this machine">
                 </div>
 
                 <div style="width:100%; margin-bottom:10px;">
-                    <a class="btn btn-primary btn-sm" href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
+                    <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
                     <button type="button" ng-click="start(machine.id)" ng-hide="{{machine.is_active}}" class="btn btn-success btn-sm"><i class="fa fa-play" aria-hidden="true"></i>&nbsp Start</button>
 
@@ -75,7 +79,7 @@
                 </div>
 
                 <div style="width:100%; margin-bottom:10px;">
-                    <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
+                    <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
                     <button type="button" ng-click="prepare(machine.id)" class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp Prepare Base</button>
 
@@ -84,7 +88,7 @@
                     <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i> &nbsp ShutDown</button>
                     <button type="button" ng-click="removeb(machine.id)" ng-show="{{machine.is_base&&machine.has_clones==0}}" class="btn btn-warning btn-sm":q:q
                     ><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button>
-                    <a  class="btn btn-danger btn-sm" href="/machine/remove/{{machine.id}}.html" ng-hide="{{machine.has_clones!=0}}"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
+                    <a  class="btn btn-danger btn-sm" ng-href="/machine/remove/{{machine.id}}.html" ng-hide="{{machine.has_clones!=0}}"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
 
                     <h4><span ng-show="{{machine.has_clones!=0}}" class="label label-danger">Can't Remove Base and Delete. Machine has {{machine.has_clones}} Clone/s</span></h4>
                 </div>

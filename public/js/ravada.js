@@ -79,10 +79,6 @@
                 $scope.list_machines= response.data;
         });
 
-        request.get(function( res ) {
-            $scope.res = res;
-        });
-
         $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
 
@@ -134,10 +130,6 @@
             }
             $http.get($url_list).then(function(response) {
                     $scope.list_bases= response.data;
-            });
-
-            request.get(function( res ) {
-                $scope.res = res;
             });
 
             $http.get('/pingbackend.json').then(function(response) {
@@ -254,10 +246,6 @@
 
         $http.get('/messages.json').then(function(response) {
                 $scope.list_message= response.data;
-        });
-
-        request.get(function( res ) {
-            $scope.res = res;
         });
 
         $scope.asRead = function(messId){

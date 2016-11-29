@@ -25,8 +25,8 @@
                         <div ng-show="{{message.date_read != null}}">{{message.date_send}}</div></td>
 
                     <td>
-                        <a ng-show="{{message.date_read == null}}" href="/messages/read/{{message.id}}.html" class="btn btn-success">Mark as Read</a>
-                        <a ng-show="{{message.date_read != null}}" href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
+                        <a ng-show="{{message.date_read == null}}" ng-href="/messages/read/{{message.id}}.html" class="btn btn-success">Mark as Read</a>
+                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
                         <button type="button" class="btn btn-info" ng-click="asRead(message.id)" data-toggle="modal" data-target="#modal{{message.id}}">View</button>
                     </td>
                     
@@ -54,7 +54,7 @@
                 </p>
               </div>
               <div class="modal-footer">
-                        <a ng-show="{{message.date_read != null}}" href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
+                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
               </div>
             </div>

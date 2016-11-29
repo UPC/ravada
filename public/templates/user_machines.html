@@ -8,10 +8,10 @@
 
         <div class="panel-heading">
             <h3 class="panel-title">{{machine.name}}</h3><br>
-            <img id="screensh" src="/img/screenshots/{{machine.id}}.png">
+            <img id="screensh" ng-src="/img/screenshots/{{machine.id}}.png">
         </div>
         <div class="panel-body machine-card">
-            <a type="button"  class="btn btn-success" href="/machine/clone/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
+            <a type="button"  class="btn btn-success" ng-href="/machine/clone/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
         </div>
         </div>
         </div>
