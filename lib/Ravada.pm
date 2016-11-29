@@ -835,6 +835,22 @@ sub _cmd_resume {
 }
 
 
+sub _cmd_open_iptables {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $domain = $self->search_domain_by_id($request->args('id_domain'));
+    die "Unknown domain" if !$domain;
+
+    $domain->open_iptables(
+        remote_ip => $request->args('remote_ip')
+        ,uid => $user->id
+    );
+}
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -952,6 +968,7 @@ sub _req_method {
    ,remove_base => \&_cmd_remove_base
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
+ ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
     );
     return $methods{$cmd};

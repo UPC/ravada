@@ -642,8 +642,9 @@ sub show_link {
 
     return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
 
+    my $req;
     if ( !$domain->is_active ) {
-        my $req = Ravada::Request->start_domain(
+        $req = Ravada::Request->start_domain(
                                          uid => $USER->id
                                        ,name => $domain->name
                                   ,remote_ip => _remote_ip($c)
@@ -659,7 +660,9 @@ sub show_link {
             if !$req->status eq 'done';
     }
     if ( $domain->is_paused) {
-        my $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id);
+        $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id
+                    , remote_ip => _remote_ip($c)
+        );
 
         $RAVADA->wait_request($req);
         warn "ERROR: ".$req->error if $req->error();
@@ -678,10 +681,24 @@ sub show_link {
         $c->render(template => 'fail', name => $domain->name);
         return;
     }
+    _open_iptables($c,$domain)
+        if !$req;
     $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
 
+sub _open_iptables {
+    my ($c, $domain) = @_;
+    my $req = Ravada::Request->open_iptables(
+               uid => $USER->id
+        ,id_domain => $domain->id
+        ,remote_ip => _remote_ip($c)
+    );
+    $RAVADA->wait_request($req);
+    return $c->render(data => 'ERROR opening domain for '._remote_ip($c)." ".$req->error)
+            if $req->error;
+
+}
 
 sub check_back_running {
     #TODO;

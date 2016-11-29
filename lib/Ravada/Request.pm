@@ -24,7 +24,7 @@ our %FIELD_RO = map { $_ => 1 } qw(id name);
 our $args_manage = { name => 1 , uid => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
 our $args_remove_base = { domain => 1 , uid => 1 };
-our $args_manage_ip = {%$args_manage, remote_ip => 1};
+our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
@@ -38,7 +38,7 @@ our %VALID_ARG = (
            ,disk => 2
         ,network => 2
     }
-    ,open_iptables => $args_manage_ip
+    ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
      ,pause_domain => $args_manage
@@ -635,6 +635,27 @@ sub screenshot_domain {
     return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
         ,args => encode_json($args));
 
+}
+
+=head2 open_iptables
+
+Request to open iptables for a remote client
+
+=cut
+
+sub open_iptables {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('open_iptables', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'open_iptables'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args));
 }
 
 sub AUTOLOAD {
