@@ -56,7 +56,7 @@ Clone the sources:
 - libnet-dns-perl
 - wget
 
-##Old debian
+##Old Mojolicious
 
 In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:
 
@@ -66,6 +66,7 @@ In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-pe
 
 #Mysql Database
 
+## MySQL user
 Create a database named "ravada". 
 
 Grant all permissions to your user:
@@ -74,6 +75,19 @@ Grant all permissions to your user:
     mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'figure a password';
     exit
 
+##Config file
+
+Create a config file at /etc/ravada.conf with:
+    
+    db:
+      user: rvd_user
+      password: *****
+
+Protect the config file from others:
+
+    $ chmod o-rx /etc/ravada.conf
+
+## Create tables
 Review and run the sql files from the sql dir.
 
     $ mysqladmin -p create -u root ravada
@@ -83,13 +97,6 @@ Review and run the sql files from the sql dir.
     $ cd data
     $ cat *.sql | mysql -p -u rvd_user ravada
 
-#Config file
-
-Create a config file at /etc/ravada.conf with:
-    
-    db:
-      user: ravada
-      password: *****
 
 #KVM backend
 
@@ -102,7 +109,7 @@ Install KVM
 
 #Ravada user
 
-Add a new user for the ravada web. This command will create a new user (not admin) in the database:
+Add a new user for the ravada web. This command will create a new ravada user :
 
     $ cd ravada
     $ ./bin/rvd_back.pl --add-user user.name

@@ -5,6 +5,26 @@ Ravada has two daemons that must run on the production server:
 - rvd_back : must run as root and manages the virtual machines
 - rvd_front : is the web frontend that sends requests to the backend
 
+## Application directory
+
+The ravada application should be installed
+in /var/www/ravada
+
+## Ravada system user
+
+The frontend daemon must run as a non-privileged user.
+
+    # useradd ravada
+
+Allow it to write to some diretories inside /var/www/ravada/
+
+    # mkdir /var/www/ravada/log
+    # chown ravada /var/www/ravada/log
+    # chgrp ravada /etc/ravada.conf
+    # chmod g+r /etc/ravada.conf
+    # mkdir -p /var/www/img/screenshots/
+    # chown ravada /var/www/img/screenshots
+
 ## Apache
 
 It is advised to run an apache server or similar before the frontend.
@@ -13,8 +33,6 @@ It is advised to run an apache server or similar before the frontend.
     
 ## Systemd
 
-There are systemd service scripts for Ravada. The application should be installed
-or linked from /var/www/ravada
 
 ### Configuration for boot start
 
@@ -23,8 +41,10 @@ First you have to copy the service scripts to the systemd directory:
     $ cd ravada/etc/systemd/
     $ sudo cp *service /lib/systemd/system/
 
-Edit _/lib/systemd/system/rvd_front.service_ and change `User=****` to the user that can
-write to /var/www/ravada/
+Edit _/lib/systemd/system/rvd_front.service_ and change `User=****` to the _ravada_
+user just created.
+
+
 
 Then enable the services to run at startup
 
