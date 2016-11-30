@@ -132,4 +132,4 @@ So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
 
 #Next
 
-Read docs/production.md or devel-docs/development.md to learn how to start it.
+Read [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md) or [devel-docs/development.md](https://github.com/frankiejol/ravada/blob/master/devel-docs/development.md) to learn how to start it.
