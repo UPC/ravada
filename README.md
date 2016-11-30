@@ -23,12 +23,12 @@ Connect to the server with a web browser at http://servername:3000/
 
 ### Production
 
-See docs/production.md
+See [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md)
 
 ### Operation
 
-See docs/operation.md
+See [docs/operation.md](https://github.com/frankiejol/ravada/blob/master/docs/operation.md)
 
 ### Testing
 
-See docs/test.md
+See [docs/test.md](https://github.com/frankiejol/ravada/blob/master/docs/test.md)
