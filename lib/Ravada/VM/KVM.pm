@@ -440,7 +440,7 @@ sub _domain_create_from_base {
     _xml_modify_video($xml);
     $self->_xml_modify_usb($xml);
 
-    $self->_fix_slots();
+    $self->_fix_slots($xml);
 
     open my $out,'>',"/var/tmp/$args{name}.xml" or die $!;
     print $out $xml->toString();
@@ -713,8 +713,9 @@ sub _fix_slots {
             next if $node->nodeName ne 'address';
             my $slot = $node->getAttribute('slot');
             my $function = $node->getAttribute('slot');
+            next if !defined $slot || !defined $function;
             if ($slot{$slot}->{$function}) {
-                die "Conflict of slot";
+                warn "Conflict of slot $slot , function $function";
             }
         }
     }
