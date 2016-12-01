@@ -440,8 +440,14 @@ sub _domain_create_from_base {
     _xml_modify_video($xml);
     $self->_xml_modify_usb($xml);
 
+    $self->_fix_slots();
+
+    open my $out,'>',"/var/tmp/$args{name}.xml" or die $!;
+    print $out $xml->toString();
+    close $out;
+
     my $dom = $self->vm->define_domain($xml->toString());
-    $dom->create;
+    $dom->create();
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
         , _vm => $self);
@@ -697,9 +703,28 @@ sub _xml_modify_network {
     }
 }
 
+sub _fix_slots {
+    my $self = shift;
+    my $doc = shift;
+
+    my %slot;
+    for my $item ($doc->findnodes('/domain/devices/*')) {
+        for my $node ($item->childNodes()) {
+            next if $node->nodeName ne 'address';
+            my $slot = $node->getAttribute('slot');
+            my $function = $node->getAttribute('slot');
+            if ($slot{$slot}->{$function}) {
+                die "Conflict of slot";
+            }
+        }
+    }
+    return %slot;
+}
+
 sub _xml_modify_usb {
     my $self = shift;
      my $doc = shift;
+
 
     for my $ctrl ($doc->findnodes('/domain/devices/controller')) {
         next if $ctrl->getAttribute('type') ne 'usb';
@@ -735,6 +760,7 @@ sub _xml_add_usb_redirect {
 sub _xml_add_usb_uhci1 {
     my $self = shift;
     my $devices = shift;
+
     # USB uhci1
     my $controller = $devices->addNewChild(undef,"controller");
     $controller->setAttribute(type => 'usb');
