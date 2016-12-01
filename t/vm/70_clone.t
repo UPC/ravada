@@ -81,14 +81,34 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         my $domain = test_create_domain($vm_name);
+        eval { $domain->start($USER) if !$domain->is_active() };
+        is($@,'');
+        ok($domain->is_active);
+        $domain->shutdown_now($USER);
 
-        my $name_clone = new_domain_name();
-        my $clone = $domain->clone(name => $name_clone, user => $USER);
-        ok($clone,"Expecting new cloned domain");
+        my @domain = ( $domain);
+        for my $n ( 1 .. 3 ) {
 
-        my $clone2 = $RVD_FRONT->search_domain($name_clone);
-        ok($clone,"Expecting new cloned domain ".$name_clone);
+            my $name_clone = new_domain_name();
+            my $clone1;
+            my $base = $domain[$n-1];
 
+            eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
+            ok(!$@,"Expecting error='', got='".($@ or '')."'");
+            ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
+
+            $clone1->shutdown_now($USER) if $clone1->is_active();
+            eval { $clone1->start($USER) };
+            is($@,'');
+            ok($clone1->is_active);
+
+            my $clone1b = $RVD_FRONT->search_domain($name_clone);
+            ok($clone1b,"Expecting new cloned domain ".$name_clone);
+            $clone1->shutdown_now($USER) if $clone1->is_active;
+            ok(!$clone1->is_active);
+
+            push @domain,($clone1);
+        }
     }
 }
 

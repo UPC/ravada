@@ -223,9 +223,25 @@ sub _check_disk {
 sub _check_create_domain {
     my $self = shift;
 
+    my %args = @_;
+
     $self->_check_readonly(@_);
+
+    $self->_check_require_base(@_);
     $self->_check_memory(@_);
     $self->_check_disk(@_);
+
+}
+
+sub _check_require_base {
+    my $self = shift;
+
+    my %args = @_;
+    return if !$args{id_base};
+
+    my $base = $self->search_domain_by_id($args{id_base});
+    die "ERROR: Domain ".$self->name." is not base"
+            if !$base->is_base();
 
 }
 
