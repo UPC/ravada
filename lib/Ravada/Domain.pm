@@ -100,7 +100,7 @@ before 'start' => \&_start_preconditions;
 before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
 
-before 'resume' => \&_allow_manage;
+before 'resume' => \&_allow_manage_any;
  after 'resume' => \&_post_resume;
 
 before 'shutdown' => \&_allow_manage_args;
@@ -150,12 +150,11 @@ sub _allow_manage_args {
 sub _allow_manage {
     my $self = shift;
 
-    confess "Disabled from read only connection"
-        if $self->readonly;
+    return $self->_allow_manage_args(@_)
+        if scalar(@_) % 2 == 0;
 
     my ($user) = @_;
-
-    $self->_allowed($user);
+    return $self->allow_manage_args( user => $user);
 
 }
 

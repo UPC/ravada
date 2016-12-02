@@ -111,6 +111,49 @@ sub test_fw_domain{
 
 }
 
+sub test_fw_domain_pause {
+    my ($vm_name, $domain_name) = @_;
+    my $remote_ip = '99.88.77.66';
+
+    my $local_ip;
+    my $local_port;
+
+    {
+
+        my $vm = rvd_back->search_vm($vm_name);
+        my $domain = $vm->search_domain($domain_name);
+        ok($domain,"Searching for domain $domain_name") or return;
+        $domain->start( user => $USER, remote_ip => $remote_ip);
+
+        my $display = $domain->display($USER);
+        ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+        $local_ip = $vm->ip;
+
+        ok(defined $local_port, "Expecting a port in display '$display'") or return;
+    
+        $domain->pause($USER);
+        ok($domain->is_paused);
+
+        test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
+    }
+    {
+        my $req = Ravada::Request->resume_domain(
+                   uid => $USER->id
+            ,name => $domain_name
+            ,remote_ip => $remote_ip
+
+        );
+        ok($req);
+        ok($req->status);
+        rvd_back->process_requests();
+        wait_request($req);
+
+        is($req->status,'done');
+        is($req->error,'');
+        ok(search_rule($local_ip,$local_port, $remote_ip )) or exit;
+    }
+}
+
 
 sub open_ipt {
     my %opts = (
@@ -135,8 +178,7 @@ sub open_ipt {
 
 }
 
-sub test_chain {
-    my $vm_name = shift;
+sub search_rule {
 
     my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
     my $ipt = open_ipt();
@@ -144,11 +186,21 @@ sub test_chain {
     my ($rule_num , $chain_rules) 
         = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, 'ACCEPT'
                               , {normalize => 1 , d_port => $local_port });
+    return if ! $rule_num;
+    return $rule_num;
+}
+
+sub test_chain {
+    my $vm_name = shift;
+    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
+
+    my $rule_num = search_rule(@_);
 
     ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
         if $enabled;
-    ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip -> $local_ip: $local_port"
-                        .", got $rule_num ")
+    ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip "
+                        ."-> $local_ip: $local_port"
+                        .", got ".($rule_num or "<UNDEF>"))
         if !$enabled;
 
 }
@@ -189,6 +241,7 @@ for my $vm_name (qw( Void KVM )) {
         flush_rules();
 
         my $domain_name = test_create_domain($vm_name);
+        test_fw_domain_pause($vm_name, $domain_name);
         test_fw_domain($vm_name, $domain_name);
 
     };

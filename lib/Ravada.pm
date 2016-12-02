@@ -828,7 +828,10 @@ sub _cmd_resume {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->resume($user);
+    $domain->resume(
+        remote_ip => $request->args('remote_ip')
+        ,uid => $user
+    );
 
     $request->status('done');
 
