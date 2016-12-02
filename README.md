@@ -1,4 +1,5 @@
-# ravada [![GitHub version]
+# ravada [![GitHub version]https://github.com/frankiejol/ravada/releases [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
+
 Remove Virtual Desktops Manager
 
 Broker: ravada
