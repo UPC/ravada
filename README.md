@@ -1,6 +1,5 @@
-# ravada
+# ravada [![GitHub version]
 Remove Virtual Desktops Manager
-[![GitHub version]
 
 Broker: ravada
 
