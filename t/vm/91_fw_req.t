@@ -123,7 +123,8 @@ sub test_fw_domain_pause {
         my $vm = rvd_back->search_vm($vm_name);
         my $domain = $vm->search_domain($domain_name);
         ok($domain,"Searching for domain $domain_name") or return;
-        $domain->start( user => $USER, remote_ip => $remote_ip);
+        $domain->start( user => $USER, remote_ip => $remote_ip)
+            if !$domain->is_active();
 
         my $display = $domain->display($USER);
         ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
@@ -241,8 +242,8 @@ for my $vm_name (qw( Void KVM )) {
         flush_rules();
 
         my $domain_name = test_create_domain($vm_name);
-        test_fw_domain_pause($vm_name, $domain_name);
         test_fw_domain($vm_name, $domain_name);
+        test_fw_domain_pause($vm_name, $domain_name);
 
     };
 }

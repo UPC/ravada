@@ -100,7 +100,7 @@ before 'start' => \&_start_preconditions;
 before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
 
-before 'resume' => \&_allow_manage_any;
+before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
 
 before 'shutdown' => \&_allow_manage_args;
@@ -154,7 +154,7 @@ sub _allow_manage {
         if scalar(@_) % 2 == 0;
 
     my ($user) = @_;
-    return $self->allow_manage_args( user => $user);
+    return $self->_allow_manage_args( user => $user);
 
 }
 
@@ -176,7 +176,7 @@ sub _allow_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
-    if ($self->is_active) {
+    if ($self->is_active && !$self->is_paused) {
         $self->pause($user);
         $self->{_was_active} = 1;
     }

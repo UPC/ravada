@@ -197,13 +197,14 @@ sub test_prepare_base_active {
     ok(!$@,$@);
 
     ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
-    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name." should not be paused") or exit;
-
-    eval { $domain->prepare_base($USER) };
-    ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'");
-
-    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or exit;
     ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name." should not be paused") or return;
+
+    eval{ $domain->prepare_base($USER) };
+    ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
+
+    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
+    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name
+                            ." should not be paused after prepare base") or return;
 }
 
 sub touch_mtime {

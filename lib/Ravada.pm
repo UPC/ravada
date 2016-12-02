@@ -830,7 +830,7 @@ sub _cmd_resume {
 
     $domain->resume(
         remote_ip => $request->args('remote_ip')
-        ,uid => $user
+        ,user => $user
     );
 
     $request->status('done');
