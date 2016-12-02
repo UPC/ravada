@@ -440,12 +440,6 @@ sub _domain_create_from_base {
     _xml_modify_video($xml);
     $self->_xml_modify_usb($xml);
 
-    $self->_fix_slots($xml);
-
-    open my $out,'>',"/var/tmp/$args{name}.xml" or die $!;
-    print $out $xml->toString();
-    close $out;
-
     my $dom = $self->vm->define_domain($xml->toString());
     $dom->create();
 
@@ -703,25 +697,6 @@ sub _xml_modify_network {
     }
 }
 
-sub _fix_slots {
-    my $self = shift;
-    my $doc = shift;
-
-    my %slot;
-    for my $item ($doc->findnodes('/domain/devices/*')) {
-        for my $node ($item->childNodes()) {
-            next if $node->nodeName ne 'address';
-            my $slot = $node->getAttribute('slot');
-            my $function = $node->getAttribute('slot');
-            next if !defined $slot || !defined $function;
-            if ($slot{$slot}->{$function}) {
-                warn "Conflict of slot $slot , function $function";
-            }
-        }
-    }
-    return %slot;
-}
-
 sub _xml_modify_usb {
     my $self = shift;
      my $doc = shift;
@@ -758,10 +733,35 @@ sub _xml_add_usb_redirect {
 
 }
 
+sub _search_xml {
+    my %arg = @_;
+
+    my $name = $arg{name};
+    delete $arg{name};
+    my $xml = $arg{xml};
+    delete $arg{xml};
+
+    confess "Undefined xml => \$xml"
+        if !$xml;
+ 
+    for my $item ( $xml->findnodes($name) ) {
+        for my $attr( sort keys %arg ) {
+            return $item if $item->getAttribute($attr) eq $arg{$attr}
+        }
+    }
+    return;
+}
+
 sub _xml_add_usb_uhci1 {
     my $self = shift;
     my $devices = shift;
 
+    return if _search_xml(
+                           xml => $devices
+                         ,name => 'controller'
+                         ,type => 'usb'
+                         ,model => 'ich9-uhci1'
+    );
     # USB uhci1
     my $controller = $devices->addNewChild(undef,"controller");
     $controller->setAttribute(type => 'usb');
@@ -784,6 +784,12 @@ sub _xml_add_usb_uhci2 {
     my $self = shift;
     my $devices = shift;
 
+    return if _search_xml(
+                           xml => $devices
+                         ,name => 'controller'
+                         ,type => 'usb'
+                         ,model => 'ich9-uhci2'
+    );
     # USB uhci2
     my $controller = $devices->addNewChild(undef,"controller");
     $controller->setAttribute(type => 'usb');
@@ -805,6 +811,12 @@ sub _xml_add_usb_uhci3 {
     my $self = shift;
     my $devices = shift;
 
+    return if _search_xml(
+                           xml => $devices
+                         ,name => 'controller'
+                         ,type => 'usb'
+                         ,model => 'ich9-uhci3'
+    );
     # USB uhci2
     my $controller = $devices->addNewChild(undef,"controller");
     $controller->setAttribute(type => 'usb');
