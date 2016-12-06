@@ -280,7 +280,7 @@ sub test_req_remove_base_fail {
         $domain_clone->_vm->disconnect();
     
         $req = Ravada::Request->remove_base(
-            domain => $domain_base
+            id_domain => $domain_base->id
             , uid => $USER->id
         );
     }
@@ -320,7 +320,7 @@ sub test_req_remove_base {
         $domain_base->_vm->disconnect();
         $domain_clone->_vm->disconnect();
         $req = Ravada::Request->remove_base(
-            domain => $domain_base
+            id_domain => $domain_base->id
             , uid => $USER->id
         );
     }

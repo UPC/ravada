@@ -86,8 +86,8 @@
                     <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
 
                     <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i> &nbsp ShutDown</button>
-                    <!-- <button type="button" ng-click="removeb(machine.id)" ng-show="{{machine.is_base&&machine.has_clones==0}}" class="btn btn-warning btn-sm":q:q
-                    ><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button> -->
+                    <button type="button" ng-click="removeb(machine.id)" ng-show="{{machine.is_base&&machine.has_clones==0}}" class="btn btn-warning btn-sm":q:q
+                    ><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button>
                     <a  class="btn btn-danger btn-sm" ng-href="/machine/remove/{{machine.id}}.html" ng-hide="{{machine.has_clones!=0}}"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
 
                     <h4><span ng-show="{{machine.has_clones!=0}}" class="label label-danger">Can't Remove Base and Delete. Machine has {{machine.has_clones}} Clone/s</span></h4>

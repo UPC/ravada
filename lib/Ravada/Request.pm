@@ -23,7 +23,7 @@ our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
-our $args_remove_base = { domain => 1 , uid => 1 };
+our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
@@ -323,20 +323,10 @@ sub remove_base {
     my $self = {};
     bless($self,$class);
 
-    my $domain = $args->{domain};
-
-    $args->{id_domain} = $domain->id;
-    delete $args->{domain};
-
     my $req = $self->_new_request(command => 'remove_base'
-        , id_domain => $domain->id
+        , id_domain => $args->{id_domain}
         , args => encode_json( $args ));
 
-    if ($domain->has_clones()) {
-        $req->status('done');
-        $req->error("Domain ".$domain->name." can't be removed."
-                    ."It has ".$domain->has_clones." clones");
-    }
     return $req;
 }
 

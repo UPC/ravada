@@ -187,7 +187,7 @@ get '/machine/info/*.json' => sub {
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
     die "No id " if !$id;
-    $c->render(json => $RAVADA->search_domain($id));
+    $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
 any '/machine/manage/*html' => sub {
