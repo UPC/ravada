@@ -17,6 +17,8 @@ use Ravada::Auth;
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 
+plugin Config => { file => 'rvd_front.conf' };
+
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
