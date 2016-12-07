@@ -261,8 +261,13 @@ sub create_domain {
     my $request = $args{request}            if $args{request};
 
     my $vm;
-    $vm = $self->search_vm($vm_name)   if $vm_name;
+    if ($vm_name) {
+        $vm = $self->search_vm($vm_name);
+        confess "ERROR: vm $vm_name not found"  if !$vm;
+    }
     $vm = $self->vm->[0]               if !$vm;
+
+    confess "No vm found"   if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
         if !$vm_name;
