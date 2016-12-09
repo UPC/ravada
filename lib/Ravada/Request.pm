@@ -49,6 +49,9 @@ our %VALID_ARG = (
     ,start_domain => {%$args_manage, remote_ip => 1 }
 );
 
+our %CMD_SEND_MESSAGE = map { $_ => 1 }
+    qw( create start shutdown prepare_base remove );
+
 our $CONNECTOR;
 
 sub _init_connector {
@@ -463,7 +466,8 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
 
-    $self->_send_message($status, $message)   if $self->command ne 'domdisplay';
+    $self->_send_message($status, $message) 
+        if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
 }
 

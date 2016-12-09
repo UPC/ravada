@@ -146,12 +146,17 @@ sub test_fw_domain_pause {
         );
         ok($req);
         ok($req->status);
+
+        my @messages = $USER->messages();
         rvd_back->process_requests();
         wait_request($req);
 
         is($req->status,'done');
         is($req->error,'');
         ok(search_rule($local_ip,$local_port, $remote_ip )) or exit;
+        my @messages2 = $USER->messages();
+        is(scalar @messages2, scalar @messages
+            ,"Expecting no new messages ");
     }
 }
 
