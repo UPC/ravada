@@ -441,7 +441,14 @@ sub _domain_create_from_base {
     $self->_xml_modify_usb($xml);
 
     my $dom = $self->vm->define_domain($xml->toString());
-    $dom->create();
+    eval { $dom->create() };
+    if ($@) {
+        my $err = $@;
+        open my $out,'>',"$args{name}.xml" or die $!;
+        print $out $xml->toString();
+        close $out;
+        die $@;
+    }
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
         , _vm => $self);
