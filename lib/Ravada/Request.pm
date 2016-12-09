@@ -221,7 +221,7 @@ sub resume_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $args = _check_args('pause_domain', @_);
+    my $args = _check_args('resume_domain', @_);
 
     my $self = {};
     bless($self,$class);
