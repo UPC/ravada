@@ -725,4 +725,17 @@ sub set_memory {
 #    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_HARD_LIMIT);
 #    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_SOFT_LIMIT);
 }
+
+=head2 rename
+
+Renames the domain
+
+    $domain->rename("new name");
+
+=cut
+
+sub rename {
+    my $self = shift;
+
+}
 1;

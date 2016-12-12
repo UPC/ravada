@@ -276,4 +276,15 @@ sub _set_info {
     $info->{$field} = $value;
     $self->_store(info => $info);
 }
+
+=head2 rename
+
+    $domain->rename("new_name");
+
+=cut
+
+sub rename {
+
+}
+
 1;

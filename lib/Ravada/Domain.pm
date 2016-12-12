@@ -35,6 +35,8 @@ requires 'pause';
 requires 'resume';
 requires 'prepare_base';
 
+requires 'rename';
+
 #storage
 requires 'add_volume';
 requires 'list_volumes';
