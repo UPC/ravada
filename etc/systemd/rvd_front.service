@@ -13,7 +13,7 @@ WorkingDirectory=/var/www/ravada/
 ExecStart=/usr/bin/hypnotoad /var/www/ravada/rvd_front.pl -f
 ExecStop=/usr/bin/hypnotoad -s /var/www/ravada/rvd_front.pl
 ExecReload=/usr/bin/hypnotoad /var/www/ravada/rvd_front.pl
-User=frankie
+User=ravada
 
 [Install]
 WantedBy=multi-user.target
