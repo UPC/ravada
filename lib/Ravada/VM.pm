@@ -155,7 +155,7 @@ Returns the external IP this for this VM
 sub ip {
     my $self = shift;
 
-    my $name = $self->host();
+    my $name = $self->host() or confess "this vm has no host name";
     my $ip = inet_ntoa(inet_aton($name)) ;
 
     return $ip if $ip && $ip !~ /^127\./;
@@ -177,7 +177,7 @@ sub ip {
     $ip = $self->_interface_ip();
     return $ip if $ip && $ip !~ /^127/ && $ip =~ /^\d+\.\d+\.\d+\.\d+$/;
 
-    warn "WARNING: I can't find the IP of host $name, using localhost."
+    warn "WARNING: I can't find the IP of host ".$self->host.", using localhost."
         ." This virtual machine won't be available from the network.";
 
     return '127.0.0.1';
@@ -198,7 +198,7 @@ sub _interface_ip {
 
     for my $if ( $s->if_list) {
         my $addr = $s->if_addr($if);
-        return $addr if $addr;
+        return $addr if $addr && $addr !~ /^127\./;
     }
     return;
 }
