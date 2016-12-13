@@ -729,9 +729,11 @@ sub _wait_children {
 
         $self->_wait_pids_nohang();
         sleep 1;
-        $req->error($msg)
-            if !$try++;
 
+        next if $try++;
+
+        $req->error($msg);
+        $req->status('waiting');
     }
 }
 
