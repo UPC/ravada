@@ -340,7 +340,10 @@ sub test_req_remove_base {
             .", got : '".$req->error."'");
 
     {
-        my $domain_base = rvd_front->search_vm('KVM')->search_domain($name_base);
+        my $domain_base = rvd_front->search_vm($vm_name)
+                            ->search_domain($name_base);
+        ok($domain_base,"[$vm_name] I can't find domain $name_base")
+            or return;
         ok(!$domain_base->is_base());
     }
     check_files_removed(@files_base);
