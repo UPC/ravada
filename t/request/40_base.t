@@ -70,12 +70,13 @@ sub test_req_create_domain_iso {
         ,"Status of request is ".$req->status." it should be requested");
 
     my $rvd_back = rvd_back();
+#    $rvd_back->process_requests(1);
     $rvd_back->process_requests();
     wait_request($req);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name)
+    ok(!$req->error,"Error ".($req->error or '')." creating domain ".$name)
         or return;
 
 #    test_unread_messages($USER,1, "[$vm_name] create domain $name");
@@ -98,7 +99,9 @@ sub test_req_create_domain_iso {
 sub test_message_new_domain {
     my ($vm_name, $user) = @_;
     my @messages = $user->unread_messages();
-    ok(scalar(@messages) == 1,"Expecting 1 new message , got ".Dumper(\@messages));
+    ok(scalar(@messages) == 1,"Expecting 1 new message , got "
+        .scalar(@messages)
+        .Dumper(\@messages));
     
     my $message = $user->show_message($messages[0]->{id});
 
@@ -131,7 +134,7 @@ sub test_req_create_domain {
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error '".$req->error."' creating domain ".$name);
+    ok(!$req->error,"Error '".($req->error or '')."' creating domain ".$name);
 
     my $rvd_front = rvd_front();
     my $domain =  $rvd_front->search_domain($name);
@@ -338,8 +341,11 @@ sub test_req_remove_base {
             .", got : '".$req->error."'");
 
     {
-        my $domain_base = rvd_front->search_vm($vm_name)->search_domain($name_base);
-        ok(!$domain_base->is_base(),"Expecting $name_base is not base");
+        my $domain_base = rvd_front->search_vm($vm_name)
+                            ->search_domain($name_base);
+        ok($domain_base,"[$vm_name] I can't find domain $name_base")
+            or return;
+        ok(!$domain_base->is_base());
     }
     check_files_removed(@files_base);
 }

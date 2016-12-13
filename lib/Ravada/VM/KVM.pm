@@ -327,7 +327,7 @@ sub _domain_create_from_iso {
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
 
-    my $device_cdrom = _iso_name($iso);
+    my $device_cdrom = _iso_name($iso, $args{request});
 
     my $disk_size = $args{disk} if $args{disk};
     my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume}
@@ -459,6 +459,7 @@ sub _domain_create_from_base {
 
 sub _iso_name {
     my $iso = shift;
+    my $req = shift;
 
     my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
     $iso_name = $iso->{url} if !$iso_name;
@@ -469,6 +470,10 @@ sub _iso_name {
         if !$iso->{md5};
 
     if (! -e $device || ! -s $device) {
+        $req->status("downloading $iso_name file"
+                ,"Downloading ISO file for $iso_name "
+                 ." from $iso->{url}. It may take several minutes"
+        )   if $req;
         _download_file_external($iso->{url}, $device);
     }
     confess "Download failed, MD5 missmatched"

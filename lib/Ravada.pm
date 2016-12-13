@@ -644,7 +644,6 @@ sub _execute {
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ($pid == 0) {
-        $request->status("forked $$");
         eval {
             $self->_connect_vm();
             $sub->($self,$request);
@@ -735,9 +734,11 @@ sub _wait_children {
 
         $self->_wait_pids_nohang();
         sleep 1;
-        $req->error($msg)
-            if !$try++;
 
+        next if $try++;
+
+        $req->error($msg);
+        $req->status('waiting');
     }
 }
 
