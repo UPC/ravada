@@ -794,13 +794,13 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
-#    @iptables_arg = ( '0.0.0.0'
-#                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
-#                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-    #
-    #($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    #
-    #$self->_log_iptable(iptables => \@iptables_arg, %args);
+    @iptables_arg = ( '0.0.0.0'
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+    
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    
+    $self->_log_iptable(iptables => \@iptables_arg, %args);
 
 }
 
@@ -843,7 +843,7 @@ sub _obj_iptables {
 	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
 	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
 	                                    ### 'system', or 'popen'.
-	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
+	    'ipt_exec_sleep' => 0, ### add in time delay between execution of
 	                           ### iptables commands (default is 0).
 	);
 
