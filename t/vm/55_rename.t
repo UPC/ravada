@@ -30,12 +30,12 @@ my $USER = create_user("foo","bar");
 
 sub test_create_domain {
     my $vm_name = shift;
+    my $name = ( shift or new_domain_name());
 
     my $ravada = Ravada->new(@ARG_RVD);
     my $vm = $ravada->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 
-    my $name = new_domain_name();
 
     if (!$ARG_CREATE_DOM{$vm_name}) {
         diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
@@ -49,7 +49,7 @@ sub test_create_domain {
                     , @{$ARG_CREATE_DOM{$vm_name}})
     };
 
-    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
+    ok($domain,"[$vm_name] Expecting VM $name created with ".ref($vm)." ".($@ or '')) or return;
     ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
@@ -68,13 +68,13 @@ sub test_rename_domain {
     ok($domain,"Expecting found $domain_name") or return;
 
     my $new_domain_name = new_domain_name();
-    $domain->rename($new_domain_name);
+    $domain->rename(name => $new_domain_name, user => $USER);
 
     my $domain0 = $vm->search_domain($domain_name);
     ok(!$domain0,"Expecting not found $domain_name");
 
     my $domain1 = $vm->search_domain($new_domain_name);
-    ok($domain1,"Expecting found $new_domain_name");
+    ok($domain1,"Expecting renamed domain $new_domain_name");
 
 }
 
@@ -111,9 +111,12 @@ for my $vm_name (qw( Void KVM )) {
         skip $msg,10    if !$vm_ok;
 
         my $domain_name = test_create_domain($vm_name);
-
         test_rename_domain($vm_name, $domain_name);
+        test_create_domain($vm_name, $domain_name);
+
+        $domain_name = test_create_domain($vm_name);
         test_req_rename_domain($vm_name, $domain_name);
+        test_create_domain($vm_name, $domain_name);
         
     };
 }
