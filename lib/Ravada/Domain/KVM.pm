@@ -736,6 +736,25 @@ Renames the domain
 
 sub rename {
     my $self = shift;
+    my %args = @_;
+    my $new_name = $args{name};
 
+    $self->domain->rename($new_name);
 }
+
+=head2 rename_volumes
+
+Renames all the volumes of a domain
+
+Argument: the new name of the volumes.
+
+=cut
+
+sub rename_volumes {
+    my $self = shift;
+    for my $volume ($self->list_volumes) {
+        warn "Rename volume ".Dumper($volume);
+    }
+}
+
 1;

@@ -36,6 +36,7 @@ requires 'resume';
 requires 'prepare_base';
 
 requires 'rename';
+requires 'rename_volumes';
 
 #storage
 requires 'add_volume';
@@ -112,7 +113,7 @@ before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
 before 'rename' => \&_pre_rename;
-after 'rename' => \&_rename_domain_db;
+after 'rename' => \&_post_rename;
 ##################################################
 
 sub _vm_connect {
@@ -922,14 +923,18 @@ sub _active_iptables {
 }
 
 sub _check_duplicate_domain_name {
+    my $self = shift;
 # TODO
 #   check name not in current domain in db
 #   check name not in other VM domain
+    $self->id();
 }
 
 sub _rename_domain_db {
     my $self = shift;
-    my $new_name = shift;
+    my %args = @_;
+
+    my $new_name = $args{name} or confess "Missing new name";
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
                 ." WHERE id=?");
@@ -945,8 +950,14 @@ sub _pre_rename {
     my $user = $args{user};
 
     $self->_check_duplicate_domain_name(@_);
-
-    $self->resume($user)            if $self->is_paused;
     $self->shutdown(user => $user)  if $self->is_active;
+}
+
+sub _post_rename {
+    my $self = shift;
+    my %args = @_;
+
+    $self->rename_volumes($args{name});
+    $self->_rename_domain_db(@_);
 }
 1;

@@ -47,6 +47,7 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
+    ,rename_domain => { uid => 1, name => 1, id_domain => 1}
 );
 
 our $CONNECTOR;
@@ -656,6 +657,29 @@ sub open_iptables {
             command => 'open_iptables'
         , id_domain => $args->{id_domain}
              , args => encode_json($args));
+}
+
+=head2 rename_domain
+
+Request to rename a domain
+
+=cut
+
+sub rename_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('rename_domain', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'rename_domain'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
 }
 
 sub AUTOLOAD {

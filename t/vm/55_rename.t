@@ -34,7 +34,7 @@ sub test_create_domain {
 
     my $ravada = Ravada->new(@ARG_RVD);
     my $vm = $ravada->search_vm($vm_name);
-    ok($vm,"I can't find VM $vm_name") or return;
+    ok($vm,"Expecting VM $vm_name") or return;
 
 
     if (!$ARG_CREATE_DOM{$vm_name}) {
@@ -43,6 +43,7 @@ sub test_create_domain {
     }
     my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
 
+    diag("[$vm_name] creating domain $name");
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
@@ -65,21 +66,50 @@ sub test_rename_domain {
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
-    ok($domain,"Expecting found $domain_name") or return;
+    ok($domain,"[$vm_name] Expecting found $domain_name") or return;
 
     my $new_domain_name = new_domain_name();
     $domain->rename(name => $new_domain_name, user => $USER);
 
     my $domain0 = $vm->search_domain($domain_name);
-    ok(!$domain0,"Expecting not found $domain_name");
+    ok(!$domain0,"[$vm_name] Expecting not found $domain_name");
 
     my $domain1 = $vm->search_domain($new_domain_name);
-    ok($domain1,"Expecting renamed domain $new_domain_name");
+    ok($domain1,"[$vm_name] Expecting renamed domain $new_domain_name") or return;
 
 }
 
 sub test_req_rename_domain {
     my ($vm_name, $domain_name) = @_;
+
+    my $domain_id;
+    {
+        my $vm = rvd_back->search_vm($vm_name);
+        my $domain = $vm->search_domain($domain_name);
+        ok($domain,"[$vm_name-req] Expecting found $domain_name") or return;
+        $domain_id = $domain->id;
+    }
+    my $new_domain_name = new_domain_name();
+    my $req = Ravada::Request->rename_domain(
+              uid => $USER->id,
+             name => $new_domain_name,
+        id_domain => $domain_id,
+    );
+    ok($req);
+    rvd_back()->process_requests();
+    wait_request($req);
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".$req->error." creating domain ".$domain_name)
+        or return;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain0 = $vm->search_domain($domain_name);
+    ok(!$domain0,"[$vm_name-req] Expecting not found $domain_name");
+
+    my $domain1 = $vm->search_domain($new_domain_name);
+    ok($domain1,"[$vm_name-req] Expecting renamed domain $new_domain_name") or return;
 }
 
 
@@ -90,7 +120,6 @@ remove_old_disks();
 
 for my $vm_name (qw( Void KVM )) {
 
-    diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
     use_ok($CLASS) or next;
@@ -115,7 +144,7 @@ for my $vm_name (qw( Void KVM )) {
         test_create_domain($vm_name, $domain_name);
 
         $domain_name = test_create_domain($vm_name);
-        test_req_rename_domain($vm_name, $domain_name);
+        test_req_rename_domain($vm_name, $domain_name) or next;
         test_create_domain($vm_name, $domain_name);
         
     };

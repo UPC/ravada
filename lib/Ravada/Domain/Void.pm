@@ -220,7 +220,7 @@ sub rename_volumes {
 
     my $data = LoadFile($self->_config_file);
 
-    for my $name (%{$data->{device}}) {
+    for my $name (keys %{$data->{device}}) {
         my $path = $data->{device}->{$name}->{path};
         next if !$path;
         $data->{device}->{$name}->{path} 
@@ -330,7 +330,6 @@ sub rename {
     unlink($file_yml);
 
     $self->domain($new_name);
-    $self->rename_volumes($new_name);
 }
 
 1;
