@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(cluck croak);
 use Data::Dumper;
+use File::Copy;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -13,7 +14,7 @@ use YAML qw(LoadFile DumpFile);
 with 'Ravada::Domain';
 
 has 'domain' => (
-    is => 'ro'
+    is => 'rw'
     ,isa => 'Str'
     ,required => 1
 );
@@ -214,6 +215,16 @@ sub add_volume {
 
 }
 
+sub rename_volumes {
+    my $self = shift;
+
+    my $data = LoadFile($self->disk_device);
+
+    for my $name (%{$data->{device}}) {
+        my $path = $data->{device}->{path};
+    }
+}
+
 sub list_volumes {
     my $self = shift;
     my $data = LoadFile($self->disk_device) if -e $self->disk_device;
@@ -284,7 +295,18 @@ sub _set_info {
 =cut
 
 sub rename {
+    my $self = shift;
+    my %args = @_;
+    my $new_name = $args{name};
 
+    my $file_img = $self->disk_device();
+
+    my $file_img_new = "$DIR_TMP/$new_name.img";
+    copy($file_img, $file_img_new) or die "$! $file_img -> $file_img_new";
+    unlink($file_img);
+
+    $self->domain($new_name);
+    $self->rename_volumes($new_name);
 }
 
 1;
