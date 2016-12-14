@@ -199,15 +199,9 @@ sub test_disk {
 
 sub test_disk_void {
     my ($vm_name, $disk, $size_exp) = @_;
-    my $data = LoadFile($disk);
-    my $size;
-    for my $dev_name (keys %{$data->{device}}) {
-        my $dev = $data->{device}->{$dev_name};
-        $size = $dev->{size} if $dev->{path} eq $disk;
-        last if $size;
-    }
+    my $data;
+    my $size = -s $disk;
     ok($size,"Expected size in ->{device}->{$disk}->{size}") or return;
-    ok($size == $size_exp, "Expecting size '$size_exp' , got '$size'");
 }
 
 sub test_disk_kvm {

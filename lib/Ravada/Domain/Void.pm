@@ -91,7 +91,7 @@ sub _store {
 
     my $data = {};
 
-    my ($disk) = $self->disk_device();
+    my $disk = $self->_config_file();
     $data = LoadFile($disk)   if -e $disk;
 
     $data->{$var} = $value;
@@ -105,7 +105,7 @@ sub _value{
 
     my ($var) = @_;
 
-    my ($disk) = $self->disk_device();
+    my ($disk) = $self->_config_file();
 
     my $data = {} ;
     $data = LoadFile($disk) if -e $disk;
@@ -144,9 +144,9 @@ sub prepare_base {
     }
 }
 
-sub disk_device {
+sub _config_file {
     my $self = shift;
-    return "$DIR_TMP/".$self->name.".img";
+    return "$DIR_TMP/".$self->name.".yml";
 }
 
 sub list_disks {
@@ -204,13 +204,13 @@ sub add_volume {
 #    confess "Missing size " if !$args{size};
 
     my $data = { };
-    $data = LoadFile($self->disk_device) if -e $self->disk_device;
+    $data = LoadFile($self->_config_file) if -e $self->_config_file;
 
     $data->{device}->{$args{name}} = \%args;
-    DumpFile($self->disk_device, $data);
+    DumpFile($self->_config_file, $data);
 
     open my $out,'>>',$args{path} or die "$! $args{path}";
-    print $out "";
+    print $out Dumper($data->{device}->{$args{name}});
     close $out;
 
 }
@@ -218,16 +218,40 @@ sub add_volume {
 sub rename_volumes {
     my $self = shift;
 
-    my $data = LoadFile($self->disk_device);
+    my $data = LoadFile($self->_config_file);
 
     for my $name (%{$data->{device}}) {
-        my $path = $data->{device}->{path};
+        my $path = $data->{device}->{$name}->{path};
+        next if !$path;
+        $data->{device}->{$name}->{path} 
+                        = $self->_rename_path($path);
     }
+    DumpFile($self->_config_file, $data);
+}
+
+sub _rename_path {
+    my $self = shift;
+    my $path = shift;
+
+    my $new_name = $self->name;
+
+    my $cnt = 0;
+    my ($dir,$ext) = $path =~ m{(.*)/.*?\.(.*)};
+    for (;;) {
+        my $new_path = "$dir/$new_name.$ext";
+        return $new_path if ! -e $new_path;
+
+        $new_name = $self->name."-$cnt";
+    }
+}
+
+sub disk_device {
+    return list_volumes(@_);
 }
 
 sub list_volumes {
     my $self = shift;
-    my $data = LoadFile($self->disk_device) if -e $self->disk_device;
+    my $data = LoadFile($self->_config_file) if -e $self->_config_file;
 
     return () if !exists $data->{device};
     my @vol;
@@ -299,11 +323,11 @@ sub rename {
     my %args = @_;
     my $new_name = $args{name};
 
-    my $file_img = $self->disk_device();
+    my $file_yml = $self->_config_file();
 
-    my $file_img_new = "$DIR_TMP/$new_name.img";
-    copy($file_img, $file_img_new) or die "$! $file_img -> $file_img_new";
-    unlink($file_img);
+    my $file_yml_new = "$DIR_TMP/$new_name.yml";
+    copy($file_yml, $file_yml_new) or die "$! $file_yml -> $file_yml_new";
+    unlink($file_yml);
 
     $self->domain($new_name);
     $self->rename_volumes($new_name);
