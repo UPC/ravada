@@ -69,6 +69,8 @@ In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-pe
 ## MySQL user
 Create a database named "ravada". 
 
+    $ mysqladmin -u root -p create ravada
+
 Grant all permissions to your user:
 
     $ mysql -u root -p
@@ -90,7 +92,6 @@ Protect the config file from others:
 ## Create tables
 Review and run the sql files from the sql dir.
 
-    $ mysqladmin -p create -u root ravada
     $ cd ravada/sql/mysql
     $ cat *.sql | mysql -p -u rvd_user ravada
     $ cd ..
