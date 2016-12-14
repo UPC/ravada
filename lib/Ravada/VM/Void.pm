@@ -67,6 +67,7 @@ sub list_domains {
 
     my %domain;
     while (my $file = readdir $ls ) {
+        next if $file !~ /\.yml$/;
         $file =~ s/\.\w+//;
         $file =~ s/(.*)\.qcow.*$/$1/;
         next if $file !~ /\w/;
