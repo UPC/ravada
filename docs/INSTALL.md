@@ -55,6 +55,7 @@ Clone the sources:
 - libiptables-chainmgr-perl
 - libnet-dns-perl
 - wget
+- virt-viewer
 
 ##Old Mojolicious
 
@@ -137,6 +138,11 @@ First we try to find out what is the new internal network:
 So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
 
     -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
+#Client
+
+The client must have a spice viewer such as virt-viewer. There is a package for
+linux and it can also be downloaded for windows.
 
 #Next
 

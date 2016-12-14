@@ -60,6 +60,33 @@ sub test_remove_domain {
 
 }
 
+sub test_req_start_domain {
+    my $vm_name = shift;
+    my $name = shift;
+
+    $USER->mark_all_messages_read();
+    test_unread_messages($USER,0, "[$vm_name] start domain $name");
+
+    my $req = Ravada::Request->start_domain( 
+        name => $name
+        ,uid => $USER->id
+        ,remote_ip => '127.0.0.1'
+    );
+    ok($req);
+    ok($req->status);
+    $ravada->process_requests();
+    $ravada->_wait_pids();
+    wait_request($req);
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done") 
+            or return ;
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name) 
+            or return ;
+    test_unread_messages($USER,1, "[$vm_name] create domain $name");
+    
+}
+
 sub test_req_create_domain_iso {
     my $vm_name = shift;
 
@@ -213,8 +240,10 @@ for my $vm_name ( qw(Void KVM)) {
         test_req_remove_domain_name($vm, $domain_iso->name)  if $domain_iso;
     
         my $domain_base = test_req_create_base($vm);
-        test_req_remove_domain_name($vm, $domain_base->name)  if $domain_base;
-    
+        if ($domain_base) {
+            test_req_start_domain($vm,$domain_base->name);
+            test_req_remove_domain_name($vm, $domain_base->name);
+        }
     };
 }
 
