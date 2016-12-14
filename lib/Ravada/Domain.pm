@@ -52,7 +52,7 @@ requires 'set_max_mem';
 
 has 'domain' => (
     isa => 'Any'
-    ,is => 'ro'
+    ,is => 'rw'
 );
 
 has 'timeout_shutdown' => (
@@ -111,6 +111,8 @@ after 'shutdown' => \&_post_shutdown;
 before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_remove_base_db;
 
+before 'rename' => \&_pre_rename;
+after 'rename' => \&_rename_domain_db;
 ##################################################
 
 sub _vm_connect {
@@ -917,5 +919,34 @@ sub _active_iptables {
         push @iptables, [ $id, decode_json($iptables)];
     }
     return @iptables;
+}
+
+sub _check_duplicate_domain_name {
+# TODO
+#   check name not in current domain in db
+#   check name not in other VM domain
+}
+
+sub _rename_domain_db {
+    my $self = shift;
+    my $new_name = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
+                ." WHERE id=?");
+    $sth->execute($new_name, $self->id);
+    $sth->finish;
+}
+
+sub _pre_rename {
+    my $self = shift;
+
+    my %args = @_;
+    my $name = $args{name};
+    my $user = $args{user};
+
+    $self->_check_duplicate_domain_name(@_);
+
+    $self->resume($user)            if $self->is_paused;
+    $self->shutdown(user => $user)  if $self->is_active;
 }
 1;
