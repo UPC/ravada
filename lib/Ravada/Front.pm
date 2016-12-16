@@ -33,7 +33,7 @@ has 'fork' => (
 
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 5;
-our @VM_TYPES = ('KVM');
+our @VM_TYPES = ('KVM','LXC');
 
 =head2 BUILD
 
