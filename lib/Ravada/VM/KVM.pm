@@ -440,13 +440,21 @@ sub _domain_create_from_base {
     _xml_modify_video($xml);
     $self->_xml_modify_usb($xml);
 
-    my $dom = $self->vm->define_domain($xml->toString());
-    eval { $dom->create() };
+    $self->_fix_pci_slots($xml);
+    my $dom;
+    eval {
+        $dom = $self->vm->define_domain($xml->toString());
+        $dom->create();
+    };
     if ($@) {
-        my $err = $@;
-        open my $out,'>',"$args{name}.xml" or die $!;
-        print $out $xml->toString();
+        my $out;
+        my $name_out = "/var/tmp/$args{name}.xml";
+        warn "Dumping $name_out";
+        open $out,">",$name_out and do {
+            print $out $xml->toString();
+        };
         close $out;
+        warn "$! $name_out" if !$out;
         die $@;
     }
 
@@ -455,6 +463,33 @@ sub _domain_create_from_base {
 
     $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     return $domain;
+}
+
+sub _fix_pci_slots {
+    my $self = shift;
+    my $doc = shift;
+  
+    my %dupe = ();
+    for my $child ($doc->findnodes('/domain/devices/*/address')) {
+        my $bus = $child->getAttribute('bus');
+        my $slot = $child->getAttribute('slot');
+        next if !defined $slot;
+        next if !$dupe{"$bus/$slot"}++;
+        warn "WARNING: duplicated $bus / $slot for ".$child->toString();
+
+        my $new_slot = $slot;
+        for (;;) {
+            last if !$dupe{"$bus/$new_slot"};
+            my ($n) = $new_slot =~ m{x(\d+)};
+            $n++;
+            $n= "0$n" if length($n)<2;
+            $new_slot="0x$n";
+            warn $new_slot;
+        }
+        $dupe{"$bus/$new_slot"}++;
+        $child->setAttribute(slot => $new_slot);
+    }
+
 }
 
 sub _iso_name {
@@ -758,7 +793,9 @@ sub _search_xml {
  
     for my $item ( $xml->findnodes($name) ) {
         for my $attr( sort keys %arg ) {
-            return $item if $item->getAttribute($attr) eq $arg{$attr}
+            return $item 
+                if $item->getAttribute($attr)
+                    && $item->getAttribute($attr) eq $arg{$attr}
         }
     }
     return;
