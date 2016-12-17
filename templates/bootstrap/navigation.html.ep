@@ -9,7 +9,7 @@
             <ul class="nav navbar-right top-nav">
 % if ( !$_anonymous ) {
                 <li>
-                        <a href="/"><i class="fa fa-fw fa-desktop"></i> Avaiable Machines</a>
+                        <a href="/"><i class="fa fa-fw fa-desktop"></i> Available Machines</a>
                 </li>
 %          if (defined $_user ) {
                 <li>

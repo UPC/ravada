@@ -155,12 +155,11 @@ sub _allow_manage_args {
 sub _allow_manage {
     my $self = shift;
 
-    confess "Disabled from read only connection"
-        if $self->readonly;
+    return $self->_allow_manage_args(@_)
+        if scalar(@_) % 2 == 0;
 
     my ($user) = @_;
-
-    $self->_allowed($user);
+    return $self->_allow_manage_args( user => $user);
 
 }
 
@@ -182,7 +181,7 @@ sub _allow_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
-    if ($self->is_active) {
+    if ($self->is_active && !$self->is_paused) {
         $self->pause($user);
         $self->{_was_active} = 1;
     }
@@ -800,13 +799,13 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
-#    @iptables_arg = ( '0.0.0.0'
-#                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
-#                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-    #
-    #($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    #
-    #$self->_log_iptable(iptables => \@iptables_arg, %args);
+    @iptables_arg = ( '0.0.0.0'
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+    
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    
+    $self->_log_iptable(iptables => \@iptables_arg, %args);
 
 }
 
@@ -849,7 +848,7 @@ sub _obj_iptables {
 	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
 	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
 	                                    ### 'system', or 'popen'.
-	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
+	    'ipt_exec_sleep' => 0, ### add in time delay between execution of
 	                           ### iptables commands (default is 0).
 	);
 

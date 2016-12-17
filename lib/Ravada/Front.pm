@@ -33,7 +33,7 @@ has 'fork' => (
 );
 
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
-our $TIMEOUT = 5;
+our $TIMEOUT = 20;
 our @VM_TYPES = ('KVM');
 
 our %VM;
@@ -90,8 +90,19 @@ Returns a list of the domains as a listref
 
 sub list_domains {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains ");
-    $sth->execute();
+    my %args = @_;
+
+    my $query = "SELECT * FROM domains";
+
+    my $where = '';
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " $field=?"
+    }
+    $where = "WHERE $where" if $where;
+
+    my $sth = $CONNECTOR->dbh->prepare("$query $where");
+    $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
@@ -106,6 +117,22 @@ sub list_domains {
     $sth->finish;
 
     return \@domains;
+}
+
+=head2 domain_info
+
+Returns information of a domain
+
+    my $info = $rvd_front->domain_info( id => $id);
+    my $info = $rvd_front->domain_info( name => $name);
+
+=cut
+
+sub domain_info {
+    my $self = shift;
+
+    my $domains = $self->list_domains(@_);
+    return $domains->[0];
 }
 
 =head2 list_vm_types

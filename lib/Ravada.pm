@@ -261,8 +261,13 @@ sub create_domain {
     my $request = $args{request}            if $args{request};
 
     my $vm;
-    $vm = $self->search_vm($vm_name)   if $vm_name;
+    if ($vm_name) {
+        $vm = $self->search_vm($vm_name);
+        confess "ERROR: vm $vm_name not found"  if !$vm;
+    }
     $vm = $self->vm->[0]               if !$vm;
+
+    confess "No vm found"   if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
         if !$vm_name;
@@ -729,9 +734,11 @@ sub _wait_children {
 
         $self->_wait_pids_nohang();
         sleep 1;
-        $req->error($msg)
-            if !$try++;
 
+        next if $try++;
+
+        $req->error($msg);
+        $req->status('waiting');
     }
 }
 
@@ -827,7 +834,10 @@ sub _cmd_resume {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->resume($user);
+    $domain->resume(
+        remote_ip => $request->args('remote_ip')
+        ,user => $user
+    );
 
     $request->status('done');
 

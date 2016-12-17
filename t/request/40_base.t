@@ -70,12 +70,13 @@ sub test_req_create_domain_iso {
         ,"Status of request is ".$req->status." it should be requested");
 
     my $rvd_back = rvd_back();
+#    $rvd_back->process_requests(1);
     $rvd_back->process_requests();
     wait_request($req);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name)
+    ok(!$req->error,"Error ".($req->error or '')." creating domain ".$name)
         or return;
 
 #    test_unread_messages($USER,1, "[$vm_name] create domain $name");
@@ -98,7 +99,9 @@ sub test_req_create_domain_iso {
 sub test_message_new_domain {
     my ($vm_name, $user) = @_;
     my @messages = $user->unread_messages();
-    ok(scalar(@messages) == 1,"Expecting 1 new message , got ".Dumper(\@messages));
+    ok(scalar(@messages) == 1,"Expecting 1 new message , got "
+        .scalar(@messages)
+        .Dumper(\@messages));
     
     my $message = $user->show_message($messages[0]->{id});
 
@@ -107,6 +110,7 @@ sub test_message_new_domain {
 }
 
 sub test_req_create_domain {
+    my $vm_name = shift;
 
     my $name = new_domain_name();
 
@@ -130,7 +134,7 @@ sub test_req_create_domain {
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error '".$req->error."' creating domain ".$name);
+    ok(!$req->error,"Error '".($req->error or '')."' creating domain ".$name);
 
     my $rvd_front = rvd_front();
     my $domain =  $rvd_front->search_domain($name);
@@ -280,7 +284,7 @@ sub test_req_remove_base_fail {
         $domain_clone->_vm->disconnect();
     
         $req = Ravada::Request->remove_base(
-            domain => $domain_base
+            id_domain => $domain_base->id
             , uid => $USER->id
         );
     }
@@ -320,7 +324,7 @@ sub test_req_remove_base {
         $domain_base->_vm->disconnect();
         $domain_clone->_vm->disconnect();
         $req = Ravada::Request->remove_base(
-            domain => $domain_base
+            id_domain => $domain_base->id
             , uid => $USER->id
         );
     }
@@ -337,7 +341,10 @@ sub test_req_remove_base {
             .", got : '".$req->error."'");
 
     {
-        my $domain_base = rvd_front->search_vm('KVM')->search_domain($name_base);
+        my $domain_base = rvd_front->search_vm($vm_name)
+                            ->search_domain($name_base);
+        ok($domain_base,"[$vm_name] I can't find domain $name_base")
+            or return;
         ok(!$domain_base->is_base());
     }
     check_files_removed(@files_base);
@@ -355,17 +362,17 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(KVM)) {
+for my $vm_name ( qw(Void KVM)) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
-        $vm_connected = 1;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id )       if $vm;
+        $vm_connected = 1 if $vm;
+        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id );
     };
 
     SKIP: {
-        my $msg = "SKIPPED: No virtual managers found";
+        my $msg = "SKIPPED: virtual manager $vm_name not found";
         skip($msg,10)   if !$vm_connected;
     
         diag("Testing requests with $vm_name");

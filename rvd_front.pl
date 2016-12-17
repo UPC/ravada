@@ -17,6 +17,8 @@ use Ravada::Auth;
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 
+plugin Config => { file => 'rvd_front.conf' };
+
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
@@ -187,7 +189,7 @@ get '/machine/info/*.json' => sub {
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
     die "No id " if !$id;
-    $c->render(json => $RAVADA->search_domain($id));
+    $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
 any '/machine/manage/*html' => sub {
@@ -274,6 +276,7 @@ get '/users/remove_admin/*.json' => sub {
 
 get '/request/*.html' => sub {
     my $c = shift;
+    return access_denied($c) if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
 
     return _show_request($c,$id);
@@ -281,6 +284,7 @@ get '/request/*.html' => sub {
 
 get '/requests.json' => sub {
     my $c = shift;
+    return access_denied($c) if !_logged_in($c);
     return list_requests($c);
 };
 
@@ -556,9 +560,16 @@ sub _show_request {
         $request = $id_request;
     }
 
+    return access_denied($c)
+        if $request 
+            && (   !$request->{args}->{uid}
+                || !$USER->is_admin
+                || $request->{args}->{uid} != $USER->id
+            );
     return $c->render(data => "Request $id_request unknown ".Dumper($request))
         if !$request->{id};
 
+#    $c->stash(url => undef, _anonymous => undef );
     $c->render(
          template => 'bootstrap/request'
         , request => $request
@@ -651,13 +662,16 @@ sub show_link {
         );
 
         $RAVADA->wait_request($req);
-        warn "ERROR: ".$req->error if $req->error();
+        warn "ERROR: req id: ".$req->id." error:".$req->error if $req->error();
 
-        return $c->render(data => 'ERROR starting domain '.$req->error)
-            if $req->error && $req->error !~ /already running/i;
+        return $c->render(data => 'ERROR starting domain '
+                ."status:'".$req->status."' ( ".$req->error.")")
+            if $req->error 
+                && $req->error !~ /already running/i
+                && $req->status ne 'waiting';
 
-        return $c->redirect_to("/request/".$req->id.".html")
-            if !$req->status eq 'done';
+        return $c->redirect_to("/request/".$req->id.".html");
+#            if !$req->status eq 'done';
     }
     if ( $domain->is_paused) {
         $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id
