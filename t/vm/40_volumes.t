@@ -115,8 +115,13 @@ sub test_clone {
 
     my @volumes_clone = $domain_clone->list_volumes();
 
-    ok(scalar @volumes_clone == scalar @volumes
-        ,"[$vm_name] Expecting ".scalar @volumes." volumes, got ".scalar(@volumes));
+    ok(scalar @volumes == scalar @volumes_clone
+        ,"[$vm_name] ".$domain->name." clone to $name_clone , expecting "
+            .scalar @volumes." volumes, got ".scalar(@volumes_clone)
+       ) or do {
+            diag(Dumper(\@volumes,\@volumes_clone));
+            exit;
+    };
 
     my %volumes_clone = map { $_ => 1 } @volumes_clone ;
 

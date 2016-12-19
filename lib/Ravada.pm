@@ -630,7 +630,7 @@ sub _execute {
     $self->_disconnect_vm();
 
     if ($dont_fork || !$CAN_FORK ) {
-
+        # TODO check if that can be done with _do_execute_command like when forking
         $self->_connect_vm();
 
         eval { $sub->($self,$request) };
@@ -643,20 +643,35 @@ sub _execute {
     $self->_wait_children($request) if $FAT_COMMAND{$request->command};
     my $pid = fork();
     die "I can't fork" if !defined $pid;
-    if ($pid == 0) {
-        eval {
-            $self->_connect_vm();
-            $sub->($self,$request);
-            $self->_disconnect_vm();
-        };
-        my $err = ( $@ or '');
-        $request->error($err);
-        $request->status('done') if $request->status() ne 'done';
-        exit;
-    }
+    $self->_do_execute_command($sub, $request) if $pid == 0;
     $self->_add_pid($pid, $request->id);
 #    $self->_connect_vm_kvm();
     return '';
+}
+
+sub _do_execute_command {
+    my $self = shift;
+    my ($sub, $request) = @_;
+
+#    if ($DEBUG ) {
+#        mkdir 'log' if ! -e 'log';
+#        open my $f_out ,'>', "log/fork_$$.out";
+#        open my $f_err ,'>', "log/fork_$$.err";
+#        $| = 1;
+#        local *STDOUT = $f_out;
+#        local *STDERR = $f_err;
+#    }
+
+    eval {
+        $self->_connect_vm();
+        $sub->($self,$request);
+        $self->_disconnect_vm();
+    };
+    my $err = ( $@ or '');
+    $request->error($err);
+    $request->status('done') if $request->status() ne 'done';
+    exit;
+
 }
 
 sub _cmd_domdisplay {

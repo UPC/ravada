@@ -31,14 +31,15 @@ sub BUILD {
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
-    return if $args->{id_base};
+    
+    return if $args->{id_base} || $args->{is_readonly};
 
-    my $file_img = "$DIR_TMP/".$self->name.".img";
-    return if -e $file_img;
+    my ($file_img) = $self->disk_device;
+    return if $file_img && -e $file_img;
 
-    $self->add_volume(name => 'void-diska' , size => $args->{disk}
-                      , path => $file_img)
-         if !$args->{is_readonly};
+    $self->add_volume(name => 'void-diska' , size => ( $args->{disk} or 1)
+                        , path => $file_img
+                        , type => 'file');
 
     $self->_set_default_info();
     $self->set_memory($args->{memory}) if $args->{memory};
@@ -191,9 +192,10 @@ sub add_volume {
     confess "Volume path must be absolute , it is '$args{path}'"
         if $args{path} !~ m{^/};
 
+
     return if -e $args{path};
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -202,6 +204,9 @@ sub add_volume {
     confess "Missing name " if !$args{name};
 #    TODO
 #    confess "Missing size " if !$args{size};
+
+    $args{type} = 'file' if !$args{type};
+    delete $args{vm}   if defined $args{vm};
 
     my $data = { };
     $data = LoadFile($self->_config_file) if -e $self->_config_file;
@@ -256,7 +261,9 @@ sub list_volumes {
     return () if !exists $data->{device};
     my @vol;
     for my $dev (keys %{$data->{device}}) {
-        push @vol,($data->{device}->{$dev}->{path});
+        push @vol,($data->{device}->{$dev}->{path})
+            if ! exists $data->{device}->{$dev}->{type}
+                || $data->{device}->{$dev}->{type} ne 'base';
     }
     return @vol;
 }

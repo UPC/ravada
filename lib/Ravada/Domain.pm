@@ -949,6 +949,7 @@ sub _pre_rename {
     my $user = $args{user};
 
     $self->_check_duplicate_domain_name(@_);
+
     $self->shutdown(user => $user)  if $self->is_active;
 }
 

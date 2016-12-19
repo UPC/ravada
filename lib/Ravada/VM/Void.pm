@@ -52,7 +52,9 @@ sub create_domain {
         for my $file_base ($domain_base->list_files_base) {
             my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*?)(\..*)};
             my $new_name = "$vol_name-$args{name}$ext";
-            $domain->add_volume(name => $new_name, path => "$dir/$new_name");
+            $domain->add_volume(name => $new_name
+                                , path => "$dir/$new_name"
+                                 ,type => 'file');
         }
     }
 #    $domain->start();
@@ -81,7 +83,7 @@ sub list_domains {
 
 sub search_domain {
     my $self = shift;
-    my $name = shift;
+    my $name = shift or confess "ERROR: Missing name";
 
     for my $name_vm ( $self->list_domains ) {
         next if $name_vm ne $name;

@@ -208,7 +208,8 @@ sub test_req_create_from_base {
     
         ok($req->status eq 'done'
             ,"Status of request is ".$req->status." it should be done");
-        ok(!$req->error,"Error ".$req->error." creating domain ".$clone_name);
+        ok(!$req->error,"Expecting error '' , got '"
+                        .($req->error or '')."' creating domain ".$clone_name);
     
     }
     my $domain =  rvd_front()->search_domain($clone_name);
@@ -239,7 +240,8 @@ sub test_volumes {
     my %volumes2 = map { $_ => 1 } @volumes2;
 
     ok(scalar keys %volumes1 == scalar keys %volumes2
-        ,"[$vm_name] Expecting ".scalar(keys %volumes1)." , got ".scalar(keys %volumes2)
+        ,"[$vm_name] Domain $domain2_name Expecting ".scalar(keys %volumes1)
+        ." , got ".scalar(keys %volumes2)." "
         .Dumper(\%volumes1,\%volumes2)) or exit;
 
 }

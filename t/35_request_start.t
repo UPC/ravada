@@ -132,7 +132,8 @@ sub test_start {
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
                             .$req3->status);
-    ok(!$req3->error,"Error shutting down domain $name , expecting ''. Got '".$req3->error);
+    ok(!$req3->error,"Error shutting down domain $name , expecting ''
+                        . Got '".($req3->error or ''));
 
     my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);

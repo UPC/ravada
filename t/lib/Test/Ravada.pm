@@ -42,7 +42,6 @@ sub rvd_back {
     my ($connector, $config) = @_;
     init($connector,$config)    if $connector;
 
-    my $rvd_back;
     return Ravada->new(
             connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
@@ -50,7 +49,6 @@ sub rvd_back {
 }
 
 sub rvd_front {
-    my $rvd_front;
 
     return Ravada::Front->new(
             connector => $CONNECTOR
@@ -80,6 +78,7 @@ sub _remove_old_domains_vm {
         return if !$rvd_back;
         $vm = $rvd_back->search_vm($vm_name);
     };
+    diag($@) if $@;
 
     return if !$vm;
 
@@ -132,9 +131,12 @@ sub _remove_old_domains_kvm {
     my $vm;
     
     eval {
-        $vm = rvd_back()->search_vm('KVM');
+        my $rvd_back = rvd_back();
+        $vm = $rvd_back->search_vm('KVM');
     };
+    diag($@) if $@;
     return if !$vm;
+
     my $base_name = base_domain_name();
     for my $domain ( $vm->vm->list_defined_domains ) {
         next if $domain->get_name !~ /^$base_name/;
@@ -160,7 +162,7 @@ sub _remove_old_disks_kvm {
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
-    my $rvd_back= rvd_back();
+#    my $rvd_back= rvd_back();
     my $vm = rvd_back()->search_vm('kvm');
     if (!$vm) {
         return;
@@ -205,7 +207,6 @@ sub _remove_old_disks_void {
 sub remove_old_disks {
     _remove_old_disks_void();
     _remove_old_disks_kvm();
-
 }
 
 sub create_user {
@@ -223,9 +224,10 @@ sub create_user {
 
 sub wait_request {
     my $req = shift;
-    for ( 1 .. 10 ) {
+    for my $cnt ( 0 .. 10 ) {
+        diag("Request ".$req->id." ".$req->command." ".$req->status." ".localtime(time))
+            if $cnt > 2;
         last if $req->status eq 'done';
-        diag("Request ".$req->id." ".$req->command." ".$req->status." ".localtime(time));
         sleep 2;
     }
 

@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(cluck confess croak);
 use Data::Dumper;
+use File::Copy;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -123,11 +124,12 @@ sub remove_disks {
         $removed++;
 
     }
-    $self->_vm->disconnect();
 
     warn "WARNING: No disk files removed for ".$self->domain->get_name."\n"
-        if !$removed;
+            .Dumper([$self->list_disks])
+        if !$removed && $0 !~ /\.t$/;
 
+    $self->_vm->disconnect();
 }
 
 sub _vol_remove {
@@ -219,6 +221,28 @@ sub _disk_device {
             .join("\n",map { $_->toString() } @devices);
     }
     return @img;
+
+}
+
+sub _disk_devices_xml {
+    my $self = shift;
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain
+                                        ->get_xml_description) 
+        or die "ERROR: $!\n";
+
+    my @devices;
+
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        next if $disk->getAttribute('device') ne 'disk';
+
+        my $is_disk = 0;
+        for my $child ($disk->childNodes) {
+            $is_disk++ if $child->nodeName eq 'source';
+        }
+        push @devices,($disk) if $is_disk;
+    }
+    return @devices;
 
 }
 
@@ -752,8 +776,30 @@ Argument: the new name of the volumes.
 
 sub rename_volumes {
     my $self = shift;
-    for my $volume ($self->list_volumes) {
-        warn "Rename volume ".Dumper($volume);
+    my $new_dom_name = shift;
+
+    for my $disk ($self->_disk_devices_xml) {
+
+        my ($source) = $disk->findnodes('source');
+        next if !$source;
+
+        my $volume = $source->getAttribute('file') or next;
+
+        my $cont = 0;
+        my $new_volume;
+        my $new_name = $new_dom_name;
+
+        for (;;) {
+            $new_volume=$volume;
+            $new_volume =~ s{(.*)/.*\.(.*)}{$1/$new_name.$2};
+            last if !-e $new_volume;
+            $cont++;
+            $new_name = "$new_dom_name.$cont";
+        }
+        copy($volume, $new_volume) or die "$! $volume -> $new_volume";
+        $source->setAttribute(file => $new_volume);
+        unlink $volume or warn "$! removing $volume";
+        $self->storage->refresh();
     }
 }
 
