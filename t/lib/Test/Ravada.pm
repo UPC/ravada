@@ -122,7 +122,8 @@ sub _remove_old_domains_vm {
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
         }
-        ok(!$@ , "Error removing domain $dom_name ".ref($domain).": $@") or exit;
+        ok(!$@ , "Removing domain $dom_name ".ref($domain)
+                ." expecting error='', got ='".($@ or '')."'") or exit;
     }
 }
 
@@ -174,7 +175,8 @@ sub _remove_old_disks_kvm {
     return if !$dir_img;
 
     eval { $vm->storage_pool->refresh() };
-    ok(!$@,$@) or return;
+    ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
+        ." after refresh storage pool") or return;
     opendir my $ls,$dir_img or die "$! $dir_img";
     while (my $disk = readdir $ls) {
         next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
