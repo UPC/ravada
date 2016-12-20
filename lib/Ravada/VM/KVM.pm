@@ -382,11 +382,11 @@ sub _create_disk_qcow2 {
 
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
-        print $out  if $out;
-        warn $err   if $err;
+#        print $out  if $out;
+#        warn $err   if $err;
 
         if (! -e $file_out) {
-            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n";
+            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
             exit;
         }
         push @files_out,($file_out);
