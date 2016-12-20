@@ -71,6 +71,11 @@
 // list machines
     function machinesCrtl($scope, $http, request, listMach) {
 
+        $scope.rename= {
+            // why this line does nothing ?
+            new_name: 'new_name'
+        };
+        $scope.show_rename = false;
         $url_list = "/list_machines.json";
         if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
             $url_list = "/list_bases_anonymous.json";
@@ -117,6 +122,21 @@
         $scope.removeb = function(machineId){
             var toGet = '/machine/remove_b/'+machineId+'.json';
             $http.get(toGet);
+        };
+
+        $scope.rename = function(machineId, old_name) {
+            if (old_name == $scope.rename.new_name) {
+                // why the next line does nothing ?
+                $scope.show_rename= false;
+                return;
+            }
+            $http.get('/machine/rename/'+machineId+'/'
+                        +$scope.rename.new_name);
+            alert('Rename machine '+old_name
+                +' and all its volumes to '+$scope.rename.new_name
+                +'. It may take some minutes to complete');
+            // why the next line does nothing ?
+            $scope.show_rename= false;
         };
 
     };
