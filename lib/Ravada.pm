@@ -761,11 +761,12 @@ sub _wait_pids_nohang {
     my $self = shift;
     return if !keys %{$self->{pids}};
 
-    my $kid = waitpid(-1 , WNOHANG);
-    return if !$kid || $kid == -1;
-
-    $self->_set_req_done($kid);
-    delete $self->{pids}->{$kid};
+    for my $pid ( keys %{$self->{pids}}) {
+        my $kid = waitpid($pid , WNOHANG);
+        next if !$kid || $kid == -1;
+        $self->_set_req_done($kid);
+        delete $self->{pids}->{$kid};
+    }
 
 }
 
