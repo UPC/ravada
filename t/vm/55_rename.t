@@ -85,7 +85,8 @@ sub test_rename_domain {
 }
 
 sub test_req_rename_domain {
-    my ($vm_name, $domain_name) = @_;
+    my ($vm_name, $domain_name, $dont_fork) = @_;
+    my $debug = 0;
 
     my $domain_id;
     {
@@ -105,10 +106,12 @@ sub test_req_rename_domain {
         );
         ok($req);
         my $rvd_back = rvd_back();
-        $rvd_back->process_requests();
+
+        $rvd_back->process_requests($debug,$dont_fork);
         for ( 1 .. 5 ) {
             wait_request($req) if $req->status ne 'done';
         }
+        $rvd_back->_wait_pids();
         ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done") or exit;
         ok(!$req->error,"Error ".($req->error or'')
@@ -159,13 +162,15 @@ sub test_req_rename_clone {
     # t/vm/55_rename.t (Wstat: 13 Tests: 71 Failed: 0)
     #  Non-zero wait status: 13
 
-    return;
+#    return;
 
     my $vm_name = shift;
 
     my $domain_name = test_create_domain($vm_name);
     my $clone2_name = test_clone_domain($vm_name, $domain_name);
-    test_req_rename_domain($vm_name, $clone2_name)
+
+    my $dont_fork = 1;
+    test_req_rename_domain($vm_name, $clone2_name, $dont_fork)
         if $clone2_name;
 }
 
