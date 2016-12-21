@@ -51,7 +51,7 @@ our %VALID_ARG = (
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove );
+    qw( create start shutdown prepare_base remove screenshot);
 
 our $CONNECTOR;
 
