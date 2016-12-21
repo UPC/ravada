@@ -59,11 +59,12 @@
             <div class="modal-content">
               <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">
-                    {{machine.name}}
+                <div class="modal-title">
+                    <b>{{machine.name}}</b>
                     <input type="text" name="new_name"
                             ng-show="show_rename"
                             ng-model="rename.new_name"
+                            ng-change="validate_new_name(machine.name)"
                     >
                     <button type="button" ng-show="show_rename"
                             ng-click="rename(machine.id, machine.name);show_rename=false;"><i
@@ -82,7 +83,12 @@
                             align="right">
                         <i class="fa fa-pencil" aria-hidden="true"></i>
                     </button>
-                </h4>
+                    <div class="form-group has-error"><label 
+                        ng-show="new_name_duplicated"
+                        class="control-label" for="new_name">This
+                             name is duplicated</label>
+                    </div>
+                </div>
               </div>
               <div class="modal-body">
                 <div style="width:100%; margin-bottom:10px;">

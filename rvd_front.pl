@@ -256,6 +256,16 @@ get '/machine/start/*.json' => sub {
         return start_machine($c);
 };
 
+get '/machine/exists/*' => sub {
+    my $c = shift;
+    my ($name) = $c->req->url->to_abs->path =~ m{.*/(.+)};
+
+    #TODO
+    # return failure if it can't find the name in the URL
+
+    return $c->render(json => $RAVADA->domain_exists($name));
+
+};
 
 ##make admin
 

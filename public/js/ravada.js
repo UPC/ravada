@@ -76,6 +76,7 @@
             new_name: 'new_name'
         };
         $scope.show_rename = false;
+        $scope.new_name_duplicated=true;
         $url_list = "/list_machines.json";
         if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
             $url_list = "/list_bases_anonymous.json";
@@ -137,6 +138,21 @@
                 +'. It may take some minutes to complete');
             // why the next line does nothing ?
             $scope.show_rename= false;
+        };
+
+        $scope.validate_new_name = function(old_name) {
+            if(old_name == $scope.rename.new_name) {
+                $scope.new_name_duplicated=false;
+                return;
+            }
+            $http.get('/machine/exists/'+$scope.rename.new_name)
+                .then(duplicated_callback, unique_callback);
+            function duplicated_callback(response) {
+                $scope.new_name_duplicated=response.data;
+            };
+            function unique_callback() {
+                $scope.new_name_duplicated=false;
+            }
         };
 
     };

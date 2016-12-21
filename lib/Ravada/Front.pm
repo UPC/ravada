@@ -135,6 +135,31 @@ sub domain_info {
     return $domains->[0];
 }
 
+=head2 domain_exists
+
+Returns true if the domain name exists
+
+    if ($rvd->domain_exists('domain_name')) {
+        ...
+    }
+
+=cut
+
+sub domain_exists {
+    my $self = shift;
+    my $name = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return 0 if !defined $id;
+    return 1;
+}
+
 =head2 list_vm_types
 
 Returns a reference to a list of Virtual Machine Managers known by the system
