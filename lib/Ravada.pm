@@ -662,6 +662,7 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    $request->status("working");
     eval {
         $self->_connect_vm();
         $sub->($self,$request);
@@ -678,8 +679,6 @@ sub _cmd_domdisplay {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
-
     my $name = $request->args('name');
     confess "Unknown name for request ".Dumper($request)  if!$name;
     my $domain = $self->search_domain($request->args->{name});
@@ -688,7 +687,6 @@ sub _cmd_domdisplay {
     my $display = $domain->display($user);
     $request->result({display => $display});
 
-    $request->status('done');
 }
 
 sub _cmd_screenshot {
@@ -697,7 +695,6 @@ sub _cmd_screenshot {
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
-    $request->error('');
     my $bytes = 0;
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
@@ -706,8 +703,6 @@ sub _cmd_screenshot {
         $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
     }
     $request->error("No data received") if !$bytes;
-    $request->status('done');
-
 }
 
 
