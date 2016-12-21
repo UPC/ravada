@@ -76,7 +76,7 @@
             new_name: 'new_name'
         };
         $scope.show_rename = false;
-        $scope.new_name_duplicated=true;
+        $scope.new_name_duplicated=false;
         $url_list = "/list_machines.json";
         if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
             $url_list = "/list_bases_anonymous.json";
