@@ -199,7 +199,7 @@ sub test_screenshot_file {
     wait_request($req);
 
     ok($req->status('done'),"Request should be done, it is ".$req->status);
-    ok(!$req->error(''),"Error should be '' , it is ".$req->error);
+    ok(!$req->error(),"Error should be '' , it is ".$req->error);
 
     ok(-e $file,"File '$file' screenshot should exist");
 
