@@ -36,7 +36,6 @@ requires 'resume';
 requires 'prepare_base';
 
 requires 'rename';
-requires 'rename_volumes';
 
 #storage
 requires 'add_volume';
@@ -957,7 +956,6 @@ sub _post_rename {
     my $self = shift;
     my %args = @_;
 
-    $self->rename_volumes($args{name});
     $self->_rename_domain_db(@_);
 }
 1;

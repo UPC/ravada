@@ -5,6 +5,7 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
+use File::Temp qw(tempfile);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -270,10 +271,16 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    $doc->findnodes('/volume/name/text()')->[0]->setData("$name.img");
-    $doc->findnodes('/volume/key/text()')->[0]->setData("$dir_img/$name.img");
+    my (undef, $img_file) = tempfile("${name}-XXXX"
+        ,DIR => $dir_img
+        ,OPEN => 0
+        ,SUFFIX => '.img'
+    );
+    my ($volume_name) = $img_file =~m{.*/(.*)};
+    $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
+    $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
-                "$dir_img/$name.img");
+                        $img_file);
 
     if ($size) {
         my ($prev_size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
@@ -282,9 +289,11 @@ sub create_volume {
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
     }
     my $vol = $self->storage_pool->create_volume($doc->toString);
-    warn "volume $dir_img/$name.img does not exists after creating volume"
-            if ! -e "$dir_img/$name.img";
-    return "$dir_img/$name.img";
+    die "volume $img_file does not exists after creating volume "
+            .$doc->toString()
+            if ! -e $img_file;
+
+    return $img_file;
 
 }
 

@@ -220,20 +220,6 @@ sub add_volume {
 
 }
 
-sub rename_volumes {
-    my $self = shift;
-
-    my $data = LoadFile($self->_config_file);
-
-    for my $name (keys %{$data->{device}}) {
-        my $path = $data->{device}->{$name}->{path};
-        next if !$path;
-        $data->{device}->{$name}->{path} 
-                        = $self->_rename_path($path);
-    }
-    DumpFile($self->_config_file, $data);
-}
-
 sub _rename_path {
     my $self = shift;
     my $path = shift;

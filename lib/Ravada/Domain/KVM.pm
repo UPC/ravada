@@ -210,7 +210,6 @@ sub _disk_device {
 
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
-#                die $child->toString();
                 push @img , ($child->getAttribute('file'));
             }
         }
@@ -267,6 +266,8 @@ sub _create_qcow_base {
     my $base_name = $self->name;
     for  my $base_img ( $self->list_volumes()) {
 
+        confess "ERROR: missing $base_img"
+            if !-e $base_img;
         my $qcow_img = $base_img;
     
         $qcow_img =~ s{\.\w+$}{\.ro.qcow2};
@@ -766,13 +767,7 @@ sub rename {
     $self->domain->rename($new_name);
 }
 
-=head2 rename_volumes
-
-Renames all the volumes of a domain
-
-Argument: the new name of the volumes.
-
-=cut
+=pod
 
 sub rename_volumes {
     my $self = shift;
@@ -785,6 +780,14 @@ sub rename_volumes {
 
         my $volume = $source->getAttribute('file') or next;
 
+        confess "ERROR: Domain ".$self->name
+                ." volume '$volume' does not exists"
+            if ! -e $volume;
+
+        $self->domain->create if !$self->is_active;
+        $self->domain->detach_device($disk);
+        $self->domain->shutdown;
+
         my $cont = 0;
         my $new_volume;
         my $new_name = $new_dom_name;
@@ -796,11 +799,15 @@ sub rename_volumes {
             $cont++;
             $new_name = "$new_dom_name.$cont";
         }
+        warn "copy $volume -> $new_volume";
         copy($volume, $new_volume) or die "$! $volume -> $new_volume";
         $source->setAttribute(file => $new_volume);
         unlink $volume or warn "$! removing $volume";
         $self->storage->refresh();
+        $self->domain->attach_device($disk);
     }
 }
+
+=cut
 
 1;
