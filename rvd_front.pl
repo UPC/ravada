@@ -267,6 +267,11 @@ get '/machine/exists/*' => sub {
 
 };
 
+get '/machine/rename/*' => sub {
+    my $c = shift;
+    return rename_machine($c);
+};
+
 ##make admin
 
 get '/users/make_admin/*.json' => sub {
@@ -953,6 +958,30 @@ sub start_machine {
     my $req = Ravada::Request->start_domain( uid => $USER->id
                                            ,name => $domain->name
                                       ,remote_ip => _remote_ip($c)
+    );
+
+    return $c->render(json => { req => $req->id });
+}
+
+sub rename_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin();
+
+    my $uri = $c->req->url->to_abs->path;
+
+    warn ref($c->req);
+    my ($id_domain,$new_name)
+       = $uri =~ m{^/machine/rename/(\d+)/(.*)};
+
+    return $c->render(data => "Machine id not found in $uri ")
+        if !$id_domain;
+    return $c->render(data => "New name not found in $uri")
+        if !$new_name;
+
+    my $req = Ravada::Request->rename_domain(    uid => $USER->id
+                                               ,name => $new_name
+                                          ,id_domain => $id_domain
     );
 
     return $c->render(json => { req => $req->id });
