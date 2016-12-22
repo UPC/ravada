@@ -63,6 +63,7 @@ sub test_create_domain {
 sub test_rename_domain {
     my ($vm_name, $domain_name) = @_;
 
+
     my $new_domain_name = new_domain_name();
     {
         my $rvd_back = rvd_back();
@@ -71,7 +72,8 @@ sub test_rename_domain {
         ok($domain,"[$vm_name] Expecting found $domain_name") 
             or return;
 
-        $domain->rename(name => $new_domain_name, user => $USER);
+        eval { $domain->rename(name => $new_domain_name, user => $USER) };
+        ok(!$@,"Expecting error='' , got ='".($@ or '')."'") or return;
     }
 
     my $vm= rvd_front->search_vm($vm_name);
@@ -82,6 +84,7 @@ sub test_rename_domain {
     ok($domain1,"[$vm_name] Expecting renamed domain $new_domain_name") 
         or return;
 
+    return $new_domain_name;
 }
 
 sub test_req_rename_domain {
@@ -127,6 +130,7 @@ sub test_req_rename_domain {
         my $domain1 = $vm->search_domain($new_domain_name);
         ok($domain1,"[$vm_name-req] Expecting renamed domain "
                         ."$new_domain_name") or return;
+
     }
 }
 
@@ -174,6 +178,21 @@ sub test_req_rename_clone {
         if $clone2_name;
 }
 
+sub test_rename_twice {
+    my $vm_name = shift;
+
+    my $name = test_create_domain($vm_name);
+    my $new_name1=test_rename_domain($vm_name, $name) or return;
+
+    my $new_name2=test_rename_domain($vm_name, $new_name1);
+    ok($new_name2,"Expecting rename twice $name -> $new_name1 -> ")
+        or return;
+
+    my $new_name3=test_rename_domain($vm_name, $new_name2);
+    ok($new_name3,"Expecting rename thrice") or return;
+
+}
+
 #######################################################################
 
 remove_old_domains();
@@ -195,8 +214,10 @@ for my $vm_name (qw( Void KVM )) {
 
         diag("Testing rename domains with $vm_name");
     
+        test_rename_twice($vm_name);
+
         my $domain_name = test_create_domain($vm_name);
-        test_rename_domain($vm_name, $domain_name);
+        test_rename_domain($vm_name, $domain_name)  or return;
         test_create_domain($vm_name, $domain_name);
     
         $domain_name = test_create_domain($vm_name);
@@ -205,6 +226,7 @@ for my $vm_name (qw( Void KVM )) {
     
         test_rename_clone($vm_name);
         test_req_rename_clone($vm_name);
+
     };
 }
     
