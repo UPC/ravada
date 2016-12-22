@@ -134,8 +134,8 @@
             $http.get('/machine/rename/'+machineId+'/'
                         +$scope.rename.new_name);
             alert('Rename machine '+old_name
-                +' and all its volumes to '+$scope.rename.new_name
-                +'. It may take some minutes to complete');
+                +' to '+$scope.rename.new_name
+                +'. It may take some seconds to complete.');
             // why the next line does nothing ?
             $scope.show_rename= false;
         };
