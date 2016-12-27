@@ -65,6 +65,7 @@ sub init {
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
     $USER_ADMIN = create_user('admin','admin',1);
 
+    $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 }
 
 sub _remove_old_domains_vm {
