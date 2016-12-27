@@ -213,7 +213,9 @@ sub _check_has_clones {
 sub _check_free_memory{
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
-    die "No free memory" if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
+    die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
+            ." MB out of ".int($MIN_FREE_MEMORY/1024)." MB required." 
+        if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
 }
 
 sub _check_used_memory {
