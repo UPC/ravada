@@ -256,8 +256,8 @@ sub test_remove_base {
         ok(!-e $file,"Expecting file base '$file' removed" );
     }
 
-    my @files_rm = $domain->list_files_base();
-    is(scalar @files_rm,0);
+    my @files_deleted = $domain->list_files_base();
+    is(scalar @files_deleted,0);
 }
 
 sub test_dont_remove_base_cloned {
