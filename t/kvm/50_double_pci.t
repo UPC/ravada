@@ -83,10 +83,12 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    my $name = test_create_domain_xml();
+    my $name = test_create_domain_xml()
+        or next;
 
     test_clone_domain($name);
 
 };
 remove_old_domains();
+remove_old_disks();
 done_testing();
