@@ -4,9 +4,7 @@ Makefile
 Makefile.old
 blib
 pm_to_blib
-t/db
 t/.db
-db
 t/etc/ravada_ldap.conf
 hypnotoad.pid
 log
