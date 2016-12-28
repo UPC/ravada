@@ -90,7 +90,8 @@ has '_vm' => (
 
 before 'display' => \&_allowed;
 
-before 'remove' => \&_allow_remove;
+before 'remove' => \&_pre_remove_domain;
+#\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
 before 'prepare_base' => \&_allow_prepare_base;
@@ -427,12 +428,21 @@ sub _insert_db {
 
 }
 
+sub _pre_remove_domain {
+    my $self = shift;
+    eval { $self->id };
+    $self->_allow_remove(@_);
+}
+
 sub _after_remove_domain {
     my $self = shift;
-    $self->remove_base(@_);
-    $self->_remove_files_base();
-    $self->_remove_domain_db();
+    if ($self->is_base) {
+        $self->_do_remove_base(@_);
+        $self->_remove_files_base();
+    }
+    return if !$self->{_data};
     $self->_remove_base_db();
+    $self->_remove_domain_db();
 }
 
 sub _remove_domain_db {
@@ -644,8 +654,14 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 
 sub remove_base {
     my $self = shift;
+    return $self->_do_remove_base();
+}
+
+sub _do_remove_base {
+    my $self = shift;
     $self->is_base(0);
     for my $file ($self->list_files_base) {
+        next if ! -e $file;
         unlink $file or die "$! unlinking $file";
     }
     $self->storage_refresh()    if $self->storage();
