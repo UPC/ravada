@@ -107,25 +107,6 @@ sub _remove_old_domains_vm {
 
     }
 
-    for (reverse 0 .. 20 ) {
-        my $dom_name = base_domain_name()."_$_";
-        my $domain;
-
-        eval { $domain = $vm->search_domain($dom_name) };
-        next if !$domain;
-
-        eval { $domain->shutdown_now($USER_ADMIN); };
-        warn "Error shutdown $dom_name $@" if $@ && $@ !~ /No DB info/i;
-
-        eval {
-            $domain->remove( $USER_ADMIN );
-        };
-        if ( $@ && $@ =~ /No DB info/i ) {
-            eval { $domain->domain->undefine() if $domain->domain };
-        }
-        ok(!$@ , "Removing domain $dom_name ".ref($domain)
-                ." expecting error='', got ='".($@ or '')."'") or exit;
-    }
 }
 
 sub _remove_old_domains_kvm {
@@ -140,7 +121,7 @@ sub _remove_old_domains_kvm {
     return if !$vm;
 
     my $base_name = base_domain_name();
-    for my $domain ( $vm->vm->list_defined_domains ) {
+    for my $domain ( $vm->vm->list_all_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         eval { 
             $domain->shutdown();
