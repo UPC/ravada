@@ -429,8 +429,10 @@ sub _insert_db {
 
 sub _after_remove_domain {
     my $self = shift;
+    $self->remove_base(@_);
     $self->_remove_files_base();
     $self->_remove_domain_db();
+    $self->_remove_base_db();
 }
 
 sub _remove_domain_db {

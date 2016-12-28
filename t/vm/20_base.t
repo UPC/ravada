@@ -258,6 +258,17 @@ sub test_remove_base {
 
     my @files_deleted = $domain->list_files_base();
     is(scalar @files_deleted,0);
+
+    my $sth = $test->dbh->prepare(
+        "SELECT count(*) FROM file_base_images"
+        ." WHERE id_domain = ?"
+    );
+    $sth->execute($domain->id);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+
+    is($count,0,"[$vm_name] Count files base after remove base domain");
+
 }
 
 sub test_dont_remove_base_cloned {
