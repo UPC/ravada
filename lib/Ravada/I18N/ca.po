@@ -61,3 +61,21 @@ msgstr "Nom"
 
 msgid "Log Out"
 msgstr "Sortir"
+
+msgid "Available Machines"
+msgstr "Màquines disponibles"
+
+msgid "Help"
+msgstr "Ajuda"
+
+msgid "Requirements"
+msgstr "Requeriments"
+
+msgid "About"
+msgstr "Info"
+
+msgid "Messages"
+msgstr "Missatges"
+
+msgid "Mark all as Read"
+msgstr "Marca com a llegit"
