@@ -1,3 +1,49 @@
 #This is the PO english locale
 msgid "Ravada broker"
 msgstr ""
+
+msgid "Machine Name"
+msgstr ""
+
+msgid "Tools"
+msgstr ""
+
+msgid "Machines List"
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "Choose a Machine to Start"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Stop"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Prepare Base"
+msgstr ""
+
+msgid "Clone"
+msgstr ""
+
+msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
+msgstr ""
+
+msgid "NEW Messages"
+msgstr ""
+
+msgid "Users List"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Log Out"
+msgstr ""
+

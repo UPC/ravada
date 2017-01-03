@@ -1,0 +1,25 @@
+#This is the PO catalan locale
+msgid "Ravada broker"
+msgstr ""
+
+msgid "Machine Name"
+msgstr "Nom de la maquina"
+
+msgid "Tools"
+msgstr "Eines"
+
+msgid "Machines List"
+msgstr "Llistat de màquines"
+
+msgid "Users"
+msgstr "Usuaris"
+
+msgid "Help"
+msgstr "Ajuda"
+
+msgid "Available Machines"
+msgstr "Maquines disponibles"
+
+
+
+

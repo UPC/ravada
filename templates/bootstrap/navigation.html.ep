@@ -9,7 +9,7 @@
             <ul class="nav navbar-right top-nav">
 % if ( !$_anonymous ) {
                 <li>
-                        <a href="/"><i class="fa fa-fw fa-desktop"></i> Avaiable Machines</a>
+                        <a href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                 </li>
 %          if (defined $_user ) {
                 <li>
@@ -26,16 +26,16 @@
 % }
 % if (defined $_user && $_user->is_admin ) { 
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-wrench"></i>&nbsp;Tools<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-wrench"></i>&nbsp;<%=l 'Tools' %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="/machines"><i class="fa fa-cubes"></i>&nbsp;Machines List</a></li>
-                        <li><a href="/users"><i class="fa fa-users"></i>&nbsp;Users</a></li>
+                        <li><a href="/machines"><i class="fa fa-cubes"></i>&nbsp;<%=l 'Machines List' %></a></li>
+                        <li><a href="/users"><i class="fa fa-users"></i>&nbsp;<%=l 'Users' %></a></li>
                     </ul>
                 </li>
 % }
 % if ( !$_anonymous ) {
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;Help<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;<%=l 'Help' %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="/requirements"><i class="fa fa-gears"></i>&nbsp;Requirements</a></li>
                         <li role="separator" class="divider"></li>
