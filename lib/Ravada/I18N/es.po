@@ -1,79 +1,63 @@
+# Translators:
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
 "PO-Revision-Date: 2017-01-03 12:12+0300\n"
-"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
-"Language-Team: \n"
-"Language: ca\n"
+"Last-Translator: Fernando Verdugo <fv3rdugo@gmail.com>, 2017\n"
+"Language-Team: Spanish (https://www.transifex.com/ravada/teams/70385/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Ravada broker"
 msgstr ""
 
 msgid "Machine Name"
-msgstr ""
+msgstr "Nombre de la máquina"
 
 msgid "Tools"
-msgstr ""
+msgstr "Herramientas"
 
 msgid "Machines List"
-msgstr ""
+msgstr "Lista de máquinas"
 
 msgid "Users"
-msgstr ""
+msgstr "Usuarios"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "Elige una máquina para iniciar"
 
 msgid "Start"
-msgstr ""
+msgstr "Iniciar"
 
 msgid "Stop"
-msgstr ""
+msgstr "Parar"
 
 msgid "View"
-msgstr ""
+msgstr "Ver"
 
 msgid "Prepare Base"
-msgstr ""
+msgstr "Preparar base"
 
 msgid "Clone"
-msgstr ""
+msgstr "Clonar"
 
 msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
 msgstr ""
 
 msgid "NEW Messages"
-msgstr ""
+msgstr "NUEVO mensaje"
 
 msgid "Users List"
-msgstr ""
+msgstr "Lista de usuarios"
 
 msgid "Name"
-msgstr ""
+msgstr "Nombre"
 
 msgid "Log Out"
-msgstr ""
-
-msgid "Available Machines"
-msgstr ""
-
-msgid "Help"
-msgstr ""
-
-msgid "Requirements"
-msgstr ""
-
-msgid "About"
-msgstr ""
-
-msgid "Messages"
-msgstr ""
-
-msgid "Mark all as Read"
-msgstr ""
+msgstr "Salir"
