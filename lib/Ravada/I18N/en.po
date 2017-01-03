@@ -48,7 +48,7 @@ msgstr ""
 msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
 msgstr ""
 
-msgid "NEW Messages"
+msgid "NEW"
 msgstr ""
 
 msgid "Users List"

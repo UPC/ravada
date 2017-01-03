@@ -16,10 +16,10 @@
                     <a href="/messages.html">
 %                   if ($_user->unread_messages) {
                         <i class="fa fa-fw fa-bell"></i>
-                        <b>NEW </b>
+                        <b><%=l 'NEW' %>  </b>
                         <!-- TODO list of message subjects when clicking -->
 %                   }
-                    Messages
+                    <%=l 'Messages' %>
                     </a>
                 </li>
 %           }

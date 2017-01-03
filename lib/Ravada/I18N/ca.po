@@ -50,8 +50,8 @@ msgstr "Clonar"
 msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
 msgstr ""
 
-msgid "NEW Messages"
-msgstr "NOU missatge"
+msgid "NEW"
+msgstr "NOUS"
 
 msgid "Users List"
 msgstr "Llista d'usuaris"

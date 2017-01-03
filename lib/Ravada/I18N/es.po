@@ -50,8 +50,8 @@ msgstr "Clonar"
 msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
 msgstr ""
 
-msgid "NEW Messages"
-msgstr "NUEVO mensaje"
+msgid "NEW"
+msgstr "NUEVOS"
 
 msgid "Users List"
 msgstr "Lista de usuarios"
@@ -61,3 +61,21 @@ msgstr "Nombre"
 
 msgid "Log Out"
 msgstr "Salir"
+
+msgid "Available Machines"
+msgstr "Máquinas disponibles"
+
+msgid "Help"
+msgstr "Ayuda"
+
+msgid "Requirements"
+msgstr "Requerimientos"
+
+msgid "About"
+msgstr "Info"
+
+msgid "Messages"
+msgstr "Mensajes"
+
+msgid "Mark all as Read"
+msgstr "Marcar como leídos"
