@@ -37,9 +37,9 @@
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;<%=l 'Help' %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="/requirements"><i class="fa fa-gears"></i>&nbsp;Requirements</a></li>
+                        <li><a href="/requirements"><i class="fa fa-gears"></i>&nbsp;<%=l 'Requirements' %></a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="/about"><i class="fa fa-info-circle"></i>&nbsp;About</a></li>
+                        <li><a href="/about"><i class="fa fa-info-circle"></i>&nbsp;<%=l 'About' %></a></li>
                     </ul>
                 </li>
 % }
@@ -49,7 +49,7 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="/logout"><i class="fa fa-fw fa-power-off"></i> Log Out</a>
+                            <a href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a>
                         </li>
                     </ul>
                 </li>

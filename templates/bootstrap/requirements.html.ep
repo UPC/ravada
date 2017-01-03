@@ -13,7 +13,7 @@
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <hr>
-                            <h2>Requirements</h2>
+                            <h2><%=l 'Requirements' %></h2>
                                 <ul>
                                 <li>Linux: virt-viewer</li>
                                 <li></li>
