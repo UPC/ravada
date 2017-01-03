@@ -389,6 +389,17 @@ any '/requirements' => sub {
     $c->render(template => 'bootstrap/requirements');
 };
 
+
+any '/settings' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->stash(version => $RAVADA->version );
+
+    $c->render(template => 'bootstrap/settings');
+};
+
+
 ###################################################
 
 sub _init_error {
