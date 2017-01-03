@@ -77,3 +77,7 @@ msgstr ""
 
 msgid "Mark all as Read"
 msgstr ""
+
+msgid "Settings"
+msgstr ""
+
