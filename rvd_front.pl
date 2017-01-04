@@ -11,7 +11,7 @@ use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 #####
 #my $self->plugin('I18N');
-plugin I18N => {namespace => 'Ravada::I18N', support_url_langs => [qw(en ca es)]};
+plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 #package Ravada::I18N:en;
 #####
 

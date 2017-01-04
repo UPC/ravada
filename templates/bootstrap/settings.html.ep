@@ -10,8 +10,12 @@
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3>Settings</h3>
-                        <select class="input-medium bfh-languages" data-language="en_US" data-available="en,ca,es,it,fr,pt"></select>
+  </ul>
+</div>
+
+
                     </div>
+
                 </div>
             </div>
     </div>
