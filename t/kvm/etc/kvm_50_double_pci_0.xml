@@ -127,13 +127,5 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
     </memballoon>
   </devices>
-  <seclabel type='dynamic' model='apparmor' relabel='yes'>
-    <label>libvirt-161cbacf-2e6c-4266-a4e6-6a21a7eb6089</label>
-    <imagelabel>libvirt-161cbacf-2e6c-4266-a4e6-6a21a7eb6089</imagelabel>
-  </seclabel>
-  <seclabel type='dynamic' model='dac' relabel='yes'>
-    <label>+112:+119</label>
-    <imagelabel>+112:+119</imagelabel>
-  </seclabel>
 </domain>
 
