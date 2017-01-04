@@ -345,6 +345,9 @@ sub open_vm {
     bless $proto,$class;
 
     my $vm = $proto->new(readonly => 1);
+    eval { $vm->vm };
+    warn $@ if $@;
+    return if $@;
     return $vm if $0 =~ /\.t$/;
 
     $VM{$type} = $vm;
