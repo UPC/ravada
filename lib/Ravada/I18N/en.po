@@ -45,7 +45,10 @@ msgstr ""
 msgid "Clone"
 msgstr ""
 
-msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
+msgid "Can't Remove Base and Delete. Machine has"
+msgstr ""
+
+msgid "Clone/s"
 msgstr ""
 
 msgid "NEW"
@@ -81,3 +84,5 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+msgid "New Machine"
+msgstr ""

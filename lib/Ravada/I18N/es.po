@@ -47,8 +47,11 @@ msgstr "Preparar base"
 msgid "Clone"
 msgstr "Clonar"
 
-msgid "Can't Remove Base and Delete. Machine has 1 Clone/s"
-msgstr ""
+msgid "Can't Remove Base and Delete. Machine has"
+msgstr "No se puede eliminar la base. La máquina tiene"
+
+msgid "Clone/s"
+msgstr "clon/es"
 
 msgid "NEW"
 msgstr "NUEVOS"
@@ -79,3 +82,9 @@ msgstr "Mensajes"
 
 msgid "Mark all as Read"
 msgstr "Marcar como leídos"
+
+msgid "Settings"
+msgstr "Preferencias"
+
+msgid "New Machine"
+msgstr "Nueva máquina"
