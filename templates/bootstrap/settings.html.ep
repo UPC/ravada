@@ -9,7 +9,7 @@
       <div class="page-header col-md-8 col-md-offset-2">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h3>Settings</h3>
+                        <h3><%=l 'Settings' %></h3>
   </ul>
 </div>
 
