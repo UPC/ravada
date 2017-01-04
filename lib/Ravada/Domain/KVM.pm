@@ -351,6 +351,7 @@ Starts the domain
 
 sub start {
     my $self = shift;
+    $self->_set_spice_ip();
     $self->domain->create();
 }
 
@@ -809,5 +810,27 @@ sub rename_volumes {
 }
 
 =cut
+
+sub _set_spice_ip {
+    my $self = shift;
+
+    my $doc = XML::LibXML->load_xml(string
+                            => $self->domain->get_xml_description) ;
+    my @graphics = $doc->findnodes('/domain/devices/graphics');
+
+    my $ip = $self->_vm->ip();
+
+    for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
+        $graphics->setAttribute('listen' => $ip);
+        my $listen;
+        for my $child ( $graphics->childNodes()) {
+            $listen = $child if $child->getName() eq 'listen';
+        }
+        # we should consider in the future add a new listen if it ain't one
+        next if !$listen;
+        $listen->setAttribute('address' => $ip);
+        $self->domain->update_device($graphics);
+    }
+}
 
 1;
