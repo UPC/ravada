@@ -211,6 +211,41 @@ sub test_screenshot_file {
     my $file = $domain->_file_screenshot();
     ok($file,"Expecting a screnshot filename, got '".($file or '<UNDEF>'));
 }
+
+sub test_change_interface {
+    my ($vm_name) = @_;
+    return if $vm_name !~ /kvm/i;
+    
+    my $domain = test_create_domain($vm_name);
+
+    set_bogus_ip($domain);
+    $domain->start($USER);
+
+    my $display = $domain->display($USER);
+    like($display,qr{spice://\d+.\d+.});
+}
+
+sub set_bogus_ip {
+    my $domain = shift;
+    my $doc = XML::LibXML->load_xml(string
+                            => $domain->domain->get_xml_description) ;
+    my @graphics = $doc->findnodes('/domain/devices/graphics');
+    is(scalar @graphics,1) or return;
+    
+    my $bogus_ip = '999.999.999.999';
+    $graphics[0]->setAttribute('listen' => $bogus_ip);
+
+    my $listen;
+    for my $child ( $graphics[0]->childNodes()) {
+        $listen = $child if $child->getName() eq 'listen';
+    }
+    ok($listen,"Expecting child node listen , got :'".($listen or '')) 
+        or return;
+
+    $listen->setAttribute('address' => $bogus_ip);
+
+    $domain->domain->update_device($graphics[0]);
+}
 #######################################################
 
 remove_old_domains();
@@ -239,6 +274,7 @@ for my $vm_name (qw( Void KVM )) {
         test_search_vm($vm_name);
 
         my $domain = test_create_domain($vm_name);
+        test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
         my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone1, "Expecting clone ");
