@@ -219,7 +219,8 @@ sub test_change_interface {
     my $domain = test_create_domain($vm_name);
 
     set_bogus_ip($domain);
-    $domain->start($USER);
+    eval { $domain->start($USER) };
+    ok(!$@,"Expecting error='' after starting domain, got ='".($@ or '')."'") or return;
 
     my $display = $domain->display($USER);
     like($display,qr{spice://\d+.\d+.});
