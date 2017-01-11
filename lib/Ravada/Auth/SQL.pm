@@ -173,7 +173,6 @@ sub login {
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE name=? AND password=?");
     $sth->execute($name , sha1_hex($password));
-    warn "$name ".sha1_hex($password);
     my ($found) = $sth->fetchrow_hashref;
     $sth->finish;
 
