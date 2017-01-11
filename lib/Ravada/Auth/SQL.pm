@@ -173,6 +173,7 @@ sub login {
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE name=? AND password=?");
     $sth->execute($name , sha1_hex($password));
+    warn "$name ".sha1_hex($password);
     my ($found) = $sth->fetchrow_hashref;
     $sth->finish;
 
@@ -284,9 +285,9 @@ sub change_password {
 
     die "Password too small" if length($password)<6;
 
-    my $sth= $$CON->dbh->prepare("UPDATE Users set password=?"
+    my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
         ." WHERE name=?");
-    $sth->execute($self->name, sha1_hex($password));
+    $sth->execute(sha1_hex($password), $self->name);
 }
 1;
 

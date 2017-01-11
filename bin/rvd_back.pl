@@ -18,13 +18,16 @@ my ($DEBUG, $ADD_USER );
 my $FILE_CONFIG = "/etc/ravada.conf";
 my $ADD_USER_LDAP;
 my $IMPORT_DOMAIN;
+my $CHANGE_PASSWORD;
 
 my $USAGE = "$0 "
         ." [--debug] [--file-config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
+        ." [--change-password]"
         ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
+        ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." -X : start in foreground\n"
     ;
@@ -33,6 +36,7 @@ GetOptions (       help => \$help
                  ,debug => \$DEBUG
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
+      ,'change-password'=> \$CHANGE_PASSWORD
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
       ,'import-domain=s' => \$IMPORT_DOMAIN
 ) or exit;
@@ -94,6 +98,21 @@ sub add_user_ldap {
     Ravada::Auth::LDAP::add_user($login, $password);
 }
 
+sub change_password {
+    print "User login name : ";
+    my $login = <STDIN>;
+    chomp $login;
+    return if !$login;
+
+    my $user = Ravada::Auth::SQL->new(name => $login);
+    die "ERROR: Unknown user '$login'\n" if !$user->id;
+
+    print "password : ";
+    my $password = <STDIN>;
+    chomp $password;
+    $user->change_password($password);
+}
+
 sub import_domain {
     my $name = shift;
     print "Virtual Manager: KVM\n";
@@ -109,6 +128,9 @@ if ($ADD_USER) {
     exit;
 } elsif ($ADD_USER_LDAP) {
     add_user($ADD_USER_LDAP);
+    exit;
+} elsif ($CHANGE_PASSWORD) {
+    change_password();
     exit;
 } elsif ($IMPORT_DOMAIN) {
     import_domain($IMPORT_DOMAIN);
