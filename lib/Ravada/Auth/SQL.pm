@@ -267,5 +267,26 @@ sub id {
 
     return $id;
 }
+
+=head2 change_password
+
+Changes the password of an User
+
+    $user->change_password();
+
+Arguments: password
+
+=cut
+
+sub change_password {
+    my $self = shift;
+    my $password = shift or die "ERROR: password required\n";
+
+    die "Password too small" if length($password)<6;
+
+    my $sth= $$CON->dbh->prepare("UPDATE Users set password=?"
+        ." WHERE name=?");
+    $sth->execute($self->name, sha1_hex($password));
+}
 1;
 

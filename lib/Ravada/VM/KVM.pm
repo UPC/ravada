@@ -484,7 +484,6 @@ sub _fix_pci_slots {
         my $slot = $child->getAttribute('slot');
         next if !defined $slot;
         next if !$dupe{"$bus/$slot"}++;
-        warn "WARNING: duplicated $bus / $slot for ".$child->toString();
 
         my $new_slot = $slot;
         for (;;) {
@@ -493,7 +492,6 @@ sub _fix_pci_slots {
             $n++;
             $n= "0$n" if length($n)<2;
             $new_slot="0x$n";
-            warn $new_slot;
         }
         $dupe{"$bus/$new_slot"}++;
         $child->setAttribute(slot => $new_slot);

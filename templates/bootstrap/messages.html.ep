@@ -11,12 +11,12 @@
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>Messages 
+                        <h2><%=l 'Messages' %> 
                         
                         <a style="float: right; margin: 0 10px;" class="btn btn-info" href="/messages.html" "><i class="fa fa-refresh" aria-hidden="true"></i></a>
 
                         <a style="float: right; margin: 0 10px;" href="/messages/read/all.html" class="btn btn-succes"><i class="fa fa-envelope-o" aria-hidden="true"></i>
-Mark all as Read</a>
+<%=l 'Mark all as Read' %></a>
 
                         </h2>
                     </div>
@@ -30,4 +30,3 @@ Mark all as Read</a>
     %= include 'bootstrap/scripts'
 </body>
 </html>
-
