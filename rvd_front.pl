@@ -1,23 +1,55 @@
 #!/usr/bin/env perl
 use warnings;
 use strict;
-
+#####
+use locale ':not_characters';
+#####
 use Carp qw(confess);
 use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
-use Mojolicious::Lite;
+use Mojolicious::Lite 'Ravada::I18N';
+#####
+#my $self->plugin('I18N');
+plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
+#package Ravada::I18N:en;
+#####
+
 use YAML qw(LoadFile);
 
 use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Auth;
+use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 
 plugin Config => { file => 'rvd_front.conf' };
+#####
+#####
+#####
+# Import locale-handling tool set from POSIX module.
+# This example uses: setlocale -- the function call
+#                    LC_CTYPE -- explained below
+
+# query and save the old locale
+my $old_locale = setlocale(LC_CTYPE);
+
+setlocale(LC_CTYPE, "en_US.ISO8859-1");
+# LC_CTYPE now in locale "English, US, codeset ISO 8859-1"
+
+setlocale(LC_CTYPE, "");
+# LC_CTYPE now reset to default defined by LC_ALL/LC_CTYPE/LANG
+# environment variables.  See below for documentation.
+
+# restore the old locale
+setlocale(LC_CTYPE, $old_locale);
+#####
+#####
+#####
+
 
 GetOptions(
      'config=s' => \$FILE_CONFIG
@@ -374,6 +406,17 @@ any '/requirements' => sub {
 
     $c->render(template => 'bootstrap/requirements');
 };
+
+
+any '/settings' => sub {
+    my $c = shift;
+    return login($c)            if !_logged_in($c);
+
+    $c->stash(version => $RAVADA->version );
+
+    $c->render(template => 'bootstrap/settings');
+};
+
 
 ###################################################
 

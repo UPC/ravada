@@ -3,22 +3,19 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div ng-controller="requirements">
+    <div ng-controller="settings">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
-
-        <!--BASES AND DOMAINS LIST-->
-
-            <div class="page-header">
+      <div class="page-header col-md-8 col-md-offset-2">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <hr>
-                            <h2><%=l 'Requirements' %></h2>
-                                <ul>
-                                <li>Linux: virt-viewer</li>
-                                <li></li>
-                                </ul>
+                        <h3><%=l 'Settings' %></h3>
+  </ul>
+</div>
+
+
                     </div>
+
                 </div>
             </div>
     </div>
@@ -27,3 +24,4 @@
     %= include 'bootstrap/scripts'
 </body>
 </html>
+
