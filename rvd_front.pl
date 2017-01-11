@@ -48,7 +48,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 #####
-#plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
+plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
 
 GetOptions(
