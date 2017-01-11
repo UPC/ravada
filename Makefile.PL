@@ -28,5 +28,7 @@ WriteMakefile(
     'Test::SQL::Data' => 0
   },
 
-  test      => {TESTS => 't/*.t t/*/*.t'}
+  test      => {TESTS => 't/*.t t/*/*.t'},
+  clean     => {FILES => 't/.db' }
+
 );
