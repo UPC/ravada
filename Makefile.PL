@@ -21,6 +21,8 @@ WriteMakefile(
 	,'IO::Interface' => 0
 	,'Sys::Statistics::Linux' => 0
     ,'Test::Pod::Coverage' => 0
+    ,'Locale::Maketext::Lexicon' => 0
+    ,'Mojolicious::Plugin::I18N' => 0
   },
   TEST_REQUIRES => {
     'Test::SQL::Data' => 0
