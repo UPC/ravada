@@ -679,7 +679,6 @@ sub rename_domain {
 sub AUTOLOAD {
     my $self = shift;
 
-
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
 
@@ -687,7 +686,7 @@ sub AUTOLOAD {
         if !ref($self);
 
     my $value = shift;
-    $name =~ tr/[a-z]/_/c;
+    $name =~ tr/[a-z][A-Z]_/_/c;
 
     confess "ERROR: Unknown field $name "
         if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
@@ -715,4 +714,5 @@ sub AUTOLOAD {
 
 }
 
+sub DESTROY {}
 1;
