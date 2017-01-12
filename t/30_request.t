@@ -96,10 +96,13 @@ sub test_req_create_domain_iso {
     $USER->mark_all_messages_read();
     test_unread_messages($USER,0, "[$vm_name] create domain $name");
 
-    my $req = Ravada::Request->create_domain( 
+    my $req;
+    eval { $req = Ravada::Request->create_domain( 
         name => $name
         ,@ARG_CREATE_DOM
-    );
+        );
+    };
+    ok(!$@,"Expecting \$@=''  , got='".($@ or '')."'") or return;
     ok($req);
     ok($req->status);
     ok($req->args('id_owner'));

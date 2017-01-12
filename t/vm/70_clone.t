@@ -108,13 +108,13 @@ for my $vm_name (reverse sort @VMS) {
 
         my @domains = ( $domain);
         my $n = 1;
-        for ( 1 .. 2 ) {
+        for my $depth ( 1 .. 3 ) {
 
             my @bases = @domains;
 
             for my $base(@bases) {
 
-               for ( 1 .. 2) {
+               for my $n_clones ( 1 .. 2 ) {
                     my $clone = test_clone($vm_name,$base);
                     push @domains,($clone) if $clone;
                 }
