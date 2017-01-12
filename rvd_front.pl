@@ -619,11 +619,8 @@ sub _show_request {
     }
 
     return access_denied($c)
-        if $request 
-            && (   !$request->{args}->{uid}
-                || !$USER->is_admin
-                || $request->{args}->{uid} != $USER->id
-            );
+        unless $USER->is_admin || $request->{args}->{uid} == $USER->id;
+
     return $c->render(data => "Request $id_request unknown ".Dumper($request))
         if !$request->{id};
 
