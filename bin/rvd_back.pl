@@ -19,6 +19,7 @@ my $FILE_CONFIG = "/etc/ravada.conf";
 my $ADD_USER_LDAP;
 my $IMPORT_DOMAIN;
 my $CHANGE_PASSWORD;
+my $NOFORK;
 
 my $USAGE = "$0 "
         ." [--debug] [--file-config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
@@ -34,6 +35,7 @@ my $USAGE = "$0 "
 
 GetOptions (       help => \$help
                  ,debug => \$DEBUG
+              ,'no-fork'=> \$NOFORK
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -53,6 +55,7 @@ if ($help) {
 die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
 
 $Ravada::DEBUG=1    if $DEBUG;
+$Ravada::CAN_FORK=0    if $NOFORK;
 ###################################################################
 
 our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
