@@ -453,10 +453,11 @@ sub _domain_create_from_base {
     my $dom;
     eval {
         $dom = $self->vm->define_domain($xml->toString());
-        $dom->create();
+#        $dom->create();
     };
     if ($@) {
         my $out;
+		warn $@;
         my $name_out = "/var/tmp/$args{name}.xml";
         warn "Dumping $name_out";
         open $out,">",$name_out and do {
@@ -464,7 +465,6 @@ sub _domain_create_from_base {
         };
         close $out;
         warn "$! $name_out" if !$out;
-        die $@;
     }
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
