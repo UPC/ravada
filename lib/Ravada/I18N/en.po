@@ -45,7 +45,7 @@ msgstr ""
 msgid "Clone"
 msgstr ""
 
-msgid "Can't Remove Base and Delete. Machine has"
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
 msgstr ""
 
 msgid "Clone/s"
