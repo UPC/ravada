@@ -47,8 +47,8 @@ msgstr "Preparar base"
 msgid "Clone"
 msgstr "Clonar"
 
-msgid "Can't Remove Base and Delete. Machine has"
-msgstr "No es pot eliminar la base. La màquina te"
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr "No es pot preparar o eliminar la base. La màquina te"
 
 msgid "Clone/s"
 msgstr "clon/s"
