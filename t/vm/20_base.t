@@ -76,10 +76,15 @@ sub test_files_base {
 sub test_display {
     my ($vm_name, $domain) = @_;
 
-    my $display = $domain->display($USER);
+    my $display;
+    $domain->start($USER) if !$domain->is_active;
+    eval { $display = $domain->display($USER)};
+    is($@,'');
+    ok($display,"Expecting a display URI, got '".($display or '')."'") or return;
 
-    my ($ip) = $display =~ m{^\w+://(.*):\d+};
-    ok($ip,"Expecting an IP from $display, got none") or return;
+    my ($ip) = $display =~ m{^\w+://(.*):\d+} if defined $display;
+
+    ok($ip,"Expecting an IP , got ''") or return;
 
     ok($ip ne '127.0.0.1', "[$vm_name] Expecting IP no '127.0.0.1', got '$ip'") or exit;
 
@@ -88,7 +93,8 @@ sub test_display {
     return if $vm_name ne 'Void';
 
     $Ravada::CONFIG->{display_ip} = $DISPLAY_IP;
-    $display = $domain->display($USER);
+    eval { $display = $domain->display($USER) };
+    is($@,'');
     ($ip) = $display =~ m{^\w+://(.*):\d+};
 
     my $expected_ip =  Ravada::display_ip();
