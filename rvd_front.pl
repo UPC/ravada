@@ -304,6 +304,13 @@ get '/machine/rename/*' => sub {
     return rename_machine($c);
 };
 
+any '/machine/copy' => sub {
+    my $c = shift;
+    return copy_machine($c);
+};
+
+# Users ##########################################################3
+
 ##make admin
 
 get '/users/make_admin/*.json' => sub {
@@ -1001,6 +1008,26 @@ sub start_machine {
     );
 
     return $c->render(json => { req => $req->id });
+}
+
+sub copy_machine {
+    my $c = shift;
+
+    return login($c) if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin();
+
+    my $id_base= $c->param('id_base');
+    my $ram = $c->param('copy_ram');
+    my $rebase = $c->param('copy_rebase');
+
+    my $data = { id_base => $id_base 
+        ,ram => $ram
+        ,rebase => $rebase
+    };
+
+    return $c->render(json => $data);
+
+
 }
 
 sub rename_machine {
