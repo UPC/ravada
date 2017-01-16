@@ -1036,17 +1036,18 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    return create_domain($c, $id_base, $name)   if !$rebase || $base->is_base;
+    return create_domain($c, $id_base, $name)   if $base->is_base && !$rebase;
 
     my $req = Ravada::Request->prepare_base(
         id_domain => $id_base
-        ,user_id => $USER->id
+        ,uid => $USER->id
     );
     return $c->render("Problem preparing base for domain ".$base->name)
         if $rebase && !$req;
 
+    sleep 1;
     # TODO fix requests for the same domain must queue
-    $req = Ravada::Request->create(
+    $req = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
        , id_owner => $USER->id
