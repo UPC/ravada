@@ -526,6 +526,16 @@ sub quick_start {
     );
 }
 
+sub create_domain {
+    my ($c, $id_base, $domain_name) = @_;
+    return $c->redirect_to('/login') if !$USER;
+    my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
+    my $domain = provision($c,  $id_base,  $domain_name);
+    return show_failure($c, $domain_name) if !$domain;
+    return show_link($c,$domain);
+
+}
+
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
 
@@ -1020,14 +1030,28 @@ sub copy_machine {
     my $ram = $c->param('copy_ram');
     my $rebase = $c->param('copy_rebase');
 
-    my $data = { id_base => $id_base 
-        ,ram => $ram
-        ,rebase => $rebase
-    };
+    my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
 
-    return $c->render(json => $data);
+    my $base = $RAVADA->search_domain_by_id($id_base);
+    my $name = $c->req->param($param_name) if $param_name;
+    $name = $base->name."-".$USER->name if !$name;
 
+    return create_domain($c, $id_base, $name)   if !$rebase || $base->is_base;
 
+    my $req = Ravada::Request->prepare_base(
+        id_domain => $id_base
+        ,user_id => $USER->id
+    );
+    return $c->render("Problem preparing base for domain ".$base->name)
+        if $rebase && !$req;
+
+    # TODO fix requests for the same domain must queue
+    $req = Ravada::Request->create(
+             name => $name
+        , id_base => $id_base
+       , id_owner => $USER->id
+    );
+    $c->redirect_to("/machines");#    if !@error;
 }
 
 sub rename_machine {
