@@ -33,6 +33,7 @@
 
                         <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
+                        <a data-toggle="modal" data-target="#copy_{{machine.id}}" class="btn btn-primary btn-sm" ><i class="fa fa-files-o" aria-hidden="true"></i>Copy</a>
                         <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbspScreenshot</button>
@@ -49,6 +50,42 @@
         </table>
 
 
+        <div ng-repeat="machine in list_machines">
+        <div id="copy_{{machine.id}}" class="modal fade" role="dialog">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                  <h2>Copy {{machine.name}}</h2>
+              </div>
+              <div class="modal-body">
+                  <form method="post" action="/machine/copy">
+                      <input type="hidden" name="id_base" value="{{machine.id}}">
+                    <label for="copy_name_{{machine.id}}">Name:</label>
+                    <input name="copy_name_{{machine.id}}" type="text" 
+                        value="{{machine.name}}-copy">
+                        <!-- todo check unique name -->
+                    <br/>
+                    <label for="copy_ram">RAM (Gb):</label>
+                    <input name="copy_ram" type="text" length="5" value="1">
+                    <br/>
+                    <label for="copy_disk_{{machine.id}}"><del>Disk Size:</del></label>
+                    <input name="copy_disk_{{machine.id}}" type="text" disabled>
+                    <br/>
+                    <div ng-show="{{machine.is_base}}">
+                        <label for="copy_rebase">Rebase First</label>
+                        <input name="copy_rebase" type="checkbox"
+                               ng-disabled="machine.has_clones">
+                        Toggle to make base from latest changes.
+                        <div ng-show="{{machine.has_clones}}">Remove clones to allow rebase.</div>
+                    </div>
+                    <br>
+                    <input type="submit">
+                  </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
 
 
         <div ng-repeat="machine in list_machines">

@@ -304,6 +304,13 @@ get '/machine/rename/*' => sub {
     return rename_machine($c);
 };
 
+any '/machine/copy' => sub {
+    my $c = shift;
+    return copy_machine($c);
+};
+
+# Users ##########################################################3
+
 ##make admin
 
 get '/users/make_admin/*.json' => sub {
@@ -517,6 +524,16 @@ sub quick_start {
                   ,_anonymous => 0
                       ,error => \@error
     );
+}
+
+sub create_domain {
+    my ($c, $id_base, $domain_name) = @_;
+    return $c->redirect_to('/login') if !$USER;
+    my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
+    my $domain = provision($c,  $id_base,  $domain_name);
+    return show_failure($c, $domain_name) if !$domain;
+    return show_link($c,$domain);
+
 }
 
 sub quick_start_domain {
@@ -1001,6 +1018,41 @@ sub start_machine {
     );
 
     return $c->render(json => { req => $req->id });
+}
+
+sub copy_machine {
+    my $c = shift;
+
+    return login($c) if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin();
+
+    my $id_base= $c->param('id_base');
+    my $ram = $c->param('copy_ram');
+    my $rebase = $c->param('copy_rebase');
+
+    my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
+
+    my $base = $RAVADA->search_domain_by_id($id_base);
+    my $name = $c->req->param($param_name) if $param_name;
+    $name = $base->name."-".$USER->name if !$name;
+
+    return create_domain($c, $id_base, $name)   if $base->is_base && !$rebase;
+
+    my $req = Ravada::Request->prepare_base(
+        id_domain => $id_base
+        ,uid => $USER->id
+    );
+    return $c->render("Problem preparing base for domain ".$base->name)
+        if $rebase && !$req;
+
+    sleep 1;
+    # TODO fix requests for the same domain must queue
+    $req = Ravada::Request->create_domain(
+             name => $name
+        , id_base => $id_base
+       , id_owner => $USER->id
+    );
+    $c->redirect_to("/machines");#    if !@error;
 }
 
 sub rename_machine {
