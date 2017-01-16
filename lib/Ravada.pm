@@ -566,12 +566,16 @@ sub process_requests {
     $self->_wait_pids_nohang();
     $self->_check_vms();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status='requested' OR status like 'retry %'");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+        ." WHERE status='requested' OR status like 'retry %'"
+        ." ORDER BY date_req"
+    );
     $sth->execute;
-    while (my ($id)= $sth->fetchrow) {
+    while (my ($id_request,$id_domain)= $sth->fetchrow) {
+        my $req = Ravada::Request->open($id_request);
+        next if $self->_domain_working($id_domain, $id_request);
         $self->_wait_pids_nohang();
-        my $req = Ravada::Request->open($id);
+
         warn "executing request ".$req->id." ".$req->status()." ".$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -592,6 +596,36 @@ sub process_requests {
 
     }
     $sth->finish;
+}
+
+sub _domain_working {
+    my $self = shift;
+    my ($id_domain, $id_request) = @_;
+
+    confess "Missing id_request" if !defined$id_request;
+
+    if (!$id_domain) {
+        my $req = Ravada::Request->open($id_request);
+        $id_domain = $req->defined_arg('id_base');
+        if (!$id_domain) {
+            my $domain_name = $req->defined_arg('name');
+            return if !$domain_name;
+            my $domain = $self->search_domain($domain_name) or return;
+            $id_domain = $domain->id;
+            if (!$id_domain) {
+                warn Dumper($req);
+                return;
+            }
+        }
+    }
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
+        ." WHERE id <> ? AND id_domain=? AND (status <> 'requested' AND status <> 'done')");
+    $sth->execute($id_request, $id_domain);
+    my ($id, $status) = $sth->fetchrow;
+#    warn "CHECKING DOMAIN WORKING "
+#        ."[$id_request] id_domain $id_domain working in request ".($id or '<NULL>')
+#            ." status: ".($status or '<UNDEF>');
+    return $id;
 }
 
 sub _process_requests_dont_fork {
