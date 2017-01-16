@@ -72,7 +72,7 @@
                     <input name="copy_disk_{{machine.id}}" type="text" disabled>
                     <br/>
                     <div ng-show="{{machine.is_base}}">
-                        <label for="copy_rebase">Rebase First {{machine.is_base}}</label>
+                        <label for="copy_rebase">Rebase First</label>
                         <input name="copy_rebase" type="checkbox"
                                ng-disabled="machine.has_clones">
                         Toggle to make base from latest changes.
