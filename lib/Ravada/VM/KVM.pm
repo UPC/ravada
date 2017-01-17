@@ -438,7 +438,7 @@ sub _domain_create_from_base {
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
     my @device_disk = $self->_create_disk($base, $args{name});
-    $self->storage->refresh();
+    $self->storage_pool->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
