@@ -199,13 +199,14 @@ sub search_domain {
         my $domain;
 
         my @args_create = ();
-        @args_create = ( storage => $self->storage_pool
-                    ,_vm => $self)
+        @args_create = ( 
+                    _vm => $self)
         if !$self->readonly;
 
         eval {
             $domain = Ravada::Domain::KVM->new(
                 domain => $dom
+                , storage => $self->storage_pool
                 ,readonly => $self->readonly
                 ,@args_create
             );
@@ -437,6 +438,7 @@ sub _domain_create_from_base {
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
     my @device_disk = $self->_create_disk($base, $args{name});
+    $self->storage->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');

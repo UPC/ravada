@@ -108,10 +108,15 @@ sub list_domains {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
-        $row->{is_active} = 1 if $domain && $domain->is_active;
-        $row->{is_locked} = 1 if $domain && $domain->is_locked;
-        $row->{is_paused} = 1 if $domain && $domain->is_paused;
-        $row->{has_clones} = $domain->has_clones if $domain;
+        if ( $domain ) {
+            $row->{is_active} = 1 if $domain->is_active;
+            $row->{is_locked} = 1 if $domain->is_locked;
+            $row->{is_paused} = 1 if $domain->is_paused;
+            $row->{has_clones} = $domain->has_clones;
+            $row->{disk_size} = ( $domain->disk_size or 0);
+            $row->{disk_size} /= (1024*1024*1024);
+            $row->{disk_size} = 1 if $row->{disk_size} < 1;
+        }
         push @domains, ($row);
     }
     $sth->finish;

@@ -459,7 +459,7 @@ sub is_paused {
 
 Adds a new volume to the domain
 
-    $domain->add_volume($size);
+    $domain->add_volume(name => $name, size => $size);
 
 =cut
 
@@ -766,6 +766,27 @@ sub rename {
     my $new_name = $args{name};
 
     $self->domain->rename($new_name);
+}
+
+sub disk_size {
+    my $self = shift;
+    my @size;
+    for my $disk ($self->_disk_devices_xml) {
+
+        my ($source) = $disk->findnodes('source');
+        next if !$source;
+
+        my $file = $source->getAttribute('file');
+        $file =~ s{.*/}{};
+
+        my $vol;
+        eval { $vol = $self->storage->get_volume_by_name($file) };
+
+        warn $source if !$vol;
+        push @size, ($vol->get_info->{capacity})    if $vol;
+    }
+    return @size if wantarray;
+    return ($size[0] or undef);
 }
 
 =pod

@@ -325,4 +325,10 @@ sub rename {
     $self->domain($new_name);
 }
 
+sub disk_size {
+    my $self = shift;
+    my ($disk) = $self->list_volumes();
+    return -s $disk;
+}
+
 1;

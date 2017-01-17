@@ -43,6 +43,8 @@ requires 'list_volumes';
 
 requires 'disk_device';
 
+requires 'disk_size';
+
 #hardware info
 
 requires 'get_info';
@@ -515,7 +517,7 @@ sub is_locked {
     $self->_init_connector() if !defined $$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT count(*) FROM requests "
-        ." WHERE id_domain=?");
+        ." WHERE id_domain=? AND status <> 'done'");
     $sth->execute($self->id);
     my ($count) = $sth->fetchrow;
     $sth->finish;
