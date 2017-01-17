@@ -109,7 +109,7 @@
                             aria-hidden="true"></i>
                     </button>
                     <button type="button" ng-show="show_rename"
-                            ng-click="show_rename=false;"><i
+                            ng-click="show_rename=false;new_name_duplicated=false"><i
                             class="fa fa-close"
                             aria-hidden="true"></i>
                     </button>
@@ -163,7 +163,7 @@
               </div>
               <div class="modal-footer">
 
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button ng-hide="show_rename" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
               </div>
             </div>
 

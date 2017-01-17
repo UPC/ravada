@@ -19,6 +19,8 @@ requires 'connect';
 our $CONNECTOR = \$Ravada::CONNECTOR;
 our $CONFIG = \$Ravada::CONFIG;
 
+our $MIN_MEMORY_MB = 128 * 1024;
+
 # domain
 requires 'create_domain';
 requires 'search_domain';
@@ -208,7 +210,7 @@ sub _check_memory {
     my %args = @_;
     return if !exists $args{memory};
 
-    die "ERROR: Low memory '$args{memory}' required 128 Mb " if $args{memory} < 128*1024;
+    die "ERROR: Low memory '$args{memory}' required ".int($MIN_MEMORY_MB/1024)." MB " if $args{memory} < $MIN_MEMORY_MB;
 }
 
 sub _check_disk {

@@ -63,7 +63,7 @@ sub test_clone {
     my ($vm_name, $base) = @_;
                 my $clone1;
                 my $name_clone = new_domain_name();
-                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
+#                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
