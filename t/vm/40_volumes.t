@@ -171,6 +171,8 @@ for my $vm_name (reverse sort @VMS) {
         # Domain with 1 volume
         #
         my $domain = test_create_domain($vm_name);
+        ok($domain->disk_size
+            ,"Expecting domain disk size something, got :".($domain->disk_size or '<UNDEF>'));
         test_prepare_base($vm_name, $domain);
         my $domain_clone = test_clone($vm_name, $domain);
         $domain = undef;
