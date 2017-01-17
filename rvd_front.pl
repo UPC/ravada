@@ -527,10 +527,10 @@ sub quick_start {
 }
 
 sub create_domain {
-    my ($c, $id_base, $domain_name, $ram) = @_;
+    my ($c, $id_base, $domain_name, $ram, $disk) = @_;
     return $c->redirect_to('/login') if !$USER;
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
-    my $domain = provision($c,  $id_base,  $domain_name, $ram);
+    my $domain = provision($c,  $id_base,  $domain_name, $ram, $disk);
     return show_failure($c, $domain_name) if !$domain;
     return show_link($c,$domain);
 
@@ -686,6 +686,7 @@ sub provision {
     my $id_base = shift;
     my $name = shift or confess "Missing name";
     my $ram = shift;
+    my $disk = shift;
 
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
@@ -694,6 +695,7 @@ sub provision {
     return $domain if $domain;
 
     my @create_args = ( memory => $ram ) if $ram;
+    push @create_args , ( disk => $disk) if $disk;
     my $req = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
@@ -1035,6 +1037,10 @@ sub copy_machine {
     $ram = 0 if $ram !~ /^\d+(\.\d+)?$/;
     $ram = int($ram*1024*1024);
 
+    my $disk= $c->param('copy_disk');
+    $disk = 0 if $disk && $disk !~ /^\d+(\.\d+)?$/;
+    $disk = int($disk*1024*1024*1024);
+
     my $rebase = $c->param('copy_rebase');
 
     my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
@@ -1043,7 +1049,7 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    return create_domain($c, $id_base, $name, $ram)
+    return create_domain($c, $id_base, $name, $ram, $disk)
        if $base->is_base && !$rebase;
 
     my $req = Ravada::Request->prepare_base(
@@ -1056,6 +1062,7 @@ sub copy_machine {
     sleep 1;
     # TODO fix requests for the same domain must queue
     my @create_args =( memory => $ram ) if $ram;
+    push @create_args , ( disk => $disk ) if $disk;
     $req = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
