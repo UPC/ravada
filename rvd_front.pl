@@ -1056,7 +1056,7 @@ sub copy_machine {
 
     my $disk= $c->param('copy_disk');
     $disk = 0 if $disk && $disk !~ /^\d+(\.\d+)?$/;
-    $disk = int($disk*1024*1024*1024);
+    $disk = int($disk*1024*1024*1024)   if $disk;
 
     my $rebase = $c->param('copy_rebase');
 
@@ -1094,9 +1094,10 @@ sub machine_is_public {
     my $uri = $c->req->url->to_abs->path;
 
     my ($id_machine, $value) = $uri =~ m{/.*/(\d+)/(\d+)?$};
-    warn $id_machine, $value;
     my $domain = $RAVADA->search_domain_by_id($id_machine);
+
     return $c->render(text => "unknown domain id $id_machine")  if !$domain;
+
     $domain->is_public($value) if defined $value;
 
     if ($value && !$domain->is_base) {
