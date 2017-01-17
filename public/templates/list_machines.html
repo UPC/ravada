@@ -68,8 +68,9 @@
                     <label for="copy_ram">RAM (Gb):</label>
                     <input name="copy_ram" type="text" length="5" value="1">
                     <br/>
-                    <label for="copy_disk_{{machine.id}}"><del>Disk Size:</del></label>
-                    <input name="copy_disk_{{machine.id}}" type="text" disabled>
+                    <label for="copy_disk"><del>Disk Size:</del></label>
+                    <input name="copy_disk_todo" type="text" 
+                        value="{{machine.disk_size}}" disabled>
                     <br/>
                     <div ng-show="{{machine.is_base}}">
                         <label for="copy_rebase">Rebase First</label>
