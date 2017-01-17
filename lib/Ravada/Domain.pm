@@ -962,6 +962,20 @@ sub _rename_domain_db {
     $sth->finish;
 }
 
+sub is_public {
+    my $self = shift;
+    my $value = shift;
+
+    _init_connector();
+    if (defined $value) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set is_public=?"
+                ." WHERE id=?");
+        $sth->execute($value, $self->id);
+        $sth->finish;
+    }
+    return $self->_data('is_public');
+}
+
 sub _pre_rename {
     my $self = shift;
 

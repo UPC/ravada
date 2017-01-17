@@ -309,6 +309,11 @@ any '/machine/copy' => sub {
     return copy_machine($c);
 };
 
+get '/machine/public/*' => sub {
+    my $c = shift;
+    return machine_is_public($c);
+};
+
 # Users ##########################################################3
 
 ##make admin
@@ -1070,6 +1075,26 @@ sub copy_machine {
         ,@create_args
     );
     $c->redirect_to("/machines");#    if !@error;
+}
+
+sub machine_is_public {
+    my $c = shift;
+    my $uri = $c->req->url->to_abs->path;
+
+    my ($id_machine, $value) = $uri =~ m{/.*/(\d+)/(\d+)?$};
+    warn $id_machine, $value;
+    my $domain = $RAVADA->search_domain_by_id($id_machine);
+    return $c->render(text => "unknown domain id $id_machine")  if !$domain;
+    $domain->is_public($value) if defined $value;
+
+    if ($value && !$domain->is_base) {
+        my $req = Ravada::Request->prepare_base(
+            id_domain => $domain->id
+            ,uid => $USER->id
+        );
+    }
+
+    return $c->render(json => $domain->is_public);
 }
 
 sub rename_machine {

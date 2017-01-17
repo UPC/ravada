@@ -155,6 +155,9 @@
             }
         };
 
+        $scope.set_public = function(machineId, value) {
+            $http.get("/machine/public/"+machineId+"/"+value);
+        };
     };
 
     // list machines
