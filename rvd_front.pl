@@ -176,7 +176,18 @@ get '/list_vm_types.json' => sub {
 
 get '/list_bases.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_bases);
+    return access_denied($c) if !_logged_in($c);
+
+    my $domains = $RAVADA->list_bases();
+    my @domains_show = @$domains;
+    if (!$USER->is_admin) {
+        @domains_show = ();
+        for (@$domains) {
+            push @domains_show,($_) if $_->{is_public};
+        }
+    }
+    $c->render(json => [@domains_show]);
+
 };
 
 get '/list_images.json' => sub {
@@ -186,7 +197,7 @@ get '/list_images.json' => sub {
 
 get '/list_machines.json' => sub {
     my $c = shift;
-    # shouldn't this be "list_bases" ?
+    return access_denied($c) if !_logged_in($c);
     $c->render(json => $RAVADA->list_domains);
 };
 
@@ -199,6 +210,7 @@ get '/list_bases_anonymous.json' => sub {
 
 get '/list_users.json' => sub {
     my $c = shift;
+    return access_denied($c) if !_logged_in($c);
     $c->render(json => $RAVADA->list_users);
 };
 

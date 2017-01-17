@@ -72,7 +72,8 @@ sub list_bases {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain;
         eval { $domain   = $self->search_domain($row->{name}) };
-        $row->{has_clones} = $domain->has_clones if $domain;
+        next if !$domain;
+        $row->{has_clones} = $domain->has_clones;
         push @bases, ($row);
     }
     $sth->finish;
@@ -546,7 +547,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();
