@@ -4,13 +4,13 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
-        <table class="table table-striped">
+        <table class="table table-striped" border="0">
             <thead>
                 <tr>
                     <th>Machine Name</th>
                     <th>Base</th>
-                    <th>Active</th>
                     <th>Public</th>
+                    <th>Status</th>
                     <th>Actions</th>
 
                 </tr>
@@ -30,28 +30,29 @@
                             ng-click="prepare(machine.id)">
                     </td>
                     <td>
-                        <a ng-show="{{machine.is_active}}" ng-click="shutdown(machine.id)"><i class="fa fa-check" aria-hidden="true"></i></a>
-
-                        <a ng-show="{{!machine.is_active}}" ng-click="start(machine.id)"><i class="fa fa-times" aria-hidden="true"></i></a></td>
-                    <td>
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)"></td>
                     <td>
+                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-click="resume(machine.id)">Paused</span>
+                        <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-click="shutdown(machine.id)">Running</span>
+                        <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger" ng-click="start(machine.id)">Down</span>
+
+                    </td>
+                    <td>
                        
+                        <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="start(machine.id)"><i class="fa fa-desktop" aria-hidden="true" aria-hidden="true">Start</i></a>
+                        <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
 
                         <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
                         <a data-toggle="modal" data-target="#copy_{{machine.id}}" class="btn btn-primary btn-sm" ><i class="fa fa-files-o" aria-hidden="true"></i>Copy</a>
-                        <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbspScreenshot</button>
 
-                        <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
 
 
 
-                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning">Paused</span>
                     </td>
 
                 </tr>
