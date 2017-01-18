@@ -962,6 +962,18 @@ sub _rename_domain_db {
     $sth->finish;
 }
 
+=head2 is_public
+
+Sets or get the domain public
+
+    $domain->is_public(1);
+
+    if ($domain->is_public()) {
+        ...
+    }
+
+=cut
+
 sub is_public {
     my $self = shift;
     my $value = shift;
