@@ -1003,7 +1003,8 @@ sub prepare_machine {
     return login($c)    if !_logged_in($c);
 
     my $domain = _search_requested_machine($c);
-    return              if  $domain->is_locked();
+    return $c->render(json => { error => "Domain ".$domain->name." is locked" })
+            if  $domain->is_locked();
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
     if (! -e $file_screenshot && $domain->can_screenshot() ) {
