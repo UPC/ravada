@@ -768,6 +768,18 @@ sub rename {
     $self->domain->rename($new_name);
 }
 
+=head2 disk_size
+
+Returns the size of the domains disk or disks
+If an array is expected, it returns the list of disks sizes, if it
+expects an scalar returns the first disk as it is asumed to be the main one.
+
+
+    my $size = $domain->disk_size();
+
+=cut
+
+
 sub disk_size {
     my $self = shift;
     my @size;
