@@ -760,7 +760,7 @@ sub show_link {
 
         return $c->render(data => 'ERROR starting domain '
                 ."status:'".$req->status."' ( ".$req->error.")")
-            if $req->error 
+            if $req->error
                 && $req->error !~ /already running/i
                 && $req->status ne 'waiting';
 
@@ -1003,11 +1003,12 @@ sub prepare_machine {
     return login($c)    if !_logged_in($c);
 
     my $domain = _search_requested_machine($c);
+    return              if  $domain->is_locked();
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
     if (! -e $file_screenshot && $domain->can_screenshot() ) {
         if ( !$domain->is_active() ) {
-            Ravada::Request->start_domain( 
+            Ravada::Request->start_domain(
                        uid => $USER->id
                      ,name => $domain->name
                 ,remote_ip => _remote_ip($c)
