@@ -35,7 +35,7 @@
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)"></td>
                     <td>
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-click="resume(machine.id)">Paused</span>
-                        <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-click="shutdown(machine.id)">Running</span>
+                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-click="shutdown(machine.id)">Running</span>
                         <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger" ng-click="start(machine.id)">Down</span>
 
                     </td>

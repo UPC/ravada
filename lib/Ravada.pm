@@ -43,9 +43,14 @@ our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
-our $LIMIT_PROCESS = 2;
+our $LIMIT_PROCESS = 1;
 
-our %FAT_COMMAND =  map { $_ => 1 } qw(start create prepare_base remove);
+# FAT commands take long
+our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove);
+
+# Priority Commands should not be run many at once because they may clash with each other
+# like opening iptables or accessing to disk
+our %PRIORITY_COMMAND = map { $_ => 1 } qw(create start);
 
 has 'vm' => (
           is => 'ro'
@@ -567,7 +572,7 @@ sub process_requests {
     $self->_check_vms();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
-        ." WHERE status='requested' OR status like 'retry %'"
+        ." WHERE status='requested' OR status like 'retry %' OR status='waiting'"
         ." ORDER BY date_req"
     );
     $sth->execute;
@@ -674,7 +679,10 @@ sub _execute {
         return $err;
     }
 
-    $self->_wait_children($request) if $FAT_COMMAND{$request->command};
+    if ( $FAT_COMMAND{$request->command} ) {
+        return if $self->_wait_children($request) 
+    }
+    $self->_wait_other_prioris($request) if $PRIORITY_COMMAND{$request->command};
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     $self->_do_execute_command($sub, $request) if $pid == 0;
@@ -764,17 +772,37 @@ sub _cmd_create{
 
 }
 
+sub _wait_other_prioris {
+    my $self = shift;
+    my $req = shift;
+
+    # In 3 seconds we return no matter what, these are priority command damn !
+    for (1 .. 3) {
+        my $count = 0;
+        for my $pid (sort keys %{$self->{pids}}) {
+            my $id_req = $self->{pids}->{$pid};
+            my $req = Ravada::Request->open($id_req);
+            if ($PRIORITY_COMMAND{$req->command}) {
+                warn "INFO: Must wait for ".$req->command." ".Dumper($req->{args});
+                $count++;
+            }
+        }
+        return if !$count;
+        sleep 1;
+    }
+}
+
 sub _wait_children {
     my $self = shift;
     my $req = shift or confess "Missing request";
 
     my $try = 0;
-    for (;;) {
+    for ( 1 .. 10 ) {
         my $n_pids = scalar keys %{$self->{pids}};
         my $msg = $req->id." ".$req->command." waiting for processes to finish $n_pids of $LIMIT_PROCESS running";
         warn $msg if $DEBUG;
 
-        return if $n_pids <= $LIMIT_PROCESS;
+        return if $n_pids < $LIMIT_PROCESS;
 
         $self->_wait_pids_nohang();
         sleep 1;
@@ -784,6 +812,7 @@ sub _wait_children {
         $req->error($msg);
         $req->status('waiting');
     }
+    return scalar keys %{$self->{pids}};
 }
 
 sub _wait_pids_nohang {

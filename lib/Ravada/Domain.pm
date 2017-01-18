@@ -183,8 +183,8 @@ sub _allow_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
-    if ($self->is_active && !$self->is_paused) {
-        $self->pause($user);
+    if ($self->is_active) {
+        $self->shutdown(user => $user);
         $self->{_was_active} = 1;
     }
 };
@@ -196,11 +196,11 @@ sub _post_prepare_base {
 
     $self->is_base(1);
     if ($self->{_was_active} ) {
-        $self->resume($user);
+        $self->start($user);
     }
     delete $self->{_was_active};
 
-    $self->_remove_id_base();
+#    $self->_remove_id_base();
 };
 
 
