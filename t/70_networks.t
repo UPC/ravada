@@ -182,6 +182,7 @@ my $domain = $vm->create_domain( name => $domain_name
             , id_iso => 1 , id_owner => $USER->id);
 
 $domain->prepare_base($USER);
+$domain->is_public(1);
 
 my $net = Ravada::Network->new(address => '127.0.0.1/32');
 ok($net->allowed($domain->id));
