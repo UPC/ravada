@@ -24,9 +24,11 @@
                     </td>
                     <td>
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
-                        <input type="checkbox" checked ng-show="{{machine.is_base}} && !{{machine.has_clones}}"
+                        <input type="checkbox" checked 
+                               ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
                             ng-click="remove_base(machine.id)">
-                        <input type="checkbox" ng-hide="{{machine.is_base}}" 
+                        <input type="checkbox" 
+                               ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
                             ng-click="prepare(machine.id)">
                     </td>
                     <td>
@@ -41,6 +43,7 @@
                     </td>
                     <td>
                        
+                      <div ng-hide="{{machine.is_locked}}">
                         <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="start(machine.id)"><i class="fa fa-desktop" aria-hidden="true" aria-hidden="true">Start</i></a>
                         <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
 
@@ -51,7 +54,8 @@
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbspScreenshot</button>
 
 
-
+                      </div>
+                      <div ng-show="{{machine.is_locked}}">Machine locked by requested <a href="/request/{{machine.is_locked}}.html">process</a></div>
 
                     </td>
 
