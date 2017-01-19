@@ -673,7 +673,9 @@ sub _show_request {
     return $c->render(data => "Request $id_request error ".$request->error)
         if $request->error;
 
-    my $name = $request->args('name');
+    my $name = $request->defined_arg('name');
+    return if !$name;
+
     my $domain = $RAVADA->search_domain($name);
 
     if (!$domain) {
