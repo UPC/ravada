@@ -367,6 +367,18 @@ sub _create_disk {
     return _create_disk_qcow2(@_);
 }
 
+sub _random_name {
+    my $length = shift;
+    my $ret = '';
+    my $max = ord('z') - ord('a');
+    for ( 0 .. $length ) {
+        my $n = int rand($max + 1);
+        $ret .= chr(ord('a') + $n);
+    }
+    return $ret;
+
+}
+
 sub _create_disk_qcow2 {
     my $self = shift;
     my ($base, $name) = @_;
@@ -381,7 +393,7 @@ sub _create_disk_qcow2 {
     for my $file_base ( $base->list_files_base ) {
         my $file_out = $file_base;
         $file_out =~ s/\.ro\.\w+$//;
-        $file_out .= ".$name.qcow2";
+        $file_out .= ".$name."._random_name(4).".qcow2";
 
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
