@@ -45,6 +45,7 @@ requires 'disk_device';
 
 requires 'disk_size';
 
+requires 'spinoff_volumes';
 #hardware info
 
 requires 'get_info';
@@ -96,7 +97,7 @@ before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
-before 'prepare_base' => \&_allow_prepare_base;
+before 'prepare_base' => \&_pre_prepare_base;
  after 'prepare_base' => \&_post_prepare_base;
  
 before 'start' => \&_start_preconditions;
@@ -112,7 +113,7 @@ before 'shutdown' => \&_allow_manage_args;
 after 'shutdown' => \&_post_shutdown;
 
 before 'remove_base' => \&_can_remove_base;
-after 'remove_base' => \&_remove_base_db;
+after 'remove_base' => \&_post_remove_base;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
@@ -174,7 +175,7 @@ sub _allow_remove {
 
 }
 
-sub _allow_prepare_base {
+sub _pre_prepare_base {
     my $self = shift;
     my ($user) = @_;
 
@@ -186,6 +187,9 @@ sub _allow_prepare_base {
     if ($self->is_active) {
         $self->shutdown(user => $user);
         $self->{_was_active} = 1;
+    }
+    if ($self->id_base ) {
+        $self->spinoff_volumes();
     }
 };
 
@@ -200,7 +204,7 @@ sub _post_prepare_base {
     }
     delete $self->{_was_active};
 
-#    $self->_remove_id_base();
+    $self->_remove_id_base();
 };
 
 
@@ -516,13 +520,13 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT count(*) FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests "
         ." WHERE id_domain=? AND status <> 'done'");
     $sth->execute($self->id);
-    my ($count) = $sth->fetchrow;
+    my ($id) = $sth->fetchrow;
     $sth->finish;
 
-    return $count;
+    return ($id or 0);
 }
 
 =head2 id_owner
@@ -676,7 +680,6 @@ sub _can_remove_base {
 
 sub _post_remove_base {
     my $self = shift;
-    $self->_vm->disconnect();
     $self->_remove_base_db(@_);
 }
 

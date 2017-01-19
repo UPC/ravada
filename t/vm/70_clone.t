@@ -98,7 +98,7 @@ sub test_mess_with_bases {
 
         $clone->remove_base($USER);
         eval { $clone->start($USER); };
-        is($@,'');
+        ok(!$@,"[$vm_name] Expecting error: '' , got '".($@ or '')."'");
         ok($clone->is_active);
         $clone->shutdown(user => $USER, timeout => 1);
 

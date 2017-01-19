@@ -43,7 +43,7 @@ our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
-our $LIMIT_PROCESS = 1;
+our $LIMIT_PROCESS = 2;
 
 # FAT commands take long
 our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove);

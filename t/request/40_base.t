@@ -288,6 +288,7 @@ sub test_req_remove_base_fail {
         @files_base = $domain_base->list_files_base();
         ok(scalar @files_base,"Expecting files base, got none") or return;
     
+        ok($domain_base->has_clones,"Expecting domain base has clones, got :".$domain_base->has_clones);
         $domain_base->_vm->disconnect();
         $domain_clone->_vm->disconnect();
     

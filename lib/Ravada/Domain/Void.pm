@@ -331,4 +331,7 @@ sub disk_size {
     return -s $disk;
 }
 
+sub spinoff_volumes {
+    return;
+}
 1;

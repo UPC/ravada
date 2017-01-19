@@ -231,6 +231,7 @@ Returns a list of the created domains
 sub list_domains {
     my $self = shift;
 
+    confess "Missing vm" if !$self->vm;
     my @list;
     my @domains = $self->vm->list_all_domains();
     for my $name (@domains) {
