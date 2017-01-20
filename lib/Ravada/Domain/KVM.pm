@@ -854,7 +854,7 @@ sub rename_volumes {
 
 =cut
 
-=head2 spinoff volumes
+=head2 spinoff_volumes
 
 Makes volumes indpendent from base
 
