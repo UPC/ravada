@@ -811,7 +811,7 @@ sub _wait_children {
         next if $try++;
 
         $req->error($msg);
-        $req->status('waiting');
+        $req->status('waiting') if $req->status() !~ 'waiting';
     }
     return scalar keys %{$self->{pids}};
 }
@@ -844,10 +844,12 @@ sub _wait_pids {
     my $self = shift;
     my $request = shift;
 
-    $request->status('waiting for other tasks')     if $request;
+    $request->status('waiting for other tasks')
+        if $request && $request->status !~ /waiting/i;
 
     for my $pid ( keys %{$self->{pids}}) {
-        $request->status("waiting for pid $pid")    if $request;
+        $request->status("waiting for pid $pid")
+            if $request && $request->status !~ /waiting/i;
 
 #        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
         my $kid = waitpid($pid,0);
