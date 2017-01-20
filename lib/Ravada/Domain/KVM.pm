@@ -470,6 +470,7 @@ sub is_paused {
 Adds a new volume to the domain
 
     $domain->add_volume(name => $name, size => $size);
+    $domain->add_volume(name => $name, size => $size, xml => 'definition.xml');
 
 =cut
 
@@ -477,7 +478,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm xml));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -485,8 +486,9 @@ sub add_volume {
     }
     confess "Missing vm"    if !$args{vm};
     confess "Missing name " if !$args{name};
+    $args{xml} = 'etc/xml/default-volume.xml'    if !$args{xml};
 
-    my $path = $args{vm}->create_volume($args{name}, "etc/xml/trusty-volume.xml"
+    my $path = $args{vm}->create_volume($args{name}, $args{xml}
         ,($args{size} or undef));
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
