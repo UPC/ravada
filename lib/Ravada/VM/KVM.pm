@@ -481,6 +481,7 @@ sub _domain_create_from_base {
         };
         close $out;
         warn "$! $name_out" if !$out;
+        die $@ if !$dom;
     }
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
@@ -771,20 +772,9 @@ sub _xml_modify_usb {
     my $self = shift;
      my $doc = shift;
 
-
-    for my $ctrl ($doc->findnodes('/domain/devices/controller')) {
-        next if $ctrl->getAttribute('type') ne 'usb';
-        $ctrl->setAttribute(model => 'ich9-ehci1');
-
-        for my $child ($ctrl->childNodes) {
-            if ($child->nodeName eq 'address') {
-                $child->setAttribute(slot => '0x08');
-                $child->setAttribute(function => '0x7');
-            }
-        }
-    }
     my ($devices) = $doc->findnodes('/domain/devices');
 
+    $self->_xml_add_usb_ehci1($devices);
     $self->_xml_add_usb_uhci1($devices);
     $self->_xml_add_usb_uhci2($devices);
     $self->_xml_add_usb_uhci3($devices);
@@ -815,13 +805,48 @@ sub _search_xml {
         if !$xml;
  
     for my $item ( $xml->findnodes($name) ) {
+        my $missing = 0;
         for my $attr( sort keys %arg ) {
-            return $item 
-                if $item->getAttribute($attr)
-                    && $item->getAttribute($attr) eq $arg{$attr}
+           $missing++ 
+                if !$item->getAttribute($attr)
+                    || $item->getAttribute($attr) ne $arg{$attr}
         }
+        return $item if !$missing;
     }
     return;
+}
+
+sub _xml_add_usb_ehci1 {
+    my $self = shift;
+    my $devices = shift;
+
+    my $model = 'ich9-ehci1';
+    my $ctrl = _search_xml(
+                           xml => $devices
+                         ,name => 'controller'
+                         ,type => 'usb'
+                         ,model => $model
+        );
+    if ($ctrl) {
+#        warn "$model found \n".$ctrl->toString."\n";
+        return;
+    }
+    for $ctrl ($devices->findnodes('controller')) {
+        next if $ctrl->getAttribute('type') ne 'usb';
+        next if $ctrl->getAttribute('model')
+                && $ctrl->getAttribute('model') eq $model;
+
+        $ctrl->setAttribute(model => $model);
+
+        for my $child ($ctrl->childNodes) {
+            if ($child->nodeName eq 'address') {
+                $child->setAttribute(slot => '0x08');
+                $child->setAttribute(function => '0x7');
+            }
+        }
+    }
+
+
 }
 
 sub _xml_add_usb_uhci1 {
