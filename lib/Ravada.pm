@@ -586,7 +586,6 @@ sub process_requests {
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
-        $req->status('working');
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
         if ($err && $err =~ /libvirt error code: 38/) {
@@ -595,9 +594,11 @@ sub process_requests {
                 $req->status("retry ".++$n_retry)
             }
         }
+        next if !$DEBUG && !$debug;
+
+        sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'"
-                if $DEBUG || $debug;
+            ." , error: '".($req->error or 'NONE')."'";
 
     }
     $sth->finish;
@@ -683,6 +684,7 @@ sub _execute {
         return if $self->_wait_children($request) 
     }
     $self->_wait_other_prioris($request) if $PRIORITY_COMMAND{$request->command};
+    $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     $self->_do_execute_command($sub, $request) if $pid == 0;
@@ -704,7 +706,6 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
-    $request->status("working");
     eval {
         $self->_connect_vm();
         $sub->($self,$request);
@@ -870,7 +871,6 @@ sub _cmd_remove {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     confess "Unknown user id ".$request->args->{uid}
         if !defined $request->args->{uid};
 
@@ -882,7 +882,6 @@ sub _cmd_pause {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
@@ -900,7 +899,6 @@ sub _cmd_resume {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
@@ -938,7 +936,6 @@ sub _cmd_start {
     my $self = shift;
     my $request = shift;
 
-    $request->status("working $$");
     my $name = $request->args('name');
 
     my $domain = $self->search_domain($name);
@@ -961,7 +958,6 @@ sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -979,7 +975,6 @@ sub _cmd_remove_base {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $id_domain = $request->id_domain or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -1001,7 +996,6 @@ sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $uid = $request->args('uid');
     my $name = $request->args('name');
     my $timeout = ($request->args('timeout') or 60);
@@ -1020,7 +1014,6 @@ sub _cmd_shutdown {
 sub _cmd_list_vm_types {
     my $self = shift;
     my $request = shift;
-    $request->status('working');
     my @list_types = $self->list_vm_types();
     $request->result(\@list_types);
     $request->status('done');
