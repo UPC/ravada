@@ -804,7 +804,8 @@ sub disk_size {
         my $vol;
         eval { $vol = $self->storage->get_volume_by_name($file) };
 
-        warn $source if !$vol;
+        warn "I can't find volume in storage. source: $source , file: ".($file or '<UNDEF>')
+            if !$vol;
         push @size, ($vol->get_info->{capacity})    if $vol;
     }
     return @size if wantarray;
