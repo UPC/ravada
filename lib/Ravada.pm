@@ -777,8 +777,8 @@ sub _wait_other_prioris {
     my $self = shift;
     my $req = shift;
 
-    # In 3 seconds we return no matter what, these are priority command damn !
-    for (1 .. 3) {
+    # In 2 seconds we return no matter what, these are priority commands damn !
+    for (1 .. 2) {
         my $count = 0;
         for my $pid (sort keys %{$self->{pids}}) {
             my $id_req = $self->{pids}->{$pid};
