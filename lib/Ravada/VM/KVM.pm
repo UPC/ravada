@@ -346,24 +346,55 @@ sub _domain_create_from_iso {
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
-    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
-
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
-#    $self->_xml_modify_usb($xml);
 
+    return $self->_domain_create_common($xml,%args);
+
+}
+
+sub _domain_create_common {
+    my $self = shift;
+    my $xml = shift;
+    my %args = @_;
+
+    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
+    $self->_xml_modify_mac($xml);
+    $self->_xml_modify_uuid($xml);
+    $self->_xml_modify_spice_port($xml);
+    _xml_modify_video($xml);
+    $self->_xml_modify_usb($xml);
+    $self->_fix_pci_slots($xml);
 
-    my $dom = $self->vm->define_domain($xml->toString());
-    $dom->create if $args{active};
+    my $dom;
+    eval {
+        $dom = $self->vm->define_domain($xml->toString());
+        $dom->create if $args{active};
+    };
+    if ($@) {
+        my $out;
+		warn $@;
+        my $name_out = "/var/tmp/$args{name}.xml";
+        warn "Dumping $name_out";
+        open $out,">",$name_out and do {
+            print $out $xml->toString();
+        };
+        close $out;
+        warn "$! $name_out" if !$out;
+        die $@ if !$dom;
+    }
 
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                , _vm => $self
+    my $domain = Ravada::Domain::KVM->new(
+              _vm => $self
+         , domain => $dom 
+        , storage => $self->storage_pool
     );
 
     $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
+
 sub _create_disk {
     return _create_disk_qcow2(@_);
 }
@@ -458,37 +489,8 @@ sub _domain_create_from_base {
     $node_name->setData($args{name});
 
     _xml_modify_disk($xml, \@device_disk);
-    $self->_xml_modify_mac($xml);
-    $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml);
-    _xml_modify_video($xml);
-    $self->_xml_modify_usb($xml);
-    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
 
-    $self->_fix_pci_slots($xml);
-    my $dom;
-    eval {
-        $dom = $self->vm->define_domain($xml->toString());
-#        $dom->create();
-    };
-    if ($@) {
-        my $out;
-		warn $@;
-        my $name_out = "/var/tmp/$args{name}.xml";
-        warn "Dumping $name_out";
-        open $out,">",$name_out and do {
-            print $out $xml->toString();
-        };
-        close $out;
-        warn "$! $name_out" if !$out;
-        die $@ if !$dom;
-    }
-
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-        , _vm => $self);
-
-    $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
-    return $domain;
+    return $self->_domain_create_common($xml,%args);
 }
 
 sub _fix_pci_slots {
@@ -787,7 +789,15 @@ sub _xml_add_usb_redirect {
     my $self = shift;
     my $devices = shift;
 
-    my $dev = $devices->addNewChild(undef,'redirdev');
+    my $dev=_search_xml(
+          xml => $devices
+        ,name => 'redirdev'
+        , bus => 'usb'
+        ,type => 'spicevmc'
+    );
+    return if $dev;
+    
+    $dev = $devices->addNewChild(undef,'redirdev');
     $dev->setAttribute( bus => 'usb');
     $dev->setAttribute(type => 'spicevmc');
 
