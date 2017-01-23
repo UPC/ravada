@@ -168,10 +168,10 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    $rvd_back->process_requests();
+    rvd_back->process_requests();
+    rvd_back->process_long_requests(0,1);
     wait_request($req);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");
-    $rvd_back = undef;
 
     my $vm = rvd_front()->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
@@ -300,6 +300,7 @@ sub test_req_remove_base_fail {
 
     ok($req->status eq 'requested' || $req->status eq 'done');
     rvd_back->process_requests();
+    rvd_back->process_long_requests(0,1);
     wait_request($req);
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
@@ -341,6 +342,7 @@ sub test_req_remove_base {
     {
         my $rvd_back = rvd_back();
         rvd_back->process_requests();
+        rvd_back->process_long_requests(0,1);
         wait_request($req);
     }
     ok($req->status eq 'done', "[$vm_name] Expected req->status 'done', got "

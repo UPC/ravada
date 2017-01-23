@@ -127,7 +127,7 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->shutdown_domain(name => $name, uid => $USER->id, timeout => 2);
+    my $req3 = Ravada::Request->force_shutdown_domain(name => $name, uid => $USER->id);
     $RAVADA->process_requests();
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
@@ -137,6 +137,10 @@ sub test_start {
 
     my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);
+    for ( 1 .. 60 ) {
+        last if !$domain3->is_active;
+        sleep 1;
+    }
     ok(!$domain3->is_active,"Domain $name should not be active");
 
     return $domain3;
