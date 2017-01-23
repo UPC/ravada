@@ -31,6 +31,7 @@ requires 'is_paused';
 requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
+requires 'force_shutdown';
 requires 'pause';
 requires 'resume';
 requires 'prepare_base';
@@ -111,6 +112,8 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_allow_manage_args;
 after 'shutdown' => \&_post_shutdown;
+after 'shutdown_now' => \&_post_shutdown_now;
+after 'force_shutdown' => \&_post_shutdown_now;
 
 before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -177,7 +180,7 @@ sub _allow_remove {
 
 sub _pre_prepare_base {
     my $self = shift;
-    my ($user) = @_;
+    my ($user, $request) = @_;
 
     $self->_allowed($user);
     $self->_check_disk_modified();
@@ -187,6 +190,17 @@ sub _pre_prepare_base {
     if ($self->is_active) {
         $self->shutdown(user => $user);
         $self->{_was_active} = 1;
+        for ( 1 .. $TIMEOUT_SHUTDOWN ) {
+            last if !$self->is_active;
+            sleep 1;
+        }
+        if ($self->is_active ) {
+            $request->status('working'
+                    ,"Domain ".$self->name." still active, forcing hard shutdown")
+                if $request;
+            $self->force_shutdown($user);
+            sleep 1;
+        }
     }
     if ($self->id_base ) {
         $self->spinoff_volumes();
@@ -200,7 +214,7 @@ sub _post_prepare_base {
 
     $self->is_base(1);
     if ($self->{_was_active} ) {
-        $self->start($user);
+        $self->start($user) if !$self->is_active;
     }
     delete $self->{_was_active};
 
@@ -742,15 +756,30 @@ sub _post_pause {
 sub _post_shutdown {
     my $self = shift;
 
+    my %arg = @_;
+    my $timeout = $arg{timeout};
+
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
 
+    if (defined $timeout) {
+        my $req = Ravada::Request->force_shutdown( @_, at => time+$timeout );
+    }
+}
+
+sub _post_shutdown_now {
+    my $self = shift;
+    my $user = shift;
+
+    $self->_post_shutdown(user => $user);
 }
 
 sub _remove_iptables {
     my $self = shift;
 
     my $args = {@_};
+
+    confess "Missing user=>\$user" if !$args->{user};
 
     my $ipt_obj = _obj_iptables();
 
@@ -928,6 +957,8 @@ sub _log_iptable {
 sub _active_iptables {
     my $self = shift;
     my $user = shift;
+
+    confess "Missing \$user" if !$user;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,iptables FROM iptables "
