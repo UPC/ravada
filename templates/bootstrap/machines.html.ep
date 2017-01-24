@@ -8,7 +8,7 @@
 
         <!--BASES AND DOMAINS LIST-->
         <div ng-controller="machines">
-        
+
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -23,9 +23,17 @@
                     <sol-show-listmachines></sol-show-listmachines>
                 </div>
             </div>
+
+            <div id="hoverNotifications" class="notifications" ng-controller="notifications">
+              <script type="text/ng-template" id="alert.html">
+                <div ng-transclude></div>
+              </script>
+                <div uib-alert ng-repeat="alert in alerts" ng-class="'alert-' + (alert.type || 'warning')" close="closeAlert($index)">{{alert.msg}}</div>
+            </div>
+
             <div class="page-header">
 
-                <sol-show-machines-notifications><sol-show-machines-notifications>
+                <sol-show-machines-notifications></sol-show-machines-notifications>
 
             </div>
         </div>
