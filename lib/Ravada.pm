@@ -619,7 +619,7 @@ sub process_requests {
 
 }
 
-=head process_long_requests
+=head2 process_long_requests
 
 Process requests that take log time. It will fork on each one
 
