@@ -17,7 +17,8 @@
             .controller("machines", machinesCrtl)
             .controller("bases", mainpageCrtl)
             .controller("messages", messagesCrtl)
-	        .controller("users", usersCrtl)
+            .controller("users", usersCrtl)
+            .controller("notifications", notifCrtl)
 
 
 
