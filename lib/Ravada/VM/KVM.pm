@@ -348,9 +348,11 @@ sub _domain_create_from_iso {
 
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    $self->_xml_modify_usb($xml);
 
-    return $self->_domain_create_common($xml,%args);
-
+    my $domain = $self->_domain_create_common($xml,%args);
+    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    return $domain;
 }
 
 sub _domain_create_common {
@@ -364,7 +366,6 @@ sub _domain_create_common {
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml);
     _xml_modify_video($xml);
-    $self->_xml_modify_usb($xml);
     $self->_fix_pci_slots($xml);
 
     my $dom;
@@ -391,7 +392,6 @@ sub _domain_create_common {
         , storage => $self->storage_pool
     );
 
-    $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
 
@@ -490,7 +490,9 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);
 
-    return $self->_domain_create_common($xml,%args);
+    my $domain = $self->_domain_create_common($xml,%args);
+    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    return $domain;
 }
 
 sub _fix_pci_slots {
