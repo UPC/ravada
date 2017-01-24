@@ -763,10 +763,12 @@ sub _post_shutdown {
     $self->_remove_iptables(@_);
 
     if (defined $timeout) {
-        delete $arg{timeout};
+        if ($timeout}<2) {
+            sleep $timeout;
+            return $self->_do_force_shutdown();
+        }
 
         my $uid = $arg{user}->id;
-        delete $arg{user};
 
         my $req = Ravada::Request->force_shutdown_domain(
                  name => $self->name

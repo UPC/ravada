@@ -353,7 +353,6 @@ sub shutdown {
 
     my %args = @_;
     my $req = $args{req};
-    my $timeout = ($args{timeout} or $TIMEOUT_SHUTDOWN);
 
     if (!$self->is_active && !$args{force}) {
         $req->status("done")                if $req;
@@ -363,6 +362,7 @@ sub shutdown {
 
     return $self->_do_force_shutdown() if $args{force};
     return $self->_do_shutdown();
+
 }
 
 sub _do_shutdown {
