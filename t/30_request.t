@@ -116,7 +116,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"$$ Status of request is ".$req->status." it should be requested");
 
-    $ravada->process_requests(1);
+    $ravada->process_requests();
 
     $ravada->_wait_pids();
     wait_request($req);
