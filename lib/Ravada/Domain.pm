@@ -32,6 +32,8 @@ requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
 requires 'force_shutdown';
+requires '_do_force_shutdown';
+
 requires 'pause';
 requires 'resume';
 requires 'prepare_base';
@@ -763,16 +765,14 @@ sub _post_shutdown {
     $self->_remove_iptables(@_);
 
     if (defined $timeout) {
-        if ($timeout}<2) {
+        if ($timeout<2 && $self->is_active) {
             sleep $timeout;
-            return $self->_do_force_shutdown();
+            return $self->_do_force_shutdown() if $self->is_active;
         }
-
-        my $uid = $arg{user}->id;
 
         my $req = Ravada::Request->force_shutdown_domain(
                  name => $self->name
-                , uid => $uid
+                , uid => $arg{user}->id
                  , at => time+$timeout 
         );
     }
