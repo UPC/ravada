@@ -217,7 +217,7 @@ a:focus {
     -moz-animation-timing-function: linear;
 }
 
-@-webkit-keyframes pulse {    
+@-webkit-keyframes pulse {
     0% {
         -webkit-transform: scale(1);
         transform: scale(1);
@@ -234,7 +234,7 @@ a:focus {
     }
 }
 
-@-moz-keyframes pulse {    
+@-moz-keyframes pulse {
     0% {
         -moz-transform: scale(1);
         transform: scale(1);
@@ -411,4 +411,26 @@ section#contacte{
 
 #submit{
     margin: 1.7em 0;
+}
+
+.overNotifications {
+  position: fixed;
+  right: 20px;
+  top: 50px;
+  -webkit-filter: blur(0px);
+  -webkit-filter: opacity(0%);
+  -moz-filter: blur(0px);
+  -moz-filter: opacity(0%);
+  filter: blur(0px);
+  filter: opacity(100%);
+  transition: all 0.5s ease;
+}
+
+.overNotifications:hover {
+  -webkit-filter: blur(3px);
+  -webkit-filter: opacity(30%);
+  -moz-filter: blur(3px);
+  -moz-filter: opacity(30%);
+  filter: blur(3px);
+  filter: opacity(30%);
 }

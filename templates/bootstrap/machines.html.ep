@@ -24,11 +24,12 @@
                 </div>
             </div>
 
-            <div id="hoverNotifications" class="notifications" ng-controller="notifications">
+            <div id="overNotifications" class="notifications" ng-controller="notifCrtl">
               <script type="text/ng-template" id="alert.html">
                 <div ng-transclude></div>
               </script>
                 <div uib-alert ng-repeat="alert in alerts" ng-class="'alert-' + (alert.type || 'warning')" close="closeAlert($index)">{{alert.msg}}</div>
+                <button type="button" class='btn btn-default' ng-click="addAlert()">Add Alert</button>
             </div>
 
             <div class="page-header">

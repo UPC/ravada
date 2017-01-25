@@ -18,7 +18,21 @@
             .controller("bases", mainpageCrtl)
             .controller("messages", messagesCrtl)
             .controller("users", usersCrtl)
-            .controller("notifications", notifCrtl)
+            .controller("notifCrtl", function($scope){
+  $scope.alerts = [
+    { type: 'danger', msg: 'Test danger alert type' },
+    { msg: 'Test default alert type' },
+    { type: 'success', msg: 'Test success alert type' }
+  ];
+
+  $scope.addAlert = function() {
+    $scope.alerts.push({msg: 'Another alert!'});
+  };
+
+  $scope.closeAlert = function(index) {
+    $scope.alerts.splice(index, 1);
+  };
+})
 
 
 
