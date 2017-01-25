@@ -117,6 +117,8 @@ after 'remove_base' => \&_post_remove_base;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
+
+after 'screenshot' => \&_post_screenshot;
 ##################################################
 
 sub _vm_connect {
@@ -1012,4 +1014,19 @@ sub _post_rename {
 
     $self->_rename_domain_db(@_);
 }
+
+ sub _post_screenshot {
+     my $self = shift;
+     my ($filename) = @_;
+
+     return if !defined $filename;
+
+     my $sth = $$CONNECTOR->dbh->prepare(
+         "UPDATE domains set file_screenshot=? "
+         ." WHERE id=?"
+     );
+     $sth->execute($filename, $self->id);
+     $sth->finish;
+ }
+
 1;
