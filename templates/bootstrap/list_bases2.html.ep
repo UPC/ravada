@@ -37,15 +37,15 @@
             <div class="panel-body">
                 <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
 %               if ($machine->{is_active}) {
-                    <a type="button" onclick="shutdown(<%= $machine->{id_clone} %>)">Shutdown</a>
+                    <a type="button" class="btn btn-danger"
+                    ng-click="shutdown(<%= $machine->{id_clone} %>)"><i 
+                        class="fa fa-power-off" aria-hidden="true"></i>&nbsp;Shutdown</a>
 %               }
             </div>
             </div>
             </div>
 %       }                
         </div>               
-        <hr>
-        <sol-show-cardsmachines></sol-show-cardsmachines>
     </div>
     </div>
     </div>

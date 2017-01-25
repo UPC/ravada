@@ -117,7 +117,7 @@ sub list_machines_user {
                 ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
                 );
             }
-            $base{name} = $clone->name;
+            $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('file_screenshot') 
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;

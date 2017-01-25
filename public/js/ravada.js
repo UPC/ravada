@@ -167,6 +167,13 @@
 
     // list machines
         function mainpageCrtl($scope, $http, request, listMach) {
+            $scope.shutdown = function(machineId){
+                var toGet = '/machine/shutdown/'+machineId+'.json';
+                $http.get(toGet);
+                alert("Shutting down");
+                window.location.reload();
+            };
+
 
             $url_list = "/list_bases.json";
             if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
