@@ -108,10 +108,13 @@ sub list_machines_user {
             , screenshot => ($screenshot or '')
             , is_active => 0
             , id_clone => undef
+            , name_clone => undef
+            , is_locked => undef
         );
 
         if ($clone) {
-            if ($clone->is_active) {
+            $base{is_locked} = $clone->is_locked;
+            if ($clone->is_active && !$clone->is_locked) {
                 my $req = Ravada::Request->screenshot_domain(
                 id_domain => $clone->id
                 ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"

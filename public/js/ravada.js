@@ -167,13 +167,27 @@
 
     // list machines
         function mainpageCrtl($scope, $http, request, listMach) {
-            $scope.shutdown = function(machineId){
-                var toGet = '/machine/shutdown/'+machineId+'.json';
+            $scope.set_restore=function(machineId) {
+                $scope.host_restore = machineId;
+            };
+            $scope.restore= function(machineId){
+                var toGet = '/machine/remove/'+machineId+'.html?sure=yes';
                 $http.get(toGet);
-                alert("Shutting down");
+                setTimeout(function(){ }, 2000);
                 window.location.reload();
             };
-
+            $scope.action = function(machineId) {
+//                alert(machineId+" - "+$scope.host_action);
+                if ( $scope.host_action.indexOf('restore') !== -1 ) {
+                    $scope.host_restore = machineId;           
+                    $scope.host_shutdown = 0;
+                } else if ($scope.host_action.indexOf('shutdown') !== -1) {
+                    $scope.host_shutdown = machineId;
+                    $scope.host_restore = 0;
+                    $http.get( '/machine/shutdown/'+machineId+'.json');
+                    window.location.reload();
+                }
+            };
 
             $url_list = "/list_bases.json";
             if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {

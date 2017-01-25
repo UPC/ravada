@@ -29,6 +29,7 @@
 %                   if ( !$machine->{is_public} ) {
                         <i>( not public )</i>
 %                   }
+                    {{host_restore}}
                 </h3>
 %               if ($machine->{screenshot} ) {
                     <img src="<%= $machine->{screenshot} %>" width="260">   
@@ -36,10 +37,42 @@
             </div>
             <div class="panel-body">
                 <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
-%               if ($machine->{is_active}) {
-                    <a type="button" class="btn btn-danger"
-                    ng-click="shutdown(<%= $machine->{id_clone} %>)"><i 
-                        class="fa fa-power-off" aria-hidden="true"></i>&nbsp;Shutdown</a>
+%               if (!$machine->{is_locked}) {
+%                   if ( $machine->{id_clone} && $machine->{is_active} ) {
+                        <select ng-model="host_action"
+                        ng-change="action(<%= $machine->{id_clone} %>)"
+                        >
+                        <option value="">action</option>
+%                       if ($machine->{is_active}) {
+                            <option value="shutdown.<%= $machine->{id_clone} %>">Shutdown</option>
+%                       }
+%                       if ($machine->{id_clone}) {
+                            <option value="restore.<%= $machine->{id_clone} %>">Restore</option>
+%                       }
+                        </select>
+%                   } elsif ($machine->{id_clone}) {
+                        <a type="button" class="btn btn-danger" 
+                             ng-click="host_restore=<%= $machine->{id_clone} %>"
+                        ><strong><i class="fa fa-off" aria-hidden="true"></i>&nbsp;Restore</strong></a>
+
+%                   }
+%                   if ( $machine->{id_clone}) {
+                    <div ng-show="host_restore == <%= $machine->{id_clone} %>">
+                        <b>Restore</b> will remove all the contents of the machine
+                        <i><%= $machine->{name_clone} %></i>.
+                        Are you sure ? <br/>
+                        <a type="button" class="btn btn-danger"
+                            ng-click="host_restore=0"
+                        >No</a>
+                        <a type="button" class="btn btn-warning"
+                            ng-click="restore(<%= $machine->{id_clone} %>)"
+                            >Yes</a>
+                    </div>
+                    <div ng-show="host_shutdown == <%= $machine->{id_clone} %>">
+                            <b>Shutting down ... </b>
+                            It may take a couple of minutes.
+                    </div>
+%                   }
 %               }
             </div>
             </div>
