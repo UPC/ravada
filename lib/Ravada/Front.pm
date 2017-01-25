@@ -103,7 +103,6 @@ sub list_machines_user {
             id_owner =>$user->id
             ,id_base => $id
         );
-        warn "clone of $id ($name) found ".Dumper($clone) if $clone;
         my %base = ( id => $id, name => $name
             , is_public => $is_public
             , screenshot => ($screenshot or '')
