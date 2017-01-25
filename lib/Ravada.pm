@@ -45,7 +45,12 @@ our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 our $LIMIT_PROCESS = 2;
 
-our %FAT_COMMAND =  map { $_ => 1 } qw(start create prepare_base remove);
+# FAT commands take long
+our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove);
+
+# Priority Commands should not be run many at once because they may clash with each other
+# like opening iptables or accessing to disk
+our %PRIORITY_COMMAND = map { $_ => 1 } qw(create start);
 
 has 'vm' => (
           is => 'ro'
@@ -567,7 +572,7 @@ sub process_requests {
     $self->_check_vms();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
-        ." WHERE status='requested' OR status like 'retry %'"
+        ." WHERE status='requested' OR status like 'retry %' OR status='waiting'"
         ." ORDER BY date_req"
     );
     $sth->execute;
@@ -581,7 +586,6 @@ sub process_requests {
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
-        $req->status('working');
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
         if ($err && $err =~ /libvirt error code: 38/) {
@@ -590,9 +594,11 @@ sub process_requests {
                 $req->status("retry ".++$n_retry)
             }
         }
+        next if !$DEBUG && !$debug;
+
+        sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'"
-                if $DEBUG || $debug;
+            ." , error: '".($req->error or 'NONE')."'";
 
     }
     $sth->finish;
@@ -674,7 +680,11 @@ sub _execute {
         return $err;
     }
 
-    $self->_wait_children($request) if $FAT_COMMAND{$request->command};
+    if ( $FAT_COMMAND{$request->command} ) {
+        return if $self->_wait_children($request) 
+    }
+    $self->_wait_other_prioris($request) if $PRIORITY_COMMAND{$request->command};
+    $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     $self->_do_execute_command($sub, $request) if $pid == 0;
@@ -696,7 +706,6 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
-    $request->status("working");
     eval {
         $self->_connect_vm();
         $sub->($self,$request);
@@ -764,17 +773,37 @@ sub _cmd_create{
 
 }
 
+sub _wait_other_prioris {
+    my $self = shift;
+    my $req = shift;
+
+    # In 2 seconds we return no matter what, these are priority commands damn !
+    for (1 .. 2) {
+        my $count = 0;
+        for my $pid (sort keys %{$self->{pids}}) {
+            my $id_req = $self->{pids}->{$pid};
+            my $req = Ravada::Request->open($id_req);
+            if ($PRIORITY_COMMAND{$req->command}) {
+                warn "INFO: Must wait for ".$req->command." ".Dumper($req->{args});
+                $count++;
+            }
+        }
+        return if !$count;
+        sleep 1;
+    }
+}
+
 sub _wait_children {
     my $self = shift;
     my $req = shift or confess "Missing request";
 
     my $try = 0;
-    for (;;) {
+    for ( 1 .. 10 ) {
         my $n_pids = scalar keys %{$self->{pids}};
         my $msg = $req->id." ".$req->command." waiting for processes to finish $n_pids of $LIMIT_PROCESS running";
         warn $msg if $DEBUG;
 
-        return if $n_pids <= $LIMIT_PROCESS;
+        return if $n_pids < $LIMIT_PROCESS;
 
         $self->_wait_pids_nohang();
         sleep 1;
@@ -782,8 +811,9 @@ sub _wait_children {
         next if $try++;
 
         $req->error($msg);
-        $req->status('waiting');
+        $req->status('waiting') if $req->status() !~ 'waiting';
     }
+    return scalar keys %{$self->{pids}};
 }
 
 sub _wait_pids_nohang {
@@ -814,10 +844,12 @@ sub _wait_pids {
     my $self = shift;
     my $request = shift;
 
-    $request->status('waiting for other tasks')     if $request;
+    $request->status('waiting for other tasks')
+        if $request && $request->status !~ /waiting/i;
 
     for my $pid ( keys %{$self->{pids}}) {
-        $request->status("waiting for pid $pid")    if $request;
+        $request->status("waiting for pid $pid")
+            if $request && $request->status !~ /waiting/i;
 
 #        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
         my $kid = waitpid($pid,0);
@@ -841,7 +873,6 @@ sub _cmd_remove {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     confess "Unknown user id ".$request->args->{uid}
         if !defined $request->args->{uid};
 
@@ -853,7 +884,6 @@ sub _cmd_pause {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
@@ -871,7 +901,6 @@ sub _cmd_resume {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
@@ -909,7 +938,6 @@ sub _cmd_start {
     my $self = shift;
     my $request = shift;
 
-    $request->status("working $$");
     my $name = $request->args('name');
 
     my $domain = $self->search_domain($name);
@@ -932,7 +960,6 @@ sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -950,7 +977,6 @@ sub _cmd_remove_base {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $id_domain = $request->id_domain or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -972,7 +998,6 @@ sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $uid = $request->args('uid');
     my $name = $request->args('name');
     my $timeout = ($request->args('timeout') or 60);
@@ -991,7 +1016,6 @@ sub _cmd_shutdown {
 sub _cmd_list_vm_types {
     my $self = shift;
     my $request = shift;
-    $request->status('working');
     my @list_types = $self->list_vm_types();
     $request->result(\@list_types);
     $request->status('done');

@@ -80,6 +80,30 @@ sub test_clone {
     return $clone1;
 }
 
+sub test_mess_with_bases {
+    my ($vm_name, $base, $clones) = @_;
+    for my $clone (@$clones) {
+        $clone->shutdown(user => $USER, timeout => 1);
+        $clone->prepare_base($USER);
+    }
+
+    $base->remove_base($USER);
+    is($base->is_base,0);
+
+    for my $clone (@$clones) {
+        eval { $clone->start($USER); };
+        is($@,'');
+        ok($clone->is_active);
+        $clone->shutdown(user => $USER, timeout => 1);
+
+        $clone->remove_base($USER);
+        eval { $clone->start($USER); };
+        ok(!$@,"[$vm_name] Expecting error: '' , got '".($@ or '')."'");
+        ok($clone->is_active);
+        $clone->shutdown(user => $USER, timeout => 1);
+
+    }
+}
 ###############################################################################
 remove_old_domains();
 remove_old_disks();
@@ -114,10 +138,13 @@ for my $vm_name (reverse sort @VMS) {
 
             for my $base(@bases) {
 
-               for my $n_clones ( 1 .. 2 ) {
+                my @clones;
+                for my $n_clones ( 1 .. 2 ) {
                     my $clone = test_clone($vm_name,$base);
-                    push @domains,($clone) if $clone;
+                    push @clones,($clone) if $clone;
                 }
+                test_mess_with_bases($vm_name, $base, \@clones);
+                push @domains,(@clones);
              }
         }
     }

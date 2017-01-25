@@ -373,6 +373,16 @@ sub shutdown {
         $req->error("Domain already down")  if $req;
         return;
     }
+
+    return $self->_do_shutdown($timeout,$req);
+}
+
+sub _do_shutdown {
+    my $self = shift;
+    my ($timeout, $req) = @_;
+    
+    $timeout = $TIMEOUT_SHUTDOWN if !defined $timeout;
+
     $self->domain->shutdown();
     $req->status("Shutting down") if $req;
 
@@ -384,7 +394,7 @@ sub shutdown {
         sleep 1;
     }
     if ($self->is_active) {
-        my $msg = "Domaing wouldn't shut down, destroying\n";
+        my $msg = "Domain wouldn't shut down, destroying\n";
         $req->error($msg)  if $req;
         $self->domain->destroy();
     }
@@ -460,6 +470,7 @@ sub is_paused {
 Adds a new volume to the domain
 
     $domain->add_volume(name => $name, size => $size);
+    $domain->add_volume(name => $name, size => $size, xml => 'definition.xml');
 
 =cut
 
@@ -467,7 +478,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm));
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm xml));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -475,8 +486,9 @@ sub add_volume {
     }
     confess "Missing vm"    if !$args{vm};
     confess "Missing name " if !$args{name};
+    $args{xml} = 'etc/xml/default-volume.xml'    if !$args{xml};
 
-    my $path = $args{vm}->create_volume($args{name}, "etc/xml/trusty-volume.xml"
+    my $path = $args{vm}->create_volume($args{name}, $args{xml}
         ,($args{size} or undef));
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
@@ -794,7 +806,8 @@ sub disk_size {
         my $vol;
         eval { $vol = $self->storage->get_volume_by_name($file) };
 
-        warn $source if !$vol;
+        warn "I can't find volume in storage. source: $source , file: ".($file or '<UNDEF>')
+            if !$vol;
         push @size, ($vol->get_info->{capacity})    if $vol;
     }
     return @size if wantarray;
@@ -843,6 +856,53 @@ sub rename_volumes {
 }
 
 =cut
+
+=head2 spinoff_volumes
+
+Makes volumes indpendent from base
+
+=cut
+
+sub spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_shutdown(1) if $self->is_active;
+
+    for my $disk ($self->_disk_devices_xml) {
+
+        my ($source) = $disk->findnodes('source');
+        next if !$source;
+
+        my $volume = $source->getAttribute('file') or next;
+
+        confess "ERROR: Domain ".$self->name
+                ." volume '$volume' does not exists"
+            if ! -e $volume;
+
+        #TODO check mktemp or something
+        my $volume_tmp  = "$volume.$$.tmp";
+
+        unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
+            if -e $volume_tmp;
+
+        my @cmd = ('qemu-img'
+            ,'convert'
+            ,'-O','qcow2'
+            ,$volume
+            ,$volume_tmp
+        );
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        warn $out  if $out;
+        warn $err   if $err;
+        die "ERROR: Output file $volume_tmp not created at ".join(" ",@cmd)."\n"
+            if (! -e $volume_tmp );
+
+        copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
+        unlink($volume_tmp) or die "ERROR $! removing $volume_tmp";
+    }
+}
+
 
 sub _set_spice_ip {
     my $self = shift;

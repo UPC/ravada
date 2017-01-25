@@ -100,6 +100,11 @@
             $http.get(toGet);
         };
 
+        $scope.remove_base= function(machineId){
+            var toGet = '/machine/remove_base/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
         $scope.screenshot = function(machineId){
             var toGet = '/machine/screenshot/'+machineId+'.json';
             $http.get(toGet);

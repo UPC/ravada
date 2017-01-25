@@ -472,6 +472,15 @@ sub status {
     return $status;
 }
 
+sub _search_domain_name {
+    my $self = shift;
+    my $domain_id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains where id=?");
+    $sth->execute($domain_id);
+    return $sth->fetchrow;
+}
+
 sub _send_message {
     my $self = shift;
     my $status = shift;
@@ -484,7 +493,11 @@ sub _send_message {
     return if !$uid;
 
     my $domain_name = $self->defined_arg('name');
-    $domain_name = ''               if !$domain_name;
+    if (!$domain_name) {
+        my $domain_id = $self->defined_arg('id_domain');
+        $domain_name = $self->_search_domain_name($domain_id)   if $domain_id;
+        $domain_name = '' if !defined $domain_name;
+    }
     $domain_name = "$domain_name "  if length $domain_name;
 
     $self->_remove_unnecessary_messages() if $self->status eq 'done';

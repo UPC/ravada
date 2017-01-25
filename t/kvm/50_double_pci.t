@@ -25,7 +25,7 @@ sub create_device {
 
 sub test_create_domain_xml {
     my $name = new_domain_name();
-    my $file_xml = "t/kvm/etc/$name.xml";
+    my $file_xml = (shift or "t/kvm/etc/$name.xml");
 
     die "Missing '$file_xml'" if !-e $file_xml;
     my $vm = rvd_back->search_vm('kvm');
@@ -83,10 +83,14 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    my $name = test_create_domain_xml()
-        or next;
+    for my $xml (  
+        't/kvm/etc/kvm_50_double_pci_0.xml'
+        ,'t/kvm/etc/wind10_fail.xml') {
+        my $name = test_create_domain_xml($xml);
+        next if !$name;
+        test_clone_domain($name);
+    }
 
-    test_clone_domain($name);
 
 };
 remove_old_domains();

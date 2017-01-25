@@ -280,6 +280,11 @@ get '/machine/remove_b/*.json' => sub {
         return remove_base($c);
 };
 
+get '/machine/remove_base/*.json' => sub {
+    my $c = shift;
+    return remove_base($c);
+};
+
 get '/machine/screenshot/*.json' => sub {
         my $c = shift;
         return screenshot_machine($c);
@@ -668,7 +673,9 @@ sub _show_request {
     return $c->render(data => "Request $id_request error ".$request->error)
         if $request->error;
 
-    my $name = $request->args('name');
+    my $name = $request->defined_arg('name');
+    return if !$name;
+
     my $domain = $RAVADA->search_domain($name);
 
     if (!$domain) {
@@ -975,6 +982,9 @@ sub remove_base {
   return login($c)    if !_logged_in($c);
 
   my $domain = _search_requested_machine($c);
+
+  $c->render(json => { error => "Domain not found" })
+    if !$domain;
 
   my $req = Ravada::Request->remove_base(
       id_domain => $domain->id
