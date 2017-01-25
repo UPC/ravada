@@ -179,7 +179,10 @@ sub _allow_prepare_base {
     my ($user) = @_;
 
     $self->_allowed($user);
-    $self->_check_disk_modified();
+
+    # TODO: if disk is not base and disks have not been modified, do not generate them
+    # again, just re-attach them 
+    $self->_check_disk_modified() if $self->is_base();
     $self->_check_has_clones();
 
     $self->is_base(0);
