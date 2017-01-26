@@ -105,7 +105,7 @@ sub test_usb {
     ok(scalar @redir == 1,"Expecting 1 redirdev, got ".scalar(@redir)
         ." in ".$devices->toString);
 
-    for my $model ( 'ich9-ehci1','ich9-uhci1','ich9-uhci2','ich9-uhci3') {
+    for my $model ( 'nec-xhci') {
         my @usb = $devices->findnodes('controller');
         my @usb_found;
 

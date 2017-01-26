@@ -88,6 +88,12 @@ SKIP: {
     my $freemem = _check_free_memory();
     my $n_domains = int($freemem)+2;
 
+    if ($n_domains > 3 ) {
+        $msg = "SKIPPED test: too many domains to try in this PC";
+        diag($msg);
+        skip($msg,10);
+    }
+
     $freemem =~ s/(\d+\.\d)\d+/$1/;
 
     diag("Checking it won't start more than $n_domains domains with $freemem free memory");
