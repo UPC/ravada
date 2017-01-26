@@ -35,8 +35,12 @@ sub test_create_domain_xml {
     ok(-e $device_disk);
 
     # oh my god, undocumented internal method -> technical debt
+    # but we are trying to test these private subs do its job !
     my $xml = $vm->_define_xml($name, $file_xml);
+
     Ravada::VM::KVM::_xml_modify_disk($xml,[$device_disk]);
+    $vm->_xml_modify_usb($xml);
+    $vm->_fix_pci_slots($xml);
 
     my $dom;
     eval { $dom = $vm->vm->define_domain($xml) };
@@ -66,7 +70,7 @@ sub test_clone_domain {
     my $domain_clone;
     eval { $domain_clone = $domain->clone(name => $clone_name, user => $USER) };
 
-    ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or return;
+    ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
 
 
 }

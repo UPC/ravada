@@ -84,6 +84,8 @@ sub test_mess_with_bases {
     my ($vm_name, $base, $clones) = @_;
     for my $clone (@$clones) {
         $clone->shutdown(user => $USER, timeout => 1);
+        ok($clone->id_base,"Expecting clone has id_base , got "
+                .($clone->id_base or '<UNDEF>'));
         $clone->prepare_base($USER);
     }
 
@@ -92,7 +94,8 @@ sub test_mess_with_bases {
 
     for my $clone (@$clones) {
         eval { $clone->start($USER); };
-        is($@,'');
+        ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
+
         ok($clone->is_active);
         $clone->shutdown(user => $USER, timeout => 1);
 
@@ -141,6 +144,9 @@ for my $vm_name (reverse sort @VMS) {
                 my @clones;
                 for my $n_clones ( 1 .. 2 ) {
                     my $clone = test_clone($vm_name,$base);
+                    ok($clone->id_base,"Expecting clone has id_base , got "
+                        .($clone->id_base or '<UNDEF>'));
+
                     push @clones,($clone) if $clone;
                 }
                 test_mess_with_bases($vm_name, $base, \@clones);
