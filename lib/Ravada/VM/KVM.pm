@@ -500,12 +500,17 @@ sub _fix_pci_slots {
     my $doc = shift;
   
     my %dupe = ("0x01/0x1" => 1); #reserved por IDE PCI
-    for my $controller ($doc->findnodes('/domain/devices/controller')) {
+    my ($all_devices) = $doc->findnodes('/domain/devices');
+
+    for my $dev ($all_devices->findnodes('*')) {
 
         # skip IDE PCI, reserved before
-        next if $controller->getAttribute('type') eq 'ide';
+        next if $dev->getAttribute('type')
+            && $dev->getAttribute('type') eq 'ide';
 
-        for my $child ($controller->findnodes('address')) {
+#        warn "finding address of type ".$dev->getAttribute('type')."\n";
+
+        for my $child ($dev->findnodes('address')) {
             my $bus = $child->getAttribute('bus');
             my $slot = $child->getAttribute('slot');
             next if !defined $slot;
