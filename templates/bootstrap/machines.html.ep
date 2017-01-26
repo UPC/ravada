@@ -53,7 +53,7 @@
       <script type="text/ng-template" id="alert.html">
         <div ng-transclude></div>
       </script>
-        <div uib-alert ng-repeat="alert in alerts" ng-class="'alert-' + (alert.type || 'warning')" ng-click="closeAlert($index)">{{alert.msg}}</div>
+        <div uib-alert ng-repeat="alert in alerts" ng-class="'alert-' + (alert.type || 'warning')" ng-click="closeAlert($index)">{{alert.subject}}</div>
     </div>
 
     %= include 'bootstrap/scripts'

@@ -319,18 +319,18 @@
 
     function notifCrtl($scope, $interval, $http, request){
       $scope.alerts = [
-        { type: 'danger', msg: 'Test danger alert type' },
-        { type: 'info', msg: 'Test info alert type' },
-        { msg: 'Test default alert type' },
-        { type: 'success', msg: 'Test success alert type' }
       ];
 
-      $scope.addAlert = function() {
-        $scope.alerts.push({msg: 'Another alert!'});
+      $scope.getAlerts = function() {
+        $http.get('/unread_messages.json').then(function(response) {
+                $scope.alerts= response.data;
+        });
       };
+      $interval($scope.getAlerts,3000);
 
       $scope.closeAlert = function(index) {
-        $scope.alerts.splice(index, 1);
+        var message = $scope.alerts.splice(index, 1);
+        var toGet = '/messages/read/'+message[0].id+'.json';
+        $http.get(toGet);
       };
-      $interval($scope.addAlert,10000);
 }
