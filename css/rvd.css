@@ -1,0 +1,269 @@
+
+.navbar-default .navbar-nav>.active>a, .navbar-default .navbar-nav>.active>a:hover, .navbar-default .navbar-nav>.active>a:focus {
+  color: #000;
+}
+
+/* Change collapse breakpoint for navbar */
+@media (max-width: 1024px) {
+    .navbar-header {
+        float: none;
+    }
+    .navbar-toggle {
+        display: block;
+    }
+    .navbar-collapse {
+        border-top: 1px solid transparent;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .navbar-collapse.collapse {
+        display: none!important;
+    }
+    .navbar-nav {
+        float: none!important;
+        margin: 7.5px -15px;
+    }
+    .navbar-nav>li {
+        float: none;
+    }
+    .navbar-nav>li>a {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .navbar-text {
+        float: none;
+        margin: 15px 0;
+    }
+    /* since 3.1.0 */
+    .navbar-collapse.collapse.in {
+        display: block!important;
+    }
+    .collapsing {
+        overflow: hidden!important;
+    }
+}
+
+.breadcrumb {
+    background-color: #fcfcfc;
+}
+
+.row-buttons {
+    margin-top: 30px;
+    width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.btn-modal {
+    margin-top: 15px;
+    border: solid 2px #272323;
+    font-size: 20px;
+    color: #272323;
+    background: 0 0;
+    transition: all .3s ease-in-out;
+}
+
+.btn-modal:hover,
+.btn-modal:focus,
+.btn-modal:active,
+.btn-modal.active {
+    border: solid 2px #fff;
+    color: #000000;
+    background: #fff;
+}
+
+.modal h2 {
+    text-transform: none;
+}
+.btn i:hover {
+    color:#dff0f9;
+}
+
+.palette-button {
+    height: 300px;
+    margin: 0px 0px 30px;
+    text-align: center;
+
+}
+
+.palette-button a:hover, .palette-button a:active, .palette-button a:focus {
+    outline: 0px none;
+    text-decoration: none;
+    color: #272323;
+    background-color: #18BC9C;
+}
+
+.palette-link {
+    display: block;
+    position: relative;
+    margin: 0px auto;
+    height: 300px;
+    background-color: #F5B142;
+    color: #272323;
+    font-size: 30px;
+}
+
+.palette-link .palette-text {
+    padding-top: 70px;
+}
+
+header.breadcrumb-header {
+    color: #272323;
+    background: #fff;
+}
+
+header.breadcrumb-header .container {
+    text-align: left;
+    padding-top: 100px;
+    padding-bottom: 0px;
+}
+
+header.breadcrumb-header .container ul {
+    margin: 0px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+header.breadcrumb-header .container ul li {
+	margin-bottom: .5em;
+}
+
+section.content-page {
+    padding: 100px 0px 0px 0px;
+}
+
+section.content-page h1 {
+    font-size: 3em;
+}
+
+section.content-page h2 {
+    margin: 20px 0px 10px 0px;
+    font-size: 2em;
+}
+
+
+section.content-page ul {
+	margin: 2em;
+}
+
+section.content-page ol {
+	margin: 2em;
+}
+
+section.content-page ul li {
+	padding-left: 1em;
+	margin-bottom: .5em;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+section.content-page ul li small {
+    font-weight: normal;
+    font-size: 18px;
+    color: #4d4d4d;
+}
+
+section.content-page ol li {
+	padding-left: 1em;
+	margin-bottom: .5em;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+section.content-page ol li small {
+    font-weight: normal;
+    font-size: 18px;
+    color: #4d4d4d;
+}
+
+.main-feature {
+    text-align: center;
+}
+
+.main-feature h2 {
+  font-size: 40px;
+  margin-bottom: 30px;
+}
+.main-feature .col-sm-4 {
+  margin-bottom: 40px;
+}
+.main-feature i {
+  background: #272323;
+  border-radius: 30px;
+  color: #f3f9f9;
+  font-size: 60px;
+  line-height: 120px;
+  height: 120px;
+  width: 120px;
+}
+.main-feature h4 {
+  font-size: 30px;
+  text-transform: uppercase;
+}
+.main-feature p {
+  margin: 0 auto;
+  width: 75%;
+  font-size: 18px;
+}
+.main-feature.btn {
+  background: #3498db;
+  color: #fff;
+  font-size: 20px;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+.main-feature .btn:hover {
+  color: #fff;
+}
+
+.help-topics {
+  width: 800px;
+}
+
+.main-feature .col-sm-6 {
+  margin-bottom: 40px;
+}
+
+
+.navbar-default .navbar-nav > li > a.nav-highlight {
+  color: #fff;
+  background-color: #007bba;
+}
+
+.navbar-default .navbar-nav > li > a.nav-highlight:hover {
+  color: #000;
+  background-color: #dff0f9;
+}
+
+.version-button {
+    position:absolute;
+    right: 150px;
+    top: 150px;
+    z-index: 3;
+}
+
+code {
+    color: #000;
+    background-color: #eeeeee;
+}
+
+.tease {
+    display: block;
+    position: relative;
+    top: 50px;
+    padding: 15px 20px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    background-color: #0275d8;
+}
+
+.tease a {
+    color: #e7e7e7;
+}
+
+@media (min-width: 768px) {
+    .tease {
+        top: 100px;
+    }
+}

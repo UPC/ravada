@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Ravada Installation">
+  <meta name="author" content="RVD Team">
+
+  <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="canonical" href="index.html">
+
+  <title>RAVADA VDI</title>
+
+  <!-- Bootstrap Core CSS - Uses Bootswatch Flatly Theme: http://bootswatch.com/flatly/ -->
+  <link href="../vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom  -->
+  <link href="../css/freelancer.min.css" rel="stylesheet">
+  <link href="../css/rvd.css" rel="stylesheet">
+
+  <!-- Custom Fonts -->
+  <link href="../vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+  <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+  <![endif]-->
+
+</head>
+
+<body id="page-top" class="index" cz-shortcut-listen="true">
+
+  <!-- Navigation -->
+<nav id="mainNav" class="navbar navbar-default navbar-fixed-top navbar-custom">
+<div class="container">
+  <!-- Brand and toggle get grouped for better mobile display -->
+  <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="../index.html"> <i class="fa fa-play-circle"></i>  <span class="light">Ravada</span> VDI</a>
+  </div>
+
+  <!-- Collect the nav links, forms, and other content for toggling -->
+  <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav navbar-right">
+          <li class="hidden active">
+              <a href="#page-top"></a>
+          </li>
+          <li class="page-scroll">
+              <a href="../index.html#about">About</a>
+          </li>
+          <li class="page-scroll">
+              <a href="../index.html#portfolio">Features</a>
+          </li>
+          <li class="page-scroll">
+              <a href="../index.html#get-started">Get Started</a>
+          </li>
+          <li class="page-scroll">
+              <a href="../index.html#devel-features">Developers</a>
+          </li>
+          <li class="page-scroll">
+              <a href="../index.html#help">Help</a>
+          </li>
+          <li>
+              <a href="https://twitter.com/ravada_vdi"><i class="fa fa-twitter"></i></a>
+          </li>
+      </ul>
+  </div>
+  <!-- /.navbar-collapse -->
+</div>
+<!-- /.container-fluid -->
+</nav>
+
+  <header class="breadcrumb-header">
+    <div class="container">
+      <ol class="breadcrumb">
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../index.html#get-started">Getting Started</a></li>
+        <li class="active">Requirements and Installation</li>
+      </ol>
+      <div class="row">
+        <div class="col-lg-12 text-center">
+          <h1>Requirements and Installation</h1>
+          <hr class="star-primary">
+        </div>
+      </div>
+      <p>
+
+      </p><div class="row">
+        <div class="col-lg-12">
+          <p><strong><a href="#server-requirements">Server requirements</a></strong></p>
+          <p><strong><a href="#install-ravada">Installing Ravada</a></strong></p>
+          <p><strong><a href="#roadmap">Roadmap</a></strong></p>
+          <p><strong><a href="#apache">Apache</a></strong></p>
+          <p><strong><a href="#dumphd">Dump hard drive</a></strong></p>
+          <p><strong><a href="#ldap">Local LDAP</a></strong></p>
+          <p><strong><a href="#new_iso">How to add a new ISO image</a></strong></p>
+          <p><strong><a href="#operation">Operation</a></strong></p>
+          <p><strong><a href="#production">Production</a></strong></p>
+          <p><strong><a href="#test">Test</a></strong></p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="server-requirements" class="content-page">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <h1>Server Requirements <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="install-ravada" class="content-page">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <h1>Installation <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+          <h2 id="os">OS</h2>
+          <p>Ravada has been tested only on Ubuntu Xenial. It should also work in recent RedHat based systems. Debian jessie has been tried but kvm spice wasn't available there, so it won't work.</p>
+          <h2 id="hardware">Hardware</h2>
+          <p>It depends on the number and the type of the virtual machines. For most places</p>
+          <h3 id="memory">Memory</h3>
+          <p>RAM is the main issue. Multiply the number of concurrent workstations by the amount of memory each one requires and that is the RAM that must have the server.</p>
+          <h3 id="disks">Disks</h3>
+          <p>The faster the disks, the better. Ravada uses incremental files for the disks images, so clones won't require many space.</p>
+          <h1 id="install-ravada">Install Ravada</h1>
+          <p>Clone the sources:</p>
+          <pre><code>$ git clone https://github.com/frankiejol/ravada.git</code></pre>
+          <h1 id="packages">Packages</h1>
+          <h2 id="debian">Debian</h2>
+          <pre><code>$ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl</code></pre>
+          <ul>
+            <li>libmojolicious-perl</li>
+            <li>mysql-server</li>
+            <li>libauthen-passphrase-perl</li>
+            <li>libdbd-mysql-perl</li>
+            <li>libdbi-perl</li>
+            <li>libdbix-connector-perl</li>
+            <li>libipc-run3-perl</li>
+            <li>libnet-ldap-perl</li>
+            <li>libproc-pid-file-perl</li>
+            <li>libvirt-bin</li>
+            <li>libsys-virt-perl</li>
+            <li>libxml-libxml-perl</li>
+            <li>libconfig-yaml-perl</li>
+            <li>libmoose-perl</li>
+            <li>libjson-xs-perl</li>
+            <li>qemu-utils</li>
+            <li>perlmagick</li>
+            <li>libmoosex-types-netaddr-ip-perl</li>
+            <li>libsys-statistics-linux-perl</li>
+            <li>libio-interface-perl</li>
+            <li>libiptables-chainmgr-perl</li>
+            <li>libnet-dns-perl</li>
+            <li>wget</li>
+            <li>virt-viewer</li>
+            <li>liblocale-maketext-lexicon-perl</li>
+            <li>libmojolicious-plugin-i18n-perl</li>
+          </ul>
+          <h2 id="old-mojolicious">Old Mojolicious</h2>
+          <p>In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:</p>
+          <pre><code>$ sudo apt-get purge libmojolicious-perl
+            $ sudo apt-get install cpanminus build-essential
+            $ sudo cpanm Mojolicious</code></pre>
+            <h1 id="mysql-database">Mysql Database</h1>
+            <h2 id="mysql-user">MySQL user</h2>
+            <p>Create a database named &quot;ravada&quot;.</p>
+            <pre><code>$ mysqladmin -u root -p create ravada</code></pre>
+            <p>Grant all permissions to your user:</p>
+            <pre><code>$ mysql -u root -p
+              mysql&gt; grant all on ravada.* to rvd_user@&#39;localhost&#39; identified by &#39;figure a password&#39;;
+              exit</code></pre>
+              <h2 id="config-file">Config file</h2>
+              <p>Create a config file at /etc/ravada.conf with:</p>
+              <pre><code>db:
+                user: rvd_user
+                password: *****</code></pre>
+                <p>Protect the config file from others:</p>
+                <pre><code>$ chmod o-rx /etc/ravada.conf</code></pre>
+                <h2 id="create-tables">Create tables</h2>
+                <p>Review and run the sql files from the sql dir.</p>
+                <pre><code>$ cd ravada/sql/mysql
+                  $ cat *.sql | mysql -p -u rvd_user ravada
+                  $ cd ..
+                  $ cd data
+                  $ cat *.sql | mysql -p -u rvd_user ravada</code></pre>
+                  <h1 id="kvm-backend">KVM backend</h1>
+                  <p>Install KVM</p>
+                  <pre><code>$ sudo apt-get install qemu-kvm qemu-utils
+                    $ sudo virsh pool-define-as default dir - - - - &quot;/var/lib/libvirt/images&quot;
+                    $ sudo virsh pool-autostart default
+                    $ sudo virsh pool-start default</code></pre>
+                    <h1 id="ravada-user">Ravada user</h1>
+                    <p>Add a new user for the ravada web. This command will create a new ravada user :</p>
+                    <pre><code>$ cd ravada
+                      $ ./bin/rvd_back.pl --add-user user.name</code></pre>
+                      <h1 id="screenshots-directory">Screenshots directory</h1>
+                      <p>Create a directory to store virtual machines screenshots:</p>
+                      <pre><code>$ sudo mkdir -p /var/www/img/screenshots/</code></pre>
+                      <h1 id="firewall">Firewall</h1>
+                      <p>The server must be able to send <em>DHCP</em> packets to its own virtual interface.</p>
+                      <p>KVM should be using a virtual interface for the NAT domnains. Look what is the address range and add it to your <em>iptables</em> configuration.</p>
+                      <p>First we try to find out what is the new internal network:</p>
+                      <pre><code>$  sudo route -n
+                        ...
+                        192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0</code></pre>
+                        <p>So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:</p>
+                        <pre><code>-A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT</code></pre>
+                        <h1 id="client">Client</h1>
+                        <p>The client must have a spice viewer such as virt-viewer. There is a package for linux and it can also be downloaded for windows.</p>
+                        <h1 id="next">Next</h1>
+                        <p>Read <a href="https://github.com/frankiejol/ravada/blob/master/docs/production.md">docs/production.md</a> or <a href="https://github.com/frankiejol/ravada/blob/master/devel-docs/">devel-docs/</a> to learn how to start it.</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section id="roadmap" class="content-page">
+                  <div class="container">
+                    <div class="row">
+                      <div class="col-lg-12">
+                        <h1>Roadmap <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                        <h1 id="v1">v1</h1>
+                        <h2 id="v0.1">v0.1</h2>
+                        <ul>
+                          <li>launch by IP</li>
+                          <li>launch by name</li>
+                          <li>basic back operations</li>
+                        </ul>
+                        <h2 id="v0.2">v0.2</h2>
+                        <ul>
+                          <li>iptables managemnt</li>
+                          <li>LDAP user managent</li>
+                          <li>make users owners of domains in the database</li>
+                          <li>restrict launch by IP to IP ranges</li>
+                        </ul>
+                        <h2 id="v0.3">v0.3</h2>
+                        <ul>
+                          <li>manage many KVM nodes</li>
+                        </ul>
+                        <h1 id="todo">TODO</h1>
+                        <ul>
+                          <li>before preparing a base, make sure it already exists, and if so check if it is being used by a domain</li>
+                          <li>find img dirs from Sys::Virt</li>
+                        </ul>
+
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section id="apache" class="content-page">
+                  <div class="container">
+                    <div class="row">
+                      <div class="col-lg-12">
+                        <h1>Apache <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                        <p>Run Hypnotoad service and Apache as a proxy for it</p>
+                        <p>Apache Proxy</p>
+                        <p><IfModule mod_ssl.c> <VirtualHost _default_:443></p>
+                          <pre><code>ProxyRequests Off
+ProxyPreserveHost On
+ProxyPass / http://localhost:8080/ keepalive=On
+ProxyPassReverse / http://localhost:8080/</code></pre>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section id="dumphd" class="content-page">
+                      <div class="container">
+                        <div class="row">
+                          <div class="col-lg-12">
+                            <h1>Dump hard drive <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                            <h2>Tools</h2>
+                            <h2>Procedure</h2>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section id="ldap" class="content-page">
+                      <div class="container">
+                        <div class="row">
+                          <div class="col-lg-12">
+                            <h1>How to Install a local LDAP <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                            <h2>Install and configure 389-ds</h2>
+                            <pre><code>$ sudo apt-get install 389-ds-base
+$ sudo setup-ds</code></pre>
+                            <h2>Add a LDAP section in the config file</h2>
+                            <p>The config file usually is /etc/ravada.conf. Add this configuration:</p>
+                            <pre><code>ldap:
+admin_group: test.admin.group
+admin_user:
+dn: cn=Directory Manager
+password: thepasswordyouusedwhensetup-ds
+base: &#39;dc=telecom,dc=bcn&#39;</code></pre>
+                            <h2>Insert one test user</h2>
+                            <p>The ravada backend script allows creating users in the LDAP</p>
+                            <pre><code>$ sudo ./bin/ldap_admin.pl --add-user-ldap jimmy.mcnulty</code></pre>
+
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section id="new_iso" class="content-page">
+                      <div class="container">
+                        <div class="row">
+                          <div class="col-lg-12">
+                            <h1>How to add a new ISO image<a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                            <p>ISO images are required to create KVM virtual machines. They can be placed or downloaded at run time.</p>
+                            <h3>Placing your own ISO image</h3>
+                            <p>Copy the .iso file to the KVM storage, it is /var/lib/libvirt/images by default. Make sure everybody can read it</p>
+                            <pre># chown 07500 file.iso</pre>
+                            <p>Get the md5 for the ISO file, you will need it for the next step:</p>
+                            <pre># md5sum file.iso# md5sum file.iso</pre>
+                            <p>Add an entry to the SQL table:</p>
+                            <pre>mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5)
+                              VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbblamd5sumjustgenerated');</pre>
+                              <h3>XML file</h3>
+                              <p>A XML template file is required if you want to create machines from this ISO. In the directory etc/xml there are examples. You can make new ones creating a new machine from another tool like virt-manager. Once it is down dump the xml with</p>
+                              <pre># virsh dumpxml machine name.xml</pre>
+                              <h3>XML Volume file</h3>
+                              <p>Create a new xml volume file based in another one from etc/xml.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section id="operation" class="content-page">
+                        <div class="container">
+                          <div class="row">
+                            <div class="col-lg-12">
+                              <h1>Basic operation docs <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                              <h2>Create users</h2>
+                              <pre>sudo ./bin/rvd_back.pl --add-user=username<br>sudo ./bin/rvd_back.pl --add-user-ldap=username</pre>
+                              <h2>Import KVM virtual machines</h2>
+                              <p>
+                                Usually, virtual machines are created within ravada, but they can be imported from existing KVM domains. Once the domain is created :
+                              </p>
+                              <pre>sudo ./bin/rvd_back.pl --import-domain=asudo ./bin/rvd_back.pl --import-domain=a</pre>
+                              <p>
+                                It will ask the name of the user the domain will be owned by.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section id="production" class="content-page">
+                        <div class="container">
+                          <div class="row">
+                            <div class="col-lg-12">
+                              <h1>Running Ravada in production <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                              <p>Ravada has two daemons that must run on the production server:Ravada has two daemons that must run on the production server:</p>
+                              <ul>
+                                <li>rvd_back : must run as root and manages the virtual machines</li>
+                                <li>rvd_front : is the web frontend that sends requests to the backend</li>
+                              </ul>
+                              <h2>Application directory</h2>
+                              <p>The ravada application should be installed in /var/www/ravada<p>
+                                <h2>Ravada system user</h2>
+                                <p>The frontend daemon must run as a non-privileged user.</p>
+                                <pre># useradd ravada</pre>
+                                <p>Allow it to write to some diretories inside /var/www/ravada/</p>
+                                <pre># mkdir /var/www/ravada/log<br># chow# chgrp ravada /etc/ravada.conf<br># chmod g+r /etc/ravada.conf<br># mkdir -p /var/www/img/screenshots/<br># chown ravada /var/www/img/screenshots</pre>
+                                <h2>Apache</h2>
+                                <p>
+                                  It is advised to run an apache server or similar before the frontend.
+                                </p>
+                                <pre>
+                                  # apt-get install apache2
+                                </pre>
+                                <h2>Systemd</h2>
+                                <h3>Configuration for boot start</h3>
+                                <p>
+                                  First you have to copy the service scripts to the systemd directory:
+                                </p>
+                                <pre>$ cd ravada/etc/systemd/<br>$ sudo cp *service /lib/systemd/system/</pre>
+                                <p>Edit <em>/lib/systemd/system/rvd_front.service</em> and change User=**** to the ravada user just created.
+                                </p>
+                                <p>
+                                  Then enable the services to run at startup
+                                </p>
+                                <pre>$ sudo systemctl enable rvd_back<br>$ sudo systemctl enable rvd_front</pre>
+                                <h3>Start or stop</h3>
+                                <pre>$ sudo systemctl stop rvd_back<br>$ sudo systemctl stop rvd_front</pre>
+                                <h3>Other systems</h3>
+                                <p>
+                                  For production mode you must run the front end with a high perfomance server like hypnotoad:
+                                </p>
+                                <pre>$ hypnotoad ./rvd_front.pl</pre>
+                                <p>
+                                  And the backend must run from root # ./bin/rvd_back.pl &
+                                </p>
+                                <h3>Firewall</h3>
+                                <p>
+                                  Ravada uses <code>iptables</code> to restrict the access to the virtual machines. Thes iptables rules grants acess to the admin workstation to all the domains and disables the access to everyone else. When the users access through the web broker they are allowed to the port of their virtual machines. Ravada uses its own iptables chain called 'ravada' to do so:
+                                </p>
+                                <pre>-A INPUT -p tcp -m tcp -s ip.of.admin.workstation --dport 5900:7000 -j ACCEPT<br>-A INPUT -p tcp -m tcp --dport 5900:7000 -j DROP</pre>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+
+                        <section id="test" class="content-page">
+                          <div class="container">
+                            <div class="row">
+                              <div class="col-lg-12">
+                                <h1>Testing environment <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
+                                <p>Previously <a href="#install-ravada">install</a> TEST::SQL::DATA module.</p>
+                                <p>In project root run:</p>
+                                <pre>$ perl Makefile.PL</pre><br>
+                                <pre>$ sudo make test</pre>
+                                <p>At the end, in "Test Summary Report" you can check the result.</p>
+                                <p>If something goes wrong you see: Result: FAIL </p>
+                                <h2>Run a single test</h2>
+                                <pre>$ make && sudo prove -b t/lxc/*t</pre>
+                                <br>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+
+
+                        <!-- Footer -->
+                        <footer class="text-center">
+                          <div class="footer-below">
+                            <div class="container">
+                              <div class="row">
+                                <div class="col-lg-4 col-lg-offset-2">
+
+                                </div>
+                                <div class="col-lg-6">
+                                  <p class="footer-p">
+                                    Copyright © RavadaVDI 2017
+                                  </p>
+                                  <p class="footer-p">
+                                    <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg"></a>
+                                    <a href="https://github.com/frankiejol/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg"></a>
+                                  </p>
+                                  <p class="footer-p">
+                                    Site theme is adapted from the <a href="http://startbootstrap.com/template-overviews/freelancer/">Freelancer</a> theme by <a href="http://startbootstrap.com/">Start Bootstrap</a>.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Scroll to Top Button (Only visible on small and extra-small screen sizes) -->
+                          <div class="scroll-top page-scroll visible-xs visible-sm">
+                            <a class="btn btn-primary" href="#page-top">
+                              <i class="fa fa-chevron-up"></i>
+                            </a>
+                          </div>
+
+                          <!-- Placed at the end of the document so the pages load faster -->
+                          <!-- jQuery -->
+                          <script src="../vendor/jquery/jquery.min.js"></script>
+
+                          <!-- Bootstrap Core JavaScript -->
+                          <script src="../vendor/bootstrap/js/bootstrap.min.js"></script>
+
+                          <!-- Plugin JavaScript -->
+                          <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js"></script>
+
+                          <!-- Custom Theme JavaScript -->
+                          <script src="../js/freelancer.js"></script>
+
+
+                        </footer>
+</body></html>
