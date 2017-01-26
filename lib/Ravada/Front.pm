@@ -82,6 +82,19 @@ sub list_bases {
     return \@bases;
 }
 
+=head2 list_machines_user
+
+Returns a list of machines available to the user
+
+If the user has ever clone the base, it shows this information. It show the
+base data if not.
+
+Arguments: user
+
+Returns: listref of machines
+
+=cut
+
 sub list_machines_user {
     my $self = shift;
     my $user = shift;
