@@ -499,23 +499,29 @@ sub _fix_pci_slots {
     my $self = shift;
     my $doc = shift;
   
-    my %dupe = ();
-    for my $child ($doc->findnodes('/domain/devices/*/address')) {
-        my $bus = $child->getAttribute('bus');
-        my $slot = $child->getAttribute('slot');
-        next if !defined $slot;
-        next if !$dupe{"$bus/$slot"}++;
+    my %dupe = ("0x01/0x1" => 1); #reserved por IDE PCI
+    for my $controller ($doc->findnodes('/domain/devices/controller')) {
 
-        my $new_slot = $slot;
-        for (;;) {
-            last if !$dupe{"$bus/$new_slot"};
-            my ($n) = $new_slot =~ m{x(\d+)};
-            $n++;
-            $n= "0$n" if length($n)<2;
-            $new_slot="0x$n";
+        # skip IDE PCI, reserved before
+        next if $controller->getAttribute('type') eq 'ide';
+
+        for my $child ($controller->findnodes('address')) {
+            my $bus = $child->getAttribute('bus');
+            my $slot = $child->getAttribute('slot');
+            next if !defined $slot;
+            next if !$dupe{"$bus/$slot"}++;
+    
+            my $new_slot = $slot;
+            for (;;) {
+                last if !$dupe{"$bus/$new_slot"};
+                my ($n) = $new_slot =~ m{x(\d+)};
+                $n++;
+                $n= "0$n" if length($n)<2;
+                $new_slot="0x$n";
+            }
+            $dupe{"$bus/$new_slot"}++;
+            $child->setAttribute(slot => $new_slot);
         }
-        $dupe{"$bus/$new_slot"}++;
-        $child->setAttribute(slot => $new_slot);
     }
 
 }
@@ -778,10 +784,13 @@ sub _xml_modify_usb {
 
     my ($devices) = $doc->findnodes('/domain/devices');
 
-    $self->_xml_add_usb_ehci1($devices);
-    $self->_xml_add_usb_uhci1($devices);
-    $self->_xml_add_usb_uhci2($devices);
-    $self->_xml_add_usb_uhci3($devices);
+    $self->_xml_remove_usb($devices);
+    $self->_xml_add_usb_xhci($devices);
+
+#    $self->_xml_add_usb_ehci1($devices);
+#    $self->_xml_add_usb_uhci1($devices);
+#    $self->_xml_add_usb_uhci2($devices);
+#    $self->_xml_add_usb_uhci3($devices);
 
     $self->_xml_add_usb_redirect($devices);
 
@@ -826,6 +835,42 @@ sub _search_xml {
         return $item if !$missing;
     }
     return;
+}
+
+sub _xml_remove_usb {
+    my $self = shift;
+    my $doc = shift;
+
+    my ($devices) = $doc->findnodes("/domain/devices");
+    for my $usb ($devices->findnodes("controller")) {
+        next if $usb->getAttribute('type') ne 'usb';
+        $devices->removeChild($usb);
+    }
+}
+
+sub _xml_add_usb_xhci {
+    my $self = shift;
+    my $devices = shift;
+
+    my $model = 'nec-xhci';
+    my $ctrl = _search_xml(
+                           xml => $devices
+                         ,name => 'controller'
+                         ,type => 'usb'
+                         ,model => $model
+        );
+    return if $ctrl;
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => $model);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x07');
+    $address->setAttribute(function => '0x0');
 }
 
 sub _xml_add_usb_ehci1 {
