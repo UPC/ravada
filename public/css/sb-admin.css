@@ -363,20 +363,18 @@ ul.alert-dropdown {
   position: fixed;
   right: 20px;
   top: 50px;
-  -webkit-filter: blur(0px);
-  -webkit-filter: opacity(0%);
-  -moz-filter: blur(0px);
-  -moz-filter: opacity(0%);
-  filter: blur(0px);
-  filter: opacity(100%);
-  transition: all 0.5s ease;
 }
 
-#overNotifications:hover {
-  -webkit-filter: blur(3px);
-  -webkit-filter: opacity(30%);
-  -moz-filter: blur(3px);
-  -moz-filter: opacity(30%);
-  filter: blur(3px);
+#overNotifications :hover {
   filter: opacity(30%);
+}
+
+#overNotifications div {
+  margin: 8px;
+  padding: 5px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 5px;
+  transition: all 0.5s ease;
+
 }
