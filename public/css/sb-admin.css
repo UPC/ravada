@@ -358,3 +358,23 @@ ul.alert-dropdown {
 .modal-backdrop {
   z-index: -1 !important;
 }
+
+#overNotifications {
+  position: fixed;
+  right: 20px;
+  top: 50px;
+}
+
+#overNotifications :hover {
+  filter: opacity(30%);
+}
+
+#overNotifications div {
+  margin: 8px;
+  padding: 5px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 5px;
+  transition: all 0.5s ease;
+
+}

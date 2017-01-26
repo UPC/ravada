@@ -378,6 +378,15 @@ get '/messages.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
+get '/unread_messages.json' => sub {
+    my $c = shift;
+
+    return $c->redirect_to('/login') if !_logged_in($c);
+
+    return $c->render( json => [$USER->unread_messages()] );
+};
+
+
 get '/messages/read/all.html' => sub {
     my $c = shift;
     return $c->redirect_to('/login') if !_logged_in($c);
@@ -398,7 +407,6 @@ get '/messages/read/*.json' => sub {
     return $c->redirect_to('/login') if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
     $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
 };
 
 get '/messages/unread/*.html' => sub {

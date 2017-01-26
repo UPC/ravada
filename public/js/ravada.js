@@ -17,7 +17,8 @@
             .controller("machines", machinesCrtl)
             .controller("bases", mainpageCrtl)
             .controller("messages", messagesCrtl)
-	        .controller("users", usersCrtl)
+            .controller("users", usersCrtl)
+            .controller("notifCrtl", notifCrtl)
 
 
 
@@ -336,3 +337,21 @@
         });
 
     };
+
+    function notifCrtl($scope, $interval, $http, request){
+      $scope.alerts = [
+      ];
+
+      $scope.getAlerts = function() {
+        $http.get('/unread_messages.json').then(function(response) {
+                $scope.alerts= response.data;
+        });
+      };
+      $interval($scope.getAlerts,3000);
+
+      $scope.closeAlert = function(index) {
+        var message = $scope.alerts.splice(index, 1);
+        var toGet = '/messages/read/'+message[0].id+'.json';
+        $http.get(toGet);
+      };
+}
