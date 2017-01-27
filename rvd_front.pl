@@ -407,6 +407,7 @@ get '/messages/read/*.json' => sub {
     return $c->redirect_to('/login') if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
     $USER->mark_message_read($id);
+    return $c->redirect_to("/messages.html");
 };
 
 get '/messages/unread/*.html' => sub {
@@ -560,7 +561,7 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
-    return $c->render( 
+    return $c->render(
         template => 'bootstrap/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER

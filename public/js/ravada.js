@@ -180,7 +180,7 @@
             $scope.action = function(machineId) {
 //                alert(machineId+" - "+$scope.host_action);
                 if ( $scope.host_action.indexOf('restore') !== -1 ) {
-                    $scope.host_restore = machineId;           
+                    $scope.host_restore = machineId;
                     $scope.host_shutdown = 0;
                 } else if ($scope.host_action.indexOf('shutdown') !== -1) {
                     $scope.host_shutdown = machineId;
@@ -351,7 +351,7 @@
 
       $scope.closeAlert = function(index) {
         var message = $scope.alerts.splice(index, 1);
-        var toGet = '/messages/read/'+message[0].id+'.json';
+        var toGet = '/messages/read/'+message[0].id+'.html';
         $http.get(toGet);
       };
 }
