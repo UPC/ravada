@@ -62,10 +62,11 @@ if ($help) {
 }
 
 our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
-our $TIMEOUT = 10;
 our $USER;
 
+# TODO: get those from the config file
 our $DOCUMENT_ROOT = "/var/www";
+our $SESSION_TIMEOUT = 300;
 
 init();
 ############################################################################3
@@ -497,6 +498,7 @@ sub login {
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok) {
             $c->session('login' => $login);
+            $c->session(expiration => $SESSION_TIMEOUT);
             return quick_start($c);
         } else {
             warn $@ if $@;
