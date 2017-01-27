@@ -487,6 +487,7 @@ sub login {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $url = ($c->param('url') or $c->req->url->to_abs->path);
     my @error =();
     if ($c->param('submit') && $login) {
         push @error,("Empty login name")  if !length $login;
@@ -499,7 +500,7 @@ sub login {
         if ( $auth_ok) {
             $c->session('login' => $login);
             $c->session(expiration => $SESSION_TIMEOUT);
-            return quick_start($c);
+            return $c->redirect_to($url);
         } else {
             warn $@ if $@;
             push @error,("Access denied");
@@ -507,6 +508,7 @@ sub login {
     }
     $c->render(
                     template => 'bootstrap/start'
+                        ,url => $url
                       ,login => $login
                       ,error => \@error
     );
@@ -588,6 +590,8 @@ sub quick_start_domain {
         if !$domain;
 
     return show_failure($c, $domain_name) if !$domain;
+
+    $c->session(expiration => 60) if !$USER->is_admin;
     return show_link($c,$domain);
 
 }
