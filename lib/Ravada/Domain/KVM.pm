@@ -866,7 +866,7 @@ Makes volumes indpendent from base
 sub spinoff_volumes {
     my $self = shift;
 
-    $self->_do_shutdown(1) if $self->is_active;
+    $self->_do_force_shutdown() if $self->is_active;
 
     for my $disk ($self->_disk_devices_xml) {
 

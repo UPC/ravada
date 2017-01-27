@@ -89,7 +89,37 @@ sub test_new_domain_from_iso {
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
     $sth->finish;
 
+    test_usb($domain);
+
     return $domain;
+}
+
+sub test_usb {
+    my $domain = shift;
+
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+
+    my ($devices)= $xml->findnodes('/domain/devices');
+
+    my @redir = $devices->findnodes('redirdev');
+    ok(scalar @redir == 1,"Expecting 1 redirdev, got ".scalar(@redir)
+        ." in ".$devices->toString);
+
+    for my $model ( 'nec-xhci') {
+        my @usb = $devices->findnodes('controller');
+        my @usb_found;
+
+        for my $dev (@usb) {
+            next if $dev->getAttribute('type') ne 'usb';
+            next if ! $dev->getAttribute('model') 
+                    || $dev->getAttribute('model') ne $model;
+
+            push @usb_found,($dev);
+        }
+        ok(scalar @usb_found == 1,"Expecting 1 USB model $model , got ".scalar(@usb_found)
+            ."\n"
+            .join("\n" , map { $_->toString } @usb_found));
+    }
 }
 
 sub test_prepare_base {
@@ -152,6 +182,7 @@ sub test_new_domain_from_base {
     }
 
     test_domain_not_cdrom($domain);
+    test_usb($domain);
     return $domain;
 
 }

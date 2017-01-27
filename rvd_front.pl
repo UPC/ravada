@@ -541,12 +541,23 @@ sub quick_start {
 
     }
 
-    $c->render(
-                    template => 'bootstrap/list_bases'
-                    ,id_base => $id_base
-                      ,login => $login
-                  ,_anonymous => 0
-                      ,error => \@error
+    return render_machines_user($c);
+
+#    $c->render(
+#                    template => 'bootstrap/list_bases'
+#                    ,id_base => $id_base
+#                      ,login => $login
+#                  ,_anonymous => 0
+#                      ,error => \@error
+#    );
+}
+
+sub render_machines_user {
+    my $c = shift;
+    return $c->render( 
+        template => 'bootstrap/list_bases2'
+        ,machines => $RAVADA->list_machines_user($USER)
+        ,user => $USER
     );
 }
 

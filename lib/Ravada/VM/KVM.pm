@@ -346,24 +346,55 @@ sub _domain_create_from_iso {
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
-    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
-
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
-#    $self->_xml_modify_usb($xml);
+    $self->_xml_modify_usb($xml);
 
-    $self->_xml_modify_network($xml , $args{network})   if $args{network};
-
-    my $dom = $self->vm->define_domain($xml->toString());
-    $dom->create if $args{active};
-
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-                , _vm => $self
-    );
-
-    $domain->_insert_db(name => $args{name}, id_owner => $args{id_owner});
+    my $domain = $self->_domain_create_common($xml,%args);
+    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
     return $domain;
 }
+
+sub _domain_create_common {
+    my $self = shift;
+    my $xml = shift;
+    my %args = @_;
+
+    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
+    $self->_xml_modify_network($xml , $args{network})   if $args{network};
+    $self->_xml_modify_mac($xml);
+    $self->_xml_modify_uuid($xml);
+    $self->_xml_modify_spice_port($xml);
+    _xml_modify_video($xml);
+    $self->_fix_pci_slots($xml);
+
+    my $dom;
+    eval {
+        $dom = $self->vm->define_domain($xml->toString());
+        $dom->create if $args{active};
+    };
+    if ($@) {
+        my $out;
+		warn $@;
+        my $name_out = "/var/tmp/$args{name}.xml";
+        warn "Dumping $name_out";
+        open $out,">",$name_out and do {
+            print $out $xml->toString();
+        };
+        close $out;
+        warn "$! $name_out" if !$out;
+        die $@ if !$dom;
+    }
+
+    my $domain = Ravada::Domain::KVM->new(
+              _vm => $self
+         , domain => $dom 
+        , storage => $self->storage_pool
+    );
+
+    return $domain;
+}
+
 sub _create_disk {
     return _create_disk_qcow2(@_);
 }
@@ -458,36 +489,9 @@ sub _domain_create_from_base {
     $node_name->setData($args{name});
 
     _xml_modify_disk($xml, \@device_disk);
-    $self->_xml_modify_mac($xml);
-    $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml);
-    _xml_modify_video($xml);
-    $self->_xml_modify_usb($xml);
-    $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
 
-    $self->_fix_pci_slots($xml);
-    my $dom;
-    eval {
-        $dom = $self->vm->define_domain($xml->toString());
-#        $dom->create();
-    };
-    if ($@) {
-        my $out;
-		warn $@;
-        my $name_out = "/var/tmp/$args{name}.xml";
-        warn "Dumping $name_out";
-        open $out,">",$name_out and do {
-            print $out $xml->toString();
-        };
-        close $out;
-        warn "$! $name_out" if !$out;
-        die $@ if !$dom;
-    }
-
-    my $domain = Ravada::Domain::KVM->new(domain => $dom , storage => $self->storage_pool
-        , _vm => $self);
-
-    $domain->_insert_db(name => $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    my $domain = $self->_domain_create_common($xml,%args);
+    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     return $domain;
 }
 
@@ -495,23 +499,34 @@ sub _fix_pci_slots {
     my $self = shift;
     my $doc = shift;
   
-    my %dupe = ();
-    for my $child ($doc->findnodes('/domain/devices/*/address')) {
-        my $bus = $child->getAttribute('bus');
-        my $slot = $child->getAttribute('slot');
-        next if !defined $slot;
-        next if !$dupe{"$bus/$slot"}++;
+    my %dupe = ("0x01/0x1" => 1); #reserved por IDE PCI
+    my ($all_devices) = $doc->findnodes('/domain/devices');
 
-        my $new_slot = $slot;
-        for (;;) {
-            last if !$dupe{"$bus/$new_slot"};
-            my ($n) = $new_slot =~ m{x(\d+)};
-            $n++;
-            $n= "0$n" if length($n)<2;
-            $new_slot="0x$n";
+    for my $dev ($all_devices->findnodes('*')) {
+
+        # skip IDE PCI, reserved before
+        next if $dev->getAttribute('type')
+            && $dev->getAttribute('type') eq 'ide';
+
+#        warn "finding address of type ".$dev->getAttribute('type')."\n";
+
+        for my $child ($dev->findnodes('address')) {
+            my $bus = $child->getAttribute('bus');
+            my $slot = $child->getAttribute('slot');
+            next if !defined $slot;
+            next if !$dupe{"$bus/$slot"}++;
+    
+            my $new_slot = $slot;
+            for (;;) {
+                last if !$dupe{"$bus/$new_slot"};
+                my ($n) = $new_slot =~ m{x(\d+)};
+                $n++;
+                $n= "0$n" if length($n)<2;
+                $new_slot="0x$n";
+            }
+            $dupe{"$bus/$new_slot"}++;
+            $child->setAttribute(slot => $new_slot);
         }
-        $dupe{"$bus/$new_slot"}++;
-        $child->setAttribute(slot => $new_slot);
     }
 
 }
@@ -774,10 +789,13 @@ sub _xml_modify_usb {
 
     my ($devices) = $doc->findnodes('/domain/devices');
 
-    $self->_xml_add_usb_ehci1($devices);
-    $self->_xml_add_usb_uhci1($devices);
-    $self->_xml_add_usb_uhci2($devices);
-    $self->_xml_add_usb_uhci3($devices);
+    $self->_xml_remove_usb($devices);
+    $self->_xml_add_usb_xhci($devices);
+
+#    $self->_xml_add_usb_ehci1($devices);
+#    $self->_xml_add_usb_uhci1($devices);
+#    $self->_xml_add_usb_uhci2($devices);
+#    $self->_xml_add_usb_uhci3($devices);
 
     $self->_xml_add_usb_redirect($devices);
 
@@ -787,7 +805,15 @@ sub _xml_add_usb_redirect {
     my $self = shift;
     my $devices = shift;
 
-    my $dev = $devices->addNewChild(undef,'redirdev');
+    my $dev=_search_xml(
+          xml => $devices
+        ,name => 'redirdev'
+        , bus => 'usb'
+        ,type => 'spicevmc'
+    );
+    return if $dev;
+    
+    $dev = $devices->addNewChild(undef,'redirdev');
     $dev->setAttribute( bus => 'usb');
     $dev->setAttribute(type => 'spicevmc');
 
@@ -814,6 +840,42 @@ sub _search_xml {
         return $item if !$missing;
     }
     return;
+}
+
+sub _xml_remove_usb {
+    my $self = shift;
+    my $doc = shift;
+
+    my ($devices) = $doc->findnodes("/domain/devices");
+    for my $usb ($devices->findnodes("controller")) {
+        next if $usb->getAttribute('type') ne 'usb';
+        $devices->removeChild($usb);
+    }
+}
+
+sub _xml_add_usb_xhci {
+    my $self = shift;
+    my $devices = shift;
+
+    my $model = 'nec-xhci';
+    my $ctrl = _search_xml(
+                           xml => $devices
+                         ,name => 'controller'
+                         ,type => 'usb'
+                         ,model => $model
+        );
+    return if $ctrl;
+    my $controller = $devices->addNewChild(undef,"controller");
+    $controller->setAttribute(type => 'usb');
+    $controller->setAttribute(index => '0');
+    $controller->setAttribute(model => $model);
+
+    my $address = $controller->addNewChild(undef,'address');
+    $address->setAttribute(type => 'pci');
+    $address->setAttribute(domain => '0x0000');
+    $address->setAttribute(bus => '0x00');
+    $address->setAttribute(slot => '0x07');
+    $address->setAttribute(function => '0x0');
 }
 
 sub _xml_add_usb_ehci1 {
