@@ -17,6 +17,14 @@ Please create a new branch for each issue. Also it would be a good idea to call 
 
     git checkout -b 77_crashonstart
    
+Commit Message
+--------------
+
+All the commits come from an issue, so add it at the very beggining of the message with brackets , a dash, and the number of the issue. Example:
+
+    [#44] Fixed flux capacitor leak
+    
+More guidelines for commit messages here: http://chris.beams.io/posts/git-commit/
 
 Testing
 -------
