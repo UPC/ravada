@@ -74,8 +74,6 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  return;
-
   my $url = $c->req->url;
 
   return access_denied($c)
