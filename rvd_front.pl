@@ -390,6 +390,15 @@ get '/messages.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
+get '/unread_messages.json' => sub {
+    my $c = shift;
+
+    return $c->redirect_to('/login') if !_logged_in($c);
+
+    return $c->render( json => [$USER->unread_messages()] );
+};
+
+
 get '/messages/read/all.html' => sub {
     my $c = shift;
     $USER->mark_all_messages_read;
@@ -566,7 +575,7 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
-    return $c->render( 
+    return $c->render(
         template => 'bootstrap/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER

@@ -17,7 +17,8 @@
             .controller("machines", machinesCrtl)
             .controller("bases", mainpageCrtl)
             .controller("messages", messagesCrtl)
-	        .controller("users", usersCrtl)
+            .controller("users", usersCrtl)
+            .controller("notifCrtl", notifCrtl)
 
 
 
@@ -179,7 +180,7 @@
             $scope.action = function(machineId) {
 //                alert(machineId+" - "+$scope.host_action);
                 if ( $scope.host_action.indexOf('restore') !== -1 ) {
-                    $scope.host_restore = machineId;           
+                    $scope.host_restore = machineId;
                     $scope.host_shutdown = 0;
                 } else if ($scope.host_action.indexOf('shutdown') !== -1) {
                     $scope.host_shutdown = machineId;
@@ -336,3 +337,21 @@
         });
 
     };
+
+    function notifCrtl($scope, $interval, $http, request){
+      $scope.alerts = [
+      ];
+
+      $scope.getAlerts = function() {
+        $http.get('/unread_messages.json').then(function(response) {
+                $scope.alerts= response.data;
+        });
+      };
+      $interval($scope.getAlerts,3000);
+
+      $scope.closeAlert = function(index) {
+        var message = $scope.alerts.splice(index, 1);
+        var toGet = '/messages/read/'+message[0].id+'.html';
+        $http.get(toGet);
+      };
+}
