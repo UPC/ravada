@@ -32,3 +32,5 @@ Testing
 Before committing, make sure it passes all the tests. This should be run specially when chaning the _master_ and _develop_ branches. Notice some tests require _root_ access, so it must run with _sudo_.
 
     perl Makefile.PL && make && sudo make test
+
+Proper testing requires the Perl Module Test::SQL::Data , available here: https://github.com/frankiejol/Test-SQL-Data
