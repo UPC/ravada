@@ -106,8 +106,7 @@ any '/test' => sub {
 
 any '/logout' => sub {
     my $c = shift;
-    $c->session(expires => 1);
-    $c->session(login => undef);
+    logout($c);
     $c->redirect_to('/');
 };
 
@@ -367,7 +366,7 @@ get '/requests.json' => sub {
 
 any '/messages.html' => sub {
     my $c = shift;
-    return access_denied($c) if !_logged_in($c);
+    return login($c) if !_logged_in($c);
     return messages($c);
 };
 
@@ -483,29 +482,31 @@ sub _logged_in {
 sub login {
     my $c = shift;
 
-    return quick_start($c)    if _logged_in($c);
+    $c->session(login => undef);
 
     my $login = $c->param('login');
     my $password = $c->param('password');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
+    $url = '/' if $url =~ m{^/login};
+
     my @error =();
-    if ($c->param('submit') && $login) {
+    if (defined $login || defined $password || $c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
 
-    if ( $login && $password ) {
+    if (defined $login && defined $password && length $login && length $password ) {
         my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
-        if ( $auth_ok) {
+        if ( $auth_ok && !$@) {
             $c->session('login' => $login);
             $c->session(expiration => $SESSION_TIMEOUT);
             return $c->redirect_to($url);
         } else {
-            warn $@ if $@;
             push @error,("Access denied");
         }
     }
+
     $c->render(
                     template => 'bootstrap/start'
                         ,url => $url
@@ -513,6 +514,16 @@ sub login {
                       ,error => \@error
     );
 
+}
+
+sub logout {
+    my $c = shift;
+
+    $USER = undef;
+    $c->session(expires => 1);
+    $c->session(login => undef);
+
+    warn "logout";
 }
 
 sub quick_start {
@@ -531,7 +542,9 @@ sub quick_start {
     }
 
     if ( $login && $password ) {
-        if (Ravada::Auth::login($login, $password)) {
+        my $log_ok;
+        eval { $log_ok = Ravada::Auth::login($login, $password) };
+        if ($log_ok) {
             $c->session('login' => $login);
         } else {
             push @error,("Access denied");
@@ -545,13 +558,6 @@ sub quick_start {
 
     return render_machines_user($c);
 
-#    $c->render(
-#                    template => 'bootstrap/list_bases'
-#                    ,id_base => $id_base
-#                      ,login => $login
-#                  ,_anonymous => 0
-#                      ,error => \@error
-#    );
 }
 
 sub render_machines_user {
