@@ -71,16 +71,37 @@ our $SESSION_TIMEOUT = 300;
 init();
 ############################################################################3
 
+hook before_routes => sub {
+  my $c = shift;
+
+  return;
+
+  my $url = $c->req->url;
+
+  return access_denied($c)
+    if $url =~ /\.json/
+    && !_logged_in($c);
+
+  return login($c)
+    if     $url !~ /\.css$/
+        && $url !~ m{^/(anonymous|login|logout)}
+        && $url !~ m{^/(font|img|js)}
+        && !_logged_in($c);
+
+
+};
+
+
+############################################################################3
+
 any '/' => sub {
     my $c = shift;
-    return quick_start($c) if _logged_in($c);
-    $c->redirect_to('/login');
+    return quick_start($c);
 };
 
 any '/index.html' => sub {
     my $c = shift;
-    return quick_start($c) if _logged_in($c);
-    $c->redirect_to('/login');
+    return quick_start($c);
 };
 
 any '/login' => sub {
@@ -138,7 +159,6 @@ get '/anonymous/*.html' => sub {
 any '/machines' => sub {
     my $c = shift;
 
-    return login($c)            if !_logged_in($c);
     return access_denied($c)    if !$USER->is_admin;
 
     return domains($c);
@@ -148,7 +168,8 @@ any '/machines' => sub {
 any '/machines/new' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin;
+
     return new_machine($c);
 };
 
@@ -176,7 +197,6 @@ get '/list_vm_types.json' => sub {
 
 get '/list_bases.json' => sub {
     my $c = shift;
-    return access_denied($c) if !_logged_in($c);
 
     my $domains = $RAVADA->list_bases();
     my @domains_show = @$domains;
@@ -197,7 +217,7 @@ get '/list_images.json' => sub {
 
 get '/list_machines.json' => sub {
     my $c = shift;
-    return access_denied($c) if !_logged_in($c);
+
     $c->render(json => $RAVADA->list_domains);
 };
 
@@ -210,7 +230,6 @@ get '/list_bases_anonymous.json' => sub {
 
 get '/list_users.json' => sub {
     my $c = shift;
-    return access_denied($c) if !_logged_in($c);
     $c->render(json => $RAVADA->list_users);
 };
 
@@ -229,7 +248,6 @@ get '/pingbackend.json' => sub {
 
 get '/machine/info/*.json' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
 
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
     die "No id " if !$id;
@@ -238,14 +256,12 @@ get '/machine/info/*.json' => sub {
 
 any '/machine/manage/*html' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
 
     return manage_machine($c);
 };
 
 get '/machine/view/*.html' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
 
     return view_machine($c);
 };
@@ -352,7 +368,6 @@ get '/users/remove_admin/*.json' => sub {
 
 get '/request/*.html' => sub {
     my $c = shift;
-    return access_denied($c) if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
 
     return _show_request($c,$id);
@@ -360,34 +375,29 @@ get '/request/*.html' => sub {
 
 get '/requests.json' => sub {
     my $c = shift;
-    return access_denied($c) if !_logged_in($c);
     return list_requests($c);
 };
 
 any '/messages.html' => sub {
     my $c = shift;
-    return login($c) if !_logged_in($c);
     return messages($c);
 };
 
 get '/messages.json' => sub {
     my $c = shift;
 
-    return $c->redirect_to('/login') if !_logged_in($c);
 
     return $c->render( json => [$USER->messages()] );
 };
 
 get '/messages/read/all.html' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
     $USER->mark_all_messages_read;
     return $c->redirect_to("/messages.html");
 };
 
 get '/messages/read/*.html' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
     $USER->mark_message_read($id);
     return $c->redirect_to("/messages.html");
@@ -395,7 +405,6 @@ get '/messages/read/*.html' => sub {
 
 get '/messages/read/*.json' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
     $USER->mark_message_read($id);
     return $c->redirect_to("/messages.html");
@@ -403,7 +412,6 @@ get '/messages/read/*.json' => sub {
 
 get '/messages/unread/*.html' => sub {
     my $c = shift;
-    return $c->redirect_to('/login') if !_logged_in($c);
     my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
     $USER->mark_message_unread($id);
     return $c->redirect_to("/messages.html");
@@ -412,7 +420,6 @@ get '/messages/unread/*.html' => sub {
 get '/messages/view/*.html' => sub {
     my $c = shift;
 
-    return $c->redirect_to('/login') if !_logged_in($c);
 
     my ($id_message) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
 
@@ -421,7 +428,6 @@ get '/messages/view/*.html' => sub {
 
 any '/about' => sub {
     my $c = shift;
-    return login($c)            if !_logged_in($c);
 
     $c->stash(version => $RAVADA->version );
 
@@ -431,7 +437,6 @@ any '/about' => sub {
 
 any '/requirements' => sub {
     my $c = shift;
-    return login($c)            if !_logged_in($c);
 
     $c->render(template => 'bootstrap/requirements');
 };
@@ -439,7 +444,6 @@ any '/requirements' => sub {
 
 any '/settings' => sub {
     my $c = shift;
-    return login($c)            if !_logged_in($c);
 
     $c->stash(version => $RAVADA->version );
 
