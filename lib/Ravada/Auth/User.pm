@@ -96,7 +96,7 @@ sub unread_messages {
     $count = 50 if !defined $count;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject FROM messages "
-        ." WHERE id_user=? AND (date_read IS NULL OR date_read < SUBDATE( NOW(), INTERVAL 100 YEAR )) "
+        ." WHERE id_user=? AND (date_read IS NULL)"
         ."    ORDER BY date_send DESC "
         ." LIMIT ?,?");
     $sth->execute($self->id, $skip, $count);
