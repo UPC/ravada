@@ -542,7 +542,7 @@
                     <div class="col-lg-10 col-lg-offset-1 text-left">
                         <p>So, you think you found a bug?  Well, please let us know!</p>
                         <p><strong>But first</strong>, please make sure it is a problem with <i>Ravada</i>, and not a problem with the way your server is configured.  If you're getting a problem when you try to install, there is a good chance that your server is not configured properly.  See the <a href="./troubleshooting">troubleshooting guide</a> for help.</p>
-                        <p>We recommend that you install a local development server on your computer, rather than <a target="_blank" href="https://pbs.twimg.com/media/BxfENwpIYAAcHqQ.png" rel="nofollow">testing your code directly on the production server.</a>  This means you can test your code directly on your own computer, making development faster and without the risk of exposing sensitive information to the public.</p>
+                        <p>We recommend that you install a local development server on your computer, rather than testing your code directly on the production server.</a>  This means you can test your code directly on your own computer, making development faster and without the risk of exposing sensitive information to the public.</p>
                         <p>Please also make sure you check the <a href="./installation/index.html">installation requirements</a>.</p>
                         <p>If you know all of this already, and you're pretty sure the problem is in our code, please <a target="_blank"  href="https://github.com/frankiejol/ravada/issues">open up an issue</a>.
                           Try to provide as much information as possible.</p>
@@ -602,10 +602,54 @@
                     <div class="col-lg-10 col-lg-offset-1">
                         <h2>Contributing to Ravada</h2>
                         <hr class="star-primary">
-                    </div>
-                    <div class="col-lg-10 col-lg-offset-1 text-center">
-                      <p class="text-center">Please contact with us!<br><center> <img class="img-responsive" src="img/thankyou.jpg" alt=""></center></p>
-                        <button type="button" class="btn btn-modal" data-dismiss="modal"><i class="fa fa-times"></i> Ok, got it!</button>
+                    </div><div class="row">
+                      <div class="col-lg-12 text-left">
+                        <p><strong><a href="#commit-rules">Commit rules</a></strong></p>
+                        <p><strong><a href="#testing">Testing</a></strong></p>
+                        <p><strong><a href="#run-ravada-in-development-mode">Run Ravada in development mode</a></strong></p>
+                        <p><strong><a href="#editor">Editor configuration rules</a></strong></p>
+                        <p><strong><a href="#translations">Translations</a></strong></p>
+                      </div>
+                    <div class="col-lg-10 col-lg-offset-1 text-left">
+                      <p>This information you will find useful if you want to work on the Ravada core development.</p>
+                      <h1 id="commit-rules">Commit Rules</h1>
+                      <h2 id="main-branches">Main Branches</h2>
+                        <p>The main branches are <em>master</em> and <em>develop</em> as described <a href="http://nvie.com/posts/a-successful-git-branching-model/">here</a>.</p>
+                      <h2 id="issues">Issues</h2>
+                        <p>Please create a new branch for each issue. Also it would be a good idea to call the branch with the number of the issue and a short text, ie:</p>
+                        <pre><code>git checkout -b 77_crashonstart</code></pre>
+                      <h2 id="commit-message">Commit Message</h2>
+                        <p>All the commits come from an issue, so add it at the very beggining of the message with brackets , a dash, and the number of the issue. Example:</p>
+                        <pre><code>[#44] Fixed flux capacitor leak</code></pre>
+                        <p>More guidelines for commit messages <a href="http://chris.beams.io/posts/git-commit/">here</a>.</p>
+                      <h2 id="testing">Testing</h2>
+                        <p>Before committing, make sure it passes all the tests. This should be run specially when chaning the <em>master</em> and <em>develop</em> branches. Notice some tests require <em>root</em> access, so it must run with <em>sudo</em>.</p>
+                      <pre><code>perl Makefile.PL &amp;&amp; make &amp;&amp; sudo make test</code></pre>
+                        <p>Proper testing requires the Perl Module Test::SQL::Data , available here: https://github.com/frankiejol/Test-SQL-Data</p>
+
+                      <h2 id="run-ravada-in-development-mode">Run Ravada in development mode</h2>
+                        <p>Once it is installed, you have to run the two ravada daemons. One is the web frontend and the other one runs as root and manage the virtual machines. It is a good practice run each one in a different terminal:</p>
+                        <p>The web frontend runs with the <code>morbo</code> tool that comes with <em>mojolicious</em>. It auto reloads itself if it detects any change in the source code:</p>
+                        <pre><code>~/src/ravada$ morbo -v ./rvd_front.pl</code></pre>
+                        <p>The backend runs as root because it has to deal with the VM processes. It won't reload automatically when there is a change, so it has to be restarted manually when the code is modified:</p>
+                        <pre><code>~/src/ravada$ sudo ./bin/rvd_back.pl --debug</code></pre>
+
+                      <h2 id="editor">Editor configuration rules</h2>
+                        <p>If you work with Ravada code it will be easier for all of us if you follow a minimun configuration rules.</p>
+                        <ul>
+                          <li><p>expand tabs to spaces</p></li>
+                          <li><p>one tab are 4 spaces</p></li>
+                        </ul>
+                        <h2>Vim Example</h2>
+
+                        <p>Set those options in your .vimrc to match ours
+                          <pre><code>set tabstop=4
+set expandtab</code></pre>
+                      <h2 id="translations">Translations</h2>
+                      <p>We use <a href="https://www.transifex.com/ravada/ravada/">Transifex</a> to provide a cleaner and easy to use interface for translators.</p>
+                        <div class="col-lg-10 col-lg-offset-1 text-center">
+                          <button type="button" class="btn btn-modal" data-dismiss="modal"><i class="fa fa-times"></i> Ok, got it!</button>
+                        </div>
                     </div>
                 </div>
             </div>
