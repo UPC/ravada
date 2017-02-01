@@ -347,7 +347,7 @@
                 $scope.alerts= response.data;
         });
       };
-      $interval($scope.getAlerts,3000);
+      $interval($scope.getAlerts,10000);
 
       $scope.closeAlert = function(index) {
         var message = $scope.alerts.splice(index, 1);

@@ -95,8 +95,8 @@ sub unread_messages {
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject FROM messages "
-        ." WHERE id_user=? AND (date_read IS NULL OR date_read < SUBDATE( NOW(), INTERVAL 100 YEAR )) "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
+        ." WHERE id_user=? AND date_read IS NULL AND date_shown IS NULL "
         ."    ORDER BY date_send DESC "
         ." LIMIT ?,?");
     $sth->execute($self->id, $skip, $count);
@@ -105,8 +105,10 @@ sub unread_messages {
 
     while (my $row = $sth->fetchrow_hashref ) {
         push @rows,($row);
+        $self->mark_message_shown($row->{id})   if $row->{id};
     }
     $sth->finish;
+
     return @rows;
 
 }
@@ -162,6 +164,31 @@ sub mark_message_read {
     $sth->finish;
 
 }
+
+=head2 mark_message_shown
+
+Marks a message as shown
+
+    $user->mark_message_shown($id);
+
+Returns nothing
+
+=cut
+
+
+sub mark_message_shown {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
+        ." SET date_shown=? "
+        ." WHERE id_user=? AND id=?");
+
+    $sth->execute(_now(), $self->id, $id);
+    $sth->finish;
+
+}
+
 
 =head2 mark_message_unread
 
