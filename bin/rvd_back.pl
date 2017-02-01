@@ -65,11 +65,34 @@ my $REMOTE_VIEWER;
 ###################################################################
 #
 
-sub start {
+sub do_start {
     warn "Starting daemon mode\n";
+
+    my $old_error = ($@ or '');
+    my $cnt_error = 0;
+
     for (;;) {
-        $RAVADA->process_requests();
+        eval { $RAVADA->process_requests() };
+        warn "$@\n" if $@ && (!$old_error || $old_error ne $@);
+        $old_error = ($@ or '');
+        if ( $@ && $cnt_error++ > 60 ) {
+            $old_error = '' ;
+            $cnt_error = 0;
+        }
         sleep 1;
+    }
+}
+
+sub start {
+    for (;;) {
+        my $pid = fork();
+        die "I can't fork $!" if !defined $pid;
+        if ($pid == 0 ) {
+            do_start();
+            exit;
+        }
+        warn "Waiting for pid $pid\n";
+        waitpid($pid,0);
     }
 }
 
