@@ -13,6 +13,7 @@
 
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
         
+                <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
                 <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch">Launch</button>
                 % if (scalar @$error) {
