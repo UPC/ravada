@@ -343,7 +343,7 @@
       ];
 
       $scope.getAlerts = function() {
-        $http.get('/unread_messages.json').then(function(response) {
+        $http.get('/unshown_messages.json').then(function(response) {
                 $scope.alerts= response.data;
         });
       };
