@@ -7,12 +7,12 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-       
+
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2><%=l 'Messages' %> 
-                        
+                        <h2><%=l 'Messages' %>
+
                         <a style="float: right; margin: 0 10px;" class="btn btn-info" href="/messages.html" "><i class="fa fa-refresh" aria-hidden="true"></i></a>
 
                         <a style="float: right; margin: 0 10px;" href="/messages/read/all.html" class="btn btn-succes"><i class="fa fa-envelope-o" aria-hidden="true"></i>
@@ -21,12 +21,13 @@
                         </h2>
                     </div>
                     <sol-show-messages></sol-show-messages>
-                    
+
                 </div>
             </div>
     </div>
     </div>
     </div>
     %= include 'bootstrap/scripts'
+    %= include 'bootstrap/footer'
 </body>
 </html>
