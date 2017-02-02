@@ -5,7 +5,7 @@
     <div id="wrapper">
     <div ng-controller="about">
     %= include 'bootstrap/navigation'
-    <div id="page-wrapper">
+    <div id="page-wrapper" class ="row">
       <div class="page-header col-md-8 col-md-offset-2">
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -14,9 +14,7 @@
                         <h3>Version</h3>
                         <%= $version %>
                         <h3>Authors</h3>
-                        <p>
                         %= include 'bootstrap/authors'
-                        </p>
                         <h3>Development</h3>
                         <p> Below are listed the technologies used in this project:</p>
                         <ul>
@@ -25,7 +23,7 @@
                         <li>and HTML, CSS, and JS framework <a href="http://getbootstrap.com/">Bootstrap</a></li>
                         </ul>
 
-                        
+
                         <p> The code is available on <a href="http://bit.ly/get_ravada">Github</a>.</p>
                         <h3>License</h3>
                         <p> The code is <a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a> licensed.</p>
@@ -36,6 +34,6 @@
     </div>
     </div>
     %= include 'bootstrap/scripts'
+    %= include 'bootstrap/footer'
 </body>
 </html>
-
