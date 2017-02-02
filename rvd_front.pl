@@ -388,12 +388,12 @@ get '/messages.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
-get '/unread_messages.json' => sub {
+get '/unshown_messages.json' => sub {
     my $c = shift;
 
     return $c->redirect_to('/login') if !_logged_in($c);
 
-    return $c->render( json => [$USER->unread_messages()] );
+    return $c->render( json => [$USER->unshown_messages()] );
 };
 
 
