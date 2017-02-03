@@ -142,12 +142,12 @@ get '/anonymous_logout.html' => sub {
     return $c->redirect_to('/');
 };
 
-get '/anonymous/*.html' => sub {
+get '/anonymous/(#base_id).html' => sub {
     my $c = shift;
 
     $c->stash(_anonymous => 1 , _logged_in => 0);
     _init_error($c);
-    my ($base_id) = $c->req->url->to_abs =~ m{/anonymous/(.*).html};
+    my $base_id = $c->stash('base_id');
     my $base = $RAVADA->search_domain_by_id($base_id);
 
     $USER = _anonymous_user($c);
@@ -244,85 +244,83 @@ get '/pingbackend.json' => sub {
 
 # machine commands
 
-get '/machine/info/*.json' => sub {
+get '/machine/info/(#id).json' => sub {
     my $c = shift;
-
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
+    my $id = $c->stash('id');
     die "No id " if !$id;
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
-any '/machine/manage/*html' => sub {
+any '/machine/manage/([^/]+).html' => sub {
     my $c = shift;
 
     return manage_machine($c);
 };
 
-get '/machine/view/*.html' => sub {
+get '/machine/view/([^/]+).html' => sub {
     my $c = shift;
 
     return view_machine($c);
 };
 
-get '/machine/clone/*.html' => sub {
+get '/machine/clone/([^/]+).html' => sub {
     my $c = shift;
     return clone_machine($c);
 };
 
-get '/machine/shutdown/*.html' => sub {
+get '/machine/shutdown/([^/]+).html' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
 
-get '/machine/shutdown/*.json' => sub {
+get '/machine/shutdown/([^/]+).json' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
 
 
-any '/machine/remove/*.html' => sub {
+any '/machine/remove/([^/]+).html' => sub {
         my $c = shift;
         return remove_machine($c);
 };
-get '/machine/prepare/*.json' => sub {
+get '/machine/prepare/([^/]+).json' => sub {
         my $c = shift;
         return prepare_machine($c);
 };
 
-get '/machine/remove_b/*.json' => sub {
+get '/machine/remove_b/([^/]+).json' => sub {
         my $c = shift;
         return remove_base($c);
 };
 
-get '/machine/remove_base/*.json' => sub {
+get '/machine/remove_base/([^/]+).json' => sub {
     my $c = shift;
     return remove_base($c);
 };
 
-get '/machine/screenshot/*.json' => sub {
+get '/machine/screenshot/([^/]+).json' => sub {
         my $c = shift;
         return screenshot_machine($c);
 };
 
-get '/machine/pause/*.json' => sub {
+get '/machine/pause/([^/]+).json' => sub {
         my $c = shift;
         return pause_machine($c);
 };
 
-get '/machine/resume/*.json' => sub {
+get '/machine/resume/([^/]+).json' => sub {
         my $c = shift;
         return resume_machine($c);
 };
 
-get '/machine/start/*.json' => sub {
+get '/machine/start/([^/]+).json' => sub {
         my $c = shift;
         return start_machine($c);
 };
 
-get '/machine/exists/*' => sub {
+get '/machine/exists/#name' => sub {
     my $c = shift;
-    my ($name) = $c->req->url->to_abs->path =~ m{.*/(.+)};
-
+    my $name = $c->stash('name');
     #TODO
     # return failure if it can't find the name in the URL
 
@@ -330,7 +328,7 @@ get '/machine/exists/*' => sub {
 
 };
 
-get '/machine/rename/*' => sub {
+get '/machine/rename/([^/]+)' => sub {
     my $c = shift;
     return rename_machine($c);
 };
@@ -340,7 +338,7 @@ any '/machine/copy' => sub {
     return copy_machine($c);
 };
 
-get '/machine/public/*' => sub {
+get '/machine/public/([^/]+)' => sub {
     my $c = shift;
     return machine_is_public($c);
 };
@@ -349,14 +347,14 @@ get '/machine/public/*' => sub {
 
 ##make admin
 
-get '/users/make_admin/*.json' => sub {
+get '/users/make_admin/([^/]+).json' => sub {
        my $c = shift;
       return make_admin($c);
 };
 
 ##remove admin
 
-get '/users/remove_admin/*.json' => sub {
+get '/users/remove_admin/([^/]+).json' => sub {
        my $c = shift;
        return remove_admin($c);
 };
@@ -403,34 +401,35 @@ get '/messages/read/all.html' => sub {
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/read/*.html' => sub {
+get '/messages/read/(#id).json' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    my $id = $c->stash('id');
+    warn 'JSON';
+    warn $id;
     $USER->mark_message_read($id);
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/read/*.json' => sub {
+get '/messages/read/(#id).html' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
+    my $id = $c->stash('id');
+    warn 'HTML';
+    warn $id;
     $USER->mark_message_read($id);
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/unread/*.html' => sub {
+get '/messages/unread/(#id).html' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    my $id = $c->stash('id');
     $USER->mark_message_unread($id);
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/view/*.html' => sub {
+get '/messages/view/(#id).html' => sub {
     my $c = shift;
-
-
-    my ($id_message) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
-
-    return $c->render( json => $USER->show_message($id_message) );
+    my $id = $c->stash('id');
+    return $c->render( json => $USER->show_message($id) );
 };
 
 any '/about' => sub {
