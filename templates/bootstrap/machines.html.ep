@@ -53,9 +53,19 @@
       <script type="text/ng-template" id="alert.html">
         <div ng-transclude></div>
       </script>
-        <div uib-alert ng-repeat="alert in alerts" ng-class="'alert-' + (alert.type || 'warning')" ng-click="closeAlert($index)">{{alert.subject}}</div>
+        <div uib-alert ng-repeat="alert in alerts"
+         ng-class="'alert-' + (alert.type || 'warning')"
+          ng-click="closeAlert($index)"
+          ng-mouseover="alert.showMessage = false"
+          ng-mouseleave="alert.showMessage = true">
+          {{alert.subject}}
+          <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage">
+            {{alert.message}}
+          </div>
+        </div>
     </div>
 
     %= include 'bootstrap/scripts'
+    %= include 'bootstrap/footer'
 </body>
 </html>

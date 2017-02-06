@@ -142,12 +142,12 @@ get '/anonymous_logout.html' => sub {
     return $c->redirect_to('/');
 };
 
-get '/anonymous/*.html' => sub {
+get '/anonymous/(#base_id).html' => sub {
     my $c = shift;
 
     $c->stash(_anonymous => 1 , _logged_in => 0);
     _init_error($c);
-    my ($base_id) = $c->req->url->to_abs =~ m{/anonymous/(.*).html};
+    my $base_id = $c->stash('base_id');
     my $base = $RAVADA->search_domain_by_id($base_id);
 
     $USER = _anonymous_user($c);
@@ -244,85 +244,85 @@ get '/pingbackend.json' => sub {
 
 # machine commands
 
-get '/machine/info/*.json' => sub {
+get '/machine/info/(:id).(:type)' => sub {
     my $c = shift;
-
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
+    my $id = $c->stash('id');
+    warn $id;
     die "No id " if !$id;
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
-any '/machine/manage/*html' => sub {
+any '/machine/manage/(:id).(:type)' => sub {
     my $c = shift;
-
     return manage_machine($c);
 };
 
-get '/machine/view/*.html' => sub {
+get '/machine/view/(:id).(:type)' => sub {
     my $c = shift;
+    my $id = $c->stash('id');
+    my $type = $c->stash('type');
 
     return view_machine($c);
 };
 
-get '/machine/clone/*.html' => sub {
+get '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;
     return clone_machine($c);
 };
 
-get '/machine/shutdown/*.html' => sub {
+get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
 
-get '/machine/shutdown/*.json' => sub {
+get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
         return shutdown_machine($c);
 };
 
 
-any '/machine/remove/*.html' => sub {
+any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
         return remove_machine($c);
 };
-get '/machine/prepare/*.json' => sub {
+get '/machine/prepare/(:id).(:type)' => sub {
         my $c = shift;
         return prepare_machine($c);
 };
 
-get '/machine/remove_b/*.json' => sub {
+get '/machine/remove_b/(:id).(:type)' => sub {
         my $c = shift;
         return remove_base($c);
 };
 
-get '/machine/remove_base/*.json' => sub {
+get '/machine/remove_base/(:id).(:type)' => sub {
     my $c = shift;
     return remove_base($c);
 };
 
-get '/machine/screenshot/*.json' => sub {
+get '/machine/screenshot/(:id).(:type)' => sub {
         my $c = shift;
         return screenshot_machine($c);
 };
 
-get '/machine/pause/*.json' => sub {
+get '/machine/pause/(:id).(:type)' => sub {
         my $c = shift;
         return pause_machine($c);
 };
 
-get '/machine/resume/*.json' => sub {
+get '/machine/resume/(:id).(:type)' => sub {
         my $c = shift;
         return resume_machine($c);
 };
 
-get '/machine/start/*.json' => sub {
+get '/machine/start/(:id).(:type)' => sub {
         my $c = shift;
         return start_machine($c);
 };
 
-get '/machine/exists/*' => sub {
+get '/machine/exists/#name' => sub {
     my $c = shift;
-    my ($name) = $c->req->url->to_abs->path =~ m{.*/(.+)};
-
+    my $name = $c->stash('name');
     #TODO
     # return failure if it can't find the name in the URL
 
@@ -330,7 +330,12 @@ get '/machine/exists/*' => sub {
 
 };
 
-get '/machine/rename/*' => sub {
+get '/machine/rename/#id' => sub {
+    my $c = shift;
+    return rename_machine($c);
+};
+
+get '/machine/rename/#id/#value' => sub {
     my $c = shift;
     return rename_machine($c);
 };
@@ -340,7 +345,12 @@ any '/machine/copy' => sub {
     return copy_machine($c);
 };
 
-get '/machine/public/*' => sub {
+get '/machine/public/#id' => sub {
+    my $c = shift;
+    return machine_is_public($c);
+};
+
+get '/machine/public/#id/#value' => sub {
     my $c = shift;
     return machine_is_public($c);
 };
@@ -349,14 +359,14 @@ get '/machine/public/*' => sub {
 
 ##make admin
 
-get '/users/make_admin/*.json' => sub {
+get '/users/make_admin/(:id).(:type)' => sub {
        my $c = shift;
       return make_admin($c);
 };
 
 ##remove admin
 
-get '/users/remove_admin/*.json' => sub {
+get '/users/remove_admin/(:id).(:type)' => sub {
        my $c = shift;
        return remove_admin($c);
 };
@@ -364,9 +374,9 @@ get '/users/remove_admin/*.json' => sub {
 ##############################################
 #
 
-get '/request/*.html' => sub {
+get '/request/(:id).(:type)' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    my $id = $c->stash('id');
 
     return _show_request($c,$id);
 };
@@ -388,12 +398,12 @@ get '/messages.json' => sub {
     return $c->render( json => [$USER->messages()] );
 };
 
-get '/unread_messages.json' => sub {
+get '/unshown_messages.json' => sub {
     my $c = shift;
 
     return $c->redirect_to('/login') if !_logged_in($c);
 
-    return $c->render( json => [$USER->unread_messages()] );
+    return $c->render( json => [$USER->unshown_messages()] );
 };
 
 
@@ -403,34 +413,31 @@ get '/messages/read/all.html' => sub {
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/read/*.html' => sub {
+get '/messages/read/(#id).json' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    my $id = $c->stash('id');
     $USER->mark_message_read($id);
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/read/*.json' => sub {
+get '/messages/read/(#id).html' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.json};
+    my $id = $c->stash('id');
     $USER->mark_message_read($id);
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/unread/*.html' => sub {
+get '/messages/unread/(#id).html' => sub {
     my $c = shift;
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
+    my $id = $c->stash('id');
     $USER->mark_message_unread($id);
     return $c->redirect_to("/messages.html");
 };
 
-get '/messages/view/*.html' => sub {
+get '/messages/view/(#id).html' => sub {
     my $c = shift;
-
-
-    my ($id_message) = $c->req->url->to_abs->path =~ m{/(\d+)\.html};
-
-    return $c->render( json => $USER->show_message($id_message) );
+    my $id = $c->stash('id');
+    return $c->render( json => $USER->show_message($id) );
 };
 
 any '/about' => sub {
@@ -860,7 +867,8 @@ sub init {
 
 sub _search_requested_machine {
     my $c = shift;
-    my ($id,$type) = $c->req->url->to_abs->path =~ m{/(\d+)\.(\w+)$};
+    my $id = $c->stash('id');
+    my $type = $c->stash('type');
 
     return show_failure($c,"I can't find id in ".$c->req->url->to_abs->path)
         if !$id;
@@ -877,8 +885,7 @@ sub _search_requested_machine {
 sub make_admin {
     my $c = shift;
     return login($c) if !_logged_in($c);
-
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    my $id = $c->stash('id');
 
     Ravada::Auth::SQL::make_admin($id);
 
@@ -887,8 +894,7 @@ sub make_admin {
 sub remove_admin {
     my $c = shift;
     return login($c) if !_logged_in($c);
-
-    my ($id) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    my $id = $c->stash('id');
 
     Ravada::Auth::SQL::remove_admin($id);
 
@@ -1137,9 +1143,8 @@ sub copy_machine {
 
 sub machine_is_public {
     my $c = shift;
-    my $uri = $c->req->url->to_abs->path;
-
-    my ($id_machine, $value) = $uri =~ m{/.*/(\d+)/(\d+)?$};
+    my $id_machine = $c->stash('id');
+    my $value = $c->stash('value');
     my $domain = $RAVADA->search_domain_by_id($id_machine);
 
     return $c->render(text => "unknown domain id $id_machine")  if !$domain;
@@ -1158,18 +1163,16 @@ sub machine_is_public {
 
 sub rename_machine {
     my $c = shift;
+    my $id_domain = $c->stash('id');
+    my $new_name = $c->stash('value');
     return login($c) if !_logged_in($c);
     return access_denied($c)    if !$USER->is_admin();
 
-    my $uri = $c->req->url->to_abs->path;
-
-    warn ref($c->req);
-    my ($id_domain,$new_name)
-       = $uri =~ m{^/machine/rename/(\d+)/(.*)};
-
-    return $c->render(data => "Machine id not found in $uri ")
+    #return $c->render(data => "Machine id not found in $uri ")
+    return $c->render(data => "Machine id not found")
         if !$id_domain;
-    return $c->render(data => "New name not found in $uri")
+    #return $c->render(data => "New name not found in $uri")
+    return $c->render(data => "New name not found")
         if !$new_name;
 
     my $req = Ravada::Request->rename_domain(    uid => $USER->id

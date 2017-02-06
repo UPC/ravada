@@ -467,7 +467,7 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
 
-    $self->_send_message($status, $message) 
+    $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
 }
@@ -503,11 +503,12 @@ sub _send_message {
     $self->_remove_unnecessary_messages() if $self->status eq 'done';
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO messages ( id_user, id_request, subject, message ) "
-        ." VALUES ( ?,?,?,?)"
+        "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
+        ." VALUES ( ?,?,?,?,?)"
     );
     $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
-        ,$message);
+        ,$message, '0000-00-00 00:00:00');
+    warn 'Updating messages: '.$uid.$self->id."Command ".$self->command." $domain_name".$self->status;
     $sth->finish;
 }
 
@@ -518,7 +519,7 @@ sub _remove_unnecessary_messages {
     $uid = $self->defined_arg('id_owner');
     $uid = $self->defined_arg('uid')        if !$uid;
     return if !$uid;
-    
+
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM messages WHERE id_user=? AND id_request=? "

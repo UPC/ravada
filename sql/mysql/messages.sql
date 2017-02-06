@@ -5,6 +5,7 @@ CREATE TABLE `messages` (
   `subject` varchar(120) DEFAULT NULL,
   `message` text,
   `date_send` datetime default now(),
+  `date_shown` datetime,
   `date_read` datetime,
   PRIMARY KEY (`id`),
   KEY `id_user` (`id_user`)

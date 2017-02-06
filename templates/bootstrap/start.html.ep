@@ -12,28 +12,27 @@
                 <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User/Email">
 
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
-        
+
                 <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
                 <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch">Launch</button>
                 % if (scalar @$error) {
-                        
+
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
                                 <strong>Error: </strong><%= $i %>
-                            </div>    
+                            </div>
                 %       }
-                        
+
                 % }
                 </form>
                 <!--<a href="#instruccions" class="btn btn-circle page-scroll">
-                            <i class="fa fa-angle-double-down animated"></i>-->
-                </a>
+                            <i class="fa fa-angle-double-down animated"></i></a>-->
             </div>
         </div>
     </header>
 
-    <!-- Instruccions 
+    <!-- Instruccions
     <section id="instruccions" class="container content-section text-center">
         <div class="row">
             <div class="col-lg-8 col-lg-offset-2">
@@ -43,7 +42,7 @@
         </div>
     </section>
 
-    Tecnologies 
+    Tecnologies
     <section id="tecnologies" class="content-section text-center">
         <div class="download-section">
             <div class="container">
@@ -56,7 +55,7 @@
         </div>
     </section>
 
-    Contacte 
+    Contacte
     <section id="contacte" class="container content-section text-center">
         <div class="row">
             <div class="col-lg-8 col-lg-offset-2">
@@ -69,14 +68,28 @@
 
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="container text-center">
-            <span class="text-muted">Source code on <a href="https://github.com/frankiejol">GitHub</a></span> 
-            <span class="text-muted">& licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html"><img src="https://www.gnu.org/graphics/lgplv3-88x31.png"</a></span>
+  <footer class="footer">
+        <center><div class="container text-center">
+          <div class="row">
+              <p><font size= "3" face = "Montserrat"> Ravada is a free to use, open source VDI project.</font></p>
+              <a href="https://frankiejol.github.io/ravada/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
+              <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg"></a>
+              <a href="https://github.com/frankiejol/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg"></a>
+          </div>
+        </div>
+       </center>
+       <br>
+         <div class="footer-below">
+            <div class="container text-center">
+                <div class="row">
+                    <p><div class="col-lg-12">
+                      <font face = "Montserrat">Copyright &copy; RavadaVDI 2017</font>
+                    </div></p>
+                </div>
+            </div>
         </div>
     </footer>
 
-     
     %= include 'bootstrap/inscripts'
 </body>
 </html>

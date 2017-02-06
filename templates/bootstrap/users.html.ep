@@ -15,15 +15,15 @@
                         <button style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
                         </h2>
                     </div>
-                    
+
                     <sol-show-listusers></sol-show-listusers>
                 </div>
             </div>
             </div>
-        
+
     </div>
     </div>
     %= include 'bootstrap/scripts'
+    %= include 'bootstrap/footer'
 </body>
 </html>
-

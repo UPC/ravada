@@ -17,9 +17,9 @@
                 <div class="panel-heading">
                     <h2><%=l 'Choose a Machine to Start' %></h2>
                 </div>
-                
+
                     <sol-show-cardsmachines></sol-show-cardsmachines>
-                
+
             </div>
         </div>
         </div>
@@ -38,5 +38,7 @@
 </div>
 %= include 'bootstrap/scripts'
 </div>
+
+%= include 'bootstrap/footer'
 </body>
 </html>
