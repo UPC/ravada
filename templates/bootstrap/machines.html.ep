@@ -59,7 +59,7 @@
           ng-mouseover="alert.showMessage = false"
           ng-mouseleave="alert.showMessage = true">
           {{alert.subject}}
-          <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage">
+          <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage" ng-bind-html="alert.message">
             {{alert.message}}
           </div>
         </div>

@@ -504,11 +504,10 @@ sub _send_message {
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
-        ." VALUES ( ?,?,?,?)"
+        ." VALUES ( ?,?,?,?, NULL)"
     );
     $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
         ,$message);
-    warn 'Updating messages: '.$uid.$self->id."Command ".$self->command." $domain_name".$self->status;
     $sth->finish;
 }
 
