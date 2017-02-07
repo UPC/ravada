@@ -1083,12 +1083,11 @@ sub _xml_modify_mac {
     my $n_part = scalar(@macparts) -2;
 
     for (;;) {
-        for my $last ( 0 .. 2 ) {
+        for my $last ( 0 .. 254 ) {
             $last = sprintf("%X", $last);
             $last = "0$last" if length($last)<2;
             $macparts[-1] = $last;
             $new_mac = join(":",@macparts);
-            warn "$new_mac\n";
             if ( $self->_unique_mac($new_mac) ) {
                 $if_mac->setAttribute(address => $new_mac);
                 return;
@@ -1101,7 +1100,6 @@ sub _xml_modify_mac {
             $new_part = 0;
             die "I can't find a new unique mac" if !$n_part<0;
         }
-        warn " $n_part -> ".sprintf("%X",$new_part)."\n";
         $macparts[$n_part] = sprintf("%X", $new_part);
     }
     die "I can't find a new unique mac" if !$new_mac;
