@@ -23,7 +23,6 @@ create_domain
     test_chain_prerouting
     search_id_iso
     flush_rules open_ipt
-    init_ip remote_ip
     remote_config
 );
 
@@ -142,19 +141,24 @@ sub init {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 }
 
-sub init_ip {
-    return if !-e $FILE_CONFIG_REMOTE;
+sub remote_config {
+    my $vm_name = shift;
+    return { } if !-e $FILE_CONFIG_REMOTE;
 
-    open my $in ,'<', $FILE_CONFIG_REMOTE;
-    $REMOTE_IP =<$in>;
-    chomp $REMOTE_IP;
-    close $in;
+    my $conf;
+    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
+    is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
 
-    return $REMOTE_IP;
-}
+    my $remote_conf = $conf->{$vm_name};
+    for my $field ( qw(host user password security)) {
+        delete $remote_conf->{$field};
+    }
+    die "Unknown fields in remote_conf $vm_name, valids are : host user password\n"
+        .Dumper($remote_conf)   if keys %$remote_conf;
 
-sub remote_ip {
-    return ($REMOTE_IP or undef);
+    $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
+    lock_hash(%$remote_conf);
+    return $remote_conf->{$vm_name};
 }
 
 sub remote_config {
