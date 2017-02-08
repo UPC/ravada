@@ -7,6 +7,7 @@ use  Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
+use YAML qw(LoadFile);
 
 use Ravada;
 use Ravada::Auth::SQL;
@@ -22,7 +23,7 @@ create_domain
     test_chain_prerouting
     search_id_iso
     flush_rules open_ipt
-init_ip remote_ip
+    remote_config
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -140,6 +141,7 @@ sub init {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 }
 
+<<<<<<< HEAD
 sub init_ip {
     return if !-e $FILE_CONFIG_REMOTE;
 
@@ -153,6 +155,26 @@ sub init_ip {
 
 sub remote_ip {
     return ($REMOTE_IP or undef);
+=======
+sub remote_config {
+    my $vm_name = shift;
+    return { } if !-e $FILE_CONFIG_REMOTE;
+
+    my $conf;
+    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
+    is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
+
+    my $remote_conf = $conf->{$vm_name};
+    for my $field ( qw(host user password security)) {
+        delete $remote_conf->{$field};
+    }
+    die "Unknown fields in remote_conf $vm_name, valids are : host user password\n"
+        .Dumper($remote_conf)   if keys %$remote_conf;
+
+    $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
+    lock_hash(%$remote_conf);
+    return $remote_conf->{$vm_name};
+>>>>>>> [#108] Store the IP of a remote testing server
 }
 
 sub _remove_old_domains_vm {
