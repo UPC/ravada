@@ -22,15 +22,19 @@ create_domain
     test_chain_prerouting
     search_id_iso
     flush_rules open_ipt
+    init_ip remote_ip
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
+our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
+
 our ($CONNECTOR, $CONFIG);
 
 our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
+our $REMOTE_IP;
 
 my %ARG_CREATE_DOM = (
       kvm => [ id_iso => 1 ]
@@ -136,6 +140,21 @@ sub init {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 }
 
+sub init_ip {
+    return if !-e $FILE_CONFIG_REMOTE;
+
+    open my $in ,'<', $FILE_CONFIG_REMOTE;
+    $REMOTE_IP =<$in>;
+    chomp $REMOTE_IP;
+    close $in;
+
+    return $REMOTE_IP;
+}
+
+sub remote_ip {
+    return ($REMOTE_IP or undef);
+}
+
 sub _remove_old_domains_vm {
     my $vm_name = shift;
 
@@ -178,12 +197,17 @@ sub _remove_old_domains_vm {
 }
 
 sub _remove_old_domains_kvm {
+    my $ip = shift;
 
     my $vm;
     
     eval {
-        my $rvd_back = rvd_back();
-        $vm = $rvd_back->search_vm('KVM');
+        if ($ip) {
+            $vm = Ravada::VM::KVM->new(host => $ip);
+        } else {
+            my $rvd_back = rvd_back();
+            $vm = $rvd_back->search_vm('KVM');
+        }
     };
     diag($@) if $@;
     return if !$vm;
@@ -211,9 +235,11 @@ sub remove_old_domains {
     _remove_old_domains_vm('KVM');
     _remove_old_domains_vm('Void');
     _remove_old_domains_kvm();
+    _remove_old_domains_kvm($REMOTE_IP) if $REMOTE_IP;
 }
 
-sub _remove_old_disks_kvm {
+sub _remove_old_disks_kvm_local {
+
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
@@ -242,6 +268,35 @@ sub _remove_old_disks_kvm {
     $vm->storage_pool->refresh();
 }
 
+sub _remove_old_disks_kvm_remote {
+    my $ip = shift;
+
+    my $name = base_domain_name();
+    confess "Unknown base domain name " if !$name;
+
+    my $vm;
+    if ($ip) {
+        $vm = Ravada::VM::KVM->new(host => $ip);
+    } else {
+        my $rvd_back = rvd_back();
+        $vm = $rvd_back->search_vm('KVM');
+    }
+
+    if (!$vm) {
+        return;
+    }
+#    ok($vm,"I can't find a KVM virtual manager") or return;
+
+    eval { $vm->storage_pool->refresh() };
+    ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
+        ." after refresh storage pool") or return;
+    for my $volume ( $vm->storage_pool->list_all_volumes()) {
+        next if $volume->get_name !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
+        $volume->delete;
+    }
+    $vm->storage_pool->refresh();
+}
+
 sub _remove_old_disks_void {
     my $name = base_domain_name();
 
@@ -261,7 +316,8 @@ sub _remove_old_disks_void {
 
 sub remove_old_disks {
     _remove_old_disks_void();
-    _remove_old_disks_kvm();
+    _remove_old_disks_kvm_remote();
+    _remove_old_disks_kvm_remote($REMOTE_IP)    if $REMOTE_IP;
 }
 
 sub create_user {
