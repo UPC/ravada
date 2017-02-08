@@ -506,7 +506,7 @@ sub _send_message {
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
         ." VALUES ( ?,?,?,?, NULL)"
     );
-    $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
+    $sth->execute($uid, $self->id,$self->command." $domain_name".$self->status
         ,$message);
     $sth->finish;
 }
