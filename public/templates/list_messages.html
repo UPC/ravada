@@ -17,8 +17,8 @@
             </thead>
             <tbody >
                 <tr ng-repeat="message in list_message">
-                    <td><div ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
-                        <div ng-show="{{message.date_read != null}}">{{message.subject}}</div>
+                    <td><div ng-bind-html="message.subject" ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
+                        <div ng-show="{{message.date_read != null}}" ng-bind-html="message.subject">{{message.subject}}</div>
                     </td>
                     
                     <td><div ng-show="{{message.date_read == null}}"><b>{{message.date_send}}</b></div>
