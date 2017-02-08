@@ -502,12 +502,14 @@ sub _send_message {
 
     $self->_remove_unnecessary_messages() if $self->status eq 'done';
 
+    my $subject = $self->command." $domain_name ".$self->status;
+    $subject = $message if $message && $self->status eq 'done';
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
         ." VALUES ( ?,?,?,?, NULL)"
     );
-    $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
-        ,$message);
+    $sth->execute($uid, $self->id,$subject, $message);
     $sth->finish;
 }
 
