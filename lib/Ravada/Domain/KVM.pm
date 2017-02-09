@@ -465,6 +465,28 @@ sub is_paused {
     return 0;
 }
 
+=head2 hibernate
+
+Saves the state of the domain and shuts it down freeing memory
+The domain will be automatically restored when it is next started.
+
+=cut
+
+sub hibernate {
+    my $self = shift;
+    $self->domain->managed_save();
+}
+
+=head2 can_hibernate
+
+Returns wether this domain can be hibernated.
+
+=cut
+
+sub can_hibernate {
+    return 1;
+}
+
 =head2 add_volume
 
 Adds a new volume to the domain
