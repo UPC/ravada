@@ -25,7 +25,3 @@ See [docs/operation.md](https://github.com/frankiejol/ravada/blob/master/docs/op
 ### Testing
 
 See [docs/test.md](https://github.com/frankiejol/ravada/blob/master/docs/test.md)
-
-
-
-##hola
