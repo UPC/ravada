@@ -478,10 +478,9 @@ sub _create_disk_raw {
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
 
-        my @cmd = ('chmod','644'
+        @cmd = ('chmod','644'
                 ,$file_out
         );
-        my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
 
         if (! -e $file_out) {
