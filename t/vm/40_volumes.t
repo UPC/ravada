@@ -146,6 +146,46 @@ sub test_files_base {
 
 }
 
+sub test_domain_2_volumes {
+
+    my $vm_name = shift;
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain2 = test_create_domain($vm_name);
+    test_add_volume($vm, $domain2, 'vdb');
+
+    my @volumes = $domain2->list_volumes;
+    ok(scalar @volumes == 2
+        ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
+
+    test_prepare_base($vm_name, $domain2);
+    test_files_base($vm_name, $domain2, \@volumes);
+
+    my $domain2_clone = test_clone($vm_name, $domain2);
+    
+    test_add_volume($vm, $domain2, 'vdc');
+
+    @volumes = $domain2->list_volumes;
+    ok(scalar @volumes == 3
+        ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
+
+
+    $domain2 = undef;
+}
+
+sub test_domain_1_volume {
+    my $vm_name = shift;
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    ok($domain->disk_size
+            ,"Expecting domain disk size something, got :".($domain->disk_size or '<UNDEF>'));
+    test_prepare_base($vm_name, $domain);
+    my $domain_clone = test_clone($vm_name, $domain);
+    $domain = undef;
+    $domain_clone = undef;
+
+}
 #######################################################################33
 
 remove_old_domains();
@@ -166,44 +206,9 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        ################################################################
-        #
-        # Domain with 1 volume
-        #
-        my $domain = test_create_domain($vm_name);
-        ok($domain->disk_size
-            ,"Expecting domain disk size something, got :".($domain->disk_size or '<UNDEF>'));
-        test_prepare_base($vm_name, $domain);
-        my $domain_clone = test_clone($vm_name, $domain);
-        $domain = undef;
-        $domain_clone = undef;
+        test_domain_1_volume($vm_name);
+        test_domain_2_volumes($vm_name);
 
-        ################################################################
-        #
-        # Domain with more than 1 volume
-        #
-
-        my $domain2 = test_create_domain($vm_name);
-        test_add_volume($vm, $domain2, 'vdb');
-
-        my @volumes = $domain2->list_volumes;
-        ok(scalar @volumes == 2
-            ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
-
-        test_prepare_base($vm_name, $domain2);
-        test_files_base($vm_name, $domain2, \@volumes);
-
-        my $domain2_clone = test_clone($vm_name, $domain2);
-        
-        test_add_volume($vm, $domain2, 'vdc');
-
-        @volumes = $domain2->list_volumes;
-        ok(scalar @volumes == 3
-            ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
-
-
-        $domain2 = undef;
-        $domain_clone = undef;
     }
 }
 
