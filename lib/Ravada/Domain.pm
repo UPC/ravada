@@ -752,6 +752,29 @@ sub _post_shutdown {
 
 }
 
+=head2 add_volume_swap
+
+Adds a swap volume to the virtual machine
+
+Arguments:
+
+    size => $kb
+    name => $name (optional)
+
+=cut
+
+sub add_volume_swap {
+    my $self = shift;
+    my %arg = @_;
+
+    $arg{name} = Ravada::Utils::random_name() if !$arg{name};
+    $self->add_volume(%arg, swap => 1);
+}
+
+sub image_swap_suffix {
+    return ".SWAP.img";
+}
+
 sub _remove_iptables {
     my $self = shift;
 
