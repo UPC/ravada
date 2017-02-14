@@ -254,13 +254,17 @@ sub list_domains {
 
 Creates a new storage volume. It requires a name and a xml template file defining the volume
 
-   my $vol = $vm->create_volume($name, $file_xml);
+   my $vol = $vm->create_volume(name => $name, name => $file_xml);
 
 =cut
 
 sub create_volume {
     my $self = shift;
-    my ($name, $file_xml, $size) = @_;
+
+    confess "Wrong arrs " if scalar @_ % 2;
+    my %args = @_;
+
+    my ($name, $file_xml, $size,$swap) = @args{qw(name xml size swap)};
 
     confess "Missing volume name"   if !$name;
     confess "Missing xml template"  if !$file_xml;
@@ -273,10 +277,12 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
+    my $suffix = ".img";
+    $suffix = ".SWAP.img"   if $args{swap};
     my (undef, $img_file) = tempfile("${name}-XXXX"
         ,DIR => $dir_img
         ,OPEN => 0
-        ,SUFFIX => '.img'
+        ,SUFFIX => $suffix
     );
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
@@ -341,8 +347,11 @@ sub _domain_create_from_iso {
     my $device_cdrom = _iso_name($iso, $args{request});
 
     my $disk_size = $args{disk} if $args{disk};
-    my $device_disk = $self->create_volume($args{name}, $DIR_XML."/".$iso->{xml_volume}
-                                            , $disk_size);
+    my $device_disk = $self->create_volume(
+          name => $args{name}
+         , xml =>  $DIR_XML."/".$iso->{xml_volume}
+        , size => $disk_size
+    );
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
@@ -399,17 +408,6 @@ sub _create_disk {
     return _create_disk_qcow2(@_);
 }
 
-sub _random_name {
-    my $length = shift;
-    my $ret = '';
-    my $max = ord('z') - ord('a');
-    for ( 0 .. $length ) {
-        my $n = int rand($max + 1);
-        $ret .= chr(ord('a') + $n);
-    }
-    return $ret;
-
-}
 
 sub _create_disk_qcow2 {
     my $self = shift;
@@ -448,6 +446,8 @@ sub _create_disk_qcow2 {
     return @files_out;
     
 }
+
+sub _random_name { return Ravada::Utils::random_name(@_); };
 
 sub _search_domain_by_id {
     my $self = shift;
