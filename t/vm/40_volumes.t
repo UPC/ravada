@@ -186,6 +186,27 @@ sub test_domain_1_volume {
     $domain_clone = undef;
 
 }
+
+sub test_domain_swap {
+    my $vm_name = shift;
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    $domain->add_volume_swap( size => 128*1024*1024 );
+
+    ok(grep(/SWAP/,$domain->list_volumes),"Expecting a swap file, got :"
+            .join(" , ",$domain->list_volumes));
+
+    test_prepare_base($vm_name, $domain);
+    for my $file_base ( $domain->list_files_base ) {
+        diag($file_base);
+        next if $file_base !~ /SWAP/;
+        ok(!-e $file_base,"Expecting no file base created for $file_base") or exit;
+    }
+    my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
+    $domain = undef;
+    $domain_clone = undef;
+}
 #######################################################################33
 
 remove_old_domains();
@@ -208,6 +229,7 @@ for my $vm_name (reverse sort @VMS) {
 
         test_domain_1_volume($vm_name);
         test_domain_2_volumes($vm_name);
+        test_domain_swap($vm_name);
 
     }
 }
