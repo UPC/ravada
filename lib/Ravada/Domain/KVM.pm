@@ -270,7 +270,7 @@ sub _create_qcow_base {
             if !-e $base_img;
         my $qcow_img = $base_img;
 
-        if ($base_img =~ /SWAP.*raw$/) {
+        if ($base_img =~ /SWAP\.img$/) {
             push @qcow_img,($base_img);
             next;
         }
@@ -505,18 +505,23 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm xml));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
             if !$valid_arg{$arg_name};
     }
-    confess "Missing vm"    if !$args{vm};
+#    confess "Missing vm"    if !$args{vm};
+    $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
     $args{xml} = 'etc/xml/default-volume.xml'    if !$args{xml};
 
-    my $path = $args{vm}->create_volume($args{name}, $args{xml}
-        ,($args{size} or undef));
+    my $path = $args{vm}->create_volume(
+        name => $args{name}
+        ,xml =>  $args{xml}
+        ,swap => ($args{swap} or 0)
+        ,size => ($args{size} or undef)
+    );
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
@@ -524,9 +529,12 @@ sub add_volume {
     my $target_dev = $self->_new_target_dev();
     my $pci_slot = $self->_new_pci_slot();
     
+    my $driver_type = 'qcow2';
+    $driver_type = 'raw' if $args{swap};
+
     my $xml_device =<<EOT;
     <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
+      <driver name='qemu' type='$driver_type'/>
       <source file='$path'/>
       <backingStore/>
       <target bus='virtio' dev='$target_dev'/>
@@ -538,6 +546,8 @@ EOT
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
     die $@."\n".$self->domain->get_xml_description if$@;
 }
+
+
 
 sub _new_target_dev {
     my $self = shift;
