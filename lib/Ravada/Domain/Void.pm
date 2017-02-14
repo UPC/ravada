@@ -144,9 +144,11 @@ sub prepare_base {
     for my $file_qcow ($self->list_volumes) {;
         $file_qcow .= ".qcow";
 
-        open my $out,'>',$file_qcow or die "$! $file_qcow";
-        print $out "$file_qcow\n";
-        close $out;
+        if ( $file_qcow !~ /.SWAP.img.qcow$/ ) {
+            open my $out,'>',$file_qcow or die "$! $file_qcow";
+            print $out "$file_qcow\n";
+            close $out;
+        }
         $self->_prepare_base_db($file_qcow);
     }
 }
@@ -184,15 +186,18 @@ sub remove_disks {
 
 Adds a new volume to the domain
 
-    $domain->add_volume($size);
+    $domain->add_volume(size => $size);
 
 =cut
 
 sub add_volume {
     my $self = shift;
+    confess "Wrong arguments " if scalar@_ % 1;
     my %args = @_;
 
-    $args{path} = "$DIR_TMP/".$self->name.".$args{name}.img"
+    my $suffix = ".img";
+    $suffix = image_swap_suffix() if $args{swap};
+    $args{path} = "$DIR_TMP/".$self->name.".$args{name}$suffix"
         if !$args{path};
 
     confess "Volume path must be absolute , it is '$args{path}'"
@@ -201,7 +206,7 @@ sub add_volume {
 
     return if -e $args{path};
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type));
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
