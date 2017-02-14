@@ -184,7 +184,7 @@ sub _remove_file_image {
         eval { $self->_vol_remove($file,1) };
 
         if ( -e $file ) {
-            eval { 
+            eval {
                 unlink $file or die "$! $file" ;
                 $self->storage->refresh();
             };
@@ -197,7 +197,7 @@ sub _remove_file_image {
 
 sub _disk_device {
     my $self = shift;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
     my @img;
@@ -227,7 +227,7 @@ sub _disk_devices_xml {
     my $self = shift;
 
     my $doc = XML::LibXML->load_xml(string => $self->domain
-                                        ->get_xml_description) 
+                                        ->get_xml_description)
         or die "ERROR: $!\n";
 
     my @devices;
@@ -266,10 +266,12 @@ sub _create_qcow_base {
     my $base_name = $self->name;
     for  my $base_img ( $self->list_volumes()) {
 
+      next if $base_img =~ 'swap';
+
         confess "ERROR: missing $base_img"
             if !-e $base_img;
         my $qcow_img = $base_img;
-    
+
         $qcow_img =~ s{\.\w+$}{\.ro.qcow2};
 
         push @qcow_img,($qcow_img);
@@ -296,6 +298,46 @@ sub _create_qcow_base {
 
 }
 
+sub _create_swap_base {
+    my $self = shift;
+
+    my @swap_img;
+
+    my $base_name = $self->name;
+    for  my $base_img ( $self->list_volumes()) {
+
+      next unless $base_img =~ 'swap';
+
+        confess "ERROR: missing $base_img"
+            if !-e $base_img;
+        my $swap_img = $base_img;
+
+        $swap_img =~ s{\.\w+$}{\.ro.img};
+
+        push @swap_img,($swap_img);
+
+        my @cmd = ('qemu-img','convert',
+                '-O','raw', $base_img
+                ,$swap_img
+        );
+
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        warn $out if $out;
+        warn $err if $err;
+
+        if (! -e $swap_img) {
+            warn "ERROR: Output file $swap_img not created at ".join(" ",@cmd)."\n";
+            exit;
+        }
+
+        chmod 0555,$swap_img;
+        $self->_prepare_base_db($swap_img);
+    }
+    return @swap_img;
+
+}
+
 =head2 prepare_base
 
 Prepares a base virtual machine with this domain disk
@@ -306,7 +348,9 @@ Prepares a base virtual machine with this domain disk
 sub prepare_base {
     my $self = shift;
 
-    return $self->_create_qcow_base();
+    my @img = $self->_create_swap_base();
+    push @img, $self->_create_qcow_base();
+    return @img;
 }
 
 =head2 display
@@ -319,7 +363,7 @@ sub display {
     my $self = shift;
 
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-    my ($graph) = $xml->findnodes('/domain/devices/graphics') 
+    my ($graph) = $xml->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
 
     my ($type) = $graph->getAttribute('type');
@@ -380,7 +424,7 @@ sub shutdown {
 sub _do_shutdown {
     my $self = shift;
     my ($timeout, $req) = @_;
-    
+
     $timeout = $TIMEOUT_SHUTDOWN if !defined $timeout;
 
     $self->domain->shutdown();
@@ -447,14 +491,14 @@ sub is_paused {
     my $self = shift;
     my ($state, $reason) = $self->domain->get_state();
 
-   
+
 
     return 0 if $state == 1;
     #TODO, find out which one of those id "1" and remove it from this list
     #
-    return $state && 
-        ($state == Sys::Virt::Domain::STATE_PAUSED_UNKNOWN 
-        || $state == Sys::Virt::Domain::STATE_PAUSED_USER 
+    return $state &&
+        ($state == Sys::Virt::Domain::STATE_PAUSED_UNKNOWN
+        || $state == Sys::Virt::Domain::STATE_PAUSED_USER
         || $state == Sys::Virt::Domain::STATE_PAUSED_DUMP
         || $state == Sys::Virt::Domain::STATE_PAUSED_FROM_SNAPSHOT
         || $state == Sys::Virt::Domain::STATE_PAUSED_IOERROR
@@ -496,7 +540,7 @@ sub add_volume {
 #
     my $target_dev = $self->_new_target_dev();
     my $pci_slot = $self->_new_pci_slot();
-    
+
     my $xml_device =<<EOT;
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
@@ -515,7 +559,7 @@ EOT
 sub _new_target_dev {
     my $self = shift;
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
     my %target;
@@ -542,7 +586,7 @@ sub _new_target_dev {
 sub _new_pci_slot{
     my $self = shift;
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
     my %target;
@@ -885,12 +929,22 @@ sub spinoff_volumes {
         unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
             if -e $volume_tmp;
 
-        my @cmd = ('qemu-img'
-            ,'convert'
-            ,'-O','qcow2'
-            ,$volume
-            ,$volume_tmp
-        );
+        my @cmd;
+        if ($volume =~ 'swap') {
+          @cmd = ('qemu-img'
+              ,'convert'
+              ,'-O','raw'
+              ,$volume
+              ,$volume_tmp
+          );
+        } else {
+          @cmd = ('qemu-img'
+              ,'convert'
+              ,'-O','qcow2'
+              ,$volume
+              ,$volume_tmp
+          );
+        }
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;

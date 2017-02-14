@@ -63,7 +63,7 @@ our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##########################################################################
- 
+
 
 sub _connect {
     my $self = shift;
@@ -139,7 +139,7 @@ Returns the directory where disk images are stored in this Virtual Manager
 sub dir_img {
     my $self = shift;
     return $DEFAULT_DIR_IMG if $DEFAULT_DIR_IMG;
-    
+
     $self->_load_storage_pool();
     return $DEFAULT_DIR_IMG;
 }
@@ -158,7 +158,7 @@ sub create_domain {
     my %args = @_;
 
     $args{active} = 1 if !defined $args{active};
-    
+
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
     croak "argument id_iso or id_base required ".Dumper(\%args)
@@ -199,7 +199,7 @@ sub search_domain {
         my $domain;
 
         my @args_create = ();
-        @args_create = ( 
+        @args_create = (
                     _vm => $self)
         if !$self->readonly;
 
@@ -323,7 +323,7 @@ sub _domain_create_from_iso {
     my %args = @_;
 
     for (qw(id_iso id_owner name)) {
-        croak "argument $_ required" 
+        croak "argument $_ required"
             if !$args{$_};
     }
 
@@ -388,7 +388,7 @@ sub _domain_create_common {
 
     my $domain = Ravada::Domain::KVM->new(
               _vm => $self
-         , domain => $dom 
+         , domain => $dom
         , storage => $self->storage_pool
     );
 
@@ -397,6 +397,10 @@ sub _domain_create_common {
 
 sub _create_disk {
     return _create_disk_qcow2(@_);
+}
+
+sub _create_swap_disk {
+    return _create_disk_raw(@_);
 }
 
 sub _random_name {
@@ -423,6 +427,7 @@ sub _create_disk_qcow2 {
     my @files_out;
 
     for my $file_base ( $base->list_files_base ) {
+      next if $file_base =~ 'swap';
         my $file_out = $file_base;
         $file_out =~ s/\.ro\.\w+$//;
         $file_out .= ".$name."._random_name(4).".qcow2";
@@ -446,7 +451,47 @@ sub _create_disk_qcow2 {
         push @files_out,($file_out);
     }
     return @files_out;
-    
+
+}
+
+sub _create_disk_raw {
+    my $self = shift;
+    my ($base, $name) = @_;
+
+    confess "Missing base" if !$base;
+    confess "Missing name" if !$name;
+
+    my $dir_img  = $DEFAULT_DIR_IMG;
+
+    my @files_out;
+
+    for my $file_base ( $base->list_files_base ) {
+      next unless $file_base =~ 'swap';
+        my $file_out = $file_base;
+        $file_out =~ s/\.ro\.\w+$//;
+        $file_out .= ".$name."._random_name(4).".img";
+
+        my @cmd = ('cp','-a'
+                ,$file_base
+                ,$file_out
+        );
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+
+        my @cmd = ('chmod','644'
+                ,$file_out
+        );
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+
+        if (! -e $file_out) {
+            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
+            exit;
+        }
+        push @files_out,($file_out);
+    }
+    return @files_out;
+
 }
 
 sub _search_domain_by_id {
@@ -465,7 +510,7 @@ sub _domain_create_from_base {
     my $self = shift;
     my %args = @_;
 
-    confess "argument id_base or base required ".Dumper(\%args) 
+    confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
     die "Domain $args{name} already exists"
@@ -482,13 +527,14 @@ sub _domain_create_from_base {
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
     my @device_disk = $self->_create_disk($base, $args{name});
+    my @swap_disk = $self->_create_swap_disk($base,$args{name});
     $self->storage_pool->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
-    _xml_modify_disk($xml, \@device_disk);
+    _xml_modify_disk($xml, \@device_disk, \@swap_disk);
 
     my $domain = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
@@ -498,7 +544,7 @@ sub _domain_create_from_base {
 sub _fix_pci_slots {
     my $self = shift;
     my $doc = shift;
-  
+
     my %dupe = ("0x01/0x1" => 1); #reserved por IDE PCI
     my ($all_devices) = $doc->findnodes('/domain/devices');
 
@@ -515,7 +561,7 @@ sub _fix_pci_slots {
             my $slot = $child->getAttribute('slot');
             next if !defined $slot;
             next if !$dupe{"$bus/$slot"}++;
-    
+
             my $new_slot = $slot;
             for (;;) {
                 last if !$dupe{"$bus/$new_slot"};
@@ -679,7 +725,7 @@ sub _xml_modify_video {
     $video->setAttribute( vram => 65536 );
     $video->setAttribute( vgamem => 16384 );
     $video->setAttribute( heads => 1 );
-    
+
     warn "WARNING: more than one video card found\n".
         $video->toString().$video2->toString()  if $video2;
 
@@ -689,7 +735,7 @@ sub _xml_modify_spice_port {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
-    my ($graph) = $doc->findnodes('/domain/devices/graphics') 
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
@@ -812,7 +858,7 @@ sub _xml_add_usb_redirect {
         ,type => 'spicevmc'
     );
     return if $dev;
-    
+
     $dev = $devices->addNewChild(undef,'redirdev');
     $dev->setAttribute( bus => 'usb');
     $dev->setAttribute(type => 'spicevmc');
@@ -829,11 +875,11 @@ sub _search_xml {
 
     confess "Undefined xml => \$xml"
         if !$xml;
- 
+
     for my $item ( $xml->findnodes($name) ) {
         my $missing = 0;
         for my $attr( sort keys %arg ) {
-           $missing++ 
+           $missing++
                 if !$item->getAttribute($attr)
                     || $item->getAttribute($attr) ne $arg{$attr}
         }
@@ -1019,26 +1065,42 @@ sub _xml_remove_cdrom {
 }
 
 sub _xml_modify_disk {
-    my $doc = shift;
-    my $device = shift          or confess "Missing device";
+  my $doc = shift;
+  my $device = shift          or confess "Missing device";
+  my $swap = shift;
 
-#  <source file="/var/export/vmimgs/ubuntu-mate.img" dev="/var/export/vmimgs/clone01.qcow2"/>
+  #  <source file="/var/export/vmimgs/ubuntu-mate.img" dev="/var/export/vmimgs/clone01.qcow2"/>
 
-    my $cont = 0;
-    for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
+  my $cont = 0;
+  my $cont_swap = 0;
+  for my $disk ($doc->findnodes('/domain/devices/disk')) {
+    next if $disk->getAttribute('device') ne 'disk';
 
+    for my $child ($disk->childNodes) {
+      if ($child->nodeName eq 'source' && $child->getAttribute('file') =~ 'swap') {
         for my $child ($disk->childNodes) {
-            if ($child->nodeName eq 'driver') {
-                $child->setAttribute(type => 'qcow2');
-            } elsif ($child->nodeName eq 'source') {
-                my $new_device = $device->[$cont++] or confess "Missing device $cont "
-                    .Dumper($device);
-                $child->setAttribute(file => $new_device);
-            }
+          if ($child->nodeName eq 'driver') {
+            $child->setAttribute(type => 'raw');
+            $child->setAttribute(cache => 'none');
+          } elsif ($child->nodeName eq 'source') {
+            my $new_swap = $swap->[$cont_swap++] or confess "Missing swap device $cont_swap "
+            .Dumper($swap);
+            $child->setAttribute(file => $new_swap);
+          }
         }
+      } elsif ($child->nodeName eq 'source' && $child->getAttribute('file') !~ 'swap') {
+        for my $child ($disk->childNodes) {
+          if ($child->nodeName eq 'driver') {
+            $child->setAttribute(type => 'qcow2');
+          } elsif ($child->nodeName eq 'source') {
+            my $new_device = $device->[$cont++] or confess "Missing device $cont "
+            .Dumper($device);
+            $child->setAttribute(file => $new_device);
+          }
+        }
+      }
     }
-
+  }
 }
 
 sub _unique_mac {
@@ -1061,11 +1123,11 @@ sub _unique_mac {
 
 sub _new_uuid {
     my $uuid = shift;
-    
+
     my ($principi, $f1,$f2) = $uuid =~ /(.*)(.)(.)/;
 
     return $principi.int(rand(10)).int(rand(10));
-    
+
 }
 
 sub _xml_modify_mac {
@@ -1098,7 +1160,7 @@ Returns a list of networks known to this VM. Each element is a Ravada::NetInterf
 
 sub list_networks {
     my $self = shift;
-    
+
     $self->connect() if !$self->vm;
     my @nets = $self->vm->list_all_networks();
     my @ret_nets;
@@ -1139,7 +1201,7 @@ sub import_domain {
 
     my $domain = Ravada::Domain::KVM->new(
                       _vm => $self
-                  ,domain => $domain_kvm 
+                  ,domain => $domain_kvm
                 , storage => $self->storage_pool
     );
 
