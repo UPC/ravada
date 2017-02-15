@@ -265,13 +265,13 @@ sub _create_qcow_base {
 
     my $base_name = $self->name;
     for  my $base_img ( $self->list_volumes()) {
-
+        warn $base_img;
         confess "ERROR: missing $base_img"
             if !-e $base_img;
         my $qcow_img = $base_img;
 
         if ($base_img =~ /SWAP\.img$/) {
-            push @qcow_img,($base_img);
+            push @qcow_img,("$base_img.raw");
             next;
         }
     
@@ -281,7 +281,6 @@ sub _create_qcow_base {
 
         my @cmd = _cmd_convert($base_img, $qcow_img);
 
-        warn join(" ",@cmd)."\n";
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
@@ -293,8 +292,9 @@ sub _create_qcow_base {
         }
 
         chmod 0555,$qcow_img;
-        $self->_prepare_base_db($qcow_img);
     }
+    $self->_prepare_base_db(@qcow_img);
+    warn Dumper(\@qcow_img);
     return @qcow_img;
 
 }
