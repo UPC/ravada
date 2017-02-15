@@ -26,7 +26,7 @@ my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 our $VERSION_TYPE = "--beta";
 
-plugin Config => { file => 'rvd_front.conf' };
+my $CONFIG_FRONT = plugin Config => { file => 'rvd_front.conf' };
 #####
 #####
 #####
@@ -530,6 +530,10 @@ sub login {
                         ,url => $url
                       ,login => $login
                       ,error => \@error
+                      ,login_header => ($CONFIG_FRONT->{login_header}
+                                            or 'Login')
+                    ,login_message => ($CONFIG_FRONT->{login_message}
+                                            or '')
     );
 
 }
