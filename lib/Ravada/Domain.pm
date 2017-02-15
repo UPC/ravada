@@ -387,7 +387,7 @@ sub _select_domain_db {
 
 sub _prepare_base_db {
     my $self = shift;
-    my $file_img = shift;
+    my @file_img = shift;
 
     if (!$self->_select_domain_db) {
         confess "CRITICAL: The data should be already inserted";
@@ -398,7 +398,9 @@ sub _prepare_base_db {
         ." (id_domain , file_base_img )"
         ." VALUES(?,?)"
     );
-    $sth->execute($self->id, $file_img );
+    for my $file_img (@file_img) {
+        $sth->execute($self->id, $file_img );
+    }
     $sth->finish;
 
     $sth = $$CONNECTOR->dbh->prepare(
