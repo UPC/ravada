@@ -424,7 +424,7 @@ sub _create_disk_qcow2 {
     my @files_out;
 
     for my $file_base ( $base->list_files_base ) {
-      next if $file_base =~ 'swap';
+      next if $file_base =~ m{\.SWAP\.img$};
         my $file_out = $file_base;
         $file_out =~ s/\.ro\.\w+$//;
         $file_out .= ".$name."._random_name(4).".qcow2";
