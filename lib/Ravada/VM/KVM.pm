@@ -1032,8 +1032,10 @@ sub _xml_modify_disk {
             if ($child->nodeName eq 'driver') {
                 $child->setAttribute(type => 'qcow2');
             } elsif ($child->nodeName eq 'source') {
-                my $new_device = $device->[$cont++] or confess "Missing device $cont "
-                    .Dumper($device);
+                my $new_device = $device->[$cont++] 
+                    or confess "Missing device $cont "
+                        .$child->toString."\n"
+                        .Dumper($device);
                 $child->setAttribute(file => $new_device);
             }
         }
