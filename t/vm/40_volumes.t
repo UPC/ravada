@@ -85,14 +85,14 @@ sub test_prepare_base {
 #    diag("[$vm_name] preparing base for domain ".$domain->name);
     my @img;
     eval {@img = $domain->prepare_base( $USER) };
-    ok(!$@, $@);
-    ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
 #    diag("[$vm_name] ".Dumper(\@img));
 
 
     my @files_base= $domain->list_files_base();
-    ok(scalar @files_base == scalar @volumes, "[$vm_name] Domain ".$domain->name
-        ." expecting ".scalar @volumes." files base, got ".scalar(@files_base)) or exit;
+    return(scalar @files_base == scalar @volumes
+        , "[$vm_name] Domain ".$domain->name
+            ." expecting ".scalar @volumes." files base, got "
+            .scalar(@files_base));
 
 }
 
@@ -158,7 +158,9 @@ sub test_domain_2_volumes {
     ok(scalar @volumes == 2
         ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
 
-    test_prepare_base($vm_name, $domain2);
+    ok(test_prepare_base($vm_name, $domain2));
+    ok($domain2->is_base,"[$vm_name] Domain ".$domain2->name
+        ." sould be base");
     test_files_base($vm_name, $domain2, \@volumes);
 
     my $domain2_clone = test_clone($vm_name, $domain2);
@@ -169,8 +171,6 @@ sub test_domain_2_volumes {
     ok(scalar @volumes == 3
         ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
 
-
-    $domain2 = undef;
 }
 
 sub test_domain_1_volume {
@@ -181,6 +181,7 @@ sub test_domain_1_volume {
     ok($domain->disk_size
             ,"Expecting domain disk size something, got :".($domain->disk_size or '<UNDEF>'));
     test_prepare_base($vm_name, $domain);
+    ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
     my $domain_clone = test_clone($vm_name, $domain);
     $domain = undef;
     $domain_clone = undef;
@@ -198,10 +199,18 @@ sub test_domain_swap {
             .join(" , ",$domain->list_volumes));
 
     test_prepare_base($vm_name, $domain);
+    ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
     for my $file_base ( $domain->list_files_base ) {
-        diag($file_base);
-        next if $file_base !~ /SWAP/;
-        ok(!-e $file_base,"Expecting no file base created for $file_base") or exit;
+        if ( $file_base !~ /SWAP/) {
+            ok(-e $file_base,
+                "Expecting file base created for $file_base")
+            or exit;
+        } else {
+            ok(!-e $file_base
+                ,"Expecting no file base created for $file_base")
+            or exit;
+        }
+;
     }
     my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
     $domain = undef;
@@ -227,9 +236,10 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        test_domain_swap($vm_name);
+        next;
         test_domain_1_volume($vm_name);
         test_domain_2_volumes($vm_name);
-        test_domain_swap($vm_name);
 
     }
 }
