@@ -269,9 +269,7 @@ sub _create_qcow_base {
             if !-e $base_img;
         my $qcow_img = $base_img;
 
-        warn $base_img;
         if ($base_img =~ /\.SWAP\.img$/) {
-            warn "swap";
             $qcow_img =~ s/(SWAP\.img$)/base.$1/;
             push @qcow_img,($qcow_img);
             next;
@@ -288,14 +286,14 @@ sub _create_qcow_base {
         warn $err   if $err;
 
         if (! -e $qcow_img) {
-            warn "ERROR: Output file $qcow_img not created at ".join(" ",@cmd)."\n";
+            warn "ERROR: Output file $qcow_img not created at "
+                .join(" ",@cmd);
             exit;
         }
 
         chmod 0555,$qcow_img;
     }
     $self->_prepare_base_db(@qcow_img);
-    warn Dumper(\@qcow_img);
     return @qcow_img;
 
 }
@@ -968,27 +966,19 @@ sub spinoff_volumes {
         unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
             if -e $volume_tmp;
 
-        my @cmd;
-        if ($volume =~ 'swap') {
-          @cmd = ('qemu-img'
-              ,'convert'
-              ,'-O','raw'
-              ,$volume
-              ,$volume_tmp
-          );
-        } else {
-          @cmd = ('qemu-img'
+        next if $volume =~ /.SWAP.img$/;
+        my @cmd = ('qemu-img'
               ,'convert'
               ,'-O','qcow2'
               ,$volume
               ,$volume_tmp
-          );
-        }
+        );
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
         warn $err   if $err;
-        die "ERROR: Output file $volume_tmp not created at ".join(" ",@cmd)."\n"
+        die "ERROR: Temporary output file $volume_tmp not created at "
+                .join(" ",@cmd)."\n"
             if (! -e $volume_tmp );
 
         copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
