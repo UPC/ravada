@@ -387,7 +387,7 @@ sub _select_domain_db {
 
 sub _prepare_base_db {
     my $self = shift;
-    my @file_img = shift;
+    my @file_img = @_;
 
     if (!$self->_select_domain_db) {
         confess "CRITICAL: The data should be already inserted";
