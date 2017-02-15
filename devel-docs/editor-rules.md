@@ -7,9 +7,18 @@ follow a minimun configuration rules.
 - expand tabs to spaces
 - one tab are 4 spaces
 
+Highlight unwanted spaces
+-------------------------
+Please, don't remove unwanted spaces if aren't yours. Highlight them with these tips: http://vim.wikia.com/wiki/Highlight_unwanted_spaces
+
+
+
 Vim Example
 -----------
 Set those options in your .vimrc to match ours
 
     set tabstop=4
     set expandtab
+    "hightlight unwanted spaces
+    highlight ExtraWhitespace ctermbg=red guibg=red
+    match ExtraWhitespace /\s\+$/
