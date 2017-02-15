@@ -471,7 +471,6 @@ sub _create_disk_raw {
 
         push @files_out,($file_out);
     }
-    die Dumper(\@files_out);
     return @files_out;
 
 }
