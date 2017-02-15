@@ -26,7 +26,12 @@ my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 our $VERSION_TYPE = "--beta";
 
-my $CONFIG_FRONT = plugin Config => { file => 'rvd_front.conf' };
+my $CONFIG_FRONT = plugin Config => { default => {
+                                                hypnotoad => {
+                                                pid_file => 'log/rvd_front.pid'
+                                                ,listen => ['http://*:8081']}
+                                              }
+                                      ,file => 'rvd_front.conf' };
 #####
 #####
 #####
