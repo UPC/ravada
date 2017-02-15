@@ -241,7 +241,6 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         test_domain_swap($vm_name);
-        next;
         test_domain_1_volume($vm_name);
         test_domain_2_volumes($vm_name);
 
