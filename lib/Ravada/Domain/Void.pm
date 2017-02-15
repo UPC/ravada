@@ -142,14 +142,16 @@ sub prepare_base {
     my $self = shift;
 
     for my $file_qcow ($self->list_volumes) {;
-        $file_qcow .= ".qcow";
+        my $file_base = $file_qcow.".qcow";
 
-        if ( $file_qcow !~ /.SWAP.img.qcow$/ ) {
-            open my $out,'>',$file_qcow or die "$! $file_qcow";
+        if ( $file_qcow =~ /.SWAP.img$/ ) {
+            $file_base = "$file_qcow.raw";
+        } else {
+            open my $out,'>',$file_base or die "$! $file_base";
             print $out "$file_qcow\n";
             close $out;
         }
-        $self->_prepare_base_db($file_qcow);
+        $self->_prepare_base_db($file_base);
     }
 }
 
