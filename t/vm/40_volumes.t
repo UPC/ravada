@@ -200,6 +200,10 @@ sub test_domain_swap {
 
     test_prepare_base($vm_name, $domain);
     ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
+
+    my @files_base = $domain->list_files_base();
+    ok(scalar(@files_base) == 2,"Expecting 2 files base "
+        .Dumper(\@files_base)) or exit;
     for my $file_base ( $domain->list_files_base ) {
         if ( $file_base !~ /SWAP/) {
             ok(-e $file_base,

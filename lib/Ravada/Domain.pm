@@ -769,7 +769,7 @@ sub add_volume_swap {
     my $self = shift;
     my %arg = @_;
 
-    $arg{name} = Ravada::Utils::random_name() if !$arg{name};
+    $arg{name} = $self->name if !$arg{name};
     $self->add_volume(%arg, swap => 1);
 }
 
