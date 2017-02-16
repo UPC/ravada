@@ -30,6 +30,7 @@ my $USER = create_user("foo","bar");
 
 sub test_create_domain {
     my $vm_name = shift;
+    my $create_swap = shift;
 
     my $ravada = Ravada->new(@ARG_RVD);
     my $vm = $ravada->search_vm($vm_name);
@@ -41,13 +42,15 @@ sub test_create_domain {
         diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
         return;
     }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
+    my @arg_create = (@{$ARG_CREATE_DOM{$vm_name}}
+        ,id_owner => $USER->id
+        ,name => $name
+    );
+    push @arg_create, (swap => 128*1024*1024)   if $create_swap;
+    warn Dumper(\@arg_create);
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
-                    , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
-    };
+    eval { $domain = $vm->create_domain(@arg_create) };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
     ok($domain->name
@@ -188,12 +191,22 @@ sub test_domain_1_volume {
 
 }
 
+sub test_domain_create_with_swap {
+    test_domain_swap(@_,1);
+}
+
 sub test_domain_swap {
     my $vm_name = shift;
+    my $create_swap = (shift or 0);
+
     my $vm = $RVD_BACK->search_vm($vm_name);
 
-    my $domain = test_create_domain($vm_name);
-    $domain->add_volume_swap( size => 128*1024*1024 );
+    diag("[$vm_name] creating domain create_swp:$create_swap");
+    my $domain = test_create_domain($vm_name, $create_swap);
+    if ( !$create_swap ) {
+        diag("adding swap volume");
+        $domain->add_volume_swap( size => 128*1024*1024 );
+    }
 
     ok(grep(/SWAP/,$domain->list_volumes),"Expecting a swap file, got :"
             .join(" , ",$domain->list_volumes));
@@ -281,6 +294,7 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         test_domain_swap($vm_name);
+        test_domain_create_with_swap($vm_name);
         test_domain_1_volume($vm_name);
         test_domain_2_volumes($vm_name);
 
