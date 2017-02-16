@@ -1073,10 +1073,8 @@ sub create_swap_disk {
         ,$path
         ,"$size"
     );
-    warn join(" ",@cmd)."\n";
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);
-    warn $out  if $out;
     warn $err   if $err;
 
     if (! -e $path) {
