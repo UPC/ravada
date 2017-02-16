@@ -362,7 +362,6 @@ sub _domain_create_from_iso {
     my $domain = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
 
-    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
     return $domain;
 }
 
