@@ -47,7 +47,6 @@ sub test_create_domain {
         ,name => $name
     );
     push @arg_create, (swap => 128*1024*1024)   if $create_swap;
-    warn Dumper(\@arg_create);
 
     my $domain;
     eval { $domain = $vm->create_domain(@arg_create) };
@@ -201,10 +200,8 @@ sub test_domain_swap {
 
     my $vm = $RVD_BACK->search_vm($vm_name);
 
-    diag("[$vm_name] creating domain create_swp:$create_swap");
     my $domain = test_create_domain($vm_name, $create_swap);
     if ( !$create_swap ) {
-        diag("adding swap volume");
         $domain->add_volume_swap( size => 128*1024*1024 );
     }
 
