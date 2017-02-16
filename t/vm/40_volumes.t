@@ -204,6 +204,8 @@ sub test_domain_swap {
     my @files_base = $domain->list_files_base();
     ok(scalar(@files_base) == 2,"Expecting 2 files base "
         .Dumper(\@files_base)) or exit;
+
+    #test files base are there, but swap ain't
     for my $file_base ( $domain->list_files_base ) {
         if ( $file_base !~ /SWAP/) {
             ok(-e $file_base,
@@ -217,8 +219,46 @@ sub test_domain_swap {
 ;
     }
     my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
-    $domain = undef;
-    $domain_clone = undef;
+
+    # after clone, the qcow file should be there, swap shouldn't
+    for my $file_base ( $domain_clone->list_files_base ) {
+        if ( $file_base !~ /SWAP/) {
+            ok(-e $file_base,
+                "Expecting file base created for $file_base")
+            or exit;
+        } else {
+            ok(!-e $file_base
+                ,"Expecting no file base created for $file_base")
+            or exit;
+        }
+;
+    }
+    eval { $domain_clone->start($USER) };
+    ok(!$@,"[$vm_name] expecting no error at start, got :$@");
+    ok($domain_clone->is_active,"Domain ".$domain_clone->name
+                                ." should be active");
+
+    # after start, all the files should be there
+    for my $file_base ( $domain_clone->list_files_base ) {
+         ok(-e $file_base,
+            "Expecting file base created for $file_base")
+    }
+    $domain_clone->shutdown_now($USER);
+
+    # after shutdown, the qcow file should be there, swap shouldn't
+    for my $file_base ( $domain_clone->list_files_base ) {
+        if ( $file_base !~ /SWAP/) {
+            ok(-e $file_base,
+                "Expecting file base created for $file_base")
+            or exit;
+        } else {
+            ok(!-e $file_base
+                ,"Expecting no file base created for $file_base")
+            or exit;
+        }
+;
+    }
+
 }
 #######################################################################33
 
