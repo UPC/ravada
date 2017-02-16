@@ -45,6 +45,36 @@ sub test_unread_messages {
     $user->mark_all_messages_read();
 }
 
+sub test_swap {
+    my $vm_name = shift;
+
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,vm => $vm_name
+        ,@ARG_CREATE_DOM
+        ,swap => 128*1024*1024
+    );
+    ok($req);
+    rvd_back()->process_requests();
+    wait_request($req);
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".($req->error or '')." creating domain ".$name)
+        or return;
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain,"Expecting domain $name created") or return;
+
+    for my $file ($domain->list_volumes) {
+        ok(!-e $file,"[$vm_name] Expecting no swap file $file")
+            if $file =~ /SWAP.img$/;
+        ok(-e $file,"[$vm_name] Expecting file $file")
+            if $file !~ /SWAP.img$/;
+    }
+}
+
 sub test_req_create_domain_iso {
     my $vm_name = shift;
 
@@ -178,10 +208,10 @@ sub test_req_prepare_base {
     ok($domain2->is_base, "Expecting domain base=1 , got: '".$domain2->is_base."'");# or exit;
 
     my @unread_messages = $USER->unread_messages;
-    like($unread_messages[-1]->{subject}, qr/done/i);
+    like($unread_messages[-1]->{subject}, qr/created/i);
 
     my @messages = $USER->messages;
-    like($messages[-1]->{subject}, qr/done/i);
+    like($messages[-1]->{subject}, qr/created/i);
 
 }
 
@@ -385,6 +415,7 @@ for my $vm_name ( qw(Void KVM)) {
         skip($msg,10)   if !$vm_connected;
 
         diag("Testing requests with $vm_name");
+        test_swap($vm_name);
 
         test_req_create_domain_iso($vm_name);
 
