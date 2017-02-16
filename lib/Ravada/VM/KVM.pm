@@ -361,6 +361,8 @@ sub _domain_create_from_iso {
 
     my $domain = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+
+    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
     return $domain;
 }
 
@@ -463,11 +465,11 @@ sub _create_disk_raw {
     my @files_out;
 
     for my $file_base ( $base->list_files_base ) {
-        warn $file_base;
         next unless $file_base =~ /SWAP\.img$/;
         my $file_out = $file_base;
         $file_out =~ s/\.ro\.\w+$//;
-        $file_out .= ".$name.".Ravada::Utils::random_name(4).".SWAP.img";
+        $file_out =~ s/-.*(img|qcow\d?)//;
+        $file_out .= ".$name-".Ravada::Utils::random_name(4).".SWAP.img";
 
         push @files_out,($file_out);
     }

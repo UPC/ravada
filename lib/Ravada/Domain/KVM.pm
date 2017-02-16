@@ -1045,4 +1045,52 @@ sub ip {
 #    }
     return;
 }
+
+=head2 create_swap_disk
+
+Create a swap disk image
+If the file is already there, returns silently.
+
+Argument: path
+
+    $domain->create_swap_disk($path);
+
+
+=cut
+
+sub create_swap_disk {
+    my $self = shift;
+    my $path = shift;
+
+    return if -e $path;
+
+    my ($size) = $path =~ m{\.size(\d+[MG])\.SWAP.img$};
+    $size = "512M" if !$size;
+
+    my @cmd = ('qemu-img'
+        ,'create'
+        ,'-f','raw'
+        ,$path
+        ,"$size"
+    );
+    warn join(" ",@cmd)."\n";
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    warn $out  if $out;
+    warn $err   if $err;
+
+    if (! -e $path) {
+        warn "ERROR: Output file $path not created at "
+            .join(" ",@cmd);
+        exit;
+    }
+}
+
+sub remove_disk {
+    my $self = shift;
+    my $path = shift;
+
+    $self->_vol_remove($path);
+}
+
 1;

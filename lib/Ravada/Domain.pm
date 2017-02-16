@@ -99,7 +99,7 @@ before 'remove' => \&_pre_remove_domain;
 
 before 'prepare_base' => \&_pre_prepare_base;
  after 'prepare_base' => \&_post_prepare_base;
- 
+
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
@@ -132,7 +132,8 @@ sub _vm_disconnect {
 }
 
 sub _start_preconditions{
-    
+    my ($self) = @_;
+
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
     } else {
@@ -141,7 +142,10 @@ sub _start_preconditions{
     _check_free_memory();
     _check_used_memory(@_);
 
+    $self->create_swap_volumes();
 }
+
+
 
 sub _allow_manage_args {
     my $self = shift;
@@ -1020,6 +1024,39 @@ sub is_public {
     }
     return $self->_data('is_public');
 }
+
+=head2 create_swap_volumes
+
+Check if the domain has swap volumes defined, and create them empty
+
+    $domain->create_swap_volumes();
+
+=cut
+
+sub create_swap_volumes {
+    my $self = shift;
+    for my $file( $self->list_volumes) {
+        $self->create_swap_disk($file)
+            if $file =~ /SWAP\.img$/;
+    }
+}
+
+=head2 remove_swap_volumes
+
+Check if the domain has swap volumes defined, and remove them
+
+    $domain->remove_swap_volumes();
+
+=cut
+
+sub remove_swap_volumes {
+    my $self = shift;
+    for my $file ( $self->list_volumes) {
+        $self->remove_disk($file)
+            if $file =~ /SWAP\.img$/;
+    }
+}
+
 
 sub _pre_rename {
     my $self = shift;
