@@ -574,11 +574,16 @@ sub add_volume {
     my $target_dev = $self->_new_target_dev();
     my $pci_slot = $self->_new_pci_slot();
     my $driver_type = 'qcow2';
-    $driver_type = 'raw' if $args{swap};
+    my $cache = 'default';
+
+    if ( $args{swap} ) {
+        $cache = 'none';
+        $driver_type = 'raw' 
+    }
 
     my $xml_device =<<EOT;
     <disk type='file' device='disk'>
-      <driver name='qemu' type='$driver_type'/>
+      <driver name='qemu' type='$driver_type' cache='$cache'/>
       <source file='$path'/>
       <backingStore/>
       <target bus='virtio' dev='$target_dev'/>
