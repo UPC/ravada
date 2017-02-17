@@ -264,37 +264,36 @@ sub create_volume {
     confess "Wrong arrs " if scalar @_ % 2;
     my %args = @_;
 
-    my ($name, $file_xml, $size,$swap) = @args{qw(name xml size swap)};
+    my ($name, $file_xml, $size, $capacity, $allocation, $swap, $path)
+        = @args{qw(name xml size capacity allocation swap path)};
 
     confess "Missing volume name"   if !$name;
     confess "Missing xml template"  if !$file_xml;
     confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+    confess "Capacity and size are the same, give only one of them"
+        if defined $capacity && defined $size;
+
+    $capacity = $size if defined $size;
+    $allocation = int($capacity * 0.1)+1
+        if !defined $allocation && $capacity;
 
     open my $fh,'<', $file_xml or die "$! $file_xml";
-    my $dir_img = $DEFAULT_DIR_IMG;
 
     my $doc;
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $suffix = ".img";
-    $suffix = ".SWAP.img"   if $args{swap};
-    my (undef, $img_file) = tempfile("${name}-XXXX"
-        ,DIR => $dir_img
-        ,OPEN => 0
-        ,SUFFIX => $suffix
-    );
+    my $img_file = ($path or $self->_volume_path(@_));
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                         $img_file);
 
-    if ($size) {
-        my ($prev_size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
-        confess "Size '$size' too small" if $size < 1024*512;
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($size*0.9));
-        $doc->findnodes('/volume/capacity/text()')->[0]->setData($size);
+    if ($capacity) {
+        confess "Size '$capacity' too small" if $capacity< 1024*512;
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData($allocation);
+        $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
     my $vol = $self->storage_pool->create_volume($doc->toString);
     die "volume $img_file does not exists after creating volume "
@@ -303,6 +302,21 @@ sub create_volume {
 
     return $img_file;
 
+}
+
+sub _volume_path {
+    my $self = shift;
+
+    my %args = @_;
+    my $dir_img = $DEFAULT_DIR_IMG;
+    my $suffix = ".img";
+    $suffix = ".SWAP.img"   if $args{swap};
+    my (undef, $img_file) = tempfile($args{name}."-XXXX"
+        ,DIR => $dir_img
+        ,OPEN => 0
+        ,SUFFIX => $suffix
+    );
+    return $img_file;
 }
 
 =head2 search_volume
@@ -379,6 +393,7 @@ sub _domain_create_common {
     $self->_fix_pci_slots($xml);
 
     my $dom;
+
     eval {
         $dom = $self->vm->define_domain($xml->toString());
         $dom->create if $args{active};
@@ -425,7 +440,6 @@ sub _create_disk_qcow2 {
     my @files_out;
 
     for my $file_base ( $base->list_files_base ) {
-      next if $file_base =~ m{\.SWAP\.img$};
         my $file_out = $file_base;
         $file_out =~ s/\.ro\.\w+$//;
         $file_out .= ".$name."._random_name(4).".qcow2";
@@ -510,15 +524,15 @@ sub _domain_create_from_base {
 
     my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
 
+
     my @device_disk = $self->_create_disk($base, $args{name});
-    my @swap_disk = $self->_create_swap_disk($base,$args{name});
     $self->storage_pool->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
-    _xml_modify_disk($xml, \@device_disk, \@swap_disk);
+    _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
     my $domain = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
@@ -623,6 +637,7 @@ sub _download_file_lwp {
 
     my $ua = LWP::UserAgent->new(keep_alive => 1);
 
+
     my $url = URI->new(decode(locale => $url_req)) or die "Error decoding $url_req";
     warn $url;
 
@@ -703,6 +718,7 @@ sub _xml_modify_video {
     die "I can't find video in "
                 .join("\n"
                      ,map { $_->toString() } $doc->findnodes('/domain/devices/video'))
+
         if !$video;
     $video->setAttribute(type => 'qxl');
     $video->setAttribute( ram => 65536 );
@@ -864,6 +880,7 @@ sub _search_xml {
         my $missing = 0;
         for my $attr( sort keys %arg ) {
            $missing++
+
                 if !$item->getAttribute($attr)
                     || $item->getAttribute($attr) ne $arg{$attr}
         }
@@ -909,6 +926,7 @@ sub _xml_add_usb_xhci {
 }
 
 sub _xml_add_usb_ehci1 {
+
     my $self = shift;
     my $devices = shift;
 
@@ -1000,6 +1018,7 @@ sub _xml_add_usb_uhci3 {
     my $self = shift;
     my $devices = shift;
 
+
     return if _search_xml(
                            xml => $devices
                          ,name => 'controller'
@@ -1061,30 +1080,14 @@ sub _xml_modify_disk {
     next if $disk->getAttribute('device') ne 'disk';
 
     for my $child ($disk->childNodes) {
-      if ($child->nodeName eq 'source'
-            && $child->getAttribute('file') =~ /SWAP.img$/) {
-        for my $child ($disk->childNodes) {
-          if ($child->nodeName eq 'driver') {
-            $child->setAttribute(type => 'raw');
-            $child->setAttribute(cache => 'none');
-          } elsif ($child->nodeName eq 'source') {
-            my $new_swap = $swap->[$cont_swap++] or confess "Missing swap device $cont_swap "
-            .Dumper($swap);
-            $child->setAttribute(file => $new_swap);
-          }
-        }
-      } elsif ($child->nodeName eq 'source' && $child->getAttribute('file') !~ 'swap') {
-        for my $child ($disk->childNodes) {
-          if ($child->nodeName eq 'driver') {
+        if ($child->nodeName eq 'driver') {
             $child->setAttribute(type => 'qcow2');
-          } elsif ($child->nodeName eq 'source') {
-            my $new_device = $device->[$cont++] 
-                or confess "Missing device $cont "
-                .Dumper($device);
+        } elsif ($child->nodeName eq 'source') {
+            my $new_device
+                    = $device->[$cont++] or confess "Missing device $cont "
+                    .Dumper($device);
             $child->setAttribute(file => $new_device);
-          }
         }
-      }
     }
   }
 }
