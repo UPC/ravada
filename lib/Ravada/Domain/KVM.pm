@@ -261,40 +261,41 @@ sub disk_device {
 sub _create_qcow_base {
     my $self = shift;
 
-    my @qcow_img;
+    my @base_img;
 
     my $base_name = $self->name;
-    for  my $base_img ( $self->list_volumes()) {
-        confess "ERROR: missing $base_img"
-            if !-e $base_img;
-        my $qcow_img = $base_img;
+    for  my $file_img ( $self->list_volumes()) {
+        confess "ERROR: missing $file_img"
+            if !-e $file_img;
+        my $base_img = $file_img;
 
+        my @cmd;
         if ($base_img =~ /\.SWAP\.img$/) {
-            $qcow_img =~ s/(SWAP\.img$)/base.$1/;
-            push @qcow_img,($qcow_img);
-            next;
+            $base_img =~ s/(SWAP\.img$)/base.$1/;
+            @cmd = _cmd_copy($file_img, $base_img);
+        } else {
+            $base_img =~ s{\.\w+$}{\.ro.qcow2};
+            @cmd = _cmd_convert($file_img,$base_img);
         }
-        $qcow_img =~ s{\.\w+$}{\.ro.qcow2};
 
-        push @qcow_img,($qcow_img);
+        push @base_img,($base_img);
 
-        my @cmd = _cmd_convert($base_img, $qcow_img);
 
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
         warn $err   if $err;
 
-        if (! -e $qcow_img) {
-            warn "ERROR: Output file $qcow_img not created at "
+        if (! -e $base_img) {
+            warn "ERROR: Output file $base_img not created at "
                 .join(" ",@cmd);
             exit;
         }
 
-        chmod 0555,$qcow_img;
+        chmod 0555,$base_img;
     }
-    $self->_prepare_base_db(@qcow_img);
-    return @qcow_img;
+    $self->_prepare_base_db(@base_img);
+    return @base_img;
 
 }
 
@@ -308,18 +309,12 @@ sub _cmd_convert {
 
 }
 
-sub _cmd_create_empty {
+sub _cmd_copy {
     my ($base_img, $qcow_img) = @_;
 
-    my $size = -s $base_img;
-
-    $size = int($size/1024)+1;
-
-    return ('qemu-img','create'
-            ,'-f','qcow2'
-            ,$qcow_img
-            ,"${size}K"
-        );
+    return ('cp'
+            ,$base_img, $qcow_img
+    );
 }
 
 =pod
@@ -559,7 +554,10 @@ sub add_volume {
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
-    $args{xml} = 'etc/xml/default-volume.xml'    if !$args{xml};
+    if (!$args{xml}) {
+        $args{xml} = 'etc/xml/default-volume.xml';
+        $args{xml} = 'etc/xml/swap-volume.xml'      if $args{swap};
+    }
 
     my $path = $args{vm}->create_volume(
         name => $args{name}
@@ -578,7 +576,7 @@ sub add_volume {
 
     if ( $args{swap} ) {
         $cache = 'none';
-        $driver_type = 'raw' 
+        $driver_type = 'raw';
     }
 
     my $xml_device =<<EOT;
@@ -1069,23 +1067,49 @@ sub create_swap_disk {
 
     return if -e $path;
 
-    my ($size) = $path =~ m{\.size(\d+[MG])\.SWAP.img$};
-    $size = "512M" if !$size;
+    my ($size) = $path =~ m{\.size(\d+)\.SWAP.img$};
+    $size = 512 *1024*1024 if !$size;
 
-    my @cmd = ('qemu-img'
-        ,'create'
-        ,'-f','raw'
-        ,$path
-        ,"$size"
+    my $file = $self->_vm->create_volume(
+        name => $self->name
+        ,capacity => $size
+        ,allocation => int($size/10)
+        ,xml => 'etc/xml/swap-volume.xml'
+        ,path => $path
     );
-    my ($in, $out, $err);
-    run3(\@cmd,\$in,\$out,\$err);
-    warn $err   if $err;
-
     if (! -e $path) {
-        warn "ERROR: Output file $path not created at "
-            .join(" ",@cmd);
+        warn "ERROR: Output file $path not created at ";
         exit;
+    }
+}
+
+sub _find_base {
+    my $self = shift;
+    my $file = shift;
+    my @cmd = ( 'qemu-img','info',$file);
+    my ($in,$out, $err);
+    run3(\@cmd,\$in, \$out, \$err);
+
+    my ($base) = $out =~ m{^backing file: (.*)}mi;
+    die "No base for $file in $out" if !$base;
+
+    return $base;
+}
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ($self->list_volumes) {
+        next if $file !~ /\.SWAP\.img/;
+        my $base = $self->_find_base($file) or next;
+
+        my @cmd = ('qemu-img','create'
+                ,'-f','qcow2'
+                ,'-b',$base
+                ,$file
+        );
+        my ($in,$out, $err);
+        run3(\@cmd,\$in, \$out, \$err);
+
     }
 }
 
