@@ -145,12 +145,12 @@ sub prepare_base {
         my $file_base = $file_qcow.".qcow";
 
         if ( $file_qcow =~ /.SWAP.img$/ ) {
-            $file_base = "$file_qcow.raw";
-        } else {
-            open my $out,'>',$file_base or die "$! $file_base";
-            print $out "$file_qcow\n";
-            close $out;
+            $file_base = $file_qcow;
+            $file_base =~ s/(\.SWAP.img$)/base-$1/;
         }
+        open my $out,'>',$file_base or die "$! $file_base";
+        print $out "$file_qcow\n";
+        close $out;
         $self->_prepare_base_db($file_base);
     }
 }
@@ -182,6 +182,11 @@ sub remove_disks {
         }
     }
 
+}
+
+sub remove_disk {
+    my $self = shift;
+    return $self->_vol_remove(@_);
 }
 
 =head2 add_volume
@@ -229,6 +234,17 @@ sub add_volume {
 
     open my $out,'>>',$args{path} or die "$! $args{path}";
     print $out Dumper($data->{device}->{$args{name}});
+    close $out;
+
+}
+
+sub create_swap_disk {
+    my $self = shift;
+    my $path = shift;
+
+    return if -e $path;
+
+    open my $out,'>>',$path or die "$! $path";
     close $out;
 
 }
@@ -352,4 +368,14 @@ sub ip {
     my $self = shift;
     return $self->_ip;
 }
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ($self->list_volumes) {
+        next if $file !~ /SWAP.img$/;
+        open my $out,'>',$file or die "$! $file";
+        close $out;
+    }
+}
+
 1;
