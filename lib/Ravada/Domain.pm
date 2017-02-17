@@ -142,7 +142,6 @@ sub _start_preconditions{
     _check_free_memory();
     _check_used_memory(@_);
 
-    $self->create_swap_volumes();
 }
 
 
@@ -755,6 +754,7 @@ sub _post_shutdown {
 
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
+    $self->clean_swap_volumes(@_) if $self->id_base();
 
 }
 
@@ -1025,35 +1025,19 @@ sub is_public {
     return $self->_data('is_public');
 }
 
-=head2 create_swap_volumes
+=head2 clean_swap_volumes
 
-Check if the domain has swap volumes defined, and create them empty
+Check if the domain has swap volumes defined, and clean them
 
-    $domain->create_swap_volumes();
-
-=cut
-
-sub create_swap_volumes {
-    my $self = shift;
-    for my $file( $self->list_volumes) {
-        $self->create_swap_disk($file)
-            if $file =~ /SWAP\.img$/;
-    }
-}
-
-=head2 remove_swap_volumes
-
-Check if the domain has swap volumes defined, and remove them
-
-    $domain->remove_swap_volumes();
+    $domain->clean_swap_volumes();
 
 =cut
 
 sub remove_swap_volumes {
     my $self = shift;
     for my $file ( $self->list_volumes) {
-        $self->remove_disk($file)
-            if $file =~ /SWAP\.img$/;
+        $self->clean_disk($file)
+            if $file =~ /.SWAP\.img$/;
     }
 }
 
