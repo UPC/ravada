@@ -207,6 +207,17 @@ sub test_domain_swap {
 
     ok(grep(/SWAP/,$domain->list_volumes),"Expecting a swap file, got :"
             .join(" , ",$domain->list_volumes));
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file");
+    }
+    $domain->start($USER);
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file");
+    }
+    $domain->shutdown_now($USER);
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file");
+    }
 
     test_prepare_base($vm_name, $domain);
     ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
@@ -215,18 +226,10 @@ sub test_domain_swap {
     ok(scalar(@files_base) == 2,"Expecting 2 files base "
         .Dumper(\@files_base)) or exit;
 
-    #test files base are there, but swap ain't
+    #test files base must be there
     for my $file_base ( $domain->list_files_base ) {
-        if ( $file_base !~ /SWAP/) {
-            ok(-e $file_base,
-                "Expecting file base created for $file_base")
-            or exit;
-        } else {
-            ok(!-e $file_base
-                ,"Expecting no file base created for $file_base")
-            or exit;
-        }
-;
+        ok(-e $file_base,
+                "Expecting file base created for $file_base");
     }
     my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
 
@@ -249,24 +252,24 @@ sub test_domain_swap {
                                 ." should be active");
 
     # after start, all the files should be there
-    for my $file_base ( $domain_clone->list_files_base ) {
-         ok(-e $file_base,
-            "Expecting file base created for $file_base")
+    for my $file ( $domain_clone->list_volumes) {
+         ok(-e $file ,
+            "Expecting file exists $file")
     }
     $domain_clone->shutdown_now($USER);
 
-    # after shutdown, the qcow file should be there, swap shouldn't
-    for my $file_base ( $domain_clone->list_files_base ) {
-        if ( $file_base !~ /SWAP/) {
-            ok(-e $file_base,
-                "Expecting file base created for $file_base")
+    # after shutdown, the qcow file should be there, swap be empty
+    my $min_size = 197120;
+    for my $file( $domain_clone->list_volumes) {
+        ok(-e $file,
+                "Expecting file exists $file")
             or exit;
-        } else {
-            ok(!-e $file_base
-                ,"Expecting no file base created for $file_base")
-            or exit;
-        }
-;
+        next if ( $file!~ /SWAP/);
+
+        ok(-s $file <= $min_size
+                ,"Expecting swap $file size <= $min_size , got :".-s $file)
+        or exit;
+
     }
 
 }
