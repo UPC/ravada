@@ -75,7 +75,7 @@ hook before_routes => sub {
   my $c = shift;
 
   my $url = $c->req->url;
-  $c->stash(css=>'/css/sb-admin.css');
+  $c->stash(css=>['/css/sb-admin.css']);
 
   return access_denied($c)
     if $url =~ /\.json/
@@ -528,7 +528,7 @@ sub login {
 
     $c->render(
                     template => 'bootstrap/start'
-                        ,css => '/css/main.css'
+                        ,css => ['/css/main.css']
                       ,login => $login
                       ,error => \@error
     );
