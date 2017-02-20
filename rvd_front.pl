@@ -533,6 +533,7 @@ sub login {
                     template => 'bootstrap/start'
                         ,css => ['/css/main.css']
                         ,js => ['/js/main.js']
+                        ,navbar_custom => 1
                       ,login => $login
                       ,error => \@error
     );
