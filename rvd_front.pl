@@ -76,6 +76,9 @@ hook before_routes => sub {
 
   my $url = $c->req->url;
   $c->stash(css=>['/css/sb-admin.css']);
+  $c->stash(js=>['/js/form.js'
+                ,'/js/ravada.js'
+                ]);
 
   return access_denied($c)
     if $url =~ /\.json/
@@ -529,6 +532,7 @@ sub login {
     $c->render(
                     template => 'bootstrap/start'
                         ,css => ['/css/main.css']
+                        ,js => ['/js/main.js']
                       ,login => $login
                       ,error => \@error
     );

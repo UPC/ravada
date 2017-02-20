@@ -90,6 +90,6 @@
         </div>
     </footer>
 
-    %= include 'bootstrap/inscripts'
+    %= include 'bootstrap/scripts'
 </body>
 </html>
