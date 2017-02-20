@@ -46,7 +46,7 @@ our $CAN_LXC = 0;
 our $LIMIT_PROCESS = 2;
 
 # FAT commands take long
-our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove);
+our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove screenshot);
 
 # Priority Commands should not be run many at once because they may clash with each other
 # like opening iptables or accessing to disk
@@ -555,6 +555,25 @@ sub remove_volume {
 
 }
 
+=head2 clean_killed_requests
+
+Before processing requests, old killed requests must be cleaned.
+
+=cut
+
+sub clean_killed_requests {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
+        ." WHERE status='working' "
+    );
+    $sth->execute;
+    while (my ($id) = $sth->fetchrow) {
+        my $req = Ravada::Request->open($id);
+        $req->status("done","Killed before completion");
+    }
+
+}
+
 =head2 process_requests
 
 This is run in the ravada backend. It processes the commands requested by the fronted
@@ -578,7 +597,8 @@ sub process_requests {
     $sth->execute;
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id_request);
-        next if $self->_domain_working($id_domain, $id_request);
+        next if $req->command !~ /shutdown/i
+            && $self->_domain_working($id_domain, $id_request);
         $self->_wait_pids_nohang();
 
         warn "executing request ".$req->id." ".$req->status()." ".$req->command
