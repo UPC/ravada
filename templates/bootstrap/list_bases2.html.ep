@@ -29,7 +29,6 @@
 %                   if ( !$machine->{is_public} ) {
                         <i>( not public )</i>
 %                   }
-                    {{host_restore}}
                 </h3>
 %               if ($machine->{screenshot} ) {
                     <img src="<%= $machine->{screenshot} %>" width="260">
