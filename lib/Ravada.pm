@@ -46,7 +46,7 @@ our $CAN_LXC = 0;
 our $LIMIT_PROCESS = 2;
 
 # FAT commands take long
-our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove);
+our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove screenshot);
 
 # Priority Commands should not be run many at once because they may clash with each other
 # like opening iptables or accessing to disk
