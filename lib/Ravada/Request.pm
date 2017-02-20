@@ -504,7 +504,8 @@ sub _send_message {
     $self->_remove_unnecessary_messages() if $self->status eq 'done';
 
     my $subject = $self->command." $domain_name ".$self->status;
-    $subject = $message if $message && $self->status eq 'done';
+    $subject = $message if $message && $self->status eq 'done'
+            && length ($message)<60;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
