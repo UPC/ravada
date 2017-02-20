@@ -60,7 +60,6 @@ $Ravada::CAN_FORK=0    if $NOFORK;
 
 our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
 
-my $RAVADA = Ravada->new( config => $FILE_CONFIG );
 my $REMOTE_VIEWER;
 ###################################################################
 #
@@ -71,8 +70,11 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    $ravada->clean_killed_requests();
+
     for (;;) {
-        eval { $RAVADA->process_requests() };
+        eval { $ravada->process_requests() };
         warn "$@\n" if $@ && (!$old_error || $old_error ne $@);
         $old_error = ($@ or '');
         if ( $@ && $cnt_error++ > 60 ) {
@@ -145,7 +147,8 @@ sub import_domain {
     print "User name : ";
     my $user = <STDIN>;
     chomp $user;
-    $RAVADA->import_domain(name => $name, vm => 'KVM', user => $user);
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
 }
 
 #################################################################
