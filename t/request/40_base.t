@@ -66,12 +66,11 @@ sub test_swap {
 
     my $domain = rvd_back->search_domain($name);
     ok($domain,"Expecting domain $name created") or return;
+    ok(!$domain->is_active,"Expecting domain no alive, got : "
+            .($domain->is_active or 0));
 
     for my $file ($domain->list_volumes) {
-        ok(!-e $file,"[$vm_name] Expecting no swap file $file")
-            if $file =~ /SWAP.img$/;
         ok(-e $file,"[$vm_name] Expecting file $file")
-            if $file !~ /SWAP.img$/;
     }
 }
 
