@@ -2,7 +2,7 @@
 <html>
 %= include 'bootstrap/header'
 <body role="document">
-    %= include 'bootstrap/innavigation'
+    %= include 'bootstrap/navigation'
      <header id="page-top" class="intro">
         <div class="intro-body">
             <div class="container" ng-controller="">
