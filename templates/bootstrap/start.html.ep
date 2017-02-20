@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-%= include 'bootstrap/inheader'
+%= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/innavigation'
      <header id="page-top" class="intro">

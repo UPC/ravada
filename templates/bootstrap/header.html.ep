@@ -10,8 +10,9 @@
     <title>Ravada VDI</title>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-
-    <link href="/css/sb-admin.css" rel="stylesheet">
+% if ($css) {
+    <link href="<%= $css %>" rel="stylesheet">
+% }
     <link href="/css/plugins/morris.css" rel="stylesheet">
     <link href="/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
 </head>
