@@ -26,7 +26,15 @@ my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 our $VERSION_TYPE = "--beta";
 
-plugin Config => { file => 'rvd_front.conf' };
+my $CONFIG_FRONT = plugin Config => { default => {
+                                                hypnotoad => {
+                                                pid_file => 'log/rvd_front.pid'
+                                                ,listen => ['http://*:8081']}
+                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_header => 'Login'
+                                              ,login_message => ''
+                                              }
+                                      ,file => 'rvd_front.conf' };
 #####
 #####
 #####
@@ -530,6 +538,9 @@ sub login {
                         ,url => $url
                       ,login => $login
                       ,error => \@error
+                      ,login_header => $CONFIG_FRONT->{login_header}
+                      ,login_message => $CONFIG_FRONT->{login_message}
+                      ,login_bg_file => $CONFIG_FRONT->{login_bg_file}
     );
 
 }

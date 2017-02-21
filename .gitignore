@@ -8,3 +8,4 @@ t/.db
 t/etc/ravada_ldap.conf
 hypnotoad.pid
 log
+rvd_front.conf
