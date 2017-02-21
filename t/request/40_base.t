@@ -45,6 +45,35 @@ sub test_unread_messages {
     $user->mark_all_messages_read();
 }
 
+sub test_swap {
+    my $vm_name = shift;
+
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,vm => $vm_name
+        ,@ARG_CREATE_DOM
+        ,swap => 128*1024*1024
+    );
+    ok($req);
+    rvd_back()->process_requests();
+    wait_request($req);
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".($req->error or '')." creating domain ".$name)
+        or return;
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain,"Expecting domain $name created") or return;
+    ok(!$domain->is_active,"Expecting domain no alive, got : "
+            .($domain->is_active or 0));
+
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file")
+    }
+}
+
 sub test_req_create_domain_iso {
     my $vm_name = shift;
 
@@ -168,10 +197,10 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    $rvd_back->process_requests();
+    rvd_back->process_requests();
+    rvd_back->process_long_requests(0,1);
     wait_request($req);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");
-    $rvd_back = undef;
 
     my $vm = rvd_front()->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
@@ -300,6 +329,7 @@ sub test_req_remove_base_fail {
 
     ok($req->status eq 'requested' || $req->status eq 'done');
     rvd_back->process_requests();
+    rvd_back->process_long_requests(0,1);
     wait_request($req);
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
@@ -341,6 +371,7 @@ sub test_req_remove_base {
     {
         my $rvd_back = rvd_back();
         rvd_back->process_requests();
+        rvd_back->process_long_requests(0,1);
         wait_request($req);
     }
     ok($req->status eq 'done', "[$vm_name] Expected req->status 'done', got "
@@ -385,6 +416,7 @@ for my $vm_name ( qw(Void KVM)) {
         skip($msg,10)   if !$vm_connected;
 
         diag("Testing requests with $vm_name");
+        test_swap($vm_name);
 
         test_req_create_domain_iso($vm_name);
 

@@ -1,0 +1,23 @@
+<volume type='file'>
+  <name>__name__.img</name>
+  <key>/var/lib/libvirt/images/__name__.img</key>
+  <source>
+  </source>
+  <capacity unit='bytes'>10442450944</capacity>
+  <allocation unit='bytes'>5395775488</allocation>
+  <target>
+    <path>/var/lib/libvirt/images/__name__.img</path>
+    <format type='raw' cache='none'/>
+    <permissions>
+      <mode>0600</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+    <timestamps>
+      <atime>1461924534.956408726</atime>
+      <mtime>1461672183.623804946</mtime>
+      <ctime>1461672193.267892180</ctime>
+    </timestamps>
+  </target>
+</volume>
+

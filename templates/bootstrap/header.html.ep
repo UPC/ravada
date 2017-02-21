@@ -15,4 +15,11 @@
 % }
     <link href="/css/plugins/morris.css" rel="stylesheet">
     <link href="/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+  
+  <style>
+% foreach my $csssnip (@$csssnippets) {
+  <%= $csssnip %>
+% }
+  </style>
+    
 </head>

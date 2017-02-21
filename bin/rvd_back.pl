@@ -58,28 +58,43 @@ $Ravada::DEBUG=1    if $DEBUG;
 $Ravada::CAN_FORK=0    if $NOFORK;
 ###################################################################
 
-our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
-
-my $RAVADA = Ravada->new( config => $FILE_CONFIG );
-my $REMOTE_VIEWER;
+my $PID_LONGS;
 ###################################################################
 #
 
 sub do_start {
-    warn "Starting daemon mode\n";
-
+    warn "Starting rvd_back\n";
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
+    start_process_longs() if !$NOFORK;
+
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    $ravada->clean_killed_requests();
+
+    start_process_longs() if !$NOFORK;
+
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
     for (;;) {
-        eval { $RAVADA->process_requests() };
-        warn "$@\n" if $@ && (!$old_error || $old_error ne $@);
-        $old_error = ($@ or '');
-        if ( $@ && $cnt_error++ > 60 ) {
-            $old_error = '' ;
-            $cnt_error = 0;
-        }
+        $ravada->process_requests();
+        $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
         sleep 1;
+    }
+}
+
+sub start_process_longs {
+    my $pid = fork();
+    die "I can't fork" if !defined $pid;
+    if ( $pid ) {
+        $PID_LONGS = $pid;
+        return;
+    }
+    
+    warn "Processing long requests in pid $$\n" if $DEBUG;
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    $ravada->clean_killed_requests();
+    for (;;) {
+        $ravada->process_long_requests();
     }
 }
 
@@ -145,7 +160,19 @@ sub import_domain {
     print "User name : ";
     my $user = <STDIN>;
     chomp $user;
-    $RAVADA->import_domain(name => $name, vm => 'KVM', user => $user);
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
+}
+
+sub DESTROY {
+    return if !$PID_LONGS;
+    warn "Killing pid: $PID_LONGS";
+
+    my $cnt = kill 15 , $PID_LONGS;
+    return if !$cnt;
+
+    kill 9 , $PID_LONGS;
+    
 }
 
 #################################################################

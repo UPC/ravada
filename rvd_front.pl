@@ -24,8 +24,17 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
+our $VERSION_TYPE = "--beta";
 
-plugin Config => { file => 'rvd_front.conf' };
+my $CONFIG_FRONT = plugin Config => { default => {
+                                                hypnotoad => {
+                                                pid_file => 'log/rvd_front.pid'
+                                                ,listen => ['http://*:8081']}
+                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_header => 'Login'
+                                              ,login_message => ''
+                                              }
+                                      ,file => 'rvd_front.conf' };
 #####
 #####
 #####
@@ -74,6 +83,7 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
+  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
   my $url = $c->req->url;
   $c->stash(css=>['/css/sb-admin.css']);
   $c->stash(js=>['/js/form.js'
@@ -447,8 +457,6 @@ get '/messages/view/(#id).html' => sub {
 any '/about' => sub {
     my $c = shift;
 
-    $c->stash(version => $RAVADA->version );
-
     $c->render(template => 'main/about');
 };
 
@@ -529,13 +537,20 @@ sub login {
         }
     }
 
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
     $c->render(
                     template => 'main/start'
                         ,css => ['/css/main.css']
+                        ,csssnippets => @css_snippets
                         ,js => ['/js/main.js']
                         ,navbar_custom => 1
                       ,login => $login
                       ,error => \@error
+                      ,login_header => $CONFIG_FRONT->{login_header}
+                      ,login_message => $CONFIG_FRONT->{login_message}
     );
 
 }
@@ -679,6 +694,8 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
+    my $swap = ($c->param('swap') or 0);
+    $swap *= 1024*1024*1024;
     my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -687,6 +704,7 @@ sub req_new_domain {
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
+        ,swap => $swap
     );
 
     return $req;

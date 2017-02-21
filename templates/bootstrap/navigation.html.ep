@@ -54,7 +54,6 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li role="separator" class="divider"></li>
-                        <li><a href="/settings"><i class="fa fa-sliders"></i>&nbsp;<%=l 'Settings' %></a></li>
                         <li>
                             <a href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a>
                         </li>
