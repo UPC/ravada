@@ -30,6 +30,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
                                                 pid_file => 'log/rvd_front.pid'
                                                 ,listen => ['http://*:8081']}
+                                              ,login_bg_file => '../img/intro-bg.jpg'
                                               }
                                       ,file => 'rvd_front.conf' };
 #####
@@ -539,6 +540,7 @@ sub login {
                                             or 'Login')
                     ,login_message => ($CONFIG_FRONT->{login_message}
                                             or '')
+                      ,login_bg_file => $CONFIG_FRONT->{login_bg_file}
     );
 
 }

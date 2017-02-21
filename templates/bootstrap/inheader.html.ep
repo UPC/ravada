@@ -13,4 +13,9 @@
     <link href="https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
 
+<style>
+  .intro {
+    background: url(<%= $login_bg_file %>) no-repeat bottom center scroll;
+  }
+</style>
 </head>
