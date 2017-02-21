@@ -24,6 +24,7 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
+our $VERSION_TYPE = "--beta";
 
 plugin Config => { file => 'rvd_front.conf' };
 #####
@@ -74,6 +75,7 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
+  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
   my $url = $c->req->url;
 
   return access_denied($c)
@@ -442,8 +444,6 @@ get '/messages/view/(#id).html' => sub {
 
 any '/about' => sub {
     my $c = shift;
-
-    $c->stash(version => $RAVADA->version );
 
     $c->render(template => 'bootstrap/about');
 };
