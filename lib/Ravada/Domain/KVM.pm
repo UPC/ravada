@@ -1010,6 +1010,8 @@ sub _hwaddr {
     return @hwaddr;
 }
 
+=pod
+
 sub ip {
     my $self = shift;
     my @nics = $self->domain
@@ -1034,6 +1036,8 @@ sub ip {
 #    }
     return;
 }
+
+=cut
 
 =head2 create_swap_disk
 
@@ -1082,6 +1086,12 @@ sub _find_base {
     return $base;
 }
 
+=head2 clean_swap_volumes
+
+Clean swap volumes. It actually just creates an empty qcow file from the base
+
+=cut
+
 sub clean_swap_volumes {
     my $self = shift;
     for my $file ($self->list_volumes) {
@@ -1097,13 +1107,6 @@ sub clean_swap_volumes {
         run3(\@cmd,\$in, \$out, \$err);
 
     }
-}
-
-sub remove_disk {
-    my $self = shift;
-    my $path = shift;
-
-    $self->_vol_remove($path);
 }
 
 1;
