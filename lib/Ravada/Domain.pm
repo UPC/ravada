@@ -49,6 +49,8 @@ requires 'disk_device';
 requires 'disk_size';
 
 requires 'spinoff_volumes';
+
+requires 'clean_swap_volumes';
 #hardware info
 
 requires 'get_info';
@@ -816,6 +818,12 @@ sub add_volume_swap {
     $self->add_volume(%arg, swap => 1);
 }
 
+=head2 image_swap_suffix
+
+Swap image files end in this
+
+=cut
+
 sub image_swap_suffix {
     return ".SWAP.img";
 }
@@ -1067,23 +1075,6 @@ sub is_public {
     }
     return $self->_data('is_public');
 }
-
-=head2 clean_swap_volumes
-
-Check if the domain has swap volumes defined, and clean them
-
-    $domain->clean_swap_volumes();
-
-=cut
-
-sub remove_swap_volumes {
-    my $self = shift;
-    for my $file ( $self->list_volumes) {
-        $self->clean_disk($file)
-            if $file =~ /.SWAP\.img$/;
-    }
-}
-
 
 sub _pre_rename {
     my $self = shift;
