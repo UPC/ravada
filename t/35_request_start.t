@@ -167,7 +167,9 @@ sub test_screenshot {
 
     my $req = Ravada::Request->screenshot_domain(id_domain => $domain_id );
     ok($req);
-    $RAVADA->process_requests();
+
+    my $dont_fork = 1;
+    rvd_back->process_all_requests(0,$dont_fork);
     wait_request($req);
     ok($req->status('done'),"Request should be done, it is ".$req->status);
     ok(!$req->error(''),"Error should be '' , it is ".$req->error);
@@ -199,11 +201,12 @@ sub test_screenshot_file {
         ,filename => $file);
     ok($req);
 
-    $RAVADA->process_requests();
+    my $dont_fork = 1;
+    rvd_back->process_all_requests(0,$dont_fork);
     wait_request($req);
 
     ok($req->status('done'),"Request should be done, it is ".$req->status);
-    ok(!$req->error(),"Error should be '' , it is ".$req->error);
+    ok(!$req->error(),"Error should be '' , it is ".($req->error or ''));
 
     ok(-e $file,"File '$file' screenshot should exist");
 
