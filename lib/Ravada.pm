@@ -653,6 +653,21 @@ sub process_long_requests {
     return $self->process_requests($debug, $dont_fork, 1);
 }
 
+=head2 process_all_requests
+
+Process all the requests, long and short
+
+=cut
+
+sub process_all_requests {
+
+    my $self = shift;
+    my ($debug,$dont_fork) = @_;
+
+    $self->process_requests($debug, $dont_fork,1,1);
+
+}
+
 sub _domain_working {
     my $self = shift;
     my ($id_domain, $id_request) = @_;
