@@ -207,10 +207,10 @@ sub test_req_prepare_base {
     ok($domain2->is_base, "Expecting domain base=1 , got: '".$domain2->is_base."'");# or exit;
 
     my @unread_messages = $USER->unread_messages;
-    like($unread_messages[-1]->{subject}, qr/created/i);
+    like($unread_messages[-1]->{subject}, qr/done/i);
 
     my @messages = $USER->messages;
-    like($messages[-1]->{subject}, qr/created/i);
+    like($messages[-1]->{subject}, qr/done/i);
 
 }
 
