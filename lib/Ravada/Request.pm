@@ -45,6 +45,7 @@ our %VALID_ARG = (
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
     ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
+    ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -253,6 +254,26 @@ sub _check_args {
     return $args;
 }
 
+=head2 force_shutdown_domain
+
+Requests to stop a domain now !
+
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id );
+
+=cut
+
+sub force_shutdown_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('force_shutdown_domain', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'force_shutdown' , args => $args);
+}
+
 =head2 shutdown_domain
 
 Requests to stop a domain
@@ -387,6 +408,7 @@ sub _new_request {
     if ( ref $args{args} ) {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
+        $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
@@ -643,7 +665,7 @@ sub screenshot_domain {
     bless($self,$class);
 
     return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
-        ,args => encode_json($args));
+        ,args => $args);
 
 }
 
@@ -665,7 +687,7 @@ sub open_iptables {
     return $self->_new_request(
             command => 'open_iptables'
         , id_domain => $args->{id_domain}
-             , args => encode_json($args));
+             , args => $args);
 }
 
 =head2 rename_domain
