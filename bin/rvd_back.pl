@@ -162,7 +162,6 @@ sub import_domain {
     chomp $user;
     my $ravada = Ravada->new( config => $FILE_CONFIG );
     $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
-<<<<<<< HEAD
 }
 
 sub DESTROY {
@@ -174,8 +173,6 @@ sub DESTROY {
 
     kill 9 , $PID_LONGS;
     
-=======
->>>>>>> rovello.2
 }
 
 #################################################################
