@@ -10,10 +10,10 @@
     <title>Ravada VDI</title>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css">
 % foreach my $csslink (@$css) {
     <link href="<%= $csslink %>" rel="stylesheet">
 % }
-    <link href="/css/plugins/morris.css" rel="stylesheet">
     <link href="/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
   
   <style>
