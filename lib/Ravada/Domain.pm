@@ -777,10 +777,6 @@ sub add_volume_swap {
     $self->add_volume(%arg, swap => 1);
 }
 
-sub image_swap_suffix {
-    return ".SWAP.img";
-}
-
 sub _remove_iptables {
     my $self = shift;
 
@@ -1033,11 +1029,11 @@ Check if the domain has swap volumes defined, and clean them
 
 =cut
 
-sub remove_swap_volumes {
+sub clean_swap_volumes {
     my $self = shift;
     for my $file ( $self->list_volumes) {
         $self->clean_disk($file)
-            if $file =~ /.SWAP\.img$/;
+            if $file =~ /\.SWAP\.\w+$/;
     }
 }
 

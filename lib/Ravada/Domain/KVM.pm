@@ -270,11 +270,10 @@ sub _create_qcow_base {
         my $base_img = $file_img;
 
         my @cmd;
-        if ($base_img =~ /\.SWAP\.img$/) {
-            $base_img =~ s/(SWAP\.img$)/base.$1/;
+        $base_img =~ s{\.\w+$}{\.ro.qcow2};
+        if ($file_img =~ /\.SWAP\.\w+$/) {
             @cmd = _cmd_copy($file_img, $base_img);
         } else {
-            $base_img =~ s{\.\w+$}{\.ro.qcow2};
             @cmd = _cmd_convert($file_img,$base_img);
         }
 
@@ -969,7 +968,6 @@ sub spinoff_volumes {
         unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
             if -e $volume_tmp;
 
-        next if $volume =~ /.SWAP.img$/;
         my @cmd = ('qemu-img'
               ,'convert'
               ,'-O','qcow2'
@@ -1049,40 +1047,6 @@ sub ip {
     return;
 }
 
-=head2 create_swap_disk
-
-Create a swap disk image
-If the file is already there, returns silently.
-
-Argument: path
-
-    $domain->create_swap_disk($path);
-
-
-=cut
-
-sub create_swap_disk {
-    my $self = shift;
-    my $path = shift;
-
-    return if -e $path;
-
-    my ($size) = $path =~ m{\.size(\d+)\.SWAP.img$};
-    $size = 512 *1024*1024 if !$size;
-
-    my $file = $self->_vm->create_volume(
-        name => $self->name
-        ,capacity => $size
-        ,allocation => int($size/10)
-        ,xml => 'etc/xml/swap-volume.xml'
-        ,path => $path
-    );
-    if (! -e $path) {
-        warn "ERROR: Output file $path not created at ";
-        exit;
-    }
-}
-
 sub _find_base {
     my $self = shift;
     my $file = shift;
@@ -1099,7 +1063,7 @@ sub _find_base {
 sub clean_swap_volumes {
     my $self = shift;
     for my $file ($self->list_volumes) {
-        next if $file !~ /\.SWAP\.img/;
+        next if $file !~ /\.SWAP\.\w+/;
         my $base = $self->_find_base($file) or next;
 
         my @cmd = ('qemu-img','create'
