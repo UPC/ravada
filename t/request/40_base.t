@@ -42,7 +42,6 @@ sub test_unread_messages {
     ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
         .scalar@messages." ".Dumper(\@messages));
 
-    $user->mark_all_messages_read();
 }
 
 sub test_unshown_messages {
@@ -148,6 +147,8 @@ sub test_message_new_domain {
 
     ok($message->{message} && $message->{message} =~ /\w+/
             , "Expecting message content not empty, got ''") or exit;
+
+    $USER->mark_all_messages_read();
 }
 
 sub test_req_create_domain {
