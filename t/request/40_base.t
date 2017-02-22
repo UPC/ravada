@@ -120,7 +120,7 @@ sub test_req_create_domain_iso {
         or return;
 
 #    test_unread_messages($USER,1, "[$vm_name] create domain $name");
-    test_message_new_domain($vm_name, $USER);
+    test_message_new_domain($vm_name, $USER, "[$vm_name] create domain $name");
 
     my $req2 = Ravada::Request->open($req->id);
     ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
@@ -137,12 +137,13 @@ sub test_req_create_domain_iso {
 }
 
 sub test_message_new_domain {
-    my ($vm_name, $user) = @_;
-    my @messages = $user->unread_messages();
-    ok(scalar(@messages) == 1,"Expecting 1 new message , got "
-        .scalar(@messages)
-        .Dumper(\@messages));
+    my ($vm_name, $user, $test) = @_;
 
+    test_unshown_messages($USER,1, $test);
+    test_unshown_messages($USER,0, $test);
+    test_unread_messages($USER,1, $test);
+
+    my @messages = $user->unread_messages();
     my $message = $user->show_message($messages[0]->{id});
 
     ok($message->{message} && $message->{message} =~ /\w+/
