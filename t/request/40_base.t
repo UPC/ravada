@@ -45,6 +45,17 @@ sub test_unread_messages {
     $user->mark_all_messages_read();
 }
 
+sub test_unshown_messages {
+    my ($user, $n_unread, $test) = @_;
+    confess "Missing test name" if !$test;
+
+    my @messages = $user->unshown_messages();
+
+    ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unshown messages , got "
+        .scalar@messages." ".Dumper(\@messages));
+
+}
+
 sub test_swap {
     my $vm_name = shift;
 
@@ -80,6 +91,7 @@ sub test_req_create_domain_iso {
     my $name = new_domain_name();
 
     $USER->mark_all_messages_read();
+    test_unshown_messages($USER,0, "[$vm_name] create domain $name");
     test_unread_messages($USER,0, "[$vm_name] create domain $name");
 
     my $req = Ravada::Request->create_domain(
