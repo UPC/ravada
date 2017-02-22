@@ -30,6 +30,7 @@ our %VALID_ARG = (
     create_domain => {
               vm => 1
            ,name => 1
+           ,swap => 2
          ,id_iso => 1
         ,id_base => 1
        ,id_owner => 1

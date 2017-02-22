@@ -99,7 +99,7 @@ before 'remove' => \&_pre_remove_domain;
 
 before 'prepare_base' => \&_pre_prepare_base;
  after 'prepare_base' => \&_post_prepare_base;
- 
+
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
@@ -132,7 +132,8 @@ sub _vm_disconnect {
 }
 
 sub _start_preconditions{
-    
+    my ($self) = @_;
+
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
     } else {
@@ -142,6 +143,8 @@ sub _start_preconditions{
     _check_used_memory(@_);
 
 }
+
+
 
 sub _allow_manage_args {
     my $self = shift;
@@ -387,7 +390,7 @@ sub _select_domain_db {
 
 sub _prepare_base_db {
     my $self = shift;
-    my $file_img = shift;
+    my @file_img = @_;
 
     if (!$self->_select_domain_db) {
         confess "CRITICAL: The data should be already inserted";
@@ -398,7 +401,9 @@ sub _prepare_base_db {
         ." (id_domain , file_base_img )"
         ." VALUES(?,?)"
     );
-    $sth->execute($self->id, $file_img );
+    for my $file_img (@file_img) {
+        $sth->execute($self->id, $file_img );
+    }
     $sth->finish;
 
     $sth = $$CONNECTOR->dbh->prepare(
@@ -749,7 +754,31 @@ sub _post_shutdown {
 
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
+    $self->clean_swap_volumes(@_) if $self->id_base();
 
+}
+
+=head2 add_volume_swap
+
+Adds a swap volume to the virtual machine
+
+Arguments:
+
+    size => $kb
+    name => $name (optional)
+
+=cut
+
+sub add_volume_swap {
+    my $self = shift;
+    my %arg = @_;
+
+    $arg{name} = $self->name if !$arg{name};
+    $self->add_volume(%arg, swap => 1);
+}
+
+sub image_swap_suffix {
+    return ".SWAP.img";
 }
 
 sub _remove_iptables {
@@ -995,6 +1024,23 @@ sub is_public {
     }
     return $self->_data('is_public');
 }
+
+=head2 clean_swap_volumes
+
+Check if the domain has swap volumes defined, and clean them
+
+    $domain->clean_swap_volumes();
+
+=cut
+
+sub remove_swap_volumes {
+    my $self = shift;
+    for my $file ( $self->list_volumes) {
+        $self->clean_disk($file)
+            if $file =~ /.SWAP\.img$/;
+    }
+}
+
 
 sub _pre_rename {
     my $self = shift;

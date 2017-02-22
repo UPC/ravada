@@ -61,7 +61,7 @@ has 'readonly' => (
 # Method Modifiers definition
 # 
 #
-before 'create_domain' => \&_pre_create_domain;
+around 'create_domain' => \&_around_create_domain;
 
 before 'search_domain' => \&_connect;
 
@@ -86,6 +86,17 @@ sub _connect {
 sub _pre_create_domain {
     _check_create_domain(@_);
     _connect(@_);
+}
+
+sub _around_create_domain {
+    my $orig = shift;
+    my $self = shift;
+    my %args = @_;
+
+    $self->_pre_create_domain(@_);
+    my $domain = $self->$orig(@_);
+    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    return $domain;
 }
 
 ############################################################
