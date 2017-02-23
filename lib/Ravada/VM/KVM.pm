@@ -440,9 +440,9 @@ sub _create_disk_qcow2 {
     my @files_out;
 
     for my $file_base ( $base->list_files_base ) {
-        my $file_out = $file_base;
-        $file_out =~ s/\.ro\.\w+$//;
-        $file_out .= ".$name."._random_name(4).".qcow2";
+        my $ext = ".qcow2";
+        $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\w+$/;
+        my $file_out = "$dir_img/$name-"._random_name(4).$ext;
 
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'

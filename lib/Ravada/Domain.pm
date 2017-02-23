@@ -818,16 +818,6 @@ sub add_volume_swap {
     $self->add_volume(%arg, swap => 1);
 }
 
-=head2 image_swap_suffix
-
-Swap image files end in this
-
-=cut
-
-sub image_swap_suffix {
-    return ".SWAP.img";
-}
-
 sub _remove_iptables {
     my $self = shift;
 
@@ -1076,6 +1066,26 @@ sub is_public {
     return $self->_data('is_public');
 }
 
+<<<<<<< HEAD
+=======
+=head2 clean_swap_volumes
+
+Check if the domain has swap volumes defined, and clean them
+
+    $domain->clean_swap_volumes();
+
+=cut
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ( $self->list_volumes) {
+        $self->clean_disk($file)
+            if $file =~ /\.SWAP\.\w+$/;
+    }
+}
+
+
+>>>>>>> swap
 sub _pre_rename {
     my $self = shift;
 
