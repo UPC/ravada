@@ -67,18 +67,16 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
-    start_process_longs() if !$NOFORK;
-
-    my $ravada = Ravada->new( config => $FILE_CONFIG );
-    $ravada->clean_killed_requests();
+    clean_killed_requests();
 
     start_process_longs() if !$NOFORK;
 
     my $ravada = Ravada->new( config => $FILE_CONFIG );
     for (;;) {
+        my $t0 = time;
         $ravada->process_requests();
         $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
-        sleep 1;
+        sleep 1 if time - $t0 <1;
     }
 }
 
@@ -92,10 +90,16 @@ sub start_process_longs {
     
     warn "Processing long requests in pid $$\n" if $DEBUG;
     my $ravada = Ravada->new( config => $FILE_CONFIG );
-    $ravada->clean_killed_requests();
     for (;;) {
+        my $t0 = time;
         $ravada->process_long_requests();
+        sleep 1 if time - $t0 <1;
     }
+}
+
+sub clean_killed_requests {
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    $ravada->clean_killed_requests();
 }
 
 sub start {

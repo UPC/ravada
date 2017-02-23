@@ -582,8 +582,8 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
-    my $long_commands = shift;
-    my $short_commands = shift;
+    my $long_commands = (shift or 0);
+    my $short_commands = (shift or 0);
 
     $self->_wait_pids_nohang();
 
