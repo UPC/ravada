@@ -1066,8 +1066,6 @@ sub is_public {
     return $self->_data('is_public');
 }
 
-<<<<<<< HEAD
-=======
 =head2 clean_swap_volumes
 
 Check if the domain has swap volumes defined, and clean them
@@ -1085,7 +1083,6 @@ sub clean_swap_volumes {
 }
 
 
->>>>>>> swap
 sub _pre_rename {
     my $self = shift;
 
