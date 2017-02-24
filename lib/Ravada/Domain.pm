@@ -12,6 +12,7 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
+use Ravada::Domain::Setting;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -1108,5 +1109,28 @@ sub _post_rename {
      $sth->execute($filename, $self->id);
      $sth->finish;
  }
+
+sub settings {
+    my $self = shift;
+    my $name = shift;
+
+    my $query = "SELECT id from domain_settings_types "
+        ." WHERE vm=?";
+    $query .= " AND name=?" if $name;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    my @sql_args = ($self->_vm->type);
+    push @sql_args,($name)  if $name;
+
+    $sth->execute(@sql_args);
+
+    my @settings;
+    while ( my ($id) = $sth->fetchrow) {
+        push @settings,Ravada::Domain::Setting->new(id => $id, domain => $self);
+    }
+    return $settings[0] if !wantarray && $name && scalar@settings == 1;
+    return @settings;
+}
 
 1;

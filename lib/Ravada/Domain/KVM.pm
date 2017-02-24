@@ -37,6 +37,13 @@ has '_vm' => (
 our $TIMEOUT_SHUTDOWN = 60;
 our $OUT;
 
+our %GET_SETTING_SUB = (
+    video => \&_get_setting_video
+);
+our %SET_SETTING_SUB = (
+    video => \&_set_setting_video
+);
+
 ##################################################
 
 
@@ -1106,6 +1113,81 @@ sub clean_swap_volumes {
         my ($in,$out, $err);
         run3(\@cmd,\$in, \$out, \$err);
 
+    }
+}
+
+sub get_setting {
+    my $self = shift;
+    my $name = shift;
+
+    my $sub = $GET_SETTING_SUB{$name};
+
+    die "I can't get setting $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+sub set_setting {
+    my $self = shift;
+    my $name = shift;
+
+    my $sub = $SET_SETTING_SUB{$name};
+
+    die "I can't get setting $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self,@_);
+}
+
+sub _get_setting_video {
+    my $self = shift;
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $video($doc->findnodes('/domain/devices/video/model')) {
+        my $str = $video->toString;
+        $str =~ s{^<model (.*)/>}{$1};
+        push @ret,($str);
+    }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+}
+
+sub _text_to_hash {
+    my $text = shift;
+
+    my %ret;
+
+    for my $item (split /\s+/,$text) {
+        my ($name, $value) = $item =~ m{(.*?)=(.*)};
+        if (!defined $name) {
+            warn "I can't find name=value in '$item'";
+            next;
+        }
+        $value =~ s/^"(.*)"$/$1/;
+        $ret{$name} = ($value or '');
+    }
+    return %ret;
+}
+
+sub _set_setting_video {
+    my $self = shift;
+    my $value_str = shift or confess "Missing value";
+    warn $value_str;
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my %value = _text_to_hash($value_str);
+    for my $video($doc->findnodes('/domain/devices/video/model')) {
+        warn $video->toString();
+        for my $name ( keys %value ) {
+            $video->setAttribute( $name => $value{$name} );
+        }
+        warn $video->toString();
+        $self->domain->update_device($video);
     }
 }
 
