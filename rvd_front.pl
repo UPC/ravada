@@ -532,9 +532,14 @@ sub login {
         }
     }
 
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url(../img/intro-bg.jpg)"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
     $c->render(
                     template => 'main/start'
                         ,css => ['/css/main.css']
+                        ,csssnippets => @css_snippets
                         ,js => ['/js/main.js']
                         ,navbar_custom => 1
                       ,login => $login
