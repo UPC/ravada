@@ -75,10 +75,13 @@ hook before_routes => sub {
   my $c = shift;
 
   my $url = $c->req->url;
-  $c->stash(css=>['/css/sb-admin.css']);
-  $c->stash(js=>['/js/form.js'
+  $c->stash(css=>['/css/sb-admin.css']
+            ,js=>['/js/form.js'
                 ,'/js/ravada.js'
-                ]);
+                ]
+            ,csssnippets => []
+            ,navbar_custom => 0
+            );
 
   return access_denied($c)
     if $url =~ /\.json/
