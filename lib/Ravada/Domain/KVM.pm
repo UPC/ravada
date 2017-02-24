@@ -1181,13 +1181,17 @@ sub _set_setting_video {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     my %value = _text_to_hash($value_str);
-    for my $video($doc->findnodes('/domain/devices/video/model')) {
+    for my $video($doc->findnodes('/domain/devices/video')) {
         warn $video->toString();
-        for my $name ( keys %value ) {
-            $video->setAttribute( $name => $value{$name} );
+        for my $node ($video->findnodes('/model')) {
+            for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+            }
         }
         warn $video->toString();
-        $self->domain->update_device($video);
+        warn "is active: ".$self->is_active;
+        $self->domain->update_device($video
+            , Sys::Virt::Domain::DEVICE_MODIFY_CURRENT);
     }
 }
 

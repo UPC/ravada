@@ -81,12 +81,15 @@ SKIP: {
     ok(scalar @options,"Expecting some options , got ".scalar(@options));
 
     for my $option (@options) {
+        $domain->shutdown_now($USER)    if $domain->is_active;
+        for ( 1 .. 10 ) {
+            last if !$domain->is_active;
+            sleep 1;
+        }
         $domain->set_setting(video => $option->{value});
         my $value = $domain->get_setting('video');
         is($value , $option->{value});
 
-        $domain->shutdown_now($USER)    if $domain->is_active;
-        $domain->start($USER);
         my $value2 = $domain->get_setting('video');
         is($value2 , $option->{value});
 
