@@ -169,6 +169,13 @@ any '/machines' => sub {
     return domains($c);
 };
 
+any '/admin' => sub {
+  my $c = shift;
+
+  return access_denied($c)    if !$USER->is_admin;
+
+  return admin($c);
+};
 
 any '/machines/new' => sub {
     my $c = shift;
@@ -670,6 +677,14 @@ sub users {
 
 }
 
+sub admin {
+    my $c = shift;
+
+    my @error = ();
+
+    $c->render(template => 'main/admin');
+
+}
 
 sub new_machine {
     my $c = shift;
