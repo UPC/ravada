@@ -81,7 +81,9 @@ sub _select_driver_db {
 
 sub get_options {
     my $self = shift;
-    my $query = "SELECT * from $TABLE_OPTIONS WHERE id_driver_type=?";
+
+    _init_connector();
+    my $query = "SELECT * from $TABLE_OPTIONS WHERE id_driver_type=? ORDER by name";
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute($self->id);
