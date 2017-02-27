@@ -78,7 +78,7 @@ SKIP: {
 
     my @options = $setting_video->get_options();
     isa_ok(\@options,'ARRAY');
-    ok(scalar @options,"Expecting some options , got ".scalar(@options));
+    ok(scalar @options > 1,"Expecting more than 1 options , got ".scalar(@options));
 
     for my $option (@options) {
         $domain->shutdown_now($USER)    if $domain->is_active;
