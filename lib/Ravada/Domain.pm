@@ -1113,6 +1113,7 @@ sub _post_rename {
 sub settings {
     my $self = shift;
     my $name = shift;
+    my $type = shift or $self->_vm->type;
 
     my $query = "SELECT id from domain_settings_types "
         ." WHERE vm=?";
@@ -1120,7 +1121,7 @@ sub settings {
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 
-    my @sql_args = ($self->_vm->type);
+    my @sql_args = ($type);
     push @sql_args,($name)  if $name;
 
     $sth->execute(@sql_args);

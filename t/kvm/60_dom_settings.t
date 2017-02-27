@@ -52,8 +52,9 @@ sub test_create_domain {
     return $domain;
 }
 
-sub test_settings_video {
+sub test_settings_type {
     my $vm_name = shift;
+    my $type = shift;
 
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
@@ -62,12 +63,12 @@ sub test_settings_video {
     ok(scalar @settings,"Expecting defined settings");
     isa_ok(\@settings,'ARRAY');
 
-    my $setting_video = $domain->settings('video');
+    my $setting_type = $domain->settings($type);
 
-    my $value = $setting_video->get_value();
+    my $value = $setting_type->get_value();
     ok($value);
 
-    my @options = $setting_video->get_options();
+    my @options = $setting_type->get_options();
     isa_ok(\@options,'ARRAY');
     ok(scalar @options > 1,"Expecting more than 1 options , got ".scalar(@options));
 
@@ -78,21 +79,21 @@ sub test_settings_video {
             sleep 1;
         }
 
-        eval { $domain->set_setting(video => $option->{value}) };
+        eval { $domain->set_setting($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
-        my $value = $domain->get_setting('video');
+        my $value = $domain->get_setting($type);
         is($value , $option->{value});
 
         {
             my $domain2 = $vm->search_domain($domain->name);
-            my $value2 = $domain2->get_setting('video');
+            my $value2 = $domain2->get_setting($type);
             is($value2 , $option->{value});
         }
         $domain->start($USER)   if !$domain->is_active;
 
         {
             my $domain2 = $vm->search_domain($domain->name);
-            my $value2 = $domain2->get_setting('video');
+            my $value2 = $domain2->get_setting($type);
             is($value2 , $option->{value});
 
         }
@@ -100,8 +101,9 @@ sub test_settings_video {
     }
 }
 
-sub test_settings_video_clone {
+sub test_settings_type_clone {
     my $vm_name = shift;
+    my $type = shift;
 
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
@@ -110,12 +112,12 @@ sub test_settings_video_clone {
     ok(scalar @settings,"Expecting defined settings");
     isa_ok(\@settings,'ARRAY');
 
-    my $setting_video = $domain->settings('video');
+    my $setting_type = $domain->settings($type);
 
-    my $value = $setting_video->get_value();
+    my $value = $setting_type->get_value();
     ok($value);
 
-    my @options = $setting_video->get_options();
+    my @options = $setting_type->get_options();
     isa_ok(\@options,'ARRAY');
     ok(scalar @options > 1,"Expecting more than 1 options , got "
                             .scalar(@options));
@@ -127,22 +129,22 @@ sub test_settings_video_clone {
             sleep 1;
         }
 
-        eval { $domain->set_setting(video => $option->{value}) };
+        eval { $domain->set_setting($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
-        my $value = $domain->get_setting('video');
+        my $value = $domain->get_setting($type);
         is($value , $option->{value});
 
         my $clone_name = new_domain_name();
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         {
             my $domain2 = $vm->search_domain($clone_name);
-            is($domain2->get_setting('video'), $option->{value});
+            is($domain2->get_setting($type), $option->{value});
         }
         $clone->start($USER)   if !$clone->is_active;
 
         {
             my $domain2 = $vm->search_domain($clone_name);
-            is($domain2->get_setting('video'), $option->{value});
+            is($domain2->get_setting($type), $option->{value});
 
         }
         # try to change the setting in the clone
@@ -152,16 +154,25 @@ sub test_settings_video_clone {
                 last if !$clone->is_active;
                 sleep 1;
             }
-            eval { $clone->set_setting(video => $option_clone->{value}) };
+            eval { $clone->set_setting($type => $option_clone->{value}) };
             ok(!$@,"Expecting no error, got : ".($@ or ''));
-            is($clone->get_setting('video'), $option_clone->{value});
+            is($clone->get_setting($type), $option_clone->{value});
 
         }
         # removing the clone and create again, original setting
         $clone->remove($USER);
         my $clone2 = $domain->clone(user => $USER, name => $clone_name);
-        is($clone2->get_setting('video'), $option->{value});
+        is($clone2->get_setting($type), $option->{value});
 
+    }
+}
+
+sub test_settings {
+    my $vm_name = shift;
+
+    for my $setting ( Ravada::Domain::settings(undef) ) {
+        test_settings_type($vm_name, $setting->name);
+        test_settings_type_clone($vm_name, $setting->name);
     }
 }
 
@@ -179,8 +190,8 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    test_settings_video($vm_name);
-    test_settings_video_clone($vm_name);
+    test_settings($vm_name);
+    test_settings_clone($vm_name);
 };
 remove_old_domains();
 remove_old_disks();
