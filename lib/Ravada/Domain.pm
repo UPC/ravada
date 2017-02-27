@@ -1135,4 +1135,24 @@ sub drivers {
     return @drivers;
 }
 
+sub set_driver_id {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT d.name,o.value "
+        ." FROM domain_drivers_types d, domain_drivers_options o"
+        ." WHERE d.id=o.id_driver_type "
+        ."    AND o.id=?"
+    );
+    $sth->execute($id);
+
+    my ($type, $value) = $sth->fetchrow;
+    confess "Unknown driver option $id" if !$type || !$value;
+
+    $self->set_driver($type => $value);
+    $sth->finish;
+}
+
+
 1;

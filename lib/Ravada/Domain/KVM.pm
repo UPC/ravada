@@ -1116,6 +1116,16 @@ sub clean_swap_volumes {
     }
 }
 
+=head2 get_driver
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
 sub get_driver {
     my $self = shift;
     my $name = shift;
@@ -1128,6 +1138,16 @@ sub get_driver {
     return $sub->($self);
 }
 
+=head2 set_driver
+
+Sets the value of a driver
+
+Argument: name , driver
+
+    my $driver = $domain->set_driver('video','"type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"');
+
+=cut
+
 sub set_driver {
     my $self = shift;
     my $name = shift;
@@ -1137,6 +1157,7 @@ sub set_driver {
     die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
+    warn "setting driver $name : $_[0]";
     return $sub->($self,@_);
 }
 
@@ -1198,9 +1219,16 @@ sub _set_driver_video {
             }
         }
         return if $old_video eq $video->toString();
+        warn $video->toString();
     }
     $self->_vm->connect if !$self->_vm->vm;
-    $self->_vm->vm->create_domain($doc->toString);
+    warn "create domain ".$doc->toString();
+    my $new_domain = $self->_vm->vm->create_domain($doc->toString);
+
+    my $doc2 = XML::LibXML->load_xml(string => $new_domain->get_xml_description);
+    my ($video) = $doc->findnodes('/domain/devices/video/model');
+    warn $video->toString;
+    $self->domain($new_domain);
 }
 
 1;
