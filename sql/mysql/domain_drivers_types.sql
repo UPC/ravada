@@ -1,4 +1,4 @@
-CREATE TABLE `domain_settings_types` (
+CREATE TABLE `domain_drivers_types` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` char(32) DEFAULT NULL,
   `description` varchar(200) DEFAULT NULL,

@@ -37,11 +37,11 @@ has '_vm' => (
 our $TIMEOUT_SHUTDOWN = 60;
 our $OUT;
 
-our %GET_SETTING_SUB = (
-    video => \&_get_setting_video
+our %GET_DRIVER_SUB = (
+    video => \&_get_driver_video
 );
-our %SET_SETTING_SUB = (
-    video => \&_set_setting_video
+our %SET_DRIVER_SUB = (
+    video => \&_set_driver_video
 );
 
 ##################################################
@@ -1116,31 +1116,31 @@ sub clean_swap_volumes {
     }
 }
 
-sub get_setting {
+sub get_driver {
     my $self = shift;
     my $name = shift;
 
-    my $sub = $GET_SETTING_SUB{$name};
+    my $sub = $GET_DRIVER_SUB{$name};
 
-    die "I can't get setting $name for domain ".$self->name
+    die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
     return $sub->($self);
 }
 
-sub set_setting {
+sub set_driver {
     my $self = shift;
     my $name = shift;
 
-    my $sub = $SET_SETTING_SUB{$name};
+    my $sub = $SET_DRIVER_SUB{$name};
 
-    die "I can't get setting $name for domain ".$self->name
+    die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
     return $sub->($self,@_);
 }
 
-sub _get_setting_video {
+sub _get_driver_video {
     my $self = shift;
 
     my @ret;
@@ -1173,7 +1173,7 @@ sub _text_to_hash {
     return %ret;
 }
 
-sub _set_setting_video {
+sub _set_driver_video {
     my $self = shift;
     my $value_str = shift or confess "Missing value";
 
@@ -1199,6 +1199,7 @@ sub _set_setting_video {
         }
         return if $old_video eq $video->toString();
     }
+    $self->_vm->connect if !$self->_vm->vm;
     $self->_vm->vm->create_domain($doc->toString);
 }
 

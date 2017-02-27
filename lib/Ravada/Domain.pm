@@ -12,7 +12,7 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
-use Ravada::Domain::Setting;
+use Ravada::Domain::Driver;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -752,12 +752,12 @@ sub clone {
 
     my $id_base = $self->id;
 
-
     return $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
+        ,_vm => $self->_vm
     );
 }
 
@@ -1110,12 +1110,13 @@ sub _post_rename {
      $sth->finish;
  }
 
-sub settings {
+sub drivers {
     my $self = shift;
     my $name = shift;
-    my $type = shift or $self->_vm->type;
+    my $type = (shift or $self->_vm->type);
 
-    my $query = "SELECT id from domain_settings_types "
+    $type = 'qemu' if $type =~ /^KVM$/;
+    my $query = "SELECT id from domain_drivers_types "
         ." WHERE vm=?";
     $query .= " AND name=?" if $name;
 
@@ -1126,12 +1127,12 @@ sub settings {
 
     $sth->execute(@sql_args);
 
-    my @settings;
+    my @drivers;
     while ( my ($id) = $sth->fetchrow) {
-        push @settings,Ravada::Domain::Setting->new(id => $id, domain => $self);
+        push @drivers,Ravada::Domain::Driver->new(id => $id, domain => $self);
     }
-    return $settings[0] if !wantarray && $name && scalar@settings == 1;
-    return @settings;
+    return $drivers[0] if !wantarray && $name && scalar@drivers< 2;
+    return @drivers;
 }
 
 1;

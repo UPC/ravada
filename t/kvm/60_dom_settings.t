@@ -19,6 +19,7 @@ my $USER = create_user('foo','bar');
 my %ARG_CREATE_DOM = (
       KVM => [ id_iso => 1 ]
 );
+our $TIMEOUT_SHUTDOWN = 10;
 
 ################################################################
 sub test_create_domain {
@@ -52,48 +53,44 @@ sub test_create_domain {
     return $domain;
 }
 
-sub test_settings_type {
+sub test_drivers_type {
     my $vm_name = shift;
     my $type = shift;
 
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
-    my @settings = $domain->settings();
-    ok(scalar @settings,"Expecting defined settings");
-    isa_ok(\@settings,'ARRAY');
+    my @drivers = $domain->drivers();
+    ok(scalar @drivers,"Expecting defined drivers");
+    isa_ok(\@drivers,'ARRAY');
 
-    my $setting_type = $domain->settings($type);
+    my $driver_type = $domain->drivers($type);
 
-    my $value = $setting_type->get_value();
+    my $value = $driver_type->get_value();
     ok($value);
 
-    my @options = $setting_type->get_options();
+    my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
     ok(scalar @options > 1,"Expecting more than 1 options , got ".scalar(@options));
 
     for my $option (@options) {
-        $domain->shutdown_now($USER)    if $domain->is_active;
-        for ( 1 .. 10 ) {
-            last if !$domain->is_active;
-            sleep 1;
-        }
+        _domain_shutdown($domain);
 
-        eval { $domain->set_setting($type => $option->{value}) };
+        eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
-        my $value = $domain->get_setting($type);
+        my $value = $domain->get_driver($type);
         is($value , $option->{value});
 
         {
             my $domain2 = $vm->search_domain($domain->name);
-            my $value2 = $domain2->get_setting($type);
+            my $value2 = $domain2->get_driver($type);
             is($value2 , $option->{value});
         }
         $domain->start($USER)   if !$domain->is_active;
 
         {
             my $domain2 = $vm->search_domain($domain->name);
-            my $value2 = $domain2->get_setting($type);
+            my $value2 = $domain2->get_driver($type);
             is($value2 , $option->{value});
 
         }
@@ -101,78 +98,88 @@ sub test_settings_type {
     }
 }
 
-sub test_settings_type_clone {
+sub test_drivers_clone {
     my $vm_name = shift;
     my $type = shift;
 
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
-    my @settings = $domain->settings();
-    ok(scalar @settings,"Expecting defined settings");
-    isa_ok(\@settings,'ARRAY');
+    my @drivers = $domain->drivers();
+    ok(scalar @drivers,"Expecting defined drivers") or return;
+    isa_ok(\@drivers,'ARRAY');
 
-    my $setting_type = $domain->settings($type);
+    my $driver_type = $domain->drivers($type);
 
-    my $value = $setting_type->get_value();
+    isa_ok($driver_type,'Ravada::Domain::Driver') or return;
+
+    my $value = $driver_type->get_value();
     ok($value);
 
-    my @options = $setting_type->get_options();
+    my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
     ok(scalar @options > 1,"Expecting more than 1 options , got "
                             .scalar(@options));
 
     for my $option (@options) {
-        $domain->shutdown_now($USER)    if $domain->is_active;
-        for ( 1 .. 10 ) {
-            last if !$domain->is_active;
-            sleep 1;
-        }
+        _domain_shutdown($domain);
 
-        eval { $domain->set_setting($type => $option->{value}) };
-        ok(!$@,"Expecting no error, got : ".($@ or ''));
-        my $value = $domain->get_setting($type);
+        eval { $domain->set_driver($type => $option->{value}) };
+        ok(!$@,"Expecting no error, got : ".($@ or '')) or return;
+        my $value = $domain->get_driver($type);
         is($value , $option->{value});
 
         my $clone_name = new_domain_name();
+
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         {
             my $domain2 = $vm->search_domain($clone_name);
-            is($domain2->get_setting($type), $option->{value});
+            is($domain2->get_driver($type), $option->{value});
         }
         $clone->start($USER)   if !$clone->is_active;
 
         {
             my $domain2 = $vm->search_domain($clone_name);
-            is($domain2->get_setting($type), $option->{value});
+            is($domain2->get_driver($type), $option->{value});
 
         }
-        # try to change the setting in the clone
+        # try to change the driver in the clone
         for my $option_clone (@options) {
-            $clone->shutdown_now($USER)    if $clone->is_active;
-            for ( 1 .. 10 ) {
-                last if !$clone->is_active;
-                sleep 1;
-            }
-            eval { $clone->set_setting($type => $option_clone->{value}) };
+            _domain_shutdown($clone);
+            eval { $clone->set_driver($type => $option_clone->{value}) };
             ok(!$@,"Expecting no error, got : ".($@ or ''));
-            is($clone->get_setting($type), $option_clone->{value});
+            is($clone->get_driver($type), $option_clone->{value});
+
+            $clone->start($USER)    if !$clone->is_active;
+            is($clone->get_driver($type), $option_clone->{value});
 
         }
-        # removing the clone and create again, original setting
+        # removing the clone and create again, original driver
         $clone->remove($USER);
         my $clone2 = $domain->clone(user => $USER, name => $clone_name);
-        is($clone2->get_setting($type), $option->{value});
+        is($clone2->get_driver($type), $option->{value});
+        $clone2->remove($USER);
+    }
+    $domain->remove($USER);
+}
 
+sub _domain_shutdown {
+    my $domain = shift;
+    $domain->shutdown_now($USER) if $domain->is_active;
+    for ( 1 .. $TIMEOUT_SHUTDOWN) {
+        last if !$domain->is_active;
+        sleep 1;
     }
 }
 
 sub test_settings {
     my $vm_name = shift;
 
-    for my $setting ( Ravada::Domain::settings(undef) ) {
-        test_settings_type($vm_name, $setting->name);
-        test_settings_type_clone($vm_name, $setting->name);
+    for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
+        next if $driver->name ne 'video';
+        diag("Testing drivers for $vm_name ".$driver->name);
+        test_drivers_clone($vm_name, $driver->name);
+        test_drivers_type($vm_name, $driver->name);
     }
 }
 
@@ -191,7 +198,6 @@ SKIP: {
     skip $msg,10    if !$vm;
 
     test_settings($vm_name);
-    test_settings_clone($vm_name);
 };
 remove_old_domains();
 remove_old_disks();

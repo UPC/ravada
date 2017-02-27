@@ -1,4 +1,4 @@
-package Ravada::Domain::Setting;
+package Ravada::Domain::Driver;
 
 use warnings;
 use strict;
@@ -8,7 +8,7 @@ use Moose;
 _init_connector();
 
 has 'domain' => (
-    isa => 'Object'
+    isa => 'Any'
     ,is => 'ro'
 );
 
@@ -20,8 +20,8 @@ has 'id' => (
 ##############################################################################
 
 our $CONNECTOR;
-our $TABLE_SETTINGS = "domain_settings_types";
-our $TABLE_OPTIONS= "domain_settings_options";
+our $TABLE_DRIVERS = "domain_drivers_types";
+our $TABLE_OPTIONS= "domain_drivers_options";
 
 sub _init_connector {
     return if $CONNECTOR && $$CONNECTOR;
@@ -34,7 +34,7 @@ sub _init_connector {
 
 sub get_value {
     my $self = shift;
-    return $self->domain->get_setting($self->name);
+    return $self->domain->get_driver($self->name);
 }
 
 sub name {
@@ -49,15 +49,15 @@ sub _data {
     _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
-    $self->{_data} = $self->_select_setting_db( id => $self->id);
+    $self->{_data} = $self->_select_driver_db( id => $self->id);
 
-    confess "No DB info for setting ".$self->id      if !$self->{_data};
-    confess "No field $field in settings "           if !exists$self->{_data}->{$field};
+    confess "No DB info for driver ".$self->id      if !$self->{_data};
+    confess "No field $field in drivers "           if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
 }
 
-sub _select_setting_db {
+sub _select_driver_db {
     my $self = shift;
     my %args = @_;
 
@@ -68,7 +68,7 @@ sub _select_setting_db {
     }
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM $TABLE_SETTINGS WHERE ".join(",",map { "$_=?" } sort keys %args )
+        "SELECT * FROM $TABLE_DRIVERS WHERE ".join(",",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
     my $row = $sth->fetchrow_hashref;
@@ -81,7 +81,7 @@ sub _select_setting_db {
 
 sub get_options {
     my $self = shift;
-    my $query = "SELECT * from $TABLE_OPTIONS WHERE id_setting_type=?";
+    my $query = "SELECT * from $TABLE_OPTIONS WHERE id_driver_type=?";
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute($self->id);
