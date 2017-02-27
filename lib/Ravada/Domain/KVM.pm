@@ -1176,23 +1176,30 @@ sub _text_to_hash {
 sub _set_setting_video {
     my $self = shift;
     my $value_str = shift or confess "Missing value";
-    warn $value_str;
 
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     my %value = _text_to_hash($value_str);
     for my $video($doc->findnodes('/domain/devices/video')) {
-        warn $video->toString();
-        for my $node ($video->findnodes('/model')) {
+        my $old_video = $video->toString();
+        for my $node ($video->findnodes('model')) {
+            for my $attrib ( $node->attributes ) {
+                my ( $name ) =$attrib =~ /\s*(.*)=/;
+                next if !defined $name;
+                my $new_value = ($value{$name} or '');
+                if ($value{$name}) {
+                    $node->setAttribute($name => $value{$name});
+                } else {
+                    $node->removeAttribute($name);
+                }
+            }
             for my $name ( keys %value ) {
                 $node->setAttribute( $name => $value{$name} );
             }
         }
-        warn $video->toString();
-        warn "is active: ".$self->is_active;
-        $self->domain->update_device($video
-            , Sys::Virt::Domain::DEVICE_MODIFY_CURRENT);
+        return if $old_video eq $video->toString();
     }
+    $self->_vm->vm->create_domain($doc->toString);
 }
 
 1;
