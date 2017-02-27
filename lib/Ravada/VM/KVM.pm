@@ -198,17 +198,12 @@ sub search_domain {
 
         my $domain;
 
-        my @args_create = ();
-        @args_create = (
-                    _vm => $self)
-        if !$self->readonly;
-
         eval {
             $domain = Ravada::Domain::KVM->new(
                 domain => $dom
                 , storage => $self->storage_pool
                 ,readonly => $self->readonly
-                ,@args_create
+                ,_vm => $self
             );
         };
         warn $@ if $@;
