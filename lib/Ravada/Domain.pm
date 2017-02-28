@@ -1110,6 +1110,15 @@ sub _post_rename {
      $sth->finish;
  }
 
+=head2 drivers
+
+List the drivers available for a domain. It may filter for a given type.
+
+    my @drivers = $domain->drivers();
+    my @video_drivers = $domain->drivers('video');
+
+=cut
+
 sub drivers {
     my $self = shift;
     my $name = shift;
@@ -1134,6 +1143,15 @@ sub drivers {
     return $drivers[0] if !wantarray && $name && scalar@drivers< 2;
     return @drivers;
 }
+
+=head2 set_driver_id
+
+Sets the driver of a domain given it id. The id must be one from
+the table domain_drivers_options
+
+    $domain->set_driver_id($id_driver);
+
+=cut
 
 sub set_driver_id {
     my $self = shift;
