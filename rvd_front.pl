@@ -969,16 +969,26 @@ sub settings_machine {
     $c->stash(uri => $c->req->url->to_abs);
 
     my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
-            if $c->param('shutdown') && $domain->is_alive;
+            if $c->param('shutdown') && $domain->is_active;
+
+    $req = Ravada::Request->start_domain(
+                        uid => $USER->id
+                     , name => $domain->name
+                , remote_ip => _remote_ip($c)
+            ) if $c->param('start') && !$domain->is_active;
 
     _enable_buttons($c, $domain);
 
     my $driver = "driver_video";
-    my $req2 = Ravada::Request->set_driver(uid => $USER->id
-            , domain_id => $domain->id
-            , option_id => $c->param($driver))
-                if $c->param($driver);
+    $c->stash(message => '');
+    if ( $c->param($driver) ) {
+        my $req2 = Ravada::Request->set_driver(uid => $USER->id
+            , id_domain => $domain->id
+            , id_option => $c->param($driver));
 
+        $RAVADA->wait_request($req2, 60);
+        $c->stash(message => 'Driver change will apply on next start');
+    }
     return $c->render(template => 'main/settings_machine');
 }
 
