@@ -76,6 +76,7 @@ sub test_drivers_type {
     for my $option (@options) {
         _domain_shutdown($domain);
 
+        die "No value for driver ".Dumper($option)  if !$option->{value};
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
         is($domain->get_driver($type), $option->{value}) or next;
@@ -233,8 +234,8 @@ sub _domain_shutdown {
 sub test_settings {
     my $vm_name = shift;
 
-    for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
-        next if $driver->name ne 'video';
+    for my $driver (Ravada::Domain::drivers(undef,undef,$vm_name) ) {
+        next if $driver->name ne 'video' && $driver->name ne 'network';
         diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_type($vm_name, $driver->name);
         test_drivers_clone($vm_name, $driver->name);

@@ -7,6 +7,6 @@ INSERT INTO `domain_drivers_options` VALUES (5,1,'Xen','type="xen" vram="4096" h
 INSERT INTO `domain_drivers_options` VALUES (6,2,'ich6','');
 INSERT INTO `domain_drivers_options` VALUES (7,2,'ac97','');
 
-INSERT INTO `domain_drivers_options` VALUES (8,3,'virtio','');
-INSERT INTO `domain_drivers_options` VALUES (9,3,'e1000','');
-INSERT INTO `domain_drivers_options` VALUES (10,3,'rtl8139','');
+INSERT INTO `domain_drivers_options` VALUES (8,3,'virtio','type="virtio"');
+INSERT INTO `domain_drivers_options` VALUES (9,3,'e1000','type="e1000"');
+INSERT INTO `domain_drivers_options` VALUES (10,3,'rtl8139','type="rtl8139"');

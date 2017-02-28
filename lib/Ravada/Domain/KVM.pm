@@ -39,9 +39,11 @@ our $OUT;
 
 our %GET_DRIVER_SUB = (
     video => \&_get_driver_video
+    ,network => \&_get_driver_network
 );
 our %SET_DRIVER_SUB = (
     video => \&_set_driver_video
+    ,network => \&_set_driver_network
 );
 
 ##################################################
@@ -1160,14 +1162,15 @@ sub set_driver {
     return $sub->($self,@_);
 }
 
-sub _get_driver_video {
+sub _get_driver_generic {
     my $self = shift;
+    my $xml_path = shift;
 
     my @ret;
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
-    for my $video($doc->findnodes('/domain/devices/video/model')) {
-        my $str = $video->toString;
+    for my $driver ($doc->findnodes($xml_path)) {
+        my $str = $driver->toString;
         $str =~ s{^<model (.*)/>}{$1};
         push @ret,($str);
     }
@@ -1175,6 +1178,17 @@ sub _get_driver_video {
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
 }
+
+sub _get_driver_video {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/video/model',@_);
+}
+
+sub _get_driver_network {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/interface/model',@_);
+}
+
 
 sub _text_to_hash {
     my $text = shift;
@@ -1193,15 +1207,16 @@ sub _text_to_hash {
     return %ret;
 }
 
-sub _set_driver_video {
+sub _set_driver_generic {
     my $self = shift;
+    my $xml_path= shift;
     my $value_str = shift or confess "Missing value";
 
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     my %value = _text_to_hash($value_str);
-    for my $video($doc->findnodes('/domain/devices/video')) {
-        my $old_video = $video->toString();
+    for my $video($doc->findnodes($xml_path)) {
+        my $old_driver = $video->toString();
         for my $node ($video->findnodes('model')) {
             for my $attrib ( $node->attributes ) {
                 my ( $name ) =$attrib =~ /\s*(.*)=/;
@@ -1217,12 +1232,22 @@ sub _set_driver_video {
                 $node->setAttribute( $name => $value{$name} );
             }
         }
-        return if $old_video eq $video->toString();
+        return if $old_driver eq $video->toString();
     }
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+}
+
+sub _set_driver_video {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/video',@_);
+}
+
+sub _set_driver_network {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/interface',@_);
 }
 
 1;

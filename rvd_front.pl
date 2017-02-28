@@ -979,15 +979,21 @@ sub settings_machine {
 
     _enable_buttons($c, $domain);
 
-    my $driver = "driver_video";
     $c->stash(message => '');
-    if ( $c->param($driver) ) {
-        my $req2 = Ravada::Request->set_driver(uid => $USER->id
-            , id_domain => $domain->id
-            , id_option => $c->param($driver));
-
-        $RAVADA->wait_request($req2, 60);
-        $c->stash(message => 'Driver change will apply on next start');
+    my @reqs = ();
+    for (qw(video network)) {
+        my $driver = "driver_$_";
+        if ( $c->param($driver) ) {
+            my $req2 = Ravada::Request->set_driver(uid => $USER->id
+                , id_domain => $domain->id
+                , id_option => $c->param($driver)
+            );
+            $c->stash(message => 'Driver change will apply on next start');
+            push @reqs,($req2);
+        }
+    }
+    for my $req (@reqs) {
+        $RAVADA->wait_request($req, 60) 
     }
     return $c->render(template => 'main/settings_machine');
 }

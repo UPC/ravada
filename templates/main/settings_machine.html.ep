@@ -26,7 +26,7 @@
                                 MB available.
                                 <br/>
 
-%                           for my $driver_name (qw(video)) {
+%                           for my $driver_name (qw(video network)) {
 %                               my $driver = $domain->drivers($driver_name);
                                 <label for="driver_<%= $driver_name %>"><%= $driver_name %></label>
 %                               if (!$driver) {
@@ -41,6 +41,7 @@
                                         value="<%= $option->{id} %>"><%= $option->{name} %></option>
 %                               }
                                 </select>
+                                <br/>
 %                           }
                             <br/>
                             <input type="submit" value="save">
