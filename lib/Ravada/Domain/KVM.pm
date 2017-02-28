@@ -1157,7 +1157,6 @@ sub set_driver {
     die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
-    warn "setting driver $name : $_[0]";
     return $sub->($self,@_);
 }
 
@@ -1219,16 +1218,11 @@ sub _set_driver_video {
             }
         }
         return if $old_video eq $video->toString();
-        warn $video->toString();
     }
     $self->_vm->connect if !$self->_vm->vm;
-    warn "create domain ".$doc->toString();
-    my $new_domain = $self->_vm->vm->create_domain($doc->toString);
-
-    my $doc2 = XML::LibXML->load_xml(string => $new_domain->get_xml_description);
-    my ($video) = $doc->findnodes('/domain/devices/video/model');
-    warn $video->toString;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+
 }
 
 1;
