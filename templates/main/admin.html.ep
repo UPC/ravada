@@ -3,15 +3,15 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div ng-controller="messages">
+    <div ng-controller="adminPage">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
-          <sol-show-admin-navigation></sol-show-admin-navigation>
-            <div class="page-header">
-                <div class="panel panel-default">
-                  <sol-show-admin-content></sol-show-admin-content>
-                </div>
-            </div>
+      <div id="admin-nav">
+        <sol-show-admin-navigation></sol-show-admin-navigation>
+      </div>
+      <div id="admin-content">
+        <sol-show-admin-content></sol-show-admin-content>
+      </div>
     </div>
     </div>
     </div>

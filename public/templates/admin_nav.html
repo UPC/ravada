@@ -1,8 +1,19 @@
-<ul>Machines
-  <li>machine1</li>
-  <li>machine2</li>
-</ul>
-<ul>Users
-  <li>user1</li>
-  <li>user2</li>
-</ul>
+<a class="btn btn-success btn-sm" ng-click="showMachines()">
+<i class="fa fa-desktop" aria-hidden="true"></i>&nbspmachines</a>
+<a class="btn btn-success btn-sm" ng-click="showUsers()">
+<i class="fa fa-user" aria-hidden="true"></i>&nbspusers</a>
+<table ng-show="showing=='machines'" class="table table-striped" border="0">
+  <thead><tr><th>Machines</th></tr></thead>
+  <tbody>
+    <tr ng-repeat="machine in list_machines">
+      <td>
+        <a ng-show="{{machine.is_public}}" title="Manage VM"><b>{{machine.name}}</b></a>
+        <a ng-hide="{{machine.is_public}}" title="Manage VM">{{machine.name}}</a>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<table ng-show="showing=='users'" class="table table-striped">
+  <thead><tr><th>Users</th></tr></thead>
+  <tbody><tr ng-repeat="user in list_users"><td>{{user.name}}</td></tr></tbody>
+</table>
