@@ -42,7 +42,7 @@ sub test_create_domain {
                     , @{$ARG_CREATE_DOM{$vm_name}})
     };
 
-    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
+    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
     ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
@@ -78,11 +78,10 @@ sub test_drivers_type {
 
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
-        my $value = $domain->get_driver($type);
-        is($value , $option->{value});
+        is($domain->get_driver($type), $option->{value}) or next;
 
         _domain_shutdown($domain),
-        is($domain->get_driver($type), $option->{value}) or exit;
+        is($domain->get_driver($type), $option->{value}) or next;
 
         {
             my $domain2 = $vm->search_domain($domain->name);
@@ -177,7 +176,7 @@ sub test_drivers_clone {
         diag("Testing $vm_name $type : $option->{name}");
 
         eval { $domain->set_driver($type => $option->{value}) };
-        ok(!$@,"Expecting no error, got : ".($@ or '')) or return;
+        ok(!$@,"Expecting no error, got : ".($@ or '')) or next;
         is($domain->get_driver($type), $option->{value});
 
         my $clone_name = new_domain_name();
@@ -185,15 +184,15 @@ sub test_drivers_clone {
         ok(!$clone_missing,"Domain $clone_name should not exists, got :"
                             .($clone_missing or ''));
 
-        is($domain->get_driver($type), $option->{value}) or exit;
+        is($domain->get_driver($type), $option->{value}) or next;
         _domain_shutdown($domain);
-        is($domain->get_driver($type), $option->{value}) or exit;
+        is($domain->get_driver($type), $option->{value}) or next;
         my $clone = $domain->clone(user => $USER, name => $clone_name);
-        is($domain->get_driver($type), $option->{value}) or exit;
-        is($clone->get_driver($type), $option->{value}) or exit;
+        is($domain->get_driver($type), $option->{value}) or next;
+        is($clone->get_driver($type), $option->{value}) or next;
         {
             my $clone2 = $vm->search_domain($clone_name);
-            is($clone2->get_driver($type), $option->{value}) or exit;
+            is($clone2->get_driver($type), $option->{value}) or next;
         }
         $clone->start($USER)   if !$clone->is_active;
 

@@ -42,7 +42,7 @@ sub test_create_domain {
                     , @{$ARG_CREATE_DOM{$vm_name}})
     };
 
-    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
+    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
     ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
