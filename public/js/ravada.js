@@ -1,6 +1,6 @@
 
 
-    angular.module("ravada.app",['ngResource','ngSanitize'])
+    var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
@@ -8,8 +8,6 @@
             .directive("solShowCardsmachines", swCardsMach)
             .directive("solShowMachinesNotifications", swMachNotif)
             .directive("solShowMessages", swMess)
-      .directive("solShowAdminNavigation", swAdminNavigation)
-            .directive("solShowAdminContent", swAdminContent)
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
@@ -292,24 +290,6 @@
         return {
             restrict: "E",
             templateUrl: '/templates/list_users.html',
-        };
-
-    };
-
-    function swAdminNavigation() {
-
-        return {
-            restrict: "E",
-            templateUrl: '/templates/admin_nav.html',
-        };
-
-    };
-
-    function swAdminContent() {
-
-        return {
-            restrict: "E",
-            templateUrl: '/templates/admin_cont.html',
         };
 
     };

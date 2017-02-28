@@ -1,0 +1,11 @@
+#admin-nav{
+  float:left;
+  width: 190px;
+  padding: 5px 5px 5px 5px;
+  border: thin solid green;
+  border-radius: 3px;
+}
+
+#admin-content{
+  margin-left: 200px;
+}
