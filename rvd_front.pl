@@ -66,7 +66,7 @@ our $USER;
 
 # TODO: get those from the config file
 our $DOCUMENT_ROOT = "/var/www";
-our $SESSION_TIMEOUT = 300;
+our $SESSION_TIMEOUT = 900;
 
 init();
 ############################################################################3
