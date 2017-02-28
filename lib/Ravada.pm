@@ -1108,6 +1108,24 @@ sub _cmd_rename_domain {
 
 }
 
+sub _cmd_set_driver {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    confess "Unkown domain ".Dumper($request)   if !$domain;
+
+    die "USER $uid not authorized to set driver for domain ".$domain->name
+        if $domain->id_owner != $user->id && !$user->is_admin;
+
+    $domain->set_driver_id($request->args('id_option'));
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -1120,6 +1138,7 @@ sub _req_method {
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
       ,shutdown => \&_cmd_shutdown
+    ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
    ,remove_base => \&_cmd_remove_base

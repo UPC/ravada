@@ -50,6 +50,7 @@ our %VALID_ARG = (
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
+    ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -242,6 +243,8 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
+
+    confess "Unknown method $sub" if !$valid_args;
     for (keys %{$args}) {
         confess "Invalid argument $_ , valid args ".Dumper($valid_args)
             if !$valid_args->{$_};
@@ -709,6 +712,35 @@ sub rename_domain {
 
     return $self->_new_request(
             command => 'rename_domain'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 set_driver
+
+Sets a driver to a domain
+
+    $domain->set_driver(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,id_driver => $driver->id
+    );
+
+=cut
+
+sub set_driver {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_driver', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_driver'
         , id_domain => $args->{id_domain}
              , args => encode_json($args)
     );
