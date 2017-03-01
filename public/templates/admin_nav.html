@@ -2,13 +2,17 @@
 <i class="fa fa-desktop" aria-hidden="true"></i>&nbspmachines</a>
 <a class="btn btn-success btn-sm" ng-click="showUsers()">
 <i class="fa fa-user" aria-hidden="true"></i>&nbspusers</a>
-<table ng-show="showing=='machines'" class="table table-striped" border="0">
+<table ng-show="showing=='machines' || showing == 'machine'" class="table table-striped" border="0">
   <thead><tr><th>Machines</th></tr></thead>
   <tbody>
     <tr ng-repeat="machine in list_machines">
       <td>
-        <a ng-show="{{machine.is_public}}" title="Manage VM"><b>{{machine.name}}</b></a>
-        <a ng-hide="{{machine.is_public}}" title="Manage VM">{{machine.name}}</a>
+        <button ng-show="{{machine.is_public}}" ng-click="showMachine(machine.id)">
+          <b>{{machine.name}}</b>
+        </button>
+        <button ng-hide="{{machine.is_public}}" ng-click="showMachine(machine.id)">
+          {{machine.name}}
+        </button>
       </td>
     </tr>
   </tbody>

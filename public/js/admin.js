@@ -21,6 +21,12 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
 
     };
 
+  function getMachineById(array, value) {
+    for (var i=0, iLength=array.length; i<iLength; i++) {
+      if (array[i].id == value) return array[i];
+    }
+    return null;
+  }
   function adminPageC($scope, $http, $interval, request, listMach) {
     $scope.showing = 'machines';
     $scope.showMachines = function(){
@@ -28,6 +34,10 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     }
     $scope.showUsers = function(){
       $scope.showing = 'users';
+    }
+    $scope.showMachine = function(machineId){
+      $scope.showmachine = getMachineById($scope.list_machines,machineId);
+      $scope.showing = 'machine';
     }
     $scope.getUsers = function() {
       $http.get('/list_users.json').then(function(response) {

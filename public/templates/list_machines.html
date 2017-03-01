@@ -18,9 +18,12 @@
             <tbody>
                 <tr ng-repeat="machine in list_machines">
                     <td>
-                        <a ng-show="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM"><b>{{machine.name}}</b></a>
-                        <a ng-hide="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM">{{machine.name}}</a>
-
+                        <button ng-show="{{machine.is_public}}" ng-click="showMachine(machine.id)">
+                          <b>{{machine.name}}</b>
+                        </button>
+                        <button ng-hide="{{machine.is_public}}" ng-click="showMachine(machine.id)">
+                          {{machine.name}}
+                        </button>
                     </td>
                     <td>
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
