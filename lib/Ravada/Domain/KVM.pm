@@ -1022,31 +1022,6 @@ sub _hwaddr {
     return @hwaddr;
 }
 
-sub ip {
-    my $self = shift;
-    my @nics = $self->domain
-        ->get_interface_addresses( 
-            Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE );
-
-    return if !@nics;
-    return $nics[0]->{addrs}->[0]->{addr};
-
-#    search the leases tables, we may need it some day
-#    for my $mac ($self->_hwaddr) {
-#        warn $mac;
-#        for my $network ($self->_vm->vm->list_all_networks) {
-#            warn $network->get_name();
-#            my @leases = $network->get_dhcp_leases($mac);
-#            warn Dumper(\@leases);
-#            return $leases[0]->{ipaddr} if @leases;
-#
-#            @leases = $network->get_dhcp_leases();
-#            warn Dumper(\@leases);
-#        }
-#    }
-    return;
-}
-
 sub _find_base {
     my $self = shift;
     my $file = shift;
@@ -1060,28 +1035,29 @@ sub _find_base {
     return $base;
 }
 
-sub clean_swap_volumes {
-    my $self = shift;
-    for my $file ($self->list_volumes) {
-        next if $file !~ /\.SWAP\.\w+/;
-        my $base = $self->_find_base($file) or next;
+=head2 clean_disk
 
-        my @cmd = ('qemu-img','create'
+Restores the disk to its clean status. It should become almost empty.
+
+Argument: file
+
+    $domain->clean_disk($file);
+
+=cut
+
+sub clean_disk {
+    my $self = shift;
+    my $file = shift;
+    my $base = $self->_find_base($file) or die "Disk $file has no base";
+
+    my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
                 ,'-b',$base
                 ,$file
-        );
-        my ($in,$out, $err);
-        run3(\@cmd,\$in, \$out, \$err);
-
-    }
-}
-
-sub remove_disk {
-    my $self = shift;
-    my $path = shift;
-
-    $self->_vol_remove($path);
+    );
+    my ($in,$out, $err);
+    run3(\@cmd,\$in, \$out, \$err);
+    die $err if $err;
 }
 
 1;
