@@ -673,6 +673,8 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
+    my $swap = ($c->param('swap') or 0);
+    $swap *= 1024*1024*1024;
     my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -681,6 +683,7 @@ sub req_new_domain {
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
+        ,swap => $swap
     );
 
     return $req;
