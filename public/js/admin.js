@@ -21,7 +21,7 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
 
     };
 
-  function adminPageC($scope, $http, request, listMach) {
+  function adminPageC($scope, $http, $interval, request, listMach) {
     $scope.showing = 'machines';
     $scope.showMachines = function(){
       $scope.showing = 'machines';
@@ -29,9 +29,13 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $scope.showUsers = function(){
       $scope.showing = 'users';
     }
-    $http.get('/list_users.json').then(function(response) {
-            $scope.list_users= response.data;
-    });
+    $scope.getUsers = function() {
+      $http.get('/list_users.json').then(function(response) {
+        $scope.list_users= response.data;
+      });
+    }
+    $scope.getUsers();
+    $interval($scope.getUsers,1000);
 
     $scope.make_admin = function(id) {
         $http.get('/users/make_admin/' + id + '.json')
@@ -60,13 +64,13 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $scope.rename= {new_name: 'new_name'};
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
-    $url_list = "/list_machines.json";
-    if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
-      $url_list = "/list_bases_anonymous.json";
-    }
-    $http.get($url_list).then(function(response) {
-      $scope.list_machines= response.data;
-    });
+    $scope.getMachines = function() {
+      $http.get("/list_machines.json").then(function(response) {
+        $scope.list_machines= response.data;
+      });
+    };
+    $scope.getMachines();
+    $interval($scope.getMachines,1000);
 
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
