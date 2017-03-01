@@ -14,7 +14,6 @@ use POSIX qw(WNOHANG);
 use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
-use Sys::Hostname;
 
 use Ravada::Auth;
 use Ravada::Request;
@@ -110,6 +109,7 @@ Returns the default display IP read from the config file
 =cut
 
 sub display_ip {
+
     my $ip = $CONFIG->{display_ip};
 
     return $ip if $ip;

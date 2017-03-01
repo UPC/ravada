@@ -10,7 +10,7 @@ use Moose::Role;
 use Net::DNS;
 use IO::Socket;
 use IO::Interface;
-use Sys::Hostname;
+use Net::Domain qw(hostfqdn);
 
 requires 'connect';
 
@@ -198,7 +198,9 @@ sub ip {
 
 sub _ip_from_hostname {
     my $res = Net::DNS::Resolver->new();
-    my $reply = $res->search(hostname());
+
+    my $name = hostfqdn();
+    my $reply = $res->search($name);
     return if !$reply;
 
     for my $rr ($reply->answer) {
