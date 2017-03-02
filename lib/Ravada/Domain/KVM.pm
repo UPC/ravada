@@ -38,12 +38,14 @@ our $TIMEOUT_SHUTDOWN = 60;
 our $OUT;
 
 our %GET_DRIVER_SUB = (
-    video => \&_get_driver_video
-    ,network => \&_get_driver_network
+    network => \&_get_driver_network
+     ,sound => \&_get_driver_sound
+     ,video => \&_get_driver_video
 );
 our %SET_DRIVER_SUB = (
-    video => \&_set_driver_video
-    ,network => \&_set_driver_network
+    network => \&_set_driver_network
+     ,sound => \&_set_driver_sound
+     ,video => \&_set_driver_video
 );
 
 ##################################################
@@ -1189,6 +1191,21 @@ sub _get_driver_network {
     return $self->_get_driver_generic('/domain/devices/interface/model',@_);
 }
 
+sub _get_driver_sound {
+    my $self = shift;
+    my $xml_path ="/domain/devices/sound";
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $driver ($doc->findnodes($xml_path)) {
+        push @ret,('model="'.$driver->getAttribute('model').'"');
+    }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+
+}
 
 sub _text_to_hash {
     my $text = shift;
@@ -1248,6 +1265,37 @@ sub _set_driver_video {
 sub _set_driver_network {
     my $self = shift;
     return $self->_set_driver_generic('/domain/devices/interface',@_);
+}
+
+sub _set_driver_sound {
+    my $self = shift;
+#    return $self->_set_driver_generic('/domain/devices/sound',@_);
+    my $value_str = shift or confess "Missing value";
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my %value = _text_to_hash($value_str);
+    for my $node ($doc->findnodes("/domain/devices/sound")) {
+        my $old_driver = $node->toString();
+        for my $attrib ( $node->attributes ) {
+            my ( $name ) =$attrib =~ /\s*(.*)=/;
+            next if !defined $name;
+            my $new_value = ($value{$name} or '');
+            if ($value{$name}) {
+                $node->setAttribute($name => $value{$name});
+            } else {
+                $node->removeAttribute($name);
+            }
+        }
+        for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+        }
+        return if $old_driver eq $node->toString();
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
 }
 
 1;
