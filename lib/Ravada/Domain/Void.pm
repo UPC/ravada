@@ -203,7 +203,7 @@ sub add_volume {
     my %args = @_;
 
     my $suffix = ".img";
-    $suffix = image_swap_suffix() if $args{swap};
+    $suffix = '.SWAP.img' if $args{swap};
     $args{path} = "$DIR_TMP/".$self->name.".$args{name}$suffix"
         if !$args{path};
 
