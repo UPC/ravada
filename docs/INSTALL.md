@@ -60,7 +60,7 @@ Clone the sources:
 
 ##Old Mojolicious
 
-In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:
+In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release (if applicable):
 
     $ sudo apt-get purge libmojolicious-perl
     $ sudo apt-get install cpanminus build-essential
@@ -89,7 +89,7 @@ Create a config file at /etc/ravada.conf with:
 
 Protect the config file from others:
 
-    $ chmod o-rx /etc/ravada.conf
+    $ sudo chmod o-rx /etc/ravada.conf
 
 ## Create tables
 Review and run the sql files from the sql dir.
