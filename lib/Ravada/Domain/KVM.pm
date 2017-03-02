@@ -52,19 +52,6 @@ sub name {
     return $self->{_name};
 }
 
-sub _wait_down {
-    my $self = shift;
-    my $seconds = (shift or $self->timeout_shutdown);
-    for my $sec ( 0 .. $seconds) {
-        return if !$self->domain->is_active;
-        print "Waiting for ".$self->domain->get_name." to shutdown." if !$sec;
-        print ".";
-        sleep 1;
-    }
-    print "\n";
-
-}
-
 =head2 list_disks
 
 Returns a list of the disks used by the virtual machine. CDRoms are not included
@@ -154,11 +141,11 @@ Removes this domain. It removes also the disk drives and base images.
 
 sub remove {
     my $self = shift;
-    $self->domain->shutdown  if $self->domain->is_active();
+    my $user = shift;
 
-    $self->_wait_down();
-
-    $self->domain->destroy   if $self->domain->is_active();
+    if ($self->domain->is_active) {
+        $self->_do_force_shutdown();
+    }
 
     $self->remove_disks();
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
@@ -432,7 +419,6 @@ sub shutdown {
 
     my %args = @_;
     my $req = $args{req};
-    my $timeout = ($args{timeout} or $TIMEOUT_SHUTDOWN);
 
     if (!$self->is_active && !$args{force}) {
         $req->status("done")                if $req;
@@ -440,31 +426,15 @@ sub shutdown {
         return;
     }
 
-    return $self->_do_shutdown($timeout,$req);
+    return $self->_do_force_shutdown() if $args{force};
+    return $self->_do_shutdown();
+
 }
 
 sub _do_shutdown {
     my $self = shift;
-    my ($timeout, $req) = @_;
-
-    $timeout = $TIMEOUT_SHUTDOWN if !defined $timeout;
-
     $self->domain->shutdown();
-    $req->status("Shutting down") if $req;
 
-    for (0 .. $timeout) {
-        my $msg = "Domain ".$self->name." shutting down ($_ / $timeout)\n";
-        $req->error($msg)  if $req;
-
-        last if !$self->is_active;
-        sleep 1;
-    }
-    if ($self->is_active) {
-        my $msg = "Domain wouldn't shut down, destroying\n";
-        $req->error($msg)  if $req;
-        $self->domain->destroy();
-    }
-    $req->status("done")        if $req;
 }
 
 =head2 shutdown_now
@@ -475,8 +445,24 @@ Shuts down uncleanly the domain
 
 sub shutdown_now {
     my $self = shift;
-    my $user = shift;
-    return $self->shutdown(timeout => 1, user => $user);
+    return $self->_do_force_shutdown()  if $self->is_active;
+}
+
+=head2 force_shutdown
+
+Shuts down uncleanly the domain
+
+=cut
+
+sub force_shutdown{
+    my $self = shift;
+    $self->_do_force_shutdown();
+}
+
+sub _do_force_shutdown {
+    my $self = shift;
+    return $self->domain->destroy;
+
 }
 
 
@@ -1035,7 +1021,21 @@ sub _find_base {
     return $base;
 }
 
+<<<<<<< HEAD
 =head2 clean_disk
+=======
+=head2 clean_swap_volumes
+
+Clean swap volumes. It actually just creates an empty qcow file from the base
+
+=cut
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ($self->list_volumes) {
+        next if $file !~ /\.SWAP\.\w+/;
+        my $base = $self->_find_base($file) or next;
+>>>>>>> 129_dot
 
 Restores the disk to its clean status. It should become almost empty.
 
@@ -1045,6 +1045,7 @@ Argument: file
 
 =cut
 
+<<<<<<< HEAD
 sub clean_disk {
     my $self = shift;
     my $file = shift;
@@ -1060,4 +1061,6 @@ sub clean_disk {
     die $err if $err;
 }
 
+=======
+>>>>>>> 129_dot
 1;

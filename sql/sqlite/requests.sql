@@ -9,4 +9,5 @@ CREATE TABLE `requests` (
 ,  `id_domain` integer DEFAULT NULL
 ,  `domain_name` char(80) DEFAULT NULL
 ,  `result` varchar(255) DEFAULT NULL
+,  `at_time` integer DEFAULT NULL
 );

@@ -127,6 +127,15 @@ sub shutdown {
     $self->_store(is_active => 0);
 }
 
+sub force_shutdown {
+    return shutdown_now(@_);
+}
+
+sub _do_force_shutdown {
+    my $self = shift;
+    return $self->_store(is_active => 0);
+}
+
 sub shutdown_now {
     my $self = shift;
     my $user = shift;

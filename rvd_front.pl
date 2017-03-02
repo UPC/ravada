@@ -26,7 +26,15 @@ my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
 our $VERSION_TYPE = "--beta";
 
-plugin Config => { file => 'rvd_front.conf' };
+my $CONFIG_FRONT = plugin Config => { default => {
+                                                hypnotoad => {
+                                                pid_file => 'log/rvd_front.pid'
+                                                ,listen => ['http://*:8081']}
+                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_header => 'Login'
+                                              ,login_message => ''
+                                              }
+                                      ,file => 'rvd_front.conf' };
 #####
 #####
 #####
@@ -77,6 +85,13 @@ hook before_routes => sub {
 
   $c->stash(version => $RAVADA->version."$VERSION_TYPE");
   my $url = $c->req->url;
+  $c->stash(css=>['/css/sb-admin.css']
+            ,js=>['/js/form.js'
+                ,'/js/ravada.js'
+                ]
+            ,csssnippets => []
+            ,navbar_custom => 0
+            );
 
   return access_denied($c)
     if $url =~ /\.json/
@@ -178,7 +193,7 @@ get '/domain/new.html' => sub {
 
     return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->stash(error => []);
-    return $c->render(template => "bootstrap/new_machine");
+    return $c->render(template => "main/new_machine");
 
 };
 
@@ -445,14 +460,14 @@ get '/messages/view/(#id).html' => sub {
 any '/about' => sub {
     my $c = shift;
 
-    $c->render(template => 'bootstrap/about');
+    $c->render(template => 'main/about');
 };
 
 
 any '/requirements' => sub {
     my $c = shift;
 
-    $c->render(template => 'bootstrap/requirements');
+    $c->render(template => 'main/requirements');
 };
 
 
@@ -461,7 +476,7 @@ any '/settings' => sub {
 
     $c->stash(version => $RAVADA->version );
 
-    $c->render(template => 'bootstrap/settings');
+    $c->render(template => 'main/settings');
 };
 
 
@@ -525,11 +540,20 @@ sub login {
         }
     }
 
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
     $c->render(
-                    template => 'bootstrap/start'
-                        ,url => $url
+                    template => 'main/start'
+                        ,css => ['/css/main.css']
+                        ,csssnippets => @css_snippets
+                        ,js => ['/js/main.js']
+                        ,navbar_custom => 1
                       ,login => $login
                       ,error => \@error
+                      ,login_header => $CONFIG_FRONT->{login_header}
+                      ,login_message => $CONFIG_FRONT->{login_message}
     );
 
 }
@@ -581,7 +605,7 @@ sub quick_start {
 sub render_machines_user {
     my $c = shift;
     return $c->render(
-        template => 'bootstrap/list_bases2'
+        template => 'main/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER
     );
@@ -608,6 +632,8 @@ sub quick_start_domain {
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
     my $domain_name = $base->name."-".$name;
+
+    $domain_name =~ tr/[\.]/[\-]/;
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
 
     $domain = provision($c,  $id_base,  $domain_name)
@@ -623,7 +649,7 @@ sub quick_start_domain {
 sub show_failure {
     my $c = shift;
     my $name = shift;
-    $c->render(template => 'bootstrap/fail', name => $name);
+    $c->render(template => 'main/fail', name => $name);
 }
 
 
@@ -634,7 +660,7 @@ sub domains {
 
     my @error = ();
 
-    $c->render(template => 'bootstrap/machines');
+    $c->render(template => 'main/machines');
 
 }
 
@@ -643,14 +669,14 @@ sub messages {
 
     my @error = ();
 
-    $c->render(template => 'bootstrap/messages');
+    $c->render(template => 'main/messages');
 
 }
 
 sub users {
     my $c = shift;
     my @users = $RAVADA->list_users();
-    $c->render(template => 'bootstrap/users'
+    $c->render(template => 'main/users'
         ,users => \@users
     );
 
@@ -709,7 +735,7 @@ sub _show_request {
 
 #    $c->stash(url => undef, _anonymous => undef );
     $c->render(
-         template => 'bootstrap/request'
+         template => 'main/request'
         , request => $request
     );
     return if $request->status ne 'done';
@@ -842,7 +868,7 @@ sub show_link {
     }
     _open_iptables($c,$domain)
         if !$req;
-    $c->render(template => 'bootstrap/run', url => $uri , name => $domain->name
+    $c->render(template => 'main/run', url => $uri , name => $domain->name
                 ,login => $c->session('login'));
 }
 
@@ -929,7 +955,7 @@ sub manage_machine {
 
     _enable_buttons($c, $domain);
 
-    $c->render( template => 'bootstrap/manage_machine');
+    $c->render( template => 'main/manage_machine');
 }
 
 sub _enable_buttons {
@@ -963,7 +989,7 @@ sub view_machine {
     return login($c) if !_logged_in($c);
 
     $domain =  _search_requested_machine($c) if !$domain;
-    return $c->render(template => 'bootstrap/fail') if !$domain;
+    return $c->render(template => 'main/fail') if !$domain;
     return show_link($c, $domain);
 }
 
@@ -975,7 +1001,7 @@ sub clone_machine {
     my $base = _search_requested_machine($c);
     if (!$base ) {
         $c->stash( error => "Unknown base ") if !$c->stash('error');
-        return $c->render(template => 'bootstrap/fail');
+        return $c->render(template => 'main/fail');
     };
     return quick_start_domain($c, $base->id);
 }
@@ -1017,7 +1043,7 @@ sub remove_machine {
     return $c->render( text => "Domain not found")  if !$domain;
     $c->stash(domain => $domain );
 
-    return $c->render( template => 'bootstrap/remove_machine' );
+    return $c->render( template => 'main/remove_machine' );
 }
 
 sub remove_base {
@@ -1222,7 +1248,7 @@ sub list_bases_anonymous {
 
     return access_denied($c)    if !scalar @$bases_anonymous;
 
-    $c->render(template => 'bootstrap/list_bases'
+    $c->render(template => 'main/list_bases'
         , _logged_in => undef
         , _anonymous => 1
         , _user => undef
