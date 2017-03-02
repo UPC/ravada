@@ -4,8 +4,8 @@ INSERT INTO `domain_drivers_options` VALUES (3,1,'Cirrus','type="cirrus" vram="1
 INSERT INTO `domain_drivers_options` VALUES (4,1,'VGA','type="vga" vram="16384" heads="1" primary="yes"');
 INSERT INTO `domain_drivers_options` VALUES (5,1,'Xen','type="xen" vram="4096" heads="1" primary="yes"');
 
-INSERT INTO `domain_drivers_options` VALUES (6,2,'ich6','');
-INSERT INTO `domain_drivers_options` VALUES (7,2,'ac97','');
+INSERT INTO `domain_drivers_options` VALUES (6,2,'ich6','model="ich6"');
+INSERT INTO `domain_drivers_options` VALUES (7,2,'ac97','model="ac97"');
 
 INSERT INTO `domain_drivers_options` VALUES (8,3,'virtio','type="virtio"');
 INSERT INTO `domain_drivers_options` VALUES (9,3,'e1000','type="e1000"');

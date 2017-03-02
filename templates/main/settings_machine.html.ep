@@ -26,7 +26,7 @@
                                 MB available.
                                 <br/>
 
-%                           for my $driver_name (qw(video network)) {
+%                           for my $driver_name (qw(network sound video)) {
 %                               my $driver = $domain->drivers($driver_name);
                                 <label for="driver_<%= $driver_name %>"><%= $driver_name %></label>
 %                               if (!$driver) {
