@@ -20,12 +20,6 @@ has 'domain' => (
     ,required => 1
 );
 
-has 'storage' => (
-    is => 'ro'
-    ,isa => 'Sys::Virt::StoragePool'
-    ,required => 0
-);
-
 has '_vm' => (
     is => 'ro'
     ,isa => 'Ravada::VM::KVM'
@@ -116,7 +110,6 @@ sub remove_disks {
             .Dumper([$self->list_disks])
         if !$removed && $0 !~ /\.t$/;
 
-    $self->_vm->disconnect();
 }
 
 sub _vol_remove {
@@ -126,7 +119,8 @@ sub _vol_remove {
 
     my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
-    my @vols = $self->storage->list_volumes();
+    #TODO: do a remove_volume in the VM
+    my @vols = $self->_vm->storage_pool->list_volumes();
     for my $vol ( @vols ) {
         $vol->delete() if$vol->get_name eq $name;
     }
@@ -173,7 +167,8 @@ sub _remove_file_image {
         if ( -e $file ) {
             eval {
                 unlink $file or die "$! $file" ;
-                $self->storage->refresh();
+                #TODO: do a refresh of all the storage pools in the VM if anything removed
+                $self->_vm->storage_pool->refresh();
             };
             warn $@ if $@;
         }
@@ -696,7 +691,7 @@ sub screenshot {
 
 sub _file_screenshot {
     my $self = shift;
-    my $doc = XML::LibXML->load_xml(string => $self->storage->get_xml_description);
+    my $doc = XML::LibXML->load_xml(string => $self->_vm->storage_pool->get_xml_description);
     my ($path) = $doc->findnodes('/pool/target/path/text()');
     return "$path/".$self->name.".png";
 }
