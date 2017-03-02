@@ -69,7 +69,7 @@ In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-pe
 #Mysql Database
 
 ## MySQL user
-Create a database named "ravada". 
+Create a database named "ravada". in this stage the system wants you to identify a password for your sql. 
 
     $ mysqladmin -u root -p create ravada
 
