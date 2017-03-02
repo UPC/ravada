@@ -44,12 +44,8 @@ our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 our $LIMIT_PROCESS = 2;
 
-# FAT commands take long
-our %FAT_COMMAND =  map { $_ => 1 } qw(prepare_base remove screenshot);
-
-# Priority Commands should not be run many at once because they may clash with each other
-# like opening iptables or accessing to disk
-our %PRIORITY_COMMAND = map { $_ => 1 } qw(create start);
+# LONG commands take long
+our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
 
 has 'vm' => (
           is => 'ro'
@@ -586,22 +582,40 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
+    my $long_commands = (shift or 0);
+    my $short_commands = (shift or 0);
 
     $self->_wait_pids_nohang();
-    $self->_check_vms();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
-        ." WHERE status='requested' OR status like 'retry %' OR status='waiting'"
+        ." WHERE "
+        ."    ( status='requested' OR status like 'retry %' OR status='waiting')"
+        ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
         ." ORDER BY date_req"
     );
-    $sth->execute;
+    $sth->execute(time);
+
+    my $debug_type = '';
+    $debug_type = 'long' if $long_commands;
+    $debug_type = 'short' if $short_commands || !$long_commands;
+    $debug_type = 'all' if $long_commands && $short_commands;
+
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id_request);
+
+        if ( ($long_commands && 
+                (!$short_commands && !$LONG_COMMAND{$req->command}))
+            ||(!$long_commands && $LONG_COMMAND{$req->command})
+        ) {
+            warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
+                .$req->command  if $DEBUG;
+            next;
+        }
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
-        $self->_wait_pids_nohang();
 
-        warn "executing request ".$req->id." ".$req->status()." ".$req->command
+        warn "[$debug_type] $$ executing request ".$req->id." ".$req->status()." "
+            .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
@@ -618,10 +632,40 @@ sub process_requests {
 
         sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'";
+            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG;
 
     }
     $sth->finish;
+
+}
+
+=head2 process_long_requests
+
+Process requests that take log time. It will fork on each one
+
+=cut
+
+sub process_long_requests {
+    my $self = shift;
+    my ($debug,$dont_fork) = @_;
+
+    $self->_disconnect_vm();
+    return $self->process_requests($debug, $dont_fork, 1);
+}
+
+=head2 process_all_requests
+
+Process all the requests, long and short
+
+=cut
+
+sub process_all_requests {
+
+    my $self = shift;
+    my ($debug,$dont_fork) = @_;
+
+    $self->process_requests($debug, $dont_fork,1,1);
+
 }
 
 sub _domain_working {
@@ -652,6 +696,13 @@ sub _domain_working {
 #        ."[$id_request] id_domain $id_domain working in request ".($id or '<NULL>')
 #            ." status: ".($status or '<UNDEF>');
     return $id;
+}
+
+sub _process_all_requests_dont_fork {
+    my $self = shift;
+    my $debug = shift;
+
+    return $self->process_requests($debug,1, 1, 1);
 }
 
 sub _process_requests_dont_fork {
@@ -687,11 +738,7 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
-    $self->_disconnect_vm();
-
-    if ($dont_fork || !$CAN_FORK ) {
-        # TODO check if that can be done with _do_execute_command like when forking
-        $self->_connect_vm();
+    if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
@@ -700,10 +747,9 @@ sub _execute {
         return $err;
     }
 
-    if ( $FAT_COMMAND{$request->command} ) {
-        return if $self->_wait_children($request) 
-    }
-    $self->_wait_other_prioris($request) if $PRIORITY_COMMAND{$request->command};
+    $self->_wait_pids_nohang();
+    return if $self->_wait_children($request);
+
     $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
@@ -791,26 +837,6 @@ sub _cmd_create{
 
     $request->status('done',$msg);
 
-}
-
-sub _wait_other_prioris {
-    my $self = shift;
-    my $req = shift;
-
-    # In 2 seconds we return no matter what, these are priority commands damn !
-    for (1 .. 2) {
-        my $count = 0;
-        for my $pid (sort keys %{$self->{pids}}) {
-            my $id_req = $self->{pids}->{$pid};
-            my $req = Ravada::Request->open($id_req);
-            if ($PRIORITY_COMMAND{$req->command}) {
-                warn "INFO: Must wait for ".$req->command." ".Dumper($req->{args});
-                $count++;
-            }
-        }
-        return if !$count;
-        sleep 1;
-    }
 }
 
 sub _wait_children {
@@ -1013,7 +1039,6 @@ sub _cmd_remove_base {
 }
 
 
-
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -1030,6 +1055,23 @@ sub _cmd_shutdown {
 
     $domain->shutdown(timeout => $timeout, name => $name, user => $user
                     , request => $request);
+
+}
+
+sub _cmd_force_shutdown {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->args('name');
+
+    my $domain;
+    $domain = $self->search_domain($name);
+    die "Unknown domain '$name'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->force_shutdown($user,$request);
 
 }
 
@@ -1086,6 +1128,7 @@ sub _req_method {
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+,force_shutdown => \&_cmd_force_shutdown
     );
     return $methods{$cmd};
 }
