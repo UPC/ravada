@@ -50,30 +50,6 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $scope.getUsers();
     $interval($scope.getUsers,1000);
 
-    $scope.make_admin = function(id) {
-        $http.get('/users/make_admin/' + id + '.json')
-        location.reload();
-    };
-
-    $scope.remove_admin = function(id) {
-        $http.get('/users/remove_admin/' + id + '.json')
-        location.reload();
-    };
-
-    $scope.checkbox = [];
-
-    //if it is checked make the user admin, otherwise remove admin
-    $scope.stateChanged = function(id,userid) {
-       if($scope.checkbox[id]) { //if it is checked
-            $http.get('/users/make_admin/' + userid + '.json')
-            location.reload();
-       }
-       else {
-            $http.get('/users/remove_admin/' + userid + '.json')
-            location.reload();
-       }
-    };
-
     $scope.rename= {new_name: 'new_name'};
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
