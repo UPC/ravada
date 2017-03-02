@@ -1,6 +1,6 @@
-<sol-show-listmachines ng-show="showing=='machines'"></sol-show-listmachines>
-<sol-show-listusers ng-show="showing=='users'"></sol-show-listusers>
-<div ng-show="showing=='machine'">
+<sol-show-listmachines ng-show="showing=='machines'" ng-cloak></sol-show-listmachines>
+<sol-show-listusers ng-show="showing=='users'" ng-cloak></sol-show-listusers>
+<div ng-show="showing=='machine'" ng-cloak>
   <div class="header">
     <b>{{showmachine.name}}</b>
     <span ng-show="{{showmachine.is_paused && showmachine.is_active}}" class="label label-warning">Paused</span>
