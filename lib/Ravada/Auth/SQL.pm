@@ -27,7 +27,12 @@ sub _init_connector {
     $CON= \$Ravada::CONNECTOR          if !$CON || !$$CON;
     $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
 
-    confess "undefined connector"   if !$CON || !$$CON;
+    if (!$CON || !$$CON) {
+        my $ravada = Ravada->new();
+        $CON= \$Ravada::CONNECTOR;
+    }
+
+    die "Undefined connector"   if !$CON || !$$CON;
 }
 
 
