@@ -86,44 +86,8 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
       $scope.pingbe_fail = !response.data;
     });
 
-    $scope.shutdown = function(machineId){
-      var toGet = '/machine/shutdown/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.prepare = function(machineId){
-      var toGet = '/machine/prepare/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.remove_base= function(machineId){
-      var toGet = '/machine/remove_base/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.screenshot = function(machineId){
-      var toGet = '/machine/screenshot/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.pause = function(machineId){
-      var toGet = '/machine/pause/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.resume = function(machineId){
-      var toGet = '/machine/resume/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.start = function(machineId){
-      var toGet = '/machine/start/'+machineId+'.json';
-      $http.get(toGet);
-    };
-
-    $scope.removeb = function(machineId){
-      var toGet = '/machine/remove_b/'+machineId+'.json';
-      $http.get(toGet);
+    $scope.action = function(target,action,machineId){
+      $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
 
     $scope.rename = function(machineId, old_name) {

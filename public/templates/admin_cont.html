@@ -41,20 +41,20 @@
   <i ng-show="{{showmachine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
   <input type="checkbox" checked
   ng-show="{{showmachine.is_base}} && !{{showmachine.has_clones}} && !{{showmachine.is_locked}}"
-  ng-click="remove_base(showmachine.id)"> Remove base
+  ng-click="action('machine','remove_base',showmachine.id)"> Remove base
   </br>
   <input type="checkbox"
   ng-show="!{{showmachine.is_base}} && !{{showmachine.is_locked}}"
-  ng-click="prepare(showmachine.id)"> Prepare base
+  ng-click="action('machine','prepare',showmachine.id)"> Prepare base
   </br>
   <input type="checkbox" checked ng-show="{{showmachine.is_public}}" ng-click="set_public(showmachine.id,0)">
   Public
   </br>
   <div ng-hide="{{showmachine.is_locked}}">
-    <a class="btn btn-success btn-sm" ng-hide="{{showmachine.is_active}}" ng-click="start(showmachine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
-    <button type="button" ng-click="shutdown(showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
+    <a class="btn btn-success btn-sm" ng-hide="{{showmachine.is_active}}" ng-click="action('machine','start',showmachine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
+    <button type="button" ng-click="action('machine','shutdown',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
     <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{showmachine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
-    <button type="button" ng-click="screenshot(showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
+    <button type="button" ng-click="action('machine','screenshot',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
   </div>
   <div ng-show="{{showmachine.is_locked}}">Machine locked by requested <a href="/request/{{showmachine.is_locked}}.html">process</a></div>
 </div>
