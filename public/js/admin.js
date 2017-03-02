@@ -28,6 +28,9 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     return null;
   }
   function adminPageC($scope, $http, $interval, request, listMach) {
+    $http.get('/pingbackend.json').then(function(response) {
+      $scope.pingbe_fail = !response.data;
+    });
     $scope.showing = 'machines';
     $scope.showMachines = function(){
       $scope.showing = 'machines';
@@ -81,10 +84,6 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     };
     $scope.getMachines();
     $interval($scope.getMachines,1000);
-
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
 
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
