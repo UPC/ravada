@@ -1021,9 +1021,6 @@ sub _find_base {
     return $base;
 }
 
-<<<<<<< HEAD
-=head2 clean_disk
-=======
 =head2 clean_swap_volumes
 
 Clean swap volumes. It actually just creates an empty qcow file from the base
@@ -1035,32 +1032,16 @@ sub clean_swap_volumes {
     for my $file ($self->list_volumes) {
         next if $file !~ /\.SWAP\.\w+/;
         my $base = $self->_find_base($file) or next;
->>>>>>> 129_dot
 
-Restores the disk to its clean status. It should become almost empty.
-
-Argument: file
-
-    $domain->clean_disk($file);
-
-=cut
-
-<<<<<<< HEAD
-sub clean_disk {
-    my $self = shift;
-    my $file = shift;
-    my $base = $self->_find_base($file) or die "Disk $file has no base";
-
-    my @cmd = ('qemu-img','create'
+    	my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
                 ,'-b',$base
                 ,$file
-    );
-    my ($in,$out, $err);
-    run3(\@cmd,\$in, \$out, \$err);
-    die $err if $err;
+    	);
+    	my ($in,$out, $err);
+    	run3(\@cmd,\$in, \$out, \$err);
+    	die $err if $err;
+	}
 }
 
-=======
->>>>>>> 129_dot
 1;
