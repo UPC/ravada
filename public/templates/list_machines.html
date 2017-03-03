@@ -65,8 +65,6 @@
                 </tr>
             </tbody>
         </table>
-
-
         <div ng-repeat="machine in list_machines">
         <div id="copy_{{machine.id}}" class="modal fade" role="dialog">
           <div class="modal-dialog">
@@ -103,89 +101,6 @@
                   </form>
               </div>
             </div>
-          </div>
-        </div>
-        </div>
-
-
-        <div ng-repeat="machine in list_machines">
-        <div id="modal{{machine.id}}" class="modal fade" role="dialog">
-          <div class="modal-dialog">
-
-            <!-- Modal content-->
-            <div class="modal-content">
-              <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <div class="modal-title">
-                    <b>{{machine.name}}</b>
-                    <input type="text" name="new_name"
-                            ng-show="show_rename"
-                            ng-model="rename.new_name"
-                            ng-change="validate_new_name(machine.name)"
-                    >
-                    <button type="button" ng-show="show_rename"
-                            ng-click="rename(machine.id, machine.name);show_rename=false;"><i
-                            class="fa fa-check"
-                            aria-hidden="true"></i>
-                    </button>
-                    <button type="button" ng-show="show_rename"
-                            ng-click="show_rename=false;new_name_duplicated=false"><i
-                            class="fa fa-close"
-                            aria-hidden="true"></i>
-                    </button>
-                    <button type="button"
-                            ng-show="!show_rename"
-                            ng-click="show_rename=!show_rename;rename.new_name=machine.name;"
-                            ng-disabled="{{machine.is_active}}"
-                            align="right">
-                        <i class="fa fa-pencil" aria-hidden="true"></i>
-                    </button>
-                    <div class="form-group has-error"><label 
-                        ng-show="new_name_duplicated"
-                        class="control-label" for="new_name">This
-                             name is duplicated</label>
-                    </div>
-                </div>
-              </div>
-              <div class="modal-body">
-                <div style="width:100%; margin-bottom:10px;">
-                    <img ng-src="/img/screenshots/{{machine.id}}.png" width="400" alt="No screenshot available for this machine">
-                </div>
-
-                <div style="width:100%; margin-bottom:10px;">
-                    <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
-
-                    <button type="button" ng-click="action('machine','start',machine.id)" ng-hide="{{machine.is_active}}" class="btn btn-success btn-sm"><i class="fa fa-play" aria-hidden="true"></i>&nbsp Start</button>
-
-                    <button type="button" ng-click="action('machine','resume',machine.id)" ng-show="{{machine.is_active && machine.is_paused}}" class="btn btn-success btn-sm"><i class="fa fa-repeat" aria-hidden="true"></i>&nbsp Resume</button>
-
-                    <button type="button" ng-click="action('machine','pause',machine.id)" ng-show="{{machine.is_active && !machine.is_paused}}" class="btn btn-success btn-sm"><i class="fa fa-pause" aria-hidden="true"></i>&nbsp Pause</button>
-                </div>
-
-                <div style="width:100%; margin-bottom:10px;">
-                    <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
-
-                    <button type="button" ng-click="action('machine','prepare',machine.id)"  ng-show="{{machine.has_clones==0}}" class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp Prepare Base</button>
-
-                    <button type="button" ng-click="action('machine','screenshot',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
-
-                    <button type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
-                    <button type="button" ng-click="action('machine','removeb',machine.id)" ng-show="{{machine.is_base&&machine.has_clones==0}}" class="btn btn-warning btn-sm"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button>
-                    <a  class="btn btn-danger btn-sm" ng-href="/machine/remove/{{machine.id}}.html" ng-hide="{{machine.has_clones!=0}}"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong>&nbsp Delete</a>
-
-                    <h4><span ng-show="{{machine.has_clones!=0}}" class="label label-danger">Can't Prepare Base, Remove Base nor Delete. Machine has {{machine.has_clones}} Clone/s</span></h4>
-                </div>
-
-
-
-
-              </div>
-              <div class="modal-footer">
-
-                <button ng-hide="show_rename" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-              </div>
-            </div>
-
           </div>
         </div>
         </div>
