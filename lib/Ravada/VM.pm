@@ -41,11 +41,6 @@ has 'host' => (
     , default => 'localhost'
 );
 
-has 'storage_pool' => (
-     isa => 'Object'
-    , is => 'ro'
-);
-
 has 'default_dir_img' => (
       isa => 'String'
      , is => 'ro'

@@ -33,11 +33,9 @@ has vm => (
     ,lazy => 1
 );
 
-has storage_pool => (
-#    isa => 'Sys::Virt::StoragePool'
-    is => 'rw'
-    ,builder => '_load_storage_pool'
-    ,lazy => 1
+has default_storage_pool_name => (
+    isa => 'Str'
+    ,is => 'rw'
 );
 
 has type => (
@@ -51,7 +49,6 @@ has type => (
 
 our $DIR_XML = "etc/xml";
 
-our $DEFAULT_DIR_IMG;
 our $XML = XML::LibXML->new();
 
 #-----------
@@ -91,7 +88,6 @@ Disconnect from the Virtual Machine Manager
 sub disconnect {
     my $self = shift;
 
-    $self->storage_pool(undef);
     $self->vm(undef);
 }
 
@@ -106,28 +102,61 @@ sub connect {
     return if $self->vm;
 
     $self->vm($self->_connect);
-    $self->storage_pool($self->_load_storage_pool);
+#    $self->storage_pool($self->_load_storage_pool);
 }
 
 sub _load_storage_pool {
     my $self = shift;
 
     my $vm_pool;
+    my $available;
 
     for my $pool ($self->vm->list_storage_pools) {
+        my $info = $pool->get_info();
+        next if defined $available
+                && $info->{available} <= $available
+                && !( defined $self->default_storage_pool_name
+                        && $pool->get_name eq $self->default_storage_pool_name);
+
         my $doc = $XML->load_xml(string => $pool->get_xml_description);
 
         my ($path) =$doc->findnodes('/pool/target/path/text()');
         next if !$path;
 
-        $DEFAULT_DIR_IMG = $path;
         $vm_pool = $pool;
+        $available = $info->{available};
+
     }
     die "I can't find /pool/target/path in the storage pools xml\n"
         if !$vm_pool;
 
     return $vm_pool;
 
+}
+
+=head2 storage_pool
+
+Returns a storage pool usable by the domain to store new volumes.
+
+=cut
+
+sub storage_pool {
+    my $self = shift;
+
+    return $self->_load_storage_pool();
+}
+
+sub _search_volume {
+    my $self = shift;
+    my $file = shift;
+
+    for my $pool ($self->vm->list_storage_pools) {
+
+        my $doc = $XML->load_xml(string => $pool->get_xml_description);
+        my ($path) =$doc->findnodes('/pool/target/path/text()');
+
+        return "$path/$file" if -e "$path/$file";
+    }
 }
 
 =head2 dir_img
@@ -138,10 +167,15 @@ Returns the directory where disk images are stored in this Virtual Manager
 
 sub dir_img {
     my $self = shift;
-    return $DEFAULT_DIR_IMG if $DEFAULT_DIR_IMG;
 
-    $self->_load_storage_pool();
-    return $DEFAULT_DIR_IMG;
+    my $pool = $self->_load_storage_pool();
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+
+    my $dir = $xml->findnodes('/pool/target/path/text()');
+    die "I can't find /pool/target/path in ".$xml->toString
+        if !$dir;
+
+    return $dir;
 }
 
 =head2 create_domain
@@ -206,7 +240,6 @@ sub search_domain {
         eval {
             $domain = Ravada::Domain::KVM->new(
                 domain => $dom
-                , storage => $self->storage_pool
                 ,readonly => $self->readonly
                 ,@args_create
             );
@@ -239,7 +272,6 @@ sub list_domains {
         my $id;
         $domain = Ravada::Domain::KVM->new(
                           domain => $name
-                        ,storage => $self->storage_pool
                         ,_vm => $self
         );
         next if !$domain->is_known();
@@ -308,7 +340,7 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
-    my $dir_img = $DEFAULT_DIR_IMG;
+    my $dir_img = $self->dir_img();
     my $suffix = ".img";
     $suffix = ".SWAP.img"   if $args{swap};
     my (undef, $img_file) = tempfile($args{name}."-XXXX"
@@ -358,7 +390,7 @@ sub _domain_create_from_iso {
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
 
-    my $device_cdrom = _iso_name($iso, $args{request});
+    my $device_cdrom = $self->_iso_name($iso, $args{request});
 
     my $disk_size = $args{disk} if $args{disk};
     my $device_disk = $self->create_volume(
@@ -435,7 +467,7 @@ sub _create_disk_qcow2 {
     confess "Missing base" if !$base;
     confess "Missing name" if !$name;
 
-    my $dir_img  = $DEFAULT_DIR_IMG;
+    my $dir_img  = $self->dir_img;
 
     my @files_out;
 
@@ -473,7 +505,7 @@ sub _create_disk_raw {
     confess "Missing base" if !$base;
     confess "Missing name" if !$name;
 
-    my $dir_img  = $DEFAULT_DIR_IMG;
+    my $dir_img  = $self->dir_img;
 
     my @files_out;
 
@@ -576,13 +608,15 @@ sub _fix_pci_slots {
 }
 
 sub _iso_name {
+    my $self = shift;
     my $iso = shift;
     my $req = shift;
 
     my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
     $iso_name = $iso->{url} if !$iso_name;
 
-    my $device = "$DEFAULT_DIR_IMG/$iso_name";
+    my $device = $self->_search_volume($iso_name);
+    $device = $self->dir_img."/$iso_name"           if !$device;
 
     confess "Missing MD5 field on table iso_images FOR $iso->{url}"
         if !$iso->{md5};
