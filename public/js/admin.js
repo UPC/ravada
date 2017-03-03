@@ -2,6 +2,7 @@
 ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         .directive("solShowAdminContent", swAdminContent)
         .controller("adminPage", adminPageC)
+        .controller("notifCrtl", notifCrtl)
 
     function swAdminNavigation() {
 
@@ -99,3 +100,20 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
       $http.get("/machine/public/"+machineId+"/"+value);
     };
   };
+  function notifCrtl($scope, $interval, $http, request){
+    $scope.alerts = [
+    ];
+
+    $scope.getAlerts = function() {
+      $http.get('/unshown_messages.json').then(function(response) {
+              $scope.alerts= response.data;
+      });
+    };
+    $interval($scope.getAlerts,10000);
+
+    $scope.closeAlert = function(index) {
+      var message = $scope.alerts.splice(index, 1);
+      var toGet = '/messages/read/'+message[0].id+'.html';
+      $http.get(toGet);
+    };
+  }
