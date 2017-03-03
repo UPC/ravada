@@ -30,12 +30,8 @@ navbar-inverse navbar-fixed-top" role="navigation">
 %           }
 % }
 % if (defined $_user && $_user->is_admin ) { 
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-wrench"></i>&nbsp;<%=l 'Tools' %><span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="/machines"><i class="fa fa-cubes"></i>&nbsp;<%=l 'Machines List' %></a></li>
-                        <li><a href="/users"><i class="fa fa-users"></i>&nbsp;<%=l 'Users' %></a></li>
-                    </ul>
+                <li>
+                    <a href="/admin" role="button"><i class="fa fa-wrench"></i>&nbsp;<%=l 'Admin tools' %></a>
                 </li>
 % }
 % if ( !$_anonymous ) {
