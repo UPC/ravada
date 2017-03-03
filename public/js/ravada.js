@@ -7,7 +7,6 @@
 	    .directive("solShowListusers", swListUsers)
             .directive("solShowCardsmachines", swCardsMach)
             .directive("solShowMachinesNotifications", swMachNotif)
-            .directive("solShowMessages", swMess)
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
@@ -320,13 +319,6 @@
         $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe = response.data;
         });
-    };
-
-    function swMess() {
-        return {
-            restrict: "E",
-            templateUrl: '/templates/list_messages.html',
-        };
     };
 
     function gtListMess($resource){

@@ -1,6 +1,7 @@
 
 ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         .directive("solShowAdminContent", swAdminContent)
+        .directive("solShowMessages", swMess)
         .controller("adminPage", adminPageC)
         .controller("notifCrtl", notifCrtl)
 
@@ -22,6 +23,13 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
 
     };
 
+    function swMess() {
+        return {
+            restrict: "E",
+            templateUrl: '/templates/list_messages.html',
+        };
+    };
+
   function getMachineById(array, value) {
     for (var i=0, iLength=array.length; i<iLength; i++) {
       if (array[i].id == value) return array[i];
@@ -38,6 +46,9 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     }
     $scope.showUsers = function(){
       $scope.showing = 'users';
+    }
+    $scope.showMessages = function(){
+      $scope.showing = 'messages';
     }
     $scope.showMachine = function(machineId){
       $scope.showmachine = getMachineById($scope.list_machines,machineId);
