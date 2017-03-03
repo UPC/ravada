@@ -28,7 +28,7 @@ Clone the sources:
 
 #Packages
 
-##Debian
+##Ubuntu
 
     $ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl
 
@@ -60,7 +60,7 @@ Clone the sources:
 
 ##Old Mojolicious
 
-In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:
+In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release (if applicable):
 
     $ sudo apt-get purge libmojolicious-perl
     $ sudo apt-get install cpanminus build-essential
@@ -69,7 +69,7 @@ In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-pe
 #Mysql Database
 
 ## MySQL user
-Create a database named "ravada". 
+Create a database named "ravada". in this stage the system wants you to identify a password for your sql. 
 
     $ mysqladmin -u root -p create ravada
 
@@ -89,7 +89,7 @@ Create a config file at /etc/ravada.conf with:
 
 Protect the config file from others:
 
-    $ chmod o-rx /etc/ravada.conf
+    $ sudo chmod o-rx /etc/ravada.conf
 
 ## Create tables
 Review and run the sql files from the sql dir.

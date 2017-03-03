@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html>
-%= include 'bootstrap/inheader'
+%= include 'bootstrap/header'
 <body role="document">
-    %= include 'bootstrap/innavigation'
+    %= include 'bootstrap/navigation'
      <header id="page-top" class="intro">
         <div class="intro-body">
             <div class="container" ng-controller="">
                 <form class="form-singin" method="post">
-                <h2 class="form-signin-heading">Login</h2>
+                <h2 class="form-signin-heading"><%= $login_header %></h2>
+                <p><%= $login_message %></p>
 
-                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User/Email">
+                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User">
 
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
 
@@ -90,6 +91,6 @@
         </div>
     </footer>
 
-    %= include 'bootstrap/inscripts'
+    %= include 'bootstrap/scripts'
 </body>
 </html>

@@ -8,5 +8,6 @@ CREATE TABLE `requests` (
   `error` text DEFAULT NULL,
   `id_domain` int(11) DEFAULT NULL,
   `domain_name` char(80) DEFAULT NULL,
-  `result` varchar(255) DEFAULT NULL
+  `result` varchar(255) DEFAULT NULL,
+  `at_time` int(11) DEFAULT NULL
 );
