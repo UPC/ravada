@@ -2,6 +2,7 @@
 ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         .directive("solShowAdminContent", swAdminContent)
         .directive("solShowMessages", swMess)
+        .directive("solShowMachine", swMach)
         .controller("adminPage", adminPageC)
         .controller("notifCrtl", notifCrtl)
 
@@ -29,6 +30,13 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
             templateUrl: '/templates/list_messages.html',
         };
     };
+
+        function swMach() {
+            return {
+                restrict: "E",
+                templateUrl: '/templates/admin_machine.html',
+            };
+        };
 
   function getMachineById(array, value) {
     for (var i=0, iLength=array.length; i<iLength; i++) {

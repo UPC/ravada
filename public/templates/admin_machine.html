@@ -1,0 +1,103 @@
+<div ng-cloak>
+  <div class="header">
+    <b>{{showmachine.name}}</b>
+    <span ng-show="{{showmachine.is_paused && showmachine.is_active}}" class="label label-warning">Paused</span>
+    <span ng-show="{{!showmachine.is_paused && showmachine.is_active}}" class="label label-success">Running</span>
+    <span ng-show="{{!showmachine.is_active}}" class="label label-danger">Down</span>
+    <input type="text" name="new_name"
+     ng-show="show_rename"
+     ng-model="rename.new_name"
+     ng-change="validate_new_name(showmachine.name)">
+    <button type="button" ng-show="show_rename"
+     ng-click="rename(showmachine.id, showmachine.name);show_rename=false;">
+      <i class="fa fa-check" aria-hidden="true"></i>
+    </button>
+    <button type="button" ng-show="show_rename"
+     ng-click="show_rename=false;new_name_duplicated=false">
+     <i class="fa fa-close" aria-hidden="true"></i>
+    </button>
+    <button type="button"
+     ng-show="!show_rename"
+     ng-click="show_rename=!show_rename;rename.new_name=showmachine.name;"
+     ng-disabled="{{showmachine.is_active}}"
+     align="right">
+      <i class="fa fa-pencil" aria-hidden="true"></i>
+    </button>
+    <div class="form-group has-error">
+      <label ng-show="new_name_duplicated"
+       class="control-label" for="new_name">This name is duplicated
+      </label>
+    </div>
+  </div>
+  <button ng-show="{{showmachine.is_public}}" ng-click="showMachine(showmachine.id)">
+    <b>{{showmachine.name}}</b>
+  </button>
+  <button ng-hide="{{showmachine.is_public}}" ng-click="showMachine(showmachine.id)">
+    {{showmachine.name}}
+  </button>
+  </br>
+  <i ng-show="{{showmachine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
+  <input type="checkbox" checked
+  ng-show="{{showmachine.is_base}} && !{{showmachine.has_clones}} && !{{showmachine.is_locked}}"
+  ng-click="action('machine','remove_base',showmachine.id)"> Remove base
+  </br>
+  <input type="checkbox"
+  ng-show="!{{showmachine.is_base}} && !{{showmachine.is_locked}}"
+  ng-click="action('machine','prepare',showmachine.id)"> Prepare base
+  </br>
+  <input type="checkbox" checked ng-show="{{showmachine.is_public}}" ng-click="set_public(showmachine.id,0)">
+  Public
+  </br>
+  <div ng-hide="{{showmachine.is_locked}}">
+    <a class="btn btn-success btn-sm" ng-hide="{{showmachine.is_active}}" ng-click="action('machine','start',showmachine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
+    <button type="button" ng-click="action('machine','shutdown',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
+    <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{showmachine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
+    <button type="button" ng-click="action('machine','screenshot',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
+  </div>
+  <div ng-show="{{showmachine.is_locked}}">Machine locked by requested <a href="/request/{{showmachine.is_locked}}.html">process</a></div>
+  <div>
+    <h2>Copy {{showmachine.name}}</h2>
+    <form method="post" action="/machine/copy">
+        <input type="hidden" name="id_base" value="{{showmachine.id}}">
+      <label for="copy_name_{{showmachine.id}}">Name:</label>
+      <input name="copy_name_{{showmachine.id}}" type="text" size="40"
+          value="{{showmachine.name}}-copy">
+          <!-- todo check unique name -->
+      <br/>
+      <label for="copy_ram">RAM (Gb):</label>
+      <input name="copy_ram" type="text" length="5" value="1">
+      <br/>
+      <div ng-show="0">
+      <label for="copy_disk"><del>Disk Size:</del></label>
+      <input name="copy_disk_todo" type="text" 
+          value="{{showmachine.disk_size}}" disabled>
+      <br/>
+      </div>
+      <div ng-show="{{showmachine.is_base}}">
+          <label for="copy_rebase">Rebase First</label>
+          <input name="copy_rebase" type="checkbox"
+                 ng-disabled="machine.has_clones">
+          Toggle to make base from latest changes.
+          <div ng-show="{{showmachine.has_clones}}">Remove clones to allow rebase.</div>
+      </div>
+      <br>
+      <input type="submit">
+    </form>
+  </div>
+</div>
+<div id="overNotifications" class="notifications" ng-controller="notifCrtl">
+  <script type="text/ng-template" id="alert.html">
+    <div ng-transclude></div>
+  </script>
+    <div uib-alert ng-repeat="alert in alerts"
+     ng-class="'alert-' + (alert.type || 'warning')"
+      ng-click="closeAlert($index)"
+      ng-mouseover="alert.showMessage = false"
+      ng-mouseleave="alert.showMessage = true"
+      ng-bind-html="alert.subject">
+      {{alert.subject}}
+      <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage" ng-bind-html="alert.message">
+        {{alert.message}}
+      </div>
+    </div>
+</div>
