@@ -20,6 +20,7 @@
                     <td>
                         <a ng-show="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM"><b>{{machine.name}}</b></a>
                         <a ng-hide="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM">{{machine.name}}</a>
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
 
                     </td>
                     <td>
@@ -52,7 +53,6 @@
                         <a data-toggle="modal" data-target="#copy_{{machine.id}}" class="btn btn-primary btn-sm" ><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Copy</a>
 
 
-                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
 
 
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
