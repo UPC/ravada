@@ -10,7 +10,7 @@
         <div ng-controller="machines">
             <div class="page-header">
                 <div class="panel panel-default">
-                    <form action="" method="post">
+                    <form action="<%= $action %>" method="post">
                     <div class="panel-heading">
                         <h2>Virtual Machine <a href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a></h2>
                             <input type="submit" name="start" value="start" <%= $_start_disabled %>>

@@ -981,7 +981,7 @@ sub settings_machine {
 
     $c->stash(message => '');
     my @reqs = ();
-    for (qw(video network)) {
+    for (qw(sound video network)) {
         my $driver = "driver_$_";
         if ( $c->param($driver) ) {
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
@@ -995,7 +995,8 @@ sub settings_machine {
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60) 
     }
-    return $c->render(template => 'main/settings_machine');
+    return $c->render(template => 'main/settings_machine'
+        , action => $c->req->url->to_abs->path);
 }
 
 sub _enable_buttons {
