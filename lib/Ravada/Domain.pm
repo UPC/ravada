@@ -1131,6 +1131,8 @@ sub drivers {
     my $name = shift;
     my $type = (shift or $self->_vm->type);
 
+    _init_connector();
+
     $type = 'qemu' if $type =~ /^KVM$/;
     my $query = "SELECT id from domain_drivers_types "
         ." WHERE vm=?";
