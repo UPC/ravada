@@ -58,7 +58,7 @@ sub create_pool {
   <uuid>$uuid</uuid>
   <capacity unit='bytes'>$capacity</capacity>
   <allocation unit='bytes'></allocation>
-  <available unit='bytes'></available>
+  <available unit='bytes'>$capacity</available>
   <source>
   </source>
   <target>
@@ -82,6 +82,7 @@ sub test_create_domain {
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
+    $vm->default_storage_pool_name($POOL_NAME);
 
     my $name = new_domain_name();
 
@@ -105,7 +106,6 @@ sub test_create_domain {
     );
 
     for my $volume ( $domain->list_volumes ) {
-        diag($volume);
         like($volume,qr{^/var/tmp});
     }
 
