@@ -879,7 +879,7 @@ sub disk_size {
         $file =~ s{.*/}{};
 
         my $vol;
-        eval { $vol = $self->storage->get_volume_by_name($file) };
+        eval { $vol = $self->_vm->search_volume($file) };
 
         warn "I can't find volume in storage. source: $source , file: ".($file or '<UNDEF>')
             if !$vol;
