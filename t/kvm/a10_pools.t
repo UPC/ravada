@@ -202,10 +202,11 @@ sub test_volumes_in_two_pools {
 
 remove_old_domains();
 remove_old_disks();
-clean_pool();
 
+clean_pool();
 my $vm_name = 'kvm';
 create_pool($vm_name);
+
 my $domain = test_create_domain($vm_name);
 test_remove_domain($vm_name, $domain);
 
