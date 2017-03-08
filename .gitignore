@@ -9,4 +9,8 @@ t/etc/ravada_ldap.conf
 hypnotoad.pid
 log
 rvd_front.conf
-pkg-debian
+pkg-debian/var
+pkg-debian/etc
+pkg-debian/usr
+pkg-debian/lib
+pkg-debian/DEBIAN/md5sums
