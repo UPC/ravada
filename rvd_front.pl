@@ -269,6 +269,10 @@ get '/machine/info/(:id).(:type)' => sub {
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
+any '/machine/settings/(:id).(:type)' => sub {
+    return settings_machine(@_);
+};
+
 any '/machine/manage/(:id).(:type)' => sub {
     my $c = shift;
     return manage_machine($c);
@@ -956,6 +960,44 @@ sub manage_machine {
     _enable_buttons($c, $domain);
 
     $c->render( template => 'main/manage_machine');
+}
+
+sub settings_machine {
+    my $c = shift;
+    my ($domain) = _search_requested_machine($c);
+    return $c->render("Domain not found")   if !$domain;
+
+    $c->stash(domain => $domain);
+    $c->stash(uri => $c->req->url->to_abs);
+
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
+            if $c->param('shutdown') && $domain->is_active;
+
+    $req = Ravada::Request->start_domain(
+                        uid => $USER->id
+                     , name => $domain->name
+                , remote_ip => _remote_ip($c)
+            ) if $c->param('start') && !$domain->is_active;
+
+    _enable_buttons($c, $domain);
+
+    $c->stash(message => '');
+    my @reqs = ();
+    for (qw(video network)) {
+        my $driver = "driver_$_";
+        if ( $c->param($driver) ) {
+            my $req2 = Ravada::Request->set_driver(uid => $USER->id
+                , id_domain => $domain->id
+                , id_option => $c->param($driver)
+            );
+            $c->stash(message => 'Driver change will apply on next start');
+            push @reqs,($req2);
+        }
+    }
+    for my $req (@reqs) {
+        $RAVADA->wait_request($req, 60) 
+    }
+    return $c->render(template => 'main/settings_machine');
 }
 
 sub _enable_buttons {

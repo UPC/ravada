@@ -71,6 +71,7 @@
                             <b>Shutting down ... </b>
                             It may take a couple of minutes.
                     </div>
+                    <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog"></a></i>
 %                   }
 %               }
             </div>

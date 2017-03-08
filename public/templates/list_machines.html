@@ -42,7 +42,7 @@
 
                     </td>
                     <td>
-                       
+
                       <div ng-hide="{{machine.is_locked}}">
                         <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="start(machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
                         <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
@@ -50,6 +50,10 @@
                         <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
                         <a data-toggle="modal" data-target="#copy_{{machine.id}}" class="btn btn-primary btn-sm" ><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Copy</a>
+
+
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
+
 
                         <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
 

@@ -31,6 +31,17 @@ has '_vm' => (
 our $TIMEOUT_SHUTDOWN = 60;
 our $OUT;
 
+our %GET_DRIVER_SUB = (
+    network => \&_get_driver_network
+     ,sound => \&_get_driver_sound
+     ,video => \&_get_driver_video
+);
+our %SET_DRIVER_SUB = (
+    network => \&_set_driver_network
+     ,sound => \&_set_driver_sound
+     ,video => \&_set_driver_video
+);
+
 ##################################################
 
 
@@ -1037,6 +1048,184 @@ sub clean_swap_volumes {
     	run3(\@cmd,\$in, \$out, \$err);
     	die $err if $err;
 	}
+}
+
+=head2 get_driver
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver {
+    my $self = shift;
+    my $name = shift;
+
+    my $sub = $GET_DRIVER_SUB{$name};
+
+    die "I can't get driver $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+=head2 set_driver
+
+Sets the value of a driver
+
+Argument: name , driver
+
+    my $driver = $domain->set_driver('video','"type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"');
+
+=cut
+
+sub set_driver {
+    my $self = shift;
+    my $name = shift;
+
+    my $sub = $SET_DRIVER_SUB{$name};
+
+    die "I can't get driver $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self,@_);
+}
+
+sub _get_driver_generic {
+    my $self = shift;
+    my $xml_path = shift;
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $driver ($doc->findnodes($xml_path)) {
+        my $str = $driver->toString;
+        $str =~ s{^<model (.*)/>}{$1};
+        push @ret,($str);
+    }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+}
+
+sub _get_driver_video {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/video/model',@_);
+}
+
+sub _get_driver_network {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/interface/model',@_);
+}
+
+sub _get_driver_sound {
+    my $self = shift;
+    my $xml_path ="/domain/devices/sound";
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $driver ($doc->findnodes($xml_path)) {
+        push @ret,('model="'.$driver->getAttribute('model').'"');
+    }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+
+}
+
+sub _text_to_hash {
+    my $text = shift;
+
+    my %ret;
+
+    for my $item (split /\s+/,$text) {
+        my ($name, $value) = $item =~ m{(.*?)=(.*)};
+        if (!defined $name) {
+            warn "I can't find name=value in '$item'";
+            next;
+        }
+        $value =~ s/^"(.*)"$/$1/;
+        $ret{$name} = ($value or '');
+    }
+    return %ret;
+}
+
+sub _set_driver_generic {
+    my $self = shift;
+    my $xml_path= shift;
+    my $value_str = shift or confess "Missing value";
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my %value = _text_to_hash($value_str);
+    for my $video($doc->findnodes($xml_path)) {
+        my $old_driver = $video->toString();
+        for my $node ($video->findnodes('model')) {
+            for my $attrib ( $node->attributes ) {
+                my ( $name ) =$attrib =~ /\s*(.*)=/;
+                next if !defined $name;
+                my $new_value = ($value{$name} or '');
+                if ($value{$name}) {
+                    $node->setAttribute($name => $value{$name});
+                } else {
+                    $node->removeAttribute($name);
+                }
+            }
+            for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+            }
+        }
+        return if $old_driver eq $video->toString();
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+sub _set_driver_video {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/video',@_);
+}
+
+sub _set_driver_network {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/interface',@_);
+}
+
+sub _set_driver_sound {
+    my $self = shift;
+#    return $self->_set_driver_generic('/domain/devices/sound',@_);
+    my $value_str = shift or confess "Missing value";
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my %value = _text_to_hash($value_str);
+    for my $node ($doc->findnodes("/domain/devices/sound")) {
+        my $old_driver = $node->toString();
+        for my $attrib ( $node->attributes ) {
+            my ( $name ) =$attrib =~ /\s*(.*)=/;
+            next if !defined $name;
+            my $new_value = ($value{$name} or '');
+            if ($value{$name}) {
+                $node->setAttribute($name => $value{$name});
+            } else {
+                $node->removeAttribute($name);
+            }
+        }
+        for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+        }
+        return if $old_driver eq $node->toString();
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
 }
 
 1;

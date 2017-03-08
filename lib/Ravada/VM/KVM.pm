@@ -232,16 +232,11 @@ sub search_domain {
 
         my $domain;
 
-        my @args_create = ();
-        @args_create = (
-                    _vm => $self)
-        if !$self->readonly;
-
         eval {
             $domain = Ravada::Domain::KVM->new(
                 domain => $dom
                 ,readonly => $self->readonly
-                ,@args_create
+                ,_vm => $self
             );
         };
         warn $@ if $@;
@@ -404,6 +399,7 @@ sub _domain_create_from_iso {
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
+    _xml_modify_video($xml);
 
     my $domain = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
@@ -421,7 +417,6 @@ sub _domain_create_common {
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml);
-    _xml_modify_video($xml);
     $self->_fix_pci_slots($xml);
 
     my $dom;
