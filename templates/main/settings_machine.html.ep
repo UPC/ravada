@@ -10,8 +10,8 @@
         <div ng-controller="machines">
             <div class="page-header">
                 <div class="panel panel-default">
+                    <form action="" method="post">
                     <div class="panel-heading">
-                        <form action="<%= $uri %>" method="post">
                         <h2>Virtual Machine <a href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a></h2>
                             <input type="submit" name="start" value="start" <%= $_start_disabled %>>
                             <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
@@ -45,8 +45,8 @@
 %                           }
                             <br/>
                             <input type="submit" value="save">
-                        </form>
                     </div>
+                    </form>
                 </div>
             </div>
         </div>
