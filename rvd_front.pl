@@ -84,7 +84,7 @@ hook before_routes => sub {
   my $c = shift;
 
   $c->stash(version => $RAVADA->version."$VERSION_TYPE");
-  my $url = $c->req->url;
+  my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>['/js/form.js'
                 ,'/js/ravada.js'
@@ -955,7 +955,6 @@ sub manage_machine {
     Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id)   if $c->param('resume');
 
     $c->stash(domain => $domain);
-    $c->stash(uri => $c->req->url->to_abs);
 
     _enable_buttons($c, $domain);
 
@@ -968,7 +967,6 @@ sub settings_machine {
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
-    $c->stash(uri => $c->req->url->to_abs);
 
     my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
