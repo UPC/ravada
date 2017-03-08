@@ -15,11 +15,14 @@ my %DIR = (
     ,'rvd_front.pl' => 'usr/sbin'
     ,'etc/ravada.conf' => 'etc'
     ,'etc/xml'  => 'var/lib/ravada'
-    ,'etc/systemd/' => 'lib/systemd/system'
     ,docs => 'usr/share/doc/ravada'
     ,sql => 'usr/share/doc/ravada'
     ,public => 'var/www/ravada'
-    ,lib => 'usr/share/perl5'
+    ,'lib/' => 'usr/share/perl5'
+);
+
+my %FILE = (
+    'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
 );
 
 my @REMOVE= qw(
@@ -37,7 +40,7 @@ sub clean {
     }
 }
 
-sub copy_files {
+sub copy_dirs {
     for my $src (sort keys %DIR) {
         my $dst = "pkg-debian/$DIR{$src}";
         make_path($dst) if ! -e $dst;
@@ -46,6 +49,12 @@ sub copy_files {
         my @cmd = ('rsync','-av',$src,$dst);
         run3(\@cmd, \$in, \$out, \$err);
         die $err if $err;
+    }
+}
+
+sub copy_files {
+    for my $src (keys %FILE) {
+        copy($src,"pkg-debian/$FILE{$src}") or die $!;
     }
 }
 
@@ -101,6 +110,7 @@ sub remove_use_lib {
 #########################################################################
 
 clean();
+copy_dirs();
 copy_files();
 remove_not_needed();
 remove_use_lib();

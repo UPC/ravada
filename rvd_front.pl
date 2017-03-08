@@ -34,7 +34,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Login'
                                               ,login_message => ''
                                               }
-                                      ,file => 'rvd_front.conf' };
+                                      ,file => '/etc/rvd_front.conf' };
 #####
 #####
 #####

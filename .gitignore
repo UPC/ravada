@@ -12,5 +12,4 @@ rvd_front.conf
 pkg-debian/var
 pkg-debian/etc
 pkg-debian/usr
-pkg-debian/lib
 pkg-debian/DEBIAN/md5sums
