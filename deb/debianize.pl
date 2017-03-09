@@ -49,6 +49,7 @@ sub copy_dirs {
         my @cmd = ('rsync','-av',$src,$dst);
         run3(\@cmd, \$in, \$out, \$err);
         die $err if $err;
+        print `chmod -R go+rx $dst`;
     }
 }
 
@@ -83,10 +84,12 @@ sub create_md5sums {
 }
 
 sub create_deb {
-    my @cmd = ('dpkg','-b','pkg-debian/',"ravada_${Ravada::VERSION}_all.deb");
+    my $deb = "ravada_${Ravada::VERSION}_all.deb";
+    my @cmd = ('dpkg','-b','pkg-debian/',$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
+    print "$deb created\n";
 }
 
 sub remove_use_lib {
@@ -109,6 +112,7 @@ sub remove_use_lib {
 
 #########################################################################
 
+umask('0002');
 clean();
 copy_dirs();
 copy_files();
