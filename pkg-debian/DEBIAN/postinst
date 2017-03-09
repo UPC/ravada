@@ -1,0 +1,5 @@
+#!/bin/bash
+adduser --system --group --disabled-password --disabled-login --no-create-home --home=/dev/null ravada
+mkdir /var/run/ravada
+chown ravada /var/run/ravada
+chmod go-rx /var/run/ravada
