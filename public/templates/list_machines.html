@@ -18,10 +18,10 @@
             <tbody>
                 <tr ng-repeat="machine in list_machines">
                     <td>
-                        <button ng-show="{{machine.is_public}}" ng-click="showMachine(machine.id)">
+                        <button ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
                           <b>{{machine.name}}</b>
                         </button>
-                        <button ng-hide="{{machine.is_public}}" ng-click="showMachine(machine.id)">
+                        <button ng-hide="{{machine.is_public}}" ng-click="show('machine',machine.id)">
                           {{machine.name}}
                         </button>
                     </td>

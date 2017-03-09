@@ -48,28 +48,38 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
     });
-    $scope.showing = 'machines';
-    $scope.showMachines = function(){
-      $scope.showing = 'machines';
-    }
-    $scope.showUsers = function(){
-      $scope.showing = 'users';
-    }
-    $scope.showMessages = function(){
-      $scope.showing = 'messages';
-    }
-    $scope.showMachine = function(machineId){
-      $scope.showmachine = getMachineById($scope.list_machines,machineId);
-      $scope.showing = 'machine';
+    $scope.show = function(type,id){
+      $interval.cancel($scope.updatePromise);
+      switch(type){
+        case 'machines':
+        $scope.getMachines();
+        $scope.updatePromise = $interval($scope.getMachines,3000);
+        break;
+        case 'users':
+        $scope.getUsers();
+        $scope.updatePromise = $interval($scope.getUsers,3000);
+        break;
+        case 'messages':
+        $scope.getMessages();
+        $scope.updatePromise = $interval($scope.getMessages,3000);
+        break;
+        case 'messages':
+        $scope.getMessages();
+        $scope.updatePromise = $interval($scope.getMessages,3000);
+        break;
+        case 'machine':
+        $scope.showmachineId = id;
+        $scope.getSingleMachine();
+        $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+        break;
+      }
+      $scope.showing = type;
     }
     $scope.getUsers = function() {
       $http.get('/list_users.json').then(function(response) {
         $scope.list_users= response.data;
       });
     }
-    $scope.getUsers();
-    $interval($scope.getUsers,1000);
-
     $scope.rename= {new_name: 'new_name'};
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
@@ -78,8 +88,10 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         $scope.list_machines= response.data;
       });
     };
-    $scope.getMachines();
-    $interval($scope.getMachines,1000);
+    $scope.getSingleMachine = function(){
+      $scope.getMachines();
+      $scope.showmachine = getMachineById($scope.list_machines,$scope.showmachineId);
+    }
 
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
@@ -118,6 +130,7 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $scope.set_public = function(machineId, value) {
       $http.get("/machine/public/"+machineId+"/"+value);
     };
+    $scope.show('machines',-1);
   };
   function notifCrtl($scope, $interval, $http, request){
     $scope.alerts = [
