@@ -161,14 +161,6 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/machines' => sub {
-    my $c = shift;
-
-    return access_denied($c)    if !$USER->is_admin;
-
-    return domains($c);
-};
-
 any '/admin' => sub {
   my $c = shift;
 
@@ -191,14 +183,6 @@ get '/domain/new.html' => sub {
     return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->stash(error => []);
     return $c->render(template => "main/new_machine");
-
-};
-
-any '/users' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin;
-    return users($c);
 
 };
 
@@ -398,11 +382,6 @@ get '/request/(:id).(:type)' => sub {
 get '/requests.json' => sub {
     my $c = shift;
     return list_requests($c);
-};
-
-any '/messages.html' => sub {
-    my $c = shift;
-    return messages($c);
 };
 
 get '/messages.json' => sub {
@@ -649,33 +628,6 @@ sub show_failure {
 
 
 #######################################################
-
-sub domains {
-    my $c = shift;
-
-    my @error = ();
-
-    $c->render(template => 'main/machines');
-
-}
-
-sub messages {
-    my $c = shift;
-
-    my @error = ();
-
-    $c->render(template => 'main/messages');
-
-}
-
-sub users {
-    my $c = shift;
-    my @users = $RAVADA->list_users();
-    $c->render(template => 'main/users'
-        ,users => \@users
-    );
-
-}
 
 sub admin {
     my $c = shift;
