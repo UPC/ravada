@@ -80,6 +80,11 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         $scope.list_users= response.data;
       });
     }
+    $scope.getMessages = function() {
+      $http.get('/messages.json').then(function(response) {
+        $scope.list_message= response.data;
+      });
+    }
     $scope.rename= {new_name: 'new_name'};
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
