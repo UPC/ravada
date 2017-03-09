@@ -3,6 +3,7 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         .directive("solShowMessages", swMess)
         .directive("solShowMachine", swMach)
         .controller("adminPage", adminPageC)
+        .controller("messages", messagesCrtl)
         .controller("notifCrtl", notifCrtl)
 
   function swAdminNavigation() {
@@ -127,6 +128,25 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
     $scope.show('machines',-1);
+  };
+
+  function messagesCrtl($scope, $http, request) {
+      $http.get('/pingbackend.json').then(function(response) {
+          $scope.pingbe_fail = !response.data;
+
+      });
+
+      $http.get('/messages.json').then(function(response) {
+              $scope.list_message= response.data;
+      });
+
+      $scope.asRead = function(messId){
+          var toGet = '/messages/read/'+messId+'.json';
+          $http.get(toGet);
+      };
+      $http.get('/pingbackend.json').then(function(response) {
+          $scope.pingbe = response.data;
+      });
   };
 
   function notifCrtl($scope, $interval, $http, request){

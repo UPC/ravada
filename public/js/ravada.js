@@ -13,11 +13,7 @@
 	    .service("listUsers", gtListUsers)
             .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
-            .controller("machines", machinesCrtl)
             .controller("bases", mainpageCrtl)
-            .controller("messages", messagesCrtl)
-
-
 
 
     function newMachineCtrl($scope, $http) {
@@ -64,103 +60,6 @@
             templateUrl: '/templates/new_machine.html',
         };
 
-    };
-
-// list machines
-    function machinesCrtl($scope, $http, request, listMach) {
-
-        $scope.rename= {
-            // why this line does nothing ?
-            new_name: 'new_name'
-        };
-        $scope.show_rename = false;
-        $scope.new_name_duplicated=false;
-        $url_list = "/list_machines.json";
-        if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
-            $url_list = "/list_bases_anonymous.json";
-        }
-        $http.get($url_list).then(function(response) {
-                $scope.list_machines= response.data;
-        });
-
-        $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe_fail = !response.data;
-
-        });
-
-        $scope.shutdown = function(machineId){
-            var toGet = '/machine/shutdown/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.prepare = function(machineId){
-            var toGet = '/machine/prepare/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.remove_base= function(machineId){
-            var toGet = '/machine/remove_base/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.screenshot = function(machineId){
-            var toGet = '/machine/screenshot/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.pause = function(machineId){
-            var toGet = '/machine/pause/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.resume = function(machineId){
-            var toGet = '/machine/resume/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.start = function(machineId){
-            var toGet = '/machine/start/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.removeb = function(machineId){
-            var toGet = '/machine/remove_b/'+machineId+'.json';
-            $http.get(toGet);
-        };
-
-        $scope.rename = function(machineId, old_name) {
-            if (old_name == $scope.rename.new_name) {
-                // why the next line does nothing ?
-                $scope.show_rename= false;
-                return;
-            }
-            $http.get('/machine/rename/'+machineId+'/'
-                        +$scope.rename.new_name);
-            alert('Rename machine '+old_name
-                +' to '+$scope.rename.new_name
-                +'. It may take some seconds to complete.');
-            // why the next line does nothing ?
-            $scope.show_rename= false;
-        };
-
-        $scope.validate_new_name = function(old_name) {
-            if(old_name == $scope.rename.new_name) {
-                $scope.new_name_duplicated=false;
-                return;
-            }
-            $http.get('/machine/exists/'+$scope.rename.new_name)
-                .then(duplicated_callback, unique_callback);
-            function duplicated_callback(response) {
-                $scope.new_name_duplicated=response.data;
-            };
-            function unique_callback() {
-                $scope.new_name_duplicated=false;
-            }
-        };
-
-        $scope.set_public = function(machineId, value) {
-            $http.get("/machine/public/"+machineId+"/"+value);
-        };
     };
 
     // list machines
@@ -264,27 +163,6 @@
             get:{isArray:true}
         });
 
-    };
-
-
-// list messages
-    function messagesCrtl($scope, $http, request) {
-        $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe_fail = !response.data;
-
-        });
-
-        $http.get('/messages.json').then(function(response) {
-                $scope.list_message= response.data;
-        });
-
-        $scope.asRead = function(messId){
-            var toGet = '/messages/read/'+messId+'.json';
-            $http.get(toGet);
-        };
-        $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe = response.data;
-        });
     };
 
     function gtListMess($resource){
