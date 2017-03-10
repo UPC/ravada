@@ -1,2 +1,6 @@
 #!/bin/bash
-deluser ravada
+set -e
+
+. /usr/share/debconf/confmodule
+
+echo PURGE | debconf-communicate ravada

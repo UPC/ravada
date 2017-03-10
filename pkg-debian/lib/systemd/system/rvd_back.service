@@ -8,9 +8,9 @@ After=network.target
 Type=simple
 RemainAfterExit=yes
 SyslogIdentifier=rvd_back
-PIDFile=/var/run/rvd_back.pid
+PIDFile=/var/run/ravada/rvd_back.pid
 WorkingDirectory=/var/www/ravada/
-ExecStart=/var/www/ravada/bin/rvd_back.pl --debug &
+ExecStart=/usr/sbin/rvd_back.pl --debug &
 
 [Install]
 WantedBy=multi-user.target
