@@ -403,28 +403,18 @@ get '/unshown_messages.json' => sub {
 get '/messages/read/all.html' => sub {
     my $c = shift;
     $USER->mark_all_messages_read;
-    return $c->redirect_to("/messages.html");
 };
 
 get '/messages/read/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
 };
 
-get '/messages/read/(#id).html' => sub {
-    my $c = shift;
-    my $id = $c->stash('id');
-    $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
-};
-
-get '/messages/unread/(#id).html' => sub {
+get '/messages/unread/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_unread($id);
-    return $c->redirect_to("/messages.html");
 };
 
 get '/messages/view/(#id).html' => sub {

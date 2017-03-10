@@ -124,22 +124,14 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
   };
 
   function messagesCrtl($scope, $http, request) {
-      $http.get('/pingbackend.json').then(function(response) {
-          $scope.pingbe_fail = !response.data;
-
-      });
-
-      $http.get('/messages.json').then(function(response) {
-              $scope.list_message= response.data;
-      });
-
       $scope.asRead = function(messId){
           var toGet = '/messages/read/'+messId+'.json';
           $http.get(toGet);
       };
-      $http.get('/pingbackend.json').then(function(response) {
-          $scope.pingbe = response.data;
-      });
+      $scope.asUnread = function(messId){
+          var toGet = '/messages/unread/'+messId+'.json';
+          $http.get(toGet);
+      };
   };
 
   function notifCrtl($scope, $interval, $http, request){
