@@ -1,5 +1,4 @@
 ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
-        .directive("solShowAdminContent", swAdminContent)
         .directive("solShowMessages", swMess)
         .directive("solShowMachine", swMach)
         .controller("adminPage", adminPageC)
@@ -10,12 +9,6 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     return {
       restrict: "E",
       templateUrl: '/templates/admin_nav.html',
-    };
-  };
-  function swAdminContent() {
-    return {
-      restrict: "E",
-      templateUrl: '/templates/admin_cont.html',
     };
   };
   function swMess() {

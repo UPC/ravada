@@ -10,7 +10,10 @@
         <sol-show-admin-navigation></sol-show-admin-navigation>
       </div>
       <div id="admin-content">
-        <sol-show-admin-content></sol-show-admin-content>
+        <sol-show-listmachines ng-show="showing=='machines'" ng-cloak></sol-show-listmachines>
+        <sol-show-listusers ng-show="showing=='users'" ng-cloak></sol-show-listusers>
+        <sol-show-messages ng-show="showing=='messages'" ng-cloak></sol-show-messages>
+        <sol-show-machine ng-show="showing=='machine'" ng-cloak></sol-show-machine>
       </div>
     </div>
     </div>
