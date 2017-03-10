@@ -18,12 +18,12 @@
             <tbody>
                 <tr ng-repeat="machine in list_machines">
                     <td>
-                        <button ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
+                        <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
                           <b>{{machine.name}}</b>
-                        </button>
-                        <button ng-hide="{{machine.is_public}}" ng-click="show('machine',machine.id)">
+                        </a>
+                        <a class="machine-button" ng-hide="{{machine.is_public}}" ng-click="show('machine',machine.id)">
                           {{machine.name}}
-                        </button>
+                        </a>
                     </td>
                     <td>
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
@@ -48,11 +48,11 @@
                        
                       <div ng-hide="{{machine.is_locked}}">
                         <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="action('machine','start',machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
-                        <button type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
+                        <a type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</a>
 
                         <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
-                        <button type="button" ng-click="action('machine','screenshot',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
+                        <a type="button" ng-click="action('machine','screenshot',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</a>
 
 
                       </div>

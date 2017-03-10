@@ -29,12 +29,6 @@
       </label>
     </div>
   </div>
-  <button ng-show="{{showmachine.is_public}}" ng-click="showMachine(showmachine.id)">
-    <b>{{showmachine.name}}</b>
-  </button>
-  <button ng-hide="{{showmachine.is_public}}" ng-click="showMachine(showmachine.id)">
-    {{showmachine.name}}
-  </button>
   </br>
   <i ng-show="{{showmachine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
   <input type="checkbox" checked

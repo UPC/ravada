@@ -5,11 +5,13 @@
   border: thin solid green;
   border-radius: 3px;
 }
+.machine-button{
+  cursor: pointer;
+}
 
 #admin-content{
   margin-left: 200px;
 }
-
 #admin-nav-table {
   width: 100%
 }
