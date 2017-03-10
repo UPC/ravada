@@ -403,18 +403,21 @@ get '/unshown_messages.json' => sub {
 get '/messages/read/all.html' => sub {
     my $c = shift;
     $USER->mark_all_messages_read;
+    return $c->render(inline => "1");
 };
 
 get '/messages/read/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_read($id);
+    return $c->render(inline => "1");
 };
 
 get '/messages/unread/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_unread($id);
+    return $c->render(inline => "1");
 };
 
 get '/messages/view/(#id).html' => sub {
@@ -861,7 +864,7 @@ sub make_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::make_admin($id);
-
+    return $c->render(inline => "1");
 }
 
 sub remove_admin {
@@ -870,7 +873,7 @@ sub remove_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::remove_admin($id);
-
+    return $c->render(inline => "1");
 }
 
 sub manage_machine {
