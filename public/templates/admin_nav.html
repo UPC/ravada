@@ -24,6 +24,11 @@
           {{machine.name}}
         </a>
       </td>
+      <td>
+        <span ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning">P</span>
+        <span ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success">R</span>
+        <span ng-show="{{!machine.is_active}}" class="label label-danger">D</span>
+      </td>
     </tr>
   </tbody>
 </table>
