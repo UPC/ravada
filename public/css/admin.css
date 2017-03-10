@@ -23,4 +23,6 @@
 }
 #admin-nav-table a {
   width: 100%;
+  font-size: 14px;
+  font-weight: bold;
 }
