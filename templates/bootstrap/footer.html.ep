@@ -3,7 +3,7 @@
       <div class="row">
           <br>
           <a href="https://frankiejol.github.io/ravada/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
-          <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg"></a>
+          <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
           <a href="https://github.com/frankiejol/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg"></a>
       <font color="white" size="2" face="Verdana">Copyright &copy; RavadaVDI 2017</font>
       </div>

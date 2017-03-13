@@ -24,8 +24,17 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
+our $VERSION_TYPE = "--beta";
 
-plugin Config => { file => 'rvd_front.conf' };
+my $CONFIG_FRONT = plugin Config => { default => {
+                                                hypnotoad => {
+                                                pid_file => 'log/rvd_front.pid'
+                                                ,listen => ['http://*:8081']}
+                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_header => 'Login'
+                                              ,login_message => ''
+                                              }
+                                      ,file => 'rvd_front.conf' };
 #####
 #####
 #####
@@ -74,7 +83,8 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  my $url = $c->req->url;
+  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
+  my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>['/js/form.js'
                 ,'/js/ravada.js'
@@ -248,6 +258,10 @@ get '/machine/info/(:id).(:type)' => sub {
     warn $id;
     die "No id " if !$id;
     $c->render(json => $RAVADA->domain_info(id => $id));
+};
+
+any '/machine/settings/(:id).(:type)' => sub {
+    return settings_machine(@_);
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
@@ -429,8 +443,6 @@ get '/messages/view/(#id).html' => sub {
 any '/about' => sub {
     my $c = shift;
 
-    $c->stash(version => $RAVADA->version );
-
     $c->render(template => 'main/about');
 };
 
@@ -512,7 +524,7 @@ sub login {
     }
 
     my @css_snippets = ["\t.intro {\n\t\tbackground:"
-                    ." url(../img/intro-bg.jpg)"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
     $c->render(
@@ -523,6 +535,8 @@ sub login {
                         ,navbar_custom => 1
                       ,login => $login
                       ,error => \@error
+                      ,login_header => $CONFIG_FRONT->{login_header}
+                      ,login_message => $CONFIG_FRONT->{login_message}
     );
 
 }
@@ -601,6 +615,8 @@ sub quick_start_domain {
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
     my $domain_name = $base->name."-".$name;
+
+    $domain_name =~ tr/[\.]/[\-]/;
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
 
     $domain = provision($c,  $id_base,  $domain_name)
@@ -649,6 +665,8 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
+    my $swap = ($c->param('swap') or 0);
+    $swap *= 1024*1024*1024;
     my $req = $RAVADA->create_domain(
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -657,6 +675,7 @@ sub req_new_domain {
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
+        ,swap => $swap
     );
 
     return $req;
@@ -898,11 +917,48 @@ sub manage_machine {
     Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id)   if $c->param('resume');
 
     $c->stash(domain => $domain);
-    $c->stash(uri => $c->req->url->to_abs);
 
     _enable_buttons($c, $domain);
 
     $c->render( template => 'main/manage_machine');
+}
+
+sub settings_machine {
+    my $c = shift;
+    my ($domain) = _search_requested_machine($c);
+    return $c->render("Domain not found")   if !$domain;
+
+    $c->stash(domain => $domain);
+
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
+            if $c->param('shutdown') && $domain->is_active;
+
+    $req = Ravada::Request->start_domain(
+                        uid => $USER->id
+                     , name => $domain->name
+                , remote_ip => _remote_ip($c)
+            ) if $c->param('start') && !$domain->is_active;
+
+    _enable_buttons($c, $domain);
+
+    $c->stash(message => '');
+    my @reqs = ();
+    for (qw(sound video network)) {
+        my $driver = "driver_$_";
+        if ( $c->param($driver) ) {
+            my $req2 = Ravada::Request->set_driver(uid => $USER->id
+                , id_domain => $domain->id
+                , id_option => $c->param($driver)
+            );
+            $c->stash(message => 'Driver change will apply on next start');
+            push @reqs,($req2);
+        }
+    }
+    for my $req (@reqs) {
+        $RAVADA->wait_request($req, 60) 
+    }
+    return $c->render(template => 'main/settings_machine'
+        , action => $c->req->url->to_abs->path);
 }
 
 sub _enable_buttons {

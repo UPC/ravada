@@ -29,7 +29,6 @@
 %                   if ( !$machine->{is_public} ) {
                         <i>( not public )</i>
 %                   }
-                    {{host_restore}}
                 </h3>
 %               if ($machine->{screenshot} ) {
                     <img src="<%= $machine->{screenshot} %>" width="260">
@@ -57,6 +56,7 @@
 
 %                   }
 %                   if ( $machine->{id_clone}) {
+                        <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog"></a></i>
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">
                         <b>Restore</b> will remove all the contents of the machine
                         <i><%= $machine->{name_clone} %></i>.

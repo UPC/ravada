@@ -7,9 +7,10 @@
         <div class="intro-body">
             <div class="container" ng-controller="">
                 <form class="form-singin" method="post">
-                <h2 class="form-signin-heading">Login</h2>
+                <h2 class="form-signin-heading"><%= $login_header %></h2>
+                <p><%= $login_message %></p>
 
-                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User/Email">
+                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User">
 
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
 
@@ -73,7 +74,7 @@
           <div class="row">
               <p><font size= "3" face = "Montserrat"> Ravada is a free to use, open source VDI project.</font></p>
               <a href="https://frankiejol.github.io/ravada/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
-              <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg"></a>
+              <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
               <a href="https://github.com/frankiejol/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg"></a>
           </div>
         </div>

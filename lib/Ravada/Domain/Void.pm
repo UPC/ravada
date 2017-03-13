@@ -19,6 +19,12 @@ has 'domain' => (
     ,required => 1
 );
 
+has '_ip' => (
+    is => 'rw'
+    ,isa => 'Str'
+    ,default => sub { return '1.1.1.'.int rand(255)}
+);
+
 our $DIR_TMP = "/var/tmp/rvd_void";
 
 #######################################3
@@ -54,7 +60,7 @@ sub display {
     my $self = shift;
 
     my $ip = $self->_vm->ip();
-    return "void://$ip:0/";
+    return "void://$ip:5990/";
 }
 
 sub is_active {
@@ -121,6 +127,15 @@ sub shutdown {
     $self->_store(is_active => 0);
 }
 
+sub force_shutdown {
+    return shutdown_now(@_);
+}
+
+sub _do_force_shutdown {
+    my $self = shift;
+    return $self->_store(is_active => 0);
+}
+
 sub shutdown_now {
     my $self = shift;
     my $user = shift;
@@ -136,12 +151,16 @@ sub prepare_base {
     my $self = shift;
 
     for my $file_qcow ($self->list_volumes) {;
-        $file_qcow .= ".qcow";
+        my $file_base = $file_qcow.".qcow";
 
-        open my $out,'>',$file_qcow or die "$! $file_qcow";
+        if ( $file_qcow =~ /.SWAP.img$/ ) {
+            $file_base = $file_qcow;
+            $file_base =~ s/(\.SWAP.img$)/base-$1/;
+        }
+        open my $out,'>',$file_base or die "$! $file_base";
         print $out "$file_qcow\n";
         close $out;
-        $self->_prepare_base_db($file_qcow);
+        $self->_prepare_base_db($file_base);
     }
 }
 
@@ -174,19 +193,27 @@ sub remove_disks {
 
 }
 
+sub remove_disk {
+    my $self = shift;
+    return $self->_vol_remove(@_);
+}
+
 =head2 add_volume
 
 Adds a new volume to the domain
 
-    $domain->add_volume($size);
+    $domain->add_volume(size => $size);
 
 =cut
 
 sub add_volume {
     my $self = shift;
+    confess "Wrong arguments " if scalar@_ % 1;
     my %args = @_;
 
-    $args{path} = "$DIR_TMP/".$self->name.".$args{name}.img"
+    my $suffix = ".img";
+    $suffix = '.SWAP.img' if $args{swap};
+    $args{path} = "$DIR_TMP/".$self->name.".$args{name}$suffix"
         if !$args{path};
 
     confess "Volume path must be absolute , it is '$args{path}'"
@@ -195,7 +222,7 @@ sub add_volume {
 
     return if -e $args{path};
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type));
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -216,6 +243,17 @@ sub add_volume {
 
     open my $out,'>>',$args{path} or die "$! $args{path}";
     print $out Dumper($data->{device}->{$args{name}});
+    close $out;
+
+}
+
+sub create_swap_disk {
+    my $self = shift;
+    my $path = shift;
+
+    return if -e $path;
+
+    open my $out,'>>',$path or die "$! $path";
     close $out;
 
 }
@@ -334,4 +372,19 @@ sub disk_size {
 sub spinoff_volumes {
     return;
 }
+
+sub ip {
+    my $self = shift;
+    return $self->_ip;
+}
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ($self->list_volumes) {
+        next if $file !~ /SWAP.img$/;
+        open my $out,'>',$file or die "$! $file";
+        close $out;
+    }
+}
+
 1;

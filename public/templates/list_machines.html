@@ -18,6 +18,7 @@
             <tbody>
                 <tr ng-repeat="machine in list_machines">
                     <td>
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
                         <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
                           <b>{{machine.name}}</b>
                         </a>
@@ -45,7 +46,7 @@
 
                     </td>
                     <td>
-                       
+
                       <div ng-hide="{{machine.is_locked}}">
                         <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="action('machine','start',machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
                         <a type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</a>
