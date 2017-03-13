@@ -60,6 +60,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
+plugin 'RenderFile';
 
 GetOptions(
      'config=s' => \$FILE_CONFIG
@@ -95,7 +96,7 @@ hook before_routes => sub {
             );
 
   return access_denied($c)
-    if $url =~ /\.json/
+    if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
 
   return login($c)
@@ -484,6 +485,33 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+
+get '/img/screenshots/:file' => sub {
+    my $c = shift;
+
+    my $file = $c->param('file');
+    my $path = $DOCUMENT_ROOT."/".$c->req->url->to_abs->path;
+
+    my ($id_domain ) =$path =~ m{/(\d+)\..+$};
+    if (!$id_domain) {
+        warn"ERROR : no id domain in $path";
+        return $c->reply->not_found;
+    }
+    if (!$USER->is_admin) {
+        warn $id_domain;
+        my $domain = $RAVADA->search_domain_by_id($id_domain);
+        return $c->reply->not_found if !$domain;
+        unless ($domain->is_base && $domain->is_public) {
+            warn "not owner";
+            return access_denied($c) if $USER->id != $domain->id_owner;
+        }
+    }
+    return $c->reply->not_found  if ! -e $path;
+    return $c->render_file(
+                      filepath => $path
+        ,'content_disposition' => 'inline'
+    );
+};
 
 ###################################################
 
