@@ -1,0 +1,10 @@
+Template: ravada/dbuser
+Type: string
+Default: rvd_user
+Description: database ravada user:
+ Name of the user that connects to the ravada MySQL database
+
+Template: ravada/dbpassword
+Type: password
+Description: MySQL ravada password:
+ Password of the user that connects to the ravada MySQL database

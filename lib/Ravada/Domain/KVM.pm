@@ -6,6 +6,7 @@ use strict;
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
+use File::Path qw(make_path);
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -675,6 +676,9 @@ Takes a screenshot, it stores it in file.
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
+
+    my ($path) = $file =~ m{(.*)/};
+    make_path($path) if ! -e $path;
 
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
