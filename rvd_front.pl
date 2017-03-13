@@ -9,6 +9,7 @@ use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+use Mojo::Home;
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -896,6 +897,18 @@ sub check_back_running {
 
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
+    my $home = Mojo::Home->new();
+    $home->detect();
+
+    if (exists $ENV{MORBO_VERBOSE}
+        || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
+            return if -e $home->rel_dir("public");
+    }
+    app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
+            or $home->rel_dir("public"));
+    app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
+            or $home->rel_dir("templates"));
+
 }
 
 sub _search_requested_machine {
