@@ -13,10 +13,3 @@ chmod go-rx /var/run/ravada
 
 systemctl daemon-reload
 
-# Configure database
-dbc_mysql_createdb_encoding="UTF8"
-
-if ! dbc_go portal3 $@ ; then
-    echo 'Automatic configuration using dbconfig-db_version 2.0common failed!'
-fi
-

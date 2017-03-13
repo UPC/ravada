@@ -3,4 +3,8 @@
     pid_file => '/var/run/ravada/rvd_front.pid'
     ,listen => ['http://*:8081']
   }
+  ,dir => {
+      templates => '/usr/share/ravada/templates'
+        ,public => '/usr/share/ravada/public'
+  }
 };

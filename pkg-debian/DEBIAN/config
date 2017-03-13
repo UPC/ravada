@@ -7,9 +7,10 @@ set -e
 # Source debconf library.
 . /usr/share/debconf/confmodule
 
+# TODO
 # Ask questions
-db_input low ravada/database_user || true
-db_input low ravada/database_password || true
+#db_input low ravada/database_user || true
+#db_input low ravada/database_password || true
 
 # Show interface
-dbc_go || true
+#dbc_go || true

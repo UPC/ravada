@@ -9,6 +9,9 @@ use lib './lib';
 use Ravada;
 use File::Copy;
 
+my $DIR_SRC = "pkg-debian";
+my $DIR_DST = "pkg-debian-out";
+
 my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
@@ -17,9 +20,10 @@ my %DIR = (
     ,sql => 'usr/share/doc/ravada'
     ,'lib/' => 'usr/share/perl5'
     ,'blib/man3' => 'usr/share/man'
+    ,"$DIR_SRC/" => "./"
 );
 
-for ( qw(css fonts js templates)) {
+for ( qw(css fonts img js templates)) {
     $DIR{"public/$_"} = "usr/share/ravada/public";
 }
 
@@ -41,18 +45,12 @@ my @REMOVE= qw(
 ########################################################################
 
 sub clean {
-    for my $src (sort keys %DIR ) {
-        my $dst = "pkg-debian/$DIR{$src}";
-        next if ! -e $dst;
-        remove_tree($dst);
-    }
-    remove_tree("pkg-debian/usr");
-    remove_tree("pkg-debian/var");
+    remove_tree($DIR_DST);
 }
 
 sub copy_dirs {
     for my $src (sort keys %DIR) {
-        my $dst = "pkg-debian/$DIR{$src}";
+        my $dst = "$DIR_DST/$DIR{$src}";
         make_path($dst) if ! -e $dst;
 
         my ($in, $out, $err);
@@ -65,7 +63,7 @@ sub copy_dirs {
 
 sub copy_files {
     for my $src (keys %FILE) {
-        my $dst = "pkg-debian/$FILE{$src}";
+        my $dst = "$DIR_DST/$FILE{$src}";
 
         my ($dir) = $dst =~ m{(.*)/.*};
         make_path($dir) if !-d $dir;
@@ -77,11 +75,11 @@ sub copy_files {
 
 sub remove_not_needed {
     for my $file (@REMOVE) {
-        $file = "pkg-debian/$file";
+        $file = "$DIR_DST/$file";
         unlink $file or die "$! $file";
     }
     for my $dir ('usr/share/doc/ravada/sql/sqlite') {
-        my $path = "pkg-debian/$dir";
+        my $path = "$DIR_DST/$dir";
         die "Missing $path" if ! -e $path;
         remove_tree($path);
     }
@@ -89,7 +87,7 @@ sub remove_not_needed {
 
 sub create_md5sums {
     my @files;
-    chdir "pkg-debian" or die "I can't chdir to pkg-debian";
+    chdir $DIR_DST or die "I can't chdir to $DIR_DST";
 
     unlink "DEBIAN/md5sums";
 
@@ -101,11 +99,12 @@ sub create_md5sums {
     }
     close $find;
     chdir "..";
+    chmod 0644,"$DIR_DST/DEBIAN/md5sums" or die $!;
 }
 
 sub create_deb {
     my $deb = "ravada_${Ravada::VERSION}_all.deb";
-    my @cmd = ('dpkg','-b','pkg-debian/',$deb);
+    my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
@@ -114,7 +113,7 @@ sub create_deb {
 
 sub remove_use_lib {
     for my $file ('usr/sbin/rvd_front','usr/sbin/rvd_back') {
-        my $path = "pkg-debian/$file";
+        my $path = "$DIR_DST/$file";
         die "Missing file '$path'" if ! -e $path;
         copy($path, "$path.old") or die "$! $path -> $path.old";
         open my $in,'<',"$path.old" or die "$! $path.old";
@@ -133,15 +132,14 @@ sub remove_use_lib {
 
 sub change_mod {
     for my $file ( 'rvd_front.service', 'rvd_back.service') {
-        my $path = "pkg-debian/lib/systemd/system/$file";
+        my $path = "$DIR_DST/lib/systemd/system/$file";
         chmod 0644,$path or die "$! $path";
     }
-    chmod 0644,"pkg-debian/DEBIAN/md5sums" or die $!;
 }
 
 sub gzip_docs {
     for my $file ( 'changelog' ) {
-        my $path = "pkg-debian/usr/share/doc/ravada/$file";
+        my $path = "$DIR_DST/usr/share/doc/ravada/$file";
         die "Missing $path\n"
             if !-e $path;
         print `gzip -n -9 $path`;
@@ -149,7 +147,7 @@ sub gzip_docs {
 }
 
 sub gzip_man {
-    my $dir = "pkg-debian/usr/share/man/man3" ;
+    my $dir = "$DIR_DST/usr/share/man/man3" ;
     opendir my $ls,$dir or die "$! $dir";
     while ( my $file = readdir $ls ) {
         next if ! -f "$dir/$file";
@@ -163,7 +161,7 @@ sub chown_files {
     my $file_perm = ( shift or 0644);
     my $dir_perm = (shift or 0755);
 
-    my $deb_dir = "pkg-debian/$dir";
+    my $deb_dir = "$DIR_DST/$dir";
     chmod($dir_perm,$deb_dir)   or die "$! $deb_dir";
     chown(0,0,$deb_dir)         or die "$! $deb_dir";
 
@@ -185,13 +183,13 @@ sub chown_files {
 }
 
 sub chown_pms {
-    print `find pkg-debian/ -iname "*pm" -exec chmod 755 {} \\;`;
-    print `find pkg-debian/usr/share -iname "*po" -exec chmod 755 {} \\;`;
+    print `find $DIR_DST/ -iname "*pm" -exec chmod 755 {} \\;`;
+    print `find $DIR_DST/usr/share -iname "*po" -exec chmod 755 {} \\;`;
 }
 
 sub chmod_control_files {
     for (qw(conffiles templates)) {
-        my $path  = "pkg-debian/DEBIAN/$_";
+        my $path  = "$DIR_DST/DEBIAN/$_";
         die "Missing $path" if ! -e $path;
         chmod 0644 , $path or die "$! $path";
     }
@@ -203,20 +201,22 @@ clean();
 copy_dirs();
 copy_files();
 remove_not_needed();
-remove_use_lib();
 change_mod();
 gzip_docs();
 gzip_man();
 chown_files('DEBIAN',0755);
-chown_files('usr/share/doc/ravada');
-chown_files('usr/share/ravada/public');
-chown_files('usr/share/ravada/templates');
+#chown_files('usr/share/doc/ravada');
+#chown_files('usr/share/ravada/public');
+#chown_files('usr/share/ravada/templates');
 chown_files('etc');
 chown_files('lib');
-chown_files('lib/systemd');
+#chown_files('lib/systemd');
 chown_files('var/lib/ravada');
-chown_files('usr/share/perl5');
-chown_files('usr/share/man');
+#chown_files('usr/share/perl5');
+#chown_files('usr/share/man');
+chown_files('usr');
+chown_files('var');
+remove_use_lib();
 chmod_control_files();
 #chown_pms();
 create_md5sums();
