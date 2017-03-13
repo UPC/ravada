@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Request.pm" />
+	<meta name="outputfile" content="./Request.html" />
+	<meta name="created" content="Tue Mar 14 00:43:42 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#BUILD">BUILD</a></li>
+<li><a href="#open">open</a></li>
+<li><a href="#create_domain">create_domain</a></li>
+<li><a href="#remove_domain">remove_domain</a></li>
+<li><a href="#start_domain">start_domain</a></li>
+<li><a href="#pause_domain">pause_domain</a></li>
+<li><a href="#resume_domain">resume_domain</a></li>
+<li><a href="#force_shutdown_domain">force_shutdown_domain</a></li>
+<li><a href="#shutdown_domain">shutdown_domain</a></li>
+<li><a href="#prepare_base">prepare_base</a></li>
+<li><a href="#remove_base">remove_base</a></li>
+<li><a href="#ping_backend">ping_backend</a></li>
+<li><a href="#domdisplay">domdisplay</a></li>
+<li><a href="#status">status</a></li>
+<li><a href="#result">result</a></li>
+<li><a href="#command">command</a></li>
+<li><a href="#args">args</a></li>
+<li><a href="#args-2">args</a></li>
+<li><a href="#defined_arg">defined_arg</a></li>
+<li><a href="#screenshot_domain">screenshot_domain</a></li>
+<li><a href="#open_iptables">open_iptables</a></li>
+<li><a href="#rename_domain">rename_domain</a></li>
+<li><a href="#set_driver">set_driver</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<p>Request a command to the ravada backend</p>
+<h2 id="BUILD">BUILD</h2>
+<div id="BUILD_CONTENT">
+<pre>    Internal object builder, do not call
+
+</pre>
+<p>sub BUILD {
+    _init_connector();
+}</p>
+<p>sub _request {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;</p>
+<pre>    my $self = {};
+    bless ($self, $class);
+    return $self;
+}
+
+</pre>
+
+</div>
+<h2 id="open">open</h2>
+<div id="open_CONTENT">
+<p>Opens the information of a previous request by id</p>
+<pre>  my $req = Ravada::Request-&gt;open($id);
+
+</pre>
+
+</div>
+<h2 id="create_domain">create_domain</h2>
+<div id="create_domain_CONTENT">
+<pre>    my $req = Ravada::Request-&gt;create_domain( name =&gt; 'bla'
+                    , id_iso =&gt; 1
+    );
+
+
+
+
+</pre>
+
+</div>
+<h2 id="remove_domain">remove_domain</h2>
+<div id="remove_domain_CONTENT">
+<pre>    my $req = Ravada::Request-&gt;remove_domain( name =&gt; 'bla'
+                    , uid =&gt; $user-&gt;id
+    );
+
+
+
+
+</pre>
+
+</div>
+<h2 id="start_domain">start_domain</h2>
+<div id="start_domain_CONTENT">
+<p>Requests to start a domain</p>
+<pre>  my $req = Ravada::Request-&gt;start_domain( name =&gt; 'name', uid =&gt; $user-&gt;id );
+
+</pre>
+
+</div>
+<h2 id="pause_domain">pause_domain</h2>
+<div id="pause_domain_CONTENT">
+<p>Requests to pause a domain</p>
+<pre>  my $req = Ravada::Request-&gt;pause_domain( name =&gt; 'name', uid =&gt; $user-&gt;id );
+
+</pre>
+
+</div>
+<h2 id="resume_domain">resume_domain</h2>
+<div id="resume_domain_CONTENT">
+<p>Requests to pause a domain</p>
+<pre>  my $req = Ravada::Request-&gt;resume_domain( name =&gt; 'name', uid =&gt; $user-&gt;id );
+
+</pre>
+
+</div>
+<h2 id="force_shutdown_domain">force_shutdown_domain</h2>
+<div id="force_shutdown_domain_CONTENT">
+<p>Requests to stop a domain now !</p>
+<pre>  my $req = Ravada::Request-&gt;shutdown_domain( name =&gt; 'name' , uid =&gt; $user-&gt;id );
+
+</pre>
+
+</div>
+<h2 id="shutdown_domain">shutdown_domain</h2>
+<div id="shutdown_domain_CONTENT">
+<p>Requests to stop a domain</p>
+<pre>  my $req = Ravada::Request-&gt;shutdown_domain( name =&gt; 'name' , uid =&gt; $user-&gt;id );
+  my $req = Ravada::Request-&gt;shutdown_domain( name =&gt; 'name' , uid =&gt; $user-&gt;id
+                                            ,timeout =&gt; $timeout );
+
+</pre>
+
+</div>
+<h2 id="prepare_base">prepare_base</h2>
+<div id="prepare_base_CONTENT">
+<p>Returns a new request for preparing a domain base</p>
+<pre>  my $req = Ravada::Request-&gt;prepare_base( $name );
+
+</pre>
+
+</div>
+<h2 id="remove_base">remove_base</h2>
+<div id="remove_base_CONTENT">
+<p>Returns a new request for making a base regular domain. It marks it
+as 'non base' and removes the files.</p>
+<p>It must have not clones. All clones must be removed before calling
+this method.</p>
+<pre>  my $req = Ravada::Request-&gt;remove_base( $name );
+
+</pre>
+
+</div>
+<h2 id="ping_backend">ping_backend</h2>
+<div id="ping_backend_CONTENT">
+<p>Returns wether the backend is alive or not</p>
+
+</div>
+<h2 id="domdisplay">domdisplay</h2>
+<div id="domdisplay_CONTENT">
+<p>Returns the domdisplay of a domain</p>
+<p>Arguments:</p>
+<p>* domain name</p>
+
+</div>
+<h2 id="status">status</h2>
+<div id="status_CONTENT">
+<p>Returns or sets the status of a request</p>
+<pre>  $req-&gt;status('done');
+
+  my $status = $req-&gt;status();
+
+</pre>
+
+</div>
+<h2 id="result">result</h2>
+<div id="result_CONTENT">
+<pre>  Returns the result of the request if any
+
+  my $result = $req-&gt;result;
+
+</pre>
+
+</div>
+<h2 id="command">command</h2>
+<div id="command_CONTENT">
+<p>Returns the requested command</p>
+
+</div>
+<h2 id="args">args</h2>
+<div id="args_CONTENT">
+<p>Returns the requested command</p>
+<pre>  my $command = $req-&gt;command;
+
+</pre>
+
+</div>
+<h2 id="args-2">args</h2>
+<div id="args_CONTENT-2">
+<p>Returns the arguments of a request or the value of one argument field</p>
+<pre>  my $args = $request-&gt;args();
+  print $args-&gt;{name};
+
+  print $request-&gt;args('name');
+
+</pre>
+
+</div>
+<h2 id="defined_arg">defined_arg</h2>
+<div id="defined_arg_CONTENT">
+<p>Returns if an argument is defined</p>
+
+</div>
+<h2 id="screenshot_domain">screenshot_domain</h2>
+<div id="screenshot_domain_CONTENT">
+<p>Request the screenshot of a domain.</p>
+<p>Arguments:</p>
+<p>- optional filename , defaults to &quot;storage_path/$id_domain.png&quot;</p>
+<p>Returns a Ravada::Request;</p>
+
+</div>
+<h2 id="open_iptables">open_iptables</h2>
+<div id="open_iptables_CONTENT">
+<p>Request to open iptables for a remote client</p>
+
+</div>
+<h2 id="rename_domain">rename_domain</h2>
+<div id="rename_domain_CONTENT">
+<p>Request to rename a domain</p>
+
+</div>
+<h2 id="set_driver">set_driver</h2>
+<div id="set_driver_CONTENT">
+<p>Sets a driver to a domain</p>
+<pre>    $domain-&gt;set_driver(
+        id_domain =&gt; $domain-&gt;id
+        ,uid =&gt; $USER-&gt;id
+        ,id_driver =&gt; $driver-&gt;id
+    );
+
+</pre>
+
+</div>
+</div></body>
+</html>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/VM/KVM.pm" />
+	<meta name="outputfile" content="./KVM.html" />
+	<meta name="created" content="Tue Mar 14 00:43:42 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#disconnect">disconnect</a></li>
+<li><a href="#connect">connect</a></li>
+<li><a href="#storage_pool">storage_pool</a></li>
+<li><a href="#dir_img">dir_img</a></li>
+<li><a href="#create_domain">create_domain</a></li>
+<li><a href="#search_domain">search_domain</a></li>
+<li><a href="#list_domains">list_domains</a></li>
+<li><a href="#create_volume">create_volume</a></li>
+<li><a href="#search_volume">search_volume</a></li>
+<li><a href="#list_networks">list_networks</a></li>
+<li><a href="#import_domain">import_domain</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="disconnect">disconnect</h2>
+<div id="disconnect_CONTENT">
+<p>Disconnect from the Virtual Machine Manager</p>
+
+</div>
+<h2 id="connect">connect</h2>
+<div id="connect_CONTENT">
+<p>Connect to the Virtual Machine Manager</p>
+
+</div>
+<h2 id="storage_pool">storage_pool</h2>
+<div id="storage_pool_CONTENT">
+<p>Returns a storage pool usable by the domain to store new volumes.</p>
+
+</div>
+<h2 id="dir_img">dir_img</h2>
+<div id="dir_img_CONTENT">
+<p>Returns the directory where disk images are stored in this Virtual Manager</p>
+
+</div>
+<h2 id="create_domain">create_domain</h2>
+<div id="create_domain_CONTENT">
+<p>Creates a domain.</p>
+<pre>    $dom = $vm-&gt;create_domain(name =&gt; $name , id_iso =&gt; $id_iso);
+    $dom = $vm-&gt;create_domain(name =&gt; $name , id_base =&gt; $id_base);
+
+</pre>
+
+</div>
+<h2 id="search_domain">search_domain</h2>
+<div id="search_domain_CONTENT">
+<p>Returns true or false if domain exists.</p>
+<pre>    $domain = $vm-&gt;search_domain($domain_name);
+
+</pre>
+
+</div>
+<h2 id="list_domains">list_domains</h2>
+<div id="list_domains_CONTENT">
+<p>Returns a list of the created domains</p>
+<pre>  my @list = $vm-&gt;list_domains();
+
+</pre>
+
+</div>
+<h2 id="create_volume">create_volume</h2>
+<div id="create_volume_CONTENT">
+<p>Creates a new storage volume. It requires a name and a xml template file defining the volume</p>
+<pre>   my $vol = $vm-&gt;create_volume(name =&gt; $name, name =&gt; $file_xml);
+
+</pre>
+
+</div>
+<h2 id="search_volume">search_volume</h2>
+<div id="search_volume_CONTENT">
+<p>Searches a volume</p>
+<pre>    my $vol =$vm-&gt;search_volume($name);
+
+</pre>
+
+</div>
+<h2 id="list_networks">list_networks</h2>
+<div id="list_networks_CONTENT">
+<p>Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object</p>
+
+</div>
+<h2 id="import_domain">import_domain</h2>
+<div id="import_domain_CONTENT">
+<p>Imports a KVM domain in Ravada</p>
+<pre>    my $domain = $vm-&gt;import_domain($name, $user);
+
+</pre>
+
+</div>
+</div></body>
+</html>

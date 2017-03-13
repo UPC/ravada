@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Auth/LDAP.pm" />
+	<meta name="outputfile" content="./LDAP.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#BUILD">BUILD</a></li>
+<li><a href="#add_user">add_user</a></li>
+<li><a href="#remove_user">remove_user</a></li>
+<li><a href="#search_user">search_user</a></li>
+<li><a href="#add_group">add_group</a></li>
+<li><a href="#remove_group">remove_group</a></li>
+<li><a href="#search_group">search_group</a></li>
+<li><a href="#add_to_group">add_to_group</a></li>
+<li><a href="#login">login</a></li>
+<li><a href="#is_admin">is_admin</a></li>
+<li><a href="#init">init</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="BUILD">BUILD</h2>
+<div id="BUILD_CONTENT">
+<p>Internal OO build</p>
+
+</div>
+<h2 id="add_user">add_user</h2>
+<div id="add_user_CONTENT">
+<p>Adds a new user in the LDAP directory</p>
+<pre>    Ravada::Auth::LDAP::add_user($name, $password, $is_admin);
+
+</pre>
+
+</div>
+<h2 id="remove_user">remove_user</h2>
+<div id="remove_user_CONTENT">
+<p>Removes the user</p>
+<pre>    Ravada::Auth::LDAP::remove_user($name);
+
+</pre>
+
+</div>
+<h2 id="search_user">search_user</h2>
+<div id="search_user_CONTENT">
+<p>Search user by uid</p>
+<pre>  my $entry = Ravada::Auth::LDAP::search_user($uid);
+
+</pre>
+
+</div>
+<h2 id="add_group">add_group</h2>
+<div id="add_group_CONTENT">
+<p>Add a group to the LDAP</p>
+
+</div>
+<h2 id="remove_group">remove_group</h2>
+<div id="remove_group_CONTENT">
+<p>Removes the group from the LDAP directory. Use with caution</p>
+<pre>    Ravada::Auth::LDAP::remove_group($name, $base);
+
+</pre>
+
+</div>
+<h2 id="search_group">search_group</h2>
+<div id="search_group_CONTENT">
+<pre>    Search group by name
+
+</pre>
+
+</div>
+<h2 id="add_to_group">add_to_group</h2>
+<div id="add_to_group_CONTENT">
+<p>Adds user to group</p>
+<pre>    add_to_group($uid, $group_name);
+
+</pre>
+
+</div>
+<h2 id="login">login</h2>
+<div id="login_CONTENT">
+<pre>    $user-&gt;login($name, $password);
+
+</pre>
+
+</div>
+<h2 id="is_admin">is_admin</h2>
+<div id="is_admin_CONTENT">
+<p>Returns wether an user is admin</p>
+
+</div>
+<h2 id="init">init</h2>
+<div id="init_CONTENT">
+<p>LDAP init, don't call, does nothing</p>
+
+</div>
+</div></body>
+</html>

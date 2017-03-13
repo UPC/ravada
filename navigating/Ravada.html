@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title>Ravada</title>
+	<meta name="description" content="Pod documentation for Ravada" />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada.pm" />
+	<meta name="outputfile" content="./Ravada.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul><li><a href="#NAME">NAME</a></li>
+<li><a href="#SYNOPSIS">SYNOPSIS</a>
+<ul><li><a href="#BUILD">BUILD</a></li>
+<li><a href="#display_ip">display_ip</a></li>
+<li><a href="#disconnect_vm">disconnect_vm</a></li>
+<li><a href="#create_domain">create_domain</a></li>
+<li><a href="#remove_domain">remove_domain</a></li>
+<li><a href="#search_domain">search_domain</a></li>
+<li><a href="#search_domain_by_id">search_domain_by_id</a></li>
+<li><a href="#list_domains">list_domains</a></li>
+<li><a href="#list_domains_data">list_domains_data</a></li>
+<li><a href="#list_bases">list_bases</a></li>
+<li><a href="#list_bases_data">list_bases_data</a></li>
+<li><a href="#list_images">list_images</a></li>
+<li><a href="#list_images_data">list_images_data</a></li>
+<li><a href="#remove_volume">remove_volume</a></li>
+<li><a href="#clean_killed_requests">clean_killed_requests</a></li>
+<li><a href="#process_requests">process_requests</a></li>
+<li><a href="#process_long_requests">process_long_requests</a></li>
+<li><a href="#process_all_requests">process_all_requests</a></li>
+<li><a href="#list_vm_types">list_vm_types</a></li>
+<li><a href="#open_vm">open_vm</a></li>
+<li><a href="#search_vm">search_vm</a></li>
+<li><a href="#import_domain">import_domain</a></li>
+<li><a href="#version">version</a></li>
+</ul>
+</li>
+<li><a href="#AUTHOR">AUTHOR</a></li>
+<li><a href="#SEE_ALSO">SEE ALSO</a>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada - Remove Virtual Desktop Manager</p>
+
+</div>
+<h1 id="SYNOPSIS">SYNOPSIS</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="SYNOPSIS_CONTENT">
+<pre>  use Ravada;
+
+  my $ravada = Ravada-&gt;new()
+
+</pre>
+
+</div>
+<h2 id="BUILD">BUILD</h2>
+<div id="BUILD_CONTENT">
+<p>Internal constructor</p>
+
+</div>
+<h2 id="display_ip">display_ip</h2>
+<div id="display_ip_CONTENT">
+<p>Returns the default display IP read from the config file</p>
+
+</div>
+<h2 id="disconnect_vm">disconnect_vm</h2>
+<div id="disconnect_vm_CONTENT">
+<p>Disconnect all the Virtual Managers connections.</p>
+
+</div>
+<h2 id="create_domain">create_domain</h2>
+<div id="create_domain_CONTENT">
+<p>Creates a new domain based on an ISO image or another domain.</p>
+<pre>  my $domain = $ravada-&gt;create_domain(
+         name =&gt; $name
+    , id_iso =&gt; 1
+  );
+
+
+
+
+  my $domain = $ravada-&gt;create_domain(
+         name =&gt; $name
+    , id_base =&gt; 3
+  );
+
+
+
+
+</pre>
+
+</div>
+<h2 id="remove_domain">remove_domain</h2>
+<div id="remove_domain_CONTENT">
+<p>Removes a domain</p>
+<pre>  $ravada-&gt;remove_domain($name);
+
+</pre>
+
+</div>
+<h2 id="search_domain">search_domain</h2>
+<div id="search_domain_CONTENT">
+<pre>  my $domain = $ravada-&gt;search_domain($name);
+
+</pre>
+
+</div>
+<h2 id="search_domain_by_id">search_domain_by_id</h2>
+<div id="search_domain_by_id_CONTENT">
+<pre>  my $domain = $ravada-&gt;search_domain_by_id($id);
+
+</pre>
+
+</div>
+<h2 id="list_domains">list_domains</h2>
+<div id="list_domains_CONTENT">
+<p>List all created domains</p>
+<pre>  my @list = $ravada-&gt;list_domains();
+
+</pre>
+
+</div>
+<h2 id="list_domains_data">list_domains_data</h2>
+<div id="list_domains_data_CONTENT">
+<p>List all domains in raw format. Return a list of id =&gt; { name , id , is_active , is_base }</p>
+<pre>   my $list = $ravada-&gt;list_domains_data();
+
+   $c-&gt;render(json =&gt; $list);
+
+</pre>
+
+</div>
+<h2 id="list_bases">list_bases</h2>
+<div id="list_bases_CONTENT">
+<p>List all base domains</p>
+<pre>  my @list = $ravada-&gt;list_domains();
+
+
+
+
+</pre>
+
+</div>
+<h2 id="list_bases_data">list_bases_data</h2>
+<div id="list_bases_data_CONTENT">
+<p>List information about the bases</p>
+
+</div>
+<h2 id="list_images">list_images</h2>
+<div id="list_images_CONTENT">
+<p>List all ISO images</p>
+
+</div>
+<h2 id="list_images_data">list_images_data</h2>
+<div id="list_images_data_CONTENT">
+<p>List information about the images</p>
+<p>sub _list_images_lxc {
+    my $self = shift;
+    my @domains;
+    my $sth = $CONNECTOR-&gt;dbh-&gt;prepare(
+        &quot;SELECT * FROM lxc_templates ORDER BY name&quot;
+    );
+    $sth-&gt;execute;
+    while (my $row = $sth-&gt;fetchrow_hashref) {
+        push @domains,($row);
+    }
+    $sth-&gt;finish;
+    return @domains;
+}</p>
+<p>sub _list_images_data_lxc {
+    my $self = shift;
+    my @data;
+    for ($self-&gt;list_images_lxc ) {
+        push @data,{ id =&gt; $_-&gt;{id} , name =&gt; $_-&gt;{name} };
+    }
+    return \@data;
+}</p>
+
+</div>
+<h2 id="remove_volume">remove_volume</h2>
+<div id="remove_volume_CONTENT">
+<pre>  $ravada-&gt;remove_volume($file);
+
+
+
+
+</pre>
+
+</div>
+<h2 id="clean_killed_requests">clean_killed_requests</h2>
+<div id="clean_killed_requests_CONTENT">
+<p>Before processing requests, old killed requests must be cleaned.</p>
+
+</div>
+<h2 id="process_requests">process_requests</h2>
+<div id="process_requests_CONTENT">
+<p>This is run in the ravada backend. It processes the commands requested by the fronted</p>
+<pre>  $ravada-&gt;process_requests();
+
+</pre>
+
+</div>
+<h2 id="process_long_requests">process_long_requests</h2>
+<div id="process_long_requests_CONTENT">
+<p>Process requests that take log time. It will fork on each one</p>
+
+</div>
+<h2 id="process_all_requests">process_all_requests</h2>
+<div id="process_all_requests_CONTENT">
+<p>Process all the requests, long and short</p>
+
+</div>
+<h2 id="list_vm_types">list_vm_types</h2>
+<div id="list_vm_types_CONTENT">
+<p>Returnsa list ofthe types of Virtual Machines available on this system</p>
+
+</div>
+<h2 id="open_vm">open_vm</h2>
+<div id="open_vm_CONTENT">
+<p>Opens a VM of a given type</p>
+<pre>
+
+
+  my $vm = $ravada-&gt;open_vm('KVM');
+
+</pre>
+
+</div>
+<h2 id="search_vm">search_vm</h2>
+<div id="search_vm_CONTENT">
+<p>Searches for a VM of a given type</p>
+<pre>  my $vm = $ravada-&gt;search_vm('kvm');
+
+</pre>
+
+</div>
+<h2 id="import_domain">import_domain</h2>
+<div id="import_domain_CONTENT">
+<p>Imports a domain in Ravada</p>
+<pre>    my $domain = $ravada-&gt;import_domain(
+                            vm =&gt; 'KVM'
+                            ,name =&gt; $name
+                            ,user =&gt; $user_name
+    );
+
+</pre>
+
+</div>
+<h2 id="version">version</h2>
+<div id="version_CONTENT">
+<p>Returns the version of the module</p>
+
+</div>
+<h1 id="AUTHOR">AUTHOR</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="AUTHOR_CONTENT">
+<p>Francesc Guasch-Ortiz	, frankie@telecos.upc.edu</p>
+
+</div>
+<h1 id="SEE_ALSO">SEE ALSO</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="SEE_ALSO_CONTENT">
+<p>Sys::Virt</p>
+
+</div>
+</div></body>
+</html>

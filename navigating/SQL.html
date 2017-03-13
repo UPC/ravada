@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Auth/SQL.pm" />
+	<meta name="outputfile" content="./SQL.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#BUILD">BUILD</a></li>
+<li><a href="#search_by_id">search_by_id</a></li>
+<li><a href="#add_user">add_user</a></li>
+<li><a href="#login">login</a></li>
+<li><a href="#make_admin">make_admin</a></li>
+<li><a href="#remove_admin">remove_admin</a></li>
+<li><a href="#is_admin">is_admin</a></li>
+<li><a href="#is_temporary">is_temporary</a></li>
+<li><a href="#id">id</a></li>
+<li><a href="#change_password">change_password</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="BUILD">BUILD</h2>
+<div id="BUILD_CONTENT">
+<p>Internal OO build method</p>
+
+</div>
+<h2 id="search_by_id">search_by_id</h2>
+<div id="search_by_id_CONTENT">
+<p>Searches a user by its id</p>
+<pre>    my $user = Ravada::Auth::SQL-&gt;search_by_id( $id );
+
+</pre>
+
+</div>
+<h2 id="add_user">add_user</h2>
+<div id="add_user_CONTENT">
+<p>Adds a new user in the SQL database. Returns nothing.</p>
+<pre>    Ravada::Auth::SQL::add_user( 
+                 name =&gt; $user
+           , password =&gt; $pass
+           , is_admin =&gt; 0
+       , is_temporary =&gt; 0
+    );
+
+</pre>
+
+</div>
+<h2 id="login">login</h2>
+<div id="login_CONTENT">
+<p>Logins the user</p>
+<pre>     my $ok = $user-&gt;login($password);
+     my $ok = Ravada::LDAP::SQL::login($name, $password);
+
+</pre>
+<p>returns true if it succeeds</p>
+
+</div>
+<h2 id="make_admin">make_admin</h2>
+<div id="make_admin_CONTENT">
+<p>Makes the user admin. Returns nothing.</p>
+<pre>     Ravada::Auth::SQL::make_admin($id);
+
+</pre>
+
+</div>
+<h2 id="remove_admin">remove_admin</h2>
+<div id="remove_admin_CONTENT">
+<p>Remove user admin privileges. Returns nothing.</p>
+<pre>     Ravada::Auth::SQL::remove_admin($id);
+
+</pre>
+
+</div>
+<h2 id="is_admin">is_admin</h2>
+<div id="is_admin_CONTENT">
+<p>Returns true if the user is admin.</p>
+<pre>    my $is = $user-&gt;is_admin;
+
+</pre>
+
+</div>
+<h2 id="is_temporary">is_temporary</h2>
+<div id="is_temporary_CONTENT">
+<p>Returns true if the user is admin.</p>
+<pre>    my $is = $user-&gt;is_temporary;
+
+</pre>
+
+</div>
+<h2 id="id">id</h2>
+<div id="id_CONTENT">
+<p>Returns the user id</p>
+<pre>    my $id = $user-&gt;id;
+
+</pre>
+
+</div>
+<h2 id="change_password">change_password</h2>
+<div id="change_password_CONTENT">
+<p>Changes the password of an User</p>
+<pre>    $user-&gt;change_password();
+
+</pre>
+<p>Arguments: password</p>
+
+</div>
+</div></body>
+</html>

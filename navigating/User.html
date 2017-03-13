@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Auth/User.pm" />
+	<meta name="outputfile" content="./User.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#BUILD">BUILD</a></li>
+<li><a href="#messages">messages</a></li>
+<li><a href="#unread_messages">unread_messages</a></li>
+<li><a href="#unshown_messages">unshown_messages</a></li>
+<li><a href="#show_message">show_message</a></li>
+<li><a href="#mark_message_read">mark_message_read</a></li>
+<li><a href="#mark_message_shown">mark_message_shown</a></li>
+<li><a href="#mark_message_unread">mark_message_unread</a></li>
+<li><a href="#mark_all_messages_read">mark_all_messages_read</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="BUILD">BUILD</h2>
+<div id="BUILD_CONTENT">
+<p>Internal OO builder</p>
+
+</div>
+<h2 id="messages">messages</h2>
+<div id="messages_CONTENT">
+<p>List of messages for this user</p>
+<pre>
+
+
+    my @messages = $user-&gt;messages();
+
+
+
+
+</pre>
+
+</div>
+<h2 id="unread_messages">unread_messages</h2>
+<div id="unread_messages_CONTENT">
+<p>List of unread messages for this user</p>
+<pre>    my @unread = $user-&gt;unread_messages();
+
+</pre>
+
+</div>
+<h2 id="unshown_messages">unshown_messages</h2>
+<div id="unshown_messages_CONTENT">
+<p>List of unshown messages for this user</p>
+<pre>    my @unshown = $user-&gt;unshown_messages();
+
+</pre>
+
+</div>
+<h2 id="show_message">show_message</h2>
+<div id="show_message_CONTENT">
+<p>Returns a message by id</p>
+<pre>    my $message = $user-&gt;show_message($id);
+
+</pre>
+<p>The data is returned as h hash ref.</p>
+
+</div>
+<h2 id="mark_message_read">mark_message_read</h2>
+<div id="mark_message_read_CONTENT">
+<p>Marks a message as read</p>
+<pre>    $user-&gt;mark_message_read($id);
+
+</pre>
+<p>Returns nothing</p>
+
+</div>
+<h2 id="mark_message_shown">mark_message_shown</h2>
+<div id="mark_message_shown_CONTENT">
+<p>Marks a message as shown</p>
+<pre>    $user-&gt;mark_message_shown($id);
+
+</pre>
+<p>Returns nothing</p>
+
+</div>
+<h2 id="mark_message_unread">mark_message_unread</h2>
+<div id="mark_message_unread_CONTENT">
+<p>Marks a message as unread</p>
+<pre>    $user-&gt;mark_message_unread($id);
+
+</pre>
+<p>Returns nothing</p>
+
+</div>
+<h2 id="mark_all_messages_read">mark_all_messages_read</h2>
+<div id="mark_all_messages_read_CONTENT">
+<p>Marks all message as read</p>
+<pre>    $user-&gt;mark_all_messages_read();
+
+</pre>
+<p>Returns nothing</p>
+
+</div>
+</div></body>
+</html>

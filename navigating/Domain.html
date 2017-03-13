@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Domain.pm" />
+	<meta name="outputfile" content="./Domain.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#id_Returns_the_id_of_the_domain_my_i">id
+Returns the id of  the domain
+    my $id = $domain-&gt;id();
+=cut</a></li>
+<li><a href="#is_known">is_known</a></li>
+<li><a href="#is_base_Returns_true_or_false_if_the">is_base
+Returns true or  false if the domain is a prepared base
+=cut</a></li>
+<li><a href="#is_locked_Shows_if_the_domain_has_ru">is_locked
+Shows if the domain has running or pending requests. It could be considered
+too as the domain is busy doing something like starting, shutdown or prepare base.
+Returns true if locked.
+=cut</a></li>
+<li><a href="#id_owner_Returns_the_id_of_the_user_">id_owner
+Returns the id of the user that created this domain
+=cut</a></li>
+<li><a href="#id_base_Returns_the_id_from_the_base">id_base
+Returns the id from the base this domain is based on, if any.
+=cut</a></li>
+<li><a href="#vm_Returns_a_string_with_the_name_of">vm
+Returns a string with the name of the VM ( Virtual Machine ) this domain was created on
+=cut</a></li>
+<li><a href="#clones_Returns_a_list_of_clones_from">clones
+Returns a list of clones from this virtual machine
+    my @clones = $domain-&gt;clones
+=cut</a></li>
+<li><a href="#has_clones_Returns_the_number_of_clo">has_clones
+Returns the number of clones from this virtual machine
+    my $has_clones = $domain-&gt;has_clones
+=cut</a></li>
+<li><a href="#list_files_base_Returns_a_list_of_th">list_files_base
+Returns a list of the filenames of this base-type domain
+=cut</a></li>
+<li><a href="#json_Returns_the_domain_information_">json
+Returns the domain information as json
+=cut</a></li>
+<li><a href="#can_screenshot_Returns_wether_this_d">can_screenshot
+Returns wether this domain can take an screenshot.
+=cut</a></li>
+<li><a href="#remove_base_Makes_the_domain_a_regul">remove_base
+Makes the domain a regular, non-base virtual machine and removes the base files.
+=cut</a></li>
+<li><a href="#clone">clone</a>
+<ul><li><a href="#arguments">arguments</a></li>
+</ul>
+</li>
+<li><a href="#add_volume_swap">add_volume_swap</a></li>
+<li><a href="#open_iptables">open_iptables</a></li>
+<li><a href="#is_public">is_public</a></li>
+<li><a href="#clean_swap_volumes">clean_swap_volumes</a></li>
+<li><a href="#drivers">drivers</a></li>
+<li><a href="#set_driver_id">set_driver_id</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="id_Returns_the_id_of_the_domain_my_i">id
+Returns the id of  the domain
+    my $id = $domain-&gt;id();
+=cut</h2>
+<div id="id_Returns_the_id_of_the_domain_my_i-2">
+<p>sub id {
+    return $_[0]-&gt;_data('id');</p>
+<p>}</p>
+
+
+
+
+<p>##################################################################################</p>
+<p>sub _data {
+    my $self = shift;
+    my $field = shift or confess &quot;Missing field name&quot;;</p>
+<pre>    _init_connector();
+
+    return $self-&gt;{_data}-&gt;{$field} if exists $self-&gt;{_data}-&gt;{$field};
+    $self-&gt;{_data} = $self-&gt;_select_domain_db( name =&gt; $self-&gt;name);
+
+    confess &quot;No DB info for domain &quot;.$self-&gt;name    if !$self-&gt;{_data};
+    confess &quot;No field $field in domains&quot;            if !exists$self-&gt;{_data}-&gt;{$field};
+
+    return $self-&gt;{_data}-&gt;{$field};
+}
+
+</pre>
+<p>sub __open {
+    my $self = shift;</p>
+<pre>    my %args = @_;
+
+    my $id = $args{id} or confess &quot;Missing required argument id&quot;;
+    delete $args{id};
+
+    my $row = $self-&gt;_select_domain_db ( );
+    return $self-&gt;search_domain($row-&gt;{name});
+#    confess $row;
+}
+
+</pre>
+
+</div>
+<h2 id="is_known">is_known</h2>
+<div id="is_known_CONTENT">
+<p>Returns if the domain is known in Ravada.</p>
+
+</div>
+<h2 id="is_base_Returns_true_or_false_if_the">is_base
+Returns true or  false if the domain is a prepared base
+=cut</h2>
+<div id="is_base_Returns_true_or_false_if_the-2">
+<p>sub is_base {
+    my $self = shift;
+    my $value = shift;</p>
+<pre>    $self-&gt;_select_domain_db or return 0;
+
+    if (defined $value ) {
+        my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(
+            &quot;UPDATE domains SET is_base=? &quot;
+            .&quot; WHERE id=?&quot;);
+        $sth-&gt;execute($value, $self-&gt;id );
+        $sth-&gt;finish;
+
+        return $value;
+    }
+    my $ret = $self-&gt;_data('is_base');
+    $ret = 0 if $self-&gt;_data('is_base') =~ /n/i;
+
+    return $ret;
+};
+
+</pre>
+
+</div>
+<h2 id="is_locked_Shows_if_the_domain_has_ru">is_locked
+Shows if the domain has running or pending requests. It could be considered
+too as the domain is busy doing something like starting, shutdown or prepare base.
+Returns true if locked.
+=cut</h2>
+<div id="is_locked_Shows_if_the_domain_has_ru-2">
+<p>sub is_locked {
+    my $self = shift;</p>
+<pre>    $self-&gt;_init_connector() if !defined $$CONNECTOR;
+
+    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;SELECT id FROM requests &quot;
+        .&quot; WHERE id_domain=? AND status &lt;&gt; 'done'&quot;);
+    $sth-&gt;execute($self-&gt;id);
+    my ($id) = $sth-&gt;fetchrow;
+    $sth-&gt;finish;
+
+    return ($id or 0);
+}
+
+</pre>
+
+</div>
+<h2 id="id_owner_Returns_the_id_of_the_user_">id_owner
+Returns the id of the user that created this domain
+=cut</h2>
+<div id="id_owner_Returns_the_id_of_the_user_-2">
+<p>sub id_owner {
+    my $self = shift;
+    return $self-&gt;_data('id_owner',@_);
+}</p>
+
+</div>
+<h2 id="id_base_Returns_the_id_from_the_base">id_base
+Returns the id from the base this domain is based on, if any.
+=cut</h2>
+<div id="id_base_Returns_the_id_from_the_base-2">
+<p>sub id_base {
+    my $self = shift;
+    return $self-&gt;_data('id_base',@_);
+}</p>
+
+</div>
+<h2 id="vm_Returns_a_string_with_the_name_of">vm
+Returns a string with the name of the VM ( Virtual Machine ) this domain was created on
+=cut</h2>
+<div id="vm_Returns_a_string_with_the_name_of-2">
+
+
+
+
+<p>sub vm {
+    my $self = shift;
+    return $self-&gt;_data('vm');
+}</p>
+
+</div>
+<h2 id="clones_Returns_a_list_of_clones_from">clones
+Returns a list of clones from this virtual machine
+    my @clones = $domain-&gt;clones
+=cut</h2>
+<div id="clones_Returns_a_list_of_clones_from-2">
+<p>sub clones {
+    my $self = shift;</p>
+<pre>    _init_connector();
+
+    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;SELECT id, name FROM domains &quot;
+            .&quot; WHERE id_base = ?&quot;);
+    $sth-&gt;execute($self-&gt;id);
+    my @clones;
+    while (my $row = $sth-&gt;fetchrow_hashref) {
+        # TODO: open the domain, now it returns only the id
+        push @clones , $row;
+    }
+    return @clones;
+}
+
+</pre>
+
+</div>
+<h2 id="has_clones_Returns_the_number_of_clo">has_clones
+Returns the number of clones from this virtual machine
+    my $has_clones = $domain-&gt;has_clones
+=cut</h2>
+<div id="has_clones_Returns_the_number_of_clo-2">
+<p>sub has_clones {
+    my $self = shift;</p>
+<pre>    _init_connector();
+
+    return scalar $self-&gt;clones;
+}
+
+
+
+
+</pre>
+
+</div>
+<h2 id="list_files_base_Returns_a_list_of_th">list_files_base
+Returns a list of the filenames of this base-type domain
+=cut</h2>
+<div id="list_files_base_Returns_a_list_of_th-2">
+<p>sub list_files_base {
+    my $self = shift;</p>
+<pre>    return if !$self-&gt;is_known();
+
+    my $id;
+    eval { $id = $self-&gt;id };
+    return if $@ &amp;&amp; $@ =~ /No DB info/i;
+    die $@ if $@;
+
+    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;SELECT file_base_img &quot;
+        .&quot; FROM file_base_images &quot;
+        .&quot; WHERE id_domain=?&quot;);
+    $sth-&gt;execute($self-&gt;id);
+
+    my @files;
+    while ( my $img = $sth-&gt;fetchrow) {
+        push @files,($img);
+    }
+    $sth-&gt;finish;
+    return @files;
+}
+
+</pre>
+
+</div>
+<h2 id="json_Returns_the_domain_information_">json
+Returns the domain information as json
+=cut</h2>
+<div id="json_Returns_the_domain_information_-2">
+<p>sub json {
+    my $self = shift;</p>
+<pre>    my $id = $self-&gt;_data('id');
+    my $data = $self-&gt;{_data};
+    $data-&gt;{is_active} = $self-&gt;is_active;
+
+    return encode_json($data);
+}
+
+</pre>
+
+</div>
+<h2 id="can_screenshot_Returns_wether_this_d">can_screenshot
+Returns wether this domain can take an screenshot.
+=cut</h2>
+<div id="can_screenshot_Returns_wether_this_d-2">
+<p>sub can_screenshot {
+    return 0;
+}</p>
+<p>sub _convert_png {
+    my $self = shift;
+    my ($file_in ,$file_out) = @_;</p>
+<pre>    my $in = Image::Magick-&gt;new();
+    my $err = $in-&gt;Read($file_in);
+    confess $err if $err;
+
+    $in-&gt;Write(&quot;png24:$file_out&quot;);
+
+    chmod 0755,$file_out or die &quot;$! chmod 0755 $file_out&quot;;
+}
+
+</pre>
+
+</div>
+<h2 id="remove_base_Makes_the_domain_a_regul">remove_base
+Makes the domain a regular, non-base virtual machine and removes the base files.
+=cut</h2>
+<div id="remove_base_Makes_the_domain_a_regul-2">
+<p>sub remove_base {
+    my $self = shift;
+    return $self-&gt;_do_remove_base();
+}</p>
+<p>sub _do_remove_base {
+    my $self = shift;
+    $self-&gt;is_base(0);
+    for my $file ($self-&gt;list_files_base) {
+        next if ! -e $file;
+        unlink $file or die &quot;$! unlinking $file&quot;;
+    }
+    $self-&gt;storage_refresh()    if $self-&gt;storage();
+}</p>
+<p>sub _can_remove_base {
+    _allow_manage(@_);
+    _check_has_clones(@_);
+}</p>
+<p>sub _post_remove_base {
+    my $self = shift;
+    $self-&gt;_remove_base_db(@_);
+}</p>
+<p>sub _remove_base_db {
+    my $self = shift;</p>
+<pre>    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;DELETE FROM file_base_images &quot;
+        .&quot; WHERE id_domain=?&quot;);
+
+    $sth-&gt;execute($self-&gt;id);
+    $sth-&gt;finish;
+
+</pre>
+<p>}</p>
+
+</div>
+<h2 id="clone">clone</h2>
+<div id="clone_CONTENT">
+<p>Clones a domain</p>
+
+</div>
+<h3 id="arguments">arguments</h3>
+<div id="arguments_CONTENT">
+<dl>
+	<dt>user =&gt; $user : The user that owns the clone</dt>
+	<dt>name =&gt; $name : Name of the new clone</dt>
+</dl>
+
+</div>
+<h2 id="add_volume_swap">add_volume_swap</h2>
+<div id="add_volume_swap_CONTENT">
+<p>Adds a swap volume to the virtual machine</p>
+<p>Arguments:</p>
+<pre>    size =&gt; $kb
+    name =&gt; $name (optional)
+
+</pre>
+
+</div>
+<h2 id="open_iptables">open_iptables</h2>
+<div id="open_iptables_CONTENT">
+<p>Open iptables for a remote client</p>
+<dl>
+	<dt>user</dt>
+	<dt>remote_ip</dt>
+</dl>
+
+</div>
+<h2 id="is_public">is_public</h2>
+<div id="is_public_CONTENT">
+<p>Sets or get the domain public</p>
+<pre>    $domain-&gt;is_public(1);
+
+    if ($domain-&gt;is_public()) {
+        ...
+    }
+
+</pre>
+
+</div>
+<h2 id="clean_swap_volumes">clean_swap_volumes</h2>
+<div id="clean_swap_volumes_CONTENT">
+<p>Check if the domain has swap volumes defined, and clean them</p>
+<pre>    $domain-&gt;clean_swap_volumes();
+
+</pre>
+
+</div>
+<h2 id="drivers">drivers</h2>
+<div id="drivers_CONTENT">
+<p>List the drivers available for a domain. It may filter for a given type.</p>
+<pre>    my @drivers = $domain-&gt;drivers();
+    my @video_drivers = $domain-&gt;drivers('video');
+
+</pre>
+
+</div>
+<h2 id="set_driver_id">set_driver_id</h2>
+<div id="set_driver_id_CONTENT">
+<p>Sets the driver of a domain given it id. The id must be one from
+the table domain_drivers_options</p>
+<pre>    $domain-&gt;set_driver_id($id_driver);
+
+</pre>
+
+</div>
+</div></body>
+</html>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Auth.pm" />
+	<meta name="outputfile" content="./Auth.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#init">init</a></li>
+<li><a href="#login">login</a></li>
+<li><a href="#LDAP">LDAP</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="init">init</h2>
+<div id="init_CONTENT">
+<p>Initializes the submodules</p>
+
+</div>
+<h2 id="login">login</h2>
+<div id="login_CONTENT">
+<p>Tries login in all the submodules</p>
+<pre>    my $ok = Ravada::Auth::login($name, $pass);
+
+</pre>
+
+</div>
+<h2 id="LDAP">LDAP</h2>
+<div id="LDAP_CONTENT">
+<p>Sets or get LDAP support.</p>
+<pre>    Ravada::Auth::LDAP(0);
+
+    print &quot;LDAP is supported&quot; if Ravada::Auth::LDAP();
+
+</pre>
+
+</div>
+</div></body>
+</html>

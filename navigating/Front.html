@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title></title>
+	<meta name="description" content="Pod documentation for " />
+	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Front.pm" />
+	<meta name="outputfile" content="./Front.html" />
+	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="generator" content="Pod::Xhtml 1.61" />
+</head>
+<body>
+<div class="pod">
+<!-- INDEX START -->
+<h3 id="TOP">Index</h3>
+
+<ul>
+<li>
+<ul><li><a href="#BUILD">BUILD</a></li>
+<li><a href="#list_bases">list_bases</a></li>
+<li><a href="#list_machines_user">list_machines_user</a></li>
+<li><a href="#list_domains">list_domains</a></li>
+<li><a href="#domain_info">domain_info</a></li>
+<li><a href="#domain_exists">domain_exists</a></li>
+<li><a href="#list_vm_types">list_vm_types</a></li>
+<li><a href="#list_iso_images">list_iso_images</a></li>
+<li><a href="#list_lxc_templates">list_lxc_templates</a></li>
+<li><a href="#list_users">list_users</a></li>
+<li><a href="#create_domain">create_domain</a></li>
+<li><a href="#wait_request">wait_request</a>
+<ul><li><a href="#Arguments">Arguments</a></li>
+</ul>
+</li>
+<li><a href="#ping_backend">ping_backend</a></li>
+<li><a href="#open_vm">open_vm</a></li>
+<li><a href="#search_vm">search_vm</a></li>
+<li><a href="#search_clone">search_clone</a>
+<ul><li><a href="#arguments">arguments</a></li>
+</ul>
+</li>
+<li><a href="#search_domain">search_domain</a></li>
+<li><a href="#list_requests">list_requests</a></li>
+<li><a href="#search_domain_by_id">search_domain_by_id</a></li>
+<li><a href="#start_domain">start_domain</a>
+<ul><li><a href="#arguments-2">arguments</a></li>
+</ul>
+</li>
+<li><a href="#list_bases_anonymous">list_bases_anonymous</a></li>
+<li><a href="#disconnect_vm">disconnect_vm </a></li>
+<li><a href="#version">version</a>
+</li>
+</ul>
+</li>
+</ul><hr />
+<!-- INDEX END -->
+
+<h2 id="BUILD">BUILD</h2>
+<div id="BUILD_CONTENT">
+<p>Internal constructor</p>
+
+</div>
+<h2 id="list_bases">list_bases</h2>
+<div id="list_bases_CONTENT">
+<p>Returns a list of the base domains as a listref</p>
+<pre>    my $bases = $rvd_front-&gt;list_bases();
+
+</pre>
+
+</div>
+<h2 id="list_machines_user">list_machines_user</h2>
+<div id="list_machines_user_CONTENT">
+<p>Returns a list of machines available to the user</p>
+<p>If the user has ever clone the base, it shows this information. It show the
+base data if not.</p>
+<p>Arguments: user</p>
+<p>Returns: listref of machines</p>
+<p>sub search_clone_data {
+    my $self = shift;
+    my %args = @_;
+    my $query = &quot;SELECT * FROM domains WHERE &quot;
+        .(join(&quot; AND &quot;, map { &quot;$_ = ? &quot; } sort keys %args));</p>
+<pre>    my $sth = $CONNECTOR-&gt;dbh-&gt;prepare($query);
+    $sth-&gt;execute( map { $args{$_} } sort keys %args );
+    my $row = $sth-&gt;fetchrow_hashref;
+    return ( $row or {});
+
+</pre>
+<p>}</p>
+
+</div>
+<h2 id="list_domains">list_domains</h2>
+<div id="list_domains_CONTENT">
+<p>Returns a list of the domains as a listref</p>
+<pre>    my $bases = $rvd_front-&gt;list_domains();
+
+</pre>
+
+</div>
+<h2 id="domain_info">domain_info</h2>
+<div id="domain_info_CONTENT">
+<p>Returns information of a domain</p>
+<pre>    my $info = $rvd_front-&gt;domain_info( id =&gt; $id);
+    my $info = $rvd_front-&gt;domain_info( name =&gt; $name);
+
+</pre>
+
+</div>
+<h2 id="domain_exists">domain_exists</h2>
+<div id="domain_exists_CONTENT">
+<p>Returns true if the domain name exists</p>
+<pre>    if ($rvd-&gt;domain_exists('domain_name')) {
+        ...
+    }
+
+</pre>
+
+</div>
+<h2 id="list_vm_types">list_vm_types</h2>
+<div id="list_vm_types_CONTENT">
+<p>Returns a reference to a list of Virtual Machine Managers known by the system</p>
+
+</div>
+<h2 id="list_iso_images">list_iso_images</h2>
+<div id="list_iso_images_CONTENT">
+<p>Returns a reference to a list of the ISO images known by the system</p>
+
+</div>
+<h2 id="list_lxc_templates">list_lxc_templates</h2>
+<div id="list_lxc_templates_CONTENT">
+<p>Returns a reference to a list of the LXC templates known by the system</p>
+
+</div>
+<h2 id="list_users">list_users</h2>
+<div id="list_users_CONTENT">
+<p>Returns a reference to a list of the users</p>
+
+</div>
+<h2 id="create_domain">create_domain</h2>
+<div id="create_domain_CONTENT">
+<p>Request the creation of a new domain or virtual machine</p>
+<pre>    # TODO: document the args here
+    my $req = $rvd_front-&gt;create_domain( ... );
+
+</pre>
+
+</div>
+<h2 id="wait_request">wait_request</h2>
+<div id="wait_request_CONTENT">
+<p>Waits for a request for some seconds.</p>
+
+</div>
+<h3 id="Arguments">Arguments</h3>
+<div id="Arguments_CONTENT">
+<dl>
+	<dt>* request</dt>
+	<dt>* timeout (optional defaults to $Ravada::Front::TIMEOUT</dt>
+</dl>
+<p>Returns: the request</p>
+
+</div>
+<h2 id="ping_backend">ping_backend</h2>
+<div id="ping_backend_CONTENT">
+<p>Checks if the backend is alive.</p>
+<p>Return true if alive, false otherwise.</p>
+
+</div>
+<h2 id="open_vm">open_vm</h2>
+<div id="open_vm_CONTENT">
+<p>Connects to a Virtual Machine Manager ( or VMM ( or VM )).
+Returns a read-only connection to the VM.</p>
+
+</div>
+<h2 id="search_vm">search_vm</h2>
+<div id="search_vm_CONTENT">
+<p>Calls to open_vm</p>
+
+</div>
+<h2 id="search_clone">search_clone</h2>
+<div id="search_clone_CONTENT">
+<p>Search for a clone of a domain owned by an user.</p>
+<pre>    my $domain_clone = $rvd_front-&gt;(id_base =&gt; $domain_base-&gt;id , id_owner =&gt; $user-&gt;id);
+
+</pre>
+
+</div>
+<h3 id="arguments">arguments</h3>
+<div id="arguments_CONTENT">
+<dl>
+	<dt>id_base : The id of the base domain</dt>
+	<dt>id_user</dt>
+</dl>
+<p>Returns the domain</p>
+
+</div>
+<h2 id="search_domain">search_domain</h2>
+<div id="search_domain_CONTENT">
+<p>Searches a domain by name</p>
+<pre>    my $domain = $rvd_front-&gt;search_domain($name);
+
+</pre>
+<p>Returns a Ravada::Domain object</p>
+
+</div>
+<h2 id="list_requests">list_requests</h2>
+<div id="list_requests_CONTENT">
+<p>Returns a list of ruquests : ( id , domain_name, status, error )</p>
+
+</div>
+<h2 id="search_domain_by_id">search_domain_by_id</h2>
+<div id="search_domain_by_id_CONTENT">
+<pre>  my $domain = $ravada-&gt;search_domain_by_id($id);
+
+</pre>
+
+</div>
+<h2 id="start_domain">start_domain</h2>
+<div id="start_domain_CONTENT">
+<p>Request to start a domain.</p>
+
+</div>
+<h3 id="arguments-2">arguments</h3>
+<div id="arguments_CONTENT-2">
+<dl>
+	<dt>user =&gt; $user : a Ravada::Auth::SQL user</dt>
+	<dt>name =&gt; $name : the domain name</dt>
+	<dt>remote_ip =&gt; $remote_ip: a Ravada::Auth::SQL user</dt>
+	<dd>
+
+
+
+
+		<p>Returns an object: Ravada::Request.</p>
+<pre>    my $req = $rvd_front-&gt;start_domain(
+               user =&gt; $user
+              ,name =&gt; 'mydomain'
+        , remote_ip =&gt; '192.168.1.1');
+
+</pre>
+
+</div>
+<h2 id="list_bases_anonymous">list_bases_anonymous</h2>
+<div id="list_bases_anonymous_CONTENT">
+		<p>List the available bases for anonymous user in a remote IP</p>
+<pre>    my $list = $rvd_front-&gt;list_bases_anonymous($remote_ip);
+
+</pre>
+
+</div>
+<h2 id="disconnect_vm">disconnect_vm </h2>
+<div id="disconnect_vm_CONTENT">
+		<p>Disconnects all the conneted VMs</p>
+
+</div>
+<h2 id="version">version</h2>
+<div id="version_CONTENT">
+		<p>Returns the version of the main module</p>
+
+</div>
+</div></body>
+</html>
