@@ -54,6 +54,7 @@ sub BUILD {
         Ravada::_init_config($self->config());
         $CONNECTOR = Ravada::_connect_dbh();
     }
+    $CONNECTOR->dbh();
 }
 
 =head2 list_bases
