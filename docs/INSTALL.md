@@ -1,21 +1,21 @@
-#Requirements
+# Requirements
 
-##OS
+## OS
 
 Ravada has been tested only on Ubuntu Xenial. It should also work in recent RedHat based
 systems. Debian jessie has been tried but kvm spice wasn't available there, so it won't
 work.
 
-##Hardware
+## Hardware
 
 It depends on the number and the type of the virtual machines. For most places 
 
-###Memory
+### Memory
 RAM is
 the main issue. Multiply the number of concurrent workstations by the amount of memory
 each one requires and that is the RAM that must have the server.
 
-###Disks
+### Disks
 The faster the disks, the better. Ravada uses incremental files for the disks images, so
 clones won't require many space.
 
@@ -68,7 +68,7 @@ development release.
 - liblocale-maketext-lexicon-perl
 - libmojolicious-plugin-i18n-perl
 
-#Mysql Database
+# Mysql Database
 
 ## MySQL user
 Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
