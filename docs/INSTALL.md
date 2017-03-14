@@ -115,7 +115,7 @@ Install KVM
 Add a new user for the ravada web. This command will create a new ravada user :
 
     $ cd ravada
-    $ ./bin/rvd_back.pl --add-user user.name
+    $ sudo ./bin/rvd_back.pl --add-user user.name
 
 #Screenshots directory
 
