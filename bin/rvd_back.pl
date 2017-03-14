@@ -122,7 +122,7 @@ sub start {
 sub add_user {
     my $login = shift;
 
-    print "password : ";
+    print "$login password: ";
     my $password = <STDIN>;
     chomp $password;
 
