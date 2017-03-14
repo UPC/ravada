@@ -26,45 +26,10 @@ clones won't require many space.
 
 We provide _deb_ Ubuntu packages. Download it from *TODO*.
 
-## Development release
+## Development Release
 
-You can get the development release cloning the sources. Don't do this if you install
-a packaged release.
-
-    $ git clone https://github.com/frankiejol/ravada.git
-
-### Ubuntu required packages
-
-These are the Ubuntu required packages. It is is only necessary for the
-development release.
-
-    $ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl
-
-- libmojolicious-perl
-- mysql-server
-- libauthen-passphrase-perl
-- libdbd-mysql-perl
-- libdbi-perl
-- libdbix-connector-perl
-- libipc-run3-perl
-- libnet-ldap-perl
-- libproc-pid-file-perl
-- libvirt-bin
-- libsys-virt-perl
-- libxml-libxml-perl
-- libconfig-yaml-perl
-- libmoose-perl
-- libjson-xs-perl
-- qemu-utils
-- perlmagick
-- libmoosex-types-netaddr-ip-perl
-- libsys-statistics-linux-perl
-- libio-interface-perl
-- libiptables-chainmgr-perl
-- libnet-dns-perl
-- wget
-- liblocale-maketext-lexicon-perl
-- libmojolicious-plugin-i18n-perl
+Read docs/INSTALL\_devel.md if you want to develop Ravada or install a bleeding
+edge, non-packaged, release.
 
 # Mysql Database
 
@@ -81,15 +46,12 @@ Grant all permissions to your user:
 
 ## Config file
 
-Create a config file at /etc/ravada.conf with:
+Create a config file at /etc/ravada.conf with the username and password you just declared
+at the previous step.
 
     db:
       user: rvd_user
       password: *****
-
-Protect the config file from others:
-
-    $ sudo chmod o-rx /etc/ravada.conf
 
 ## Create tables
 
@@ -108,7 +70,7 @@ the files are at the _sql_ directory inside the sources.
 Add a new user for the ravada web. Use rvd\_back to create it.
 
     $ cd ravada
-    $ sudo ./bin/rvd_back.pl --add-user user.name
+    $ sudo /usr/sbin/rvd_back --add-user user.name
 
 
 # Firewall
@@ -135,4 +97,4 @@ linux and it can also be downloaded for windows.
 
 # Next
 
-Read [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md) or [devel-docs/](https://github.com/frankiejol/ravada/blob/master/devel-docs/) to learn how to start it.
+Read [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md) 
