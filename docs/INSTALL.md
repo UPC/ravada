@@ -20,22 +20,20 @@ The faster the disks, the better. Ravada uses incremental files for the disks im
 clones won't require many space.
 
 
-#Install Ravada
+# Install Ravada
 
-##Ubuntu
+## Ubuntu
 
 We provide _deb_ Ubuntu packages. Download it from *TODO*.
 
-##Development release
+## Development release
 
 You can get the development release cloning the sources. Don't do this if you install
 a packaged release.
 
     $ git clone https://github.com/frankiejol/ravada.git
 
-#Packages
-
-##Ubuntu
+### Ubuntu required packages
 
 These are the Ubuntu required packages. It is is only necessary for the
 development release.
@@ -81,7 +79,7 @@ Grant all permissions to your user:
     mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'figure a password';
     exit
 
-##Config file
+## Config file
 
 Create a config file at /etc/ravada.conf with:
 
@@ -105,20 +103,15 @@ the files are at the _sql_ directory inside the sources.
     $ cat *.sql | mysql -p -u rvd_user ravada
 
 
-#Ravada web user
+# Ravada web user
 
 Add a new user for the ravada web. Use rvd\_back to create it.
 
     $ cd ravada
     $ sudo ./bin/rvd_back.pl --add-user user.name
 
-#Screenshots directory
 
-Create a directory to store virtual machines screenshots:
-
-    $ sudo mkdir -p /var/www/img/screenshots/
-
-#Firewall
+# Firewall
 
 The server must be able to send _DHCP_ packets to its own virtual interface.
 
@@ -135,11 +128,11 @@ So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
 
     -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
 
-#Client
+# Client
 
 The client must have a spice viewer such as virt-viewer. There is a package for
 linux and it can also be downloaded for windows.
 
-#Next
+# Next
 
 Read [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md) or [devel-docs/](https://github.com/frankiejol/ravada/blob/master/devel-docs/) to learn how to start it.
