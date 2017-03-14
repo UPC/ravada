@@ -169,6 +169,7 @@ sub dir_img {
     my $self = shift;
 
     my $pool = $self->_load_storage_pool();
+    $pool = $self->_create_default_pool() if !$pool;
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -176,6 +177,38 @@ sub dir_img {
         if !$dir;
 
     return $dir;
+}
+
+sub _create_default_pool {
+    my $self = shift;
+
+    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+
+    my $dir = "/var/lib/libvirt/images/default";
+    mkdir $dir if ! -e $dir;
+
+    my $xml =
+"<pool type='dir'>
+  <name>default</name>
+  <uuid>$uuid</uuid>
+  <capacity unit='bytes'></capacity>
+  <allocation unit='bytes'></allocation>
+  <available unit='bytes'></available>
+  <source>
+  </source>
+  <target>
+    <path>$dir</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>"
+;
+    my $pool = $self->vm->create_storage_pool($xml);
+    $pool->set_autostart(1);
+
 }
 
 =head2 create_domain
