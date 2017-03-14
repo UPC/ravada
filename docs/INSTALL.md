@@ -22,13 +22,23 @@ clones won't require many space.
 
 #Install Ravada
 
-Clone the sources:
+##Ubuntu
+
+We provide _deb_ Ubuntu packages. Download it from *TODO*.
+
+##Development release
+
+You can get the development release cloning the sources. Don't do this if you install
+a packaged release.
 
     $ git clone https://github.com/frankiejol/ravada.git
 
 #Packages
 
 ##Ubuntu
+
+These are the Ubuntu required packages. It is is only necessary for the
+development release.
 
     $ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl
 
@@ -58,18 +68,10 @@ Clone the sources:
 - liblocale-maketext-lexicon-perl
 - libmojolicious-plugin-i18n-perl
 
-##Old Mojolicious
-
-In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release (if applicable):
-
-    $ sudo apt-get purge libmojolicious-perl
-    $ sudo apt-get install cpanminus build-essential
-    $ sudo cpanm Mojolicious
-
 #Mysql Database
 
 ## MySQL user
-Create a database named "ravada". in this stage the system wants you to identify a password for your sql. 
+Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
 
     $ mysqladmin -u root -p create ravada
 
@@ -82,7 +84,7 @@ Grant all permissions to your user:
 ##Config file
 
 Create a config file at /etc/ravada.conf with:
-    
+
     db:
       user: rvd_user
       password: *****
@@ -92,30 +94,23 @@ Protect the config file from others:
     $ sudo chmod o-rx /etc/ravada.conf
 
 ## Create tables
-Review and run the sql files from the sql dir.
 
-    $ cd ravada/sql/mysql
+Review and run the sql files from the sql dir. If you are using a packaged
+release you can find these files at _/usr/share/doc/ravada/doc_. For development,
+the files are at the _sql_ directory inside the sources.
+
+    $ cd /usr/share/doc/ravada/sql/mysql
     $ cat *.sql | mysql -p -u rvd_user ravada
-    $ cd ..
-    $ cd data
+    $ cd ../data
     $ cat *.sql | mysql -p -u rvd_user ravada
 
 
-#KVM backend
+#Ravada web user
 
-Install KVM 
-
-    $ sudo apt-get install qemu-kvm qemu-utils
-    $ sudo virsh pool-define-as default dir - - - - "/var/lib/libvirt/images"
-    $ sudo virsh pool-autostart default
-    $ sudo virsh pool-start default
-
-#Ravada user
-
-Add a new user for the ravada web. This command will create a new ravada user :
+Add a new user for the ravada web. Use rvd\_back to create it.
 
     $ cd ravada
-    $ ./bin/rvd_back.pl --add-user user.name
+    $ sudo ./bin/rvd_back.pl --add-user user.name
 
 #Screenshots directory
 
