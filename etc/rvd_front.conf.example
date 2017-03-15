@@ -7,4 +7,6 @@
       templates => '/usr/share/ravada/templates'
         ,public => '/usr/share/ravada/public'
   }
+  ,user => 'ravada'
+  ,group => 'ravada'
 };
