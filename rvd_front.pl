@@ -923,8 +923,35 @@ sub check_back_running {
     return 1;
 }
 
+sub _init_user_group {
+    warn $>;
+    return if $>;
+    warn Dumper($CONFIG_FRONT);
+
+    my $user = $CONFIG_FRONT->{user};
+    my $group = $CONFIG_FRONT->{group};
+
+    if (defined $group) {
+        $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
+            if $group !~ /^\d+$/;
+
+        warn "setting \) to $group\n";
+        $) = $group;
+    }
+    if (defined $user) {
+        $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"
+            if $user !~ /^\d+$/;
+        $> = $user;
+        warn "setting \> to $user\n";
+    }
+
+
+}
+
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
+
+    _init_user_group();
     my $home = Mojo::Home->new();
     $home->detect();
 
