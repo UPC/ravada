@@ -13,7 +13,6 @@ PIDFile=/var/run/ravada/hypnotoad.pid
 ExecStart=/usr/bin/hypnotoad /usr/sbin/rvd_front -f
 ExecStop=/usr/bin/hypnotoad -s /usr/sbin/rvd_front
 ExecReload=/usr/bin/hypnotoad /usr/sbin/rvd_front
-User=ravada
 
 [Install]
 WantedBy=multi-user.target
