@@ -195,6 +195,10 @@ sub chmod_control_files {
     }
 }
 
+sub chmod_ravada_conf {
+    chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
+}
+
 #########################################################################
 
 clean();
@@ -218,6 +222,7 @@ chown_files('usr');
 chown_files('var');
 remove_use_lib();
 chmod_control_files();
+chmod_ravada_conf();
 #chown_pms();
 create_md5sums();
 create_deb();
