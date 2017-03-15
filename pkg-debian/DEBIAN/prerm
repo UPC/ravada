@@ -1,5 +1,0 @@
-#!/bin/bash
-
-set -e
-systemctl stop rvd_back || true
-systemctl stop rvd_front || true
