@@ -160,7 +160,7 @@ sub _remove_old_disks_kvm {
     eval { $vm->storage_pool->refresh() };
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
-    opendir my $ls,$dir_img or die "$! $dir_img";
+    opendir my $ls,$dir_img or return;
     while (my $disk = readdir $ls) {
         next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
 
