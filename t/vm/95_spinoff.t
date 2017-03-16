@@ -141,8 +141,7 @@ sub test_remove_domain {
 #######################################################################33
 
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 for my $vm_name (reverse sort @VMS) {
 
@@ -160,6 +159,11 @@ for my $vm_name (reverse sort @VMS) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ( $vm && $> ) {
+            $msg = "SKIPPED test: Must be run from root user ";
+            $vm = undef;
+        }
+        init_vm($vm)    if $vm;
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
@@ -173,7 +177,6 @@ for my $vm_name (reverse sort @VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 done_testing();
