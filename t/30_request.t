@@ -235,6 +235,11 @@ for my $vm_name ( qw(Void KVM)) {
 
     SKIP: {
         my $msg = "SKIPPED: No virtual managers found";
+        if ( $vm && $vm_name =~ /KVM/i && $> ) {
+            $msg = "SKIPPED test: Must be run from root user ";
+            $vm = undef;
+        }
+
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
