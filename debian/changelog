@@ -1,5 +1,5 @@
-ravada (0.1.2-1) unstable; urgency=medium
+ravada (0.1.2) unstable; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * Initial Release.
 
- -- Francesc Guasch <frankie@telecos.upc.edu>  Wed, 15 Mar 2017 20:24:20 +0100
+ -- frankie <frankie@>  Thu, 16 Mar 2017 09:35:20 +0100

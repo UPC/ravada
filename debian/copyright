@@ -1,34 +1,45 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Source: https://metacpan.org/release/ravada
+Upstream-Contact: Francesc Guasch-Ortiz	, frankie@telecos.upc.edu
 Upstream-Name: ravada
-Source: <url://example.com>
+DISCLAIMER: This copyright info was automatically extracted
+ from the perl module. It may not be accurate, so you better
+ check the module sources in order to ensure the module for its
+ inclusion in Debian or for general legal information. Please,
+ if licensing information is incorrectly generated, file a bug
+ on dh-make-perl.
+ NOTE: Don't forget to remove this disclaimer once you are happy
+ with this file.
 
 Files: *
-Copyright: <years> <put author's name and email here>
-           <years> <likewise for another author>
-License: GPL-3.0+
+Copyright: Francesc Guasch-Ortiz	, frankie@telecos.upc.edu
+License: GPL-3+
 
 Files: debian/*
-Copyright: 2017 Francesc Guasch <frankie@telecos.upc.edu>
-License: GPL-3.0+
+Copyright: 2017, frankie <frankie@>
+License: Artistic or GPL-1+ or GPL-3+
 
-License: GPL-3.0+
- This program is free software: you can redistribute it and/or modify
+License: Artistic
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the Artistic License, which comes with Perl.
+ .
+ On Debian systems, the complete text of the Artistic License can be
+ found in `/usr/share/common-licenses/Artistic'.
+
+License: GPL-1+
+ This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+ the Free Software Foundation; either version 1, or (at your option)
+ any later version.
  .
- This package is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
- .
- You should have received a copy of the GNU General Public License
- along with this program. If not, see <https://www.gnu.org/licenses/>.
- .
- On Debian systems, the complete text of the GNU General
- Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".
+ On Debian systems, the complete text of version 1 of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL-1'.
 
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
-# Please avoid picking licenses with terms that are more restrictive than the
-# packaged work, as it may make Debian's contributions unacceptable upstream.
+License: GPL-3+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; version 3 dated June, 2007, or (at your
+ option) any later version.
+ .
+ On Debian systems, the complete text of version 3 of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL-3'.
