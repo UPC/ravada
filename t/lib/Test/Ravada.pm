@@ -167,7 +167,7 @@ sub _remove_old_disks_kvm {
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
 
-        unlink $disk or warn "I can't remove $disk";
+        unlink $disk or next;#warn "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
 }
