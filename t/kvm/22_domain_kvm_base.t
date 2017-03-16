@@ -263,6 +263,7 @@ sub test_dont_allow_remove_base_before_sons {
 
 ################################################################
 my $vm;
+clean();
 
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 
@@ -290,4 +291,5 @@ if (ok($domain,"test domain not created")) {
 
 };
 
+clean();
 done_testing();
