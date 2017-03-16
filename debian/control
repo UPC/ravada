@@ -1,0 +1,15 @@
+Source: ravada
+Section: unknown
+Priority: optional
+Maintainer: Francesc Guasch <frankie@telecos.upc.edu>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.8
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://anonscm.debian.org/collab-maint/ravada.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/ravada.git
+
+Package: ravada
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>

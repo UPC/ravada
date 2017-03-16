@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+. /usr/share/debconf/confmodule
+
+adduser --system --group --disabled-password --disabled-login --no-create-home --home /nonexistent ravada
+
+if [ ! -d /var/run/ravada ]; then
+    mkdir /var/run/ravada
+fi
+chown ravada /var/run/ravada
+chmod go-rx /var/run/ravada
+
+systemctl daemon-reload
+
+systemctl status rvd_front || systemctl stop rvd_front || true
+systemctl start rvd_front

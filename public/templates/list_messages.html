@@ -1,0 +1,67 @@
+
+<div class="panel-body">
+    <div class="col-lg-12">
+        <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
+            <strong>Error!</strong> Backend no available!
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+
+                    <th>Date</th>
+
+                    <th>Actions</th>
+                    
+                </tr>
+            </thead>
+            <tbody >
+                <tr ng-repeat="message in list_message">
+                    <td><div ng-bind-html="message.subject" ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
+                        <div ng-show="{{message.date_read != null}}" ng-bind-html="message.subject">{{message.subject}}</div>
+                    </td>
+                    
+                    <td><div ng-show="{{message.date_read == null}}"><b>{{message.date_send}}</b></div>
+                        <div ng-show="{{message.date_read != null}}">{{message.date_send}}</div></td>
+
+                    <td>
+                        <a ng-show="{{message.date_read == null}}" ng-href="/messages/read/{{message.id}}.html" class="btn btn-success">Mark as Read</a>
+                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
+                        <button type="button" class="btn btn-info" ng-click="asRead(message.id)" data-toggle="modal" data-target="#modal{{message.id}}">View</button>
+                    </td>
+                    
+                </tr>      
+            </tbody>
+        </table> 
+
+        <div ng-repeat="message in list_message">       
+        <div id="modal{{message.id}}" class="modal fade" role="dialog">
+          <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">
+                    <div ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
+                            
+                    <div ng-show="{{message.date_read != null}}">{{message.subject}}</div>
+                </h4>
+              </div>
+              <div class="modal-body">
+                <p>     <div ng-bind-html='message.message' ng-show="{{message.message != ''}}">{{message.message}}</div>
+                        <div ng-show="{{message.message == ''}}"><b>No message to show!</b></div>
+                </p>
+              </div>
+              <div class="modal-footer">
+                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        </div>
+
+    </div>
+</div>

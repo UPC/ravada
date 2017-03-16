@@ -1,0 +1,90 @@
+# Translators:
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-01-03 12:12+0300\n"
+"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Language-Team: \n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+
+msgid "Ravada broker"
+msgstr ""
+
+msgid "Machine Name"
+msgstr ""
+
+msgid "Tools"
+msgstr ""
+
+msgid "Machines List"
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "Choose a Machine to Start"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Stop"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Prepare Base"
+msgstr ""
+
+msgid "Clone"
+msgstr ""
+
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr ""
+
+msgid "Clone/s"
+msgstr ""
+
+msgid "NEW"
+msgstr ""
+
+msgid "Users List"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Log Out"
+msgstr ""
+
+msgid "Available Machines"
+msgstr ""
+
+msgid "Help"
+msgstr ""
+
+msgid "Requirements"
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "Messages"
+msgstr ""
+
+msgid "Mark all as Read"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "New Machine"
+msgstr ""
