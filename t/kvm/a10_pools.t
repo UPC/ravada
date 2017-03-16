@@ -198,6 +198,17 @@ sub test_volumes_in_two_pools {
 
 }
 
+sub test_default_pool {
+    my $vm_name = shift;
+    {
+        my $vm = rvd_back->search_vm($vm_name);
+        $vm->default_storage_pool_name($POOL_NAME)
+            if $vm->default_storage_pool_name() ne $POOL_NAME;
+    }
+    my $vm = rvd_back->search_vm($vm_name);
+    is($vm->default_storage_pool_name, $POOL_NAME);
+}
+
 #########################################################################
 
 remove_old_domains();
@@ -209,6 +220,7 @@ create_pool($vm_name);
 
 my $domain = test_create_domain($vm_name);
 test_remove_domain($vm_name, $domain);
+test_default_pool($vm_name);
 
 test_volumes_in_two_pools($vm_name);
 
