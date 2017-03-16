@@ -15,13 +15,14 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our ($CONNECTOR, $CONFIG);
 
 our $CONT = 0;
 our $USER_ADMIN;
+our $POOL_NAME = "test00";
 
 sub user_admin {
     return $USER_ADMIN;
@@ -166,7 +167,7 @@ sub _remove_old_disks_kvm {
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
 
-        unlink $disk or die "I can't remove $disk";
+        unlink $disk or warn "I can't remove $disk";
     }
     $vm->storage_pool->refresh();
 }
@@ -217,5 +218,80 @@ sub wait_request {
 
 }
 
+sub init_vm {
+    my $vm = shift;
+    return if $vm->type =~ /void/i;
+    _qemu_storage_pool($vm) if $vm->type =~ /qemu/i;
+}
 
+sub _exists_storage_pool {
+    my ($vm, $pool_name) = @_;
+    for my $pool ($vm->vm->list_storage_pools) {
+        return 1 if $pool->get_name eq $pool_name;
+    }
+    return;
+}
+
+sub _qemu_storage_pool {
+    my $vm = shift;
+
+    if ( _exists_storage_pool($vm, $POOL_NAME)) {
+        $vm->default_storage_pool_name($POOL_NAME);
+        return;
+    }
+
+    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+
+    my $dir = "/var/tmp/$POOL_NAME";
+    mkdir $dir if ! -e $dir;
+
+    my $xml =
+"<pool type='dir'>
+  <name>$POOL_NAME</name>
+  <uuid>$uuid</uuid>
+  <capacity unit='bytes'></capacity>
+  <allocation unit='bytes'></allocation>
+  <available unit='bytes'></available>
+  <source>
+  </source>
+  <target>
+    <path>$dir</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>"
+;
+    my $pool;
+    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
+    ok($pool,"Expecting a pool , got ".($pool or ''));
+
+    $vm->default_storage_pool_name($POOL_NAME);
+}
+
+sub remove_qemu_pools {
+    my $vm = rvd_back->search_vm('kvm') or return;
+    my $pool;
+    eval { $pool = $vm->vm->get_storage_pool_by_name($POOL_NAME)};
+    return if !$pool;
+
+    diag("Removing $POOL_NAME storage_pool");
+    $pool->destroy();
+    eval { $pool->undefine() };
+    ok(!$@ or $@ =~ /Storage pool not found/i);
+
+}
+
+sub remove_old_pools {
+    remove_qemu_pools();
+}
+
+sub clean {
+    remove_old_domains();
+    remove_old_disks();
+    remove_old_pools();
+}
 1;
