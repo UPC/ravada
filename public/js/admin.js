@@ -45,6 +45,16 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         $scope.list_message= response.data;
       });
     }
+    $scope.updateMessages = function() {
+      $http.get('/messages.json').then(function(response) {
+        for (var i=0, iLength = response.data.length; i<iLength; i++){
+          if (response.data[0].id != $scope.list_message[i].id){
+            $scope.list_message.unshift(response.data.shift());
+          }
+          else{break;}
+        }
+      });
+    }
     $scope.getMachines = function() {
       $http.get("/list_machines.json").then(function(response) {
         $scope.list_machines= response.data;
@@ -67,11 +77,7 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
         break;
         case 'messages':
         $scope.getMessages();
-        $scope.updatePromise = $interval($scope.getMessages,3000);
-        break;
-        case 'messages':
-        $scope.getMessages();
-        $scope.updatePromise = $interval($scope.getMessages,3000);
+        $scope.updatePromise = $interval($scope.updateMessages,3000);
         break;
         case 'machine':
         $scope.showmachineId = id;
