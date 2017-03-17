@@ -49,7 +49,7 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
       $http.get('/messages.json').then(function(response) {
         for (var i=0, iLength = response.data.length; i<iLength; i++){
           if (response.data[0].id != $scope.list_message[i].id){
-            $scope.list_message.unshift(response.data.shift());
+            $scope.list_message.splice(i,0,response.data.shift());
           }
           else{break;}
         }
