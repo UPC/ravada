@@ -7,7 +7,11 @@
         <table class="table table-striped" border="0">
             <thead>
                 <tr>
-                    <th>Machine Name</th>
+                    <th>
+                      <i class="fa fa-arrows-v machine-button"
+                       aria-hidden="true"
+                       ng-click="orderMachineList()"></i>
+                      &nbsp Machine Name</th>
                     <th>Base</th>
                     <th>Public</th>
                     <th>Status</th>
@@ -16,7 +20,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="machine in list_machines">
+                <tr ng-repeat="machine in list_machines | orderBy : orderParam : orderParam&&reverse">
                     <td>
                         <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
                         <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">

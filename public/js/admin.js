@@ -87,7 +87,23 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
       }
       $scope.showing = type;
     }
-
+    $scope.orderParam = "";
+    $scope.reverse = true;
+    $scope.increment = 0;
+    $scope.orderMachineList = function(){
+      $scope.increment++;
+      switch ($scope.increment) {
+        case 1:
+        case 2:
+          $scope.orderParam = 'name';
+          $scope.reverse = !$scope.reverse;
+          break;
+        case 3:
+          $scope.orderParam = '';
+          $scope.increment = 0;
+          break;
+      }
+    }
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
