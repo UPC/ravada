@@ -134,4 +134,38 @@ msgstr ""
 msgid "Copy"
 msgstr ""
 
+msgid "Error!"
+msgstr ""
 
+msgid "Backend no available!"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Mark as Read"
+msgstr ""
+
+msgid "Mark as UnRead"
+msgstr ""
+
+msgid "No message to show!"
+msgstr ""
+
+msgid "Admin"
+msgstr ""
+
+msgid "machines"
+msgstr ""
+
+msgid "users"
+msgstr ""
+
+msgid "messages"
+msgstr ""
