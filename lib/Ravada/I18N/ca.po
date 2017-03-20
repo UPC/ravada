@@ -134,3 +134,39 @@ msgstr "procés"
 msgid "Copy"
 msgstr "Còpia"
 
+msgid "Error!"
+msgstr "Error!"
+
+msgid "Backend no available!"
+msgstr "Backend no disponible!"
+
+msgid "Subject"
+msgstr "Assumpte"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Actions"
+msgstr "Accions"
+
+msgid "Mark as Read"
+msgstr "Marca com a llegit"
+
+msgid "Mark as UnRead"
+msgstr "Marca com a no llegit"
+
+msgid "No message to show!"
+msgstr "No hi ha missatges per mostrar!"
+
+msgid "Admin"
+msgstr "Administrador"
+
+msgid "machines"
+msgstr "màquines"
+
+msgid "users"
+msgstr "usuaris"
+
+msgid "messages"
+msgstr "missatges"
+
