@@ -5,6 +5,7 @@ CREATE TABLE `messages` (
 ,  `subject` varchar(120) DEFAULT NULL
 ,  `message` text
 ,  `date_send` datetime DEFAULT CURRENT_TIME
+,  `date_shown` datetime
 ,  `date_read` datetime
 );
 CREATE INDEX "idx_messages_id_user" ON "messages" (`id_user`);

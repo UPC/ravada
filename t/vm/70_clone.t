@@ -59,7 +59,54 @@ sub test_create_domain {
 
     return $domain;
 }
+sub test_clone {
+    my ($vm_name, $base) = @_;
+                my $clone1;
+                my $name_clone = new_domain_name();
+#                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
+                eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
+                ok(!$@,"Expecting error='', got='".($@ or '')."'");
+                ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
 
+                $clone1->shutdown_now($USER) if $clone1->is_active();
+                eval { $clone1->start($USER) };
+                is($@,'');
+                ok($clone1->is_active);
+
+                my $clone1b = $RVD_FRONT->search_domain($name_clone);
+                ok($clone1b,"Expecting new cloned domain ".$name_clone);
+                $clone1->shutdown_now($USER) if $clone1->is_active;
+                ok(!$clone1->is_active);
+    return $clone1;
+}
+
+sub test_mess_with_bases {
+    my ($vm_name, $base, $clones) = @_;
+    for my $clone (@$clones) {
+        $clone->shutdown(user => $USER, timeout => 1);
+        ok($clone->id_base,"Expecting clone has id_base , got "
+                .($clone->id_base or '<UNDEF>'));
+        $clone->prepare_base($USER);
+    }
+
+    $base->remove_base($USER);
+    is($base->is_base,0);
+
+    for my $clone (@$clones) {
+        eval { $clone->start($USER); };
+        ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
+
+        ok($clone->is_active);
+        $clone->shutdown(user => $USER, timeout => 1);
+
+        $clone->remove_base($USER);
+        eval { $clone->start($USER); };
+        ok(!$@,"[$vm_name] Expecting error: '' , got '".($@ or '')."'");
+        ok($clone->is_active);
+        $clone->shutdown(user => $USER, timeout => 1);
+
+    }
+}
 ###############################################################################
 remove_old_domains();
 remove_old_disks();
@@ -86,28 +133,25 @@ for my $vm_name (reverse sort @VMS) {
         ok($domain->is_active);
         $domain->shutdown_now($USER);
 
-        my @domain = ( $domain);
-        for my $n ( 1 .. 3 ) {
+        my @domains = ( $domain);
+        my $n = 1;
+        for my $depth ( 1 .. 3 ) {
 
-            my $name_clone = new_domain_name();
-            my $clone1;
-            my $base = $domain[$n-1];
+            my @bases = @domains;
 
-            eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
-            ok(!$@,"Expecting error='', got='".($@ or '')."'");
-            ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
+            for my $base(@bases) {
 
-            $clone1->shutdown_now($USER) if $clone1->is_active();
-            eval { $clone1->start($USER) };
-            is($@,'');
-            ok($clone1->is_active);
+                my @clones;
+                for my $n_clones ( 1 .. 2 ) {
+                    my $clone = test_clone($vm_name,$base);
+                    ok($clone->id_base,"Expecting clone has id_base , got "
+                        .($clone->id_base or '<UNDEF>'));
 
-            my $clone1b = $RVD_FRONT->search_domain($name_clone);
-            ok($clone1b,"Expecting new cloned domain ".$name_clone);
-            $clone1->shutdown_now($USER) if $clone1->is_active;
-            ok(!$clone1->is_active);
-
-            push @domain,($clone1);
+                    push @clones,($clone) if $clone;
+                }
+                test_mess_with_bases($vm_name, $base, \@clones);
+                push @domains,(@clones);
+             }
         }
     }
 }

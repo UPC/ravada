@@ -6,6 +6,7 @@ CREATE TABLE `domains` (
 ,  `error` varchar(200) DEFAULT NULL
 ,  `uri` varchar(250) DEFAULT NULL
 ,  `is_base` integer NOT NULL DEFAULT '0'
+,  `is_public` integer NOT NULL DEFAULT '0'
 ,  `file_base_img` varchar(255) DEFAULT NULL
 ,  `file_screenshot` varchar(255) DEFAULT NULL
 ,  `port` integer

@@ -1,0 +1,12 @@
+New Features
+ - Set domain drivers: audio, video and network
+ - Request a forced shutdown timed out later after normal shutdown
+ - Show custom message at login to the users
+ - Started javascript refactor to clean it up
+ - Allow different storage pools in KVM
+Bugs fixed
+ - Error when create a new local user in master branch bug
+ - Clean stalled requests when starting
+ - Restore shows debug id at list_bases
+ - Manage swap volumes
+ - Improve Unique MAC generation

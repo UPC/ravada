@@ -30,6 +30,7 @@ my $USER = create_user("foo","bar");
 
 sub test_create_domain {
     my $vm_name = shift;
+    my $create_swap = shift;
 
     my $ravada = Ravada->new(@ARG_RVD);
     my $vm = $ravada->search_vm($vm_name);
@@ -41,13 +42,14 @@ sub test_create_domain {
         diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
         return;
     }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
+    my @arg_create = (@{$ARG_CREATE_DOM{$vm_name}}
+        ,id_owner => $USER->id
+        ,name => $name
+    );
+    push @arg_create, (swap => 128*1024*1024)   if $create_swap;
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
-                    , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
-    };
+    eval { $domain = $vm->create_domain(@arg_create) };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
     ok($domain->name
@@ -85,14 +87,14 @@ sub test_prepare_base {
 #    diag("[$vm_name] preparing base for domain ".$domain->name);
     my @img;
     eval {@img = $domain->prepare_base( $USER) };
-    ok(!$@, $@);
-    ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
 #    diag("[$vm_name] ".Dumper(\@img));
 
 
     my @files_base= $domain->list_files_base();
-    ok(scalar @files_base == scalar @volumes, "[$vm_name] Domain ".$domain->name
-        ." expecting ".scalar @volumes." files base, got ".scalar(@files_base)) or exit;
+    return(scalar @files_base == scalar @volumes
+        , "[$vm_name] Domain ".$domain->name
+            ." expecting ".scalar @volumes." files base, got "
+            .scalar(@files_base));
 
 }
 
@@ -146,6 +148,131 @@ sub test_files_base {
 
 }
 
+sub test_domain_2_volumes {
+
+    my $vm_name = shift;
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain2 = test_create_domain($vm_name);
+    test_add_volume($vm, $domain2, 'vdb');
+
+    my @volumes = $domain2->list_volumes;
+    ok(scalar @volumes == 2
+        ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
+
+    ok(test_prepare_base($vm_name, $domain2));
+    ok($domain2->is_base,"[$vm_name] Domain ".$domain2->name
+        ." sould be base");
+    test_files_base($vm_name, $domain2, \@volumes);
+
+    my $domain2_clone = test_clone($vm_name, $domain2);
+    
+    test_add_volume($vm, $domain2, 'vdc');
+
+    @volumes = $domain2->list_volumes;
+    ok(scalar @volumes == 3
+        ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
+
+}
+
+sub test_domain_1_volume {
+    my $vm_name = shift;
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    ok($domain->disk_size
+            ,"Expecting domain disk size something, got :".($domain->disk_size or '<UNDEF>'));
+    test_prepare_base($vm_name, $domain);
+    ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
+    my $domain_clone = test_clone($vm_name, $domain);
+    $domain = undef;
+    $domain_clone = undef;
+
+}
+
+sub test_domain_create_with_swap {
+    test_domain_swap(@_,1);
+}
+
+sub test_domain_swap {
+    my $vm_name = shift;
+    my $create_swap = (shift or 0);
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name, $create_swap);
+    if ( !$create_swap ) {
+        $domain->add_volume_swap( size => 128*1024*1024 );
+    }
+
+    ok(grep(/SWAP/,$domain->list_volumes),"Expecting a swap file, got :"
+            .join(" , ",$domain->list_volumes));
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file");
+    }
+    $domain->start($USER);
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file");
+    }
+    $domain->shutdown_now($USER);
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file");
+    }
+
+    test_prepare_base($vm_name, $domain);
+    ok($domain->is_base,"[$vm_name] Domain ".$domain->name." sould be base");
+
+    my @files_base = $domain->list_files_base();
+    ok(scalar(@files_base) == 2,"Expecting 2 files base "
+        .Dumper(\@files_base)) or exit;
+
+    #test files base must be there
+    for my $file_base ( $domain->list_files_base ) {
+        ok(-e $file_base,
+                "Expecting file base created for $file_base");
+    }
+    my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
+
+    # after clone, the qcow file should be there, swap shouldn't
+    for my $file_base ( $domain_clone->list_files_base ) {
+        if ( $file_base !~ /SWAP/) {
+            ok(-e $file_base,
+                "Expecting file base created for $file_base")
+            or exit;
+        } else {
+            ok(!-e $file_base
+                ,"Expecting no file base created for $file_base")
+            or exit;
+        }
+;
+    }
+    eval { $domain_clone->start($USER) };
+    ok(!$@,"[$vm_name] expecting no error at start, got :$@");
+    ok($domain_clone->is_active,"Domain ".$domain_clone->name
+                                ." should be active");
+
+    # after start, all the files should be there
+    for my $file ( $domain_clone->list_volumes) {
+         ok(-e $file ,
+            "Expecting file exists $file")
+    }
+    $domain_clone->shutdown_now($USER);
+
+    # after shutdown, the qcow file should be there, swap be empty
+    my $min_size = 197120;
+    for my $file( $domain_clone->list_volumes) {
+        ok(-e $file,
+                "Expecting file exists $file")
+            or exit;
+        next if ( $file!~ /SWAP/);
+
+        ok(-s $file <= $min_size
+                ,"Expecting swap $file size <= $min_size , got :".-s $file)
+        or exit;
+
+    }
+
+}
 #######################################################################33
 
 remove_old_domains();
@@ -166,42 +293,11 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        ################################################################
-        #
-        # Domain with 1 volume
-        #
-        my $domain = test_create_domain($vm_name);
-        test_prepare_base($vm_name, $domain);
-        my $domain_clone = test_clone($vm_name, $domain);
-        $domain = undef;
-        $domain_clone = undef;
+        test_domain_swap($vm_name);
+        test_domain_create_with_swap($vm_name);
+        test_domain_1_volume($vm_name);
+        test_domain_2_volumes($vm_name);
 
-        ################################################################
-        #
-        # Domain with more than 1 volume
-        #
-
-        my $domain2 = test_create_domain($vm_name);
-        test_add_volume($vm, $domain2, 'vdb');
-
-        my @volumes = $domain2->list_volumes;
-        ok(scalar @volumes == 2
-            ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
-
-        test_prepare_base($vm_name, $domain2);
-        test_files_base($vm_name, $domain2, \@volumes);
-
-        my $domain2_clone = test_clone($vm_name, $domain2);
-        
-        test_add_volume($vm, $domain2, 'vdc');
-
-        @volumes = $domain2->list_volumes;
-        ok(scalar @volumes == 3
-            ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
-
-
-        $domain2 = undef;
-        $domain_clone = undef;
     }
 }
 

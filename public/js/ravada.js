@@ -17,7 +17,8 @@
             .controller("machines", machinesCrtl)
             .controller("bases", mainpageCrtl)
             .controller("messages", messagesCrtl)
-	        .controller("users", usersCrtl)
+            .controller("users", usersCrtl)
+            .controller("notifCrtl", notifCrtl)
 
 
 
@@ -100,6 +101,11 @@
             $http.get(toGet);
         };
 
+        $scope.remove_base= function(machineId){
+            var toGet = '/machine/remove_base/'+machineId+'.json';
+            $http.get(toGet);
+        };
+
         $scope.screenshot = function(machineId){
             var toGet = '/machine/screenshot/'+machineId+'.json';
             $http.get(toGet);
@@ -155,10 +161,34 @@
             }
         };
 
+        $scope.set_public = function(machineId, value) {
+            $http.get("/machine/public/"+machineId+"/"+value);
+        };
     };
 
     // list machines
         function mainpageCrtl($scope, $http, request, listMach) {
+            $scope.set_restore=function(machineId) {
+                $scope.host_restore = machineId;
+            };
+            $scope.restore= function(machineId){
+                var toGet = '/machine/remove/'+machineId+'.html?sure=yes';
+                $http.get(toGet);
+                setTimeout(function(){ }, 2000);
+                window.location.reload();
+            };
+            $scope.action = function(machineId) {
+//                alert(machineId+" - "+$scope.host_action);
+                if ( $scope.host_action.indexOf('restore') !== -1 ) {
+                    $scope.host_restore = machineId;
+                    $scope.host_shutdown = 0;
+                } else if ($scope.host_action.indexOf('shutdown') !== -1) {
+                    $scope.host_shutdown = machineId;
+                    $scope.host_restore = 0;
+                    $http.get( '/machine/shutdown/'+machineId+'.json');
+                    window.location.reload();
+                }
+            };
 
             $url_list = "/list_bases.json";
             if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
@@ -307,3 +337,21 @@
         });
 
     };
+
+    function notifCrtl($scope, $interval, $http, request){
+      $scope.alerts = [
+      ];
+
+      $scope.getAlerts = function() {
+        $http.get('/unshown_messages.json').then(function(response) {
+                $scope.alerts= response.data;
+        });
+      };
+      $interval($scope.getAlerts,10000);
+
+      $scope.closeAlert = function(index) {
+        var message = $scope.alerts.splice(index, 1);
+        var toGet = '/messages/read/'+message[0].id+'.html';
+        $http.get(toGet);
+      };
+}

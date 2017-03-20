@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
+<div id="wrapper">
+%= include 'bootstrap/navigation'
+<script>
+    $_anonymous=<%= ($_anonymous or 0) %>;
+</script>
+    <div id="page-wrapper">
+
+        <!--MACHINES SELECTION-->
+        <div class="page-header" ng-controller="bases">
+        <div class="row">
+        <div class="col-lg-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h2><%=l 'Choose a Machine to Start' %></h2>
+                </div>
+
+                    <sol-show-cardsmachines></sol-show-cardsmachines>
+
+            </div>
+        </div>
+        </div>
+        </div>
+<!--/row-->
+
+<!--SUPPORT CONTACT
+    <div class="page-header" ng-controller="SupportForm as formCtrl">
+    <div class="row">
+    <div class="col-lg-12">
+        <sol-show-supportform></sol-show-supportform>
+    </div>
+    </div>
+    </div>
+/row-->
+</div>
+%= include 'bootstrap/scripts'
+</div>
+
+%= include 'bootstrap/footer'
+</body>
+</html>

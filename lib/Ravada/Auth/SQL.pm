@@ -27,7 +27,12 @@ sub _init_connector {
     $CON= \$Ravada::CONNECTOR          if !$CON || !$$CON;
     $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
 
-    confess "undefined connector"   if !$CON || !$$CON;
+    if (!$CON || !$$CON) {
+        my $ravada = Ravada->new();
+        $CON= \$Ravada::CONNECTOR;
+    }
+
+    die "Undefined connector"   if !$CON || !$$CON;
 }
 
 
@@ -266,6 +271,27 @@ sub id {
     confess $@ if $@;
 
     return $id;
+}
+
+=head2 change_password
+
+Changes the password of an User
+
+    $user->change_password();
+
+Arguments: password
+
+=cut
+
+sub change_password {
+    my $self = shift;
+    my $password = shift or die "ERROR: password required\n";
+
+    die "Password too small" if length($password)<6;
+
+    my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
+        ." WHERE name=?");
+    $sth->execute(sha1_hex($password), $self->name);
 }
 1;
 

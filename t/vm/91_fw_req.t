@@ -153,7 +153,7 @@ sub test_fw_domain_pause {
 
         is($req->status,'done');
         is($req->error,'');
-        ok(search_rule($local_ip,$local_port, $remote_ip )) or exit;
+        ok(search_rule($local_ip,$local_port, $remote_ip ),"Expecting rule for $local_ip:$local_port <- $remote_ip") or return;
         my @messages2 = $USER->messages();
         is(scalar @messages2, scalar @messages
             ,"Expecting no new messages ");

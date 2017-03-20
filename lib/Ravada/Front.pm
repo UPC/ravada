@@ -35,6 +35,7 @@ has 'fork' => (
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 20;
 our @VM_TYPES = ('KVM');
+our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pl.pid';
@@ -53,6 +54,7 @@ sub BUILD {
         Ravada::_init_config($self->config());
         $CONNECTOR = Ravada::_connect_dbh();
     }
+    $CONNECTOR->dbh();
 }
 
 =head2 list_bases
@@ -72,13 +74,96 @@ sub list_bases {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain;
         eval { $domain   = $self->search_domain($row->{name}) };
-        $row->{has_clones} = $domain->has_clones if $domain;
+        next if !$domain;
+        $row->{has_clones} = $domain->has_clones;
         push @bases, ($row);
     }
     $sth->finish;
 
     return \@bases;
 }
+
+=head2 list_machines_user
+
+Returns a list of machines available to the user
+
+If the user has ever clone the base, it shows this information. It show the
+base data if not.
+
+Arguments: user
+
+Returns: listref of machines
+
+=cut
+
+sub list_machines_user {
+    my $self = shift;
+    my $user = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,is_public, file_screenshot"
+        ." FROM domains "
+        ." WHERE is_base=1"
+        ." ORDER BY name "
+    );
+    my ($id, $name, $is_public, $screenshot);
+    $sth->execute;
+    $sth->bind_columns(\($id, $name, $is_public, $screenshot));
+
+    my @list;
+    while ( $sth->fetch ) {
+        my $is_active = 0;
+        my $clone = $self->search_clone(
+            id_owner =>$user->id
+            ,id_base => $id
+        );
+        my %base = ( id => $id, name => $name
+            , is_public => $is_public
+            , screenshot => ($screenshot or '')
+            , is_active => 0
+            , id_clone => undef
+            , name_clone => undef
+            , is_locked => undef
+        );
+
+        if ($clone) {
+            $base{is_locked} = $clone->is_locked;
+            if ($clone->is_active && !$clone->is_locked) {
+                my $req = Ravada::Request->screenshot_domain(
+                id_domain => $clone->id
+                ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
+                );
+            }
+            $base{name_clone} = $clone->name;
+            $base{screenshot} = ( $clone->_data('file_screenshot') 
+                                or $base{screenshot});
+            $base{is_active} = $clone->is_active;
+            $base{id_clone} = $clone->id
+        }
+        $base{screenshot} =~ s{^/var/www}{};
+        lock_hash(%base);
+        push @list,(\%base);
+    }
+    $sth->finish;
+    return \@list;
+}
+
+=pod
+
+sub search_clone_data {
+    my $self = shift;
+    my %args = @_;
+    my $query = "SELECT * FROM domains WHERE "
+        .(join(" AND ", map { "$_ = ? " } sort keys %args));
+
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute( map { $args{$_} } sort keys %args );
+    my $row = $sth->fetchrow_hashref;
+    return ( $row or {});
+        
+}
+
+=cut
 
 =head2 list_domains
 
@@ -108,10 +193,15 @@ sub list_domains {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
-        $row->{is_active} = 1 if $domain && $domain->is_active;
-        $row->{is_locked} = 1 if $domain && $domain->is_locked;
-        $row->{is_paused} = 1 if $domain && $domain->is_paused;
-        $row->{has_clones} = $domain->has_clones if $domain;
+        if ( $domain ) {
+            $row->{is_active} = 1 if $domain->is_active;
+            $row->{is_locked} = $domain->is_locked;
+            $row->{is_paused} = 1 if $domain->is_paused;
+            $row->{has_clones} = $domain->has_clones;
+            $row->{disk_size} = ( $domain->disk_size or 0);
+            $row->{disk_size} /= (1024*1024*1024);
+            $row->{disk_size} = 1 if $row->{disk_size} < 1;
+        }
         push @domains, ($row);
     }
     $sth->finish;
@@ -541,7 +631,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();

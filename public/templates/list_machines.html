@@ -4,12 +4,13 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
-        <table class="table table-striped">
+        <table class="table table-striped" border="0">
             <thead>
                 <tr>
                     <th>Machine Name</th>
                     <th>Base</th>
-                    <th>Active</th>
+                    <th>Public</th>
+                    <th>Status</th>
                     <th>Actions</th>
 
                 </tr>
@@ -17,31 +18,49 @@
             <tbody>
                 <tr ng-repeat="machine in list_machines">
                     <td>
-                        <a data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM">{{machine.name}}</a>
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
+                        <a ng-show="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM"><b>{{machine.name}}</b></a>
+                        <a ng-hide="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM">{{machine.name}}</a>
+
                     </td>
                     <td>
-                        <i ng-show="{{machine.is_base}}" class="fa fa-check" aria-hidden="true"></i>
-
-                        <a ng-hide="{{machine.is_base}}" ng-click="prepare(machine.id)" href="" title="Prepare base"><i  class="fa fa-times" aria-hidden="true"></i></a>
+                        <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
+                        <input type="checkbox" checked 
+                               ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
+                            ng-click="remove_base(machine.id)">
+                        <input type="checkbox" 
+                               ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
+                            ng-click="prepare(machine.id)">
                     </td>
                     <td>
-                        <a ng-show="{{machine.is_active}}" ng-click="shutdown(machine.id)"><i class="fa fa-check" aria-hidden="true"></i></a>
+                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)">
 
-                        <a ng-show="{{!machine.is_active}}" ng-click="start(machine.id)"><i class="fa fa-times" aria-hidden="true"></i></td></a>
+                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)"></td>
                     <td>
-                       
+                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-click="resume(machine.id)">Paused</span>
+                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-click="shutdown(machine.id)">Running</span>
+                        <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger" ng-click="start(machine.id)">Down</span>
+
+                    </td>
+                    <td>
+
+                      <div ng-hide="{{machine.is_locked}}">
+                        <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="start(machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
+                        <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
 
                         <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
 
-                        <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
-
-                        <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbspScreenshot</button>
-
-                        <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
+                        <a data-toggle="modal" data-target="#copy_{{machine.id}}" class="btn btn-primary btn-sm" ><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Copy</a>
 
 
 
-                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning">Paused</span>
+
+                        <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
+
+
+                      </div>
+                      <div ng-show="{{machine.is_locked}}">Machine locked by requested <a href="/request/{{machine.is_locked}}.html">process</a></div>
+
                     </td>
 
                 </tr>
@@ -49,6 +68,45 @@
         </table>
 
 
+        <div ng-repeat="machine in list_machines">
+        <div id="copy_{{machine.id}}" class="modal fade" role="dialog">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                  <h2>Copy {{machine.name}}</h2>
+              </div>
+              <div class="modal-body">
+                  <form method="post" action="/machine/copy">
+                      <input type="hidden" name="id_base" value="{{machine.id}}">
+                    <label for="copy_name_{{machine.id}}">Name:</label>
+                    <input name="copy_name_{{machine.id}}" type="text" size="40"
+                        value="{{machine.name}}-copy">
+                        <!-- todo check unique name -->
+                    <br/>
+                    <label for="copy_ram">RAM (Gb):</label>
+                    <input name="copy_ram" type="text" length="5" value="1">
+                    <br/>
+                    <div ng-show="0">
+                    <label for="copy_disk"><del>Disk Size:</del></label>
+                    <input name="copy_disk_todo" type="text" 
+                        value="{{machine.disk_size}}" disabled>
+                    <br/>
+                    </div>
+                    <div ng-show="{{machine.is_base}}">
+                        <label for="copy_rebase">Rebase First</label>
+                        <input name="copy_rebase" type="checkbox"
+                               ng-disabled="machine.has_clones">
+                        Toggle to make base from latest changes.
+                        <div ng-show="{{machine.has_clones}}">Remove clones to allow rebase.</div>
+                    </div>
+                    <br>
+                    <input type="submit">
+                  </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
 
 
         <div ng-repeat="machine in list_machines">
@@ -72,7 +130,7 @@
                             aria-hidden="true"></i>
                     </button>
                     <button type="button" ng-show="show_rename"
-                            ng-click="show_rename=false;"><i
+                            ng-click="show_rename=false;new_name_duplicated=false"><i
                             class="fa fa-close"
                             aria-hidden="true"></i>
                     </button>
@@ -108,16 +166,15 @@
                 <div style="width:100%; margin-bottom:10px;">
                     <a ng-show="{{machine.is_base}}" class="btn btn-primary btn-sm" ng-href="/machine/clone/{{machine.id}}.html"><i class="fa fa-files-o" aria-hidden="true"></i>&nbsp Clone</a>
 
-                    <button type="button" ng-click="prepare(machine.id)" class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp Prepare Base</button>
+                    <button type="button" ng-click="prepare(machine.id)"  ng-show="{{machine.has_clones==0}}" class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp Prepare Base</button>
 
                     <button type="button" ng-click="screenshot(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
 
-                    <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i> &nbsp ShutDown</button>
-                    <button type="button" ng-click="removeb(machine.id)" ng-show="{{machine.is_base&&machine.has_clones==0}}" class="btn btn-warning btn-sm":q:q
-                    ><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button>
-                    <a  class="btn btn-danger btn-sm" ng-href="/machine/remove/{{machine.id}}.html" ng-hide="{{machine.has_clones!=0}}"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong> Delete</a>
+                    <button type="button" ng-click="shutdown(machine.id)" ng-show="{{machine.is_active}}" class="btn btn-warning btn-sm"></strong><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
+                    <button type="button" ng-click="removeb(machine.id)" ng-show="{{machine.is_base&&machine.has_clones==0}}" class="btn btn-warning btn-sm"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp Remove Base</button>
+                    <a  class="btn btn-danger btn-sm" ng-href="/machine/remove/{{machine.id}}.html" ng-hide="{{machine.has_clones!=0}}"><strong>&nbsp;<i class="fa fa-trash-o" aria-hidden="true"></i></strong>&nbsp Delete</a>
 
-                    <h4><span ng-show="{{machine.has_clones!=0}}" class="label label-danger">Can't Remove Base and Delete. Machine has {{machine.has_clones}} Clone/s</span></h4>
+                    <h4><span ng-show="{{machine.has_clones!=0}}" class="label label-danger">Can't Prepare Base, Remove Base nor Delete. Machine has {{machine.has_clones}} Clone/s</span></h4>
                 </div>
 
 
@@ -126,7 +183,7 @@
               </div>
               <div class="modal-footer">
 
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button ng-hide="show_rename" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
               </div>
             </div>
 

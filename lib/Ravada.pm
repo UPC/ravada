@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.1.0';
+our $VERSION = '0.1.2';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -14,7 +14,6 @@ use POSIX qw(WNOHANG);
 use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
-use Sys::Hostname;
 
 use Ravada::Auth;
 use Ravada::Request;
@@ -45,7 +44,8 @@ our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 our $LIMIT_PROCESS = 2;
 
-our %FAT_COMMAND =  map { $_ => 1 } qw(start create prepare_base remove);
+# LONG commands take long
+our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
 
 has 'vm' => (
           is => 'ro'
@@ -105,6 +105,7 @@ Returns the default display IP read from the config file
 =cut
 
 sub display_ip {
+
     my $ip = $CONFIG->{display_ip};
 
     return $ip if $ip;
@@ -550,6 +551,25 @@ sub remove_volume {
 
 }
 
+=head2 clean_killed_requests
+
+Before processing requests, old killed requests must be cleaned.
+
+=cut
+
+sub clean_killed_requests {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
+        ." WHERE status='working' "
+    );
+    $sth->execute;
+    while (my ($id) = $sth->fetchrow) {
+        my $req = Ravada::Request->open($id);
+        $req->status("done","Killed before completion");
+    }
+
+}
+
 =head2 process_requests
 
 This is run in the ravada backend. It processes the commands requested by the fronted
@@ -562,22 +582,44 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
+    my $long_commands = (shift or 0);
+    my $short_commands = (shift or 0);
 
     $self->_wait_pids_nohang();
-    $self->_check_vms();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status='requested' OR status like 'retry %'");
-    $sth->execute;
-    while (my ($id)= $sth->fetchrow) {
-        $self->_wait_pids_nohang();
-        my $req = Ravada::Request->open($id);
-        warn "executing request ".$req->id." ".$req->status()." ".$req->command
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+        ." WHERE "
+        ."    ( status='requested' OR status like 'retry %' OR status='waiting')"
+        ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
+        ." ORDER BY date_req"
+    );
+    $sth->execute(time);
+
+    my $debug_type = '';
+    $debug_type = 'long' if $long_commands;
+    $debug_type = 'short' if $short_commands || !$long_commands;
+    $debug_type = 'all' if $long_commands && $short_commands;
+
+    while (my ($id_request,$id_domain)= $sth->fetchrow) {
+        my $req = Ravada::Request->open($id_request);
+
+        if ( ($long_commands && 
+                (!$short_commands && !$LONG_COMMAND{$req->command}))
+            ||(!$long_commands && $LONG_COMMAND{$req->command})
+        ) {
+            warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
+                .$req->command  if $DEBUG;
+            next;
+        }
+        next if $req->command !~ /shutdown/i
+            && $self->_domain_working($id_domain, $id_request);
+
+        warn "[$debug_type] $$ executing request ".$req->id." ".$req->status()." "
+            .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
-        $req->status('working');
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
         if ($err && $err =~ /libvirt error code: 38/) {
@@ -586,12 +628,81 @@ sub process_requests {
                 $req->status("retry ".++$n_retry)
             }
         }
+        next if !$DEBUG && !$debug;
+
+        sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'"
-                if $DEBUG || $debug;
+            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG;
 
     }
     $sth->finish;
+
+}
+
+=head2 process_long_requests
+
+Process requests that take log time. It will fork on each one
+
+=cut
+
+sub process_long_requests {
+    my $self = shift;
+    my ($debug,$dont_fork) = @_;
+
+    $self->_disconnect_vm();
+    return $self->process_requests($debug, $dont_fork, 1);
+}
+
+=head2 process_all_requests
+
+Process all the requests, long and short
+
+=cut
+
+sub process_all_requests {
+
+    my $self = shift;
+    my ($debug,$dont_fork) = @_;
+
+    $self->process_requests($debug, $dont_fork,1,1);
+
+}
+
+sub _domain_working {
+    my $self = shift;
+    my ($id_domain, $id_request) = @_;
+
+    confess "Missing id_request" if !defined$id_request;
+
+    if (!$id_domain) {
+        my $req = Ravada::Request->open($id_request);
+        $id_domain = $req->defined_arg('id_base');
+        if (!$id_domain) {
+            my $domain_name = $req->defined_arg('name');
+            return if !$domain_name;
+            my $domain = $self->search_domain($domain_name) or return;
+            $id_domain = $domain->id;
+            if (!$id_domain) {
+                warn Dumper($req);
+                return;
+            }
+        }
+    }
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
+        ." WHERE id <> ? AND id_domain=? AND (status <> 'requested' AND status <> 'done')");
+    $sth->execute($id_request, $id_domain);
+    my ($id, $status) = $sth->fetchrow;
+#    warn "CHECKING DOMAIN WORKING "
+#        ."[$id_request] id_domain $id_domain working in request ".($id or '<NULL>')
+#            ." status: ".($status or '<UNDEF>');
+    return $id;
+}
+
+sub _process_all_requests_dont_fork {
+    my $self = shift;
+    my $debug = shift;
+
+    return $self->process_requests($debug,1, 1, 1);
 }
 
 sub _process_requests_dont_fork {
@@ -627,11 +738,7 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
-    $self->_disconnect_vm();
-
-    if ($dont_fork || !$CAN_FORK ) {
-        # TODO check if that can be done with _do_execute_command like when forking
-        $self->_connect_vm();
+    if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
@@ -640,7 +747,10 @@ sub _execute {
         return $err;
     }
 
-    $self->_wait_children($request) if $FAT_COMMAND{$request->command};
+    $self->_wait_pids_nohang();
+    return if $self->_wait_children($request);
+
+    $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     $self->_do_execute_command($sub, $request) if $pid == 0;
@@ -662,7 +772,6 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
-    $request->status("working");
     eval {
         $self->_connect_vm();
         $sub->($self,$request);
@@ -735,12 +844,12 @@ sub _wait_children {
     my $req = shift or confess "Missing request";
 
     my $try = 0;
-    for (;;) {
+    for ( 1 .. 10 ) {
         my $n_pids = scalar keys %{$self->{pids}};
         my $msg = $req->id." ".$req->command." waiting for processes to finish $n_pids of $LIMIT_PROCESS running";
         warn $msg if $DEBUG;
 
-        return if $n_pids <= $LIMIT_PROCESS;
+        return if $n_pids < $LIMIT_PROCESS;
 
         $self->_wait_pids_nohang();
         sleep 1;
@@ -748,8 +857,9 @@ sub _wait_children {
         next if $try++;
 
         $req->error($msg);
-        $req->status('waiting');
+        $req->status('waiting') if $req->status() !~ 'waiting';
     }
+    return scalar keys %{$self->{pids}};
 }
 
 sub _wait_pids_nohang {
@@ -780,10 +890,12 @@ sub _wait_pids {
     my $self = shift;
     my $request = shift;
 
-    $request->status('waiting for other tasks')     if $request;
+    $request->status('waiting for other tasks')
+        if $request && $request->status !~ /waiting/i;
 
     for my $pid ( keys %{$self->{pids}}) {
-        $request->status("waiting for pid $pid")    if $request;
+        $request->status("waiting for pid $pid")
+            if $request && $request->status !~ /waiting/i;
 
 #        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
         my $kid = waitpid($pid,0);
@@ -807,7 +919,6 @@ sub _cmd_remove {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     confess "Unknown user id ".$request->args->{uid}
         if !defined $request->args->{uid};
 
@@ -819,7 +930,6 @@ sub _cmd_pause {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
@@ -837,7 +947,6 @@ sub _cmd_resume {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $name = $request->args('name');
     my $domain = $self->search_domain($name);
     die "Unknown domain '$name'" if !$domain;
@@ -875,7 +984,6 @@ sub _cmd_start {
     my $self = shift;
     my $request = shift;
 
-    $request->status("working $$");
     my $name = $request->args('name');
 
     my $domain = $self->search_domain($name);
@@ -898,7 +1006,6 @@ sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -916,7 +1023,6 @@ sub _cmd_remove_base {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $id_domain = $request->id_domain or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -933,12 +1039,10 @@ sub _cmd_remove_base {
 }
 
 
-
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
 
-    $request->status('working');
     my $uid = $request->args('uid');
     my $name = $request->args('name');
     my $timeout = ($request->args('timeout') or 60);
@@ -954,10 +1058,26 @@ sub _cmd_shutdown {
 
 }
 
+sub _cmd_force_shutdown {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->args('name');
+
+    my $domain;
+    $domain = $self->search_domain($name);
+    die "Unknown domain '$name'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->force_shutdown($user,$request);
+
+}
+
 sub _cmd_list_vm_types {
     my $self = shift;
     my $request = shift;
-    $request->status('working');
     my @list_types = $self->list_vm_types();
     $request->result(\@list_types);
     $request->status('done');
@@ -988,6 +1108,24 @@ sub _cmd_rename_domain {
 
 }
 
+sub _cmd_set_driver {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    confess "Unkown domain ".Dumper($request)   if !$domain;
+
+    die "USER $uid not authorized to set driver for domain ".$domain->name
+        if $domain->id_owner != $user->id && !$user->is_admin;
+
+    $domain->set_driver_id($request->args('id_option'));
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -1000,6 +1138,7 @@ sub _req_method {
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
       ,shutdown => \&_cmd_shutdown
+    ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
    ,remove_base => \&_cmd_remove_base
@@ -1008,6 +1147,7 @@ sub _req_method {
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+,force_shutdown => \&_cmd_force_shutdown
     );
     return $methods{$cmd};
 }

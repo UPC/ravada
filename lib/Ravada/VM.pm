@@ -10,7 +10,7 @@ use Moose::Role;
 use Net::DNS;
 use IO::Socket;
 use IO::Interface;
-use Sys::Hostname;
+use Net::Domain qw(hostfqdn);
 
 requires 'connect';
 
@@ -18,6 +18,8 @@ requires 'connect';
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
 our $CONFIG = \$Ravada::CONFIG;
+
+our $MIN_MEMORY_MB = 128 * 1024;
 
 # domain
 requires 'create_domain';
@@ -39,11 +41,6 @@ has 'host' => (
     , default => 'localhost'
 );
 
-has 'storage_pool' => (
-     isa => 'Object'
-    , is => 'ro'
-);
-
 has 'default_dir_img' => (
       isa => 'String'
      , is => 'ro'
@@ -59,7 +56,7 @@ has 'readonly' => (
 # Method Modifiers definition
 # 
 #
-before 'create_domain' => \&_pre_create_domain;
+around 'create_domain' => \&_around_create_domain;
 
 before 'search_domain' => \&_connect;
 
@@ -84,6 +81,17 @@ sub _connect {
 sub _pre_create_domain {
     _check_create_domain(@_);
     _connect(@_);
+}
+
+sub _around_create_domain {
+    my $orig = shift;
+    my $self = shift;
+    my %args = @_;
+
+    $self->_pre_create_domain(@_);
+    my $domain = $self->$orig(@_);
+    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    return $domain;
 }
 
 ############################################################
@@ -185,7 +193,9 @@ sub ip {
 
 sub _ip_from_hostname {
     my $res = Net::DNS::Resolver->new();
-    my $reply = $res->search(hostname());
+
+    my $name = hostfqdn();
+    my $reply = $res->search($name);
     return if !$reply;
 
     for my $rr ($reply->answer) {
@@ -208,7 +218,7 @@ sub _check_memory {
     my %args = @_;
     return if !exists $args{memory};
 
-    die "ERROR: Low memory '$args{memory}' required 128 Mb " if $args{memory} < 128*1024;
+    die "ERROR: Low memory '$args{memory}' required ".int($MIN_MEMORY_MB/1024)." MB " if $args{memory} < $MIN_MEMORY_MB;
 }
 
 sub _check_disk {
