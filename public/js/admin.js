@@ -104,6 +104,10 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
           break;
       }
     }
+    $scope.hide_clones = false;
+    $scope.hideClones = function(){
+      $scope.hide_clones = !$scope.hide_clones;
+    }
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };

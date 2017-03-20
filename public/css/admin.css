@@ -15,6 +15,19 @@
 #admin-content{
   margin-left: 200px;
 }
+.admin-cont-body {
+  table-layout: fixed;
+}
+.lgMachName{
+  min-width: 50%;
+  word-break: break-all;
+}
+.lgMachToggle{
+  width: 75px;
+}
+.lgMachActions{
+  width: 25%;
+}
 #admin-nav-head {
   width: 100%;
 }

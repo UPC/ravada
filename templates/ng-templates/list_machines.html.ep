@@ -4,24 +4,29 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
-        <table class="table table-striped" border="0">
+        <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
-                    <th>
+                    <th class="lgMachName">
                       <i class="fa fa-arrows-v machine-button"
                        aria-hidden="true"
                        ng-click="orderMachineList()"></i>
-                      &nbsp Machine Name</th>
-                    <th>Base</th>
-                    <th>Public</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                      Machine Name</th>
+                    <th class="lgMachToggle">
+                      <i class="fa machine-button"
+                       ng-class="{ 'fa-eye':!hide_clones, 'fa-eye-slash':hide_clones }"
+                       aria-hidden="true"
+                       ng-click="hideClones()"></i>
+                      Base</th>
+                    <th class="lgMachToggle">Public</th>
+                    <th class="lgMachToggle">Status</th>
+                    <th class="lgMachActions">Actions</th>
 
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="machine in list_machines | orderBy : orderParam : orderParam&&reverse">
-                    <td>
+                <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam : orderParam&&reverse">
+                    <td class="lgMachName">
                         <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
                         <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
                           <b>{{machine.name}}</b>
@@ -30,7 +35,7 @@
                           {{machine.name}}
                         </a>
                     </td>
-                    <td>
+                    <td class="lgMachToggle">
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
                         <input type="checkbox" checked 
                                ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
@@ -39,17 +44,17 @@
                                ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
                             ng-click="action('machine','prepare',machine.id)">
                     </td>
-                    <td>
+                    <td class="lgMachToggle">
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)"></td>
-                    <td>
+                    <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning">Paused</span>
                         <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success">Running</span>
                         <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger">Down</span>
 
                     </td>
-                    <td>
+                    <td class="lgMachToggle">
 
                       <div ng-hide="{{machine.is_locked}}">
                         <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="action('machine','start',machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
