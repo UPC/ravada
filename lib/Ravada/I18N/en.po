@@ -88,3 +88,37 @@ msgstr ""
 
 msgid "New Machine"
 msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Machines"
+msgstr ""
+
+msgid "Down"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "ShutDown"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Paused"
+msgstr ""
+

@@ -88,3 +88,36 @@ msgstr "Preferencias"
 
 msgid "New Machine"
 msgstr "Nueva máquina"
+
+msgid "Public"
+msgstr "Público"
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Actions"
+msgstr "Acciones"
+
+msgid "Machines"
+msgstr "Máquinas"
+
+msgid "Down"
+msgstr "Parada"
+
+msgid "Running"
+msgstr "En marcha"
+
+msgid "Start"
+msgstr ""
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "View"
+msgstr "Ver"
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Paused"
+msgstr "Pausado"
