@@ -111,7 +111,7 @@ msgid "Start"
 msgstr ""
 
 msgid "ShutDown"
-msgstr "Aturar"
+msgstr "Atura"
 
 msgid "View"
 msgstr "Veure"
@@ -121,3 +121,16 @@ msgstr ""
 
 msgid "Paused"
 msgstr "Pausat"
+
+msgid "Prepare base"
+msgstr "Prepara base"
+
+msgid "Machine locked by requested"
+msgstr "Màquina bloquejada per"
+
+msgid "process"
+msgstr "procés"
+
+msgid "Copy"
+msgstr "Còpia"
+

@@ -122,3 +122,16 @@ msgstr ""
 msgid "Paused"
 msgstr ""
 
+msgid "Prepare base"
+msgstr ""
+
+msgid "Machine locked by requested"
+msgstr ""
+
+msgid "process"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+

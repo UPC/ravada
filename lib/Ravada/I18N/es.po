@@ -121,3 +121,16 @@ msgstr ""
 
 msgid "Paused"
 msgstr "Pausado"
+
+msgid "Prepare base"
+msgstr "Prepara base"
+
+msgid "Machine locked by requested"
+msgstr "Máquina bloqueada por"
+
+msgid "process"
+msgstr "proceso"
+
+msgid "Copy"
+msgstr "Copia"
+
