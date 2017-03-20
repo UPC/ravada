@@ -15,14 +15,28 @@
 #admin-content{
   margin-left: 200px;
 }
-#admin-nav-table {
-  width: 100%
+#admin-nav-head {
+  width: 100%;
 }
-#admin-nav-table td {
+#admin-nav-head td {
   padding-top: 3px;
 }
-#admin-nav-table a {
+#admin-nav-head a {
   width: 100%;
   font-size: 14px;
   font-weight: bold;
+}
+.admin-nav-body {
+  table-layout:fixed;
+}
+.admin-nav-body tbody tr {
+  border-bottom-width: 1px;
+  border-bottom-style: dotted;
+}
+.admin-nav-body td {
+  padding-top: 3px;
+  padding-bottom: 1px;
+}
+.navMachName{
+  word-break: break-all;
 }

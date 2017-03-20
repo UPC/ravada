@@ -6,9 +6,7 @@
     <div ng-controller="adminPage">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
-      <div id="admin-nav">
-        <sol-show-admin-navigation></sol-show-admin-navigation>
-      </div>
+      <sol-show-admin-navigation id="admin-nav" ng-cloak></sol-show-admin-navigation>
       <div id="admin-content">
         <sol-show-listmachines ng-show="showing=='machines'" ng-cloak></sol-show-listmachines>
         <sol-show-listusers ng-show="showing=='users'" ng-cloak></sol-show-listusers>

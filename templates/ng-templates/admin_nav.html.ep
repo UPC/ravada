@@ -1,4 +1,4 @@
-<table id="admin-nav-table">
+<table id="admin-nav-head">
   <tr><td>
 <a class="btn btn-success btn-sm" ng-click="show('machines')">
 <i class="fa fa-desktop" aria-hidden="true"></i>&nbspmachines</a>
@@ -12,11 +12,11 @@
 <i class="fa fa-envelope" aria-hidden="true"></i>&nbspmessages</a>
   </tr></td>
 </table>
-<table ng-show="showing=='machines' || showing == 'machine'" class="table table-striped" border="0">
+<table ng-show="showing=='machines' || showing == 'machine'" class="admin-nav-body">
   <thead><tr><th>Machines</th></tr></thead>
   <tbody>
     <tr ng-repeat="machine in list_machines">
-      <td>
+      <td class="navMachName">
         <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
           <b>{{machine.name}}</b>
         </a>
@@ -32,7 +32,7 @@
     </tr>
   </tbody>
 </table>
-<table ng-show="showing=='users'" class="table table-striped">
+<table ng-show="showing=='users'" class="admin-nav-body">
   <thead><tr><th>Users</th></tr></thead>
   <tbody><tr ng-repeat="user in list_users"><td>{{user.name}}</td></tr></tbody>
 </table>
