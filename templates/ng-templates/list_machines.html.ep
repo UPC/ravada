@@ -1,4 +1,4 @@
-<h2>Machines</h2>
+<h2><%=l 'Machines' %></h2>
 <div class="panel-body">
     <div class="col-lg-12">
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
@@ -11,11 +11,11 @@
                       <i class="fa fa-arrows-v machine-button"
                        aria-hidden="true"
                        ng-click="orderMachineList()"></i>
-                      &nbsp Machine Name</th>
-                    <th>Base</th>
-                    <th>Public</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                      &nbsp <%=l 'Machine Name' %></th>
+                    <th><%=l 'Base' %></th>
+                    <th><%=l 'Public' %></th>
+                    <th><%=l 'Status' %></th>
+                    <th><%=l 'Actions' %></th>
 
                 </tr>
             </thead>
@@ -44,20 +44,20 @@
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)"></td>
                     <td>
-                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning">Paused</span>
-                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success">Running</span>
-                        <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger">Down</span>
+                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning"><%=l 'Paused' %></span>
+                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success"><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger"><%=l 'Down' %></span>
 
                     </td>
                     <td>
 
                       <div ng-hide="{{machine.is_locked}}">
-                        <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="action('machine','start',machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
-                        <a type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</a>
+                        <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="action('machine','start',machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'Start' %></a>
+                        <a type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp <%=l 'ShutDown' %></a>
 
-                        <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
+                        <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp <%=l 'View' %></a>
 
-                        <a type="button" ng-click="action('machine','screenshot',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</a>
+                        <a type="button" ng-click="action('machine','screenshot',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp <%=l 'Screenshot' %></a>
 
 
                       </div>
