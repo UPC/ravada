@@ -8,19 +8,19 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
   function swAdminNavigation() {
     return {
       restrict: "E",
-      templateUrl: '/templates/admin_nav.html',
+      templateUrl: '/ng-templates/admin_nav.html',
     };
   };
   function swMess() {
     return {
       restrict: "E",
-      templateUrl: '/templates/list_messages.html',
+      templateUrl: '/ng-templates/list_messages.html',
     };
   };
   function swMach() {
     return {
       restrict: "E",
-      templateUrl: '/templates/admin_machine.html',
+      templateUrl: '/ng-templates/admin_machine.html',
     };
   };
 

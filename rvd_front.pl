@@ -440,6 +440,12 @@ get '/messages/view/(#id).html' => sub {
     return $c->render( json => $USER->show_message($id) );
 };
 
+any '/ng-templates/(#template).html' => sub {
+  my $c = shift;
+  my $id = $c->stash('template');
+  return $c->render(template => 'ng-templates/'.$id);
+};
+
 any '/about' => sub {
     my $c = shift;
 

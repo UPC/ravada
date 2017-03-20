@@ -48,7 +48,7 @@
 
         return {
             restrict: "E",
-            templateUrl: '/templates/support_form.html',
+            templateUrl: '/ng-templates/support_form.html',
         };
 
     };
@@ -57,7 +57,7 @@
 
         return {
             restrict: "E",
-            templateUrl: '/templates/new_machine.html',
+            templateUrl: '/ng-templates/new_machine.html',
         };
 
     };
@@ -106,16 +106,16 @@
 
         return {
             restrict: "E",
-            templateUrl: '/templates/list_machines.html',
+            templateUrl: '/ng-templates/list_machines.html',
         };
 
     };
 
     function swCardsMach() {
 
-        $url =  '/templates/user_machines.html';
+        $url =  '/ng-templates/user_machines.html';
         if ( typeof $_anonymous !== 'undefined' && $_anonymous ) {
-            $url =  '/templates/user_machines_anonymous.html';
+            $url =  '/ng-templates/user_machines_anonymous.html';
         }
 
         return {
@@ -128,7 +128,7 @@
     function swMachNotif() {
         return {
             restrict: "E",
-            templateUrl: '/templates/machines_notif.html',
+            templateUrl: '/ng-templates/machines_notif.html',
         };
     };
 
@@ -152,7 +152,7 @@
 
         return {
             restrict: "E",
-            templateUrl: '/templates/list_users.html',
+            templateUrl: '/ng-templates/list_users.html',
         };
 
     };
