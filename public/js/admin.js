@@ -90,12 +90,16 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
     $scope.orderParam = "";
     $scope.reverse = true;
     $scope.increment = 0;
-    $scope.orderMachineList = function(){
+    $scope.orderMachineList = function(type){
+      if ($scope.orderParam != type ) {
+        $scope.increment = 0;
+        $scope.reverse = true;
+      }
       $scope.increment++;
       switch ($scope.increment) {
         case 1:
         case 2:
-          $scope.orderParam = 'name';
+          $scope.orderParam = type;
           $scope.reverse = !$scope.reverse;
           break;
         case 3:
