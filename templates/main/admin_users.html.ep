@@ -12,8 +12,8 @@
   <table class="table table-striped">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Admin</th>
+        <th><%=l 'Name' %></th>
+        <th><%=l 'Admin' %></th>
       </tr>
     </thead>
     <tbody>
