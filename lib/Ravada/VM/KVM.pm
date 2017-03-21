@@ -33,12 +33,6 @@ has vm => (
     ,lazy => 1
 );
 
-has _default_storage_pool_name => (
-    isa => 'Str'
-    ,is => 'rw'
-    ,default => 'default'
-);
-
 has type => (
     isa => 'Str'
     ,is => 'ro'
@@ -105,26 +99,6 @@ sub connect {
     $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
 }
-
-sub id {
-    return $_[0]->_data('id');
-}
-
-sub _data {
-    my $self = shift;
-    my $field = shift or confess "Missing field name";
-
-#    _init_connector();
-
-    return $self->{_data}->{$field} if exists $self->{_data}->{$field};
-    $self->{_data} = $self->_select_vm_db( name => $self->name);
-
-    confess "No DB info for VM ".$self->name    if !$self->{_data};
-    confess "No field $field in vms"            if !exists$self->{_data}->{$field};
-
-    return $self->{_data}->{$field};
-}
-
 
 sub _load_storage_pool {
     my $self = shift;
@@ -1280,22 +1254,6 @@ sub import_domain {
     $domain->_insert_db(name => $name, id_owner => $user->id);
 
     return $domain;
-}
-
-sub default_storage_pool_name {
-    my $self = shift;
-    my $value = shift;
-
-    #TODO check pool exists
-    if (defined $value) {
-        $self->_default_storage_pool_name($value);
-        my $sth = $$CONNECTOR->dbh->prepare(
-            "UPDATE vms SET default_storage=?"
-            ." WHERE id=?"
-        );
-        $sth->execute($value,$self->id);
-    }
-    return $self->_default_storage_pool_name();
 }
 
 1;
