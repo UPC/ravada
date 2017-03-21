@@ -268,6 +268,11 @@ for my $vm_name (qw( Void KVM )) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 

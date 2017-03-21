@@ -263,12 +263,16 @@ sub test_dont_allow_remove_base_before_sons {
 
 ################################################################
 my $vm;
-clean();
 
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    if ($vm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
@@ -291,5 +295,4 @@ if (ok($domain,"test domain not created")) {
 
 };
 
-clean();
 done_testing();

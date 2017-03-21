@@ -1,4 +1,76 @@
 #!/usr/bin/make -f
+#-*- makefile -*-
+# Made with the aid of dh_make, by Craig Small
+# Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
+# Some lines taken from debmake, by Christoph Lameter.
 
-%:
-	dh $@
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+INST=$(CURDIR)/debian/ravada
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+
+	# Add here commands to compile the package.
+	pod2man --center debian ravada > ravada.1
+
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+
+	# Add here commands to clean up after the build process.
+	@for i in Strange-0.1 Strange-2.1; do\
+		if test -d "$$i/debian"; then \
+			cd $$i; \
+			debian/rules clean; \
+			cd ..; \
+			rm -rf $$i/debian; \
+		fi \
+	done
+
+	dh_clean ravada.1 $(wildcard *.changes) $(wildcard *.deb) $(wildcard *.gz)
+
+install:
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/tmp.
+	#$(MAKE) install DESTDIR=`pwd`/debian/tmp
+	mkdir -p $(INST)/usr/bin
+	mkdir -p $(INST)/usr/share/ravada
+	cp ravada $(INST)/usr/bin
+	cp rules* $(INST)/usr/share/ravada
+	cp overrides $(INST)/usr/share/ravada
+
+
+# Build architecture-independent files here.
+binary-arch: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-indep: build install
+	dh_testdir
+	dh_testroot
+	dh_installdocs README
+	dh_installman ravada.1
+	dh_installchangelogs
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_perl 
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+source diff:
+	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary

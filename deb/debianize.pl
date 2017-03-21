@@ -3,25 +3,25 @@
 use warnings;
 use strict;
 
+use Cwd qw(getcwd);
 use File::Path qw(remove_tree make_path);
 use IPC::Run3;
 use lib './lib';
 use Ravada;
 use File::Copy;
 
-my $DIR_SRC = "pkg-debian";
-my $RELEASE = Ravada::version();
-my $DIR_DST = "ravada-$RELEASE";
+my $DIR_DST = getcwd."/../ravada-".Ravada::version();
 
 my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
     ,'etc/xml'  => 'var/lib/ravada'
-    ,'docs/' => 'usr/share/doc/ravada'
+    ,'docs/' => 'docs'
     ,sql => 'usr/share/doc/ravada'
     ,'lib/' => 'usr/share/perl5'
     ,'blib/man3' => 'usr/share/man'
-    ,"$DIR_SRC/" => "./"
+    ,"debian/" => "./debian"
+    ,'etc/systemd/' => 'lib/systemd/system/'
 );
 
 for ( qw(css fonts img js templates)) {
@@ -31,16 +31,20 @@ for ( qw(css fonts img js templates)) {
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
     ,'bin/rvd_back.pl' => 'usr/sbin/rvd_back'
-    ,'rvd_front.pl' => 'usr/sbin/rvd_front'
+    ,'rvd_front.pl' => 'usr/bin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
     ,'copyright' => 'usr/share/doc/ravada'
 );
 
 my @REMOVE= qw(
-    usr/share/doc/ravada/_config.yml
-    usr/share/doc/ravada/INSTALL.md
     usr/share/ravada/templates/bootstrap/get_authors.sh
     usr/share/man/man3/.exists
+    debian/menu.ex
+    debian/postinst.ex
+    debian/postrm.ex
+    debian/preinst.ex
+    debian/prerm.ex
+    debian/ravada.cron.d.ex
 );
 
 ########################################################################
@@ -90,32 +94,30 @@ sub create_md5sums {
     my @files;
     chdir $DIR_DST or die "I can't chdir to $DIR_DST";
 
-    unlink "DEBIAN/md5sums";
+    unlink "debian/md5sums";
 
     open my $find, ,'-|', 'find . -type f -printf \'%P\n\'' or die $!;
     while (<$find>) {
         chomp;
-        next if /^DEBIAN/;
-        print `md5sum $_ >> DEBIAN/md5sums`
+        next if /^debian/;
+        print `md5sum $_ >> debian/md5sums`
     }
     close $find;
     chdir "..";
-    chmod 0644,"$DIR_DST/DEBIAN/md5sums" or die $!;
+    chmod 0644,"$DIR_DST/debian/md5sums" or die "$! $DIR_DST/debian/md5sums";
 }
 
 sub create_deb {
-#    my $deb = "ravada_${RELEASE}_all.deb";
-#    my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
-    chdir $DIR_DST or die "$! $DIR_DST";
-    my @cmd = ('debuild','-us','-uc');
+    my $deb = "ravada_${Ravada::VERSION}_all.deb";
+    my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
-    print $out;
+    print "$deb created\n";
 }
 
 sub remove_use_lib {
-    for my $file ('usr/sbin/rvd_front','usr/sbin/rvd_back') {
+    for my $file ('usr/bin/rvd_front','usr/sbin/rvd_back') {
         my $path = "$DIR_DST/$file";
         die "Missing file '$path'" if ! -e $path;
         copy($path, "$path.old") or die "$! $path -> $path.old";
@@ -191,8 +193,8 @@ sub chown_pms {
 }
 
 sub chmod_control_files {
-    for (qw(conffiles templates)) {
-        my $path  = "$DIR_DST/DEBIAN/$_";
+    for (qw(ravada.docs changelog control copyright ravada-docs.docs ravada.doc-base.EX)) {
+        my $path  = "$DIR_DST/debian/$_";
         die "Missing $path" if ! -e $path;
         chmod 0644 , $path or die "$! $path";
     }
@@ -202,30 +204,45 @@ sub chmod_ravada_conf {
     chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
 }
 
+sub tar {
+    my @cmd = ('tar','czvf',"ravada_".Ravada::version.".orig.tar.gz"
+       ,"ravada-".Ravada::version()
+    );
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+}
+
+sub make_pl {
+    my @cmd = ('perl','Makefile.PL');
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    @cmd = ('make');
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+}
+
 #########################################################################
 
 clean();
+make_pl();
 copy_dirs();
 copy_files();
 remove_not_needed();
 change_mod();
 gzip_docs();
 gzip_man();
-chown_files('DEBIAN',0755);
-#chown_files('usr/share/doc/ravada');
-#chown_files('usr/share/ravada/public');
-#chown_files('usr/share/ravada/templates');
+chown_files('debian',0755);
 chown_files('etc');
 chown_files('lib');
-#chown_files('lib/systemd');
 chown_files('var/lib/ravada');
-#chown_files('usr/share/perl5');
-#chown_files('usr/share/man');
 chown_files('usr');
 chown_files('var');
 remove_use_lib();
 chmod_control_files();
 chmod_ravada_conf();
-#chown_pms();
 create_md5sums();
-create_deb();
+tar();
+#create_deb();

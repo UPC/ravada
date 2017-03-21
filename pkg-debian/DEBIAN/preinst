@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-
-systemctl status rvd_front || systemctl stop rvd_front || true

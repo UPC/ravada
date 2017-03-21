@@ -924,9 +924,7 @@ sub check_back_running {
 }
 
 sub _init_user_group {
-    warn $>;
     return if $>;
-    warn Dumper($CONFIG_FRONT);
 
     my $user = $CONFIG_FRONT->{user};
     my $group = $CONFIG_FRONT->{group};

@@ -248,9 +248,9 @@ my $vm;
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
-    if ( $vm && $> ) {
-            $msg = "SKIPPED test: Must be run from root user ";
-            $vm = undef;
+    if ($vm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
     }
 
     diag($msg)      if !$vm;

@@ -33,11 +33,6 @@ has vm => (
     ,lazy => 1
 );
 
-has default_storage_pool_name => (
-    isa => 'Str'
-    ,is => 'rw'
-);
-
 has type => (
     isa => 'Str'
     ,is => 'ro'
