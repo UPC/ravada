@@ -169,3 +169,17 @@ msgstr ""
 
 msgid "messages"
 msgstr ""
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr ""
+
+msgid "Prepare base"
+msgstr ""
+
+msgid "public"
+msgstr ""
+
+

@@ -33,7 +33,7 @@
   <i ng-show="{{showmachine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
   <input type="checkbox" checked
   ng-show="{{showmachine.is_base}} && !{{showmachine.has_clones}} && !{{showmachine.is_locked}}"
-  ng-click="action('machine','remove_base',showmachine.id)"> Remove base
+  ng-click="action('machine','remove_base',showmachine.id)"> <%=l 'Remove base' %>
   </br>
   <input type="checkbox"
   ng-show="!{{showmachine.is_base}} && !{{showmachine.is_locked}}"
