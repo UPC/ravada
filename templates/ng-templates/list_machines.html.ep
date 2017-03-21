@@ -10,7 +10,7 @@
                     <th class="lgMachName">
                       <i class="fa fa-arrows-v machine-button"
                        aria-hidden="true"
-                       ng-click="orderMachineList('name')"></i>
+                       ng-click="orderMachineList('name','')"></i>
                       Machine Name</th>
                     <th class="lgMachToggle">
                       <i class="fa machine-button"
@@ -22,14 +22,14 @@
                     <th class="lgMachToggle">
                       <i class="fa fa-arrows-v machine-button"
                        aria-hidden="true"
-                       ng-click="orderMachineList('is_active')"></i>
+                       ng-click="orderMachineList('is_active','is_paused')"></i>
                       Status</th>
                     <th class="lgMachActions">Actions</th>
 
                 </tr>
             </thead>
             <tbody>
-                <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam : orderParam&&reverse">
+                <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
                         <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
                         <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">

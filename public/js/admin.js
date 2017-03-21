@@ -87,23 +87,19 @@ ravadaApp.directive("solShowAdminNavigation", swAdminNavigation)
       }
       $scope.showing = type;
     }
-    $scope.orderParam = "";
-    $scope.reverse = true;
+    $scope.orderParam = [];
     $scope.increment = 0;
-    $scope.orderMachineList = function(type){
-      if ($scope.orderParam != type ) {
-        $scope.increment = 0;
-        $scope.reverse = true;
-      }
+    $scope.orderMachineList = function(type1,type2){
       $scope.increment++;
       switch ($scope.increment) {
         case 1:
+          $scope.orderParam = [type1,'-'+type2];
+          break;
         case 2:
-          $scope.orderParam = type;
-          $scope.reverse = !$scope.reverse;
+          $scope.orderParam = ['-'+type1,type2];
           break;
         case 3:
-          $scope.orderParam = '';
+          $scope.orderParam = [];
           $scope.increment = 0;
           break;
       }
