@@ -173,6 +173,10 @@ get '/anonymous/(#base_id).html' => sub {
 
 any '/admin' => sub {
   my $c = shift;
+  $c->redirect_to("/admin/machines")
+};
+any '/admin/(#type)' => sub {
+  my $c = shift;
 
   return access_denied($c)    if !$USER->is_admin;
 
@@ -646,14 +650,14 @@ sub show_failure {
 
 sub admin {
     my $c = shift;
-
+    my $page = $c->stash('type');
     my @error = ();
 
-    push($c->stash->{css},'css/admin.css');
-    push($c->stash->{js},'js/admin.js');
-    $c->render(template => 'main/admin');
+    push($c->stash->{css},'/css/admin.css');
+    push($c->stash->{js},'/js/admin.js');
+    $c->render(template => 'main/admin_'.$page);
 
-}
+};
 
 sub new_machine {
     my $c = shift;

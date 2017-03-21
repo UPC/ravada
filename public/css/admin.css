@@ -1,19 +1,7 @@
-#admin-nav{
-  float:left;
-  width: 190px;
-  padding: 5px 5px 5px 5px;
-  border: thin solid green;
-  border-radius: 3px;
-}
-#admin-nav td{
-  vertical-align: middle;
-}
 .machine-button{
   cursor: pointer;
 }
-
 #admin-content{
-  margin-left: 200px;
 }
 .admin-cont-body {
   table-layout: fixed;
@@ -26,30 +14,5 @@
   width: 75px;
 }
 .lgMachActions{
-  width: 25%;
-}
-#admin-nav-head {
-  width: 100%;
-}
-#admin-nav-head td {
-  padding-top: 3px;
-}
-#admin-nav-head a {
-  width: 100%;
-  font-size: 14px;
-  font-weight: bold;
-}
-.admin-nav-body {
-  table-layout:fixed;
-}
-.admin-nav-body tbody tr {
-  border-bottom-width: 1px;
-  border-bottom-style: dotted;
-}
-.admin-nav-body td {
-  padding-top: 3px;
-  padding-bottom: 1px;
-}
-.navMachName{
-  word-break: break-all;
+  min-width: 25%;
 }
