@@ -1,19 +1,20 @@
 <table id="admin-nav-head">
   <tr><td>
 <a class="btn btn-success btn-sm" ng-click="show('machines')">
-<i class="fa fa-desktop" aria-hidden="true"></i>&nbspmachines</a>
+<i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'machines' %></a>
   </tr></td>
   <tr><td>
 <a class="btn btn-success btn-sm" ng-click="show('users')">
-<i class="fa fa-user" aria-hidden="true"></i>&nbspusers</a>
+<i class="fa fa-user" aria-hidden="true"></i>&nbsp<%=l 'users' %></a>
   </tr></td>
   <tr><td>
 <a class="btn btn-success btn-sm" ng-click="show('messages')">
-<i class="fa fa-envelope" aria-hidden="true"></i>&nbspmessages</a>
+<i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
   </tr></td>
 </table>
-<table ng-show="showing=='machines' || showing == 'machine'" class="admin-nav-body">
-  <thead><tr><th>Machines</th></tr></thead>
+
+<table ng-show="showing=='machines' || showing == 'machine'" class="table table-striped" border="0">
+  <thead><tr><th><%=l 'Machines' %></th></tr></thead>
   <tbody>
     <tr ng-repeat="machine in list_machines">
       <td class="navMachName">
@@ -33,6 +34,6 @@
   </tbody>
 </table>
 <table ng-show="showing=='users'" class="admin-nav-body">
-  <thead><tr><th>Users</th></tr></thead>
+  <thead><tr><th><%=l 'Users' %></th></tr></thead>
   <tbody><tr ng-repeat="user in list_users"><td>{{user.name}}</td></tr></tbody>
 </table>

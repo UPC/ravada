@@ -1,9 +1,9 @@
 <div ng-cloak>
   <div class="header">
     <b>{{showmachine.name}}</b>
-    <span ng-show="{{showmachine.is_paused && showmachine.is_active}}" class="label label-warning">Paused</span>
-    <span ng-show="{{!showmachine.is_paused && showmachine.is_active}}" class="label label-success">Running</span>
-    <span ng-show="{{!showmachine.is_active}}" class="label label-danger">Down</span>
+    <span ng-show="{{showmachine.is_paused && showmachine.is_active}}" class="label label-warning"><%=l 'Paused' %></span>
+    <span ng-show="{{!showmachine.is_paused && showmachine.is_active}}" class="label label-success"><%=l 'Running'%></span>
+    <span ng-show="{{!showmachine.is_active}}" class="label label-danger"><%=l 'Down'%></span>
     <input type="text" name="new_name"
      ng-show="show_rename"
      ng-model="rename.new_name"
@@ -33,27 +33,27 @@
   <i ng-show="{{showmachine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
   <input type="checkbox" checked
   ng-show="{{showmachine.is_base}} && !{{showmachine.has_clones}} && !{{showmachine.is_locked}}"
-  ng-click="action('machine','remove_base',showmachine.id)"> Remove base
+  ng-click="action('machine','remove_base',showmachine.id)"> <%=l 'Remove base' %>
   </br>
   <input type="checkbox"
   ng-show="!{{showmachine.is_base}} && !{{showmachine.is_locked}}"
-  ng-click="action('machine','prepare',showmachine.id)"> Prepare base
+  ng-click="action('machine','prepare',showmachine.id)"> <%=l 'Prepare base' %>
   </br>
   <input type="checkbox" checked ng-show="{{showmachine.is_public}}" ng-click="set_public(showmachine.id,0)">
   Public
   </br>
   <div ng-hide="{{showmachine.is_locked}}">
-    <a class="btn btn-success btn-sm" ng-hide="{{showmachine.is_active}}" ng-click="action('machine','start',showmachine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp Start</a>
-    <button type="button" ng-click="action('machine','shutdown',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp ShutDown</button>
-    <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{showmachine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp View</a>
-    <button type="button" ng-click="action('machine','screenshot',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp Screenshot</button>
+    <a class="btn btn-success btn-sm" ng-hide="{{showmachine.is_active}}" ng-click="action('machine','start',showmachine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp <%=l 'Start' %></a>
+    <button type="button" ng-click="action('machine','shutdown',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp <%=l 'ShutDown' %></button>
+    <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{showmachine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp <%=l 'View' %></a>
+    <button type="button" ng-click="action('machine','screenshot',showmachine.id)" ng-show="{{showmachine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp <%=l 'Screenshot' %></button>
   </div>
-  <div ng-show="{{showmachine.is_locked}}">Machine locked by requested <a href="/request/{{showmachine.is_locked}}.html">process</a></div>
+  <div ng-show="{{showmachine.is_locked}}"><%=l 'Machine locked by requested' %><a href="/request/{{showmachine.is_locked}}.html"><%=l 'process' %></a></div>
   <div>
-    <h2>Copy {{showmachine.name}}</h2>
+    <h2><%=l 'Copy'%> {{showmachine.name}}</h2>
     <form method="post" action="/machine/copy">
         <input type="hidden" name="id_base" value="{{showmachine.id}}">
-      <label for="copy_name_{{showmachine.id}}">Name:</label>
+      <label for="copy_name_{{showmachine.id}}"><%=l 'Name' %>:</label>
       <input name="copy_name_{{showmachine.id}}" type="text" size="40"
           value="{{showmachine.name}}-copy">
           <!-- todo check unique name -->

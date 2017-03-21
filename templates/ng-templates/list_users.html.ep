@@ -1,10 +1,10 @@
-<h2>Users</h2>
+<h2><%=l 'Users' %></h2>
 <div class="panel-body col-lg-12">
   <table class="table table-striped">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Admin</th>
+        <th><%=l 'Name' %></th>
+        <th><%=l 'Admin' %></th>
       </tr>
     </thead>
     <tbody>
