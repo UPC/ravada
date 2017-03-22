@@ -2,14 +2,14 @@ Source: ravada
 Section: perl
 Priority: optional
 Maintainer: frankie <frankie@>
-Build-Depends: debhelper (>= 9),
- perl
+Build-Depends: debhelper (>= 9)
+Build-Depends-Indep: perl
 Standards-Version: 3.9.8
 Homepage: https://metacpan.org/release/ravada
 
 Package: ravada
-Architecture: any
-Depends: ${misc:Depends}, ${perl:Depends}, ${shlibs:Depends}
+Architecture: all
+Depends: ${misc:Depends}, ${perl:Depends}
 Description: Remove Virtual Desktop Manager
  (no description was found)
  .
