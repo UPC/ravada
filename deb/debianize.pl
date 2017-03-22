@@ -11,16 +11,17 @@ use Ravada;
 use File::Copy;
 
 my $DIR_DST = getcwd."/../ravada-".Ravada::version();
+my $DEBIAN = "DEBIAN";
 
 my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
     ,'etc/xml'  => 'var/lib/ravada'
-    ,'docs/' => 'docs'
+    ,'docs/' => 'usr/share/docs/ravada'
     ,sql => 'usr/share/doc/ravada'
     ,'lib/' => 'usr/share/perl5'
     ,'blib/man3' => 'usr/share/man'
-    ,"debian/" => "./debian"
+    ,"debian/" => "./DEBIAN"
     ,'etc/systemd/' => 'lib/systemd/system/'
 );
 
@@ -39,6 +40,9 @@ my %FILE = (
 my @REMOVE= qw(
     usr/share/ravada/templates/bootstrap/get_authors.sh
     usr/share/man/man3/.exists
+    usr/share/man/man3/Ravada::Domain::LXC.3pm
+    usr/share/man/man3/Ravada::Domain::Void.3pm
+    usr/share/man/man3/Ravada::NetInterface::Void.3pm
 );
 
 ########################################################################
@@ -88,17 +92,17 @@ sub create_md5sums {
     my @files;
     chdir $DIR_DST or die "I can't chdir to $DIR_DST";
 
-    unlink "debian/md5sums";
+    unlink "$DEBIAN/md5sums";
 
     open my $find, ,'-|', 'find . -type f -printf \'%P\n\'' or die $!;
     while (<$find>) {
         chomp;
-        next if /^debian/;
-        print `md5sum $_ >> debian/md5sums`
+        next if /^debian/i;
+        print `md5sum $_ >> $DEBIAN/md5sums`
     }
     close $find;
     chdir "..";
-    chmod 0644,"$DIR_DST/debian/md5sums" or die "$! $DIR_DST/debian/md5sums";
+    chmod 0644,"$DIR_DST/$DEBIAN/md5sums" or die "$! $DIR_DST/$DEBIAN/md5sums";
 }
 
 sub create_deb {
@@ -187,15 +191,20 @@ sub chown_pms {
 }
 
 sub chmod_control_files {
-    for (qw(ravada.docs changelog control copyright ravada-docs.docs ravada.doc-base.EX)) {
-        my $path  = "$DIR_DST/debian/$_";
+    for (qw(control conffiles)) {
+        my $path  = "$DIR_DST/$DEBIAN/$_";
         warn "Missing $path"                    if ! -e $path;
+        chmod 0644 , $path or die "$! $path"    if -e $path;
+    }
+
+    for(qw(conffiles)) {
+        my $path  = "$DIR_DST/$DEBIAN/$_";
         chmod 0644 , $path or die "$! $path"    if -e $path;
     }
 }
 
 sub chmod_ravada_conf {
-    chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
+    chmod 0644,"$DIR_DST/etc/ravada.conf" or die $!;
 }
 
 sub tar {
@@ -228,7 +237,7 @@ remove_not_needed();
 change_mod();
 gzip_docs();
 gzip_man();
-chown_files('debian',0755);
+chown_files($DEBIAN,0755);
 chown_files('etc');
 chown_files('lib');
 chown_files('var/lib/ravada');
@@ -239,4 +248,4 @@ chmod_control_files();
 chmod_ravada_conf();
 create_md5sums();
 tar();
-#create_deb();
+create_deb();
