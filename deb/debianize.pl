@@ -31,7 +31,7 @@ for ( qw(css fonts img js templates)) {
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
     ,'bin/rvd_back.pl' => 'usr/sbin/rvd_back'
-    ,'rvd_front.pl' => 'usr/bin/rvd_front'
+    ,'bin/rvd_front.pl' => 'usr/bin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
     ,'copyright' => 'usr/share/doc/ravada'
 );
@@ -39,12 +39,6 @@ my %FILE = (
 my @REMOVE= qw(
     usr/share/ravada/templates/bootstrap/get_authors.sh
     usr/share/man/man3/.exists
-    debian/menu.ex
-    debian/postinst.ex
-    debian/postrm.ex
-    debian/preinst.ex
-    debian/prerm.ex
-    debian/ravada.cron.d.ex
 );
 
 ########################################################################
@@ -195,8 +189,8 @@ sub chown_pms {
 sub chmod_control_files {
     for (qw(ravada.docs changelog control copyright ravada-docs.docs ravada.doc-base.EX)) {
         my $path  = "$DIR_DST/debian/$_";
-        die "Missing $path" if ! -e $path;
-        chmod 0644 , $path or die "$! $path";
+        warn "Missing $path"                    if ! -e $path;
+        chmod 0644 , $path or die "$! $path"    if -e $path;
     }
 }
 
