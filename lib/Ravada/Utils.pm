@@ -1,5 +1,14 @@
 package Ravada::Utils;
 
+use warnings;
+use strict;
+
+=head1 NAME
+
+Ravada::Utils - Misc util libraries for Ravada
+
+=cut
+
 =head2 now
 
 Returns the current datetime

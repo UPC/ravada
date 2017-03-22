@@ -1,5 +1,14 @@
 package Ravada::VM::KVM;
 
+use warnings;
+use strict;
+
+=head1 NAME
+
+Ravada::VM::KVM - KVM Virtual Managers library for Ravada
+
+=cut
+
 use Carp qw(croak carp cluck);
 use Data::Dumper;
 use Digest::MD5;

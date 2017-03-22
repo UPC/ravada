@@ -3,6 +3,12 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
+=head2 NAME
+
+Ravada::Domain::KVM - KVM Virtual Machines library for Ravada
+
+=cut
+
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;

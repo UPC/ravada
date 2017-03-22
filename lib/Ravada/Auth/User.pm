@@ -3,6 +3,12 @@ package Ravada::Auth::User;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Auth::User - User management and tools library for Ravada
+
+=cut
+
 use Carp qw(confess croak);
 use Data::Dumper;
 use Moose::Role;

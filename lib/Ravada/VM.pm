@@ -2,6 +2,11 @@ use warnings;
 use strict;
 
 package Ravada::VM;
+=head1 NAME
+
+Ravada::VM - Virtual Managers library for Ravada
+
+=cut
 
 use Carp qw( carp croak);
 use Data::Dumper;

@@ -3,6 +3,12 @@ package Ravada::NetInterface::KVM;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::NetInterface::KVM - KVM network interface management API for Ravada
+
+=cut
+
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use Hash::Util qw(lock_keys);

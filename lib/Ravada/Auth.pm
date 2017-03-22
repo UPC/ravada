@@ -7,6 +7,12 @@ our $LDAP;
 
 use Ravada::Auth::SQL;
 
+=head1 NAME
+
+Ravada::Auth - Authentication library for Ravada users
+
+=cut
+
 eval { 
     require Ravada::Auth::LDAP; 
 };
