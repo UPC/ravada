@@ -56,7 +56,6 @@
 
 %                   }
 %                   if ( $machine->{id_clone}) {
-                        <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog"></a></i>
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">
                         <b>Restore</b> will remove all the contents of the machine
                         <i><%= $machine->{name_clone} %></i>.
@@ -72,6 +71,7 @@
                             <b>Shutting down ... </b>
                             It may take a couple of minutes.
                     </div>
+                    <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog"></a></i>
 %                   }
 %               }
             </div>

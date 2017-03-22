@@ -18,9 +18,9 @@
             <tbody>
                 <tr ng-repeat="machine in list_machines">
                     <td>
-                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
                         <a ng-show="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM"><b>{{machine.name}}</b></a>
                         <a ng-hide="{{machine.is_public}}" data-toggle="modal" data-target="#modal{{machine.id}}" title="Manage VM">{{machine.name}}</a>
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
 
                     </td>
                     <td>

@@ -27,7 +27,6 @@ WriteMakefile(
   TEST_REQUIRES => {
     'Test::SQL::Data' => 0
   },
-  EXE_FILES => ['bin/rvd_front.pl' ,'bin/rvd_back.pl'],
 
   test      => {TESTS => 't/*.t t/*/*.t'},
   clean     => {FILES => 't/.db' }

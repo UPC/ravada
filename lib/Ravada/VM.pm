@@ -56,7 +56,7 @@ has 'readonly' => (
     , is => 'ro'
     ,default => 0
 );
-
+#
 ############################################################
 #
 # Method Modifiers definition
@@ -102,7 +102,6 @@ sub _around_create_domain {
 
 ############################################################
 #
-
 sub _domain_remove_db {
     my $self = shift;
     my $name = shift;
@@ -136,9 +135,9 @@ sub name {
     my $self = shift;
 
     return $self->_data('name') if defined $self->{_data}->{name};
-    my ($ref) = ref($self) =~ /.*::(.*)/;
 
-   return ($ref or ref($self))."_".$self->host;
+    my ($ref) = ref($self) =~ /.*::(.*)/;
+    return ($ref or ref($self))."_".$self->host;
 }
 
 =head2 search_domain_by_id
