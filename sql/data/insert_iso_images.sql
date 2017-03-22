@@ -58,3 +58,14 @@ VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
     ,'http://releases.ubuntu.com/16.10/ubuntu-16.10-desktop-amd64.iso'
     ,'3f50877c05121f7fd8544bef2d722824'
     );
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,md5)
+VALUES('Debian Jessie 64 bits netinst'
+    ,'Debian 8.5.0 Jessie 64 bits (netsinst)'
+    ,'amd64'
+    ,'jessie-amd64.xml'
+    ,'jessie-volume.xml'
+    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/amd64/iso-cd/debian-8.5.0-amd64-netinst.iso'
+    ,'3e1b9029a0cf188730646c379d15073f'
+   );
+

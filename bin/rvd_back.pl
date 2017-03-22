@@ -103,6 +103,10 @@ sub clean_killed_requests {
 }
 
 sub start {
+    {
+        my $ravada = Ravada->new( config => $FILE_CONFIG );
+        $Ravada::CONNECTOR->dbh;
+    }
     for (;;) {
         my $pid = fork();
         die "I can't fork $!" if !defined $pid;
@@ -118,7 +122,7 @@ sub start {
 sub add_user {
     my $login = shift;
 
-    print "password : ";
+    print "$login password: ";
     my $password = <STDIN>;
     chomp $password;
 

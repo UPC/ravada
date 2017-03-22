@@ -1,7 +1,7 @@
+package Ravada::Auth;
+
 use warnings;
 use strict;
-
-package Ravada::Auth;
 
 our $LDAP;
 

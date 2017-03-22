@@ -233,7 +233,7 @@ for my $vm_name (qw( Void KVM )) {
     use_ok($CLASS) or next;
 
     my $vm_ok;
-    eval { 
+    eval {
         my $vm = rvd_back->search_vm($vm_name);
         $vm_ok=1    if $vm;
     };
@@ -241,6 +241,11 @@ for my $vm_name (qw( Void KVM )) {
     SKIP: {
         #TODO: find out if this system has iptables
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm_ok && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm_ok = undef;
+        }
+
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
 

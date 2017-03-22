@@ -33,11 +33,6 @@ has vm => (
     ,lazy => 1
 );
 
-has default_storage_pool_name => (
-    isa => 'Str'
-    ,is => 'rw'
-);
-
 has type => (
     isa => 'Str'
     ,is => 'ro'
@@ -169,6 +164,7 @@ sub dir_img {
     my $self = shift;
 
     my $pool = $self->_load_storage_pool();
+    $pool = $self->_create_default_pool() if !$pool;
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -176,6 +172,38 @@ sub dir_img {
         if !$dir;
 
     return $dir;
+}
+
+sub _create_default_pool {
+    my $self = shift;
+
+    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+
+    my $dir = "/var/lib/libvirt/images/default";
+    mkdir $dir if ! -e $dir;
+
+    my $xml =
+"<pool type='dir'>
+  <name>default</name>
+  <uuid>$uuid</uuid>
+  <capacity unit='bytes'></capacity>
+  <allocation unit='bytes'></allocation>
+  <available unit='bytes'></available>
+  <source>
+  </source>
+  <target>
+    <path>$dir</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>"
+;
+    my $pool = $self->vm->create_storage_pool($xml);
+    $pool->set_autostart(1);
+
 }
 
 =head2 create_domain
@@ -232,16 +260,11 @@ sub search_domain {
 
         my $domain;
 
-        my @args_create = ();
-        @args_create = (
-                    _vm => $self)
-        if !$self->readonly;
-
         eval {
             $domain = Ravada::Domain::KVM->new(
                 domain => $dom
                 ,readonly => $self->readonly
-                ,@args_create
+                ,_vm => $self
             );
         };
         warn $@ if $@;
@@ -404,6 +427,7 @@ sub _domain_create_from_iso {
     _xml_modify_cdrom($xml, $device_cdrom);
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
+    _xml_modify_video($xml);
 
     my $domain = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
@@ -421,7 +445,6 @@ sub _domain_create_common {
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml);
-    _xml_modify_video($xml);
     $self->_fix_pci_slots($xml);
 
     my $dom;

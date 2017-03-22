@@ -9,6 +9,7 @@ use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+use Mojo::Home;
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -34,7 +35,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Login'
                                               ,login_message => ''
                                               }
-                                      ,file => 'rvd_front.conf' };
+                                      ,file => '/etc/rvd_front.conf' };
 #####
 #####
 #####
@@ -59,6 +60,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
+plugin 'RenderFile';
 
 GetOptions(
      'config=s' => \$FILE_CONFIG
@@ -84,7 +86,7 @@ hook before_routes => sub {
   my $c = shift;
 
   $c->stash(version => $RAVADA->version."$VERSION_TYPE");
-  my $url = $c->req->url;
+  my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>['/js/form.js'
                 ,'/js/ravada.js'
@@ -94,7 +96,7 @@ hook before_routes => sub {
             );
 
   return access_denied($c)
-    if $url =~ /\.json/
+    if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
 
   return login($c)
@@ -267,6 +269,10 @@ get '/machine/info/(:id).(:type)' => sub {
     warn $id;
     die "No id " if !$id;
     $c->render(json => $RAVADA->domain_info(id => $id));
+};
+
+any '/machine/settings/(:id).(:type)' => sub {
+    return settings_machine(@_);
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
@@ -479,6 +485,33 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+
+get '/img/screenshots/:file' => sub {
+    my $c = shift;
+
+    my $file = $c->param('file');
+    my $path = $DOCUMENT_ROOT."/".$c->req->url->to_abs->path;
+
+    my ($id_domain ) =$path =~ m{/(\d+)\..+$};
+    if (!$id_domain) {
+        warn"ERROR : no id domain in $path";
+        return $c->reply->not_found;
+    }
+    if (!$USER->is_admin) {
+        warn $id_domain;
+        my $domain = $RAVADA->search_domain_by_id($id_domain);
+        return $c->reply->not_found if !$domain;
+        unless ($domain->is_base && $domain->is_public) {
+            warn "not owner";
+            return access_denied($c) if $USER->id != $domain->id_owner;
+        }
+    }
+    return $c->reply->not_found  if ! -e $path;
+    return $c->render_file(
+                      filepath => $path
+        ,'content_disposition' => 'inline'
+    );
+};
 
 ###################################################
 
@@ -890,8 +923,45 @@ sub check_back_running {
     return 1;
 }
 
+sub _init_user_group {
+    return if $>;
+
+    my $user = $CONFIG_FRONT->{user};
+    my $group = $CONFIG_FRONT->{group};
+
+    if (defined $group) {
+        $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
+            if $group !~ /^\d+$/;
+
+        warn "setting \) to $group\n";
+        $) = $group;
+    }
+    if (defined $user) {
+        $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"
+            if $user !~ /^\d+$/;
+        $> = $user;
+        warn "setting \> to $user\n";
+    }
+
+
+}
+
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
+
+    _init_user_group();
+    my $home = Mojo::Home->new();
+    $home->detect();
+
+    if (exists $ENV{MORBO_VERBOSE}
+        || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
+            return if -e $home->rel_dir("public");
+    }
+    app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
+            or $home->rel_dir("public"));
+    app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
+            or $home->rel_dir("templates"));
+
 }
 
 sub _search_requested_machine {
@@ -951,11 +1021,48 @@ sub manage_machine {
     Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id)   if $c->param('resume');
 
     $c->stash(domain => $domain);
-    $c->stash(uri => $c->req->url->to_abs);
 
     _enable_buttons($c, $domain);
 
     $c->render( template => 'main/manage_machine');
+}
+
+sub settings_machine {
+    my $c = shift;
+    my ($domain) = _search_requested_machine($c);
+    return $c->render("Domain not found")   if !$domain;
+
+    $c->stash(domain => $domain);
+
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
+            if $c->param('shutdown') && $domain->is_active;
+
+    $req = Ravada::Request->start_domain(
+                        uid => $USER->id
+                     , name => $domain->name
+                , remote_ip => _remote_ip($c)
+            ) if $c->param('start') && !$domain->is_active;
+
+    _enable_buttons($c, $domain);
+
+    $c->stash(message => '');
+    my @reqs = ();
+    for (qw(sound video network)) {
+        my $driver = "driver_$_";
+        if ( $c->param($driver) ) {
+            my $req2 = Ravada::Request->set_driver(uid => $USER->id
+                , id_domain => $domain->id
+                , id_option => $c->param($driver)
+            );
+            $c->stash(message => 'Driver change will apply on next start');
+            push @reqs,($req2);
+        }
+    }
+    for my $req (@reqs) {
+        $RAVADA->wait_request($req, 60) 
+    }
+    return $c->render(template => 'main/settings_machine'
+        , action => $c->req->url->to_abs->path);
 }
 
 sub _enable_buttons {

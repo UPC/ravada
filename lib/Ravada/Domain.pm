@@ -12,6 +12,7 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
+use Ravada::Domain::Driver;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -751,12 +752,12 @@ sub clone {
 
     my $id_base = $self->id;
 
-
     return $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
+        ,_vm => $self->_vm
     );
 }
 
@@ -1115,5 +1116,70 @@ sub _post_rename {
      $sth->execute($filename, $self->id);
      $sth->finish;
  }
+
+=head2 drivers
+
+List the drivers available for a domain. It may filter for a given type.
+
+    my @drivers = $domain->drivers();
+    my @video_drivers = $domain->drivers('video');
+
+=cut
+
+sub drivers {
+    my $self = shift;
+    my $name = shift;
+    my $type = (shift or $self->_vm->type);
+
+    _init_connector();
+
+    $type = 'qemu' if $type =~ /^KVM$/;
+    my $query = "SELECT id from domain_drivers_types "
+        ." WHERE vm=?";
+    $query .= " AND name=?" if $name;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    my @sql_args = ($type);
+    push @sql_args,($name)  if $name;
+
+    $sth->execute(@sql_args);
+
+    my @drivers;
+    while ( my ($id) = $sth->fetchrow) {
+        push @drivers,Ravada::Domain::Driver->new(id => $id, domain => $self);
+    }
+    return $drivers[0] if !wantarray && $name && scalar@drivers< 2;
+    return @drivers;
+}
+
+=head2 set_driver_id
+
+Sets the driver of a domain given it id. The id must be one from
+the table domain_drivers_options
+
+    $domain->set_driver_id($id_driver);
+
+=cut
+
+sub set_driver_id {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT d.name,o.value "
+        ." FROM domain_drivers_types d, domain_drivers_options o"
+        ." WHERE d.id=o.id_driver_type "
+        ."    AND o.id=?"
+    );
+    $sth->execute($id);
+
+    my ($type, $value) = $sth->fetchrow;
+    confess "Unknown driver option $id" if !$type || !$value;
+
+    $self->set_driver($type => $value);
+    $sth->finish;
+}
+
 
 1;
