@@ -1,0 +1,91 @@
+# Translators:
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# Kimia mirehbar	kimia@etsetb.upc.edu
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-01-03 12:12+0300\n"
+"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Language-Team: \n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+
+msgid "Ravada broker"
+msgstr "واسطه راوادا"
+
+msgid "Machine Name"
+msgstr "نام ماشین"
+
+msgid "Tools"
+msgstr "ابزار"
+
+msgid "Machines List"
+msgstr "لیست ماشین ها"
+
+msgid "Users"
+msgstr "کاربرها"
+
+msgid "Choose a Machine to Start"
+msgstr "برای آغاز یک ماشین انتخاب کنید"
+
+msgid "Start"
+msgstr "آغاز"
+
+msgid "Stop"
+msgstr "پایان"
+
+msgid "View"
+msgstr "نمایش"
+
+msgid "Prepare Base"
+msgstr "ایجاد پایگاه"
+
+msgid "Clone"
+msgstr "همسان"
+
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr "عدم توانایی در آماده سازی پایگاه"
+
+msgid "Clone/s"
+msgstr "همسان ها"
+
+msgid "NEW"
+msgstr "جدید"
+
+msgid "Users List"
+msgstr "لیست کاربرها"
+
+msgid "Name"
+msgstr "نام"
+
+msgid "Log Out"
+msgstr "خروج"
+
+msgid "Available Machines"
+msgstr "ماشین های موجود"
+
+msgid "Help"
+msgstr "راهنما"
+
+msgid "Requirements"
+msgstr "پیش نیازها"
+
+msgid "About"
+msgstr "درباره"
+
+msgid "Messages"
+msgstr "پیغام ها"
+
+msgid "Mark all as Read"
+msgstr "نمایش همه موارد به عنوان خوانده شده"
+
+msgid "Settings"
+msgstr "تنظیمات"
+
+msgid "New Machine"
+msgstr "ماشین جدید"
