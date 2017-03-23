@@ -3,26 +3,42 @@
 use warnings;
 use strict;
 
+<<<<<<< HEAD
 use Cwd qw(getcwd);
+=======
+>>>>>>> master
 use File::Path qw(remove_tree make_path);
 use IPC::Run3;
 use lib './lib';
 use Ravada;
 use File::Copy;
 
+<<<<<<< HEAD
 my $DIR_DST = getcwd."/../ravada-".Ravada::version();
 my $DEBIAN = "DEBIAN";
+=======
+my $DIR_SRC = "pkg-debian";
+my $DIR_DST = "pkg-debian-out";
+>>>>>>> master
 
 my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
     ,'etc/xml'  => 'var/lib/ravada'
+<<<<<<< HEAD
     ,'docs/' => 'usr/share/docs/ravada'
     ,sql => 'usr/share/doc/ravada'
     ,'lib/' => 'usr/share/perl5'
     ,'blib/man3' => 'usr/share/man'
     ,"debian/" => "./DEBIAN"
     ,'etc/systemd/' => 'lib/systemd/system/'
+=======
+    ,'docs/' => 'usr/share/doc/ravada'
+    ,sql => 'usr/share/doc/ravada'
+    ,'lib/' => 'usr/share/perl5'
+    ,'blib/man3' => 'usr/share/man'
+    ,"$DIR_SRC/" => "./"
+>>>>>>> master
 );
 
 for ( qw(css fonts img js templates)) {
@@ -32,17 +48,28 @@ for ( qw(css fonts img js templates)) {
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
     ,'bin/rvd_back.pl' => 'usr/sbin/rvd_back'
+<<<<<<< HEAD
     ,'bin/rvd_front.pl' => 'usr/bin/rvd_front'
+=======
+    ,'rvd_front.pl' => 'usr/sbin/rvd_front'
+>>>>>>> master
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
     ,'copyright' => 'usr/share/doc/ravada'
 );
 
 my @REMOVE= qw(
+<<<<<<< HEAD
     usr/share/ravada/templates/bootstrap/get_authors.sh
     usr/share/man/man3/.exists
     usr/share/man/man3/Ravada::Domain::LXC.3pm
     usr/share/man/man3/Ravada::Domain::Void.3pm
     usr/share/man/man3/Ravada::NetInterface::Void.3pm
+=======
+    usr/share/doc/ravada/_config.yml
+    usr/share/doc/ravada/INSTALL.md
+    usr/share/ravada/templates/bootstrap/get_authors.sh
+    usr/share/man/man3/.exists
+>>>>>>> master
 );
 
 ########################################################################
@@ -92,17 +119,30 @@ sub create_md5sums {
     my @files;
     chdir $DIR_DST or die "I can't chdir to $DIR_DST";
 
+<<<<<<< HEAD
     unlink "$DEBIAN/md5sums";
+=======
+    unlink "DEBIAN/md5sums";
+>>>>>>> master
 
     open my $find, ,'-|', 'find . -type f -printf \'%P\n\'' or die $!;
     while (<$find>) {
         chomp;
+<<<<<<< HEAD
         next if /^debian/i;
         print `md5sum $_ >> $DEBIAN/md5sums`
     }
     close $find;
     chdir "..";
     chmod 0644,"$DIR_DST/$DEBIAN/md5sums" or die "$! $DIR_DST/$DEBIAN/md5sums";
+=======
+        next if /^DEBIAN/;
+        print `md5sum $_ >> DEBIAN/md5sums`
+    }
+    close $find;
+    chdir "..";
+    chmod 0644,"$DIR_DST/DEBIAN/md5sums" or die $!;
+>>>>>>> master
 }
 
 sub create_deb {
@@ -115,7 +155,11 @@ sub create_deb {
 }
 
 sub remove_use_lib {
+<<<<<<< HEAD
     for my $file ('usr/bin/rvd_front','usr/sbin/rvd_back') {
+=======
+    for my $file ('usr/sbin/rvd_front','usr/sbin/rvd_back') {
+>>>>>>> master
         my $path = "$DIR_DST/$file";
         die "Missing file '$path'" if ! -e $path;
         copy($path, "$path.old") or die "$! $path -> $path.old";
@@ -191,6 +235,7 @@ sub chown_pms {
 }
 
 sub chmod_control_files {
+<<<<<<< HEAD
     for (qw(control conffiles)) {
         my $path  = "$DIR_DST/$DEBIAN/$_";
         warn "Missing $path"                    if ! -e $path;
@@ -200,10 +245,17 @@ sub chmod_control_files {
     for(qw(conffiles)) {
         my $path  = "$DIR_DST/$DEBIAN/$_";
         chmod 0644 , $path or die "$! $path"    if -e $path;
+=======
+    for (qw(conffiles templates)) {
+        my $path  = "$DIR_DST/DEBIAN/$_";
+        die "Missing $path" if ! -e $path;
+        chmod 0644 , $path or die "$! $path";
+>>>>>>> master
     }
 }
 
 sub chmod_ravada_conf {
+<<<<<<< HEAD
     chmod 0644,"$DIR_DST/etc/ravada.conf" or die $!;
 }
 
@@ -225,27 +277,51 @@ sub make_pl {
     @cmd = ('make');
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
+=======
+    chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
+>>>>>>> master
 }
 
 #########################################################################
 
 clean();
+<<<<<<< HEAD
 make_pl();
+=======
+>>>>>>> master
 copy_dirs();
 copy_files();
 remove_not_needed();
 change_mod();
 gzip_docs();
 gzip_man();
+<<<<<<< HEAD
 chown_files($DEBIAN,0755);
 chown_files('etc');
 chown_files('lib');
 chown_files('var/lib/ravada');
+=======
+chown_files('DEBIAN',0755);
+#chown_files('usr/share/doc/ravada');
+#chown_files('usr/share/ravada/public');
+#chown_files('usr/share/ravada/templates');
+chown_files('etc');
+chown_files('lib');
+#chown_files('lib/systemd');
+chown_files('var/lib/ravada');
+#chown_files('usr/share/perl5');
+#chown_files('usr/share/man');
+>>>>>>> master
 chown_files('usr');
 chown_files('var');
 remove_use_lib();
 chmod_control_files();
 chmod_ravada_conf();
+<<<<<<< HEAD
 create_md5sums();
 tar();
+=======
+#chown_pms();
+create_md5sums();
+>>>>>>> master
 create_deb();

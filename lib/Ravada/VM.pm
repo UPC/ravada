@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 package Ravada::VM;
+
 =head1 NAME
 
 Ravada::VM - Virtual Managers library for Ravada
@@ -56,7 +57,6 @@ has 'readonly' => (
     , is => 'ro'
     ,default => 0
 );
-#
 ############################################################
 #
 # Method Modifiers definition
@@ -102,6 +102,7 @@ sub _around_create_domain {
 
 ############################################################
 #
+
 sub _domain_remove_db {
     my $self = shift;
     my $name = shift;

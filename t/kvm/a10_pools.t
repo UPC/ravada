@@ -149,7 +149,6 @@ sub test_volumes_in_two_pools {
 
     my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
 
-    clean_pool();
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 

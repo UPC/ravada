@@ -24,11 +24,11 @@ clones won't require many space.
 
 ## Ubuntu
 
-We provide _deb_ Ubuntu packages. Download it from *TODO*.
+We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/).
 
 ## Development Release
 
-Read docs/INSTALL\_devel.md if you want to develop Ravada or install a bleeding
+Read [docs/INSTALL\_devel.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL_devel.md)  if you want to develop Ravada or install a bleeding
 edge, non-packaged, release.
 
 # Mysql Database
