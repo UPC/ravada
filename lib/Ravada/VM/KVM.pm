@@ -379,10 +379,13 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
+    my $target = $args{target};
     my $dir_img = $self->dir_img();
     my $suffix = ".img";
     $suffix = ".SWAP.img"   if $args{swap};
-    my (undef, $img_file) = tempfile($args{name}."-XXXX"
+    my $filename = $args{name};
+    $filename .= "-$target" if $target;
+    my (undef, $img_file) = tempfile($filename."-XXXX"
         ,DIR => $dir_img
         ,OPEN => 0
         ,SUFFIX => $suffix
@@ -439,6 +442,7 @@ sub _domain_create_from_iso {
           name => $args{name}
          , xml => $file_xml
         , size => $disk_size
+        ,target => 'vda'
     );
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
@@ -513,10 +517,11 @@ sub _create_disk_qcow2 {
 
     my @files_out;
 
-    for my $file_base ( $base->list_files_base ) {
+    for my $file_data ( $base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
         my $ext = ".qcow2";
         $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\.\w+$/;
-        my $file_out = "$dir_img/$name-"._random_name(4).$ext;
+        my $file_out = "$dir_img/$name-$target-"._random_name(2).$ext;
 
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
