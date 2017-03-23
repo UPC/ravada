@@ -1,5 +1,8 @@
 # Development release
 
+If you are not sure, you probably want to install the stable release.
+Follow this [guide](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md).
+
 You can get the development release cloning the sources. Don't do this if you install
 a packaged release.
 
