@@ -24,7 +24,7 @@ clones won't require many space.
 
 ## Ubuntu
 
-We provide _deb_ Ubuntu packages. Download it from *TODO*.
+We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/):
 
 ## Development Release
 
