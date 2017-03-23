@@ -107,9 +107,6 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-msgid "Start"
-msgstr ""
-
 msgid "ShutDown"
 msgstr ""
 
