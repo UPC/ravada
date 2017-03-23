@@ -12,11 +12,11 @@ Remote Access: [Spice](http://www.spice-space.org/)
 
 Read [docs/INSTALL.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md)
 
-Connect to the server with a web browser at http://servername:3000/
 
 ### Production
 
 See [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md)
+for production fine-tuning guidelines.
 
 ### Operation
 
