@@ -22,6 +22,3 @@ for production fine-tuning guidelines.
 
 See [docs/operation.md](https://github.com/frankiejol/ravada/blob/master/docs/operation.md)
 
-### Testing
-
-See [docs/test.md](https://github.com/frankiejol/ravada/blob/master/docs/test.md)
