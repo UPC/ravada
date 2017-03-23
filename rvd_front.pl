@@ -483,6 +483,53 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+###################################################
+
+## user_settings
+
+any '/user_settings' => sub {
+    my $c = shift;
+    user_settings($c);
+};
+
+sub user_settings {
+    my $c = shift;
+    if ( defined $c->param('password') && defined $c->param('conf_password')) {
+      if ($c->param('password') eq $c->param('conf_password')) {
+            $USER->change_password($c->param('password'));
+      }
+    }
+
+    if ( $c->param('check_language') ) {
+      if ($c->param('language') eq 'es' ) { $c->render(template => 'bootstrap/es/user_settings'); }
+      else { $c->render(template => 'bootstrap/user_settings'); }
+    }
+    else { $c->render(template => 'bootstrap/user_settings'); }
+    ### warn $c->param('name');
+    #if ($c->param('name') && $c->param('upload')) {
+      #$c->param('extension')
+    #  my $file = $c->param('upload');
+    #  if( $file->filename =~ /\.iso$/ ) {
+    #      my $fileuploaded = $c->req->upload('upload');
+          #$fileuploaded->move_to('/var/tmp/'.$c->param('name'));
+
+    #      my ($id_xml, $id_xml_vol);
+    #      if ($c->param('id_xml') eq 'id_xml_Linux_32') {
+    #        $id_xml = 'trusty-i386.xml';
+    #        $id_xml_vol = 'trusty-volume.xml';
+    #      }
+    #      if ($c->param('id_xml') eq 'id_xml_Linux_64') {
+    #        $id_xml = 'trusty-amd64.xml';
+    #        $id_xml_vol = 'trusty-amd64-volume.xml';
+    #      }
+
+    #      $RAVADA->insert_iso( name => $c->param('name'),
+    #                           xml => $id_xml, xml_volume => $id_xml_vol);
+
+    #  }
+    #}
+
+};
 
 ###################################################
 
@@ -993,7 +1040,7 @@ sub settings_machine {
         }
     }
     for my $req (@reqs) {
-        $RAVADA->wait_request($req, 60) 
+        $RAVADA->wait_request($req, 60)
     }
     return $c->render(template => 'main/settings_machine'
         , action => $c->req->url->to_abs->path);

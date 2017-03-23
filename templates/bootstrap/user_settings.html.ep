@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+
+        <!--BASES AND DOMAINS LIST-->
+        <div ng-controller="user_settings">
+
+            <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2 class="text-center">Settings</h2>
+                        <form onsubmit='alert(document.getElementById('upload').value);' method='post' enctype="multipart/form-data">
+                            <p><input type="checkbox" name="check_language" id="check_language"> I want to change my language instead of my password</p>
+                            <p>Language:
+                               <input type='radio' name="language" value="en" id="language">English</option>
+                               <input type='radio' name="language" value="es" id="language">Spanish</option>
+                             </select></p>
+
+                            <p>New Password: <input type= 'text' name= 'password' id='password'></p>
+                            <p>Confirm Password: <input type='text' name='conf_password' id='conf_password'></p>
+
+                            <!--    <p>Xml: </p>
+                                <select name ="id_xml" id="id_xml">
+                                  <option value="id_xml_Linux_32">Linux 32 bits</option>
+                                  <option value="id_xml_Linux_64">Linux 64 bits</option>
+                                  <option value="id_xml_Win7">Windows 7</option>
+                                  <option value="id_xml_Win7"></option>
+                                </select> -->
+
+                            <p><input type='submit' value='Submit'>
+                            </p>
+                        </form>
+                  </div>
+                  </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- <script>
+    var file_name = document.getElementById('upload').value;
+    var extension = file_name.split(".").pop();
+    </script> -->
+
+    %= include 'bootstrap/scripts'
+    %= include 'bootstrap/footer'
+</body>
+</html>
+
+            <!--          <h2><%=l 'Machines List' %>
+                      <button type="button" style="float: right; margin: 0 0 0 15px;" class="btn btn-success" data-toggle="modal" data-target="#modalNM"><%=l 'New Machine' %></button>
+
+                      <a style="float: right; margin: 0 10px;" class="btn btn-info" href="/machines"><i class="fa fa-refresh" aria-hidden="true"></i></A>
+
+                      </h2>
+                        <div id="modalNM" class="modal fade" role="dialog" ng-controller="new_machine">
+                          <div class="modal-dialog">
+
+                            <div class="modal-content">
+
+
+                              <sol-show-newmachine></sol-show-newmachine> -->
