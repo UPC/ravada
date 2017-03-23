@@ -1,13 +1,12 @@
 # Translators:
-# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
-# Kimia mirehbar	kimia@etsetb.upc.edu
+# Kimia Mirehbar 	<kimia@etsetb.upc.edu>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
 "PO-Revision-Date: 2017-01-03 12:12+0300\n"
-"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Last-Translator: Kimia Mirehbar    kimia@etsetb.upc.edu\n"
 "Language-Team: \n"
 "Language: ca\n"
 "MIME-Version: 1.0\n"
