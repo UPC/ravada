@@ -28,7 +28,7 @@ We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](h
 
 ## Development Release
 
-Read docs/INSTALL\_devel.md if you want to develop Ravada or install a bleeding
+Read [docs/INSTALL\_devel.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL_devel.md)  if you want to develop Ravada or install a bleeding
 edge, non-packaged, release.
 
 # Mysql Database
