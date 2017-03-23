@@ -62,7 +62,7 @@ ravadaApp.directive("solShowMachine", swMach)
           break;
       }
     }
-    $scope.hide_clones = false;
+    $scope.hide_clones = true;
     $scope.hideClones = function(){
       $scope.hide_clones = !$scope.hide_clones;
     }
