@@ -553,8 +553,8 @@ sub add_volume {
     $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
     if (!$args{xml}) {
-        $args{xml} = 'etc/xml/default-volume.xml';
-        $args{xml} = 'etc/xml/swap-volume.xml'      if $args{swap};
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/default-volume.xml";
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
     }
 
     my $path = $args{vm}->create_volume(

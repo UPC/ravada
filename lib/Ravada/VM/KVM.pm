@@ -51,7 +51,9 @@ has type => (
 #########################################################################3
 #
 
+#TODO use config file for DIR_XML
 our $DIR_XML = "etc/xml";
+$DIR_XML = "/var/lib/ravada/xml/" if $0 =~ m{^/usr/sbin};
 
 our $XML = XML::LibXML->new();
 
@@ -79,7 +81,10 @@ sub _connect {
                               ,readonly => $self->mode
                           );
     }
-#    $vm->register_close_callback(\&_reconnect);
+    if ( ! $vm->list_storage_pools ) {
+	warn "WARNING: No storage pools creating default\n";
+    	$self->_create_default_pool($vm);
+    }
     return $vm;
 }
 
@@ -185,6 +190,8 @@ sub dir_img {
 
 sub _create_default_pool {
     my $self = shift;
+    my $vm = shift;
+    $vm = $self->vm if !$vm;
 
     my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
@@ -210,7 +217,7 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $self->vm->create_storage_pool($xml);
+    my $pool = $vm->create_storage_pool($xml);
     $pool->set_autostart(1);
 
 }
@@ -341,7 +348,7 @@ sub create_volume {
     $allocation = int($capacity * 0.1)+1
         if !defined $allocation && $capacity;
 
-    open my $fh,'<', $file_xml or die "$! $file_xml";
+    open my $fh,'<', $file_xml or confess "$! $file_xml";
 
     my $doc;
     eval { $doc = $XML->load_xml(IO => $fh) };
@@ -425,9 +432,12 @@ sub _domain_create_from_iso {
     my $device_cdrom = $self->_iso_name($iso, $args{request});
 
     my $disk_size = $args{disk} if $args{disk};
+
+    my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
+
     my $device_disk = $self->create_volume(
           name => $args{name}
-         , xml =>  $DIR_XML."/".$iso->{xml_volume}
+         , xml => $file_xml
         , size => $disk_size
     );
 
