@@ -65,12 +65,14 @@ sub test_add_volume {
     my $vm = shift;
     my $domain = shift;
     my $volume_name = shift or confess "Missing volume name";
+    my $swap = shift;
 
     my @volumes = $domain->list_volumes();
 
 #    diag("[".$domain->vm."] adding volume $volume_name to domain ".$domain->name);
 
-    $domain->add_volume(name => $domain->name.".$volume_name", size => 512*1024 , vm => $vm);
+    $domain->add_volume(name => $domain->name.".$volume_name", size => 512*1024 , vm => $vm
+        ,swap => $swap);
 
     my @volumes2 = $domain->list_volumes();
 
@@ -87,6 +89,7 @@ sub test_prepare_base {
 #    diag("[$vm_name] preparing base for domain ".$domain->name);
     my @img;
     eval {@img = $domain->prepare_base( $USER) };
+    is($@,'');
 #    diag("[$vm_name] ".Dumper(\@img));
 
 
@@ -175,6 +178,42 @@ sub test_domain_2_volumes {
 
 }
 
+sub test_domain_n_volumes {
+
+    my $vm_name = shift;
+    my $n = shift;
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    test_add_volume($vm, $domain, 'vdb',"swap");
+    for ( reverse 3 .. $n) {
+        test_add_volume($vm, $domain, 'vd'.chr(ord('a')-1+$_));
+    }
+
+    my @volumes = $domain->list_volumes;
+    ok(scalar @volumes == $n
+        ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes));
+
+    ok(test_prepare_base($vm_name, $domain));
+    ok($domain->is_base,"[$vm_name] Domain ".$domain->name
+        ." sould be base");
+    test_files_base($vm_name, $domain, \@volumes);
+
+    my $domain_clone = test_clone($vm_name, $domain);
+
+    my @volumes_clone = $domain_clone->list_volumes_target;
+    ok(scalar @volumes_clone ==$n
+        ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes_clone));
+
+    return if $vm_name =~ /void/i;
+    for my $vol ( @volumes_clone ) {
+        my ($file, $target) = @$vol;
+        like($file,qr/-$target-/);
+    }
+}
+
+
 sub test_domain_1_volume {
     my $vm_name = shift;
     my $vm = $RVD_BACK->search_vm($vm_name);
@@ -202,7 +241,7 @@ sub test_domain_swap {
 
     my $domain = test_create_domain($vm_name, $create_swap);
     if ( !$create_swap ) {
-        $domain->add_volume_swap( size => 128*1024*1024 );
+        $domain->add_volume_swap( size => 128*1024*1024, target => 'vdb' );
     }
 
     ok(grep(/SWAP/,$domain->list_volumes),"Expecting a swap file, got :"
@@ -302,6 +341,9 @@ for my $vm_name (reverse sort @VMS) {
         test_domain_create_with_swap($vm_name);
         test_domain_1_volume($vm_name);
         test_domain_2_volumes($vm_name);
+        for ( 3..6) {
+            test_domain_n_volumes($vm_name,$_);
+        }
 
     }
 }
