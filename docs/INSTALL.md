@@ -24,7 +24,15 @@ clones won't require many space.
 
 ## Ubuntu
 
-We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/).
+We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/). Downlad them and install them:
+
+    $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    $ sudo dpkg -i ravada_0.1.2_all.deb
+
+The last command will show a warning about missing dependencies. Install them
+running:
+
+    $ sudo apt-get -f install
 
 ## Development Release
 
@@ -60,9 +68,9 @@ release you can find these files at _/usr/share/doc/ravada/doc_. For development
 the files are at the _sql_ directory inside the sources.
 
     $ cd /usr/share/doc/ravada/sql/mysql
-    $ cat *.sql | mysql -p -u rvd_user ravada
+    $ cat *.sql | mysql -p -u root ravada
     $ cd ../data
-    $ cat *.sql | mysql -p -u rvd_user ravada
+    $ cat *.sql | mysql -p -u root ravada
 
 
 # Ravada web user

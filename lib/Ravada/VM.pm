@@ -3,6 +3,12 @@ use strict;
 
 package Ravada::VM;
 
+=head1 NAME
+
+Ravada::VM - Virtual Managers library for Ravada
+
+=cut
+
 use Carp qw( carp croak);
 use Data::Dumper;
 use Socket qw( inet_aton inet_ntoa );
@@ -51,7 +57,6 @@ has 'readonly' => (
     , is => 'ro'
     ,default => 0
 );
-
 ############################################################
 #
 # Method Modifiers definition
@@ -131,9 +136,9 @@ sub name {
     my $self = shift;
 
     return $self->_data('name') if defined $self->{_data}->{name};
-    my ($ref) = ref($self) =~ /.*::(.*)/;
 
-   return ($ref or ref($self))."_".$self->host;
+    my ($ref) = ref($self) =~ /.*::(.*)/;
+    return ($ref or ref($self))."_".$self->host;
 }
 
 =head2 search_domain_by_id

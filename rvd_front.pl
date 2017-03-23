@@ -926,6 +926,9 @@ sub check_back_running {
 sub _init_user_group {
     return if $>;
 
+    my ($run_dir) = $CONFIG_FRONT->{hypnotoad}->{pid_file} =~ m{(.*)/.*};
+    mkdir $run_dir if ! -e $run_dir;
+
     my $user = $CONFIG_FRONT->{user};
     my $group = $CONFIG_FRONT->{group};
 
@@ -933,14 +936,22 @@ sub _init_user_group {
         $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
             if $group !~ /^\d+$/;
 
-        warn "setting \) to $group\n";
-        $) = $group;
     }
     if (defined $user) {
         $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"
             if $user !~ /^\d+$/;
-        $> = $user;
+
+    }
+    chown $user,$group,$run_dir or die "$! chown $user,$group,$run_dir"
+        if defined $user;
+
+    if (defined $group) {
+        warn "setting \) to $group\n";
+        $) = $group;
+    }
+    if (defined $user) {
         warn "setting \> to $user\n";
+        $> = $user;
     }
 
 

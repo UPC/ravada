@@ -3,6 +3,12 @@ package Ravada::Domain::LXC;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Domain::LXC - LXC containers library for Ravada
+
+=cut
+
 use Carp qw(cluck croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);

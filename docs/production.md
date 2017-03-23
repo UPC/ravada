@@ -18,6 +18,9 @@ It is advised to run an apache server or similar before the frontend.
 
 There are two _systemd_ services to start and stop the two ravada daemons:
 
+After install or upgrade you may have to refresh the systemd service units:
+
+    $ sudo systemctl daemon-reload
 
 Check the services are enabled to run at startup
 
@@ -26,8 +29,8 @@ Check the services are enabled to run at startup
 
 ### Start or stop
 
-    $ sudo systemctl stop rvd_back
-    $ sudo systemctl stop rvd_front
+    $ sudo systemctl start rvd_back
+    $ sudo systemctl start rvd_front
 
 
 ## Firewall

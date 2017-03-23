@@ -3,6 +3,12 @@ package Ravada::Domain;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
+
+=cut
+
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);

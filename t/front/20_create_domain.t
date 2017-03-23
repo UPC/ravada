@@ -149,6 +149,7 @@ for my $vm_name ('Void','KVM','LXC') {
     test_remove_domain($name);
 }
 }
+
 remove_old_domains();
 remove_old_disks();
 
