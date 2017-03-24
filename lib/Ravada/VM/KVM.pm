@@ -195,7 +195,7 @@ sub _create_default_pool {
 
     my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
-    my $dir = "/var/lib/libvirt/images/default";
+    my $dir = "/var/lib/libvirt/images";
     mkdir $dir if ! -e $dir;
 
     my $xml =

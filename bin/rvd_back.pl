@@ -197,5 +197,5 @@ if ($ADD_USER) {
     import_domain($IMPORT_DOMAIN);
     exit;
 }
-die "Already started" if Proc::PID::File->running();
+die "Already started" if Proc::PID::File->running( name => 'rvd_back');
 start();
