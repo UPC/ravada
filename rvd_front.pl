@@ -59,7 +59,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
-
+#plugin I18N => {namespace => 'Ravada::I18N', no_header_detect => 1, languages => 'es' };
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
