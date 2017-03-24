@@ -43,6 +43,8 @@ our $DEBUG;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 our $LIMIT_PROCESS = 2;
+our $DIR_SQL = "sql/mysql";
+$DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
 our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
@@ -85,6 +87,7 @@ sub BUILD {
         $self->connector($CONNECTOR);
     }
     Ravada::Auth::init($CONFIG);
+    $self->_create_tables();
     $self->_upgrade_tables();
 }
 
@@ -102,9 +105,61 @@ sub _upgrade_table {
     $dbh->do("alter table $table add $field $definition");
 }
 
+sub _create_table {
+    my $self = shift;
+    my $table = shift;
+
+    my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
+    my $info = $sth->fetchrow_hashref();
+    $sth->finish;
+    return if keys %$info;
+
+    warn "INFO: creating table $table\n";
+    my $file_sql = "$DIR_SQL/$table.sql";
+    open my $in,'<',$file_sql or die "$! $file_sql";
+    my $sql = join " ",<$in>;
+    close $in;
+
+    $CONNECTOR->dbh->do($sql);
+    return 1;
+}
+
+sub _insert_data {
+    my $self = shift;
+    my $table = shift;
+
+    my $file_sql =  "$DIR_SQL/../data/insert_$table.sql";
+    return if ! -e $file_sql;
+
+    warn "INFO: inserting data for $table\n";
+    open my $in,'<',$file_sql or die "$! $file_sql";
+    my $sql = '';
+    while (my $line = <$in>) {
+        $sql .= $line;
+        next if $sql !~ /\w/ || $sql !~ /;\s*$/;
+        $CONNECTOR->dbh->do($sql);
+        $sql = '';
+    }
+    close $in;
+
+}
+
+sub _create_tables {
+    my $self = shift;
+    opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
+    while (my $file = readdir $ls) {
+        my ($table) = $file =~ m{(.*)\.sql$};
+        next if !$table;
+        $self->_insert_data($table)     if $self->_create_table($table);
+    }
+    closedir $ls;
+}
+
 sub _upgrade_tables {
     my $self = shift;
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
+    $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 }
 
 
