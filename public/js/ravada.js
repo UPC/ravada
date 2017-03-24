@@ -14,6 +14,7 @@
             .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
             .controller("bases", mainpageCrtl)
+            .controller("singleMachinePage", singleMachinePageC)
 
 
     function newMachineCtrl($scope, $http) {
@@ -101,6 +102,56 @@
 
         };
 
+        function singleMachinePageC($scope, $http, $interval, request, $location) {
+          $http.get('/pingbackend.json').then(function(response) {
+            $scope.pingbe_fail = !response.data;
+          });
+          $scope.getSingleMachine = function(){
+            $http.get("/list_machines.json").then(function(response) {
+              for (var i=0, iLength=response.data.length; i<iLength; i++) {
+                if (response.data[i].id == $scope.showmachineId) {
+                  $scope.showmachine = response.data[i];
+                  if (!$scope.new_name) {
+                    $scope.new_name =   $scope.showmachine.name;
+                  }
+                return;
+                }
+              }
+              window.location.href = "/admin/machines";
+            });
+          }
+          $scope.action = function(target,action,machineId){
+            $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+          };
+          $scope.rename = function(machineId, old_name) {
+            if ($scope.new_name_duplicated) return;
+            $http.get('/machine/rename/'+machineId+'/'
+            +$scope.new_name);
+          };
+
+          $scope.validate_new_name = function(old_name) {
+            if(old_name == $scope.new_name) {
+              $scope.new_name_duplicated=false;
+              return;
+            }
+            $http.get('/machine/exists/'+$scope.new_name)
+            .then(duplicated_callback, unique_callback);
+            function duplicated_callback(response) {
+              $scope.new_name_duplicated=response.data;
+            };
+            function unique_callback() {
+              $scope.new_name_duplicated=false;
+            }
+          };
+          $scope.set_public = function(machineId, value) {
+            $http.get("/machine/public/"+machineId+"/"+value);
+          };
+
+          //On load code
+          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
+          $scope.getSingleMachine();
+          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+        };
 
     function swListMach() {
 

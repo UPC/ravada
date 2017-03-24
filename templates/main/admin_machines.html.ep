@@ -39,13 +39,8 @@
             <tbody>
                 <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
-                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></a></i>
-                        <a class="machine-button" ng-show="{{machine.is_public}}" ng-click="show('machine',machine.id)">
-                          <b>{{machine.name}}</b>
-                        </a>
-                        <a class="machine-button" ng-hide="{{machine.is_public}}" ng-click="show('machine',machine.id)">
-                          {{machine.name}}
-                        </a>
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></i></a>
+                        <b>{{machine.name}}</b>
                     </td>
                     <td class="lgMachToggle">
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>

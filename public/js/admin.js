@@ -11,13 +11,6 @@ ravadaApp.directive("solShowMachine", swMach)
     };
   };
 
-  function getMachineById(array, value) {
-    for (var i=0, iLength=array.length; i<iLength; i++) {
-      if (array[i].id == value) return array[i];
-    }
-    return null;
-  }
-
   function machinesPageC($scope, $http, $interval, request, listMach) {
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
@@ -27,24 +20,6 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_machines= response.data;
       });
     };
-    $scope.getSingleMachine = function(){
-      $scope.getMachines();
-      $scope.showmachine = getMachineById($scope.list_machines,$scope.showmachineId);
-    }
-    $scope.show = function(type,id){
-      $interval.cancel($scope.updatePromise);
-      switch(type){
-        case 'machines':
-        $scope.getMachines();
-        $scope.updatePromise = $interval($scope.getMachines,3000);
-        break;
-        case 'machine':
-        $scope.showmachineId = id;
-        $scope.getSingleMachine();
-        $scope.updatePromise = $interval($scope.getSingleMachine,3000);
-        break;
-      }
-    }
     $scope.orderParam = [];
     $scope.increment = 0;
     $scope.orderMachineList = function(type1,type2){
@@ -69,33 +44,6 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
-    $scope.rename = function(machineId, old_name) {
-      if (old_name == $scope.rename.new_name) {
-        $scope.show_rename= false;
-        return;
-      }
-      $http.get('/machine/rename/'+machineId+'/'
-      +$scope.rename.new_name);
-      alert('Rename machine '+old_name
-      +' to '+$scope.rename.new_name
-      +'. It may take some seconds to complete.');
-      $scope.show_rename= false;
-    };
-
-    $scope.validate_new_name = function(old_name) {
-      if(old_name == $scope.rename.new_name) {
-        $scope.new_name_duplicated=false;
-        return;
-      }
-      $http.get('/machine/exists/'+$scope.rename.new_name)
-      .then(duplicated_callback, unique_callback);
-      function duplicated_callback(response) {
-        $scope.new_name_duplicated=response.data;
-      };
-      function unique_callback() {
-        $scope.new_name_duplicated=false;
-      }
-    };
     $scope.set_public = function(machineId, value) {
       $http.get("/machine/public/"+machineId+"/"+value);
     };
@@ -104,7 +52,8 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.rename= {new_name: 'new_name'};
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
-    $scope.show('machines',-1);
+    $scope.getMachines();
+    $interval($scope.getMachines,3000);
   };
 
   function usersPageC($scope, $http, $interval, request) {

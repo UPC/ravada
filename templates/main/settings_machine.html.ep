@@ -7,7 +7,7 @@
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="machines">
+        <div ng-controller="singleMachinePage">
             <div class="page-header">
                 <div class="panel panel-default">
                     <form action="<%= $action %>" method="post">
@@ -17,8 +17,81 @@
                             <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
                             <%= $message %>
                             <br/>
+                      <button ng-disabled ="showmachine.is_base == 0 || showmachine.has_clones > 0 || showmachine.is_locked == 1"
+                      ng-click="action('machine','remove_base',showmachine.id)">
+                        <%=l 'Remove base' %>
+                      </button>
+                      <button ng-disabled="showmachine.has_clones > 0 && showmachine.is_locked"
+                      ng-click="action('machine','prepare',showmachine.id)">
+                        <%=l 'Prepare base' %>
+                      </button>
+                      <span ng-show="{{showmachine.has_clones}} > 0">
+                        <h4>Machine has {{showmachine.has_clones}} clones</h4>
+                      </span>
                     </div>
-                    <div>
+                      <div class="header"> <%=l 'Status'%>:
+                        <span ng-show="{{showmachine.is_paused && showmachine.is_active}}"
+                         class="label label-warning">
+                          <%=l 'Paused' %>
+                        </span>
+                        <span ng-show="{{!showmachine.is_paused && showmachine.is_active}}"
+                         class="label label-success">
+                          <%=l 'Running' %>
+                        </span>
+                        <span ng-show="{{!showmachine.is_active}}" class="label label-danger">
+                          <%=l 'Down'%>
+                        </span>
+                        <hr>
+                        <h2><%=l 'Rename'%></h2>
+                        <input type="text" name="new_name" ng-model="new_name"
+                         ng-change="validate_new_name(showmachine.name)">
+                        <button type="button"
+                         ng-click="rename(showmachine.id, showmachine.name)">
+                          <i class="fa fa-check" aria-hidden="true"></i>
+                        </button>
+                        <div class="form-group has-error">
+                          <label ng-show="new_name_duplicated"
+                           class="control-label" for="new_name">
+                           This name is duplicated
+                          </label>
+                        </div>
+                      </div>
+                      <div ng-show="{{showmachine.is_locked}}">
+                        <%=l 'Machine locked by requested' %>
+                        <a href="/request/{{showmachine.is_locked}}.html"><%=l 'process' %></a>
+                      </div>
+                      <hr>
+                      <div>
+                        <h2><%=l 'Copy'%></h2>
+                        <form method="post" action="/machine/copy">
+                            <input type="hidden" name="id_base" value="{{showmachine.id}}">
+                          <label for="copy_name_{{showmachine.id}}"><%=l 'Name' %>:</label>
+                          <input name="copy_name_{{showmachine.id}}" type="text" size="40"
+                              value="{{showmachine.name}}-copy">
+                              <!-- todo check unique name -->
+                          <br/>
+                          <label for="copy_ram">RAM (Gb):</label>
+                          <input name="copy_ram" type="text" length="5" value="1">
+                          <br/>
+                          <div ng-show="0">
+                          <label for="copy_disk"><del>Disk Size:</del></label>
+                          <input name="copy_disk_todo" type="text"
+                              value="{{showmachine.disk_size}}" disabled>
+                          <br/>
+                          </div>
+                          <div ng-show="{{showmachine.is_base}}">
+                              <label for="copy_rebase">Rebase First</label>
+                              <input name="copy_rebase" type="checkbox"
+                                     ng-disabled="machine.has_clones">
+                              Toggle to make base from latest changes.
+                              <div ng-show="{{showmachine.has_clones}}">Remove clones to allow rebase.</div>
+                          </div>
+                          <br>
+                          <input type="submit">
+                        </form>
+                      </div>
+                      <hr>
+                      <h2><%=l 'VM Options'%></h2>
                             <label for="ram">Memory</label>
                             <input type="text" name="ram" size="5" disabled
                                 value="<%= int($domain->get_info->{memory} / 1024) %>">
@@ -56,4 +129,3 @@
     %= include 'bootstrap/scripts'
 </body>
 </html>
-
