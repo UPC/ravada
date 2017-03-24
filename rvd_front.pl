@@ -29,7 +29,8 @@ our $VERSION_TYPE = "--beta";
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
                                                 pid_file => 'log/rvd_front.pid'
-                                                ,listen => ['http://*:8081']}
+                                                ,listen => ['http://*:8081']
+                                                }
                                               ,login_bg_file => '../img/intro-bg.jpg'
                                               ,login_header => 'Login'
                                               ,login_message => ''
@@ -58,7 +59,6 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
-
 
 GetOptions(
      'config=s' => \$FILE_CONFIG

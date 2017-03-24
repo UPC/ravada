@@ -113,9 +113,6 @@ msgstr ""
 msgid "ShutDown"
 msgstr ""
 
-msgid "View"
-msgstr ""
-
 msgid "Screenshot"
 msgstr ""
 
