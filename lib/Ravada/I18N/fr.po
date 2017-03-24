@@ -1,6 +1,7 @@
 # Translators:
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 # Kimia mirehbar	kimia@etsetb.upc.edu
+# french 
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
@@ -46,7 +47,7 @@ msgid "Prepare Base"
 msgstr "Preparer Base"
 
 msgid "Clone"
-msgstr "Clone"
+msgstr "Cloner"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
 msgstr "Ne Se Peux pas Preparer Base, Retirer ou Effacer la Base"
@@ -89,3 +90,45 @@ msgstr "Réglages"
 
 msgid "New Machine"
 msgstr "Machine Nouveau"
+
+msgid "Paused"
+msgstr "En Pause"
+
+msgid "Prepare base"
+msgstr "Preparer Base"
+
+msgid "Machine locked by requested"
+msgstr "Machine Férme par demande"
+
+msgid "process"
+msgstr "Procès"
+
+msgid "Copy"
+msgstr "Copie"
+
+msgid "Error!"
+msgstr "Erreur"
+
+msgid "Backend no available!"
+msgstr "Backend Indisponible"
+
+msgid "Subject"
+msgstr "Sujet"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Actions"
+msgstr "Action"
+
+msgid "Mark as Read"
+msgstr "Marquer Comme Lu"
+ 
+msgid "Mark as UnRead"
+msgstr "Marquer Comme Non Lu"
+
+msgid "No message to show!"
+msgstr "Pas de Messages à Lire"
+
+msgid "Admin"
+msgstr "Administrateur"
