@@ -521,7 +521,8 @@ sub _create_disk_qcow2 {
         my ($file_base,$target) = @$file_data;
         my $ext = ".qcow2";
         $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\.\w+$/;
-        my $file_out = "$dir_img/$name-$target-"._random_name(2).$ext;
+        my $file_out = "$dir_img/$name-".($target or _random_name(2))
+            ."-"._random_name(2).$ext;
 
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
