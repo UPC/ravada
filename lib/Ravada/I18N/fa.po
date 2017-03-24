@@ -1,6 +1,7 @@
 # Translators:
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 # Kimia mirehbar	kimia@etsetb.upc.edu
+# Persian
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
@@ -31,13 +32,13 @@ msgid "Users"
 msgstr "کاربرها"
 
 msgid "Choose a Machine to Start"
-msgstr "برای آغاز یک ماشین انتخاب کنید"
+msgstr "برای شروع یک ماشین انتخاب کنید"
 
 msgid "Start"
 msgstr "آغاز"
 
 msgid "Stop"
-msgstr "پایان"
+msgstr "توقف"
 
 msgid "View"
 msgstr "نمایش"
@@ -46,7 +47,7 @@ msgid "Prepare Base"
 msgstr "ایجاد پایگاه"
 
 msgid "Clone"
-msgstr "همسان"
+msgstr "همسان سازی"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
 msgstr "عدم توانایی در آماده سازی پایگاه"
@@ -89,3 +90,46 @@ msgstr "تنظیمات"
 
 msgid "New Machine"
 msgstr "ماشین جدید"
+
+msgid "Paused"
+msgstr "متوقف"
+
+msgid "Prepare base"
+
+msgstr "ایجاد پایگاه"
+
+msgid "Machine locked by requested"
+msgstr "طبق درخواست ماشین قفل شده است"
+
+msgid "process"
+msgstr "پروسه"
+
+msgid "Copy"
+msgstr "کپی"
+
+msgid "Error!"
+msgstr "خطا"
+
+msgid "Backend no available!"
+msgstr "بک اند موجود نیست"
+
+msgid "Subject"
+msgstr "موضوع"
+
+msgid "Date"
+msgstr "تاریخ"
+
+msgid "Actions"
+msgstr "عملیات"
+
+msgid "Mark as Read"
+msgstr "نمایش به عنوان خوانده شده"
+ 
+msgid "Mark as UnRead"
+msgstr "نمایش به عنوان خوانده نشده"
+
+msgid "No message to show!"
+msgstr "پیغامی برای نمایش وجود ندارد"
+
+msgid "Admin"
+msgstr "ادمین"
