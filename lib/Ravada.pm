@@ -146,6 +146,8 @@ sub _insert_data {
 
 sub _create_tables {
     my $self = shift;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
     opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
     while (my $file = readdir $ls) {
         my ($table) = $file =~ m{(.*)\.sql$};
@@ -157,6 +159,8 @@ sub _create_tables {
 
 sub _upgrade_tables {
     my $self = shift;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
