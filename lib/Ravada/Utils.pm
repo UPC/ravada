@@ -41,7 +41,7 @@ sub random_name {
     my $length = (shift or 4);
     my $ret = '';
     my $max = ord('z') - ord('a');
-    for ( 0 .. $length ) {
+    for ( 1 .. $length ) {
         my $n = int rand($max + 1);
         $ret .= chr(ord('a') + $n);
     }

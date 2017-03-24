@@ -423,11 +423,13 @@ sub _prepare_base_db {
     }
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO file_base_images "
-        ." (id_domain , file_base_img )"
-        ." VALUES(?,?)"
+        ." (id_domain , file_base_img, target )"
+        ." VALUES(?,?,?)"
     );
     for my $file_img (@file_img) {
-        $sth->execute($self->id, $file_img );
+        my $target;
+        ($file_img, $target) = @$file_img if ref $file_img;
+        $sth->execute($self->id, $file_img, $target );
     }
     $sth->finish;
 
@@ -633,6 +635,7 @@ Returns a list of the filenames of this base-type domain
 
 sub list_files_base {
     my $self = shift;
+    my $with_target = shift;
 
     return if !$self->is_known();
 
@@ -641,17 +644,28 @@ sub list_files_base {
     return if $@ && $@ =~ /No DB info/i;
     die $@ if $@;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target "
         ." FROM file_base_images "
         ." WHERE id_domain=?");
     $sth->execute($self->id);
 
     my @files;
-    while ( my $img = $sth->fetchrow) {
-        push @files,($img);
+    while ( my ($img, $target) = $sth->fetchrow) {
+        push @files,($img)          if !$with_target;
+        push @files,[$img,$target]  if $with_target;
     }
     $sth->finish;
     return @files;
+}
+
+=head2 list_files_base_target
+
+Returns a list of the filenames and targets of this base-type domain
+
+=cut
+
+sub list_files_base_target {
+    return $_[0]->list_files_base("target");
 }
 
 =head2 json
