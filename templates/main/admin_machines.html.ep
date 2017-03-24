@@ -63,12 +63,29 @@
                     <td class="lgMachToggle">
 
                       <div ng-hide="{{machine.is_locked}}">
-                        <a class="btn btn-success btn-sm" ng-hide="{{machine.is_active}}" ng-click="action('machine','start',machine.id)"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'Start' %></a>
-                        <a type="button" ng-click="action('machine','shutdown',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-danger btn-sm"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp <%=l 'ShutDown' %></a>
-
-                        <a class="btn btn-primary btn-sm" ng-href="/machine/view/{{machine.id}}.html"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp <%=l 'View' %></a>
-
-                        <a type="button" ng-click="action('machine','screenshot',machine.id)" ng-show="{{machine.is_active}}" class="btn btn-primary btn-sm"><i class="fa fa-camera" aria-hidden="true"></i>&nbsp <%=l 'Screenshot' %></a>
+                        <a type="button" class="btn btn-success btn-sm"
+                         ng-click="action('machine','start',machine.id)"
+                         ng-disabled="machine.is_active"
+                         title="<%=l 'Start' %>">
+                          <i class="fa fa-play"></i>
+                        </a>
+                        <a type="button" class="btn btn-danger btn-sm"
+                         ng-click="action('machine','shutdown',machine.id)"
+                         ng-disabled="!machine.is_active"
+                         title="<%=l 'ShutDown' %>">
+                          <i class="fa fa-power-off"></i>
+                       </a>
+                        <a type="button" class="btn btn-primary btn-sm"
+                         ng-href="/machine/view/{{machine.id}}.html"
+                         title="<%=l 'View' %>">
+                          <i class="fa fa-desktop"></i>
+                        </a>
+                        <a type="button" class="btn btn-primary btn-sm"
+                         ng-click="action('machine','screenshot',machine.id)"
+                         ng-disabled="!machine.is_active"
+                         title="<%=l 'Screenshot' %>">
+                         <i class="fa fa-camera" aria-hidden="true"></i>
+                       </a>
 
 
                       </div>
