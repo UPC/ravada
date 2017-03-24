@@ -107,14 +107,8 @@ msgstr "Parada"
 msgid "Running"
 msgstr "En marcha"
 
-msgid "Start"
-msgstr ""
-
 msgid "ShutDown"
 msgstr "Apagar"
-
-msgid "View"
-msgstr "Ver"
 
 msgid "Screenshot"
 msgstr ""
@@ -133,4 +127,3 @@ msgstr "proceso"
 
 msgid "Copy"
 msgstr "Copia"
-

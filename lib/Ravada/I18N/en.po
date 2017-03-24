@@ -89,8 +89,6 @@ msgstr ""
 msgid "New Machine"
 msgstr ""
 
-<<<<<<< HEAD
-=======
 msgid "Public"
 msgstr ""
 
@@ -112,21 +110,13 @@ msgstr ""
 msgid "ShutDown"
 msgstr ""
 
-msgid "View"
-msgstr ""
-
 msgid "Screenshot"
 msgstr ""
 
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
 msgid "Paused"
 msgstr ""
 
 msgid "Prepare base"
-<<<<<<< HEAD
-
-=======
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
 msgstr ""
 
 msgid "Machine locked by requested"
@@ -155,21 +145,12 @@ msgstr ""
 
 msgid "Mark as Read"
 msgstr ""
-<<<<<<< HEAD
- 
-=======
-
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
-msgid "Mark as UnRead"
-msgstr ""
 
 msgid "No message to show!"
 msgstr ""
 
 msgid "Admin"
 msgstr ""
-<<<<<<< HEAD
-=======
 
 msgid "machines"
 msgstr ""
@@ -179,4 +160,3 @@ msgstr ""
 
 msgid "messages"
 msgstr ""
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
