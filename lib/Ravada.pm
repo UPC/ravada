@@ -85,7 +85,28 @@ sub BUILD {
         $self->connector($CONNECTOR);
     }
     Ravada::Auth::init($CONFIG);
+    $self->_upgrade_tables();
 }
+
+sub _upgrade_table {
+    my $self = shift;
+    my ($table, $field, $definition) = @_;
+    my $dbh = $CONNECTOR->dbh;
+
+    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return if $row;
+
+    warn "INFO: adding $field $definition to $table\n";
+    $dbh->do("alter table $table add $field $definition");
+}
+
+sub _upgrade_tables {
+    my $self = shift;
+    $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
+}
+
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
