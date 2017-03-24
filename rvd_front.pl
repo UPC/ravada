@@ -946,14 +946,11 @@ sub _init_user_group {
         if defined $user;
 
     if (defined $group) {
-        warn "setting \) to $group\n";
         $) = $group;
     }
     if (defined $user) {
-        warn "setting \> to $user\n";
         $> = $user;
     }
-
 
 }
 
