@@ -44,7 +44,7 @@ our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
-our $PID_FILE_BACKEND = '/var/run/rvd_back.pl.pid';
+our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
 =head2 BUILD
 
