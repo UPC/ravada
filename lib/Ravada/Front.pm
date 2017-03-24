@@ -3,6 +3,12 @@ package Ravada::Front;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Front - Web Frontend library for Ravada
+
+=cut
+
 use Carp qw(carp);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -593,6 +599,7 @@ Request to start a domain.
 
 =item remote_ip => $remote_ip: a Ravada::Auth::SQL user
 
+=back
 
 Returns an object: Ravada::Request.
 

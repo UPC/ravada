@@ -88,3 +88,85 @@ msgstr "Preferències"
 
 msgid "New Machine"
 msgstr "Nova màquina"
+
+msgid "Public"
+msgstr "Públic"
+
+msgid "Status"
+msgstr "Estat"
+
+msgid "Actions"
+msgstr "Accions"
+
+msgid "Machines"
+msgstr "Màquines"
+
+msgid "Down"
+msgstr "Aturada"
+
+msgid "Running"
+msgstr "En marxa"
+
+msgid "Start"
+msgstr ""
+
+msgid "ShutDown"
+msgstr "Atura"
+
+msgid "View"
+msgstr "Veure"
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Paused"
+msgstr "Pausat"
+
+msgid "Prepare base"
+msgstr "Prepara base"
+
+msgid "Machine locked by requested"
+msgstr "Màquina bloquejada per"
+
+msgid "process"
+msgstr "procés"
+
+msgid "Copy"
+msgstr "Còpia"
+
+msgid "Error!"
+msgstr "Error!"
+
+msgid "Backend no available!"
+msgstr "Backend no disponible!"
+
+msgid "Subject"
+msgstr "Assumpte"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Actions"
+msgstr "Accions"
+
+msgid "Mark as Read"
+msgstr "Marca com a llegit"
+
+msgid "Mark as UnRead"
+msgstr "Marca com a no llegit"
+
+msgid "No message to show!"
+msgstr "No hi ha missatges per mostrar!"
+
+msgid "Admin"
+msgstr "Administrador"
+
+msgid "machines"
+msgstr "màquines"
+
+msgid "users"
+msgstr "usuaris"
+
+msgid "messages"
+msgstr "missatges"
+

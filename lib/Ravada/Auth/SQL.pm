@@ -3,6 +3,12 @@ package Ravada::Auth::SQL;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Auth::SQL - SQL authentication library for Ravada
+
+=cut
+
 use Carp qw(carp);
 
 use Ravada;
