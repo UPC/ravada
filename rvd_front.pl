@@ -29,13 +29,11 @@ our $VERSION_TYPE = "--beta";
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
                                                 pid_file => 'log/rvd_front.pid'
-                                                ,listen => ['http://*:8081']
-                                                }
-                                                ,login_bg_file => '../img/intro-bg.jpg'
-                                                ,login_header => 'Login'
-                                                ,login_message => ''
-                                                #,login_template => ''
-                                                }
+                                                ,listen => ['http://*:8081']}
+                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_header => 'Login'
+                                              ,login_message => ''
+                                              }
                                       ,file => 'rvd_front.conf' };
 #####
 #####
@@ -61,6 +59,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
+#plugin I18N => {namespace => 'Ravada::I18N', no_header_detect => 1, languages => 'es' };
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
@@ -537,9 +536,9 @@ sub login {
     my @css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
-  warn Dumper($CONFIG_FRONT);
+
     $c->render(
-                    template => ($CONFIG_FRONT->{login_template} or 'main/start')
+                    template => 'main/start'
                         ,css => ['/css/main.css']
                         ,csssnippets => @css_snippets
                         ,js => ['/js/main.js']
@@ -966,7 +965,7 @@ sub settings_machine {
         }
     }
     for my $req (@reqs) {
-        $RAVADA->wait_request($req, 60)
+        $RAVADA->wait_request($req, 60) 
     }
     return $c->render(template => 'main/settings_machine'
         , action => $c->req->url->to_abs->path);
