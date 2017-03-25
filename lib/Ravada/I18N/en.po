@@ -140,9 +140,6 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-msgid "Actions"
-msgstr ""
-
 msgid "Mark as Read"
 msgstr ""
 
