@@ -127,7 +127,7 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->shutdown_domain(name => $name, uid => $USER->id, timeout => 2);
+    my $req3 = Ravada::Request->force_shutdown_domain(name => $name, uid => $USER->id);
     $RAVADA->process_requests();
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
@@ -137,6 +137,10 @@ sub test_start {
 
     my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);
+    for ( 1 .. 60 ) {
+        last if !$domain3->is_active;
+        sleep 1;
+    }
     ok(!$domain3->is_active,"Domain $name should not be active");
 
     return $domain3;
@@ -163,7 +167,9 @@ sub test_screenshot {
 
     my $req = Ravada::Request->screenshot_domain(id_domain => $domain_id );
     ok($req);
-    $RAVADA->process_requests();
+
+    my $dont_fork = 1;
+    rvd_back->process_all_requests(0,$dont_fork);
     wait_request($req);
     ok($req->status('done'),"Request should be done, it is ".$req->status);
     ok(!$req->error(''),"Error should be '' , it is ".$req->error);
@@ -195,11 +201,12 @@ sub test_screenshot_file {
         ,filename => $file);
     ok($req);
 
-    $RAVADA->process_requests();
+    my $dont_fork = 1;
+    rvd_back->process_all_requests(0,$dont_fork);
     wait_request($req);
 
     ok($req->status('done'),"Request should be done, it is ".$req->status);
-    ok(!$req->error(),"Error should be '' , it is ".$req->error);
+    ok(!$req->error(),"Error should be '' , it is ".($req->error or ''));
 
     ok(-e $file,"File '$file' screenshot should exist");
 
@@ -217,6 +224,11 @@ for my $vm_name (qw(KVM Void)) {
 
     SKIP: {
         my $msg = "SKIPPED: Virtual manager $vm_name not found";
+        if ($vmm && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vmm = undef;
+        }
+
         diag($msg) if !$vmm;
         skip($msg,10) if !$vmm;
 

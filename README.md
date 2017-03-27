@@ -1,35 +1,37 @@
-# ravada [![GitHub version](https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
+# ravada [![GitHub version](https://img.shields.io/badge/version-0.1.1--beta-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
 
-Remove Virtual Desktops Manager
+## Remove Virtual Desktops Manager
 
-Broker: ravada
+Ravada is a software that allows the user to connect to a
+remote virtual desktop.
 
-Hypervisors: [KVM](http://www.linux-kvm.org/) - [LXC](https://linuxcontainers.org/)
+In the current release we use the
+KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual Machines.
+ [LXC](https://linuxcontainers.org/) support is currently in development.
 
-Remote Access: [Spice](http://www.spice-space.org/)
+### Features
+
+ * KVM backend for Windows and Linux Virtual machines
+ * LDAP and SQL authentication
+ * Kiosk mode
+ * Remote Access with [Spice](http://www.spice-space.org/) for Windows and Linux
+ * Light and fast virtual machine clones for each user
+ * Instant clone creation
+ * USB redirection
+ * Easy and customizable end users interface
+ * Administration from a web browser
 
 ## Install
 
 Read [docs/INSTALL.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md)
 
-## Run
-
-### Development
-To run it in development mode run those commands in two different terminals:
-
-    $ morbo ./rvd_front.pl
-    $ sudo ./bin/rvd_back.pl --debug
-
-Connect to the server with a web browser at http://servername:3000/
 
 ### Production
 
 See [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md)
+for production fine-tuning guidelines.
 
 ### Operation
 
 See [docs/operation.md](https://github.com/frankiejol/ravada/blob/master/docs/operation.md)
 
-### Testing
-
-See [docs/test.md](https://github.com/frankiejol/ravada/blob/master/docs/test.md)

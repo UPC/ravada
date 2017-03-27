@@ -3,14 +3,20 @@ use strict;
 
 package Ravada::VM;
 
-use Carp qw(croak);
+=head1 NAME
+
+Ravada::VM - Virtual Managers library for Ravada
+
+=cut
+
+use Carp qw( carp croak);
 use Data::Dumper;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
 use IO::Socket;
 use IO::Interface;
-use Sys::Hostname;
+use Net::Domain qw(hostfqdn);
 
 requires 'connect';
 
@@ -41,11 +47,6 @@ has 'host' => (
     , default => 'localhost'
 );
 
-has 'storage_pool' => (
-     isa => 'Object'
-    , is => 'ro'
-);
-
 has 'default_dir_img' => (
       isa => 'String'
      , is => 'ro'
@@ -61,7 +62,7 @@ has 'readonly' => (
 # Method Modifiers definition
 # 
 #
-before 'create_domain' => \&_pre_create_domain;
+around 'create_domain' => \&_around_create_domain;
 
 before 'search_domain' => \&_connect;
 
@@ -88,8 +89,20 @@ sub _pre_create_domain {
     _connect(@_);
 }
 
+sub _around_create_domain {
+    my $orig = shift;
+    my $self = shift;
+    my %args = @_;
+
+    $self->_pre_create_domain(@_);
+    my $domain = $self->$orig(@_);
+    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    return $domain;
+}
+
 ############################################################
 #
+
 sub _domain_remove_db {
     my $self = shift;
     my $name = shift;
@@ -122,9 +135,10 @@ Returns the name of this Virtual Machine Manager
 sub name {
     my $self = shift;
 
-    my ($ref) = ref($self) =~ /.*::(.*)/;
+    return $self->_data('name') if defined $self->{_data}->{name};
 
-    return ($ref or ref($self));
+    my ($ref) = ref($self) =~ /.*::(.*)/;
+    return ($ref or ref($self))."_".$self->host;
 }
 
 =head2 search_domain_by_id
@@ -187,7 +201,9 @@ sub ip {
 
 sub _ip_from_hostname {
     my $res = Net::DNS::Resolver->new();
-    my $reply = $res->search(hostname());
+
+    my $name = hostfqdn();
+    my $reply = $res->search($name);
     return if !$reply;
 
     for my $rr ($reply->answer) {
@@ -246,5 +262,101 @@ sub _check_require_base {
             if !$base->is_base();
 
 }
+
+=head2 id
+
+Returns the id value of the domain. This id is used in the database
+tables and is not related to the virtual machine engine.
+
+=cut
+
+sub id {
+    return $_[0]->_data('id');
+}
+
+sub _data {
+    my $self = shift;
+    my $field = shift or confess "Missing field name";
+
+#    _init_connector();
+
+    return $self->{_data}->{$field} if exists $self->{_data}->{$field};
+    $self->{_data} = $self->_select_vm_db( name => $self->name);
+
+    confess "No DB info for VM ".$self->name    if !$self->{_data};
+    confess "No field $field in vms"            if !exists$self->{_data}->{$field};
+
+    return $self->{_data}->{$field};
+}
+
+sub _do_select_vm_db {
+    my $self = shift;
+    my %args = @_;
+
+    if (!keys %args) {
+        my $id;
+        eval { $id = $self->id  };
+        if ($id) {
+            %args =( id => $id );
+        }
+    }
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM vms WHERE ".join(",",map { "$_=?" } sort keys %args )
+    );
+    $sth->execute(map { $args{$_} } sort keys %args);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return $row;
+}
+
+sub _select_vm_db {
+    my $self = shift;
+
+    my ($row) = ($self->_do_select_vm_db(@_) or $self->_insert_vm_db());
+
+    $self->{_data} = $row;
+    return $row if $row->{id};
+}
+
+sub _insert_vm_db {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO vms (name,vm_type,hostname) "
+        ." VALUES(?,?,?)"
+    );
+    my $name = $self->name;
+    $sth->execute($name,$self->type,$self->host);
+    $sth->finish;
+
+
+    return $self->_do_select_vm_db( name => $name);
+}
+
+=head2 default_storage_pool_name
+
+Set the default storage pool name for this Virtual Machine Manager
+
+    $vm->default_storage_pool_name('default');
+
+=cut
+
+sub default_storage_pool_name {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET default_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{default_storage} = $value;
+    }
+    return $self->_data('default_storage');
+}
+
 
 1;

@@ -27,7 +27,7 @@ sub test_req_prepare_base {
     ok(!$domain0->is_base,"Domain $name should not be base");
 
     my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => $USER->id);
-    $RAVADA->_process_requests_dont_fork();
+    $RAVADA->_process_all_requests_dont_fork();
 
     ok($req->status('done'),"Request should be done, it is".$req->status);
     ok(!$req->error(),"Request error ".$req->error);
@@ -199,6 +199,11 @@ eval { $vm_kvm = $RAVADA->search_vm('kvm')  if $RAVADA };
 
 SKIP: {
     my $msg = "SKIPPED: No KVM virtual machines manager found";
+    if ($vm_kvm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm_kvm = undef;
+    }
+
     diag($msg) if !$vm_kvm ;
     skip($msg,10) if !$vm_kvm;
 

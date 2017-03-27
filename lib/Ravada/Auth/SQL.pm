@@ -3,6 +3,12 @@ package Ravada::Auth::SQL;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Auth::SQL - SQL authentication library for Ravada
+
+=cut
+
 use Carp qw(carp);
 
 use Ravada;
@@ -27,7 +33,12 @@ sub _init_connector {
     $CON= \$Ravada::CONNECTOR          if !$CON || !$$CON;
     $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
 
-    confess "undefined connector"   if !$CON || !$$CON;
+    if (!$CON || !$$CON) {
+        my $ravada = Ravada->new();
+        $CON= \$Ravada::CONNECTOR;
+    }
+
+    die "Undefined connector"   if !$CON || !$$CON;
 }
 
 

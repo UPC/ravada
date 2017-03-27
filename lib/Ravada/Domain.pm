@@ -3,6 +3,12 @@ package Ravada::Domain;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
+
+=cut
+
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
@@ -12,6 +18,7 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
+use Ravada::Domain::Driver;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -31,6 +38,9 @@ requires 'is_paused';
 requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
+requires 'force_shutdown';
+requires '_do_force_shutdown';
+
 requires 'pause';
 requires 'resume';
 requires 'prepare_base';
@@ -46,6 +56,8 @@ requires 'disk_device';
 requires 'disk_size';
 
 requires 'spinoff_volumes';
+
+requires 'clean_swap_volumes';
 #hardware info
 
 requires 'get_info';
@@ -99,7 +111,7 @@ before 'remove' => \&_pre_remove_domain;
 
 before 'prepare_base' => \&_pre_prepare_base;
  after 'prepare_base' => \&_post_prepare_base;
- 
+
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
@@ -111,6 +123,8 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_allow_manage_args;
 after 'shutdown' => \&_post_shutdown;
+after 'shutdown_now' => \&_post_shutdown_now;
+after 'force_shutdown' => \&_post_shutdown_now;
 
 before 'remove_base' => \&_can_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -132,7 +146,8 @@ sub _vm_disconnect {
 }
 
 sub _start_preconditions{
-    
+    my ($self) = @_;
+
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
     } else {
@@ -142,6 +157,8 @@ sub _start_preconditions{
     _check_used_memory(@_);
 
 }
+
+
 
 sub _allow_manage_args {
     my $self = shift;
@@ -179,7 +196,7 @@ sub _allow_remove {
 
 sub _pre_prepare_base {
     my $self = shift;
-    my ($user) = @_;
+    my ($user, $request) = @_;
 
     $self->_allowed($user);
 
@@ -192,6 +209,17 @@ sub _pre_prepare_base {
     if ($self->is_active) {
         $self->shutdown(user => $user);
         $self->{_was_active} = 1;
+        for ( 1 .. $TIMEOUT_SHUTDOWN ) {
+            last if !$self->is_active;
+            sleep 1;
+        }
+        if ($self->is_active ) {
+            $request->status('working'
+                    ,"Domain ".$self->name." still active, forcing hard shutdown")
+                if $request;
+            $self->force_shutdown($user);
+            sleep 1;
+        }
     }
     if ($self->id_base ) {
         $self->spinoff_volumes();
@@ -205,7 +233,7 @@ sub _post_prepare_base {
 
     $self->is_base(1);
     if ($self->{_was_active} ) {
-        $self->start($user);
+        $self->start($user) if !$self->is_active;
     }
     delete $self->{_was_active};
 
@@ -387,7 +415,7 @@ sub _select_domain_db {
 
 sub _prepare_base_db {
     my $self = shift;
-    my $file_img = shift;
+    my @file_img = @_;
 
     if (!$self->_select_domain_db) {
         confess "CRITICAL: The data should be already inserted";
@@ -395,10 +423,14 @@ sub _prepare_base_db {
     }
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO file_base_images "
-        ." (id_domain , file_base_img )"
-        ." VALUES(?,?)"
+        ." (id_domain , file_base_img, target )"
+        ." VALUES(?,?,?)"
     );
-    $sth->execute($self->id, $file_img );
+    for my $file_img (@file_img) {
+        my $target;
+        ($file_img, $target) = @$file_img if ref $file_img;
+        $sth->execute($self->id, $file_img, $target );
+    }
     $sth->finish;
 
     $sth = $$CONNECTOR->dbh->prepare(
@@ -603,6 +635,7 @@ Returns a list of the filenames of this base-type domain
 
 sub list_files_base {
     my $self = shift;
+    my $with_target = shift;
 
     return if !$self->is_known();
 
@@ -611,17 +644,28 @@ sub list_files_base {
     return if $@ && $@ =~ /No DB info/i;
     die $@ if $@;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target "
         ." FROM file_base_images "
         ." WHERE id_domain=?");
     $sth->execute($self->id);
 
     my @files;
-    while ( my $img = $sth->fetchrow) {
-        push @files,($img);
+    while ( my ($img, $target) = $sth->fetchrow) {
+        push @files,($img)          if !$with_target;
+        push @files,[$img,$target]  if $with_target;
     }
     $sth->finish;
     return @files;
+}
+
+=head2 list_files_base_target
+
+Returns a list of the filenames and targets of this base-type domain
+
+=cut
+
+sub list_files_base_target {
+    return $_[0]->list_files_base("target");
 }
 
 =head2 json
@@ -728,12 +772,12 @@ sub clone {
 
     my $id_base = $self->id;
 
-
     return $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
+        ,_vm => $self->_vm
     );
 }
 
@@ -747,15 +791,60 @@ sub _post_pause {
 sub _post_shutdown {
     my $self = shift;
 
+    my %arg = @_;
+    my $timeout = $arg{timeout};
+
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
+    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
 
+    if (defined $timeout) {
+        if ($timeout<2 && $self->is_active) {
+            sleep $timeout;
+            return $self->_do_force_shutdown() if $self->is_active;
+        }
+
+        my $req = Ravada::Request->force_shutdown_domain(
+                 name => $self->name
+                , uid => $arg{user}->id
+                 , at => time+$timeout 
+        );
+    }
+}
+
+sub _post_shutdown_now {
+    my $self = shift;
+    my $user = shift;
+
+    $self->_post_shutdown(user => $user);
+}
+
+
+=head2 add_volume_swap
+
+Adds a swap volume to the virtual machine
+
+Arguments:
+
+    size => $kb
+    name => $name (optional)
+
+=cut
+
+sub add_volume_swap {
+    my $self = shift;
+    my %arg = @_;
+
+    $arg{name} = $self->name if !$arg{name};
+    $self->add_volume(%arg, swap => 1);
 }
 
 sub _remove_iptables {
     my $self = shift;
 
     my $args = {@_};
+
+    confess "Missing user=>\$user" if !$args->{user};
 
     my $ipt_obj = _obj_iptables();
 
@@ -934,6 +1023,8 @@ sub _active_iptables {
     my $self = shift;
     my $user = shift;
 
+    confess "Missing \$user" if !$user;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,iptables FROM iptables "
         ." WHERE "
@@ -996,6 +1087,23 @@ sub is_public {
     return $self->_data('is_public');
 }
 
+=head2 clean_swap_volumes
+
+Check if the domain has swap volumes defined, and clean them
+
+    $domain->clean_swap_volumes();
+
+=cut
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ( $self->list_volumes) {
+        $self->clean_disk($file)
+            if $file =~ /\.SWAP\.\w+$/;
+    }
+}
+
+
 sub _pre_rename {
     my $self = shift;
 
@@ -1028,5 +1136,70 @@ sub _post_rename {
      $sth->execute($filename, $self->id);
      $sth->finish;
  }
+
+=head2 drivers
+
+List the drivers available for a domain. It may filter for a given type.
+
+    my @drivers = $domain->drivers();
+    my @video_drivers = $domain->drivers('video');
+
+=cut
+
+sub drivers {
+    my $self = shift;
+    my $name = shift;
+    my $type = (shift or $self->_vm->type);
+
+    _init_connector();
+
+    $type = 'qemu' if $type =~ /^KVM$/;
+    my $query = "SELECT id from domain_drivers_types "
+        ." WHERE vm=?";
+    $query .= " AND name=?" if $name;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    my @sql_args = ($type);
+    push @sql_args,($name)  if $name;
+
+    $sth->execute(@sql_args);
+
+    my @drivers;
+    while ( my ($id) = $sth->fetchrow) {
+        push @drivers,Ravada::Domain::Driver->new(id => $id, domain => $self);
+    }
+    return $drivers[0] if !wantarray && $name && scalar@drivers< 2;
+    return @drivers;
+}
+
+=head2 set_driver_id
+
+Sets the driver of a domain given it id. The id must be one from
+the table domain_drivers_options
+
+    $domain->set_driver_id($id_driver);
+
+=cut
+
+sub set_driver_id {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT d.name,o.value "
+        ." FROM domain_drivers_types d, domain_drivers_options o"
+        ." WHERE d.id=o.id_driver_type "
+        ."    AND o.id=?"
+    );
+    $sth->execute($id);
+
+    my ($type, $value) = $sth->fetchrow;
+    confess "Unknown driver option $id" if !$type || !$value;
+
+    $self->set_driver($type => $value);
+    $sth->finish;
+}
+
 
 1;

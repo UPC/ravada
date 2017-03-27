@@ -2,7 +2,7 @@ Run Hypnotoad service and Apache as a proxy for it.
 
 ##Enable apache modules
 
-    # a2enmod ssl proxy proxy_http proxy_connect rewrite
+    # a2enmod ssl proxy proxy_http proxy_connect
 
 ##Apache Proxy Configuration
 
@@ -27,6 +27,7 @@ Redirect all the connections to https.
 Edit /etc/apache2/sites-enabled/000-default.conf
 
     <VirtualHost *:80>
-        RewriteEngine On
-        RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+        ServerName hostname.domainname
+        Redirect / https://hostname.domainname/
+    </virtualhost>
 

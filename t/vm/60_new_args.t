@@ -269,7 +269,7 @@ for my $vm_name (qw( Void KVM )) {
     use_ok($CLASS) or next;
 
     my $vm_ok;
-    eval { 
+    eval {
         my $ravada = Ravada->new(@ARG_RVD);
         $USER = create_user("foo","bar")    if !$USER;
 
@@ -279,6 +279,11 @@ for my $vm_name (qw( Void KVM )) {
     };
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm_ok && $vm_name =~/kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm_ok = undef;
+        }
+
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
         test_args($vm_name);

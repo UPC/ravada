@@ -42,7 +42,46 @@ sub test_unread_messages {
     ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
         .scalar@messages." ".Dumper(\@messages));
 
-    $user->mark_all_messages_read();
+}
+
+sub test_unshown_messages {
+    my ($user, $n_unread, $test) = @_;
+    confess "Missing test name" if !$test;
+
+    my @messages = $user->unshown_messages();
+
+    ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unshown messages , got "
+        .scalar@messages." ".Dumper(\@messages));
+
+}
+
+sub test_swap {
+    my $vm_name = shift;
+
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,vm => $vm_name
+        ,@ARG_CREATE_DOM
+        ,swap => 128*1024*1024
+    );
+    ok($req);
+    rvd_back()->process_requests();
+    wait_request($req);
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done");
+    ok(!$req->error,"Error ".($req->error or '')." creating domain ".$name)
+        or return;
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain,"Expecting domain $name created") or return;
+    ok(!$domain->is_active,"Expecting domain no alive, got : "
+            .($domain->is_active or 0));
+
+    for my $file ($domain->list_volumes) {
+        ok(-e $file,"[$vm_name] Expecting file $file")
+    }
 }
 
 sub test_req_create_domain_iso {
@@ -51,6 +90,7 @@ sub test_req_create_domain_iso {
     my $name = new_domain_name();
 
     $USER->mark_all_messages_read();
+    test_unshown_messages($USER,0, "[$vm_name] create domain $name");
     test_unread_messages($USER,0, "[$vm_name] create domain $name");
 
     my $req = Ravada::Request->create_domain(
@@ -80,7 +120,7 @@ sub test_req_create_domain_iso {
         or return;
 
 #    test_unread_messages($USER,1, "[$vm_name] create domain $name");
-    test_message_new_domain($vm_name, $USER);
+    test_message_new_domain($vm_name, $USER, "[$vm_name] create domain $name");
 
     my $req2 = Ravada::Request->open($req->id);
     ok($req2->{id} == $req->id,"req2->{id} = ".$req2->{id}." , expecting ".$req->id);
@@ -97,16 +137,19 @@ sub test_req_create_domain_iso {
 }
 
 sub test_message_new_domain {
-    my ($vm_name, $user) = @_;
-    my @messages = $user->unread_messages();
-    ok(scalar(@messages) == 1,"Expecting 1 new message , got "
-        .scalar(@messages)
-        .Dumper(\@messages));
+    my ($vm_name, $user, $test) = @_;
 
+    test_unshown_messages($USER,1, $test);
+    test_unshown_messages($USER,0, $test);
+    test_unread_messages($USER,1, $test);
+
+    my @messages = $user->unread_messages();
     my $message = $user->show_message($messages[0]->{id});
 
     ok($message->{message} && $message->{message} =~ /\w+/
             , "Expecting message content not empty, got ''") or exit;
+
+    $USER->mark_all_messages_read();
 }
 
 sub test_req_create_domain {
@@ -168,20 +211,20 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    $rvd_back->process_requests();
+    rvd_back->process_requests();
+    rvd_back->process_long_requests(0,1);
     wait_request($req);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");
-    $rvd_back = undef;
 
     my $vm = rvd_front()->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
     ok($domain2->is_base, "Expecting domain base=1 , got: '".$domain2->is_base."'");# or exit;
 
     my @unread_messages = $USER->unread_messages;
-    like($unread_messages[-1]->{subject}, qr/done/i);
+    like($unread_messages[-1]->{subject}, qr/done$/i);
 
     my @messages = $USER->messages;
-    like($messages[-1]->{subject}, qr/done/i);
+    like($messages[-1]->{subject}, qr/done$/i);
 
 }
 
@@ -300,6 +343,7 @@ sub test_req_remove_base_fail {
 
     ok($req->status eq 'requested' || $req->status eq 'done');
     rvd_back->process_requests();
+    rvd_back->process_long_requests(0,1);
     wait_request($req);
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
@@ -341,6 +385,7 @@ sub test_req_remove_base {
     {
         my $rvd_back = rvd_back();
         rvd_back->process_requests();
+        rvd_back->process_long_requests(0,1);
         wait_request($req);
     }
     ok($req->status eq 'done', "[$vm_name] Expected req->status 'done', got "
@@ -382,9 +427,15 @@ for my $vm_name ( qw(Void KVM)) {
 
     SKIP: {
         my $msg = "SKIPPED: virtual manager $vm_name not found";
+        if ($vm_connected && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm_connected = undef;
+        }
+
         skip($msg,10)   if !$vm_connected;
 
         diag("Testing requests with $vm_name");
+        test_swap($vm_name);
 
         test_req_create_domain_iso($vm_name);
 

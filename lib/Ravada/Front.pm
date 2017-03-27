@@ -3,6 +3,12 @@ package Ravada::Front;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Front - Web Frontend library for Ravada
+
+=cut
+
 use Carp qw(carp);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -38,7 +44,7 @@ our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
-our $PID_FILE_BACKEND = '/var/run/rvd_back.pl.pid';
+our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
 =head2 BUILD
 
@@ -54,6 +60,7 @@ sub BUILD {
         Ravada::_init_config($self->config());
         $CONNECTOR = Ravada::_connect_dbh();
     }
+    $CONNECTOR->dbh();
 }
 
 =head2 list_bases
@@ -592,6 +599,7 @@ Request to start a domain.
 
 =item remote_ip => $remote_ip: a Ravada::Auth::SQL user
 
+=back
 
 Returns an object: Ravada::Request.
 

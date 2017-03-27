@@ -3,9 +3,16 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
+=head2 NAME
+
+Ravada::Domain::KVM - KVM Virtual Machines library for Ravada
+
+=cut
+
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
+use File::Path qw(make_path);
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -20,12 +27,6 @@ has 'domain' => (
     ,required => 1
 );
 
-has 'storage' => (
-    is => 'ro'
-    ,isa => 'Sys::Virt::StoragePool'
-    ,required => 0
-);
-
 has '_vm' => (
     is => 'ro'
     ,isa => 'Ravada::VM::KVM'
@@ -36,6 +37,17 @@ has '_vm' => (
 #
 our $TIMEOUT_SHUTDOWN = 60;
 our $OUT;
+
+our %GET_DRIVER_SUB = (
+    network => \&_get_driver_network
+     ,sound => \&_get_driver_sound
+     ,video => \&_get_driver_video
+);
+our %SET_DRIVER_SUB = (
+    network => \&_set_driver_network
+     ,sound => \&_set_driver_sound
+     ,video => \&_set_driver_video
+);
 
 ##################################################
 
@@ -50,19 +62,6 @@ sub name {
     my $self = shift;
     $self->{_name} = $self->domain->get_name if !$self->{_name};
     return $self->{_name};
-}
-
-sub _wait_down {
-    my $self = shift;
-    my $seconds = (shift or $self->timeout_shutdown);
-    for my $sec ( 0 .. $seconds) {
-        return if !$self->domain->is_active;
-        print "Waiting for ".$self->domain->get_name." to shutdown." if !$sec;
-        print ".";
-        sleep 1;
-    }
-    print "\n";
-
 }
 
 =head2 list_disks
@@ -129,7 +128,6 @@ sub remove_disks {
             .Dumper([$self->list_disks])
         if !$removed && $0 !~ /\.t$/;
 
-    $self->_vm->disconnect();
 }
 
 sub _vol_remove {
@@ -139,7 +137,8 @@ sub _vol_remove {
 
     my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
-    my @vols = $self->storage->list_volumes();
+    #TODO: do a remove_volume in the VM
+    my @vols = $self->_vm->storage_pool->list_volumes();
     for my $vol ( @vols ) {
         $vol->delete() if$vol->get_name eq $name;
     }
@@ -154,11 +153,11 @@ Removes this domain. It removes also the disk drives and base images.
 
 sub remove {
     my $self = shift;
-    $self->domain->shutdown  if $self->domain->is_active();
+    my $user = shift;
 
-    $self->_wait_down();
-
-    $self->domain->destroy   if $self->domain->is_active();
+    if ($self->domain->is_active) {
+        $self->_do_force_shutdown();
+    }
 
     $self->remove_disks();
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
@@ -184,9 +183,10 @@ sub _remove_file_image {
         eval { $self->_vol_remove($file,1) };
 
         if ( -e $file ) {
-            eval { 
+            eval {
                 unlink $file or die "$! $file" ;
-                $self->storage->refresh();
+                #TODO: do a refresh of all the storage pools in the VM if anything removed
+                $self->_vm->storage_pool->refresh();
             };
             warn $@ if $@;
         }
@@ -197,7 +197,10 @@ sub _remove_file_image {
 
 sub _disk_device {
     my $self = shift;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+    my $with_target = shift;
+
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
     my @img;
@@ -208,11 +211,17 @@ sub _disk_device {
 
         $list_disks .= $disk->toString();
 
+        my ($file,$target);
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
-                push @img , ($child->getAttribute('file'));
+                $file = $child->getAttribute('file');
+            }
+            if ($child->nodeName eq 'target') {
+                $target = $child->getAttribute('dev');
             }
         }
+        push @img,[$file,$target]   if $with_target;
+        push @img,($file)           if !$with_target;
     }
     if (!scalar @img) {
         my (@devices) = $doc->findnodes('/domain/devices/disk');
@@ -227,7 +236,7 @@ sub _disk_devices_xml {
     my $self = shift;
 
     my $doc = XML::LibXML->load_xml(string => $self->domain
-                                        ->get_xml_description) 
+                                        ->get_xml_description)
         or die "ERROR: $!\n";
 
     my @devices;
@@ -255,46 +264,111 @@ Returns the file name of the disk of the domain.
 
 sub disk_device {
     my $self = shift;
-    return $self->_disk_device();
+    return $self->_disk_device(@_);
 }
 
 sub _create_qcow_base {
     my $self = shift;
 
-    my @qcow_img;
+    my @base_img;
 
     my $base_name = $self->name;
-    for  my $base_img ( $self->list_volumes()) {
+    for  my $vol_data ( $self->list_volumes_target()) {
+        my ($file_img,$target) = @$vol_data;
+        confess "ERROR: missing $file_img"
+            if !-e $file_img;
+        my $base_img = $file_img;
 
-        confess "ERROR: missing $base_img"
-            if !-e $base_img;
-        my $qcow_img = $base_img;
-    
-        $qcow_img =~ s{\.\w+$}{\.ro.qcow2};
+        my @cmd;
+        $base_img =~ s{\.\w+$}{\.ro.qcow2};
+        if ($file_img =~ /\.SWAP\.\w+$/) {
+            @cmd = _cmd_copy($file_img, $base_img);
+        } else {
+            @cmd = _cmd_convert($file_img,$base_img);
+        }
 
-        push @qcow_img,($qcow_img);
+        push @base_img,([$base_img,$target]);
 
-        my @cmd = ('qemu-img','convert',
-                '-O','qcow2', $base_img
-                ,$qcow_img
-        );
 
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
         warn $err   if $err;
 
-        if (! -e $qcow_img) {
-            warn "ERROR: Output file $qcow_img not created at ".join(" ",@cmd)."\n";
+        if (! -e $base_img) {
+            warn "ERROR: Output file $base_img not created at "
+                .join(" ",@cmd);
             exit;
         }
 
-        chmod 0555,$qcow_img;
-        $self->_prepare_base_db($qcow_img);
+        chmod 0555,$base_img;
     }
-    return @qcow_img;
+    $self->_prepare_base_db(@base_img);
+    return @base_img;
 
 }
+
+sub _cmd_convert {
+    my ($base_img, $qcow_img) = @_;
+
+    return    ('qemu-img','convert',
+                '-O','qcow2', $base_img
+                ,$qcow_img
+        );
+
+}
+
+sub _cmd_copy {
+    my ($base_img, $qcow_img) = @_;
+
+    return ('cp'
+            ,$base_img, $qcow_img
+    );
+}
+
+=pod
+
+sub _create_swap_base {
+    my $self = shift;
+
+    my @swap_img;
+
+    my $base_name = $self->name;
+    for  my $base_img ( $self->list_volumes()) {
+
+      next unless $base_img =~ 'SWAP';
+
+        confess "ERROR: missing $base_img"
+            if !-e $base_img;
+        my $swap_img = $base_img;
+
+        $swap_img =~ s{\.\w+$}{\.ro.img};
+
+        push @swap_img,($swap_img);
+
+        my @cmd = ('qemu-img','convert',
+                '-O','raw', $base_img
+                ,$swap_img
+        );
+
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        warn $out if $out;
+        warn $err if $err;
+
+        if (! -e $swap_img) {
+            warn "ERROR: Output file $swap_img not created at ".join(" ",@cmd)."\n";
+            exit;
+        }
+
+        chmod 0555,$swap_img;
+        $self->_prepare_base_db($swap_img);
+    }
+    return @swap_img;
+
+}
+
+=cut
 
 =head2 prepare_base
 
@@ -306,7 +380,9 @@ Prepares a base virtual machine with this domain disk
 sub prepare_base {
     my $self = shift;
 
-    return $self->_create_qcow_base();
+#    my @img = $self->_create_swap_base();
+    my @img = $self->_create_qcow_base();
+    return @img;
 }
 
 =head2 display
@@ -319,7 +395,7 @@ sub display {
     my $self = shift;
 
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-    my ($graph) = $xml->findnodes('/domain/devices/graphics') 
+    my ($graph) = $xml->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
 
     my ($type) = $graph->getAttribute('type');
@@ -366,7 +442,6 @@ sub shutdown {
 
     my %args = @_;
     my $req = $args{req};
-    my $timeout = ($args{timeout} or $TIMEOUT_SHUTDOWN);
 
     if (!$self->is_active && !$args{force}) {
         $req->status("done")                if $req;
@@ -374,31 +449,15 @@ sub shutdown {
         return;
     }
 
-    return $self->_do_shutdown($timeout,$req);
+    return $self->_do_force_shutdown() if $args{force};
+    return $self->_do_shutdown();
+
 }
 
 sub _do_shutdown {
     my $self = shift;
-    my ($timeout, $req) = @_;
-    
-    $timeout = $TIMEOUT_SHUTDOWN if !defined $timeout;
-
     $self->domain->shutdown();
-    $req->status("Shutting down") if $req;
 
-    for (0 .. $timeout) {
-        my $msg = "Domain ".$self->name." shutting down ($_ / $timeout)\n";
-        $req->error($msg)  if $req;
-
-        last if !$self->is_active;
-        sleep 1;
-    }
-    if ($self->is_active) {
-        my $msg = "Domain wouldn't shut down, destroying\n";
-        $req->error($msg)  if $req;
-        $self->domain->destroy();
-    }
-    $req->status("done")        if $req;
 }
 
 =head2 shutdown_now
@@ -409,8 +468,24 @@ Shuts down uncleanly the domain
 
 sub shutdown_now {
     my $self = shift;
-    my $user = shift;
-    return $self->shutdown(timeout => 1, user => $user);
+    return $self->_do_force_shutdown()  if $self->is_active;
+}
+
+=head2 force_shutdown
+
+Shuts down uncleanly the domain
+
+=cut
+
+sub force_shutdown{
+    my $self = shift;
+    $self->_do_force_shutdown();
+}
+
+sub _do_force_shutdown {
+    my $self = shift;
+    return $self->domain->destroy;
+
 }
 
 
@@ -447,14 +522,14 @@ sub is_paused {
     my $self = shift;
     my ($state, $reason) = $self->domain->get_state();
 
-   
+
 
     return 0 if $state == 1;
     #TODO, find out which one of those id "1" and remove it from this list
     #
-    return $state && 
-        ($state == Sys::Virt::Domain::STATE_PAUSED_UNKNOWN 
-        || $state == Sys::Virt::Domain::STATE_PAUSED_USER 
+    return $state &&
+        ($state == Sys::Virt::Domain::STATE_PAUSED_UNKNOWN
+        || $state == Sys::Virt::Domain::STATE_PAUSED_USER
         || $state == Sys::Virt::Domain::STATE_PAUSED_DUMP
         || $state == Sys::Virt::Domain::STATE_PAUSED_FROM_SNAPSHOT
         || $state == Sys::Virt::Domain::STATE_PAUSED_IOERROR
@@ -500,28 +575,43 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm xml));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
             if !$valid_arg{$arg_name};
     }
-    confess "Missing vm"    if !$args{vm};
+#    confess "Missing vm"    if !$args{vm};
+    $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
-    $args{xml} = 'etc/xml/default-volume.xml'    if !$args{xml};
+    if (!$args{xml}) {
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/default-volume.xml";
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
+    }
 
-    my $path = $args{vm}->create_volume($args{name}, $args{xml}
-        ,($args{size} or undef));
+    my $path = $args{vm}->create_volume(
+        name => $args{name}
+        ,xml =>  $args{xml}
+        ,swap => ($args{swap} or 0)
+        ,size => ($args{size} or undef)
+    );
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
 #
-    my $target_dev = $self->_new_target_dev();
+    my ($target_dev) = ($args{target} or $self->_new_target_dev());
     my $pci_slot = $self->_new_pci_slot();
-    
+    my $driver_type = 'qcow2';
+    my $cache = 'default';
+
+    if ( $args{swap} ) {
+        $cache = 'none';
+        $driver_type = 'raw';
+    }
+
     my $xml_device =<<EOT;
     <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
+      <driver name='qemu' type='$driver_type' cache='$cache'/>
       <source file='$path'/>
       <backingStore/>
       <target bus='virtio' dev='$target_dev'/>
@@ -534,10 +624,12 @@ EOT
     die $@."\n".$self->domain->get_xml_description if$@;
 }
 
+
+
 sub _new_target_dev {
     my $self = shift;
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
     my %target;
@@ -564,7 +656,7 @@ sub _new_target_dev {
 sub _new_pci_slot{
     my $self = shift;
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description) 
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
     my %target;
@@ -613,6 +705,20 @@ sub list_volumes {
     return $self->disk_device();
 }
 
+=head2 list_volumes_target
+
+Returns a list of the disk volumes. Each element of the list is a string with the filename.
+For KVM it reads from the XML definition of the domain.
+
+    my @volumes = $domain->list_volumes_target();
+
+=cut
+
+sub list_volumes_target {
+    my $self = shift;
+    return $self->disk_device("target");
+}
+
 =head2 screenshot
 
 Takes a screenshot, it stores it in file.
@@ -622,6 +728,9 @@ Takes a screenshot, it stores it in file.
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
+
+    my ($path) = $file =~ m{(.*)/};
+    make_path($path) if ! -e $path;
 
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
@@ -649,7 +758,7 @@ sub screenshot {
 
 sub _file_screenshot {
     my $self = shift;
-    my $doc = XML::LibXML->load_xml(string => $self->storage->get_xml_description);
+    my $doc = XML::LibXML->load_xml(string => $self->_vm->storage_pool->get_xml_description);
     my ($path) = $doc->findnodes('/pool/target/path/text()');
     return "$path/".$self->name.".png";
 }
@@ -826,7 +935,7 @@ sub disk_size {
         $file =~ s{.*/}{};
 
         my $vol;
-        eval { $vol = $self->storage->get_volume_by_name($file) };
+        eval { $vol = $self->_vm->search_volume($file) };
 
         warn "I can't find volume in storage. source: $source , file: ".($file or '<UNDEF>')
             if !$vol;
@@ -908,16 +1017,17 @@ sub spinoff_volumes {
             if -e $volume_tmp;
 
         my @cmd = ('qemu-img'
-            ,'convert'
-            ,'-O','qcow2'
-            ,$volume
-            ,$volume_tmp
+              ,'convert'
+              ,'-O','qcow2'
+              ,$volume
+              ,$volume_tmp
         );
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
         warn $err   if $err;
-        die "ERROR: Output file $volume_tmp not created at ".join(" ",@cmd)."\n"
+        die "ERROR: Temporary output file $volume_tmp not created at "
+                .join(" ",@cmd)."\n"
             if (! -e $volume_tmp );
 
         copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
@@ -946,6 +1056,232 @@ sub _set_spice_ip {
         $listen->setAttribute('address' => $ip);
         $self->domain->update_device($graphics);
     }
+}
+
+sub _hwaddr {
+    my $self = shift;
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my @hwaddr;
+    for my $mac( $doc->findnodes("/domain/devices/interface/mac")) {
+        push @hwaddr,($mac->getAttribute('address'));
+    }
+    return @hwaddr;
+}
+
+sub _find_base {
+    my $self = shift;
+    my $file = shift;
+    my @cmd = ( 'qemu-img','info',$file);
+    my ($in,$out, $err);
+    run3(\@cmd,\$in, \$out, \$err);
+
+    my ($base) = $out =~ m{^backing file: (.*)}mi;
+    die "No base for $file in $out" if !$base;
+
+    return $base;
+}
+
+=head2 clean_swap_volumes
+
+Clean swap volumes. It actually just creates an empty qcow file from the base
+
+=cut
+
+sub clean_swap_volumes {
+    my $self = shift;
+    for my $file ($self->list_volumes) {
+        next if $file !~ /\.SWAP\.\w+/;
+        my $base = $self->_find_base($file) or next;
+
+    	my @cmd = ('qemu-img','create'
+                ,'-f','qcow2'
+                ,'-b',$base
+                ,$file
+    	);
+    	my ($in,$out, $err);
+    	run3(\@cmd,\$in, \$out, \$err);
+    	die $err if $err;
+	}
+}
+
+=head2 get_driver
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver {
+    my $self = shift;
+    my $name = shift;
+
+    my $sub = $GET_DRIVER_SUB{$name};
+
+    die "I can't get driver $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+=head2 set_driver
+
+Sets the value of a driver
+
+Argument: name , driver
+
+    my $driver = $domain->set_driver('video','"type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"');
+
+=cut
+
+sub set_driver {
+    my $self = shift;
+    my $name = shift;
+
+    my $sub = $SET_DRIVER_SUB{$name};
+
+    die "I can't get driver $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self,@_);
+}
+
+sub _get_driver_generic {
+    my $self = shift;
+    my $xml_path = shift;
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $driver ($doc->findnodes($xml_path)) {
+        my $str = $driver->toString;
+        $str =~ s{^<model (.*)/>}{$1};
+        push @ret,($str);
+    }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+}
+
+sub _get_driver_video {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/video/model',@_);
+}
+
+sub _get_driver_network {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/interface/model',@_);
+}
+
+sub _get_driver_sound {
+    my $self = shift;
+    my $xml_path ="/domain/devices/sound";
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $driver ($doc->findnodes($xml_path)) {
+        push @ret,('model="'.$driver->getAttribute('model').'"');
+    }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+
+}
+
+sub _text_to_hash {
+    my $text = shift;
+
+    my %ret;
+
+    for my $item (split /\s+/,$text) {
+        my ($name, $value) = $item =~ m{(.*?)=(.*)};
+        if (!defined $name) {
+            warn "I can't find name=value in '$item'";
+            next;
+        }
+        $value =~ s/^"(.*)"$/$1/;
+        $ret{$name} = ($value or '');
+    }
+    return %ret;
+}
+
+sub _set_driver_generic {
+    my $self = shift;
+    my $xml_path= shift;
+    my $value_str = shift or confess "Missing value";
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my %value = _text_to_hash($value_str);
+    for my $video($doc->findnodes($xml_path)) {
+        my $old_driver = $video->toString();
+        for my $node ($video->findnodes('model')) {
+            for my $attrib ( $node->attributes ) {
+                my ( $name ) =$attrib =~ /\s*(.*)=/;
+                next if !defined $name;
+                my $new_value = ($value{$name} or '');
+                if ($value{$name}) {
+                    $node->setAttribute($name => $value{$name});
+                } else {
+                    $node->removeAttribute($name);
+                }
+            }
+            for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+            }
+        }
+        return if $old_driver eq $video->toString();
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+sub _set_driver_video {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/video',@_);
+}
+
+sub _set_driver_network {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/interface',@_);
+}
+
+sub _set_driver_sound {
+    my $self = shift;
+#    return $self->_set_driver_generic('/domain/devices/sound',@_);
+    my $value_str = shift or confess "Missing value";
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my %value = _text_to_hash($value_str);
+    for my $node ($doc->findnodes("/domain/devices/sound")) {
+        my $old_driver = $node->toString();
+        for my $attrib ( $node->attributes ) {
+            my ( $name ) =$attrib =~ /\s*(.*)=/;
+            next if !defined $name;
+            my $new_value = ($value{$name} or '');
+            if ($value{$name}) {
+                $node->setAttribute($name => $value{$name});
+            } else {
+                $node->removeAttribute($name);
+            }
+        }
+        for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+        }
+        return if $old_driver eq $node->toString();
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
 }
 
 1;

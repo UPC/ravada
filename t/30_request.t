@@ -195,7 +195,10 @@ sub test_req_remove_domain_name {
 
     my $req = Ravada::Request->remove_domain(name => $name, uid => user_admin()->id);
 
-    $ravada->_process_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork();
+
+    ok($req->status eq 'done',ref($vm)." status ".$req->status." should be done");
+    ok(!$req->error ,ref($vm)." error : '".$req->error."' , should be ''");
 
     my $domain =  $vm->search_domain($name);
     ok(!$domain,ref($vm)." Domain $name should be removed") or exit;
@@ -232,6 +235,10 @@ for my $vm_name ( qw(Void KVM)) {
 
     SKIP: {
         my $msg = "SKIPPED: No virtual managers found";
+        if ($vm && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
