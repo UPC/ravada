@@ -138,57 +138,39 @@
           <pre><code>$ git clone https://github.com/frankiejol/ravada.git</code></pre>
           <h1 id="packages">Packages</h1>
           <h2 id="debian">Debian</h2>
+	
+	  
           <pre><code>$ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl</code></pre>
-          <ul>
-            <li>libmojolicious-perl</li>
-            <li>mysql-server</li>
-            <li>libauthen-passphrase-perl</li>
-            <li>libdbd-mysql-perl</li>
-            <li>libdbi-perl</li>
-            <li>libdbix-connector-perl</li>
-            <li>libipc-run3-perl</li>
-            <li>libnet-ldap-perl</li>
-            <li>libproc-pid-file-perl</li>
-            <li>libvirt-bin</li>
-            <li>libsys-virt-perl</li>
-            <li>libxml-libxml-perl</li>
-            <li>libconfig-yaml-perl</li>
-            <li>libmoose-perl</li>
-            <li>libjson-xs-perl</li>
-            <li>qemu-utils</li>
-            <li>perlmagick</li>
-            <li>libmoosex-types-netaddr-ip-perl</li>
-            <li>libsys-statistics-linux-perl</li>
-            <li>libio-interface-perl</li>
-            <li>libiptables-chainmgr-perl</li>
-            <li>libnet-dns-perl</li>
-            <li>wget</li>
-            <li>virt-viewer</li>
-            <li>liblocale-maketext-lexicon-perl</li>
-            <li>libmojolicious-plugin-i18n-perl</li>
-          </ul>
-          <h2 id="old-mojolicious">Old Mojolicious</h2>
-          <p>In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:</p>
-          <pre><code>$ sudo apt-get purge libmojolicious-perl
-            $ sudo apt-get install cpanminus build-essential
-            $ sudo cpanm Mojolicious</code></pre>
+         
+	  <h2 id="Ubuntu">Ubuntu</h2>
+ 	<a href="infoteleco.upc.edu/img/debian"> ETSETB repository </a>. We provide deb Ubuntu packages. Download and install them."</body>
+          <pre><code> $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+
+ $ sudo dpkg -i ravada_0.1.2_all.deb
+ </code></pre>
+          <p id="the last command will show a warning about missing dependencies. install them running">The last command will show a warning about missing dependencies. Install them running</p>
+          <pre><code> $ sudo apt-get -f install</code></pre>
+
+          <h2 id="development-release">Development Release</h2>
+          <p>Read <a href"https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md">INSTALL DEVEL.md</a> if you want to develop RAVADA or install a bleeding edge, non-packaged, release.</p>
+          
             <h1 id="mysql-database">Mysql Database</h1>
             <h2 id="mysql-user">MySQL user</h2>
-            <p>Create a database named &quot;ravada&quot;.</p>
+            <p>Create a database named &quot;ravada&quot;.In this stage the system wants you to identify a password for your sql.</p>
             <pre><code>$ mysqladmin -u root -p create ravada</code></pre>
             <p>Grant all permissions to your user:</p>
             <pre><code>$ mysql -u root -p
               mysql&gt; grant all on ravada.* to rvd_user@&#39;localhost&#39; identified by &#39;figure a password&#39;;
               exit</code></pre>
               <h2 id="config-file">Config file</h2>
-              <p>Create a config file at /etc/ravada.conf with:</p>
+              <p>Create a config file at /etc/ravada.conf with the username and password you declared in the previous step.</p>
               <pre><code>db:
                 user: rvd_user
                 password: *****</code></pre>
                 <p>Protect the config file from others:</p>
                 <pre><code>$ chmod o-rx /etc/ravada.conf</code></pre>
                 <h2 id="create-tables">Create tables</h2>
-                <p>Review and run the sql files from the sql dir.</p>
+                <p>Review and run the sql files from the sql dir. If you are using a packaged release, you can find these files at /usr/share/doc/ravada/doc. For development, the files are at the sql directory inside the sources.</p>
                 <pre><code>$ cd ravada/sql/mysql
                   $ cat *.sql | mysql -p -u rvd_user ravada
                   $ cd ..
@@ -202,8 +184,7 @@
                     $ sudo virsh pool-start default</code></pre>
                     <h1 id="ravada-user">Ravada user</h1>
                     <p>Add a new user for the ravada web. This command will create a new ravada user :</p>
-                    <pre><code>$ cd ravada
-                      $ ./bin/rvd_back.pl --add-user user.name</code></pre>
+                    <pre><code>$ sudo /usr/sbin/rvd_back --add-user user.name</code></pre>
                       <h1 id="screenshots-directory">Screenshots directory</h1>
                       <p>Create a directory to store virtual machines screenshots:</p>
                       <pre><code>$ sudo mkdir -p /var/www/img/screenshots/</code></pre>
