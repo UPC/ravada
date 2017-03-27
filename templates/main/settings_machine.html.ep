@@ -17,6 +17,7 @@
                             <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
                             <%= $message %>
                             <br/>
+% if ($USER->is_admin()) {
                       <button ng-disabled ="showmachine.is_base == 0 || showmachine.has_clones > 0 || showmachine.is_locked == 1"
                       ng-click="action('machine','remove_base',showmachine.id)">
                         <%=l 'Remove base' %>
@@ -28,6 +29,7 @@
                       <span ng-show="{{showmachine.has_clones}} > 0">
                         <h4>Machine has {{showmachine.has_clones}} clones</h4>
                       </span>
+% }
                     </div>
                       <div class="header"> <%=l 'Status'%>:
                         <span ng-show="{{showmachine.is_paused && showmachine.is_active}}"
@@ -42,6 +44,7 @@
                           <%=l 'Down'%>
                         </span>
                         <hr>
+% if ($USER->is_admin()) {
                         <h2><%=l 'Rename'%></h2>
                         <input type="text" name="new_name" ng-model="new_name"
                          ng-change="validate_new_name(showmachine.name)">
@@ -55,11 +58,13 @@
                            This name is duplicated
                           </label>
                         </div>
+% }
                       </div>
                       <div ng-show="{{showmachine.is_locked}}">
                         <%=l 'Machine locked by requested' %>
                         <a href="/request/{{showmachine.is_locked}}.html"><%=l 'process' %></a>
                       </div>
+% if ($USER->is_admin()) {
                       <hr>
                       <div>
                         <h2><%=l 'Copy'%></h2>
@@ -91,6 +96,7 @@
                         </form>
                       </div>
                       <hr>
+% }
                       <h2><%=l 'VM Options'%></h2>
                             <label for="ram">Memory</label>
                             <input type="text" name="ram" size="5" disabled

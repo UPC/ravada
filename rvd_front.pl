@@ -939,6 +939,7 @@ sub settings_machine {
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
+    $c->stash(USER => $USER);
 
     my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
