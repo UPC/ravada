@@ -46,15 +46,17 @@
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
                         <input type="checkbox" checked 
                                ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
-                            ng-click="action('machine','remove_base',machine.id)">
+                            ng-click="action('machine','remove_base',machine.id)"
+                            title ="Remove base">
                         <input type="checkbox" 
                                ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
-                            ng-click="action('machine','prepare',machine.id)">
+                            ng-click="action('machine','prepare',machine.id)"
+                            title ="Prepare base">
                     </td>
                     <td class="lgMachToggle">
-                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)">
+                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="Make private">
 
-                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)"></td>
+                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="Make public"></td>
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning"><%=l 'Paused' %></span>
                         <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success"><%=l 'Running' %></span>
