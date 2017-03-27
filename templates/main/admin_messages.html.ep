@@ -1,17 +1,26 @@
-
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    <div ng-controller="messagesPage">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div id="admin-content">
+<h2><%=l 'Messages' %></h2>
 <div class="panel-body">
     <div class="col-lg-12">
         <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
-            <strong>Error!</strong> Backend no available!
+            <strong><%=l 'Error!' %></strong> <%=l 'Backend no available!' %>
         </div>
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Subject</th>
+                    <th><%=l 'Subject' %></th>
 
-                    <th>Date</th>
+                    <th><%=l 'Date' %></th>
 
-                    <th>Actions</th>
+                    <th><%=l 'Actions' %></th>
                     
                 </tr>
             </thead>
@@ -25,9 +34,11 @@
                         <div ng-show="{{message.date_read != null}}">{{message.date_send}}</div></td>
 
                     <td>
-                        <a ng-show="{{message.date_read == null}}" ng-href="/messages/read/{{message.id}}.html" class="btn btn-success">Mark as Read</a>
-                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
-                        <button type="button" class="btn btn-info" ng-click="asRead(message.id)" data-toggle="modal" data-target="#modal{{message.id}}">View</button>
+                        <button type="button" class="btn btn-info" ng-click="asRead(message.id)" data-toggle="modal" data-target="#modal{{message.id}}"><%=l 'View' %></button>
+                    </td>
+                    <td>
+                        <a ng-show="{{message.date_read == null}}" ng-click="asRead(message.id)" class="btn btn-success"><%=l 'Mark as Read' %></a>
+                        <a ng-show="{{message.date_read != null}}" ng-click="asUnread(message.id)" class="btn btn-warning"><%=l 'Mark as UnRead' %></a>
                     </td>
                     
                 </tr>      
@@ -50,12 +61,12 @@
               </div>
               <div class="modal-body">
                 <p>     <div ng-bind-html='message.message' ng-show="{{message.message != ''}}">{{message.message}}</div>
-                        <div ng-show="{{message.message == ''}}"><b>No message to show!</b></div>
+                        <div ng-show="{{message.message == ''}}"><b><%=l 'No message to show!' %></b></div>
                 </p>
               </div>
               <div class="modal-footer">
-                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning">Mark as UnRead</a>
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <a ng-show="{{message.date_read != null}}" ng-href="/messages/unread/{{message.id}}.html" class="btn btn-warning"><%=l 'Mark as UnRead' %></a>
+                <button type="button" class="btn btn-default" data-dismiss="modal"><%=l 'Close' %></button>
               </div>
             </div>
 
@@ -65,3 +76,27 @@
 
     </div>
 </div>
+</div>
+</div>
+</div>
+</div>
+%= include 'bootstrap/scripts'
+%= include 'bootstrap/footer'
+<div id="overNotifications" class="notifications" ng-controller="notifCrtl">
+<script type="text/ng-template" id="alert.html">
+<div ng-transclude></div>
+</script>
+<div uib-alert ng-repeat="alert in alerts"
+ ng-class="'alert-' + (alert.type || 'warning')"
+  ng-click="closeAlert($index)"
+  ng-mouseover="alert.showMessage = false"
+  ng-mouseleave="alert.showMessage = true"
+  ng-bind-html="alert.subject">
+  {{alert.subject}}
+  <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage" ng-bind-html="alert.message">
+    {{alert.message}}
+  </div>
+</div>
+</div>
+</body>
+</html>
