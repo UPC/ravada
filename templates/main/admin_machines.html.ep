@@ -39,11 +39,13 @@
             <tbody>
                 <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
-                        <a align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog"></i></a>
+                        <a align="right" href="/machine/settings/{{machine.id}}.html"
+                        title ="Machine settings"><i class="fa fa-fw fa-cog"></i></a>
                         <b>{{machine.name}}</b>
                     </td>
                     <td class="lgMachToggle">
-                        <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"></i>
+                        <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
+                        title ="Cannot remove base, machine has clones"></i>
                         <input type="checkbox" checked 
                                ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
                             ng-click="action('machine','remove_base',machine.id)"
