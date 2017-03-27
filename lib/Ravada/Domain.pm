@@ -121,7 +121,7 @@ before 'pause' => \&_allow_manage;
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
 
-before 'shutdown' => \&_allow_manage_args;
+before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 after 'shutdown_now' => \&_post_shutdown_now;
 after 'force_shutdown' => \&_post_shutdown_now;
@@ -786,6 +786,16 @@ sub _post_pause {
     my $user = shift;
 
     $self->_remove_iptables(user => $user);
+}
+
+sub _pre_shutdown {
+    my $self = shift;
+
+    $self->_allow_manage_args(@_);
+    if ($self->is_paused) {
+        my %args = @_;
+        $self->resume(user => $args{user});
+    }
 }
 
 sub _post_shutdown {
