@@ -774,7 +774,8 @@ sub _show_request {
     return if $request->status ne 'done';
 
     return $c->render(data => "Request $id_request error ".$request->error)
-        if $request->error;
+        if $request->error
+            &&  !($request->command eq 'start' && $request->error =~ /already running/);
 
     my $name = $request->defined_arg('name');
     return if !$name;
