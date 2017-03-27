@@ -3,6 +3,12 @@ package Ravada::Request;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Request - Requests library for Ravada
+
+=cut
+
 use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
@@ -68,7 +74,7 @@ sub _init_connector {
 
     Internal object builder, do not call
 
-=Cut
+=cut
 
 sub BUILD {
     _init_connector();

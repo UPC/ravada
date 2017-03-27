@@ -9,6 +9,7 @@ use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+use Mojo::Home;
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -35,7 +36,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Login'
                                               ,login_message => ''
                                               }
-                                      ,file => 'rvd_front.conf' };
+                                      ,file => '/etc/rvd_front.conf' };
 #####
 #####
 #####
@@ -60,6 +61,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
+plugin 'RenderFile';
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
@@ -94,7 +96,7 @@ hook before_routes => sub {
             );
 
   return access_denied($c)
-    if $url =~ /\.json/
+    if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
 
   return login($c)
@@ -472,6 +474,33 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+
+get '/img/screenshots/:file' => sub {
+    my $c = shift;
+
+    my $file = $c->param('file');
+    my $path = $DOCUMENT_ROOT."/".$c->req->url->to_abs->path;
+
+    my ($id_domain ) =$path =~ m{/(\d+)\..+$};
+    if (!$id_domain) {
+        warn"ERROR : no id domain in $path";
+        return $c->reply->not_found;
+    }
+    if (!$USER->is_admin) {
+        warn $id_domain;
+        my $domain = $RAVADA->search_domain_by_id($id_domain);
+        return $c->reply->not_found if !$domain;
+        unless ($domain->is_base && $domain->is_public) {
+            warn "not owner";
+            return access_denied($c) if $USER->id != $domain->id_owner;
+        }
+    }
+    return $c->reply->not_found  if ! -e $path;
+    return $c->render_file(
+                      filepath => $path
+        ,'content_disposition' => 'inline'
+    );
+};
 
 ###################################################
 
@@ -866,8 +895,53 @@ sub check_back_running {
     return 1;
 }
 
+sub _init_user_group {
+    return if $>;
+
+    my ($run_dir) = $CONFIG_FRONT->{hypnotoad}->{pid_file} =~ m{(.*)/.*};
+    mkdir $run_dir if ! -e $run_dir;
+
+    my $user = $CONFIG_FRONT->{user};
+    my $group = $CONFIG_FRONT->{group};
+
+    if (defined $group) {
+        $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
+            if $group !~ /^\d+$/;
+
+    }
+    if (defined $user) {
+        $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"
+            if $user !~ /^\d+$/;
+
+    }
+    chown $user,$group,$run_dir or die "$! chown $user,$group,$run_dir"
+        if defined $user;
+
+    if (defined $group) {
+        $) = $group;
+    }
+    if (defined $user) {
+        $> = $user;
+    }
+
+}
+
 sub init {
     check_back_running() or warn "CRITICAL: rvd_back is not running\n";
+
+    _init_user_group();
+    my $home = Mojo::Home->new();
+    $home->detect();
+
+    if (exists $ENV{MORBO_VERBOSE}
+        || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
+            return if -e $home->rel_dir("public");
+    }
+    app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
+            or $home->rel_dir("public"));
+    app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
+            or $home->rel_dir("templates"));
+
 }
 
 sub _search_requested_machine {

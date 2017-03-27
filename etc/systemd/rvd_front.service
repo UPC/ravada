@@ -8,12 +8,9 @@ After=network.target
 Type=simple
 RemainAfterExit=yes
 SyslogIdentifier=rvd_front
-PIDFile=/var/www/ravada/script/hypnotoad.pid
-WorkingDirectory=/var/www/ravada/
-ExecStart=/usr/bin/hypnotoad /var/www/ravada/rvd_front.pl -f
-ExecStop=/usr/bin/hypnotoad -s /var/www/ravada/rvd_front.pl
-ExecReload=/usr/bin/hypnotoad /var/www/ravada/rvd_front.pl
-User=ravada
+ExecStart=/usr/bin/hypnotoad /usr/sbin/rvd_front -f
+ExecStop=/usr/bin/hypnotoad -s /usr/sbin/rvd_front
+ExecReload=/usr/bin/hypnotoad /usr/sbin/rvd_front
 
 [Install]
 WantedBy=multi-user.target

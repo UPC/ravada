@@ -3,6 +3,12 @@ package Ravada::Auth::LDAP;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Auth::LDAP - LDAP library for Ravada
+
+=cut
+
 use Authen::Passphrase;
 use Authen::Passphrase::SaltedDigest;
 use Carp qw(carp);

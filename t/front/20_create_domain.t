@@ -89,12 +89,19 @@ $RVD_FRONT->fork(0);
 ok(scalar $RVD_FRONT->list_vm_types(),"Expecting some in list_vm_types , got "
     .scalar $RVD_FRONT->list_vm_types());
 
+SKIP: {
 for my $vm_name ('Void','KVM','LXC') {
 
     my $vm = $RVD_BACK->search_vm($vm_name);
+    my $msg = "Skipping VM $vm_name in this system";
+    if ($vm && $vm_name =~ /kvm/i && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     if (!$vm) {
-        diag("Skipping VM $vm_name in this system");
-        next;
+        diag($msg);
+        skip($msg,10);
     }
 
     my $name = new_domain_name();
@@ -140,6 +147,7 @@ for my $vm_name ('Void','KVM','LXC') {
     ok(!$display,"No display should b e returned with no user");
 
     test_remove_domain($name);
+}
 }
 
 remove_old_domains();

@@ -1,5 +1,14 @@
 package Ravada::VM::KVM;
 
+use warnings;
+use strict;
+
+=head1 NAME
+
+Ravada::VM::KVM - KVM Virtual Managers library for Ravada
+
+=cut
+
 use Carp qw(croak carp cluck);
 use Data::Dumper;
 use Digest::MD5;
@@ -33,11 +42,6 @@ has vm => (
     ,lazy => 1
 );
 
-has default_storage_pool_name => (
-    isa => 'Str'
-    ,is => 'rw'
-);
-
 has type => (
     isa => 'Str'
     ,is => 'ro'
@@ -47,7 +51,9 @@ has type => (
 #########################################################################3
 #
 
+#TODO use config file for DIR_XML
 our $DIR_XML = "etc/xml";
+$DIR_XML = "/var/lib/ravada/xml/" if $0 =~ m{^/usr/sbin};
 
 our $XML = XML::LibXML->new();
 
@@ -75,7 +81,10 @@ sub _connect {
                               ,readonly => $self->mode
                           );
     }
-#    $vm->register_close_callback(\&_reconnect);
+    if ( ! $vm->list_storage_pools ) {
+	warn "WARNING: No storage pools creating default\n";
+    	$self->_create_default_pool($vm);
+    }
     return $vm;
 }
 
@@ -169,6 +178,7 @@ sub dir_img {
     my $self = shift;
 
     my $pool = $self->_load_storage_pool();
+    $pool = $self->_create_default_pool() if !$pool;
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -176,6 +186,40 @@ sub dir_img {
         if !$dir;
 
     return $dir;
+}
+
+sub _create_default_pool {
+    my $self = shift;
+    my $vm = shift;
+    $vm = $self->vm if !$vm;
+
+    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+
+    my $dir = "/var/lib/libvirt/images";
+    mkdir $dir if ! -e $dir;
+
+    my $xml =
+"<pool type='dir'>
+  <name>default</name>
+  <uuid>$uuid</uuid>
+  <capacity unit='bytes'></capacity>
+  <allocation unit='bytes'></allocation>
+  <available unit='bytes'></available>
+  <source>
+  </source>
+  <target>
+    <path>$dir</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>"
+;
+    my $pool = $vm->create_storage_pool($xml);
+    $pool->set_autostart(1);
+
 }
 
 =head2 create_domain
@@ -304,7 +348,7 @@ sub create_volume {
     $allocation = int($capacity * 0.1)+1
         if !defined $allocation && $capacity;
 
-    open my $fh,'<', $file_xml or die "$! $file_xml";
+    open my $fh,'<', $file_xml or confess "$! $file_xml";
 
     my $doc;
     eval { $doc = $XML->load_xml(IO => $fh) };
@@ -335,10 +379,13 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
+    my $target = $args{target};
     my $dir_img = $self->dir_img();
     my $suffix = ".img";
     $suffix = ".SWAP.img"   if $args{swap};
-    my (undef, $img_file) = tempfile($args{name}."-XXXX"
+    my $filename = $args{name};
+    $filename .= "-$target" if $target;
+    my (undef, $img_file) = tempfile($filename."-XXXX"
         ,DIR => $dir_img
         ,OPEN => 0
         ,SUFFIX => $suffix
@@ -388,10 +435,14 @@ sub _domain_create_from_iso {
     my $device_cdrom = $self->_iso_name($iso, $args{request});
 
     my $disk_size = $args{disk} if $args{disk};
+
+    my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
+
     my $device_disk = $self->create_volume(
           name => $args{name}
-         , xml =>  $DIR_XML."/".$iso->{xml_volume}
+         , xml => $file_xml
         , size => $disk_size
+        ,target => 'vda'
     );
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
@@ -466,10 +517,12 @@ sub _create_disk_qcow2 {
 
     my @files_out;
 
-    for my $file_base ( $base->list_files_base ) {
+    for my $file_data ( $base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
         my $ext = ".qcow2";
         $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\.\w+$/;
-        my $file_out = "$dir_img/$name-"._random_name(4).$ext;
+        my $file_out = "$dir_img/$name-".($target or _random_name(2))
+            ."-"._random_name(2).$ext;
 
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
@@ -1159,15 +1212,30 @@ sub _xml_modify_mac {
     my @macparts = split/:/,$mac;
 
     my $new_mac;
-    for my $last ( 0 .. 99 ) {
-        $last = "0$last" if length($last)<2;
-        $macparts[-1] = $last;
-        $new_mac = join(":",@macparts);
-        last if $self->_unique_mac($new_mac);
-        $new_mac = undef;
+
+    my $n_part = scalar(@macparts) -2;
+
+    for (;;) {
+        for my $last ( 0 .. 254 ) {
+            $last = sprintf("%X", $last);
+            $last = "0$last" if length($last)<2;
+            $macparts[-1] = $last;
+            $new_mac = join(":",@macparts);
+            if ( $self->_unique_mac($new_mac) ) {
+                $if_mac->setAttribute(address => $new_mac);
+                return;
+            }
+            $new_mac = undef;
+        }
+        my $new_part = hex($macparts[$n_part])+1;
+        if ($new_part > 255) {
+            $n_part--;
+            $new_part = 0;
+            die "I can't find a new unique mac" if !$n_part<0;
+        }
+        $macparts[$n_part] = sprintf("%X", $new_part);
     }
     die "I can't find a new unique mac" if !$new_mac;
-    $if_mac->setAttribute(address => $new_mac);
 }
 
 =head2 list_networks

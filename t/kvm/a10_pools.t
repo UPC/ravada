@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
@@ -23,22 +24,7 @@ my %ARG_CREATE_DOM = (
 my @VMS = reverse keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
 
-my $POOL_NAME= new_domain_name();
-
 #########################################################################
-
-sub clean_pool {
-
-    my $vm = rvd_back->search_vm('kvm') or return;
-    my $pool;
-    eval { $pool = $vm->vm->get_storage_pool_by_name($POOL_NAME)};
-    return if !$pool;
-
-    diag("Removing $POOL_NAME storage_pool");
-    $pool->destroy();
-    eval { $pool->undefine() };
-    ok(!$@ or $@ =~ /Storage pool not found/i);
-}
 
 sub create_pool {
     my $vm_name = shift;
@@ -49,12 +35,13 @@ sub create_pool {
 
     my $capacity = 1 * 1024 * 1024;
 
-    my $dir = "/var/tmp/$POOL_NAME";
+    my $pool_name = new_pool_name();
+    my $dir = "/var/tmp/$pool_name";
     mkdir $dir if ! -e $dir;
 
     my $xml =
 "<pool type='dir'>
-  <name>$POOL_NAME</name>
+  <name>$pool_name</name>
   <uuid>$uuid</uuid>
   <capacity unit='bytes'>$capacity</capacity>
   <allocation unit='bytes'></allocation>
@@ -75,14 +62,18 @@ sub create_pool {
     eval { $pool = $vm->vm->create_storage_pool($xml) };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
+
+    return $pool_name;
 }
 
 sub test_create_domain {
     my $vm_name = shift;
+    my $pool_name = shift or confess "Missing pool_name";
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
-    $vm->default_storage_pool_name($POOL_NAME);
+    $vm->default_storage_pool_name($pool_name);
+    is($vm->default_storage_pool_name($pool_name), $pool_name) or exit;
 
     my $name = new_domain_name();
 
@@ -131,7 +122,8 @@ sub test_remove_domain {
 
 sub test_base {
     my $domain = shift;
-    $domain->prepare_base($USER);
+    eval { $domain->prepare_base($USER) };
+    is($@,'',"Prepare base") or exit;
 
     my @files_base = $domain->list_files_base();
     is(scalar @files_base, 2);
@@ -157,12 +149,13 @@ sub test_volumes_in_two_pools {
 
     my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
 
-    clean_pool();
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
 
+    my $pool_name1 = create_pool($vm_name);
+    $vm->default_storage_pool_name($pool_name1);
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
@@ -170,15 +163,16 @@ sub test_volumes_in_two_pools {
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
+    my $pool_name2 = create_pool($vm_name);
+    $vm->default_storage_pool_name($pool_name2);
 
-    create_pool($vm_name);
-    $vm->default_storage_pool_name($POOL_NAME);
     $domain->add_volume(name => 'volb' , size => 1024*1024 );
 
     my @volumes = $domain->list_volumes();
     is(scalar @volumes , 2);
     for my $file (@volumes) {
         ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
+        like($file,qr(^/var/tmp));
     }
 
     my ($path0) = $volumes[0] =~ m{(.*)/};
@@ -198,22 +192,44 @@ sub test_volumes_in_two_pools {
 
 }
 
+sub test_default_pool {
+    my $vm_name = shift;
+    my $pool_name = shift or confess "Missing pool_name";
+    {
+        my $vm = rvd_back->search_vm($vm_name);
+        $vm->default_storage_pool_name($pool_name)
+            if $vm->default_storage_pool_name() ne $pool_name;
+    }
+    my $vm = rvd_back->search_vm($vm_name);
+    is($vm->default_storage_pool_name, $pool_name);
+}
+
 #########################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
-clean_pool();
 my $vm_name = 'kvm';
-create_pool($vm_name);
+my $vm = rvd_back->search_vm($vm_name);
 
-my $domain = test_create_domain($vm_name);
-test_remove_domain($vm_name, $domain);
+SKIP: {
 
-test_volumes_in_two_pools($vm_name);
+    my $msg = "SKIPPED: No virtual managers found";
+    if ($vm && $vm_name =~ /kvm/i && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
 
-clean_pool();
-remove_old_domains();
-remove_old_disks();
+    skip($msg,10)   if !$vm;
+
+    my $pool_name = create_pool($vm_name);
+
+    my $domain = test_create_domain($vm_name, $pool_name);
+    test_remove_domain($vm_name, $domain);
+    test_default_pool($vm_name,$pool_name);
+
+    test_volumes_in_two_pools($vm_name);
+}
+
+clean();
 
 done_testing();

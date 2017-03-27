@@ -3,9 +3,16 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
+=head2 NAME
+
+Ravada::Domain::KVM - KVM Virtual Machines library for Ravada
+
+=cut
+
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
+use File::Path qw(make_path);
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -190,6 +197,9 @@ sub _remove_file_image {
 
 sub _disk_device {
     my $self = shift;
+    my $with_target = shift;
+
+
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
@@ -201,11 +211,17 @@ sub _disk_device {
 
         $list_disks .= $disk->toString();
 
+        my ($file,$target);
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
-                push @img , ($child->getAttribute('file'));
+                $file = $child->getAttribute('file');
+            }
+            if ($child->nodeName eq 'target') {
+                $target = $child->getAttribute('dev');
             }
         }
+        push @img,[$file,$target]   if $with_target;
+        push @img,($file)           if !$with_target;
     }
     if (!scalar @img) {
         my (@devices) = $doc->findnodes('/domain/devices/disk');
@@ -248,7 +264,7 @@ Returns the file name of the disk of the domain.
 
 sub disk_device {
     my $self = shift;
-    return $self->_disk_device();
+    return $self->_disk_device(@_);
 }
 
 sub _create_qcow_base {
@@ -257,7 +273,8 @@ sub _create_qcow_base {
     my @base_img;
 
     my $base_name = $self->name;
-    for  my $file_img ( $self->list_volumes()) {
+    for  my $vol_data ( $self->list_volumes_target()) {
+        my ($file_img,$target) = @$vol_data;
         confess "ERROR: missing $file_img"
             if !-e $file_img;
         my $base_img = $file_img;
@@ -270,7 +287,7 @@ sub _create_qcow_base {
             @cmd = _cmd_convert($file_img,$base_img);
         }
 
-        push @base_img,($base_img);
+        push @base_img,([$base_img,$target]);
 
 
         my ($in, $out, $err);
@@ -536,7 +553,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -546,8 +563,8 @@ sub add_volume {
     $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
     if (!$args{xml}) {
-        $args{xml} = 'etc/xml/default-volume.xml';
-        $args{xml} = 'etc/xml/swap-volume.xml'      if $args{swap};
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/default-volume.xml";
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
     }
 
     my $path = $args{vm}->create_volume(
@@ -560,7 +577,7 @@ sub add_volume {
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
 #
-    my $target_dev = $self->_new_target_dev();
+    my ($target_dev) = ($args{target} or $self->_new_target_dev());
     my $pci_slot = $self->_new_pci_slot();
     my $driver_type = 'qcow2';
     my $cache = 'default';
@@ -666,6 +683,20 @@ sub list_volumes {
     return $self->disk_device();
 }
 
+=head2 list_volumes_target
+
+Returns a list of the disk volumes. Each element of the list is a string with the filename.
+For KVM it reads from the XML definition of the domain.
+
+    my @volumes = $domain->list_volumes_target();
+
+=cut
+
+sub list_volumes_target {
+    my $self = shift;
+    return $self->disk_device("target");
+}
+
 =head2 screenshot
 
 Takes a screenshot, it stores it in file.
@@ -675,6 +706,9 @@ Takes a screenshot, it stores it in file.
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
+
+    my ($path) = $file =~ m{(.*)/};
+    make_path($path) if ! -e $path;
 
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();

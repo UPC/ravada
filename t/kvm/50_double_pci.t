@@ -87,10 +87,15 @@ my $vm;
 eval { $vm = rvd_back->search_vm('KVM') };
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    if ($vm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    for my $xml (  
+    for my $xml (
         't/kvm/etc/kvm_50_double_pci_0.xml'
         ,'t/kvm/etc/wind10_fail.xml') {
         my $name = test_create_domain_xml($xml);
