@@ -21,12 +21,13 @@
         <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
-                    <th class="lgMachName" ng-click="orderMachineList('name','')">
-                      <i class="fa fa-arrows-v machine-button"
+                    <th class="lgMachName machine-button"
+                     ng-click="orderMachineList('name','')">
+                      <i class="fa fa-exchange fa-rotate-90"
                        ng-hide="orderParam[0] === 'name' || orderParam[0] === '-name'"></i>
-                      <i class="fa fa-arrow-down machine-button" ng-cloak
+                      <i class="fa fa-arrow-down" ng-cloak
                        ng-hide="orderParam[0] !== 'name'"></i>
-                      <i class="fa fa-arrow-up machine-button" ng-cloak
+                      <i class="fa fa-arrow-up" ng-cloak
                        ng-hide="orderParam[0] !== '-name'"></i>
                       <%=l 'Machine Name' %></th>
                     <th class="lgMachToggle">
@@ -36,12 +37,13 @@
                        title="<%=l 'Show/Hide clones' %>"></i>
                       <%=l 'Base' %></th>
                     <th class="lgMachToggle">Public</th>
-                    <th class="lgMachToggle" ng-click="orderMachineList('is_active','is_paused')">
-                      <i class="fa fa-arrows-v machine-button"
+                    <th class="lgMachToggle machine-button"
+                     ng-click="orderMachineList('is_active','is_paused')">
+                      <i class="fa fa-exchange fa-rotate-90"
                        ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i>
-                      <i class="fa fa-arrow-down machine-button" ng-cloak
+                      <i class="fa fa-arrow-down" ng-cloak
                        ng-hide="orderParam[0] !== 'is_active'"></i>
-                      <i class="fa fa-arrow-up machine-button" ng-cloak
+                      <i class="fa fa-arrow-up" ng-cloak
                        ng-hide="orderParam[0] !== '-is_active'"></i>
                       <%=l 'Status' %></th>
                     <th class="lgMachActions">Actions</th>
