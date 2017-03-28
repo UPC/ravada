@@ -32,7 +32,8 @@
                     <th class="lgMachToggle">
                       <i class="fa machine-button"
                        ng-class="{ 'fa-eye':!hide_clones, 'fa-eye-slash':hide_clones }"
-                       ng-click="hideClones()"></i>
+                       ng-click="hideClones()"
+                       title="<%=l 'Show/Hide clones' %>"></i>
                       <%=l 'Base' %></th>
                     <th class="lgMachToggle">Public</th>
                     <th class="lgMachToggle" ng-click="orderMachineList('is_active','is_paused')">
@@ -47,7 +48,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
+                <tr ng-hide="{{machine.id_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
                         <a align="right" href="/machine/settings/{{machine.id}}.html"
                         title ="Machine settings"><i class="fa fa-fw fa-cog"></i></a>
