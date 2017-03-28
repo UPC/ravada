@@ -166,7 +166,7 @@
                         <div ng-show="{{child.is_locked}}" ng-cloak>Machine locked by requested <a href="/request/{{child.is_locked}}.html">process</a></div>
                       </td>
                     </tr>
-                    <tr ng-repeat-end ng-hide="true"></tr>>
+                    <tr ng-repeat-end ng-hide="true"></tr>
             </tbody>
         </table>
     </div>
