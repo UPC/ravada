@@ -20,22 +20,13 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_machines= response.data;
       });
     };
-    $scope.orderParam = [];
-    $scope.increment = 0;
+    $scope.orderParam = ['none'];
     $scope.orderMachineList = function(type1,type2){
-      $scope.increment++;
-      switch ($scope.increment) {
-        case 1:
-          $scope.orderParam = [type1,'-'+type2];
-          break;
-        case 2:
-          $scope.orderParam = ['-'+type1,type2];
-          break;
-        case 3:
-          $scope.orderParam = [];
-          $scope.increment = 0;
-          break;
-      }
+      if ($scope.orderParam[0] === '-'+type1)
+        $scope.orderParam = ['none'];
+      else if ($scope.orderParam[0] === type1 )
+        $scope.orderParam = ['-'+type1,type2];
+      else $scope.orderParam = [type1,'-'+type2];
     }
     $scope.hide_clones = true;
     $scope.hideClones = function(){
