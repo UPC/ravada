@@ -38,7 +38,26 @@ ravadaApp.directive("solShowMachine", swMach)
     });
     $scope.getMachines = function() {
       $http.get("/list_machines.json").then(function(response) {
-        $scope.list_machines= response.data;
+        $scope.list_machines = [];
+        var mach;
+        for (var i=0, iLength = response.data.length; i<iLength; i++){
+          mach = response.data[i];
+          if (!mach.id_base){
+            $scope.list_machines[mach.id] = mach;
+            $scope.list_machines[mach.id].childs = [];
+          }
+        }
+        for (var i=0, iLength = response.data.length; i<iLength; i++){
+          mach = response.data[i];
+          if (mach.id_base){
+            $scope.list_machines[mach.id_base].childs.push(mach);
+          }
+        }
+        for (var i = $scope.list_machines.length-1; i >= 0; i--){
+          if (!$scope.list_machines[i]){
+            $scope.list_machines.splice(i,1);
+          }
+        }
       });
     };
     $scope.orderParam = ['none'];
