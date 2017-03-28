@@ -682,8 +682,8 @@ sub admin {
     my $page = $c->stash('type');
     my @error = ();
 
-    push($c->stash->{css},'/css/admin.css');
-    push($c->stash->{js},'/js/admin.js');
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
     $c->render(template => 'main/admin_'.$page);
 
 };
