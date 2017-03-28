@@ -107,8 +107,14 @@ msgstr "Aturada"
 msgid "Running"
 msgstr "En marxa"
 
+msgid "Start"
+msgstr ""
+
 msgid "ShutDown"
 msgstr "Atura"
+
+msgid "View"
+msgstr "Veure"
 
 msgid "Screenshot"
 msgstr ""
@@ -163,3 +169,15 @@ msgstr "usuaris"
 
 msgid "messages"
 msgstr "missatges"
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr "Esborra base"
+
+msgid "Prepare base"
+msgstr "Prepara base"
+
+msgid "public"
+msgstr "públic"

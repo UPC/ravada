@@ -16,26 +16,22 @@ navbar-inverse navbar-fixed-top" role="navigation">
                 <li>
                         <a href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                 </li>
-%          if (defined $_user ) {
-                <li>
-                    <a href="/messages.html">
-%                   if ($_user->unread_messages) {
-                        <i class="fa fa-fw fa-bell"></i>
-                        <b><%=l 'NEW' %>  </b>
-                        <!-- TODO list of message subjects when clicking -->
-%                   }
-                    <%=l 'Messages' %>
-                    </a>
-                </li>
-%           }
 % }
 % if (defined $_user && $_user->is_admin ) { 
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-wrench"></i>&nbsp;<%=l 'Tools' %><span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="/machines"><i class="fa fa-cubes"></i>&nbsp;<%=l 'Machines List' %></a></li>
-                        <li><a href="/users"><i class="fa fa-users"></i>&nbsp;<%=l 'Users' %></a></li>
-                    </ul>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">
+                    <i class="fa fa-wrench"></i>&nbsp;<%=l 'Admin tools' %><span class="caret"></span></a>
+                  <ul class="dropdown-menu">
+                    <li><a href="/admin/machines">
+                      <i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'machines' %></a>
+                    </li>
+                    <li><a href="/admin/users">
+                      <i class="fa fa-user" aria-hidden="true"></i>&nbsp<%=l 'users' %></a>
+                    </li>
+                    <li><a href="/admin/messages">
+                      <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
+                    </li>
+                  </ul>
                 </li>
 % }
 % if ( !$_anonymous ) {

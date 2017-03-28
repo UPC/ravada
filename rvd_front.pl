@@ -62,7 +62,6 @@ setlocale(LC_CTYPE, $old_locale);
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
 plugin 'RenderFile';
-
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
@@ -78,7 +77,7 @@ our $USER;
 
 # TODO: get those from the config file
 our $DOCUMENT_ROOT = "/var/www";
-our $SESSION_TIMEOUT = 300;
+our $SESSION_TIMEOUT = 900;
 
 init();
 ############################################################################3
@@ -174,14 +173,17 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/machines' => sub {
-    my $c = shift;
-
-    return access_denied($c)    if !$USER->is_admin;
-
-    return domains($c);
+any '/admin' => sub {
+  my $c = shift;
+  $c->redirect_to("/admin/machines")
 };
+any '/admin/(#type)' => sub {
+  my $c = shift;
 
+  return access_denied($c)    if !$USER->is_admin;
+
+  return admin($c);
+};
 
 any '/machines/new' => sub {
     my $c = shift;
@@ -197,14 +199,6 @@ get '/domain/new.html' => sub {
     return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->stash(error => []);
     return $c->render(template => "main/new_machine");
-
-};
-
-any '/users' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin;
-    return users($c);
 
 };
 
@@ -410,11 +404,6 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
-any '/messages.html' => sub {
-    my $c = shift;
-    return messages($c);
-};
-
 get '/messages.json' => sub {
     my $c = shift;
 
@@ -434,34 +423,33 @@ get '/unshown_messages.json' => sub {
 get '/messages/read/all.html' => sub {
     my $c = shift;
     $USER->mark_all_messages_read;
-    return $c->redirect_to("/messages.html");
+    return $c->render(inline => "1");
 };
 
 get '/messages/read/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
+    return $c->render(inline => "1");
 };
 
-get '/messages/read/(#id).html' => sub {
-    my $c = shift;
-    my $id = $c->stash('id');
-    $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
-};
-
-get '/messages/unread/(#id).html' => sub {
+get '/messages/unread/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_unread($id);
-    return $c->redirect_to("/messages.html");
+    return $c->render(inline => "1");
 };
 
 get '/messages/view/(#id).html' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     return $c->render( json => $USER->show_message($id) );
+};
+
+any '/ng-templates/(#template).html' => sub {
+  my $c = shift;
+  my $id = $c->stash('template');
+  return $c->render(template => 'ng-templates/'.$id);
 };
 
 any '/about' => sub {
@@ -689,33 +677,16 @@ sub show_failure {
 
 #######################################################
 
-sub domains {
+sub admin {
     my $c = shift;
-
+    my $page = $c->stash('type');
     my @error = ();
 
-    $c->render(template => 'main/machines');
+    push($c->stash->{css},'/css/admin.css');
+    push($c->stash->{js},'/js/admin.js');
+    $c->render(template => 'main/admin_'.$page);
 
-}
-
-sub messages {
-    my $c = shift;
-
-    my @error = ();
-
-    $c->render(template => 'main/messages');
-
-}
-
-sub users {
-    my $c = shift;
-    my @users = $RAVADA->list_users();
-    $c->render(template => 'main/users'
-        ,users => \@users
-    );
-
-}
-
+};
 
 sub new_machine {
     my $c = shift;
@@ -996,7 +967,7 @@ sub make_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::make_admin($id);
-
+    return $c->render(inline => "1");
 }
 
 sub remove_admin {
@@ -1005,7 +976,7 @@ sub remove_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::remove_admin($id);
-
+    return $c->render(inline => "1");
 }
 
 sub manage_machine {
@@ -1042,6 +1013,7 @@ sub settings_machine {
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
+    $c->stash(USER => $USER);
 
     my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
