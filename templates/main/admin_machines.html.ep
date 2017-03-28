@@ -7,7 +7,12 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
-<h2><%=l 'Machines' %></h2>
+<h2><%=l 'Machines' %>
+  <button type="button" style="float: right"
+   class="btn btn-success" data-toggle="modal" data-target="#modalNM">
+    New Machine
+ </button>
+</h2>
 <div class="panel-body">
     <div class="col-lg-12">
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
@@ -111,6 +116,14 @@
 </div>
 </div>
 </div>
+</div>
+<div id="modalNM" class="modal fade ng-scope"
+ role="dialog" style="display: none;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <sol-show-newmachine></sol-show-newmachine>
+    </div>
+  </div>
 </div>
 %= include 'bootstrap/scripts'
 %= include 'bootstrap/footer'

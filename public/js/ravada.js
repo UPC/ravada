@@ -2,7 +2,6 @@
 
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
-            .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
 	    .directive("solShowListusers", swListUsers)
             .directive("solShowCardsmachines", swCardsMach)
@@ -11,26 +10,9 @@
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
 	    .service("listUsers", gtListUsers)
-            .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
-
-
-    function newMachineCtrl($scope, $http) {
-
-        $http.get('/list_images.json').then(function(response) {
-                $scope.images = response.data;
-        });
-        $http.get('/list_vm_types.json').then(function(response) {
-                $scope.backends = response.data;
-        });
-        $http.get('/list_lxc_templates.json').then(function(response) {
-                $scope.templates_lxc = response.data;
-        });
-
-
-    };
 
     function suppFormCtrl($scope){
         this.user = {};
@@ -50,15 +32,6 @@
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
-        };
-
-    };
-
-    function swNewMach() {
-
-        return {
-            restrict: "E",
-            templateUrl: '/ng-templates/new_machine.html',
         };
 
     };

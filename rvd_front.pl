@@ -185,7 +185,7 @@ any '/admin/(#type)' => sub {
   return admin($c);
 };
 
-any '/machines/new' => sub {
+any '/new_machine' => sub {
     my $c = shift;
 
     return access_denied($c)    if !$USER->is_admin;
@@ -694,7 +694,7 @@ sub new_machine {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         req_new_domain($c);
-        $c->redirect_to("/machines")    if !@error;
+        $c->redirect_to("/admin/machines")    if !@error;
     }
     warn join("\n",@error) if @error;
 
@@ -1255,7 +1255,7 @@ sub copy_machine {
        , id_owner => $USER->id
         ,@create_args
     );
-    $c->redirect_to("/machines");#    if !@error;
+    $c->redirect_to("/admin/machines");#    if !@error;
 }
 
 sub machine_is_public {

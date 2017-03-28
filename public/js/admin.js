@@ -1,4 +1,6 @@
 ravadaApp.directive("solShowMachine", swMach)
+        .directive("solShowNewmachine", swNewMach)
+        .controller("new_machine", newMachineCtrl)
         .controller("machinesPage", machinesPageC)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
@@ -9,6 +11,25 @@ ravadaApp.directive("solShowMachine", swMach)
       restrict: "E",
       templateUrl: '/ng-templates/admin_machine.html',
     };
+  };
+
+  function swNewMach() {
+      return {
+          restrict: "E",
+          templateUrl: '/ng-templates/new_machine.html',
+      };
+  };
+
+  function newMachineCtrl($scope, $http) {
+      $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+      });
+      $http.get('/list_vm_types.json').then(function(response) {
+              $scope.backends = response.data;
+      });
+      $http.get('/list_lxc_templates.json').then(function(response) {
+              $scope.templates_lxc = response.data;
+      });
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
