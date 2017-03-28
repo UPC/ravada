@@ -1201,5 +1201,21 @@ sub set_driver_id {
     $sth->finish;
 }
 
+sub remote_ip {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT remote_ip FROM iptables "
+        ." WHERE "
+        ."    id_domain=?"
+        ."    AND time_deleted IS NULL"
+        ." ORDER BY time_req DESC "
+    );
+    $sth->execute($self->id);
+    my ($remote_ip) = $sth->fetchrow();
+    $sth->finish;
+    return ($remote_ip or undef);
+
+}
 
 1;

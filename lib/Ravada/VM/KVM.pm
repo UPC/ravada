@@ -1212,15 +1212,30 @@ sub _xml_modify_mac {
     my @macparts = split/:/,$mac;
 
     my $new_mac;
-    for my $last ( 0 .. 99 ) {
-        $last = "0$last" if length($last)<2;
-        $macparts[-1] = $last;
-        $new_mac = join(":",@macparts);
-        last if $self->_unique_mac($new_mac);
-        $new_mac = undef;
+
+    my $n_part = scalar(@macparts) -2;
+
+    for (;;) {
+        for my $last ( 0 .. 254 ) {
+            $last = sprintf("%X", $last);
+            $last = "0$last" if length($last)<2;
+            $macparts[-1] = $last;
+            $new_mac = join(":",@macparts);
+            if ( $self->_unique_mac($new_mac) ) {
+                $if_mac->setAttribute(address => $new_mac);
+                return;
+            }
+            $new_mac = undef;
+        }
+        my $new_part = hex($macparts[$n_part])+1;
+        if ($new_part > 255) {
+            $n_part--;
+            $new_part = 0;
+            die "I can't find a new unique mac" if !$n_part<0;
+        }
+        $macparts[$n_part] = sprintf("%X", $new_part);
     }
     die "I can't find a new unique mac" if !$new_mac;
-    $if_mac->setAttribute(address => $new_mac);
 }
 
 =head2 list_networks

@@ -107,6 +107,9 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
+msgid "Start"
+msgstr ""
+
 msgid "ShutDown"
 msgstr ""
 
@@ -146,6 +149,9 @@ msgstr ""
 msgid "Mark as Read"
 msgstr ""
 
+msgid "Mark as UnRead"
+msgstr ""
+
 msgid "No message to show!"
 msgstr ""
 
@@ -159,4 +165,16 @@ msgid "users"
 msgstr ""
 
 msgid "messages"
+msgstr ""
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr ""
+
+msgid "Prepare base"
+msgstr ""
+
+msgid "public"
 msgstr ""
