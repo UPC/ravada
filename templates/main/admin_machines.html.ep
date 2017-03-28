@@ -51,28 +51,28 @@
                     <td class="lgMachName">
                         <a align="right" href="/machine/settings/{{machine.id}}.html"
                         title ="Machine settings"><i class="fa fa-fw fa-cog"></i></a>
-                        <b>{{machine.name}}</b>
+                        <b ng-cloak>{{machine.name}}</b>
                     </td>
                     <td class="lgMachToggle">
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
-                        title ="Cannot remove base, machine has clones"></i>
+                        title ="Cannot remove base, machine has clones" ng-cloak></i>
                         <input type="checkbox" checked 
                                ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
                             ng-click="action('machine','remove_base',machine.id)"
-                            title ="Remove base">
+                            title ="Remove base" ng-cloak>
                         <input type="checkbox" 
                                ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
                             ng-click="action('machine','prepare',machine.id)"
-                            title ="Prepare base">
+                            title ="Prepare base" ng-cloak>
                     </td>
                     <td class="lgMachToggle">
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="Make private">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="Make public"></td>
                     <td class="lgMachActions">
-                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning"><%=l 'Paused' %></span>
-                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success"><%=l 'Running' %></span>
-                        <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger"><%=l 'Down' %></span>
+                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
+                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="{{!machine.is_active}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
                         <div ng-show="{{machine.is_active}}">{{machine.remote_ip}}</div>
                     </td>
                     <td class="lgMachToggle">
@@ -104,7 +104,7 @@
 
 
                       </div>
-                      <div ng-show="{{machine.is_locked}}">Machine locked by requested <a href="/request/{{machine.is_locked}}.html">process</a></div>
+                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by requested <a href="/request/{{machine.is_locked}}.html">process</a></div>
 
                     </td>
 
@@ -118,7 +118,7 @@
 </div>
 </div>
 <div id="modalNM" class="modal fade ng-scope"
- role="dialog" style="display: none;">
+ role="dialog" ng-cloak>
   <div class="modal-dialog">
     <div class="modal-content">
       <sol-show-newmachine></sol-show-newmachine>
@@ -127,7 +127,7 @@
 </div>
 %= include 'bootstrap/scripts'
 %= include 'bootstrap/footer'
-<div id="overNotifications" class="notifications" ng-controller="notifCrtl">
+<div id="overNotifications" class="notifications" ng-controller="notifCrtl" ng-cloak>
 <script type="text/ng-template" id="alert.html">
 <div ng-transclude></div>
 </script>
