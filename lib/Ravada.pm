@@ -7,7 +7,6 @@ our $VERSION = '0.2.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
-use DBIx::Connector;
 use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
@@ -16,6 +15,7 @@ use YAML;
 use Socket qw( inet_aton inet_ntoa );
 
 use Ravada::Auth;
+use Ravada::DB;
 use Ravada::Request;
 use Ravada::VM::KVM;
 use Ravada::VM::Void;
@@ -37,7 +37,6 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 
 ###########################################################################
 
-our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
@@ -49,6 +48,8 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 # LONG commands take long
 our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
 
+our $CONNECTOR;
+
 has 'vm' => (
           is => 'ro'
         ,isa => 'ArrayRef'
@@ -58,6 +59,7 @@ has 'vm' => (
 
 has 'connector' => (
         is => 'rw'
+        ,builder => '_connect_dbh'
 );
 
 has 'config' => (
@@ -80,36 +82,36 @@ sub BUILD {
         _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
     }
 
-    if ( $self->connector ) {
-        $CONNECTOR = $self->connector
-    } else {
-        $CONNECTOR = $self->_connect_dbh();
-        $self->connector($CONNECTOR);
-    }
+    $CONNECTOR= $self->connector;
+
     Ravada::Auth::init($CONFIG);
     $self->_create_tables();
     $self->_upgrade_tables();
 }
 
+sub _dbh {
+    my $self = shift;
+    return $self->connector->dbh;
+}
+
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
-    my $dbh = $CONNECTOR->dbh;
 
-    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $sth = $self->_dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
     return if $row;
 
     warn "INFO: adding $field $definition to $table\n";
-    $dbh->do("alter table $table add $field $definition");
+    $self->_dbh->do("alter table $table add $field $definition");
 }
 
 sub _create_table {
     my $self = shift;
     my $table = shift;
 
-    my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
+    my $sth = $self->_dbh->table_info('%',undef,$table,'TABLE');
     my $info = $sth->fetchrow_hashref();
     $sth->finish;
     return if keys %$info;
@@ -120,7 +122,7 @@ sub _create_table {
     my $sql = join " ",<$in>;
     close $in;
 
-    $CONNECTOR->dbh->do($sql);
+    $self->_dbh->do($sql);
     return 1;
 }
 
@@ -137,7 +139,7 @@ sub _insert_data {
     while (my $line = <$in>) {
         $sql .= $line;
         next if $sql !~ /\w/ || $sql !~ /;\s*$/;
-        $CONNECTOR->dbh->do($sql);
+        $self->_dbh->do($sql);
         $sql = '';
     }
     close $in;
@@ -146,7 +148,7 @@ sub _insert_data {
 
 sub _create_tables {
     my $self = shift;
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+    return if $self->_dbh->{Driver}{Name} !~ /mysql/i;
 
     opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
     while (my $file = readdir $ls) {
@@ -159,7 +161,7 @@ sub _create_tables {
 
 sub _upgrade_tables {
     my $self = shift;
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+    return if $self->_dbh->{Driver}{Name} !~ /mysql/i;
 
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
@@ -168,14 +170,7 @@ sub _upgrade_tables {
 
 
 sub _connect_dbh {
-    my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
-    my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
-    my $db_pass = ($CONFIG->{db}->{password} or undef);
-    my $db = ( $CONFIG->{db}->{db} or 'ravada' );
-    return DBIx::Connector->new("DBI:$driver:$db"
-                        ,$db_user,$db_pass,{RaiseError => 1
-                        , PrintError=> 0 });
-
+    return Ravada::DB->instance($CONFIG);
 }
 
 =head2 display_ip
@@ -201,7 +196,6 @@ sub _init_config {
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
-#    $CONNECTOR = ( $connector or _connect_dbh());
 }
 
 sub _create_vm_kvm {
@@ -214,7 +208,7 @@ sub _create_vm_kvm {
 
     my $vm_kvm;
 
-    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
+    eval { $vm_kvm = Ravada::VM::KVM->new( connector => $self->connector ) };
     my $err_kvm = $@;
 
     my ($internal_vm , $storage);
@@ -282,7 +276,7 @@ sub _create_vm {
 
     my $vm_lxc;
     if ($CAN_LXC) {
-        eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
+        eval { $vm_lxc = Ravada::VM::LXC->new( connector => $self->connector ) };
         push @vms,($vm_lxc) if $vm_lxc;
         my $err_lxc = $@;
         $err .= "\n$err_lxc" if $err_lxc;
@@ -433,7 +427,7 @@ sub search_domain_by_id {
     my $self = shift;
     my $id = shift  or confess "ERROR: missing argument id";
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
+    my $sth = $self->_dbh->prepare("SELECT name FROM domains WHERE id=?");
     $sth->execute($id);
     my ($name) = $sth->fetchrow;
     confess "Unknown domain id=$id" if !$name;
@@ -473,7 +467,7 @@ List all domains in raw format. Return a list of id => { name , id , is_active ,
 sub list_domains_data {
     my $self = shift;
     my @domains;
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT * FROM domains ORDER BY name"
     );
     $sth->execute;
@@ -549,7 +543,7 @@ List all ISO images
 sub list_images {
     my $self = shift;
     my @domains;
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT * FROM iso_images ORDER BY name"
     );
     $sth->execute;
@@ -581,7 +575,7 @@ sub list_images_data {
 sub _list_images_lxc {
     my $self = shift;
     my @domains;
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT * FROM lxc_templates ORDER BY name"
     );
     $sth->execute;
@@ -639,7 +633,7 @@ Before processing requests, old killed requests must be cleaned.
 
 sub clean_killed_requests {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
+    my $sth = $self->_dbh->prepare("SELECT id FROM requests "
         ." WHERE status='working' "
     );
     $sth->execute;
@@ -667,7 +661,7 @@ sub process_requests {
 
     $self->_wait_pids_nohang();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+    my $sth = $self->_dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
         ."    ( status='requested' OR status like 'retry %' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
@@ -768,7 +762,7 @@ sub _domain_working {
             }
         }
     }
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
+    my $sth = $self->_dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? AND (status <> 'requested' AND status <> 'done')");
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
