@@ -206,6 +206,7 @@ sub _pre_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
+    $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
         $self->{_was_active} = 1;
@@ -730,7 +731,17 @@ sub _can_remove_base {
 sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
+    $self->post_remove_base();
 }
+
+=head2 post_remove_base
+
+Code to execute after remove base. By default it does nothing. It may
+be implemented in the child classes of Ravada::Daomin.
+
+=cut
+
+sub post_remove_base {}
 
 sub _remove_base_db {
     my $self = shift;
@@ -1216,6 +1227,12 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
+}
+
+sub _dbh {
+    my $self = shift;
+    _init_connector() if !$CONNECTOR || !$$CONNECTOR;
+    return $$CONNECTOR->dbh;
 }
 
 1;

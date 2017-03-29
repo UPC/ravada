@@ -382,7 +382,49 @@ sub prepare_base {
 
 #    my @img = $self->_create_swap_base();
     my @img = $self->_create_qcow_base();
+    $self->_store_xml();
     return @img;
+}
+
+sub _store_xml {
+    my $self = shift;
+    my $xml = $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE);
+    my $sth = $self->_dbh->prepare(
+        "INSERT INTO base_xml (id_domain, xml) "
+        ." VALUES ( ?,? ) "
+    );
+    $sth->execute($self->id , $xml);
+    $sth->finish;
+}
+
+=head2 get_xml_base
+
+Returns the XML definition for the base, only if prepare_base has been run befor
+
+=cut
+
+sub get_xml_base{
+
+    my $self = shift;
+    my $sth = $self->_dbh->prepare(
+        "SELECT xml FROM base_xml WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    return $sth->fetchrow;
+}
+
+=head2 post_remove_base
+
+Code to run after removing a base
+
+=cut
+
+sub post_remove_base {
+    my $self = shift;
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM base_xml WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
 }
 
 =head2 display
