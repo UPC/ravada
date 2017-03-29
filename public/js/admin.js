@@ -41,7 +41,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_machines= response.data;
       });
     };
-    $scope.orderParam = ['none'];
+    $scope.orderParam = ['name'];
     $scope.orderMachineList = function(type1,type2){
       if ($scope.orderParam[0] === '-'+type1)
         $scope.orderParam = ['none'];
