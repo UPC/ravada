@@ -413,13 +413,7 @@ sub get_xml_base{
     return $sth->fetchrow;
 }
 
-=head2 post_remove_base
-
-Code to run after removing a base
-
-=cut
-
-sub post_remove_base {
+sub _post_remove_base_domain {
     my $self = shift;
     my $sth = $self->_dbh->prepare(
         "DELETE FROM base_xml WHERE id_domain=?"
