@@ -473,6 +473,21 @@ sub start {
     $self->domain->create();
 }
 
+sub _pre_shutdown_domain {
+    my $self = shift;
+    my ($state, $reason) = $self->domain->get_state();
+
+    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN 
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN 
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED) {
+        $self->domain->pm_wakeup();
+        for ( 1 .. 10 ) {
+            last if $self->is_active;
+            sleep 1;
+        }
+    }
+}
+
 =head2 shutdown
 
 Stops the domain

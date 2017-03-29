@@ -731,17 +731,12 @@ sub _can_remove_base {
 sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
-    $self->post_remove_base();
+    $self->_post_remove_base_domain();
 }
 
-=head2 post_remove_base
+sub _pre_shutdown_domain {}
 
-Code to execute after remove base. By default it does nothing. It may
-be implemented in the child classes of Ravada::Daomin.
-
-=cut
-
-sub post_remove_base {}
+sub _post_remove_base_domain {}
 
 sub _remove_base_db {
     my $self = shift;
@@ -803,6 +798,9 @@ sub _pre_shutdown {
     my $self = shift;
 
     $self->_allow_manage_args(@_);
+
+    $self->_pre_shutdown_domain();
+
     if ($self->is_paused) {
         my %args = @_;
         $self->resume(user => $args{user});
