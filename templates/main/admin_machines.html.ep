@@ -50,7 +50,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-hide="{{machine.id_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
+                <tr ng-hide="!{{machine.is_base}} && hide_clones" ng-repeat="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
                         <a align="right" href="/machine/settings/{{machine.id}}.html"
                         title ="Machine settings"><i class="fa fa-fw fa-cog"></i></a>
