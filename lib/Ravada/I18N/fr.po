@@ -19,6 +19,9 @@ msgstr ""
 msgid "Ravada broker"
 msgstr "Ravada Courtier"
 
+msgid "Restore"
+msgstr "Restaurer"
+
 msgid "Machine Name"
 msgstr "Nom de Machine"
 
