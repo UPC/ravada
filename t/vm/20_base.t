@@ -124,7 +124,7 @@ sub test_prepare_base {
     test_files_base($domain,1);
 
     my @disk = $domain->disk_device();
-    $domain->shutdown(user => $USER);
+    $domain->shutdown(user => $USER)    if $domain->is_active;
 
     touch_mtime(@disk);
 
