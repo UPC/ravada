@@ -16,8 +16,8 @@
                         <form onsubmit='alert(document.getElementById('upload').value);' method='post' enctype="multipart/form-data">
                             <p><input type="checkbox" name="check_language" id="check_language"> I want to change my language instead of my password</p>
                             <p>Language:
-                               <input type='radio' name="language" value="en" id="language">English</option>
-                               <input type='radio' name="language" value="es" id="language">Spanish</option>
+                               <input type='radio' name="tongue" value="en" id="tongue">English</option>
+                               <input type='radio' name="tongue" value="es" id="tongue">Spanish</option>
                              </select></p>
 
                             <p>New Password: <input type= 'text' name= 'password' id='password'></p>

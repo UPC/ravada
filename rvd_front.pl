@@ -9,6 +9,8 @@ use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+#use Mojolicious::Plugin::I18N;
+
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -494,41 +496,18 @@ any '/user_settings' => sub {
 
 sub user_settings {
     my $c = shift;
-    if ( defined $c->param('password') && defined $c->param('conf_password')) {
+    warn $c->param('tongue');
+    warn $USER->language;
+    if ( $c->param('check_language') ) {
+      $USER->language($c->param('tongue'));
+    }
+    if (!($c->param('password') eq "") && !($c->param('conf_password') eq "")) {
       if ($c->param('password') eq $c->param('conf_password')) {
             $USER->change_password($c->param('password'));
       }
     }
 
-    if ( $c->param('check_language') ) {
-      if ($c->param('language') eq 'es' ) { $c->render(template => 'bootstrap/es/user_settings'); }
-      else { $c->render(template => 'bootstrap/user_settings'); }
-    }
-    else { $c->render(template => 'bootstrap/user_settings'); }
-    ### warn $c->param('name');
-    #if ($c->param('name') && $c->param('upload')) {
-      #$c->param('extension')
-    #  my $file = $c->param('upload');
-    #  if( $file->filename =~ /\.iso$/ ) {
-    #      my $fileuploaded = $c->req->upload('upload');
-          #$fileuploaded->move_to('/var/tmp/'.$c->param('name'));
-
-    #      my ($id_xml, $id_xml_vol);
-    #      if ($c->param('id_xml') eq 'id_xml_Linux_32') {
-    #        $id_xml = 'trusty-i386.xml';
-    #        $id_xml_vol = 'trusty-volume.xml';
-    #      }
-    #      if ($c->param('id_xml') eq 'id_xml_Linux_64') {
-    #        $id_xml = 'trusty-amd64.xml';
-    #        $id_xml_vol = 'trusty-amd64-volume.xml';
-    #      }
-
-    #      $RAVADA->insert_iso( name => $c->param('name'),
-    #                           xml => $id_xml, xml_volume => $id_xml_vol);
-
-    #  }
-    #}
-
+    $c->render(template => 'bootstrap/user_settings');
 };
 
 ###################################################
@@ -550,13 +529,17 @@ sub _logged_in {
 
     _init_error($c);
     $c->stash(_logged_in => undef , _user => undef, _anonymous => 1);
-
     my $login = $c->session('login');
-    $USER = Ravada::Auth::SQL->new(name => $login)  if $login;
+    if ($login) {
+        $USER = Ravada::Auth::SQL->new(name => $login);
+        #Mojolicious::Plugin::I18N::
+        $c->languages($USER->language);
 
-    $c->stash(_logged_in => $login );
-    $c->stash(_user => $USER);
-    $c->stash(_anonymous => !$USER);
+        $c->stash(_logged_in => $login );
+        $c->stash(_user => $USER);
+        $c->stash(_anonymous => !$USER);
+
+    }
     $c->stash(url => undef);
 
     return $USER;

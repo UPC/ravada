@@ -75,7 +75,7 @@ sub search_by_id {
 
 Adds a new user in the SQL database. Returns nothing.
 
-    Ravada::Auth::SQL::add_user( 
+    Ravada::Auth::SQL::add_user(
                  name => $user
            , password => $pass
            , is_admin => 0
@@ -197,7 +197,7 @@ Makes the user admin. Returns nothing.
 
      Ravada::Auth::SQL::make_admin($id);
 
-=cut       
+=cut
 
 sub make_admin {
     my $id = shift;
@@ -206,7 +206,7 @@ sub make_admin {
 
     $sth->execute($id);
     $sth->finish;
-    
+
 }
 
 =head2 remove_admin
@@ -215,7 +215,7 @@ Remove user admin privileges. Returns nothing.
 
      Ravada::Auth::SQL::remove_admin($id);
 
-=cut       
+=cut
 
 sub remove_admin {
     my $id = shift;
@@ -224,7 +224,7 @@ sub remove_admin {
 
     $sth->execute($id);
     $sth->finish;
-    
+
 }
 
 =head2 is_admin
@@ -293,5 +293,31 @@ sub change_password {
         ." WHERE name=?");
     $sth->execute(sha1_hex($password), $self->name);
 }
-1;
 
+=head2 language
+
+  Updates or selects the language selected for an User
+
+    $user->language();
+
+  Arguments: lang
+
+=cut
+
+  sub language {
+    my $self = shift;
+    my $tongue = shift;
+    if (defined $tongue) {
+      my $sth= $$CON->dbh->prepare("UPDATE users set language=?"
+          ." WHERE name=?");
+      $sth->execute($tongue, $self->name);
+    }
+    else {
+      my $sth = $$CON->dbh->prepare(
+         "SELECT language FROM users WHERE name=? ");
+      $sth->execute($self->name);
+      return $sth->fetchrow();
+    }
+  }
+
+1;
