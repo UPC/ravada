@@ -129,7 +129,7 @@ sub test_prepare_base {
     touch_mtime(@disk);
 
     eval { $domain->prepare_base( $USER) };
-    ok(!$@,"Trying to prepare base again failed, it should have worked. ");
+    is($@,'');
     ok($domain->is_base);
 
     my $name_clone = new_domain_name();

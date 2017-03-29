@@ -602,7 +602,7 @@ sub _domain_create_from_base {
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
 
-    my $xml = XML::LibXML->load_xml(string => $base->domain->get_xml_description());
+    my $xml = XML::LibXML->load_xml(string => $base->get_xml_base());
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
