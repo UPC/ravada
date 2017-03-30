@@ -13,7 +13,7 @@ my $BACKEND = 'KVM';
 my $CLASS= "Ravada::VM::$BACKEND";
 
 my %CONFIG = (
-        _connector => $test->connector
+        connector => $test->connector
         ,config => 't/etc/ravada.conf'
 );
 

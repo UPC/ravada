@@ -56,7 +56,7 @@ sub rvd_back {
     init($connector,$config)    if $connector;
 
     return Ravada->new(
-            _connector => $CONNECTOR
+            connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
     );
 }
@@ -64,7 +64,7 @@ sub rvd_back {
 sub rvd_front {
 
     return Ravada::Front->new(
-            _connector => $CONNECTOR
+            connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
     );
 }
