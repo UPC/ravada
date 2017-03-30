@@ -1,3 +1,31 @@
+<!--<h2>New Base</h2>
+<form name="new_machine" method="post" action="#"
+    ng-controller="new_machine"
+    novalidate
+    >
+    <label for "name"><%=l 'Name' %></label><input type="text" size="20" name="name" ><br/>
+
+    <label for="id_iso">ISO image</label>
+    <select name ="id_iso"
+        ng-model="id_iso"
+        ng-options="item.name for item in images track by item.id"
+    >
+    </select>
+    <br/>
+    <label for="backend">Backend</label>
+    <select name="backend"
+            ng-model="backend"
+            ng-init="backend = 'KVM'"
+            ng-options="item for item in backends"
+            required=""
+            >
+    </select>
+        <br/>
+    Disk: <input type="text" name="disk" size="2"> Gb<br/>
+    Ram: <input type="text" name="ram" size="2"> Gb<br/>
+    <input type="submit" name="submit" value="create">
+
+</form>-->
 <div class="panel panel-default">
     <div class="panel-heading">
         <h2>New Base</h2>
@@ -14,11 +42,13 @@
 
             <div class="row">
               <div class="col-md-6 from-group">
+            <div class="from-group">
                 <label for="backend">Backend</label>
                 <select name="backend"
                         ng-model="backend"
                         ng-init="backend = 'KVM'"
                         ng-options="item for item in backends"
+                        ng-options="item for item in backends track by item"
                         required=""
                 ></select>
               </div>
@@ -45,6 +75,7 @@
 
           <div class="row">
             <div ng-if="backend == 'KVM'" class="col-md-6 from-group">
+            <div ng-if="backend == 'KVM'" class="from-group">
                 <label for="disk">Disk Size: (GB)</label>
                 <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="40" required="">
                 <label for="swap">Swap Size: (GB)</label>
@@ -72,7 +103,6 @@
               </div>
             </div>
           </div>
-
 
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
