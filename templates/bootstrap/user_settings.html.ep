@@ -15,10 +15,10 @@
                         <h2 class="text-center"><%=l 'Settings' %></h2>
                         <form onsubmit='alert(document.getElementById('upload').value);' method='post' enctype="multipart/form-data">
                             <p><input type="checkbox" name="check_language" id="check_language"> <%=l 'I want to change my language' %></p>
-                            <p><%=l 'Language:' %>
-                               <input type='radio' name="tongue" value="en" id="tongue"><%=l 'English' %></option>
-                               <input type='radio' name="tongue" value="es" id="tongue"><%=l 'Spanish' %></option>
-                               <input type='radio' name="tongue" value="ca" id="tongue"><%=l 'Catalan' %></option>
+                            <p><%=l 'Language:' %> <select id="tongue" name="tongue" >
+                               <option value="en"><%=l 'English' %></option>
+                               <option value="es"><%=l 'Spanish' %></option>
+                               <option value="ca"><%=l 'Catalan' %></option>
                              </select></p>
                             <p><input type="checkbox" name="check_pass" id="check_pass"> <%=l 'I want to change my password' %></p>
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>

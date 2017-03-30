@@ -496,8 +496,6 @@ any '/user_settings' => sub {
 
 sub user_settings {
     my $c = shift;
-    warn $c->param('tongue');
-    warn $USER->language;
     if ( $c->param('check_language') && defined $c->param('tongue')) {
       $USER->language($c->param('tongue'));
       _logged_in($c);
