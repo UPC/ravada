@@ -501,7 +501,7 @@ sub user_settings {
     if ( $c->param('check_language') ) {
       $USER->language($c->param('tongue'));
     }
-    if (!($c->param('password') eq "") && !($c->param('conf_password') eq "")) {
+    if ($c->param('check_pass') && !($c->param('password') eq "") && !($c->param('conf_password') eq "")) {
       if ($c->param('password') eq $c->param('conf_password')) {
             $USER->change_password($c->param('password'));
       }

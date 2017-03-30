@@ -12,16 +12,17 @@
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2 class="text-center">Settings</h2>
+                        <h2 class="text-center"><%=l 'Settings' %></h2>
                         <form onsubmit='alert(document.getElementById('upload').value);' method='post' enctype="multipart/form-data">
-                            <p><input type="checkbox" name="check_language" id="check_language"> I want to change my language instead of my password</p>
-                            <p>Language:
-                               <input type='radio' name="tongue" value="en" id="tongue">English</option>
-                               <input type='radio' name="tongue" value="es" id="tongue">Spanish</option>
+                            <p><input type="checkbox" name="check_language" id="check_language"> <%=l 'I want to change my language' %></p>
+                            <p><%=l 'Language:' %>
+                               <input type='radio' name="tongue" value="en" id="tongue"><%=l 'English' %></option>
+                               <input type='radio' name="tongue" value="es" id="tongue"><%=l 'Spanish' %></option>
+                               <input type='radio' name="tongue" value="ca" id="tongue"><%=l 'Catalan' %></option>
                              </select></p>
-
-                            <p>New Password: <input type= 'text' name= 'password' id='password'></p>
-                            <p>Confirm Password: <input type='text' name='conf_password' id='conf_password'></p>
+                            <p><input type="checkbox" name="check_pass" id="check_pass"> <%=l 'I want to change my password' %></p>
+                            <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
+                            <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
 
                             <!--    <p>Xml: </p>
                                 <select name ="id_xml" id="id_xml">
@@ -31,7 +32,7 @@
                                   <option value="id_xml_Win7"></option>
                                 </select> -->
 
-                            <p><input type='submit' value='Submit'>
+                            <p><input type='submit' value='<%=l 'Submit' %>'></input>
                             </p>
                         </form>
                   </div>

@@ -88,3 +88,30 @@ msgstr ""
 
 msgid "New Machine"
 msgstr ""
+
+msgid "I want to change my password"
+msgstr ""
+
+msgid "I want to change my language"
+msgstr ""
+
+msgid "Language:"
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid "Spanish"
+msgstr ""
+
+msgid "Catalan"
+msgstr ""
+
+msgid "New Password:"
+msgstr ""
+
+msgid "Confirm Password:"
+msgstr ""
+
+msgid "Submit"
+msgstr ""
