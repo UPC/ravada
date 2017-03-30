@@ -141,5 +141,5 @@ msgstr "پیغامی برای نمایش وجود ندارد"
 msgid "<%=l 'Admin' %>"
 msgstr "ادمین"
 
-msgid "Show/Hide clones"
+msgid "<%=l 'Show/Hide clones' %>"
 msgstr "نمایش/پنهان همسان ها"
