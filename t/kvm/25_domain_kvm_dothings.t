@@ -67,8 +67,8 @@ my $domain = $VMM->create_domain(
 );
 
 
-ok($domain,"Domain not created") and do {
-    $domain->shutdown(timeout => 5, user => $USER) if !$domain->is_active;
+ok($domain,"Expected a domain class, got :".ref($domain)) and do {
+    $domain->shutdown(timeout => 5, user => $USER) if $domain->is_active;
 
     for ( 1 .. 10 ){
         last if !$domain->is_active;

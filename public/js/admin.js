@@ -1,4 +1,6 @@
 ravadaApp.directive("solShowMachine", swMach)
+        .directive("solShowNewmachine", swNewMach)
+        .controller("new_machine", newMachineCtrl)
         .controller("machinesPage", machinesPageC)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
@@ -11,6 +13,25 @@ ravadaApp.directive("solShowMachine", swMach)
     };
   };
 
+  function swNewMach() {
+      return {
+          restrict: "E",
+          templateUrl: '/ng-templates/new_machine.html',
+      };
+  };
+
+  function newMachineCtrl($scope, $http) {
+      $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+      });
+      $http.get('/list_vm_types.json').then(function(response) {
+              $scope.backends = response.data;
+      });
+      $http.get('/list_lxc_templates.json').then(function(response) {
+              $scope.templates_lxc = response.data;
+      });
+  };
+
   function machinesPageC($scope, $http, $interval, request, listMach) {
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
@@ -20,7 +41,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_machines= response.data;
       });
     };
-    $scope.orderParam = ['none'];
+    $scope.orderParam = ['name'];
     $scope.orderMachineList = function(type1,type2){
       if ($scope.orderParam[0] === '-'+type1)
         $scope.orderParam = ['none'];
@@ -28,7 +49,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.orderParam = ['-'+type1,type2];
       else $scope.orderParam = [type1,'-'+type2];
     }
-    $scope.hide_clones = true;
+    $scope.hide_clones = false;
     $scope.hideClones = function(){
       $scope.hide_clones = !$scope.hide_clones;
     }

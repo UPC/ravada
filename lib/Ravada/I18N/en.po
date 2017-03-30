@@ -53,6 +53,9 @@ msgstr ""
 msgid "Clone/s"
 msgstr ""
 
+msgid "Show/Hide clones"
+msgstr ""
+
 msgid "NEW"
 msgstr ""
 
