@@ -56,6 +56,10 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
 
         is($domain->is_active,0);
 
+        $domain->start($USER);
+        is($domain->is_active,1);
+
+
     }
 }
 
