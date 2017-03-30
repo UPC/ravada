@@ -20,123 +20,123 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 
-msgid "Ravada broker"
+msgid "<%=l 'Ravada broker' %>"
 msgstr "واسطه راوادا"
 
-msgid "Restore"
+msgid "<%=l 'Restore' %>"
 msgstr " بازیابی"
 
-msgid "Machine Name"
+msgid "<%=l 'Machine Name' %>"
 msgstr "نام ماشین"
 
-msgid "Tools"
+msgid "<%=l 'Tools' %>"
 msgstr "ابزار"
 
-msgid "Machines List"
+msgid "<%=l 'Machines List' %>"
 msgstr "لیست ماشین ها"
 
-msgid "Users"
+msgid "<%=l 'Users' %>"
 msgstr "کاربرها"
 
-msgid "Choose a Machine to Start"
-msgstr "برای شروع یک ماشین انتخاب کنید"
+msgid "<%=l 'Choose a Machine to Start' %>"
+msgstr "برای شروع یک ماشین انتخاب کنید' %>"
 
-msgid "Start"
+msgid "<%=l 'Start' %>"
 msgstr "آغاز"
 
-msgid "Stop"
+msgid "<%=l 'Stop' %>"
 msgstr "توقف"
 
-msgid "View"
+msgid "<%=l 'View' %>"
 msgstr "نمایش"
 
-msgid "Prepare Base"
+msgid "<%=l 'Prepare Base' %>"
 msgstr "ایجاد پایگاه"
 
-msgid "Clone"
+msgid "<%=l 'Clone' %>"
 msgstr "همسان سازی"
 
-msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgid "<%=l 'Can't Prepare Base, Remove Base nor Delete. Machine has' %>"
 msgstr "عدم توانایی در آماده سازی پایگاه"
 
-msgid "Clone/s"
+msgid "<%=l 'Clone/s' %>"
 msgstr "همسان ها"
 
-msgid "NEW"
+msgid "<%=l 'NEW' %>"
 msgstr "جدید"
 
-msgid "Users List"
+msgid "<%=l 'Users List' %>"
 msgstr "لیست کاربرها"
 
-msgid "Name"
+msgid "<%=l 'Name' %>"
 msgstr "نام"
 
-msgid "Log Out"
+msgid "<%=l 'Log Out' %>"
 msgstr "خروج"
 
-msgid "Available Machines"
+msgid "<%=l 'Available Machines' %>"
 msgstr "ماشین های موجود"
 
-msgid "Help"
+msgid "<%=l 'Help' %>"
 msgstr "راهنما"
 
-msgid "Requirements"
+msgid "<%=l 'Requirements' %>"
 msgstr "پیش نیازها"
 
-msgid "About"
+msgid "<%=l 'About' %>"
 msgstr "درباره"
 
-msgid "Messages"
+msgid "<%=l 'Messages' %>"
 msgstr "پیغام ها"
 
-msgid "Mark all as Read"
-msgstr "نمایش همه موارد به عنوان خوانده شده"
+msgid "<%=l 'Mark all as Read' %>"
+msgstr "نمایش همه موارد به عنوان خوانده شده' %>"
 
-msgid "Settings"
+msgid "<%=l 'Settings' %>"
 msgstr "تنظیمات"
 
-msgid "New Machine"
+msgid "<%=l 'New Machine' %>"
 msgstr "ماشین جدید"
 
-msgid "Paused"
+msgid "<%=l 'Paused' %>"
 msgstr "متوقف"
 
-msgid "Prepare base"
+msgid "<%=l 'Prepare base' %>"
 
 msgstr "ایجاد پایگاه"
 
-msgid "Machine locked by requested"
+msgid "<%=l 'Machine locked by requested' %>"
 msgstr "طبق درخواست ماشین قفل شده است"
 
-msgid "process"
+msgid "<%=l 'process' %>"
 msgstr "پروسه"
 
-msgid "Copy"
+msgid "<%=l 'Copy' %>"
 msgstr "کپی"
 
-msgid "Error!"
+msgid "<%=l 'Error!' %>"
 msgstr "خطا"
 
-msgid "Backend no available!"
+msgid "<%=l 'Backend no available!' %>"
 msgstr "بک اند موجود نیست"
 
-msgid "Subject"
+msgid "<%=l 'Subject' %>"
 msgstr "موضوع"
 
-msgid "Date"
+msgid "<%=l 'Date' %>"
 msgstr "تاریخ"
 
-msgid "Actions"
+msgid "<%=l 'Actions' %>"
 msgstr "عملیات"
 
-msgid "Mark as Read"
+msgid "<%=l 'Mark as Read' %>"
 msgstr "نمایش به عنوان خوانده شده"
  
-msgid "Mark as UnRead"
+msgid "<%=l 'Mark as UnRead' %>"
 msgstr "نمایش به عنوان خوانده نشده"
 
-msgid "No message to show!"
+msgid "<%=l 'No message to show!' %>"
 msgstr "پیغامی برای نمایش وجود ندارد"
 
-msgid "Admin"
+msgid "<%=l 'Admin' %>"
 msgstr "ادمین"
