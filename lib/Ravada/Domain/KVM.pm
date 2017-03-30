@@ -591,6 +591,29 @@ sub is_paused {
     return 0;
 }
 
+=head2 can_hybernate
+
+Returns true (1) for KVM domains
+
+=cut
+
+sub can_hybernate { 1 };
+
+=head2 hybernate
+
+Take a snapshot of the domain's state and save the information to a
+managed save location. The domain will be automatically restored with
+this state when it is next started.
+
+    $domain->hybernate();
+
+=cut
+
+sub hybernate {
+    my $self = shift;
+    $self->domain->managed_save();
+}
+
 =head2 add_volume
 
 Adds a new volume to the domain
