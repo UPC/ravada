@@ -6,14 +6,13 @@ use Test::SQL::Data;
 
 use_ok('Ravada');
 
-ok(! $Ravada::CONNECTOR, "DB connector should be undef at load time");
-
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $ravada = Ravada->new( connector => $test->connector );
+my $connector = Ravada::DB->instance(connector => $test->connector);
 
-ok($Ravada::CONNECTOR, "Now we should have a DB connector ");
+my $ravada = Ravada->new();
 
-ok($Ravada::CONNECTOR,"No connector defined ");
-eval { ok($Ravada::CONNECTOR->dbh,"No dbh defined ") };
+ok($ravada->connector, "Expecting a DB connector defined");
+
+eval { ok($ravada->connector->dbh,"Expecting dbh defined") };
 
 done_testing();

@@ -236,7 +236,9 @@ sub _domain_shutdown {
 sub test_settings {
     my $vm_name = shift;
 
-    for my $driver (Ravada::Domain::drivers(undef,undef,$vm_name) ) {
+    my $domain = test_create_domain($vm_name);
+
+    for my $driver ($domain->drivers(undef,$vm_name) ) {
         diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_type($vm_name, $driver->name);
         test_drivers_clone($vm_name, $driver->name);

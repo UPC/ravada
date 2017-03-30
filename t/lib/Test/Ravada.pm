@@ -56,7 +56,7 @@ sub rvd_back {
     init($connector,$config)    if $connector;
 
     return Ravada->new(
-            connector => $CONNECTOR
+            _connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
     );
 }
@@ -64,7 +64,7 @@ sub rvd_back {
 sub rvd_front {
 
     return Ravada::Front->new(
-            connector => $CONNECTOR
+            _connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
     );
 }
@@ -74,8 +74,8 @@ sub init {
 
     confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
 
-    $Ravada::CONNECTOR = $CONNECTOR if !$Ravada::CONNECTOR;
-    Ravada::Auth::SQL::_init_connector($CONNECTOR);
+    my $connector = Ravada::DB->instance(connector => $CONNECTOR);
+
     $USER_ADMIN = create_user('admin','admin',1);
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;

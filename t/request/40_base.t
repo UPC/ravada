@@ -411,8 +411,6 @@ my $rvd_back = rvd_back();
 ok($rvd_back,"Launch Ravada");# or exit;
 }
 
-ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'));
-
 remove_old_domains();
 remove_old_disks();
 

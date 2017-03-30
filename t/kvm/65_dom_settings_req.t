@@ -13,6 +13,7 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
+my $connector = Ravada::DB->instance(connector => $test->connector);
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user('foo','bar');

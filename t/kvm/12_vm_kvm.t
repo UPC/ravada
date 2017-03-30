@@ -5,15 +5,19 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use Ravada::DB;
+
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $BACKEND = 'KVM';
 my $CLASS= "Ravada::VM::$BACKEND";
 
 my %CONFIG = (
-        connector => $test->connector
+        _connector => $test->connector
         ,config => 't/etc/ravada.conf'
 );
+
+my $connector =Ravada::DB->instance(connector => $test->connector());
 
 use_ok('Ravada');
 use_ok($CLASS);

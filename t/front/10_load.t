@@ -24,10 +24,6 @@ my %ARG_CREATE_DOM = (
     ,Void => [ ]
 );
 
-# twice so it won't warn it is only used once
-ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
-ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
-
 ok($RVD_BACK->connector());
 
 
