@@ -480,6 +480,9 @@ sub _pre_shutdown_domain {
             sleep 1;
         }
     }
+
+    $self->domain->managed_save_remove()
+        if $self->domain->has_managed_save_image();
 }
 
 =head2 shutdown
