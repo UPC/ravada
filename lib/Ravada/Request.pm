@@ -57,6 +57,7 @@ our %VALID_ARG = (
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
+    ,hybernate=> {uid => 1, id_domain => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -747,6 +748,34 @@ sub set_driver {
 
     return $self->_new_request(
             command => 'set_driver'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 hybernate
+
+Hybernates a domain.
+
+    Ravada::Request->hybernate(
+        id_domain => $domain->id
+             ,uid => $user->id
+    );
+
+=cut
+
+sub hybernate {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('hybernate', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'hybernate'
         , id_domain => $args->{id_domain}
              , args => encode_json($args)
     );
