@@ -57,7 +57,13 @@
                     $scope.host_restore = 0;
                     $http.get( '/machine/shutdown/'+machineId+'.json');
                     window.location.reload();
-                }
+                }  else if ($scope.host_action.indexOf('hybernate') !== -1) {
+                    $scope.host_hybernate = machineId;
+                    $scope.host_restore = 0;
+                    $http.get( '/machine/hybernate/'+machineId+'.json');
+                    window.location.reload();
+                } 
+
             };
 
             $url_list = "/list_bases.json";

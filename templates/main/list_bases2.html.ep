@@ -44,6 +44,7 @@
                         <option value="">action</option>
 %                       if ($machine->{is_active}) {
                             <option value="shutdown.<%= $machine->{id_clone} %>">Shutdown</option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>">Hybernate</option>
 %                       }
 %                       if ($machine->{id_clone}) {
                             <option value="restore.<%= $machine->{id_clone} %>">Restore</option>
@@ -72,6 +73,11 @@
                             <b>Shutting down ... </b>
                             It may take a couple of minutes.
                     </div>
+                    <div ng-show="host_hybernate== <%= $machine->{id_clone} %>">
+                            <b>Hybernating ... </b>
+                            It may take a couple of minutes.
+                    </div>
+
 %                   }
 %               }
             </div>
