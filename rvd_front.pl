@@ -498,12 +498,14 @@ sub user_settings {
     my $c = shift;
     warn $c->param('tongue');
     warn $USER->language;
-    if ( $c->param('check_language') ) {
+    if ( $c->param('check_language') && defined $c->param('tongue')) {
       $USER->language($c->param('tongue'));
+      _logged_in($c);
     }
     if ($c->param('check_pass') && !($c->param('password') eq "") && !($c->param('conf_password') eq "")) {
       if ($c->param('password') eq $c->param('conf_password')) {
             $USER->change_password($c->param('password'));
+            _logged_in($c);
       }
     }
 
