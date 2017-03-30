@@ -46,12 +46,16 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
 
         $domain->start($USER)   if !$domain->is_active;
 
-        eval { $domain->hybernate($USER) };
-        ok(!$@,"Expecting no error hybernating, got : ".($@ or ''));
+        my $req = Ravada::Request->hybernate(
+            id_domain => $domain->id
+                  ,uid=> $USER->id
+        );
+        ok($req);
+        rvd_back->process_requests();
+        wait_request($req);
 
         is($domain->is_active,0);
 
-        ok($domain);
     }
 }
 
