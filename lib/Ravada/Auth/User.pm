@@ -30,27 +30,6 @@ has 'password' => (
 #
 #####################################################
 
-our $CONNECTOR;
-
-sub _init_connector {
-    $CONNECTOR= \$Ravada::CONNECTOR;
-    $CONNECTOR= \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
-}
-
-_init_connector();
-
-=head2 BUILD
-
-Internal OO builder
-
-=cut
-
-sub BUILD {
-    _init_connector();
-}
-
-#####################################################
-
 =head2 messages
 
 List of messages for this user
@@ -64,13 +43,11 @@ List of messages for this user
 sub messages {
     my $self = shift;
 
-    _init_connector() if !$$CONNECTOR;
-
     my $skip  = ( shift or 0);
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, date_read, date_send, message FROM messages WHERE id_user=?"
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT id, subject, date_read, date_send, message FROM messages WHERE id_user=?"
         ." ORDER BY date_send DESC"
         ." LIMIT ?,?");
     $sth->execute($self->id, $skip, $count);
@@ -95,14 +72,12 @@ List of unread messages for this user
 sub unread_messages {
     my $self = shift;
 
-    _init_connector() if !$$CONNECTOR;
-
     my $skip  = ( shift or 0);
     my $count = shift;
     $count = 50 if !defined $count;
 
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT id, subject, message FROM messages "
         ." WHERE id_user=? AND date_read IS NULL"
         ."    ORDER BY date_send DESC "
         ." LIMIT ?,?");
@@ -131,13 +106,11 @@ List of unshown messages for this user
 sub unshown_messages {
     my $self = shift;
 
-    _init_connector() if !$$CONNECTOR;
-
     my $skip  = ( shift or 0);
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT id, subject, message FROM messages "
         ." WHERE id_user=? AND date_shown IS NULL"
         ."    ORDER BY date_send DESC "
         ." LIMIT ?,?");
@@ -171,7 +144,7 @@ sub show_message {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM messages "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM messages "
         ." WHERE id_user=? AND id=?");
 
     $sth->execute($self->id, $id);
@@ -199,7 +172,7 @@ sub mark_message_read {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
+    my $sth = Ravada::DB->instance->dbh->prepare("UPDATE messages "
         ." SET date_read=? "
         ." WHERE id_user=? AND id=?");
 
@@ -223,7 +196,7 @@ sub mark_message_shown {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
+    my $sth = Ravada::DB->instance->dbh->prepare("UPDATE messages "
         ." SET date_shown=? "
         ." WHERE id_user=? AND id=?");
 
@@ -247,7 +220,7 @@ sub mark_message_unread {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE messages "
+    my $sth = Ravada::DB->instance->dbh->prepare("UPDATE messages "
         ." SET date_read=null "
         ." WHERE id_user=? AND id=?");
 
@@ -270,9 +243,7 @@ Returns nothing
 sub mark_all_messages_read {
     my $self = shift;
 
-    _init_connector() if !$$CONNECTOR;
-
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "UPDATE messages set date_read=?, date_shown=?"
     );
     $sth->execute(_now(), _now());
