@@ -12,6 +12,7 @@ Ravada::Auth::SQL - SQL authentication library for Ravada
 use Carp qw(carp);
 
 use Ravada;
+use Ravada::DB;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
@@ -21,26 +22,9 @@ use Data::Dumper;
 
 with 'Ravada::Auth::User';
 
-
-our $CON;
-
-sub _init_connector {
-    my $connector = shift;
-
-    $CON = \$connector                 if defined $connector;
-    return if $CON;
-
-    $CON= \$Ravada::CONNECTOR          if !$CON || !$$CON;
-    $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
-
-    if (!$CON || !$$CON) {
-        my $ravada = Ravada->new();
-        $CON= \$Ravada::CONNECTOR;
-    }
-
-    die "Undefined connector"   if !$CON || !$$CON;
+sub _dbh {
+    return Ravada::DB->instance->dbh;
 }
-
 
 =head2 BUILD
 
@@ -49,8 +33,6 @@ Internal OO build method
 =cut
 
 sub BUILD {
-    _init_connector();
-
     my $self = shift;
 
     $self->_load_data();
@@ -93,8 +75,6 @@ Adds a new user in the SQL database. Returns nothing.
 sub add_user {
     my %args = @_;
 
-    _init_connector();
-
     my $name= $args{name};
     my $password = $args{password};
     my $is_admin = ($args{is_admin} or 0);
@@ -105,7 +85,8 @@ sub add_user {
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
 
-    my $sth = $$CON->dbh->prepare(
+    my $con = Ravada::DB->instance();
+    my $sth = $con->dbh->prepare(
             "INSERT INTO users (name,password,is_admin,is_temporary) VALUES(?,?,?,?)");
 
     if ($password) {
@@ -119,11 +100,10 @@ sub add_user {
 
 sub _load_data {
     my $self = shift;
-    _init_connector();
 
     die "No login name nor id " if !$self->name && !$self->id;
 
-    my $sth = $$CON->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
        "SELECT * FROM users WHERE name=? ");
     $sth->execute($self->name);
     my ($found) = $sth->fetchrow_hashref;
@@ -138,9 +118,9 @@ sub _load_data {
 
 sub _load_data_by_id {
     my $id = shift;
-    _init_connector();
 
-    my $sth = $$CON->dbh->prepare(
+    my $con = Ravada::DB->instance();
+    my $sth = $con->dbh->prepare(
        "SELECT * FROM users WHERE id=? ");
     $sth->execute($id);
     my ($found) = $sth->fetchrow_hashref;
@@ -167,8 +147,6 @@ returns true if it succeeds
 sub login {
     my $self = shift;
 
-    _init_connector();
-
     my ($name, $password);
 
     if (ref $self) {
@@ -181,7 +159,7 @@ sub login {
     }
 
 
-    my $sth = $$CON->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
        "SELECT * FROM users WHERE name=? AND password=?");
     $sth->execute($name , sha1_hex($password));
     my ($found) = $sth->fetchrow_hashref;
@@ -207,7 +185,7 @@ Makes the user admin. Returns nothing.
 
 sub make_admin {
     my $id = shift;
-    my $sth = $$CON->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
             "UPDATE users SET is_admin=1 WHERE id=?");
 
     $sth->execute($id);
@@ -225,7 +203,7 @@ Remove user admin privileges. Returns nothing.
 
 sub remove_admin {
     my $id = shift;
-    my $sth = $$CON->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
             "UPDATE users SET is_admin=NULL WHERE id=?");
 
     $sth->execute($id);
@@ -295,7 +273,7 @@ sub change_password {
 
     die "Password too small" if length($password)<6;
 
-    my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
+    my $sth= $self->_dbh->prepare("UPDATE users set password=?"
         ." WHERE name=?");
     $sth->execute(sha1_hex($password), $self->name);
 }
