@@ -135,3 +135,6 @@ msgstr "Pas de Messages à Lire' %>"
 
 msgid "<%=l 'Admin' %>"
 msgstr "Administrateur"
+
+msgid "<%=l 'Show/Hide clones' %>"
+msgstr "Afficher/Masquer des clones"
