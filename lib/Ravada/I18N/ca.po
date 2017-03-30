@@ -181,3 +181,6 @@ msgstr "Prepara base"
 
 msgid "public"
 msgstr "públic"
+
+msgid "New Base"
+msgstr "Nova Base"

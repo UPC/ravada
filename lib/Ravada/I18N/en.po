@@ -181,3 +181,6 @@ msgstr ""
 
 msgid "public"
 msgstr ""
+
+msgid "New Base"
+msgstr ""

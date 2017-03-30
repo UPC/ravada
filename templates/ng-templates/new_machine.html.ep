@@ -1,5 +1,5 @@
 <!--<h2>New Base</h2>
-<form name="new_machine" method="post" action="#" 
+<form name="new_machine" method="post" action="#"
     ng-controller="new_machine"
     novalidate
     >
@@ -22,19 +22,26 @@
     Disk: <input type="text" name="disk" size="2"> Gb<br/>
     Ram: <input type="text" name="ram" size="2"> Gb<br/>
     <input type="submit" name="submit" value="create">
-    
+
 </form>-->
 <div class="panel panel-default">
     <div class="panel-heading">
         <h2>New Base</h2>
     </div>
     <div class="panel-body">
-        <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
-            <div class="from-group">
-                <label for="name">Name</label>
-                <input class="form-control" ng-model="name" type="text" ng-maxlength="20" name="name" required=""><br/>
-            </div>
-            
+        <div class="row">
+          <div class="col-md-6">
+              <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
+                <div class="from-group">
+                  <label for="name">Name</label>
+                  <input class="form-control" ng-model="name" type="text" ng-maxlength="20" name="name" required=""><br/>
+              </div>
+          </div>
+          <div class="col-md-6">"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
             <div class="from-group">
                 <label for="backend">Backend</label>
                 <select name="backend"
@@ -43,7 +50,12 @@
                         required=""
                 ></select>
             </div><br/>
-
+            </div>
+            <div class="col-md-6">"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
             <div ng-if="backend == 'KVM'" class="from-group">
                 <label for="id_iso">ISO image</label>
                 <select name ="id_iso"
@@ -52,6 +64,10 @@
                         required=""
                 ></select>
             </div>
+          </div>
+          <div class="col-md-6">"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+          </div>
+        </div>
 
             <div ng-if="backend == 'LXC'" class="from-group">
                 <label for="id_template">Template</label>
@@ -61,7 +77,7 @@
                         required="">
                 </select>
             </div><br/>
-            
+
             <div ng-if="backend == 'KVM'" class="from-group">
                 <label for="disk">Disk Size: (GB)</label>
                 <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="40" required="">
@@ -72,7 +88,7 @@
                 <label for="memory">Ram: (GB)</label>
                 <input class="form-control" ng-model="ramsize" type="number" name="memory" min="1" max="4" required="">
             </div><br/>
-            
+
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
                     <strong>Error</strong> Machine name is required.
