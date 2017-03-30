@@ -48,8 +48,6 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 # LONG commands take long
 our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
 
-our $CONNECTOR;
-
 has 'vm' => (
           is => 'ro'
         ,isa => 'ArrayRef'
@@ -81,8 +79,9 @@ sub BUILD {
     } else {
         _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
     }
-
-    $CONNECTOR= $self->connector;
+    if ($self->connector) {
+        $self->connector(Ravada::DB->instance( connector => $self->connector ));
+    }
 
     Ravada::Auth::init($CONFIG);
     $self->_create_tables();
@@ -170,7 +169,7 @@ sub _upgrade_tables {
 
 
 sub _connect_dbh {
-    return Ravada::DB->instance($CONFIG);
+    return Ravada::DB->instance();
 }
 
 =head2 display_ip
@@ -187,7 +186,8 @@ sub display_ip {
 }
 
 sub _init_config {
-    my $file = shift;
+    my $file = ( shift or $FILE_CONFIG );
+    $FILE_CONFIG = $file;
 
     my $connector = shift;
     confess "Deprecated connector" if $connector;
@@ -196,6 +196,13 @@ sub _init_config {
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
+
+    return $CONFIG;
+}
+
+sub _config {
+    return $CONFIG if keys %$CONFIG;
+    return _init_config();
 }
 
 sub _create_vm_kvm {
