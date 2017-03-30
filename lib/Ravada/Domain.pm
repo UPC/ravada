@@ -64,6 +64,8 @@ requires 'get_info';
 requires 'set_memory';
 requires 'set_max_mem';
 
+requires 'hybernate';
+
 ##########################################################
 
 has 'domain' => (
@@ -118,6 +120,9 @@ before 'start' => \&_start_preconditions;
 
 before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
+
+before 'hybernate' => \&_allow_manage;
+ after 'hybernate' => \&_post_pause;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
