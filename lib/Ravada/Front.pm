@@ -53,11 +53,11 @@ Internal constructor
 
 sub BUILD {
     my $self = shift;
+    my $config = Ravada::_init_config($self->config);
     if ($self->connector) {
         $self->connector(Ravada::DB->instance(connector => $self->connector));
     } else {
-        Ravada::_init_config($self->config());
-        $self->connector(Ravada::_connect_dbh());
+        $self->connector(Ravada::DB->instance(config => $config));
     }
     $self->connector->dbh();
 }

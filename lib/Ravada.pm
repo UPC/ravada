@@ -169,7 +169,7 @@ sub _upgrade_tables {
 
 
 sub _connect_dbh {
-    return Ravada::DB->instance();
+    return Ravada::DB->instance($CONFIG);
 }
 
 =head2 display_ip
