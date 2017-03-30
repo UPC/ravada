@@ -8,11 +8,17 @@ use DBIx::Connector;
 
 sub _new_instance {
     my $class = shift;
-    my $config = shift;
+
+    my %args = @_;
 
     my $self  = bless { }, $class;
 
-    warn "Creating a new instance of Ravada::DB";
+    my $connector = $args{connector};
+    if ($connector) {
+        $self->{connector} = $connector;
+        return $self;
+    }
+    my $config = $args{config};
 
     my $driver= ($config->{db}->{driver} or 'mysql');;
     my $db_user = ($config->{db}->{user} or getpwnam($>));;
