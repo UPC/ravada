@@ -177,6 +177,10 @@ sub _remove_old_domains_kvm {
         }
             if $domain->is_active;
         warn "WARNING: error $@ trying to shutdown ".$domain->get_name if $@;
+
+        $domain->managed_save_remove()
+            if $domain->has_managed_save_image();
+
         eval { $domain->undefine };
         warn $@ if $@;
     }
