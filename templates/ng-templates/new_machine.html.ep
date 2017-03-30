@@ -4,30 +4,29 @@
     </div>
     <div class="panel-body">
           <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
-          <div class="row">
-
-            <div class="col-md-6 from-group">
+            <div class="row">
+              <div class="col-md-6 from-group">
                 <label for="name">Name</label>
                 <input class="form-control" ng-model="name" type="text" ng-maxlength="20" name="name" required=""><br/>
+              </div>
+                <div class="col-md-6">Choose a name for your base. (Can be modified later)</div>
             </div>
-        <div class="col-md-6">Choose a name for your base. You can modify later</div>
-          </div>
 
-          <div class="row">
-            <div class="col-md-6 from-group">
+            <div class="row">
+              <div class="col-md-6 from-group">
                 <label for="backend">Backend</label>
                 <select name="backend"
                         ng-model="backend"
-                        ng-options="item for item in backends track by item"
+                        ng-init="backend = 'KVM'"
+                        ng-options="item for item in backends"
                         required=""
                 ></select>
+              </div>
+                <div class="col-md-6">For now only KVM available.</div>
             </div>
-              <div class="col-md-6">You can choose KVM</div>
-          </div>
-
 
             <div ng-if="backend == 'KVM'" class="from-group">
-                <label for="id_iso">ISO image</label>
+                <label for="id_iso">ISO image</label><br/>
                 <select name ="id_iso"
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
@@ -44,16 +43,36 @@
                 </select>
             </div><br/>
 
-            <div ng-if="backend == 'KVM'" class="from-group">
+          <div class="row">
+            <div ng-if="backend == 'KVM'" class="col-md-6 from-group">
                 <label for="disk">Disk Size: (GB)</label>
                 <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="40" required="">
                 <label for="swap">Swap Size: (GB)</label>
                 <input class="form-control" ng-model="swapsize" type="number" name="swap" min="1" max="40">
             </div>
-            <div ng-show="backend == 'KVM' || backend == 'LXC'" class="from-group">
+            <div ng-if="backend == 'KVM'" class="col-md-6"><label>Server Limits</label><br/>
+              <h6><label>Total Gigabytes</label><div class="progress"></h6>
+                  <div class="progress-bar" role="progressbar" aria-valuenow="70"
+                    aria-valuemin="0" aria-valuemax="100" style="width:70%">
+                  </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div ng-show="backend == 'KVM' || backend == 'LXC'" class="col-md-6 from-group">
                 <label for="memory">Ram: (GB)</label>
                 <input class="form-control" ng-model="ramsize" type="number" name="memory" min="1" max="4" required="">
             </div><br/>
+          <div ng-if="backend == 'KVM'" class="col-md-6"><label>Server memory available</label><br/>
+              <div class="progress">
+                  <div class="progress-bar" role="progressbar" aria-valuenow="70"
+                    aria-valuemin="0" aria-valuemax="100" style="width:20%">
+                  </div>
+              </div>
+            </div>
+          </div>
+
 
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
