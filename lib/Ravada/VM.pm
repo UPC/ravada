@@ -17,12 +17,12 @@ use Net::DNS;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
+use Ravada::DB;
 
 requires 'connect';
 
 # global DB Connection
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
 our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
@@ -106,7 +106,7 @@ sub _around_create_domain {
 sub _domain_remove_db {
     my $self = shift;
     my $name = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains WHERE name=?");
+    my $sth = Ravada::DB->instance->dbh->prepare("DELETE FROM domains WHERE name=?");
     $sth->execute($name);
     $sth->finish;
 }
@@ -153,7 +153,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT name FROM domains "
         ." WHERE id=?");
     $sth->execute($id);
     my ($name) = $sth->fetchrow;
@@ -278,8 +278,6 @@ sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
 
-#    _init_connector();
-
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_vm_db( name => $self->name);
 
@@ -301,7 +299,7 @@ sub _do_select_vm_db {
         }
     }
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT * FROM vms WHERE ".join(",",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
@@ -321,7 +319,7 @@ sub _select_vm_db {
 
 sub _insert_vm_db {
     my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "INSERT INTO vms (name,vm_type,hostname) "
         ." VALUES(?,?,?)"
     );
@@ -348,7 +346,7 @@ sub default_storage_pool_name {
     #TODO check pool exists
     if (defined $value) {
         my $id = $self->id();
-        my $sth = $$CONNECTOR->dbh->prepare(
+        my $sth = Ravada::DB->instance->dbh->prepare(
             "UPDATE vms SET default_storage=?"
             ." WHERE id=?"
         );
