@@ -22,12 +22,9 @@ use Ravada::Domain::Driver;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
-our $CONNECTOR;
 
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
-
-_init_connector();
 
 requires 'name';
 requires 'remove';
@@ -93,6 +90,12 @@ has '_vm' => (
     ,isa => 'Object'
     ,required => 1
 );
+
+has 'connector' => (
+            is => 'rw'
+        ,builder => 'Ravada::_connect_dbh'
+);
+
 
 ##################################################################################3
 #
@@ -328,13 +331,6 @@ sub _allowed {
 }
 ##################################################################################3
 
-sub _init_connector {
-    return if $CONNECTOR && $$CONNECTOR;
-    $CONNECTOR = \$Ravada::CONNECTOR if $Ravada::CONNECTOR;
-    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR
-                                                && defined $Ravada::Front::CONNECTOR;
-}
-
 =head2 id
 Returns the id of  the domain
     my $id = $domain->id();
@@ -351,8 +347,6 @@ sub id {
 sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
-
-    _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
@@ -391,8 +385,6 @@ sub _select_domain_db {
     my $self = shift;
     my %args = @_;
 
-    _init_connector();
-
     if (!keys %args) {
         my $id;
         eval { $id = $self->id  };
@@ -403,7 +395,7 @@ sub _select_domain_db {
         }
     }
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT * FROM domains WHERE ".join(",",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
@@ -422,7 +414,7 @@ sub _prepare_base_db {
         confess "CRITICAL: The data should be already inserted";
 #        $self->_insert_db( name => $self->name, id_owner => $self->id_owner );
     }
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "INSERT INTO file_base_images "
         ." (id_domain , file_base_img, target )"
         ." VALUES(?,?,?)"
@@ -434,7 +426,7 @@ sub _prepare_base_db {
     }
     $sth->finish;
 
-    $sth = $$CONNECTOR->dbh->prepare(
+    $sth = $self->_dbh->prepare(
         "UPDATE domains SET is_base=1 "
         ." WHERE id=?");
     $sth->execute($self->id);
@@ -446,8 +438,6 @@ sub _prepare_base_db {
 sub _insert_db {
     my $self = shift;
     my %field = @_;
-
-    _init_connector();
 
     for (qw(name id_owner)) {
         confess "Field $_ is mandatory ".Dumper(\%field)
@@ -462,7 +452,7 @@ sub _insert_db {
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "
     ;
-    my $sth = $$CONNECTOR->dbh->prepare($query);
+    my $sth = $self->_dbh->prepare($query);
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         #warn "$query\n".Dumper(\%field);
@@ -495,7 +485,7 @@ sub _remove_domain_db {
     return if !$self->is_known();
 
     $self->_select_domain_db or return;
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
+    my $sth = $self->_dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
     $sth->execute($self->id);
     $sth->finish;
@@ -514,7 +504,7 @@ sub _remove_id_base {
 
     my $self = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "UPDATE domains set id_base=NULL "
         ." WHERE id=?"
     );
@@ -533,7 +523,7 @@ sub is_base {
     $self->_select_domain_db or return 0;
 
     if (defined $value ) {
-        my $sth = $$CONNECTOR->dbh->prepare(
+        my $sth = $self->_dbh->prepare(
             "UPDATE domains SET is_base=? "
             ." WHERE id=?");
         $sth->execute($value, $self->id );
@@ -556,9 +546,7 @@ Returns true if locked.
 sub is_locked {
     my $self = shift;
 
-    $self->_init_connector() if !defined $$CONNECTOR;
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests "
+    my $sth = $self->_dbh->prepare("SELECT id FROM requests "
         ." WHERE id_domain=? AND status <> 'done'");
     $sth->execute($self->id);
     my ($id) = $sth->fetchrow;
@@ -603,9 +591,7 @@ Returns a list of clones from this virtual machine
 sub clones {
     my $self = shift;
 
-    _init_connector();
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
+    my $sth = $self->_dbh->prepare("SELECT id, name FROM domains "
             ." WHERE id_base = ?");
     $sth->execute($self->id);
     my @clones;
@@ -623,8 +609,6 @@ Returns the number of clones from this virtual machine
 
 sub has_clones {
     my $self = shift;
-
-    _init_connector();
 
     return scalar $self->clones;
 }
@@ -645,7 +629,7 @@ sub list_files_base {
     return if $@ && $@ =~ /No DB info/i;
     die $@ if $@;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target "
+    my $sth = $self->_dbh->prepare("SELECT file_base_img, target "
         ." FROM file_base_images "
         ." WHERE id_domain=?");
     $sth->execute($self->id);
@@ -741,7 +725,7 @@ sub _post_remove_base_domain {}
 sub _remove_base_db {
     my $self = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM file_base_images "
+    my $sth = $self->_dbh->prepare("DELETE FROM file_base_images "
         ." WHERE id_domain=?");
 
     $sth->execute($self->id);
@@ -867,7 +851,7 @@ sub _remove_iptables {
 
     my $ipt_obj = _obj_iptables();
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
     );
@@ -1027,7 +1011,7 @@ sub _log_iptable {
 
     my $iptables = $args{iptables};
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "INSERT INTO iptables "
         ."(id_domain, id_user, remote_ip, time_req, iptables)"
         ."VALUES(?, ?, ?, ?, ?)"
@@ -1044,7 +1028,7 @@ sub _active_iptables {
 
     confess "Missing \$user" if !$user;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT id,iptables FROM iptables "
         ." WHERE "
         ."    id_domain=?"
@@ -1074,7 +1058,7 @@ sub _rename_domain_db {
 
     my $new_name = $args{name} or confess "Missing new name";
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
+    my $sth = $self->_dbh->prepare("UPDATE domains set name=?"
                 ." WHERE id=?");
     $sth->execute($new_name, $self->id);
     $sth->finish;
@@ -1096,9 +1080,8 @@ sub is_public {
     my $self = shift;
     my $value = shift;
 
-    _init_connector();
     if (defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set is_public=?"
+        my $sth = $self->_dbh->prepare("UPDATE domains set is_public=?"
                 ." WHERE id=?");
         $sth->execute($value, $self->id);
         $sth->finish;
@@ -1148,7 +1131,7 @@ sub _post_rename {
 
      return if !defined $filename;
 
-     my $sth = $$CONNECTOR->dbh->prepare(
+     my $sth = $self->_dbh->prepare(
          "UPDATE domains set file_screenshot=? "
          ." WHERE id=?"
      );
@@ -1170,14 +1153,12 @@ sub drivers {
     my $name = shift;
     my $type = (shift or $self->_vm->type);
 
-    _init_connector();
-
     $type = 'qemu' if $type =~ /^KVM$/;
     my $query = "SELECT id from domain_drivers_types "
         ." WHERE vm=?";
     $query .= " AND name=?" if $name;
 
-    my $sth = $$CONNECTOR->dbh->prepare($query);
+    my $sth = Ravada::DB->instance->dbh->prepare($query);
 
     my @sql_args = ($type);
     push @sql_args,($name)  if $name;
@@ -1205,7 +1186,7 @@ sub set_driver_id {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT d.name,o.value "
         ." FROM domain_drivers_types d, domain_drivers_options o"
         ." WHERE d.id=o.id_driver_type "
@@ -1223,7 +1204,7 @@ sub set_driver_id {
 sub remote_ip {
     my $self = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT remote_ip FROM iptables "
         ." WHERE "
         ."    id_domain=?"
@@ -1239,8 +1220,7 @@ sub remote_ip {
 
 sub _dbh {
     my $self = shift;
-    _init_connector() if !$CONNECTOR || !$$CONNECTOR;
-    return $$CONNECTOR->dbh;
+    return $self->connector->dbh;
 }
 
 1;

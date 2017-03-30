@@ -105,7 +105,7 @@ sub clean_killed_requests {
 sub start {
     {
         my $ravada = Ravada->new( config => $FILE_CONFIG );
-        $Ravada::CONNECTOR->dbh;
+        $ravada->connector->dbh;
     }
     for (;;) {
         my $pid = fork();

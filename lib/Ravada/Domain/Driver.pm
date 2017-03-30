@@ -5,8 +5,6 @@ use strict;
 
 use Moose;
 
-_init_connector();
-
 has 'domain' => (
     isa => 'Any'
     ,is => 'ro'
@@ -19,16 +17,8 @@ has 'id' => (
 
 ##############################################################################
 
-our $CONNECTOR;
 our $TABLE_DRIVERS = "domain_drivers_types";
 our $TABLE_OPTIONS= "domain_drivers_options";
-
-sub _init_connector {
-    return if $CONNECTOR && $$CONNECTOR;
-    $CONNECTOR = \$Ravada::CONNECTOR if $Ravada::CONNECTOR;
-    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR
-                                                && defined $Ravada::Front::CONNECTOR;
-}
 
 ##############################################################################
 
@@ -46,8 +36,6 @@ sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
 
-    _init_connector();
-
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_driver_db( id => $self->id);
 
@@ -61,13 +49,11 @@ sub _select_driver_db {
     my $self = shift;
     my %args = @_;
 
-    _init_connector();
-
     if (!keys %args) {
         %args =( id => $self->id );
     }
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT * FROM $TABLE_DRIVERS WHERE ".join(",",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
@@ -82,10 +68,9 @@ sub _select_driver_db {
 sub get_options {
     my $self = shift;
 
-    _init_connector();
     my $query = "SELECT * from $TABLE_OPTIONS WHERE id_driver_type=? ORDER by name";
 
-    my $sth = $$CONNECTOR->dbh->prepare($query);
+    my $sth = Ravada::DB->instance->dbh->prepare($query);
     $sth->execute($self->id);
 
     my @ret;

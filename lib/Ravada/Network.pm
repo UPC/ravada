@@ -16,14 +16,11 @@ use Moose::Util::TypeConstraints;
 
 use NetAddr::IP;
 
+use Ravada::DB;
 
 #########################################################
 
 has 'address' => ( is => 'ro', isa => NetAddrIP, coerce => 1 );
-
-#########################################################
-
-our $CONNECTOR;
 
 #########################################################
 
@@ -34,11 +31,6 @@ our $CONNECTOR;
     if ( $net->allowed( $domain->id ) ) {
 
 =cut
-
-sub _init_connector {
-    $CONNECTOR = \$Ravada::CONNECTOR;
-    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR;
-}
 
 =head2 allowed
 
@@ -97,7 +89,7 @@ sub _allowed_domain {
     my $self = shift;
     my ($id_domain, $id_network) = @_;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT allowed FROM domains_network "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT allowed FROM domains_network "
         ." WHERE id_domain=? AND id_network=? ");
     $sth->execute($id_domain, $id_network);
     my ($allowed) = $sth->fetchrow;
@@ -110,7 +102,7 @@ sub _allowed_domain_anonymous {
     my $self = shift;
     my ($id_domain, $id_network) = @_;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT anonymous FROM domains_network "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT anonymous FROM domains_network "
         ." WHERE id_domain=? AND id_network=? AND allowed=1");
     $sth->execute($id_domain, $id_network);
     my ($allowed) = $sth->fetchrow;
@@ -123,9 +115,7 @@ sub _allowed_domain_anonymous {
 sub list_networks {
     my $self = shift;
 
-    _init_connector();
-
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT * "
         ." FROM networks "
         ." ORDER BY n_order"

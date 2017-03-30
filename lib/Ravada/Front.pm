@@ -38,7 +38,6 @@ has 'fork' => (
     ,default => 1
 );
 
-our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 20;
 our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
@@ -55,12 +54,12 @@ Internal constructor
 sub BUILD {
     my $self = shift;
     if ($self->connector) {
-        $CONNECTOR = $self->connector;
+        $self->connector(Ravada::DB->instance(connector => $self->connector));
     } else {
         Ravada::_init_config($self->config());
-        $CONNECTOR = Ravada::_connect_dbh();
+        $self->connector(Ravada::_connect_dbh());
     }
-    $CONNECTOR->dbh();
+    $self->connector->dbh();
 }
 
 =head2 list_bases
@@ -73,7 +72,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();
@@ -106,7 +105,7 @@ sub list_machines_user {
     my $self = shift;
     my $user = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT id,name,is_public, file_screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
@@ -162,7 +161,7 @@ sub search_clone_data {
     my $query = "SELECT * FROM domains WHERE "
         .(join(" AND ", map { "$_ = ? " } sort keys %args));
 
-    my $sth = $CONNECTOR->dbh->prepare($query);
+    my $sth = Ravada::DB->instance->dbh->prepare($query);
     $sth->execute( map { $args{$_} } sort keys %args );
     my $row = $sth->fetchrow_hashref;
     return ( $row or {});
@@ -192,7 +191,7 @@ sub list_domains {
     }
     $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where");
+    my $sth = Ravada::DB->instance->dbh->prepare("$query $where");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
@@ -246,7 +245,7 @@ sub domain_exists {
     my $self = shift;
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT id FROM domains "
         ." WHERE name=?"
     );
@@ -285,7 +284,7 @@ sub list_iso_images {
     my $self = shift;
 
     my @iso;
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT * FROM iso_images ORDER BY name"
     );
     $sth->execute;
@@ -307,7 +306,7 @@ sub list_lxc_templates {
     my $self = shift;
 
     my @template;
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT * FROM lxc_templates ORDER BY name"
     );
     $sth->execute;
@@ -327,7 +326,7 @@ Returns a reference to a list of the users
 
 sub list_users {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM users ");
     $sth->execute();
     
     my @users = ();
@@ -494,7 +493,7 @@ sub search_clone {
 
     confess "Unknown arguments ".Dumper(\%args) if keys %args;
 
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "SELECT id,name FROM domains "
         ." WHERE id_base=? AND id_owner=? "
     );
@@ -524,7 +523,7 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM domains WHERE name=?");
     $sth->execute($name);
 
     my $row = $sth->fetchrow_hashref;
@@ -545,7 +544,7 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 sub list_requests {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT id, command, args, date_changed, status, error "
         ." FROM requests "
         ." WHERE command NOT IN (SELECT command FROM requests WHERE command = 'list_vm_types')"
         ." ORDER BY date_changed DESC LIMIT 4"
@@ -574,7 +573,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM domains WHERE id=?");
     $sth->execute($id);
 
     my $row = $sth->fetchrow_hashref;
@@ -639,7 +638,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();

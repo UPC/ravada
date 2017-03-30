@@ -62,23 +62,11 @@ our %VALID_ARG = (
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot);
 
-our $CONNECTOR;
-
-sub _init_connector {
-    $CONNECTOR = \$Ravada::CONNECTOR;
-    $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
-
-}
-
 =head2 BUILD
 
     Internal object builder, do not call
 
 =cut
-
-sub BUILD {
-    _init_connector();
-}
 
 sub _request {
     my $proto = shift;
@@ -103,9 +91,7 @@ sub open {
 
     my $id = shift or confess "Missing request id";
 
-    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM requests "
         ." WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
@@ -421,9 +407,8 @@ sub _new_request {
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
         $args{args} = encode_json($args{args});
     }
-    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
         ."  VALUES ( "
                 .join(",", map { '?' } keys %args)
@@ -438,7 +423,7 @@ sub _new_request {
 }
 
 sub _last_insert_id {
-    my $driver = $$CONNECTOR->dbh->{Driver}->{Name};
+    my $driver = Ravada::DB->instance->dbh->{Driver}->{Name};
 
     if ( $driver =~ /sqlite/i ) {
         return _last_insert_id_sqlite(@_);
@@ -451,7 +436,7 @@ sub _last_insert_id {
 
 sub _last_insert_id_mysql {
     my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_id()");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT last_insert_id()");
     $sth->execute;
     my ($id) = $sth->fetchrow;
     $sth->finish;
@@ -462,7 +447,7 @@ sub _last_insert_id_mysql {
 sub _last_insert_id_sqlite {
     my $self = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_rowid()");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT last_insert_rowid()");
     $sth->execute;
     my ($id) = $sth->fetchrow;
     $sth->finish;
@@ -485,7 +470,7 @@ sub status {
     my $message = shift;
 
     if (!defined $status) {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+        my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");
         $sth->execute($self->{id});
         my $row = $sth->fetchrow_hashref;
@@ -494,7 +479,7 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+    my $sth = Ravada::DB->instance->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
     $sth->execute($status, $self->{id});
     $sth->finish;
@@ -508,7 +493,7 @@ sub _search_domain_name {
     my $self = shift;
     my $domain_id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains where id=?");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT name FROM domains where id=?");
     $sth->execute($domain_id);
     return $sth->fetchrow;
 }
@@ -538,7 +523,7 @@ sub _send_message {
     $subject = $message if $message && $self->status eq 'done'
             && length ($message)<60;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
         ." VALUES ( ?,?,?,?, NULL)"
     );
@@ -555,7 +540,7 @@ sub _remove_unnecessary_messages {
     return if !$uid;
 
 
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $sth = Ravada::DB->instance->dbh->prepare(
         "DELETE FROM messages WHERE id_user=? AND id_request=? "
         ." AND (message='' OR message IS NULL)"
     );
@@ -580,13 +565,13 @@ sub result {
     my $value = shift;
 
     if (defined $value ) {
-        my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set result=? "
+        my $sth = Ravada::DB->instance->dbh->prepare("UPDATE requests set result=? "
             ." WHERE id=?");
         $sth->execute(encode_json($value), $self->{id});
         $sth->finish;
 
     } else {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT result FROM requests where id=? ");
+        my $sth = Ravada::DB->instance->dbh->prepare("SELECT result FROM requests where id=? ");
         $sth->execute($self->{id});
         ($value) = $sth->fetchrow;
         $value = decode_json($value)    if defined $value;
@@ -768,7 +753,7 @@ sub AUTOLOAD {
     confess "ERROR: Unknown field $name "
         if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
     if (!defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+        my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM requests "
             ." WHERE id=?");
         $sth->execute($self->{id});
         my $row = $sth->fetchrow_hashref;
@@ -780,7 +765,7 @@ sub AUTOLOAD {
     confess "ERROR: field $name is read only"
         if $FIELD_RO{$name};
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
+    my $sth = Ravada::DB->instance->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
     eval {
         $sth->execute($value, $self->{id});
