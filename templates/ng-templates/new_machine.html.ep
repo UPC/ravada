@@ -42,13 +42,11 @@
 
             <div class="row">
               <div class="col-md-6 from-group">
-            <div class="from-group">
                 <label for="backend">Backend</label>
                 <select name="backend"
                         ng-model="backend"
                         ng-init="backend = 'KVM'"
-                        ng-options="item for item in backends"
-                        ng-options="item for item in backends track by item"
+                        ng-options="item for item in backends track by item.id "
                         required=""
                 ></select>
               </div>
@@ -75,7 +73,6 @@
 
           <div class="row">
             <div ng-if="backend == 'KVM'" class="col-md-6 from-group">
-            <div ng-if="backend == 'KVM'" class="from-group">
                 <label for="disk">Disk Size: (GB)</label>
                 <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="40" required="">
                 <label for="swap">Swap Size: (GB)</label>
@@ -85,20 +82,22 @@
               <h6><label>Total Gigabytes</label><div class="progress"></h6>
                   <div class="progress-bar" role="progressbar" aria-valuenow="70"
                     aria-valuemin="0" aria-valuemax="100" style="width:70%">
+                    <span class="sr-only">70% Complete</span>
                   </div>
               </div>
             </div>
-          </div>
+            </div>
 
           <div class="row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'" class="col-md-6 from-group">
                 <label for="memory">Ram: (GB)</label>
                 <input class="form-control" ng-model="ramsize" type="number" name="memory" min="1" max="4" required="">
             </div><br/>
-          <div ng-if="backend == 'KVM'" class="col-md-6"><label>Server memory available</label><br/>
+            <div ng-if="backend == 'KVM'" class="col-md-6"><label>Server memory available</label><br/>
               <div class="progress">
                   <div class="progress-bar" role="progressbar" aria-valuenow="70"
                     aria-valuemin="0" aria-valuemax="100" style="width:20%">
+                    <span class="sr-only">20% Complete</span>
                   </div>
               </div>
             </div>
