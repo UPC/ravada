@@ -63,8 +63,6 @@ our $XML = XML::LibXML->new();
 #
 our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
-our $CONNECTOR = \$Ravada::CONNECTOR;
-
 ##########################################################################
 
 
@@ -576,7 +574,7 @@ sub _search_domain_by_id {
     my $self = shift;
     my $id = shift;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM domains WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
@@ -761,7 +759,7 @@ sub _search_iso {
     my $self = shift;
     my $id_iso = shift or croak "Missing id_iso";
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
+    my $sth = Ravada::DB->instance->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
