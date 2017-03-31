@@ -228,3 +228,28 @@ sub id {
 }
 1;
 
+
+=head2 change_password
+
+Changes user's password. Returns nothing.
+
+     Ravada::Auth::SQL::change_password($id,$password);
+
+=cut       
+
+sub change_password {
+    my $id = shift;
+    my $password = shift;
+
+    warn "id es $id";
+    warn "pass es $password";
+    
+      my $sth = $$CON->dbh->prepare(
+           "UPDATE users SET password=? WHERE id=?");
+
+    $sth->execute(sha1_hex($password), $id);
+    $sth->finish;
+   
+}
+
+

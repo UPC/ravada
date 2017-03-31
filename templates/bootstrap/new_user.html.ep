@@ -6,26 +6,22 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
 
-        <!--USERS LIST-->
-        <div ng-controller="users">
-            <div class="page-header">
+        <!--MANAGE USERS-->
+        <div ng-controller="AddUserForm">
+           <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>Users List
+                        <h2>Create a new account
                         <button style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
-			<button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'">Add new user</button>
-			</h2>
+                        </h2>
                     </div>
-                    
-                    <sol-show-listusers></sol-show-listusers>
-                    
+                            <sol-show-adduser></sol-show-adduser>                            
                 </div>
             </div>
-            </div>
-        
+                  
+        </div>
     </div>
     </div>
     %= include 'bootstrap/scripts'
 </body>
 </html>
-

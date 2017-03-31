@@ -2,6 +2,7 @@
 
     angular.module("ravada.app",['ngResource'])
             .directive("solShowSupportform", swSupForm)
+            .directive("solShowAdduser",swAddUser)
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
 	    .directive("solShowListusers", swListUsers)
@@ -14,12 +15,12 @@
 	    .service("listUsers", gtListUsers)
             .controller("new_machine", newMachineCtrl)
             .controller("SupportForm", suppFormCtrl)
+	    .controller("AddUserForm",addUserFormCrtl)
             .controller("machines", machinesCrtl)
             .controller("messages", messagesCrtl)
-	        .controller("users", usersCrtl)
+            .controller("users", usersCrtl)
            
-
-
+              
  
     function newMachineCtrl($scope, $http) {
 
@@ -37,7 +38,7 @@
     };
 
     function suppFormCtrl($scope){
-        this.user = {};
+	this.user = {};
         $scope.showErr = false;
         $scope.isOkey = function() {
             if($scope.contactForm.$valid){
@@ -50,7 +51,7 @@
     };
 
     function swSupForm() {
-
+	
         return {
             restrict: "E",
             templateUrl: '/templates/support_form.html',
@@ -58,6 +59,21 @@
 
     };
 
+
+    function addUserFormCrtl($scope, $http, request){
+               
+       
+    };
+
+    function swAddUser() {
+	
+        return {
+            restrict: "E",
+            templateUrl: '/templates/new_user.html',
+        };
+
+    };
+    
     function swNewMach() {
 
         return {
@@ -138,6 +154,11 @@
             location.reload();
         };
 
+	$scope.add_user = function() {
+            $http.get('/users/register')
+            
+        };
+
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
@@ -155,7 +176,7 @@
     };
 
     function swListUsers() {
-
+	
         return {
             restrict: "E",
             templateUrl: '/templates/list_users.html',
@@ -163,7 +184,7 @@
 
     };
 
-    function gtListUsers($resource){
+      function gtListUsers($resource){
 
         return $resource('/list_users.json',{},{
             get:{isArray:true}

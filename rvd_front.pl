@@ -81,7 +81,6 @@ any '/machines' => sub {
     return domains($c);
 };
 
-
 any '/machines/new' => sub {
     my $c = shift;
 
@@ -173,12 +172,34 @@ get '/users/make_admin/*.json' => sub {
       return make_admin($c);
 };
 
+
+get '/users/new_admin/*.json' => sub {
+       my $c = shift;
+      return new_admin($c);
+};
+
+
 ##remove admin
 
 get '/users/remove_admin/*.json' => sub {
        my $c = shift;
        return remove_admin($c);
 };
+
+##add user
+
+any 'users/add_user/submit_user' => sub {
+   my $c = shift;
+
+   return new_user($c);
+};
+
+any 'users/register' => sub {
+       
+       my $c = shift;
+       return register($c);
+};
+
 
 ##############################################
 #
@@ -570,6 +591,18 @@ sub make_admin {
         
 }
 
+sub new_admin {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($username) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    
+    warn "nom usuari $username";
+    
+   # Ravada::Auth::SQL::make_admin($id);
+        
+}
+
 sub remove_admin {
     my $c = shift;
     return login($c) if !_logged_in($c);
@@ -579,6 +612,29 @@ sub remove_admin {
     warn "id usuari $id";
     
     Ravada::Auth::SQL::remove_admin($id);
+        
+}
+
+sub register {
+    
+    my $c = shift;
+    
+    my @error = ();
+    $c->render(template => 'bootstrap/new_user');
+
+}
+
+sub new_user {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my $username = $c->param('username');
+    my $password = $c->param('password');
+   
+    warn "username $username";
+    warn "password $password";
+    
+    Ravada::Auth::SQL::add_user($username, $password,0);
         
 }
 
