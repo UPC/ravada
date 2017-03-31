@@ -83,6 +83,7 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
+          $scope.domain_remove = 0;
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
