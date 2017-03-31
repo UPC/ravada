@@ -94,5 +94,6 @@
 </div>
 
 %= include 'bootstrap/footer'
+%= include 'bootstrap/messages'
 </body>
 </html>

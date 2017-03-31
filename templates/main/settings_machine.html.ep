@@ -137,5 +137,6 @@
     </div>
     </div>
     %= include 'bootstrap/scripts'
+    %= include 'bootstrap/messages'
 </body>
 </html>
