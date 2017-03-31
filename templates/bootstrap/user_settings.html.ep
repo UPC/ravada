@@ -13,14 +13,15 @@
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h2 class="text-center"><%=l 'Settings' %></h2>
-                        <form onsubmit='alert(document.getElementById('upload').value);' method='post' enctype="multipart/form-data">
-                            <p><input type="checkbox" name="check_language" id="check_language"> <%=l 'I want to change my language' %></p>
-                            <p><%=l 'Language:' %> <select id="tongue" name="tongue" >
-                               <option value="en"><%=l 'English' %></option>
-                               <option value="es"><%=l 'Spanish' %></option>
-                               <option value="ca"><%=l 'Catalan' %></option>
+                        <form method='post' enctype="multipart/form-data">
+                            <p><%=l 'Language:' %> <select onchange="this.form.submit()" id="tongue" name="tongue" >
+                               <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
+                               <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
+                               <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
                              </select></p>
-                            <p><input type="checkbox" name="check_pass" id="check_pass"> <%=l 'I want to change my password' %></p>
+                        </form>
+                        <p>____<p></br>
+                        <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
 
