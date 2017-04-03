@@ -328,6 +328,11 @@ get '/machine/pause/(:id).(:type)' => sub {
         return pause_machine($c);
 };
 
+get '/machine/hybernate/(:id).(:type)' => sub {
+        my $c = shift;
+        return hybernate_machine($c);
+};
+
 get '/machine/resume/(:id).(:type)' => sub {
         my $c = shift;
         return resume_machine($c);
@@ -1308,6 +1313,15 @@ sub pause_machine {
     my $req = Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id);
 
     return $c->render(json => { req => $req->id });
+}
+
+sub hybernate_machine {
+    my $c = shift;
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->hybernate(id_domain => $domain->id, uid => $USER->id);
+
+    return $c->render(json => { req => $req->id });
+
 }
 
 sub resume_machine {

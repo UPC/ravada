@@ -13,6 +13,7 @@
             .controller("SupportForm", suppFormCtrl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
+        .controller("notifCrtl", notifCrtl)
 
     function suppFormCtrl($scope){
         this.user = {};
@@ -57,7 +58,13 @@
                     $scope.host_restore = 0;
                     $http.get( '/machine/shutdown/'+machineId+'.json');
                     window.location.reload();
-                }
+                }  else if ($scope.host_action.indexOf('hybernate') !== -1) {
+                    $scope.host_hybernate = machineId;
+                    $scope.host_restore = 0;
+                    $http.get( '/machine/hybernate/'+machineId+'.json');
+                    window.location.reload();
+                } 
+
             };
 
             $url_list = "/list_bases.json";
@@ -76,6 +83,7 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
+          $scope.domain_remove = 0;
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
@@ -196,3 +204,17 @@
         });
 
     };
+
+  function notifCrtl($scope, $interval, $http, request){
+    $scope.getAlerts = function() {
+      $http.get('/unshown_messages.json').then(function(response) {
+              $scope.alerts= response.data;
+      });
+    };
+    $interval($scope.getAlerts,10000);
+    $scope.closeAlert = function(index) {
+      var message = $scope.alerts.splice(index, 1);
+      var toGet = '/messages/read/'+message[0].id+'.html';
+      $http.get(toGet);
+    };
+  }

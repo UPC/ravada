@@ -1,0 +1,18 @@
+<div class="header"> <%=l 'Status'%>:
+    <span ng-show="{{showmachine.is_paused && showmachine.is_active}}"
+                         class="label label-warning">
+                          <%=l 'Paused' %>
+    </span>
+    <span ng-show="{{!showmachine.is_paused && showmachine.is_active}}"
+                         class="label label-success">
+                          <%=l 'Running' %>
+    </span>
+    <span ng-show="{{!showmachine.is_active}}" class="label label-danger">
+                          <%=l 'Down'%>
+    </span>
+    <hr>
+    <div ng-show="{{showmachine.is_locked}}">
+                        <%=l 'Machine locked by requested' %>
+                        <a href="/request/{{showmachine.is_locked}}.html"><%=l 'process' %></a>
+    </div>
+</div>

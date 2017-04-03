@@ -26,6 +26,33 @@ All the commits come from an issue, so add it at the very beggining of the messa
     
 More guidelines for commit messages here: http://chris.beams.io/posts/git-commit/
 
+## Show the branch in the message
+
+Add the file _prepare-commit-msg_ to the directory _.git/hooks/_ with this content:
+
+    #!/bin/sh
+    #
+    # Automatically adds branch name and branch description to every commit message.
+    
+    #
+    NAME=$(git branch | grep '*' | sed 's/* //')
+    DESCRIPTION=$(git config branch."$NAME".description)
+    TEXT=$(cat "$1" | sed '/^#.*/d')
+    
+    if [ -n "$TEXT" ]
+    then
+        echo "$NAME"': '$(cat "$1" | sed '/^#.*/d') > "$1"
+        if [ -n "$DESCRIPTION" ]
+        then
+           echo "" >> "$1"
+           echo $DESCRIPTION >> "$1"
+        fi
+    else
+        echo "Aborting commit due to empty commit message."
+        exit 1
+    fi
+
+
 Testing
 -------
 

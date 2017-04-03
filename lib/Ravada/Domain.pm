@@ -63,6 +63,9 @@ requires 'clean_swap_volumes';
 requires 'get_info';
 requires 'set_memory';
 requires 'set_max_mem';
+
+requires 'hybernate';
+
 ##########################################################
 
 has 'domain' => (
@@ -117,6 +120,9 @@ before 'start' => \&_start_preconditions;
 
 before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
+
+before 'hybernate' => \&_allow_manage;
+ after 'hybernate' => \&_post_pause;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
@@ -838,6 +844,13 @@ sub _post_shutdown_now {
     $self->_post_shutdown(user => $user);
 }
 
+=head2 can_hybernate
+
+Returns wether a domain supports hybernation
+
+=cut
+
+sub can_hybernate { 0 };
 
 =head2 add_volume_swap
 
