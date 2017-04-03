@@ -41,7 +41,7 @@ msgstr "Para"
 msgid "View"
 msgstr "Ver"
 
-msgid "Prepare Base"
+msgid "Prepare base"
 msgstr "Preparar base"
 
 msgid "Clone"
