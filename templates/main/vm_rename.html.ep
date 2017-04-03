@@ -20,9 +20,9 @@
         % }
         <input type="text" name="new_name" ng-model="new_name"
                              ng-change="validate_new_name(showmachine.name)"
-                             ng-disabled="<%= $domain->domain->has_managed_save_image %>"
+                             ng-disabled="<%= $disable_rename %>"
         >
-        <button type="button" ng-disabled="<%= $domain->domain->has_managed_save_image %>"
+        <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated"
                              ng-click="rename(showmachine.id, showmachine.name)">
                               <i class="fa fa-check" aria-hidden="true"></i>
         </button>
