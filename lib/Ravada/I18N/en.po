@@ -41,7 +41,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-msgid "Prepare Base"
+msgid "Prepare base"
 msgstr ""
 
 msgid "Clone"
@@ -51,9 +51,6 @@ msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
 msgstr ""
 
 msgid "Clone/s"
-msgstr ""
-
-msgid "Show/Hide clones"
 msgstr ""
 
 msgid "NEW"
@@ -110,9 +107,6 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-msgid "Start"
-msgstr ""
-
 msgid "ShutDown"
 msgstr ""
 
@@ -120,9 +114,6 @@ msgid "Screenshot"
 msgstr ""
 
 msgid "Paused"
-msgstr ""
-
-msgid "Prepare base"
 msgstr ""
 
 msgid "Machine locked by requested"
@@ -176,11 +167,44 @@ msgstr ""
 msgid "Remove base"
 msgstr ""
 
-msgid "Prepare base"
-msgstr ""
-
 msgid "public"
 msgstr ""
 
+msgid "Restore"
+msgstr ""
+
+msgid "Hybernate"
+msgstr ""
+
+msgid "Shutdown"
+msgstr ""
+
+msgid "action"
+msgstr ""
+
 msgid "New Base"
+msgstr ""
+
+msgid "will remove all the contents of the machine"
+msgstr ""
+
+msgid "Are you sure?"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Make public"
+msgstr ""
+
+msgid "Machine settings"
+msgstr ""
+
+msgid "Cannot remove base, machine has clones"
+msgstr ""
+
+msgid "Show/Hide clones"
 msgstr ""

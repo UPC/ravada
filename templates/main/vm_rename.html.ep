@@ -1,0 +1,36 @@
+% my $disable_rename = 0;
+% my $message_rename;
+% if ( $domain->is_active ) {
+%   $message_rename = 'This VM is running and can\'t be renamed.';
+%   $disable_rename = 1;
+% }
+% if ( $domain->domain->has_managed_save_image ) {
+%   $message_rename = 'This VM has a saved hybernated state and can\'t be renamed.';
+%   $disable_rename = 1;
+% }
+%# if $domain->is_paused || $domain->domain->has_managed_save_image;
+<div class="panel panel-primary" ng-hide="domain_remove_done">
+    <div class="panel-heading"><b><%=l 'Rename'%></b></div>
+
+    <div class="panel-body">
+        % if ($message_rename) {
+            <div class="panel panel-warning">
+               <div class="panel-heading"><%= $message_rename %></div>
+            </div>
+        % }
+        <input type="text" name="new_name" ng-model="new_name"
+                             ng-change="validate_new_name(showmachine.name)"
+                             ng-disabled="<%= $disable_rename %>"
+        >
+        <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated"
+                             ng-click="rename(showmachine.id, showmachine.name)">
+                              <i class="fa fa-check" aria-hidden="true"></i>
+        </button>
+        <div class="form-group has-error">
+                              <label ng-show="new_name_duplicated"
+                               class="control-label" for="new_name">
+                               This name is duplicated
+                              </label>
+        </div>
+    </div>
+</div>

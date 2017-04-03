@@ -480,6 +480,9 @@ sub _pre_shutdown_domain {
             sleep 1;
         }
     }
+
+    $self->domain->managed_save_remove()
+        if $self->domain->has_managed_save_image();
 }
 
 =head2 shutdown
@@ -589,6 +592,29 @@ sub is_paused {
         || $state == Sys::Virt::Domain::STATE_PAUSED_SHUTTING_DOWN
     );
     return 0;
+}
+
+=head2 can_hybernate
+
+Returns true (1) for KVM domains
+
+=cut
+
+sub can_hybernate { 1 };
+
+=head2 hybernate
+
+Take a snapshot of the domain's state and save the information to a
+managed save location. The domain will be automatically restored with
+this state when it is next started.
+
+    $domain->hybernate();
+
+=cut
+
+sub hybernate {
+    my $self = shift;
+    $self->domain->managed_save();
 }
 
 =head2 add_volume

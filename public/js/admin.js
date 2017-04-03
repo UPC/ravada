@@ -4,7 +4,6 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("machinesPage", machinesPageC)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
-        .controller("notifCrtl", notifCrtl)
 
   function swMach() {
     return {
@@ -117,16 +116,3 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
 
-  function notifCrtl($scope, $interval, $http, request){
-    $scope.getAlerts = function() {
-      $http.get('/unshown_messages.json').then(function(response) {
-              $scope.alerts= response.data;
-      });
-    };
-    $interval($scope.getAlerts,10000);
-    $scope.closeAlert = function(index) {
-      var message = $scope.alerts.splice(index, 1);
-      var toGet = '/messages/read/'+message[0].id+'.html';
-      $http.get(toGet);
-    };
-  }
