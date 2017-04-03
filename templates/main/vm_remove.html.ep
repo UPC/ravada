@@ -11,7 +11,7 @@
                 </div>
             </div>
             <a type="button" class="btn btn-danger"
-                              ng-hide="showmachine.has_clones > 0 || domain_remove_done"
+                              ng-hide="showmachine.has_clones > 0 || domain_remove_done || domain_remove"
                               ng-click="domain_remove=1"
                           >
                           <%=l 'Remove' %>

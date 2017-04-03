@@ -130,6 +130,19 @@ sub remove_disks {
 
 }
 
+=head2 pre_remove_domain
+
+Cleanup operations executed before removing this domain
+
+    $self->pre_remove_domain
+
+=cut
+
+sub pre_remove_domain {
+    my $self = shift;
+    $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
+}
+
 sub _vol_remove {
     my $self = shift;
     my $file = shift;

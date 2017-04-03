@@ -478,10 +478,19 @@ sub _insert_db {
 
 }
 
+=head2 pre_remove_domain
+
+Cleanup operations executed before removing this domain
+
+=cut
+
+sub pre_remove_domain { }
+
 sub _pre_remove_domain {
     my $self = shift;
     eval { $self->id };
     $self->_allow_remove(@_);
+    $self->pre_remove_domain();
 }
 
 sub _after_remove_domain {
