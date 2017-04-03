@@ -12,11 +12,9 @@
         <div class="panel panel-default">
              <div class="panel-heading">
                   <h2>Virtual Machine <a href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a></h2>
-% if ($USER->is_admin()) {
-    % include 'main/vm_remove'
-% }
              </div> <!-- del panel heading-->
 % if ( $USER->is_admin ) {
+    %= include 'main/vm_remove'
     %= include 'main/vm_rename'
     %= include 'main/vm_copy'
 % }
