@@ -1,9 +1,17 @@
+<div class="panel panel-primary">
+    <div class="panel-body">
+
                      <a type="button" class="btn btn-danger"
                               ng-hide="showmachine.has_clones > 0 "
                               ng-click="domain_remove=1"
                           >
                           <%=l 'Remove' %>
                       </a>
+
+        <div ng-show=showmachine.has_clones>
+            This machine can't be removed because it
+            has {{showmachine.has_clones}} clones.
+        </div>
 
                       <div ng-show="domain_remove">
                         This will remove all the contents of the machine
@@ -16,4 +24,5 @@
                             ng-click="remove(<%= $domain->id %>)"
                             >Yes</a>
                       </div><!-- del domain remove -->
-
+    </div>
+</div>
