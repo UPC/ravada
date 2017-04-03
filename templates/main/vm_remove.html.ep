@@ -1,19 +1,23 @@
 <div class="panel panel-primary">
-    <div class="panel-body">
+    <div class="panel-heading"><%=l 'Remove Machine' %></div>
 
-                     <a type="button" class="btn btn-danger"
+        <div class="panel-body">
+            <div class="panel panel-warning" ng-show="showmachine.has_clones">
+
+                <div class="panel-heading">
+
+                    This virtual machine can't be removed because it
+                    has {{showmachine.has_clones}} clones.
+                </div>
+            </div>
+            <a type="button" class="btn btn-danger"
                               ng-hide="showmachine.has_clones > 0 "
                               ng-click="domain_remove=1"
                           >
                           <%=l 'Remove' %>
-                      </a>
+           </a>
 
-        <div ng-show=showmachine.has_clones>
-            This machine can't be removed because it
-            has {{showmachine.has_clones}} clones.
-        </div>
-
-                      <div ng-show="domain_remove">
+           <div ng-show="domain_remove">
                         This will remove all the contents of the machine
                         <i><%= $domain->name %></i>.
                         Are you sure ? <br/>
@@ -23,6 +27,6 @@
                         <a type="button" class="btn btn-warning"
                             ng-click="remove(<%= $domain->id %>)"
                             >Yes</a>
-                      </div><!-- del domain remove -->
+           </div><!-- del domain remove -->
     </div>
 </div>
