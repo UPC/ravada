@@ -187,9 +187,6 @@ sub ip {
     }
     return $ip if $ip && $ip !~ /^127\./;
 
-    $ip = _ip_from_hostname();
-    return $ip if $ip && $ip !~ /^127\./;
-
     $ip = $self->_interface_ip();
     return $ip if $ip && $ip !~ /^127/ && $ip =~ /^\d+\.\d+\.\d+\.\d+$/;
 
@@ -199,22 +196,11 @@ sub ip {
     return '127.0.0.1';
 }
 
-sub _ip_from_hostname {
-    my $res = Net::DNS::Resolver->new();
-
-    my $name = hostfqdn();
-    my $reply = $res->search($name);
-    return if !$reply;
-
-    for my $rr ($reply->answer) {
-        return $rr->address if $rr->type eq 'A';
-    }
-}
-
 sub _interface_ip {
     my $s = IO::Socket::INET->new(Proto => 'tcp');
 
     for my $if ( $s->if_list) {
+        next if $if =~ /^virbr/;
         my $addr = $s->if_addr($if);
         return $addr if $addr && $addr !~ /^127\./;
     }
