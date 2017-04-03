@@ -1121,22 +1121,14 @@ sub _do_remove_machine {
         ,uid => $USER->id
     );
 
-    return $c->redirect_to('/machines');
+    $c->render(json => { request => $req->id});
 }
 
 sub remove_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
-    return _do_remove_machine($c,@_)   if $c->param('sure') && $c->param('sure') =~ /y/i;
+    return _do_remove_machine($c,@_);#   if $c->param('sure') && $c->param('sure') =~ /y/i;
 
-    return $c->redirect_to('/machines')   if $c->param('sure')
-                                            || $c->param('cancel');
-
-    my $domain = _search_requested_machine($c);
-    return $c->render( text => "Domain not found")  if !$domain;
-    $c->stash(domain => $domain );
-
-    return $c->render( template => 'main/remove_machine' );
 }
 
 sub remove_base {

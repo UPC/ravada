@@ -1,4 +1,4 @@
-<div class="panel panel-primary">
+<div class="panel panel-primary" ng-hide="domain_remove_done">
 
     <div class="panel-heading"><b><%=l 'Copy'%></b></div>
     <div class="panel-body">

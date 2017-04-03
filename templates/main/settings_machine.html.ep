@@ -11,7 +11,11 @@
     <div class="page-header">
         <div class="panel panel-default">
              <div class="panel-heading">
-                  <h2>Virtual Machine <a href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a></h2>
+                 <h2>Virtual Machine 
+                     <a ng-hide="domain_remove_done" 
+                         href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
+                     Settings
+                 </h2>
              </div> <!-- del panel heading-->
 % if ( $USER->is_admin ) {
     %= include 'main/vm_remove'
