@@ -100,7 +100,14 @@
               }
               window.location.href = "/admin/machines";
             });
-          }
+          };
+          $scope.remove = function(machineId) {
+            $http.get('/machine/remove/'+machineId+'.json');
+          };
+          $scope.remove_clones = function(machineId) {
+                $http.get('/machine/remove_clones/'+machineId+'.json');
+          };
+
           $scope.action = function(target,action,machineId){
             $http.get('/'+target+'/'+action+'/'+machineId+'.json');
           };

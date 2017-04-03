@@ -303,6 +303,12 @@ any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
         return remove_machine($c);
 };
+
+any '/machine/remove_clones/(:id).(:type)' => sub {
+        my $c = shift;
+        return remove_clones($c);
+};
+
 get '/machine/prepare/(:id).(:type)' => sub {
         my $c = shift;
         return prepare_machine($c);
@@ -1128,6 +1134,22 @@ sub remove_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
     return _do_remove_machine($c,@_);#   if $c->param('sure') && $c->param('sure') =~ /y/i;
+
+}
+
+sub remove_clones {
+    my $c = shift;
+
+    my $domain = _search_requested_machine($c);
+    my @req;
+    for my $clone ( $domain->clones) {
+        my $req = Ravada::Request->remove_domain(
+            name => $clone->{name}
+            ,uid => $USER->id
+        );
+        push @req,($req);
+    }
+    $c->render(json => { request => map { id => { $_->id } } });
 
 }
 
