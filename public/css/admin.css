@@ -1,0 +1,18 @@
+.machine-button{
+  cursor: pointer;
+}
+#admin-content{
+}
+.admin-cont-body {
+  table-layout: fixed;
+}
+.lgMachName{
+  min-width: 50%;
+  word-break: break-all;
+}
+.lgMachToggle{
+  width: 78px;
+}
+.lgMachActions{
+  width: 200px;
+}

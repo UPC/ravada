@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.1.2';
+our $VERSION = '0.2.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -1119,6 +1119,22 @@ sub _cmd_remove_base {
 }
 
 
+sub _cmd_hybernate {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid') or confess "Missing argument uid";
+    my $id_domain = $request->id_domain or confess "Missing request id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    $domain->hybernate($user);
+
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -1218,6 +1234,7 @@ sub _req_method {
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
       ,shutdown => \&_cmd_shutdown
+     ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot

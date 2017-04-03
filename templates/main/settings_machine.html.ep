@@ -2,58 +2,34 @@
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
-    <div id="wrapper">
+<div id="wrapper">
     %= include 'bootstrap/navigation'
-    <div id="page-wrapper">
+<div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="machines">
-            <div class="page-header">
-                <div class="panel panel-default">
-                    <form action="<%= $action %>" method="post">
-                    <div class="panel-heading">
-                        <h2>Virtual Machine <a href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a></h2>
-                            <input type="submit" name="start" value="start" <%= $_start_disabled %>>
-                            <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
-                            <%= $message %>
-                            <br/>
-                    </div>
-                    <div>
-                            <label for="ram">Memory</label>
-                            <input type="text" name="ram" size="5" disabled
-                                value="<%= int($domain->get_info->{memory} / 1024) %>">
-                                <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
-                                MB available.
-                                <br/>
+<div ng-controller="singleMachinePage">
+    <div class="page-header">
+        <div class="panel panel-default">
+             <div class="panel-heading">
+                 <h2>Virtual Machine 
+                     <a ng-hide="domain_remove_done" 
+                         href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
+                     Settings
+                 </h2>
+             </div> <!-- del panel heading-->
+% if ( $USER->is_admin ) {
+    %= include 'main/vm_remove'
+    %= include 'main/vm_rename'
+    %= include 'main/vm_copy'
+% }
+    %= include 'main/vm_options'
+        </div><!-- del panel default-->
+    </div><!-- del page-header -->
+</div><!-- del ng-controller -->
 
-%                           for my $driver_name (qw(network sound video)) {
-%                               my $driver = $domain->drivers($driver_name);
-                                <label for="driver_<%= $driver_name %>"><%= $driver_name %></label>
-%                               if (!$driver) {
-                                    <p>I can't find <%= $driver_name %> driver</p>
-%                                    next;
-%                               }
-                                <select name="driver_<%= $driver_name %>">
-%                               for my $option( $driver->get_options ) {
-%                                   my $selected ='';
-%                                   $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
-                                    <option <%= $selected %>
-                                        value="<%= $option->{id} %>"><%= $option->{name} %></option>
-%                               }
-                                </select>
-                                <br/>
-%                           }
-                            <br/>
-                            <input type="submit" value="save">
-                    </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-    </div>
-    </div>
+</div> <!-- del page-wrapper -->
+</div> <!-- del wrapper -->
     %= include 'bootstrap/scripts'
+    %= include 'bootstrap/messages'
 </body>
 </html>
-

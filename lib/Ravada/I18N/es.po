@@ -134,3 +134,14 @@ msgstr "proceso"
 msgid "Copy"
 msgstr "Copia"
 
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr "Elimina base"
+
+msgid "Prepare base"
+msgstr "Prepara base"
+
+msgid "public"
+msgstr "pública"

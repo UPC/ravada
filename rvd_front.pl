@@ -30,7 +30,8 @@ our $VERSION_TYPE = "--beta";
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
                                                 pid_file => 'log/rvd_front.pid'
-                                                ,listen => ['http://*:8081']}
+                                                ,listen => ['http://*:8081']
+                                                }
                                               ,login_bg_file => '../img/intro-bg.jpg'
                                               ,login_header => 'Login'
                                               ,login_message => ''
@@ -61,7 +62,6 @@ setlocale(LC_CTYPE, $old_locale);
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
 plugin 'RenderFile';
-
 GetOptions(
      'config=s' => \$FILE_CONFIG
          ,help  => \$help
@@ -77,7 +77,7 @@ our $USER;
 
 # TODO: get those from the config file
 our $DOCUMENT_ROOT = "/var/www";
-our $SESSION_TIMEOUT = 300;
+our $SESSION_TIMEOUT = 900;
 
 init();
 ############################################################################3
@@ -173,16 +173,19 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/machines' => sub {
-    my $c = shift;
+any '/admin' => sub {
+  my $c = shift;
+  $c->redirect_to("/admin/machines")
+};
+any '/admin/(#type)' => sub {
+  my $c = shift;
 
-    return access_denied($c)    if !$USER->is_admin;
+  return access_denied($c)    if !$USER->is_admin;
 
-    return domains($c);
+  return admin($c);
 };
 
-
-any '/machines/new' => sub {
+any '/new_machine' => sub {
     my $c = shift;
 
     return access_denied($c)    if !$USER->is_admin;
@@ -196,14 +199,6 @@ get '/domain/new.html' => sub {
     return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->stash(error => []);
     return $c->render(template => "main/new_machine");
-
-};
-
-any '/users' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin;
-    return users($c);
 
 };
 
@@ -333,6 +328,11 @@ get '/machine/pause/(:id).(:type)' => sub {
         return pause_machine($c);
 };
 
+get '/machine/hybernate/(:id).(:type)' => sub {
+        my $c = shift;
+        return hybernate_machine($c);
+};
+
 get '/machine/resume/(:id).(:type)' => sub {
         my $c = shift;
         return resume_machine($c);
@@ -409,11 +409,6 @@ get '/requests.json' => sub {
     return list_requests($c);
 };
 
-any '/messages.html' => sub {
-    my $c = shift;
-    return messages($c);
-};
-
 get '/messages.json' => sub {
     my $c = shift;
 
@@ -433,34 +428,33 @@ get '/unshown_messages.json' => sub {
 get '/messages/read/all.html' => sub {
     my $c = shift;
     $USER->mark_all_messages_read;
-    return $c->redirect_to("/messages.html");
+    return $c->render(inline => "1");
 };
 
 get '/messages/read/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
+    return $c->render(inline => "1");
 };
 
-get '/messages/read/(#id).html' => sub {
-    my $c = shift;
-    my $id = $c->stash('id');
-    $USER->mark_message_read($id);
-    return $c->redirect_to("/messages.html");
-};
-
-get '/messages/unread/(#id).html' => sub {
+get '/messages/unread/(#id).json' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     $USER->mark_message_unread($id);
-    return $c->redirect_to("/messages.html");
+    return $c->render(inline => "1");
 };
 
 get '/messages/view/(#id).html' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     return $c->render( json => $USER->show_message($id) );
+};
+
+any '/ng-templates/(#template).html' => sub {
+  my $c = shift;
+  my $id = $c->stash('template');
+  return $c->render(template => 'ng-templates/'.$id);
 };
 
 any '/about' => sub {
@@ -688,33 +682,16 @@ sub show_failure {
 
 #######################################################
 
-sub domains {
+sub admin {
     my $c = shift;
-
+    my $page = $c->stash('type');
     my @error = ();
 
-    $c->render(template => 'main/machines');
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+    $c->render(template => 'main/admin_'.$page);
 
-}
-
-sub messages {
-    my $c = shift;
-
-    my @error = ();
-
-    $c->render(template => 'main/messages');
-
-}
-
-sub users {
-    my $c = shift;
-    my @users = $RAVADA->list_users();
-    $c->render(template => 'main/users'
-        ,users => \@users
-    );
-
-}
-
+};
 
 sub new_machine {
     my $c = shift;
@@ -722,7 +699,7 @@ sub new_machine {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         req_new_domain($c);
-        $c->redirect_to("/machines")    if !@error;
+        $c->redirect_to("/admin/machines")    if !@error;
     }
     warn join("\n",@error) if @error;
 
@@ -996,7 +973,7 @@ sub make_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::make_admin($id);
-
+    return $c->render(inline => "1");
 }
 
 sub remove_admin {
@@ -1005,7 +982,7 @@ sub remove_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::remove_admin($id);
-
+    return $c->render(inline => "1");
 }
 
 sub manage_machine {
@@ -1042,6 +1019,7 @@ sub settings_machine {
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
+    $c->stash(USER => $USER);
 
     my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
@@ -1144,22 +1122,14 @@ sub _do_remove_machine {
         ,uid => $USER->id
     );
 
-    return $c->redirect_to('/machines');
+    $c->render(json => { request => $req->id});
 }
 
 sub remove_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
-    return _do_remove_machine($c,@_)   if $c->param('sure') && $c->param('sure') =~ /y/i;
+    return _do_remove_machine($c,@_);#   if $c->param('sure') && $c->param('sure') =~ /y/i;
 
-    return $c->redirect_to('/machines')   if $c->param('sure')
-                                            || $c->param('cancel');
-
-    my $domain = _search_requested_machine($c);
-    return $c->render( text => "Domain not found")  if !$domain;
-    $c->stash(domain => $domain );
-
-    return $c->render( template => 'main/remove_machine' );
 }
 
 sub remove_base {
@@ -1283,7 +1253,7 @@ sub copy_machine {
        , id_owner => $USER->id
         ,@create_args
     );
-    $c->redirect_to("/machines");#    if !@error;
+    $c->redirect_to("/admin/machines");#    if !@error;
 }
 
 sub machine_is_public {
@@ -1336,6 +1306,15 @@ sub pause_machine {
     my $req = Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id);
 
     return $c->render(json => { req => $req->id });
+}
+
+sub hybernate_machine {
+    my $c = shift;
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->hybernate(id_domain => $domain->id, uid => $USER->id);
+
+    return $c->render(json => { req => $req->id });
+
 }
 
 sub resume_machine {

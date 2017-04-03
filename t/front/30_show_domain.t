@@ -72,8 +72,10 @@ sub test_start_domain {
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
 
-    eval { $domain_b->shutdown(user => $USER)};
-    ok(!$@,"[$vm_name] Start domain $name expecting error: '' , got $@");
+    if ($domain_b->is_active) {
+        eval { $domain_b->shutdown(user => $USER)};
+        ok(!$@,"[$vm_name] Start domain $name expecting error: '' , got $@");
+    }
 
     ok(!$domain_f->is_active);
 

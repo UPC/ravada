@@ -53,6 +53,9 @@ msgstr ""
 msgid "Clone/s"
 msgstr ""
 
+msgid "Show/Hide clones"
+msgstr ""
+
 msgid "NEW"
 msgstr ""
 
@@ -89,8 +92,6 @@ msgstr ""
 msgid "New Machine"
 msgstr ""
 
-<<<<<<< HEAD
-=======
 msgid "Public"
 msgstr ""
 
@@ -109,24 +110,19 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-msgid "ShutDown"
+msgid "Start"
 msgstr ""
 
-msgid "View"
+msgid "ShutDown"
 msgstr ""
 
 msgid "Screenshot"
 msgstr ""
 
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
 msgid "Paused"
 msgstr ""
 
 msgid "Prepare base"
-<<<<<<< HEAD
-
-=======
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
 msgstr ""
 
 msgid "Machine locked by requested"
@@ -155,11 +151,7 @@ msgstr ""
 
 msgid "Mark as Read"
 msgstr ""
-<<<<<<< HEAD
- 
-=======
 
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
 msgid "Mark as UnRead"
 msgstr ""
 
@@ -168,8 +160,6 @@ msgstr ""
 
 msgid "Admin"
 msgstr ""
-<<<<<<< HEAD
-=======
 
 msgid "machines"
 msgstr ""
@@ -179,4 +169,15 @@ msgstr ""
 
 msgid "messages"
 msgstr ""
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr ""
+
+msgid "Prepare base"
+msgstr ""
+
+msgid "public"
+msgstr ""

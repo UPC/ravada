@@ -1,0 +1,35 @@
+<div class="panel panel-primary">
+    <div class="panel-heading"><%=l 'Remove Machine' %></div>
+
+        <div class="panel-body">
+            <div class="panel panel-warning" ng-show="showmachine.has_clones">
+
+                <div class="panel-heading">
+
+                    This virtual machine can't be removed because it
+                    has {{showmachine.has_clones}} clones.
+                </div>
+            </div>
+            <a type="button" class="btn btn-danger"
+                              ng-hide="showmachine.has_clones > 0 || domain_remove_done"
+                              ng-click="domain_remove=1"
+                          >
+                          <%=l 'Remove' %>
+           </a>
+
+           <div ng-show="domain_remove">
+                        This will remove all the contents of the machine
+                        <i><%= $domain->name %></i>. <b>This action can't be undone</b>.
+                        Are you sure ? <br/>
+                        <a type="button" class="btn btn-danger"
+                            ng-click="domain_remove=0"
+                        >No</a>
+                        <a type="button" class="btn btn-warning"
+                            ng-click="action('machine','remove',<%= $domain->id %>);domain_remove=0;domain_remove_done=1"
+                            >Yes</a>
+           </div><!-- del domain remove -->
+           <div ng-show="domain_remove_done">
+                Virtual Machine <b>{{showmachine.name}}</b> removed.
+           </div>
+    </div>
+</div>
