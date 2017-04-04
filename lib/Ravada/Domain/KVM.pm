@@ -410,7 +410,8 @@ sub get_xml_base{
         "SELECT xml FROM base_xml WHERE id_domain=?"
     );
     $sth->execute($self->id);
-    return $sth->fetchrow;
+    my $xml = $sth->fetchrow;
+    return ($xml or $self->domain->get_xml_description);
 }
 
 sub _post_remove_base_domain {
