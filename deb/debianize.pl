@@ -25,7 +25,7 @@ my %DIR = (
     ,'etc/systemd/' => 'lib/systemd/system/'
 );
 
-for ( qw(css fonts img js templates)) {
+for ( qw(css fonts img js )) {
     $DIR{"public/$_"} = "usr/share/ravada/public";
 }
 
