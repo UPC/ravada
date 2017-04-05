@@ -25,7 +25,7 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
-our $VERSION_TYPE = "--beta";
+our $VERSION_TYPE = "";
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
