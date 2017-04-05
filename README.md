@@ -23,15 +23,15 @@ KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual
 
 ## Install
 
-Read [docs/INSTALL.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md)
+Read [docs/INSTALL.md](https://github.com/UPC/ravada/blob/master/docs/INSTALL.md)
 
 
 ### Production
 
-See [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md)
+See [docs/production.md](https://github.com/UPC/ravada/blob/master/docs/production.md)
 for production fine-tuning guidelines.
 
 ### Operation
 
-See [docs/operation.md](https://github.com/frankiejol/ravada/blob/master/docs/operation.md)
+See [docs/operation.md](https://github.com/UPC/ravada/blob/master/docs/operation.md)
 
