@@ -421,4 +421,5 @@ sub clean_swap_volumes {
     }
 }
 
+sub hybernate { confess "Not supported"; }
 1;

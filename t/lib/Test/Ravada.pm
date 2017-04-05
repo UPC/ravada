@@ -15,7 +15,9 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name);
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name
+create_domain
+);
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our ($CONNECTOR, $CONFIG);
@@ -24,9 +26,41 @@ our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
 
+my %ARG_CREATE_DOM = (
+      kvm => [ id_iso => 1 ]
+);
+
 sub user_admin {
     return $USER_ADMIN;
 }
+
+sub create_domain {
+    my $vm_name = shift;
+    my $user = (shift or $USER_ADMIN);
+
+    my $vm = rvd_back()->search_vm($vm_name);
+    ok($vm,"I can't find VM $vm_name") or return;
+
+    my $name = new_domain_name();
+
+    ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
+        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
+        return;
+    };
+    my @arg_create = @{$ARG_CREATE_DOM{lc($vm_name)}};
+
+    my $domain;
+    eval { $domain = $vm->create_domain(name => $name
+                    , id_owner => $user->id
+                    , @arg_create
+           );
+    };
+    is($@,'');
+
+    return $domain;
+
+}
+
 sub base_domain_name {
     my ($name) = $0 =~ m{.*?/(.*)\.t};
     die "I can't find name in $0"   if !$name;
@@ -143,6 +177,10 @@ sub _remove_old_domains_kvm {
         }
             if $domain->is_active;
         warn "WARNING: error $@ trying to shutdown ".$domain->get_name if $@;
+
+        $domain->managed_save_remove()
+            if $domain->has_managed_save_image();
+
         eval { $domain->undefine };
         warn $@ if $@;
     }

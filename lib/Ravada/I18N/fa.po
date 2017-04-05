@@ -1,11 +1,5 @@
 # Translators:
-<<<<<<< HEAD
-# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
-# Kimia mirehbar	kimia@etsetb.upc.edu
-# Persian
-=======
 # Kimia Mirehbar 	<kimia@etsetb.upc.edu>, 2017
->>>>>>> cbf371a4b84a3f9f559ebcb4f863a2510aa30b03
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
@@ -22,6 +16,9 @@ msgstr ""
 
 msgid "Ravada broker"
 msgstr "واسطه راوادا"
+
+msgid "Restore"
+msgstr " بازیابی"
 
 msgid "Machine Name"
 msgstr "نام ماشین"
@@ -47,7 +44,7 @@ msgstr "توقف"
 msgid "View"
 msgstr "نمایش"
 
-msgid "Prepare Base"
+msgid "Prepare base"
 msgstr "ایجاد پایگاه"
 
 msgid "Clone"
@@ -98,10 +95,6 @@ msgstr "ماشین جدید"
 msgid "Paused"
 msgstr "متوقف"
 
-msgid "Prepare base"
-
-msgstr "ایجاد پایگاه"
-
 msgid "Machine locked by requested"
 msgstr "طبق درخواست ماشین قفل شده است"
 
@@ -137,3 +130,6 @@ msgstr "پیغامی برای نمایش وجود ندارد"
 
 msgid "Admin"
 msgstr "ادمین"
+
+msgid "Show/Hide clones"
+msgstr "نمایش/پنهان همسان ها"

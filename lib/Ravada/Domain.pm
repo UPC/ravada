@@ -63,6 +63,9 @@ requires 'clean_swap_volumes';
 requires 'get_info';
 requires 'set_memory';
 requires 'set_max_mem';
+
+requires 'hybernate';
+
 ##########################################################
 
 has 'domain' => (
@@ -118,10 +121,13 @@ before 'start' => \&_start_preconditions;
 before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
 
+before 'hybernate' => \&_allow_manage;
+ after 'hybernate' => \&_post_pause;
+
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
 
-before 'shutdown' => \&_allow_manage_args;
+before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 after 'shutdown_now' => \&_post_shutdown_now;
 after 'force_shutdown' => \&_post_shutdown_now;
@@ -206,6 +212,7 @@ sub _pre_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
+    $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
         $self->{_was_active} = 1;
@@ -730,7 +737,12 @@ sub _can_remove_base {
 sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
+    $self->_post_remove_base_domain();
 }
+
+sub _pre_shutdown_domain {}
+
+sub _post_remove_base_domain {}
 
 sub _remove_base_db {
     my $self = shift;
@@ -788,6 +800,19 @@ sub _post_pause {
     $self->_remove_iptables(user => $user);
 }
 
+sub _pre_shutdown {
+    my $self = shift;
+
+    $self->_allow_manage_args(@_);
+
+    $self->_pre_shutdown_domain();
+
+    if ($self->is_paused) {
+        my %args = @_;
+        $self->resume(user => $args{user});
+    }
+}
+
 sub _post_shutdown {
     my $self = shift;
 
@@ -819,6 +844,13 @@ sub _post_shutdown_now {
     $self->_post_shutdown(user => $user);
 }
 
+=head2 can_hybernate
+
+Returns wether a domain supports hybernation
+
+=cut
+
+sub can_hybernate { 0 };
 
 =head2 add_volume_swap
 
@@ -1216,6 +1248,12 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
+}
+
+sub _dbh {
+    my $self = shift;
+    _init_connector() if !$CONNECTOR || !$$CONNECTOR;
+    return $$CONNECTOR->dbh;
 }
 
 1;

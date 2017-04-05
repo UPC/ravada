@@ -303,6 +303,12 @@ any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
         return remove_machine($c);
 };
+
+any '/machine/remove_clones/(:id).(:type)' => sub {
+        my $c = shift;
+        return remove_clones($c);
+};
+
 get '/machine/prepare/(:id).(:type)' => sub {
         my $c = shift;
         return prepare_machine($c);
@@ -326,6 +332,11 @@ get '/machine/screenshot/(:id).(:type)' => sub {
 get '/machine/pause/(:id).(:type)' => sub {
         my $c = shift;
         return pause_machine($c);
+};
+
+get '/machine/hybernate/(:id).(:type)' => sub {
+        my $c = shift;
+        return hybernate_machine($c);
 };
 
 get '/machine/resume/(:id).(:type)' => sub {
@@ -1116,22 +1127,30 @@ sub _do_remove_machine {
         ,uid => $USER->id
     );
 
-    return $c->redirect_to('/machines');
+    $c->render(json => { request => $req->id});
 }
 
 sub remove_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
-    return _do_remove_machine($c,@_)   if $c->param('sure') && $c->param('sure') =~ /y/i;
+    return _do_remove_machine($c,@_);#   if $c->param('sure') && $c->param('sure') =~ /y/i;
 
-    return $c->redirect_to('/machines')   if $c->param('sure')
-                                            || $c->param('cancel');
+}
+
+sub remove_clones {
+    my $c = shift;
 
     my $domain = _search_requested_machine($c);
-    return $c->render( text => "Domain not found")  if !$domain;
-    $c->stash(domain => $domain );
+    my @req;
+    for my $clone ( $domain->clones) {
+        my $req = Ravada::Request->remove_domain(
+            name => $clone->{name}
+            ,uid => $USER->id
+        );
+        push @req,($req);
+    }
+    $c->render(json => { request => map { id => { $_->id } } });
 
-    return $c->render( template => 'main/remove_machine' );
 }
 
 sub remove_base {
@@ -1308,6 +1327,15 @@ sub pause_machine {
     my $req = Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id);
 
     return $c->render(json => { req => $req->id });
+}
+
+sub hybernate_machine {
+    my $c = shift;
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->hybernate(id_domain => $domain->id, uid => $USER->id);
+
+    return $c->render(json => { req => $req->id });
+
 }
 
 sub resume_machine {

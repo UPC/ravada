@@ -4,7 +4,6 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("machinesPage", machinesPageC)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
-        .controller("notifCrtl", notifCrtl)
 
   function swMach() {
     return {
@@ -60,7 +59,7 @@ ravadaApp.directive("solShowMachine", swMach)
         }
       });
     };
-    $scope.orderParam = ['none'];
+    $scope.orderParam = ['name'];
     $scope.orderMachineList = function(type1,type2){
       if ($scope.orderParam[0] === '-'+type1)
         $scope.orderParam = ['none'];
@@ -68,7 +67,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.orderParam = ['-'+type1,type2];
       else $scope.orderParam = [type1,'-'+type2];
     }
-    $scope.hide_clones = true;
+    $scope.hide_clones = false;
     $scope.hideClones = function(){
       $scope.hide_clones = !$scope.hide_clones;
     }
@@ -136,16 +135,3 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
 
-  function notifCrtl($scope, $interval, $http, request){
-    $scope.getAlerts = function() {
-      $http.get('/unshown_messages.json').then(function(response) {
-              $scope.alerts= response.data;
-      });
-    };
-    $interval($scope.getAlerts,10000);
-    $scope.closeAlert = function(index) {
-      var message = $scope.alerts.splice(index, 1);
-      var toGet = '/messages/read/'+message[0].id+'.html';
-      $http.get(toGet);
-    };
-  }

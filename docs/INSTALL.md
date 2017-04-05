@@ -49,7 +49,7 @@ Create a database named "ravada". in this stage the system wants you to identify
 Grant all permissions to your user:
 
     $ mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'figure a password';
+    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD';
     exit
 
 ## Config file
@@ -59,7 +59,7 @@ at the previous step.
 
     db:
       user: rvd_user
-      password: *****
+      password: THE PASSWORD CHOSEN BEFORE
 
 ## Create tables
 
@@ -95,7 +95,11 @@ First we try to find out what is the new internal network:
 
 So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
 
-    -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+    sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
+To confirm that the configuration was updated, check it with:
+
+    sudo iptables -S
 
 # Client
 

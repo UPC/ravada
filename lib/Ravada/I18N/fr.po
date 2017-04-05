@@ -16,119 +16,125 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 
-msgid "Ravada broker"
+msgid "<%=l 'Ravada broker' %>"
 msgstr "Ravada Courtier"
 
-msgid "Machine Name"
+msgid "<%=l 'Restore' %>"
+msgstr "Restaurer"
+
+msgid "<%=l 'Machine Name' %>"
 msgstr "Nom de Machine"
 
-msgid "Tools"
+msgid "<%=l 'Tools' %>"
 msgstr "Outils"
 
-msgid "Machines List"
+msgid "<%=l 'Machines List' %>"
 msgstr "Liste de Machines"
 
-msgid "Users"
+msgid "<%=l 'Users' %>"
 msgstr "Utilisateurs"
 
-msgid "Choose a Machine to Start"
+msgid "<%=l 'Choose a Machine to Start' %>"
 msgstr "Choisir un Machine Pour Commencer"
 
-msgid "Start"
+msgid "<%=l 'Start' %>"
 msgstr "Début"
 
-msgid "Stop"
+msgid "<%=l 'Stop' %>"
 msgstr "Stop"
 
-msgid "View"
+msgid "<%=l 'View' %>"
 msgstr "Vue"
 
-msgid "Prepare Base"
+msgid "<%=l 'Prepare Base' %>"
 msgstr "Preparer Base"
 
-msgid "Clone"
+msgid "<%=l 'Clone' %>"
 msgstr "Cloner"
 
-msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgid "<%=l 'Can't Prepare Base, Remove Base nor Delete. Machine has' %>"
 msgstr "Ne Se Peux pas Preparer Base, Retirer ou Effacer la Base"
 
-msgid "Clone/s"
+msgid "<%=l 'Clone/s' %>"
 msgstr "Clones"
 
-msgid "NEW"
+msgid "<%=l 'NEW' %>"
 msgstr "Nouveau"
 
-msgid "Users List"
+msgid "<%=l 'Users List' %>"
 msgstr "Liste d'utilisateurs"
 
-msgid "Name"
+msgid "<%=l 'Name' %>"
 msgstr "Nom"
 
-msgid "Log Out"
+msgid "<%=l 'Log Out' %>"
 msgstr "Sortir"
 
-msgid "Available Machines"
+msgid "<%=l 'Available Machines' %>"
 msgstr "Machines Disponibles"
 
-msgid "Help"
+msgid "<%=l 'Help' %>"
 msgstr "Aide"
 
-msgid "Requirements"
+msgid "<%=l 'Requirements' %>"
 msgstr "Exigences"
 
-msgid "About"
+msgid "<%=l 'About' %>"
 msgstr "Sur"
 
-msgid "Messages"
+msgid "<%=l 'Messages' %>"
 msgstr "Messages"
 
-msgid "Mark all as Read"
-msgstr "Marquer Tout Comme Lu"
+msgid "<%=l 'Mark all as Read' %>"
+msgstr "Marquer Tout Comme Lu' %>"
 
-msgid "Settings"
+msgid "<%=l 'Settings' %>"
 msgstr "Réglages"
 
-msgid "New Machine"
+msgid "<%=l 'New Machine' %>"
 msgstr "Machine Nouveau"
 
-msgid "Paused"
+msgid "<%=l 'Paused' %>"
 msgstr "En Pause"
 
-msgid "Prepare base"
+msgid "<%=l 'Prepare base' %>"
 msgstr "Preparer Base"
 
-msgid "Machine locked by requested"
+msgid "<%=l 'Machine locked by requested' %>"
 msgstr "Machine Férme par demande"
 
-msgid "process"
+msgid "<%=l 'process' %>"
 msgstr "Procès"
 
-msgid "Copy"
+msgid "<%=l 'Copy' %>"
 msgstr "Copie"
 
-msgid "Error!"
+msgid "<%=l 'Error!' %>"
 msgstr "Erreur"
 
-msgid "Backend no available!"
+msgid "<%=l 'Backend no available!' %>"
 msgstr "Backend Indisponible"
 
-msgid "Subject"
+msgid "<%=l 'Subject' %>"
 msgstr "Sujet"
 
-msgid "Date"
+msgid "<%=l 'Date' %>"
 msgstr "Date"
 
-msgid "Actions"
+msgid "<%=l 'Actions' %>"
 msgstr "Action"
 
-msgid "Mark as Read"
+msgid "<%=l 'Mark as Read' %>"
 msgstr "Marquer Comme Lu"
  
-msgid "Mark as UnRead"
+msgid "<%=l 'Mark as UnRead' %>"
 msgstr "Marquer Comme Non Lu"
 
-msgid "No message to show!"
-msgstr "Pas de Messages à Lire"
+msgid "<%=l 'No message to show!' %>"
+msgstr "Pas de Messages à Lire' %>"
 
-msgid "Admin"
+msgid "<%=l 'Admin' %>"
 msgstr "Administrateur"
+
+msgid "<%=l 'Show/Hide clones' %>"
+msgstr "Afficher/Masquer des clones"

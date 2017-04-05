@@ -35,43 +35,49 @@
 %               }
             </div>
             <div class="panel-body">
-                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
+                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
 %               if (!$machine->{is_locked}) {
 %                   if ( $machine->{id_clone} && $machine->{is_active} ) {
                         <select ng-model="host_action"
                         ng-change="action(<%= $machine->{id_clone} %>)"
                         >
-                        <option value="">action</option>
+                        <option value=""><%=l 'action'%></option>
 %                       if ($machine->{is_active}) {
-                            <option value="shutdown.<%= $machine->{id_clone} %>">Shutdown</option>
+                            <option value="shutdown.<%= $machine->{id_clone} %>"><%=l 'Shutdown' %></option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hybernate' %></option>
 %                       }
 %                       if ($machine->{id_clone}) {
-                            <option value="restore.<%= $machine->{id_clone} %>">Restore</option>
+                            <option value="restore.<%= $machine->{id_clone} %>"><%=l 'Restore'%></option>
 %                       }
                         </select>
 %                   } elsif ($machine->{id_clone}) {
                         <a type="button" class="btn btn-danger"
                              ng-click="host_restore=<%= $machine->{id_clone} %>"
-                        ><strong><i class="fa fa-off" aria-hidden="true"></i>&nbsp;Restore</strong></a>
+                        ><strong><i class="fa fa-off" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
 
 %                   }
 %                   if ( $machine->{id_clone}) {
-                        <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog"></a></i>
+                        <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">
-                        <b>Restore</b> will remove all the contents of the machine
-                        <i><%= $machine->{name_clone} %></i>.
-                        Are you sure ? <br/>
+                        <b><%=l 'Restore' %></b> <%=l 'will remove all the contents of the machine' %>
+                        <i><b><%= $machine->{name_clone} %></b></i>.
+                        <%=l 'Are you sure?' %><br/>
                         <a type="button" class="btn btn-danger"
                             ng-click="host_restore=0"
-                        >No</a>
+                        ><%=l 'No' %></a>
                         <a type="button" class="btn btn-warning"
                             ng-click="restore(<%= $machine->{id_clone} %>)"
-                            >Yes</a>
+                            ><%=l 'Yes' %></a>
                     </div>
                     <div ng-show="host_shutdown == <%= $machine->{id_clone} %>">
                             <b>Shutting down ... </b>
                             It may take a couple of minutes.
                     </div>
+                    <div ng-show="host_hybernate== <%= $machine->{id_clone} %>">
+                            <b>Hybernating ... </b>
+                            It may take a couple of minutes.
+                    </div>
+
 %                   }
 %               }
             </div>
@@ -88,5 +94,6 @@
 </div>
 
 %= include 'bootstrap/footer'
+%= include 'bootstrap/messages'
 </body>
 </html>
