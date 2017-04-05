@@ -36,7 +36,7 @@ running:
 
 ## Development Release
 
-Read [docs/INSTALL\_devel.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL_devel.md)  if you want to develop Ravada or install a bleeding
+Read [docs/INSTALL\_devel.md](https://github.com/UPC/ravada/blob/master/docs/INSTALL_devel.md)  if you want to develop Ravada or install a bleeding
 edge, non-packaged, release.
 
 # Mysql Database
@@ -108,4 +108,4 @@ linux and it can also be downloaded for windows.
 
 # Next
 
-Read [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md) 
+Read [docs/production.md](https://github.com/UPC/ravada/blob/master/docs/production.md) 
