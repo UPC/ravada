@@ -1340,4 +1340,20 @@ sub _set_driver_sound {
 
 }
 
+=head2 pre_remove
+
+Code to run before removing the domain. It can be implemented in each domain.
+It is not expected to run by itself, the remove function calls it before proceeding.
+In KVM it removes saved images.
+
+    $domain->pre_remove();  # This isn't likely to be necessary
+    $domain->remove();      # Automatically calls the domain pre_remove method
+
+=cut
+
+sub pre_remove {
+    my $self = shift;
+    $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
+}
+
 1;
