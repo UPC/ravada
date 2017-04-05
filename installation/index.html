@@ -118,13 +118,13 @@
         <div class="col-lg-12">
           <h1>Server Requirements <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
           <h2 id="os">OS</h2>
-          <p>Ravada has been tested on Ubuntu Xenial and Yakkety Yak. It should also work in recent RedHat based systems. Debian jessie has been tried but kvm spice wasn't available there, so it won't work.</p>
+          <p>Ravada has been tested only on Ubuntu Xenial. It should also work in recent RedHat based systems. Debian jessie has been tried but kvm spice wasn’t available there, so it won’t work.</p>
           <h2 id="hardware">Hardware</h2>
           <p>It depends on the number and the type of the virtual machines.</p>
           <h3 id="memory">Memory</h3>
           <p>RAM is the main issue. Multiply the number of concurrent workstations by the amount of memory each one requires and that is the RAM that must have the server.</p>
           <h3 id="disks">Disks</h3>
-          <p>The faster the disks, the better. SSD is a good choice. Ravada uses incremental files for the disks images, so clones won't require many space.</p>
+          <p>The faster the disks, the better. Ravada uses incremental files for the disks images, so clones won't require many space.</p>
         </div>
       </div>
     </div>
@@ -134,78 +134,49 @@
       <div class="row">
         <div class="col-lg-12">
           <h1 id="install-ravada">Installation <a href="index.html"><i class="fa fa-sort-up"></i></a></h1>
-          <p>Clone the sources:</p>
-          <pre><code>$ git clone https://github.com/UPC/ravada.git</code></pre>
-          <h1 id="packages">Packages</h1>
-          <h2 id="debian">Debian</h2>
-	
-	  
-          <pre><code>$ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl</code></pre>
-         
-	  <h2 id="Ubuntu">Ubuntu</h2>
- 	We provide deb Ubuntu packages. Download and install them from <a href="https://infoteleco.upc.edu/img/debian"> ETSETB repository </a>.</body>
-          <pre><code> $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-
- $ sudo dpkg -i ravada_0.1.2_all.deb
- </code></pre>
-          <p id="the last command will show a warning about missing dependencies. install them running">The last command will show a warning about missing dependencies. Install them running</p>
-          <pre><code> $ sudo apt-get -f install</code></pre>
-
-          <h2 id="development-release">Development Release</h2>
-          <p>Read <a href="../index.html#devel-features">Contribuiting</a> if you want to develop RAVADA or install a bleeding edge, non-packaged, release.</p>
-          
-            <h1 id="mysql-database">Mysql Database</h1>
-            <h2 id="mysql-user">MySQL user</h2>
-            <p>Create a database named &quot;ravada&quot;.In this stage the system wants you to identify a password for your sql.</p>
-            <pre><code>$ mysqladmin -u root -p create ravada</code></pre>
-            <p>Grant all permissions to your user:</p>
-            <pre><code>$ mysql -u root -p
-              mysql&gt; grant all on ravada.* to rvd_user@&#39;localhost&#39; identified by &#39;figure a password&#39;;
-              exit</code></pre>
-              <h2 id="config-file">Config file</h2>
-              <p>Create a config file at /etc/ravada.conf with the username and password you declared in the previous step.</p>
-              <pre><code>db:
-                user: rvd_user
-                password: *****</code></pre>
-                <p>Protect the config file from others:</p>
-                <pre><code>$ chmod o-rx /etc/ravada.conf</code></pre>
-                <h2 id="create-tables">Create tables</h2>
-                <p>Review and run the sql files from the sql dir. If you are using a packaged release, you can find these files at /usr/share/doc/ravada/doc. For development, the files are at the sql directory inside the sources.</p>
-                <pre><code>$ cd ravada/sql/mysql
-                  $ cat *.sql | mysql -p -u rvd_user ravada
-                  $ cd ..
-                  $ cd data
-                  $ cat *.sql | mysql -p -u rvd_user ravada</code></pre>
-                  <h1 id="kvm-backend">KVM backend</h1>
-                  <p>Install KVM</p>
-                  <pre><code>$ sudo apt-get install qemu-kvm qemu-utils
-                    $ sudo virsh pool-define-as default dir - - - - &quot;/var/lib/libvirt/images&quot;
-                    $ sudo virsh pool-autostart default
-                    $ sudo virsh pool-start default</code></pre>
-                    <h1 id="ravada-user">Ravada user</h1>
-                    <p>Add a new user for the ravada web. This command will create a new ravada user :</p>
-                    <pre><code>$ sudo /usr/sbin/rvd_back --add-user user.name</code></pre>
-                      <h1 id="screenshots-directory">Screenshots directory</h1>
-                      <p>Create a directory to store virtual machines screenshots:</p>
-                      <pre><code>$ sudo mkdir -p /var/www/img/screenshots/</code></pre>
-                      <h1 id="firewall">Firewall</h1>
+            <h2><a id="Ubuntu_24"></a>Ubuntu</h2>
+              <p>We provide <em>deb</em> Ubuntu packages. Download it from the <a href="http://infoteleco.upc.edu/img/debian/">UPC ETSETB repository</a>. Downlad them and install them:</p>
+              <pre><code>$ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb<br>$ sudo dpkg -i ravada_0.1.2_all.deb</code></pre>
+              <p>The last command will show a warning about missing dependencies. Install them<br>
+                running:</p>
+                <pre><code>$ sudo apt-get -f install</code></pre>
+                <h2><a id="Development_Release_36"></a>Development Release</h2>
+                <p>Read <a href="https://github.com/UPC/ravada/blob/master/docs/INSTALL_devel.md">docs/INSTALL_devel.md</a>  if you want to develop Ravada or install a bleeding<br>
+                  edge, non-packaged, release.</p>
+                  <h1><a id="Mysql_Database_41"></a>Mysql Database</h1>
+                  <h2><a id="MySQL_user_43"></a>MySQL user</h2>
+                  <p>Create a database named “ravada”. in this stage the system wants you to identify a password for your sql.</p>
+                  <pre><code>$ mysqladmin -u root -p create ravada</code></pre>
+                  <p>Grant all permissions to your user:</p>
+                  <pre><code>$mysql -u root -p<br> mysql&gt; grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD';<br> mysql&gt; exit</code></pre>
+                  <h2><a id="Config_file_54"></a>Config file</h2>
+                  <p>Create a config file at /etc/ravada.conf with the username and password you just declared<br>
+                    at the previous step.</p>
+                    <pre><code>db:<br>user: rvd_user<br>password: THE PASSWORD CHOSEN BEFORE</code></pre>
+                    <h2><a id="Create_tables_63"></a>Create tables</h2>
+                    <p>Review and run the sql files from the sql dir. If you are using a packaged<br>
+                      release you can find these files at <em>/usr/share/doc/ravada/doc</em>. For development,<br>
+                      the files are at the <em>sql</em> directory inside the sources.</p>
+                      <pre><code>$ cd /usr/share/doc/ravada/sql/mysql<br>$ cat *.sql | mysql -p -u root ravada<br>$ cd ../data<br>$ cat *.sql | mysql -p -u root ravada</code></pre>
+                      <h1><a id="Ravada_web_user_75"></a>Ravada web user</h1>
+                      <p>Add a new user for the ravada web. Use rvd_back to create it.</p>
+                      <pre><code>$ sudo /usr/sbin/rvd_back --add-user user.name</code></pre>
+                      <h1><a id="Firewall_82"></a>Firewall</h1>
                       <p>The server must be able to send <em>DHCP</em> packets to its own virtual interface.</p>
-                      <p>KVM should be using a virtual interface for the NAT domnains. Look what is the address range and add it to your <em>iptables</em> configuration.</p>
-                      <p>First we try to find out what is the new internal network:</p>
-                      <pre><code>$  sudo route -n
-                        ...
-                        192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0</code></pre>
+                      <p>KVM should be using a virtual interface for the NAT domnains. Look what is the address range<br>
+                        and add it to your <em>iptables</em> configuration.</p>
+                        <p>First we try to find out what is the new internal network:</p>
+                        <pre><code>$  sudo route -n<br>...<br>192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0</code></pre>
                         <p>So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:</p>
-                        <pre><code>-A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT</code></pre>
-                        <h1 id="client">Client</h1>
-                        <p>The client must have a spice viewer such as virt-viewer. There is a package for linux and it can also be downloaded for windows.</p>
-                        <h1 id="next">Next</h1>
-                        <p>Read <a href="https://github.com/UPC/ravada/blob/master/docs/production.md">docs/production.md</a> or <a href="https://github.com/UPC/ravada/blob/master/devel-docs/">devel-docs/</a> to learn how to start it.</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
+                        <pre><code>sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT</code></pre>
+                        <p>To confirm that the configuration was updated, check it with:</p>
+                        <pre><code>sudo iptables -S</code></pre>
+                        <h1><a id="Client_103"></a>Client</h1>
+                        <p>The client must have a spice viewer such as virt-viewer. There is a package for<br>
+                          linux and it can also be downloaded for windows.</p>
+                          <h1><a id="Next_108"></a>Next</h1>
+                          <p>Read <a href="https://github.com/UPC/ravada/blob/master/docs/production.md">docs/production.md</a></p>
+  </section>
                 <section id="roadmap" class="content-page">
                   <div class="container">
                     <div class="row">
