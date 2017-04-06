@@ -10,6 +10,8 @@ Ravada has two daemons that must run on the production server:
 It is advised to run an apache server or similar before the frontend.
 
     # apt-get install apache2
+    
+In case you use apache for ravada, you must do the steps explained on [/docs/apache.md](https://github.com/UPC/ravada/blob/master/docs/apache.md)
 
 ## Systemd
 
