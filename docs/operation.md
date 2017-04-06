@@ -1,5 +1,5 @@
 
-#Create users
+# Create users
 
 
     sudo ./bin/rvd_back.pl --add-user=username
@@ -7,7 +7,7 @@
     sudo ./bin/rvd_back.pl --add-user-ldap=username
 
 
-#Import KVM virtual machines.
+# Import KVM virtual machines.
 
 Usually, virtual machines are created within ravada, but they can be
 imported from existing KVM domains. Once the domain is created :
