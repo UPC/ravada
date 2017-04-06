@@ -34,6 +34,7 @@ requires 'remove';
 requires 'display';
 
 requires 'is_active';
+requires 'is_hibernated';
 requires 'is_paused';
 requires 'start';
 requires 'shutdown';

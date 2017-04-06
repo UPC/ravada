@@ -568,6 +568,17 @@ sub resume {
 }
 
 
+=head2 is_hibernated
+
+Returns if the domain has a managed saved state.
+
+=cut
+
+sub is_hibernated {
+    my $self = shift;
+    return $self->domain->has_managed_save_image;
+}
+
 =head2 is_paused
 
 Returns if the domain is paused
