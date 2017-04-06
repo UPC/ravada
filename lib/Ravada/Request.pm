@@ -114,8 +114,8 @@ sub open {
     confess "I can't find id=$id " if !defined $row;
     $sth->finish;
 
-    my $args = decode_json($row->{args}) if $row->{args};
-    $args = {} if !$args;
+    my $args = {};
+    $args = decode_json($row->{args}) if $row->{args};
 
     $row->{args} = $args;
 

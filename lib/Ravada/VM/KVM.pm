@@ -434,7 +434,8 @@ sub _domain_create_from_iso {
 
     my $device_cdrom = $self->_iso_name($iso, $args{request});
 
-    my $disk_size = $args{disk} if $args{disk};
+    my $disk_size;
+    $disk_size = $args{disk} if $args{disk};
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
@@ -594,7 +595,7 @@ sub _domain_create_from_base {
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
 
-    my $base = $args{base}  if $args{base};
+    my $base = $args{base};
 
     $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
@@ -1013,17 +1014,17 @@ sub _xml_add_usb_ehci1 {
     my $devices = shift;
 
     my $model = 'ich9-ehci1';
-    my $ctrl = _search_xml(
+    my $ctrl_found = _search_xml(
                            xml => $devices
                          ,name => 'controller'
                          ,type => 'usb'
                          ,model => $model
         );
-    if ($ctrl) {
+    if ($ctrl_found) {
 #        warn "$model found \n".$ctrl->toString."\n";
         return;
     }
-    for $ctrl ($devices->findnodes('controller')) {
+    for my $ctrl ($devices->findnodes('controller')) {
         next if $ctrl->getAttribute('type') ne 'usb';
         next if $ctrl->getAttribute('model')
                 && $ctrl->getAttribute('model') eq $model;

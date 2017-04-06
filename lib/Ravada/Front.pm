@@ -556,7 +556,8 @@ sub list_requests {
     $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
 
     while ( $sth->fetch) {
-        my $args = decode_json($j_args) if $j_args;
+        my $args;
+        $args = decode_json($j_args) if $j_args;
 
         push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
     }

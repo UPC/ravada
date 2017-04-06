@@ -1,5 +1,8 @@
 package Ravada::I18N;
 
+use warnings;
+use strict;
+
 use base 'Locale::Maketext';
 use File::Basename qw/dirname/;
 use Locale::Maketext::Lexicon {

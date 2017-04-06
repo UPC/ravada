@@ -135,7 +135,8 @@ sub _vol_remove {
     my $file = shift;
     my $warning = shift;
 
-    my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
+    my $name;
+    ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
     #TODO: do a remove_volume in the VM
     my @vols = $self->_vm->storage_pool->list_volumes();

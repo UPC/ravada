@@ -84,7 +84,7 @@ sub list_domains {
 
     closedir $ls;
 
-    return sort keys %domain;
+    return keys %domain;
 }
 
 sub search_domain {
