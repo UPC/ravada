@@ -87,6 +87,8 @@ sub remove {
     $self->remove_disks();
 }
 
+sub is_hibernated { return 0 }
+
 sub is_paused {
     my $self = shift;
 
