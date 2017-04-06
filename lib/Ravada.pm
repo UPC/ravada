@@ -339,7 +339,7 @@ sub create_domain {
     my $vm_name = $args{vm};
     delete $args{vm};
 
-    my $request = $args{request}            if $args{request};
+    my $request = ( $args{request} or undef);
 
     my $vm;
     if ($vm_name) {
@@ -805,7 +805,7 @@ sub list_vm_types {
             my ($name) = ref($vm) =~ /.*::(.*)/;
             $type{$name}++;
     }
-    return sort keys %type;
+    return keys %type;
 }
 
 sub _execute {
