@@ -14,12 +14,12 @@
                     <div class="panel-heading">
                         <hr>
                             <h2 class="text-center"><%=l 'Requirements' %></h2>
-								                <i class="fa fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><p> For spice redirection you'll need to install <a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> in your computer.<br>
-                                Search in your distro, e.g. in Debian/Ubuntu with <i><b>sudo apt-get install virt-viewer</b></i></p>
+								                <i class="fa fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><p> <%=l 'For spice redirection you\'ll need to install' %><a target=_blank href="https://virt-manager.org/download/"> VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br>
+                                <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %> <i><b>sudo apt-get install virt-viewer</b></i></p>
 
-                                <i class="fa fa-windows  fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><p> You'll need to install <a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a>, e.g. VirtViewer v5.0-256 in your computer.</p>
-                                <p>Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app.<br>
-                                To make this possible, download <a target=_blank href="https://raw.githubusercontent.com/UPC/ravada/master/docs/spice.reg">regfile <i class="fa fa-download" aria-hidden="true"></i></a> or copy the following lines in an ASCII file and save with extension .reg, then execute the file.<br>
+                                <i class="fa fa-windows  fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><p> <%=l 'You\'ll need to install' %> <a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a>, <%=l 'e.g. VirtViewer v5.0-256 in your computer.' %></p>
+                                <p><%=l 'Be aware that in Windows, spice redirection is not automatically. It\'s necessary associate protocol with the app.' %><br>
+                                <%=l 'To make this possible, download' %><a target=_blank href="https://raw.githubusercontent.com/UPC/ravada/master/docs/spice.reg"> spice.reg <i class="fa fa-download" aria-hidden="true"></i></a> <%=l 'or copy the following lines in an ASCII file and save with extension .reg, then execute the file.' %><br>
                                 <code>
 
                                 [HKEY_CLASSES_ROOT\spice]<br>
@@ -38,7 +38,7 @@
                                 [HKEY_CLASSES_ROOT\spice\shell\open\command]<br>
                                 @="\"C:\\Program Files\\VirtViewer v5.0-256\\bin\\remote-viewer.exe\" \"%1\""<br></code></p>
 
-                                <i class="fa fa-apple fa-3x " aria-hidden="true"> OS X</i>&copy;<br><p> For spice redirection you'll need to install <a target=_blank href="http://people.freedesktop.org/~teuf/spice-gtk-osx/dmg/0.5.7/RemoteViewer-0.5.7-1.dmg">RemoteViewer <i class="fa fa-download" aria-hidden="true"></i></a> in your computer.<br></p>
+                                <i class="fa fa-apple fa-3x " aria-hidden="true"> OS X</i>&copy;<br><p> <%=l 'For spice redirection you\'ll need to install' %> <a target=_blank href="http://people.freedesktop.org/~teuf/spice-gtk-osx/dmg/0.5.7/RemoteViewer-0.5.7-1.dmg">RemoteViewer <i class="fa fa-download" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br></p>
                     </div>
                 </div>
             </div>

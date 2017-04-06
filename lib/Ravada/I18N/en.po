@@ -206,3 +206,26 @@ msgstr ""
 msgid "Show/Hide clones"
 msgstr ""
 
+msgid "For spice redirection you'll need to install"
+msgstr ""
+
+msgid "in your computer."
+msgstr ""
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+
+msgid "You'll need to install"
+msgstr ""
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr ""
+
+msgid "Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app."
+msgstr ""
+
+msgid "To make this possible, download"
+msgstr ""
+
+msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
+msgstr ""

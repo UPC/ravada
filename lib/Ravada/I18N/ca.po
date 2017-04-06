@@ -206,3 +206,26 @@ msgstr "No es pot esborrar la base, la màquina té clons"
 msgid "Show/Hide clones"
 msgstr "Veure/Amaga clons"
 
+msgid "For spice redirection you'll need to install"
+msgstr "Per redirigir spice necessitaràs instal·lar"
+
+msgid "in your computer."
+msgstr "al teu ordinador."
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Cerca a la teva distribució, p.e. en Debia/Ubuntu amb"
+
+msgid "You'll need to install"
+msgstr "Necessitaràs instal·lar"
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr "p.e. VirtViewer v5.0-256 al teu ordinador."
+
+msgid "Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app."
+msgstr "Recordeu que en Windows, la redirecció de spice no és automàtica. Cal associar el protocol amb l'aplicació."
+
+msgid "To make this possible, download"
+msgstr "Per fer-ho possible, descarrega"
+
+msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
+msgstr "o copia les següents línies en un arxiu ASCII, desa'l amb l'extensió .reg, i a continuació, executa l'arxiu."
