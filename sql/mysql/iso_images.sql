@@ -1,6 +1,6 @@
 CREATE TABLE `iso_images` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `file_re` char(64)
+  `file_re` char(64),
   `name` char(64) NOT NULL,
   `description` varchar(255),
   `arch` char(8),
