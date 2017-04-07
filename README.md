@@ -35,3 +35,6 @@ for production fine-tuning guidelines.
 
 See [docs/operation.md](https://github.com/UPC/ravada/blob/master/docs/operation.md)
 
+### Update
+
+See [docs/update.md](https://github.com/UPC/ravada/blob/master/docs/update.md)
