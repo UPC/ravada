@@ -169,8 +169,8 @@ my $tmpl = HTML::Template->new(scalarref => \ <<EO_TMPL
             Copyright © RavadaVDI 2017
           </p>
           <p class="footer-p">
-            <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg"></a>
-            <a href="https://github.com/frankiejol/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg"></a>
+            <a href="https://github.com/UPC/ravada/releases"><img src="https://img.shields.io/badge/version-0.1.0--alpha-brightgreen.svg"></a>
+            <a href="https://github.com/UPC/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg"></a>
           </p>
           <p class="footer-p">
             Site theme is adapted from the <a href="http://startbootstrap.com/template-overviews/freelancer/">Freelancer</a> theme by <a href="http://startbootstrap.com/">Start Bootstrap</a>.
