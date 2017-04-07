@@ -1,6 +1,6 @@
 Steps to release
 
-#Draft
+# Draft
 
 ## Draft the release
 
