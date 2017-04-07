@@ -86,7 +86,7 @@ sub test_isos {
 
         like($iso->{url},qr{.iso}) or exit;
         like($iso->{url},qr($row->{file_re})) or exit   if $row->{file_re};
-        diag($iso->{file_re}." -> ".$iso->{url})   if $row->{file_re};
+#        diag($iso->{file_re}." -> ".$iso->{url})   if $row->{file_re};
     }
     $sth->finish;
 }
