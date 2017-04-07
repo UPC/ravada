@@ -1,6 +1,6 @@
 # ravada [![GitHub version](https://img.shields.io/badge/version-0.2.2-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
 
-## Remove Virtual Desktops Manager
+## Remote Virtual Desktops Manager
 
 Ravada is a software that allows the user to connect to a
 remote virtual desktop.
