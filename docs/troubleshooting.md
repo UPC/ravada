@@ -1,6 +1,6 @@
-#Troubleshooting frequent problems
+# Troubleshooting frequent problems
 
-##Could not access KVM kernel module:
+## Could not access KVM kernel module:
 
 The system shows this message on trying to start a virtual Machine:
 
@@ -16,11 +16,11 @@ If it shows a message like this it means the BIOS Virt feature must be enabled:
     kvm: disabled by bios
 
 
-##Dealing with permissions
+## Dealing with permissions
 
 The system may deny access to some directories.
 
-###On Screnshots ( requires review )
+### On Screnshots ( requires review )
 
 That problem showed up in Vanilla Linux 4.10.
 
@@ -28,7 +28,7 @@ When running the screenshot command it returns:
 
     failed to open file '/var/cache/libvirt/qemu/qemu.screendump.31DvW9': Permission denied
 
-####Apparmor
+#### Apparmor
 
 At the file : usr.lib.libvirt.virt-aa-helper
 
