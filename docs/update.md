@@ -10,7 +10,7 @@ Step 1: Download the _deb_ package of the new version
 
 Step 2: Install the _deb_ package.
 
-    $ sudo dpkg -i ravada_0.1.2_all.deb
+    $ sudo dpkg -i <deb file>
     
 Step 3: Reconfigurate the systemd.
 
