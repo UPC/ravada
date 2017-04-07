@@ -766,7 +766,57 @@ sub _search_iso {
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
+
+    $self->_fetch_filename($row)    if $row->{file_re};
+    $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
+
     return $row;
+}
+
+sub _fetch_filename {
+    my $self = shift;
+    my $row = shift;
+    my $ua = new LWP::UserAgent;
+    my $req = HTTP::Request->new( GET => $row->{url});
+    my $res = $ua->request($req);
+
+    confess "No file_re" if !$row->{file_re};
+
+    die $res->status_line if !$res->is_success;
+    my $file;
+    my $lines = '';
+    for my $line (split/\n/,$res->content) {
+        next if $line !~ /iso"/;
+        $lines .= "$line\n";
+        my ($found) = $line =~ qr/"($row->{file_re})"/;
+        next if !$found;
+        $file=$found if $found;
+    }
+    die "No ".qr($row->{file_re})." found on $row->{url}"   if !$file;
+    $row->{url} .= $file;
+}
+
+sub _fetch_md5 {
+    my $self = shift;
+    my $row = shift;
+
+    my $ua = new LWP::UserAgent;
+    my $req = HTTP::Request->new( GET => $row->{md5_url});
+    my $res = $ua->request($req);
+
+    die $res->error_line if !$res->is_success;
+
+    my ($file) = $row->{url} =~ m{.*/(.*)};
+    confess "No file for $row->{url}"   if !$file;
+
+    for my $line (split/\n/,$res->content) {
+        my ($md5) = $line =~ m{^\s*(.*?)\s+.*?$file};
+        next if !$md5;
+        $row->{md5} = $md5;
+        return;
+    }
+
+    die "No MD5 for $file in $row->{md5_url}\n".$res->content;
 }
 
 ###################################################################################
