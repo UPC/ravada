@@ -10,62 +10,78 @@ VALUES('Debian Jessie 32 bits netinst'
    );
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url,file_re,md5_url)
 VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
     ,'trusty-i386.xml'
     ,'trusty-volume.xml'
-    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso'
-	,'610c4a399df39a78866f9236b8c658da'
+    ,'http://releases.ubuntu.com/14.04/'
+    ,'ubuntu-14.04.*-desktop-i386.iso'
+    ,'http://releases.ubuntu.com/14.04/MD5SUMS'
 	);
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
 VALUES('Ubuntu Trusty 64 bits','Ubuntu 14.04.1 LTS Trusty 64 bits'
     ,'amd64'
     ,'trusty-amd64.xml'
     ,'trusty-amd64-volume.xml'
-    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04.1-desktop-amd64.iso'
-    ,'17643c29e3c4609818f26becf76d29a3'
+    ,'http://releases.ubuntu.com/16.04/'
+    ,'ubuntu-16.04.*-desktop-amd64.iso'
+    ,'http://releases.ubuntu.com/16.04/MD5SUMS'
 	);
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
 VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
     ,'xenial-volume.xml'
-    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04-desktop-i386.iso'
-    ,'610c4a399df39a78866f9236b8c658da'
+    ,'http://releases.ubuntu.com/16.04/'
+    ,'ubuntu-16.04.*desktop-i386.iso'
+    ,'http://releases.ubuntu.com/16.04/MD5SUMS'
     );
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
 VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
     ,'amd64'
     ,'xenial64-amd64.xml'
     ,'xenial64-volume.xml'
-    ,'http://releases.ubuntu.com/16.04/ubuntu-16.04.2-desktop-amd64.iso'
-    ,'1400884cec8e40a1a876b2678f81494b'
+    ,'http://releases.ubuntu.com/16.04/'
+    ,'ubuntu-16.04.*-desktop-amd64.iso'
+    ,'http://releases.ubuntu.com/16.04/MD5SUMS'
     );
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
 VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
     ,'amd64'
     ,'yakkety64-amd64.xml'
     ,'yakkety64-volume.xml'
-    ,'http://releases.ubuntu.com/16.10/ubuntu-16.10-desktop-amd64.iso'
-    ,'3f50877c05121f7fd8544bef2d722824'
+    ,'http://releases.ubuntu.com/16.10/'
+    ,'ubuntu-16.10.*desktop-amd64.iso'
+    ,'http://releases.ubuntu.com/16.10/MD5SUMS'
     );
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url,file_re,md5_url)
 VALUES('Debian Jessie 64 bits netinst'
     ,'Debian 8.5.0 Jessie 64 bits (netsinst)'
     ,'amd64'
     ,'jessie-amd64.xml'
     ,'jessie-volume.xml'
-    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/amd64/iso-cd/debian-8.5.0-amd64-netinst.iso'
-    ,'3e1b9029a0cf188730646c379d15073f'
+    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/amd64/iso-cd/'
+    ,'debian-8.5.0-amd64-netinst.iso'
+    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/amd64/iso-cd/MD5SUMS'
    );
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
+VALUES('Ubuntu Zesty Zapus',' Ubuntu 17.04 Zesty Zapus 64 bits'
+    ,'amd64'
+    ,'zesty-amd64.xml'
+    ,'zesty-volume.xml'
+    ,'http://releases.ubuntu.com/17.04/'
+    ,'ubuntu-17.04.*desktop-amd64.iso'
+    ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+    );
 
