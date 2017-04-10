@@ -41,6 +41,13 @@ edge, non-packaged, release.
 
 # Mysql Database
 
+## MySQL server
+
+It is required a MySQL server, it can be installed in another host or in the
+same one as the ravada package.
+
+    $ sudo apt-get install mysql-server
+
 ## MySQL user
 Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
 
@@ -60,18 +67,6 @@ at the previous step.
     db:
       user: rvd_user
       password: THE PASSWORD CHOSEN BEFORE
-
-## Create tables
-
-Review and run the sql files from the sql dir. If you are using a packaged
-release you can find these files at _/usr/share/doc/ravada/doc_. For development,
-the files are at the _sql_ directory inside the sources.
-
-    $ cd /usr/share/doc/ravada/sql/mysql
-    $ cat *.sql | mysql -p -u root ravada
-    $ cd ../data
-    $ cat *.sql | mysql -p -u root ravada
-
 
 # Ravada web user
 
