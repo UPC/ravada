@@ -1137,6 +1137,16 @@ sub _cmd_hybernate {
 
 }
 
+sub _cmd_download {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_iso = $request->args('uid') or confess "Missing argument uid";
+
+    # Ravada::KVM_search_iso
+
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
