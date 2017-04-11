@@ -28,10 +28,22 @@ for my $vm_name ('KVM') {
             $vm = undef;
         }
 
-       skip($msg,10)   if !$vm;
+        skip($msg,10)   if !$vm;
+
+        ################################################
+        #
+        # Request for the 1st ISO
+        my $id_iso = 1;
+        my $iso = $vm->_search_iso($id_iso);
+
+        if (!$iso->{device}) {
+            $msg = "ISO for $iso->{filename} not downloaded, I won't do it in the tests";
+            diag($msg);
+            skip($msg,10);
+        }
 
         my $req1 = Ravada::Request->download(
-             id_iso => 1
+             id_iso => $id_iso
             , id_vm => $vm->id
             , delay => 4
         );
@@ -40,7 +52,23 @@ for my $vm_name ('KVM') {
         $rvd_back->process_all_requests();
         is($req1->status, 'working');
 
-        my $req2 = Ravada::Request->download( id_iso => 2, delay => 2 );
+        ################################################
+        #
+        # Request for the 1st ISO
+        $id_iso = 2;
+        my $iso2 = $vm->_search_iso($id_iso);
+        if (!$iso2->{device} || ! -e $iso2->{device}) {
+            $msg = "ISO for $iso2->{filename} not downloaded, I won't do it in the tests";
+            diag($msg);
+            skip($msg,10);
+        }
+
+
+        my $req2 = Ravada::Request->download(
+             id_iso => $id_iso
+            , id_vm => $vm->id
+            , delay => 2
+        );
         is($req2->status, 'requested');
 
         $rvd_back->process_all_requests();
@@ -54,8 +82,8 @@ for my $vm_name ('KVM') {
         is($req2->status, 'working');
         wait_request($req2);
         is($req2->status, 'done');
-        diag($req1->error);
-        diag($req2->error);
+        diag($req1->error)  if $req1->error;
+        diag($req2->error)  if $req2->error;
     }
 }
 done_testing();
