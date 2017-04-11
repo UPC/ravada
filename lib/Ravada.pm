@@ -1181,15 +1181,17 @@ sub _cmd_download {
     my $id_iso = $request->args('id_iso')
         or confess "Missing argument id_iso";
 
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
 
-    my $iso = $self-_search_iso($id_iso);
+    my $iso = $vm->_search_iso($id_iso);
     if ($iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
-    my $device_cdrom = $self->_iso_name($iso, $request);
+    my $device_cdrom = $vm->_iso_name($iso, $request);
 }
 
 sub _cmd_shutdown {
