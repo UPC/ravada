@@ -678,6 +678,8 @@ sub _iso_name {
         )   if $req;
         _download_file_external($iso->{url}, $device);
     }
+    confess "Download failed, file $device missing.\n"
+        if ! -e $device;
     confess "Download failed, MD5 missmatched"
             if (! _check_md5($device, $iso->{md5}));
     return $device;
@@ -778,7 +780,6 @@ sub _search_iso {
                 "UPDATE iso_images SET device=? WHERE id=?"
             );
             $sth->execute($volume->get_path, $row->{id});
-            $sth->fetch;
         }
     }
     return $row;
