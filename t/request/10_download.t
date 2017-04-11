@@ -15,7 +15,6 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 use_ok('Ravada');
 init($test->connector);
 
-diag("$$ parent pid");
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
