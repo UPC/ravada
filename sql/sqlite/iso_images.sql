@@ -9,5 +9,6 @@ CREATE TABLE `iso_images` (
 ,  `url` varchar(255)
 ,  `md5` varchar(32)
 ,  `md5_url` varchar(255)
+,  `device` varchar(255)
 ,  UNIQUE (`name`)
 );
