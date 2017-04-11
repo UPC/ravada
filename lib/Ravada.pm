@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.3';
+our $VERSION = '0.2.4';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -1184,9 +1184,12 @@ sub _cmd_download {
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
 
-    # Ravada::KVM_search_iso
-
-#    my $iso = $self-_search_iso($id_iso);
+    my $iso = $self-_search_iso($id_iso);
+    if ($iso->{device} && -e $iso->{device}) {
+        $request->status('done',"$iso->{device} already downloaded");
+        return;
+    }
+    my $device_cdrom = $self->_iso_name($iso, $request);
 }
 
 sub _cmd_shutdown {
