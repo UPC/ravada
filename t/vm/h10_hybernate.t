@@ -59,6 +59,8 @@ sub test_hybernate_clone {
     ok(!$@,"Expecting no error restarting, got : ".($@ or ''));
     is($clone->is_active,1);
 
+    $clone->shutdown_now($USER) if $clone->is_active;
+
 }
 
 sub test_hybernate_clone_swap {
