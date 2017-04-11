@@ -72,6 +72,12 @@ has 'config' => (
     ,isa => 'Str'
 );
 
+has 'warn_error' => (
+    is => 'rw'
+    ,isa => 'Bool'
+    ,default => sub { 1 }
+);
+
 =head2 BUILD
 
 Internal constructor
@@ -262,7 +268,7 @@ sub _connect_vm {
 
     my @vms;
     eval { @vms = $self->vm };
-    warn $@ if $@;
+    warn $@ if $@ && $self->warn_error;
     return if $@ && $@ =~ /No VMs found/i;
     die $@ if $@;
 
@@ -298,7 +304,7 @@ sub _create_vm {
         $err .= "\n$err_lxc" if $err_lxc;
     }
     if (!@vms) {
-        warn "No VMs found: $err\n";
+        warn "No VMs found: $err\n" if $self->warn_error;
     }
     return \@vms;
 
