@@ -566,11 +566,11 @@ sub login {
 
     # TODO: improve this hash
     my ($time) = time =~ m{(.*)...$};
-    my $login_hash1 = $time.$CONFIG_FRONT->{secrets}->[0];
+    my $login_hash1 = $time.($CONFIG_FRONT->{secrets}->[0] or '');
 
     # let login varm be valid for 60 seconds
     ($time) = (time-60) =~ m{(.*)...$};
-    my $login_hash2 = $time.$CONFIG_FRONT->{secrets}->[0];
+    my $login_hash2 = $time.($CONFIG_FRONT->{secrets}->[0] or '');
 
     if (defined $login || defined $password || $c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
@@ -580,7 +580,7 @@ sub login {
                 && $form_hash ne sha256_hex($login_hash2);
     }
 
-    if ( !@error ) {
+    if ( !@error && defined $login && defined $password) {
         my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
@@ -1460,7 +1460,6 @@ sub _new_anonymous_user {
     return $name;
 }
 
-warn Dumper($CONFIG_FRONT->{secrets});
 app->secrets($CONFIG_FRONT->{secrets})  if $CONFIG_FRONT->{secrets};
 app->start;
 __DATA__
