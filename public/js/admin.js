@@ -36,6 +36,9 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.pingbe_fail = !response.data;
     });
     $scope.getMachines = function() {
+      $http.get("/requests.json").then(function(response) {
+        $scope.requests=response.data;
+      });
       $http.get("/list_machines.json").then(function(response) {
         $scope.list_machines = [];
         var mach;
