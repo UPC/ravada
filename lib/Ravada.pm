@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.3';
+our $VERSION = '0.2.4';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -42,12 +42,19 @@ our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
+
+# Seconds to wait for other long process
+our $SECONDS_WAIT_CHILDREN = 2;
+# Limit for long processes
 our $LIMIT_PROCESS = 2;
+our $LIMIT_HUGE_PROCESS = 1;
+
 our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
-our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
+our %HUGE_COMMAND = map { $_ => 1 } qw(download);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
 
 has 'vm' => (
           is => 'ro'
@@ -63,6 +70,12 @@ has 'connector' => (
 has 'config' => (
     is => 'ro'
     ,isa => 'Str'
+);
+
+has 'warn_error' => (
+    is => 'rw'
+    ,isa => 'Bool'
+    ,default => sub { 1 }
 );
 
 =head2 BUILD
@@ -166,6 +179,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
+    $self->_upgrade_table('iso_images','device','varchar(255)');
 }
 
 
@@ -254,7 +268,7 @@ sub _connect_vm {
 
     my @vms;
     eval { @vms = $self->vm };
-    warn $@ if $@;
+    warn $@ if $@ && $self->warn_error;
     return if $@ && $@ =~ /No VMs found/i;
     die $@ if $@;
 
@@ -290,7 +304,7 @@ sub _create_vm {
         $err .= "\n$err_lxc" if $err_lxc;
     }
     if (!@vms) {
-        warn "No VMs found: $err\n";
+        warn "No VMs found: $err\n" if $self->warn_error;
     }
     return \@vms;
 
@@ -835,8 +849,11 @@ sub _execute {
     $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
-    $self->_do_execute_command($sub, $request) if $pid == 0;
-    $self->_add_pid($pid, $request->id);
+    if ( $pid == 0 ) {
+        $self->_do_execute_command($sub, $request) 
+    } else {
+        $self->_add_pid($pid, $request->id);
+    }
 #    $self->_connect_vm_kvm();
     return '';
 }
@@ -926,13 +943,25 @@ sub _wait_children {
     my $req = shift or confess "Missing request";
 
     my $try = 0;
-    for ( 1 .. 10 ) {
+    for ( 1 .. $SECONDS_WAIT_CHILDREN ) {
         my $n_pids = scalar keys %{$self->{pids}};
-        my $msg = $req->id." ".$req->command." waiting for processes to finish $n_pids of $LIMIT_PROCESS running";
-        warn $msg if $DEBUG;
 
-        return if $n_pids < $LIMIT_PROCESS;
-
+        my $msg;
+        if ($HUGE_COMMAND{$req->command}) {
+            if ( $n_pids < $LIMIT_HUGE_PROCESS) {
+                $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_HUGE_PROCESS ";
+                warn $msg if $DEBUG;
+                return;
+            }
+        } elsif ( $n_pids < $LIMIT_PROCESS) {
+            $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_PROCESS ";
+            warn $msg if $DEBUG;
+            return;
+        }
         $self->_wait_pids_nohang();
         sleep 1;
 
@@ -952,7 +981,7 @@ sub _wait_pids_nohang {
         my $kid = waitpid($pid , WNOHANG);
         next if !$kid || $kid == -1;
         $self->_set_req_done($kid);
-        delete $self->{pids}->{$kid};
+        $self->_delete_pid($kid);
     }
 
 }
@@ -984,7 +1013,7 @@ sub _wait_pids {
 #        warn "Found $kid";
         $self->_set_req_done($pid);
 
-        delete $self->{pids}->{$kid};
+        $self->_delete_pid($kid);
         return if $kid  == $pid;
     }
 }
@@ -995,6 +1024,14 @@ sub _add_pid {
     my $id_req = shift;
 
     $self->{pids}->{$pid} = $id_req;
+
+}
+
+sub _delete_pid {
+    my $self = shift;
+    my $pid = shift;
+
+    delete $self->{pids}->{$pid};
 }
 
 sub _cmd_remove {
@@ -1137,6 +1174,26 @@ sub _cmd_hybernate {
 
 }
 
+sub _cmd_download {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_iso = $request->args('id_iso')
+        or confess "Missing argument id_iso";
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+
+    my $delay = $request->defined_arg('delay');
+    sleep $delay if $delay;
+
+    my $iso = $vm->_search_iso($id_iso);
+    if ($iso->{device} && -e $iso->{device}) {
+        $request->status('done',"$iso->{device} already downloaded");
+        return;
+    }
+    my $device_cdrom = $vm->_iso_name($iso, $request);
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -1235,6 +1292,7 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
+      ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
      ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver

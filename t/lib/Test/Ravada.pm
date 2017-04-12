@@ -92,6 +92,7 @@ sub rvd_back {
     return Ravada->new(
             connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
+                , warn_error => 0
     );
 }
 
