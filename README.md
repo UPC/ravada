@@ -1,6 +1,6 @@
-# ravada [![GitHub version](https://img.shields.io/badge/version-0.1.1--beta-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
+# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.3-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
 
-## Remove Virtual Desktops Manager
+## Remote Virtual Desktops Manager
 
 Ravada is a software that allows the user to connect to a
 remote virtual desktop.
@@ -23,15 +23,18 @@ KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual
 
 ## Install
 
-Read [docs/INSTALL.md](https://github.com/frankiejol/ravada/blob/master/docs/INSTALL.md)
+Read [docs/INSTALL.md](https://github.com/UPC/ravada/blob/master/docs/INSTALL.md)
 
 
 ### Production
 
-See [docs/production.md](https://github.com/frankiejol/ravada/blob/master/docs/production.md)
+See [docs/production.md](https://github.com/UPC/ravada/blob/master/docs/production.md)
 for production fine-tuning guidelines.
 
 ### Operation
 
-See [docs/operation.md](https://github.com/frankiejol/ravada/blob/master/docs/operation.md)
+See [docs/operation.md](https://github.com/UPC/ravada/blob/master/docs/operation.md)
 
+### Update
+
+See [docs/update.md](https://github.com/UPC/ravada/blob/master/docs/update.md)

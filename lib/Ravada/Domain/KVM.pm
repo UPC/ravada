@@ -148,7 +148,8 @@ sub _vol_remove {
     my $file = shift;
     my $warning = shift;
 
-    my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
+    my $name;
+    ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
     #TODO: do a remove_volume in the VM
     my @vols = $self->_vm->storage_pool->list_volumes();
@@ -423,7 +424,8 @@ sub get_xml_base{
         "SELECT xml FROM base_xml WHERE id_domain=?"
     );
     $sth->execute($self->id);
-    return $sth->fetchrow;
+    my $xml = $sth->fetchrow;
+    return ($xml or $self->domain->get_xml_description);
 }
 
 sub _post_remove_base_domain {
@@ -578,6 +580,17 @@ sub resume {
     return $self->domain->resume();
 }
 
+
+=head2 is_hibernated
+
+Returns if the domain has a managed saved state.
+
+=cut
+
+sub is_hibernated {
+    my $self = shift;
+    return $self->domain->has_managed_save_image;
+}
 
 =head2 is_paused
 
@@ -1350,6 +1363,22 @@ sub _set_driver_sound {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+}
+
+=head2 pre_remove
+
+Code to run before removing the domain. It can be implemented in each domain.
+It is not expected to run by itself, the remove function calls it before proceeding.
+In KVM it removes saved images.
+
+    $domain->pre_remove();  # This isn't likely to be necessary
+    $domain->remove();      # Automatically calls the domain pre_remove method
+
+=cut
+
+sub pre_remove {
+    my $self = shift;
+    $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
 }
 
 1;

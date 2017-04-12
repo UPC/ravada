@@ -222,7 +222,7 @@ for my $vm_name (qw( Void KVM )) {
         test_rename_twice($vm_name);
 
         my $domain_name = test_create_domain($vm_name);
-        test_rename_domain($vm_name, $domain_name)  or return;
+        test_rename_domain($vm_name, $domain_name)  or next;
         test_create_domain($vm_name, $domain_name);
     
         $domain_name = test_create_domain($vm_name);

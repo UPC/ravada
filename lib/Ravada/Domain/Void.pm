@@ -87,6 +87,8 @@ sub remove {
     $self->remove_disks();
 }
 
+sub is_hibernated { return 0 }
+
 sub is_paused {
     my $self = shift;
 
@@ -297,7 +299,8 @@ sub disk_device {
 
 sub list_volumes {
     my $self = shift;
-    my $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data;
+    $data = LoadFile($self->_config_file) if -e $self->_config_file;
 
     return () if !exists $data->{device};
     my @vol;
@@ -310,13 +313,15 @@ sub list_volumes {
 }
 
 sub list_volumes_target {
-my $self = shift;
-    my $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $self = shift;
+    my $data;
+    $data = LoadFile($self->_config_file) if -e $self->_config_file;
 
     return () if !exists $data->{device};
     my @vol;
     for my $dev (keys %{$data->{device}}) {
-        my $vol = ($data->{device}->{$dev}->{path})
+        my $vol;
+        $vol = ($data->{device}->{$dev}->{path})
             if ! exists $data->{device}->{$dev}->{type}
                 || $data->{device}->{$dev}->{type} ne 'base';
         next if !$vol;

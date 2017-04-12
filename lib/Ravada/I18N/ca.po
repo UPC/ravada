@@ -41,7 +41,7 @@ msgstr "Atura"
 msgid "View"
 msgstr "Veure"
 
-msgid "Prepare Base"
+msgid "Prepare base"
 msgstr "Preparar base"
 
 msgid "Clone"
@@ -107,23 +107,14 @@ msgstr "Aturada"
 msgid "Running"
 msgstr "En marxa"
 
-msgid "Start"
-msgstr ""
-
 msgid "ShutDown"
 msgstr "Atura"
-
-msgid "View"
-msgstr "Veure"
 
 msgid "Screenshot"
 msgstr ""
 
 msgid "Paused"
 msgstr "Pausat"
-
-msgid "Prepare base"
-msgstr "Prepara base"
 
 msgid "Machine locked by requested"
 msgstr "Màquina bloquejada per"
@@ -176,8 +167,65 @@ msgstr ""
 msgid "Remove base"
 msgstr "Esborra base"
 
-msgid "Prepare base"
-msgstr "Prepara base"
-
 msgid "public"
 msgstr "públic"
+
+msgid "Restore"
+msgstr "Restaura"
+
+msgid "Hybernate"
+msgstr "Hiverna"
+
+msgid "Shutdown"
+msgstr "Atura"
+
+msgid "action"
+msgstr "acció"
+
+msgid "will remove all the contents of the machine"
+msgstr "esborrarà tot el contigut de la màquina"
+
+msgid "Are you sure?"
+msgstr "Estas segur/a?"
+
+msgid "Yes"
+msgstr "Si"
+
+msgid "No"
+msgstr ""
+
+msgid "Make public"
+msgstr "Fes públic"
+
+msgid "Machine settings"
+msgstr "Preferències de la màquina"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "No es pot esborrar la base, la màquina té clons"
+
+msgid "Show/Hide clones"
+msgstr "Veure/Amaga clons"
+
+msgid "For spice redirection you'll need to install"
+msgstr "Per redirigir spice necessitaràs instal·lar"
+
+msgid "in your computer."
+msgstr "al teu ordinador."
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Cerca a la teva distribució, p.e. en Debia/Ubuntu amb"
+
+msgid "You'll need to install"
+msgstr "Necessitaràs instal·lar"
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr "p.e. VirtViewer v5.0-256 al teu ordinador."
+
+msgid "Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app."
+msgstr "Recordeu que en Windows, la redirecció de spice no és automàtica. Cal associar el protocol amb l'aplicació."
+
+msgid "To make this possible, download"
+msgstr "Per fer-ho possible, descarrega"
+
+msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
+msgstr "o copia les següents línies en un arxiu ASCII, desa'l amb l'extensió .reg, i a continuació, executa l'arxiu."

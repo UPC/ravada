@@ -58,6 +58,7 @@ our %VALID_ARG = (
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
+    ,download => { id_iso => 1, id_vm => 1, delay => 2}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -114,8 +115,8 @@ sub open {
     confess "I can't find id=$id " if !defined $row;
     $sth->finish;
 
-    my $args = decode_json($row->{args}) if $row->{args};
-    $args = {} if !$args;
+    my $args = {};
+    $args = decode_json($row->{args}) if $row->{args};
 
     $row->{args} = $args;
 
@@ -777,6 +778,29 @@ sub hybernate {
     return $self->_new_request(
             command => 'hybernate'
         , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 download
+
+Downloads a file. Actually used only to download iso images
+for KVM domains.
+
+=cut
+
+sub download {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('download', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'download'
              , args => encode_json($args)
     );
 

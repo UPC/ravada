@@ -34,6 +34,7 @@ requires 'remove';
 requires 'display';
 
 requires 'is_active';
+requires 'is_hibernated';
 requires 'is_paused';
 requires 'start';
 requires 'shutdown';
@@ -478,17 +479,22 @@ sub _insert_db {
 
 }
 
-=head2 pre_remove_domain
+=head2 pre_remove
 
-Cleanup operations executed before removing this domain
+Code to run before removing the domain. It can be implemented in each domain.
+It is not expected to run by itself, the remove function calls it before proceeding.
+
+    $domain->pre_remove();  # This isn't likely to be necessary
+    $domain->remove();      # Automatically calls the domain pre_remove method
 
 =cut
 
-sub pre_remove_domain { }
+sub pre_remove { }
 
 sub _pre_remove_domain {
     my $self = shift;
     eval { $self->id };
+    $self->pre_remove();
     $self->_allow_remove(@_);
     $self->pre_remove_domain();
 }

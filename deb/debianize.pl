@@ -25,7 +25,7 @@ my %DIR = (
     ,'etc/systemd/' => 'lib/systemd/system/'
 );
 
-for ( qw(css fonts img js templates)) {
+for ( qw(css fonts img js )) {
     $DIR{"public/$_"} = "usr/share/ravada/public";
 }
 
@@ -238,14 +238,17 @@ remove_use_lib();
 change_mod();
 gzip_docs();
 gzip_man();
-chown_files($DEBIAN,0755);
+chown_files($DEBIAN,0644);
 chown_files('etc');
 chown_files('lib');
-chown_files('var/lib/ravada');
+chown_files('var');
 chown_files('DEBIAN',0755);
+chown_files('DEBIAN/conffiles',undef,0644);
 #chown_files('usr/share/doc/ravada');
-chown_files('usr/share/ravada/public');
-chown_files('usr/share/ravada/templates');
+chown_files('usr');
+chown_files('usr/sbin',0755,0755);
+#chown_files('usr/share/ravada/public');
+#chown_files('usr/share/ravada/templates');
 chown_files('etc');
 chown_files('lib');
 #chown_files('lib/systemd');

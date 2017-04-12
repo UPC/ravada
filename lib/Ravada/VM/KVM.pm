@@ -155,17 +155,38 @@ sub storage_pool {
     return $self->_load_storage_pool();
 }
 
-sub _search_volume {
-    my $self = shift;
-    my $file = shift;
+=head2 search_volume
 
+Searches for a volume in all the storage pools known to the Virtual Manager
+
+Argument: the filenaname;
+Returns the path of the volume. If called in array context returns a
+list of all the paths to the volume.
+
+    my $iso = $vm->search_volume("debian-8.iso");
+
+    my @disk = $vm->search_volume("windows10-clone.img");
+
+=cut
+
+sub search_volume {
+    my $self = shift;
+    my $file = shift    or confess "Missing file name";
+
+    my @volume;
     for my $pool ($self->vm->list_storage_pools) {
 
-        my $doc = $XML->load_xml(string => $pool->get_xml_description);
-        my ($path) =$doc->findnodes('/pool/target/path/text()');
+        my $vol;
+        eval {$vol = $pool->get_volume_by_name($file); };
+        return $vol if !wantarray;
+        push @volume,($vol);
+#        my $doc = $XML->load_xml(string => $pool->get_xml_description);
+#        my ($path) =$doc->findnodes('/pool/target/path/text()');
 
-        return "$path/$file" if -e "$path/$file";
+#        return "$path/$file" if -e "$path/$file" && ! wantarray;
+#        push @volume,("$path/$file");
     }
+    return @volume;
 }
 
 =head2 dir_img
@@ -393,25 +414,6 @@ sub _volume_path {
     return $img_file;
 }
 
-=head2 search_volume
-
-Searches a volume
-
-    my $vol =$vm->search_volume($name);
-
-=cut
-
-sub search_volume {
-    my $self = shift;
-    my $name = shift or confess "Missing volume name";
-
-    my $vol;
-    eval { $vol = $self->storage_pool->get_volume_by_name($name) };
-    die $@ if $@;
-
-    return $vol;
-}
-
 sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
@@ -434,7 +436,8 @@ sub _domain_create_from_iso {
 
     my $device_cdrom = $self->_iso_name($iso, $args{request});
 
-    my $disk_size = $args{disk} if $args{disk};
+    my $disk_size;
+    $disk_size = $args{disk} if $args{disk};
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
@@ -594,7 +597,7 @@ sub _domain_create_from_base {
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
 
-    my $base = $args{base}  if $args{base};
+    my $base = $args{base};
 
     $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
@@ -663,8 +666,7 @@ sub _iso_name {
     my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
     $iso_name = $iso->{url} if !$iso_name;
 
-    my $device = $self->_search_volume($iso_name);
-    $device = $self->dir_img."/$iso_name"           if !$device;
+    my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
     confess "Missing MD5 field on table iso_images FOR $iso->{url}"
         if !$iso->{md5};
@@ -676,6 +678,8 @@ sub _iso_name {
         )   if $req;
         _download_file_external($iso->{url}, $device);
     }
+    confess "Download failed, file $device missing.\n"
+        if ! -e $device;
     confess "Download failed, MD5 missmatched"
             if (! _check_md5($device, $iso->{md5}));
     return $device;
@@ -765,7 +769,118 @@ sub _search_iso {
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
+
+    $self->_fetch_filename($row);#    if $row->{file_re};
+    $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
+
+    if ( !$row->{device}) {
+        if (my $volume = $self->search_volume($row->{filename})) {
+            $row->{device} = $volume->get_path;
+            my $sth = $$CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET device=? WHERE id=?"
+            );
+            $sth->execute($volume->get_path, $row->{id});
+        }
+    }
     return $row;
+}
+
+sub _download {
+    my $self = shift;
+    my $url = shift;
+
+    my $cache = $self->_cache_get($url);
+    return $cache if $cache;
+
+    my $ua = new LWP::UserAgent;
+    $ua->env_proxy;
+    my $req = HTTP::Request->new( GET => $url);
+    my $res = $ua->request($req);
+
+    die $res->status_line if !$res->is_success;
+
+    return $self->_cache_store($url,$res->content);
+}
+
+sub _cache_get {
+    my $self = shift;
+    my $url = shift;
+
+    my $file = _cache_filename($url);
+
+    my @stat = stat($file)  or return;
+    return if time-$stat[9] > 3600;
+    open my $in ,'<' , $file or return;
+    return join("",<$in>);
+}
+
+sub _cache_store {
+    my $self = shift;
+    my $url = shift;
+    my $content = shift;
+
+    my $file = _cache_filename($url);
+    open my $out ,'>' , $file or die "$! $file";
+    print $out $content;
+    close $out;
+    return $content;
+
+}
+
+sub _cache_filename {
+    my $url = shift;
+
+    my $file = $url;
+    $file =~ tr{/:}{_-};
+
+    return "/var/tmp/$file";
+}
+
+sub _fetch_filename {
+    my $self = shift;
+    my $row = shift;
+
+    if (!$row->{file_re}) {
+        my ($file) = $row->{url} =~ m{.*/(.*)};
+        confess "No filename in $row->{url}" if !$file;
+        $row->{filename} = $file;
+        return;
+    }
+    confess "No file_re" if !$row->{file_re};
+
+    my $content = $self->_download($row->{url});
+    my $file;
+    my $lines = '';
+    for my $line (split/\n/,$content) {
+        next if $line !~ /iso"/;
+        $lines .= "$line\n";
+        my ($found) = $line =~ qr/"($row->{file_re})"/;
+        next if !$found;
+        $file=$found if $found;
+    }
+    die "No ".qr($row->{file_re})." found on $row->{url}"   if !$file;
+
+    $row->{filename} = $file;
+    $row->{url} .= $file;
+}
+
+sub _fetch_md5 {
+    my $self = shift;
+    my $row = shift;
+
+    my ($file) = $row->{url} =~ m{.*/(.*)};
+    confess "No file for $row->{url}"   if !$file;
+
+    my $content = $self->_download($row->{md5_url});
+
+    for my $line (split/\n/,$content) {
+        my ($md5) = $line =~ m{^\s*(.*?)\s+.*?$file};
+        next if !$md5;
+        $row->{md5} = $md5;
+        return;
+    }
+
+    die "No MD5 for $file in $row->{md5_url}\n".$content;
 }
 
 ###################################################################################
@@ -1013,17 +1128,17 @@ sub _xml_add_usb_ehci1 {
     my $devices = shift;
 
     my $model = 'ich9-ehci1';
-    my $ctrl = _search_xml(
+    my $ctrl_found = _search_xml(
                            xml => $devices
                          ,name => 'controller'
                          ,type => 'usb'
                          ,model => $model
         );
-    if ($ctrl) {
+    if ($ctrl_found) {
 #        warn "$model found \n".$ctrl->toString."\n";
         return;
     }
-    for $ctrl ($devices->findnodes('controller')) {
+    for my $ctrl ($devices->findnodes('controller')) {
         next if $ctrl->getAttribute('type') ne 'usb';
         next if $ctrl->getAttribute('model')
                 && $ctrl->getAttribute('model') eq $model;

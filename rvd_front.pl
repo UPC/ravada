@@ -5,6 +5,7 @@ use strict;
 use locale ':not_characters';
 #####
 use Carp qw(confess);
+use Digest::SHA qw(sha256_hex);
 use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
@@ -25,7 +26,7 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
-our $VERSION_TYPE = "--beta";
+our $VERSION_TYPE = "";
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
@@ -35,8 +36,10 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_bg_file => '../img/intro-bg.jpg'
                                               ,login_header => 'Login'
                                               ,login_message => ''
+                                              ,secrets => ['changeme0']
                                               }
-                                      ,file => '/etc/rvd_front.conf' };
+                                      ,file => '/etc/rvd_front.conf'
+};
 #####
 #####
 #####
@@ -77,7 +80,11 @@ our $USER;
 
 # TODO: get those from the config file
 our $DOCUMENT_ROOT = "/var/www";
-our $SESSION_TIMEOUT = 900;
+
+# session times out in 5 minutes
+our $SESSION_TIMEOUT = 5 * 60;
+# session times out in 15 minutes for admin users
+our $SESSION_TIMEOUT_ADMIN = 15 * 60;
 
 init();
 ############################################################################3
@@ -303,6 +310,12 @@ any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
         return remove_machine($c);
 };
+
+any '/machine/remove_clones/(:id).(:type)' => sub {
+        my $c = shift;
+        return remove_clones($c);
+};
+
 get '/machine/prepare/(:id).(:type)' => sub {
         my $c = shift;
         return prepare_machine($c);
@@ -492,7 +505,6 @@ get '/img/screenshots/:file' => sub {
         return $c->reply->not_found;
     }
     if (!$USER->is_admin) {
-        warn $id_domain;
         my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
@@ -546,21 +558,37 @@ sub login {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $form_hash = $c->param('login_hash');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     my @error =();
+
+    # TODO: improve this hash
+    my ($time) = time =~ m{(.*)...$};
+    my $login_hash1 = $time.$CONFIG_FRONT->{secrets}->[0];
+
+    # let login varm be valid for 60 seconds
+    ($time) = (time-60) =~ m{(.*)...$};
+    my $login_hash2 = $time.$CONFIG_FRONT->{secrets}->[0];
+
     if (defined $login || defined $password || $c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
+        push @error,("Session timeout")
+            if $form_hash ne sha256_hex($login_hash1)
+                && $form_hash ne sha256_hex($login_hash2);
     }
 
-    if (defined $login && defined $password && length $login && length $password ) {
+    if ( !@error ) {
         my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
             $c->session('login' => $login);
-            $c->session(expiration => $SESSION_TIMEOUT);
+            my $expiration = $SESSION_TIMEOUT;
+            $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+
+            $c->session(expiration => $expiration);
             return $c->redirect_to($url);
         } else {
             push @error,("Access denied");
@@ -571,6 +599,7 @@ sub login {
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
+    sleep 5 if scalar(@error);
     $c->render(
                     template => 'main/start'
                         ,css => ['/css/main.css']
@@ -578,6 +607,7 @@ sub login {
                         ,js => ['/js/main.js']
                         ,navbar_custom => 1
                       ,login => $login
+                      ,login_hash => sha256_hex($login_hash1)
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
@@ -1132,6 +1162,22 @@ sub remove_machine {
 
 }
 
+sub remove_clones {
+    my $c = shift;
+
+    my $domain = _search_requested_machine($c);
+    my @req;
+    for my $clone ( $domain->clones) {
+        my $req = Ravada::Request->remove_domain(
+            name => $clone->{name}
+            ,uid => $USER->id
+        );
+        push @req,($req);
+    }
+    $c->render(json => { request => map { id => { $_->id } } });
+
+}
+
 sub remove_base {
   my $c = shift;
   return login($c)    if !_logged_in($c);
@@ -1414,6 +1460,8 @@ sub _new_anonymous_user {
     return $name;
 }
 
+warn Dumper($CONFIG_FRONT->{secrets});
+app->secrets($CONFIG_FRONT->{secrets})  if $CONFIG_FRONT->{secrets};
 app->start;
 __DATA__
 

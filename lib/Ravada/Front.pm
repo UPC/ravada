@@ -202,6 +202,7 @@ sub list_domains {
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
+            $row->{is_hibernated} = 1 if $domain->is_hibernated;
             $row->{is_paused} = 1 if $domain->is_paused;
             $row->{has_clones} = $domain->has_clones;
             $row->{disk_size} = ( $domain->disk_size or 0);
@@ -556,7 +557,8 @@ sub list_requests {
     $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
 
     while ( $sth->fetch) {
-        my $args = decode_json($j_args) if $j_args;
+        my $args;
+        $args = decode_json($j_args) if $j_args;
 
         push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
     }
