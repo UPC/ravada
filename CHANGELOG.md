@@ -3,10 +3,9 @@
 
 **Implemented enhancements:**
 
-- Show remote ip for active domains [\#152]
-- Upgrade sql tables [\#149]
-- Improved volumes management [\#148]
+- Auto review code with perl critic [\#168]
+- Show hibernated domains [\#172]
 
 **Fixed bugs:**
 
-- Improved unique MAC generation [\#113]
+- Fixed MD5 and ISO download when original changed [\#178]
