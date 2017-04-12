@@ -80,7 +80,11 @@ our $USER;
 
 # TODO: get those from the config file
 our $DOCUMENT_ROOT = "/var/www";
-our $SESSION_TIMEOUT = 900;
+
+# session times out in 5 minutes
+our $SESSION_TIMEOUT = 5 * 60;
+# session times out in 15 minutes for admin users
+our $SESSION_TIMEOUT_ADMIN = 15 * 60;
 
 init();
 ############################################################################3
@@ -501,7 +505,6 @@ get '/img/screenshots/:file' => sub {
         return $c->reply->not_found;
     }
     if (!$USER->is_admin) {
-        warn $id_domain;
         my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
@@ -582,7 +585,10 @@ sub login {
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
             $c->session('login' => $login);
-            $c->session(expiration => $SESSION_TIMEOUT);
+            my $expiration = $SESSION_TIMEOUT;
+            $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+
+            $c->session(expiration => $expiration);
             return $c->redirect_to($url);
         } else {
             push @error,("Access denied");
