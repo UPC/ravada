@@ -496,6 +496,7 @@ sub _pre_remove_domain {
     eval { $self->id };
     $self->pre_remove();
     $self->_allow_remove(@_);
+    $self->pre_remove_domain();
 }
 
 sub _after_remove_domain {
