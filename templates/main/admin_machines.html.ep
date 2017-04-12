@@ -18,6 +18,7 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
+%=      include 'bootstrap/requests'
         <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
