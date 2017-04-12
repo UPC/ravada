@@ -5,6 +5,7 @@ use strict;
 use locale ':not_characters';
 #####
 use Carp qw(confess);
+use Digest::SHA qw(sha256_hex);
 use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
@@ -35,8 +36,10 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_bg_file => '../img/intro-bg.jpg'
                                               ,login_header => 'Login'
                                               ,login_message => ''
+                                              ,secrets => ['changeme0']
                                               }
-                                      ,file => '/etc/rvd_front.conf' };
+                                      ,file => '/etc/rvd_front.conf'
+};
 #####
 #####
 #####
@@ -552,16 +555,29 @@ sub login {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $form_hash = $c->param('login_hash');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     my @error =();
+
+    # TODO: improve this hash
+    my ($time) = time =~ m{(.*)...$};
+    my $login_hash1 = $time.$CONFIG_FRONT->{secrets}->[0];
+
+    # let login varm be valid for 60 seconds
+    ($time) = (time-60) =~ m{(.*)...$};
+    my $login_hash2 = $time.$CONFIG_FRONT->{secrets}->[0];
+
     if (defined $login || defined $password || $c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
+        push @error,("Session timeout")
+            if $form_hash ne sha256_hex($login_hash1)
+                && $form_hash ne sha256_hex($login_hash2);
     }
 
-    if (defined $login && defined $password && length $login && length $password ) {
+    if ( !@error ) {
         my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
@@ -577,6 +593,7 @@ sub login {
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
+    sleep 5 if scalar(@error);
     $c->render(
                     template => 'main/start'
                         ,css => ['/css/main.css']
@@ -584,6 +601,7 @@ sub login {
                         ,js => ['/js/main.js']
                         ,navbar_custom => 1
                       ,login => $login
+                      ,login_hash => sha256_hex($login_hash1)
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
@@ -1435,6 +1453,8 @@ sub _new_anonymous_user {
     return $name;
 }
 
+warn Dumper($CONFIG_FRONT->{secrets});
+app->secrets($CONFIG_FRONT->{secrets})  if $CONFIG_FRONT->{secrets};
 app->start;
 __DATA__
 
