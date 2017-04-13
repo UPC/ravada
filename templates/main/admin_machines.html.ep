@@ -113,7 +113,7 @@
                          <i class="fa fa-camera" aria-hidden="true"></i>
                        </a>
                       </div>
-                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by requested <a href="/request/{{machine.is_locked}}.html">process</a></div>
+                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">process</a></div>
                     </td>
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
@@ -181,7 +181,7 @@
                            <i class="fa fa-camera" aria-hidden="true"></i>
                          </a>
                         </div>
-                        <div ng-show="{{child.is_locked}}" ng-cloak>Machine locked by requested <a href="/request/{{child.is_locked}}.html">process</a></div>
+                        <div ng-show="{{child.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{child.is_locked}}.html">process</a></div>
                       </td>
                     </tr>
                     <tr ng-repeat-end ng-hide="true"></tr>

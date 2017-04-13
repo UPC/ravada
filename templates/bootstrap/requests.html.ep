@@ -1,6 +1,7 @@
 <div id="requests" class="panel panel-primary"
-     ng-controler="requestsCtrl">
-    <div class="panel-heading">Requests</div>
+    ng-show="requests[0]"
+    ng-controler="requestsCtrl">
+    <div class="panel-heading"><b>Running processes</b></div>
 
     <div class="panel-body">
     <div ng-repeat="request in requests">

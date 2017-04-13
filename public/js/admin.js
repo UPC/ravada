@@ -75,7 +75,10 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.hide_clones = !$scope.hide_clones;
     }
     $scope.action = function(target,action,machineId){
-      $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+      $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+        .then(function() {
+            $scope.getMachines();
+        });
     };
     $scope.set_public = function(machineId, value) {
       $http.get("/machine/public/"+machineId+"/"+value);
