@@ -95,7 +95,7 @@ msgstr "ماشین جدید"
 msgid "Paused"
 msgstr "متوقف"
 
-msgid "Machine locked by requested"
+msgid "Machine locked by"
 msgstr "طبق درخواست ماشین قفل شده است"
 
 msgid "process"
