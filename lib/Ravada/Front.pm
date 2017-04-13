@@ -561,10 +561,8 @@ sub list_requests {
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
-        ." ((status = 'working' OR status like 'waiting%' "
-        ."  OR status like 'downloading%')"
+        ."    status <> 'done' "
 #        ."  OR date_changed >= ?".
-        ." )"
         ." ORDER BY date_changed DESC LIMIT 10"
     );
     $sth->execute();

@@ -656,7 +656,7 @@ Before processing requests, old killed requests must be cleaned.
 sub clean_killed_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status like 'working%' OR status like 'downloading%' "
+        ." WHERE status <> 'done' "
     );
     $sth->execute;
     while (my ($id) = $sth->fetchrow) {
