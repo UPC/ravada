@@ -31,8 +31,13 @@ ravadaApp.directive("solShowMachine", swMach)
       });
       $scope.iso_download=function(id_iso) {
             $http.get('/iso/download/'+id_iso+'.json').then(function() {
-                window.location.url('/admin/machines');
+                window.location.href = '/admin/machines';
             });
+      };
+      $scope.list_images=function() {
+        $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+        });
       };
   };
 
