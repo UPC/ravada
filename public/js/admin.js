@@ -29,6 +29,11 @@ ravadaApp.directive("solShowMachine", swMach)
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
       });
+      $scope.iso_download=function(id_iso) {
+            $http.get('/iso/download/'+id_iso+'.json').then(function() {
+                window.location.url('/admin/machines');
+            });
+      };
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
