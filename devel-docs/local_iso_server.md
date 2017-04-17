@@ -50,7 +50,7 @@ If you want to access to the ISO files from localhost
 change the _URL_ field to this:
 
     $ mysql -u root -p ravada
-    mysql> update iso_images set url = 'http://192.168.122.1/iso';
+    mysql> update iso_images set url = 'http://192.168.122.1/iso/';
 
 ## From Virtual Machines
 
@@ -62,7 +62,7 @@ probably be _192.168.1.1_, check it is doing
 
 
     $ mysql -u root -p ravada
-    mysql> update iso_images set url = 'http://192.168.122.1/iso';
+    mysql> update iso_images set url = 'http://192.168.122.1/iso/';
 
 
 # Try it
