@@ -1,11 +1,12 @@
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,md5)
+(name,description,arch,xml,xml_volume,url,file_re,md5)
 VALUES('Debian Jessie 32 bits netinst'
     ,'Debian 8.5.0 Jessie 32 bits (netsinst)'
     ,'i386'
     ,'jessie-i386.xml'
     ,'jessie-volume.xml'
     ,'http://cdimage.debian.org/cdimage/archive/8.5.0/i386/iso-cd/debian-8.5.0-i386-netinst.iso'
+    ,'debian-8.5.0-i386-netinst.iso'
     ,'b3cd3e2e6a74b93ab41059c47c2b43fd'
    );
 

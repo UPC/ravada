@@ -190,7 +190,6 @@ sub test_shutdown_suspended_domain {
 
 }
 
-
 sub test_remove_domain {
     my $vm_name = shift;
     my $domain = shift;

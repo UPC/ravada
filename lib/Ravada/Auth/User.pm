@@ -101,7 +101,6 @@ sub unread_messages {
     my $count = shift;
     $count = 50 if !defined $count;
 
-
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
         ." WHERE id_user=? AND date_read IS NULL"
         ."    ORDER BY date_send DESC "

@@ -9,4 +9,5 @@
   }
   ,user => 'ravada'
   ,group => 'ravada'
+  ,secrets => ['changeme1','changeme2']
 };

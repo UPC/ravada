@@ -678,9 +678,11 @@ sub _iso_name {
         )   if $req;
         _download_file_external($iso->{url}, $device);
     }
-    confess "Download failed, file $device missing.\n"
+    die "Download failed, file $device missing.\n"
         if ! -e $device;
-    confess "Download failed, MD5 missmatched"
+    die "Download failed, MD5 id=$iso->{id} missmatched for $device."
+        ." Please read ISO "
+        ." MD5 missmatch at operation docs.\n"
             if (! _check_md5($device, $iso->{md5}));
     return $device;
 }

@@ -5,6 +5,16 @@ Ravada has two daemons that must run on the production server:
 - rvd_back : must run as root and manages the virtual machines
 - rvd_front : is the web frontend that sends requests to the backend
 
+## Configuration
+
+The frontend has a secret passphrase that should be changed. Cookies
+and user session rely on this. You can have many passphrases that
+get rotated to improve security even more.
+
+Change the file _/etc/rvd_front.conf_ line _secrets_ like this:
+
+    , secrets => ['my secret 1', 'my secret 2' ]
+
 ## Apache
 
 It is advised to run an apache server or similar before the frontend.
@@ -38,7 +48,7 @@ Check the services are enabled to run at startup
 ## Firewall
 
 Ravada uses `iptables` to restrict the access to the virtual machines. 
-Thes iptables rules grants acess to the admin workstation to all the domains
+These iptables rules grants acess to the admin workstation to all the domains
 and disables the access to everyone else.
 When the users access through the web broker they are allowed to the port of
 their virtual machines. Ravada uses its own iptables chain called 'ravada' to
