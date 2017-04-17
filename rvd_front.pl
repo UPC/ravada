@@ -513,6 +513,17 @@ get '/img/screenshots/:file' => sub {
     );
 };
 
+get '/iso/download/(#id).json' => sub {
+    my $c = shift;
+    my $id = $c->stash('id');
+
+    my $req = Ravada::Request->download(
+        id_iso => $id
+        ,id_vm => 1
+    );
+
+    return $c->render(json => {request => $req->id});
+};
 ###################################################
 
 sub _init_error {
