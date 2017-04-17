@@ -684,6 +684,8 @@ sub _iso_name {
         ." Please read ISO "
         ." MD5 missmatch at operation docs.\n"
             if (! _check_md5($device, $iso->{md5}));
+
+    $req->status("done","File $iso->{filename} downloaded");
     return $device;
 }
 
