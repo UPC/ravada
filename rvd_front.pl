@@ -515,6 +515,8 @@ get '/img/screenshots/:file' => sub {
 
 get '/iso/download/(#id).json' => sub {
     my $c = shift;
+
+    return access_denied($c)    if !$USER->is_admin;
     my $id = $c->stash('id');
 
     my $req = Ravada::Request->download(
