@@ -9,6 +9,7 @@
       <div id="admin-content">
 <h2><%=l 'Machines' %>
   <button type="button" style="float: right"
+                        onclick="list_images()"
    class="btn btn-success" data-toggle="modal" data-target="#modalNM">
     <%=l 'New Machine' %>
  </button>
@@ -61,11 +62,11 @@
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked 
-                               ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
+                               ng-show="can_remove_base(machine)"
                             ng-click="action('machine','remove_base',machine.id)"
                             title ="<%=l 'Remove base' %>" ng-cloak>
                         <input type="checkbox" 
-                               ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
+                               ng-show="can_prepare_base(machine)"
                             ng-click="action('machine','prepare',machine.id)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
                     </td>
