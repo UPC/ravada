@@ -573,6 +573,11 @@ sub list_requests {
         , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
+        next if $command eq 'force_shutdown'
+                || $command eq 'start'
+                || $command eq 'shutdown'
+                || $command eq 'screenshot'
+                || $command eq 'hibernate';
         my $args;
         $args = decode_json($j_args) if $j_args;
 
