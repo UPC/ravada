@@ -562,14 +562,14 @@ sub list_requests {
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    status <> 'done' "
-#        ."  OR date_changed >= ?".
+        ."  OR ( command = 'download' AND date_changed >= ?) "
         ." ORDER BY date_changed DESC LIMIT 10"
     );
-    $sth->execute();
+    $sth->execute($time_recent);
     my @reqs;
-    my ($id, $command, $j_args, $date_changed, $status
+    my ($id_request, $command, $j_args, $date_changed, $status
         , $error, $id_domain, $domain, $date);
-    $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status
+    $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
         , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
@@ -580,13 +580,34 @@ sub list_requests {
             $domain = $args->{id_domain};
         }
         $domain = $args->{name} if !$domain && $args->{name};
-        push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}
+
+        my $message = ( $self->_last_message($id_request) or $error or '');
+        $message =~ s/^$command\s+$status(.*)/$1/i;
+
+        push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
             ,date => $date
+            ,message => $message
         };
     }
     $sth->finish;
     return \@reqs;
+}
+
+sub _last_message {
+    my $self = shift;
+    my $id_request = shift;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT subject , message FROM messages WHERE id_request=?");
+    $sth->execute($id_request);
+    my ($subject, $message) = $sth->fetchrow;
+
+    return '' if !$subject;
+
+    $subject = '' if $message =~ /^$subject/;
+    return "$subject ".($message or '');
+    $sth->finish;
+
 }
 
 =head2 search_domain_by_id
