@@ -34,11 +34,6 @@ ravadaApp.directive("solShowMachine", swMach)
                 window.location.href = '/admin/machines';
             });
       };
-      $scope.list_images=function() {
-        $http.get('/list_images.json').then(function(response) {
-              $scope.images = response.data;
-        });
-      };
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
@@ -93,6 +88,20 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.set_public = function(machineId, value) {
       $http.get("/machine/public/"+machineId+"/"+value);
     };
+
+    $scope.can_remove_base = function(machine) {
+        return machine.is_base > 0 && machine.has_clones == 0 && machine.is_locked ==0;
+    };
+    $scope.can_prepare_base = function(machine) {
+        return machine.is_base == 0 && machine.is_locked ==0;
+    };
+
+    $scope.list_images=function() {
+        $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+        });
+    };
+
 
     //On load code
     $scope.rename= {new_name: 'new_name'};
