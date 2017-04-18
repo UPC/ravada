@@ -603,7 +603,7 @@ sub _last_message {
     my $self = shift;
     my $id_request = shift;
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT subject , message FROM messages WHERE id_request=? ORDER BY date_send,id DESC");
+        "SELECT subject , message FROM messages WHERE id_request=? ORDER BY date_send DESC,id DESC");
     $sth->execute($id_request);
     my ($subject, $message) = $sth->fetchrow;
 
