@@ -528,7 +528,6 @@ get '/iso/download/(#id).json' => sub {
     my $req = Ravada::Request->download(
         id_iso => $id
         ,id_vm => 1
-        ,delay => 10
         ,uid => $USER->id
     );
 
