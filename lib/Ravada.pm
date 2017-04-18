@@ -102,6 +102,52 @@ sub BUILD {
     Ravada::Auth::init($CONFIG);
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_update_data();
+}
+
+sub _update_isos {
+    my $self = shift;
+    my $table = 'iso_images';
+    my $field = 'name';
+    my %data = (
+        zesty => {
+                    name => 'Ubuntu Zesty Zapus'
+            ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/17.04/'
+                ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
+                ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+        }
+    );
+
+    my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
+    for my $name (keys %data) {
+        my $row = $data{$name};
+        $sth_search->execute($row->{$field});
+        my ($id) = $sth_search->fetchrow;
+        next if $id;
+        warn("INFO: updating $table : $row->{$field}\n");
+
+        my $sql =
+            "INSERT INTO iso_images "
+            ."("
+            .join(" , ", sort keys %{$data{$name}})
+            .")"
+            ." VALUES ( "
+            .join(" , ", map { "?" } keys %{$data{$name}})
+            ." )"
+        ;
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute(map { $data{$name}->{$_} } sort keys %{$data{$name}});
+        $sth->finish;
+    }
+}
+
+sub _update_data {
+    my $self = shift;
+    $self->_update_isos();
 }
 
 sub _upgrade_table {
