@@ -686,6 +686,11 @@ sub _iso_name {
             if (! _check_md5($device, $iso->{md5}));
 
     $req->status("done","File $iso->{filename} downloaded");
+    my $sth = $$CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET device=? WHERE id=?"
+    );
+    $sth->execute($device,$iso->{id});
+
     return $device;
 }
 
