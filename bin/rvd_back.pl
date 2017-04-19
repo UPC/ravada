@@ -5,6 +5,7 @@ use strict;
 
 use lib './lib';
 
+use Data::Dumper;
 use Getopt::Long;
 use Proc::PID::File;
 
@@ -72,9 +73,6 @@ sub do_start {
     start_process_longs() if !$NOFORK;
 
     my $ravada = Ravada->new( config => $FILE_CONFIG );
-    for my $vm (@{$ravada->vm}) {
-        $vm->id;
-    }
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
@@ -109,6 +107,10 @@ sub start {
     {
         my $ravada = Ravada->new( config => $FILE_CONFIG );
         $Ravada::CONNECTOR->dbh;
+        for my $vm (@{$ravada->vm}) {
+            $vm->id;
+            $vm->vm;
+        }
     }
     for (;;) {
         my $pid = fork();

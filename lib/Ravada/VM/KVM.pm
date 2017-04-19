@@ -85,7 +85,21 @@ sub _connect {
 	warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
     }
+    $self->_check_networks($vm);
     return $vm;
+}
+
+sub _check_networks {
+    my $self = shift;
+    my $vm = shift;
+
+    for my $net ($vm->list_all_networks) {
+        next if $net->is_active;
+
+        warn "INFO: Activating KVM network ".$net->get_name."\n";
+        $net->create;
+        $net->set_autostart(1);
+    }
 }
 
 =head2 disconnect
