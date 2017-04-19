@@ -207,7 +207,7 @@ sub test_req_prepare_base {
     like($unread_messages[-1]->{subject}, qr/done$/i);
 
     my @messages = $USER->messages;
-    like($messages[-1]->{subject}, qr/done$/i);
+    like($messages[-1]->{subject}, qr/done|downloaded/i);
 
 }
 
