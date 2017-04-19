@@ -43,6 +43,17 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.getMachines = function() {
       $http.get("/requests.json").then(function(response) {
         $scope.requests=response.data;
+        $scope.download_done=false;
+        $scope.download_working =false;
+        for (var i = 0; i < $scope.requests.length; i++){
+            if ( $scope.requests[i].command == 'download') {
+                if ($scope.requests[i].status == 'done') {
+                    $scope.download_done=true;
+                } else {
+                    $scope.download_working=true;
+                }
+            }
+        }
       });
       $http.get("/list_machines.json").then(function(response) {
         $scope.list_machines = [];
