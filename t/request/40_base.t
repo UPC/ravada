@@ -19,8 +19,9 @@ init($test->connector, 't/etc/ravada.conf');
 
 my $USER = create_user("foo","bar");
 
+my $ID_ISO = 1;
 my @ARG_CREATE_DOM = (
-        id_iso => 1
+        id_iso => $ID_ISO
         ,id_owner => $USER->id
 );
 
@@ -31,28 +32,6 @@ $Ravada::CAN_FORK = 1;
 sub test_empty_request {
     my $request = rvd_back()->request();
     ok($request);
-}
-
-sub test_unread_messages {
-    my ($user, $n_unread, $test) = @_;
-    confess "Missing test name" if !$test;
-
-    my @messages = $user->unread_messages();
-
-    ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
-        .scalar@messages." ".Dumper(\@messages));
-
-}
-
-sub test_unshown_messages {
-    my ($user, $n_unread, $test) = @_;
-    confess "Missing test name" if !$test;
-
-    my @messages = $user->unshown_messages();
-
-    ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unshown messages , got "
-        .scalar@messages." ".Dumper(\@messages));
-
 }
 
 sub test_swap {
@@ -90,8 +69,9 @@ sub test_req_create_domain_iso {
     my $name = new_domain_name();
 
     $USER->mark_all_messages_read();
-    test_unshown_messages($USER,0, "[$vm_name] create domain $name");
-    test_unread_messages($USER,0, "[$vm_name] create domain $name");
+    is($USER->unshown_messages,0, "[$vm_name] create domain $name");
+
+    is($USER->unread_messages,0, "[$vm_name] create domain $name");
 
     my $req = Ravada::Request->create_domain(
         name => $name
@@ -139,9 +119,12 @@ sub test_req_create_domain_iso {
 sub test_message_new_domain {
     my ($vm_name, $user, $test) = @_;
 
-    test_unshown_messages($USER,1, $test);
-    test_unshown_messages($USER,0, $test);
-    test_unread_messages($USER,1, $test);
+    my @unshown = $USER->unshown_messages;
+    my $n_expected = 1;
+    $n_expected++ if $vm_name eq 'KVM';
+    is(scalar @unshown, $n_expected , $test." ".Dumper(\@unshown));
+    is($USER->unshown_messages,0, $test);
+    is($USER->unread_messages, $n_expected, $test." ".Dumper($USER->unread_messages));
 
     my @messages = $user->unread_messages();
     my $message = $user->show_message($messages[0]->{id});
@@ -224,7 +207,7 @@ sub test_req_prepare_base {
     like($unread_messages[-1]->{subject}, qr/done$/i);
 
     my @messages = $USER->messages;
-    like($messages[-1]->{subject}, qr/done$/i);
+    like($messages[-1]->{subject}, qr/done|downloaded/i);
 
 }
 
@@ -416,13 +399,18 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
+for my $vm_name ( qw(KVM Void)) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = 1 if $vm;
         @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id );
+
+        if ($vm_name eq 'KVM') {
+            my $iso = $vm->_search_iso($ID_ISO);
+            $vm->_iso_name($iso);
+        }
     };
 
     SKIP: {

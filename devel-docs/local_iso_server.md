@@ -6,7 +6,10 @@ let the development virtual ravadas download them from there.
 
 # Copy the ISO files
 
-Copy the _.iso_ files to the directory _/var/www/iso_.
+Copy the _.iso_ files to the directory _/var/www/html/iso_.
+
+    $ sudo mkdir /var/www/html/iso
+    $ sudo cp /var/lib/libvirt/images/*iso /var/www/html/iso
 
 # Apache
 
@@ -36,7 +39,11 @@ Edit _/etc/apache2/sites-enabled/000-default.conf_ and add:
         Require all granted
         Options +Indexes
     
-    </Directory>
+    </Location>
+
+## Restart apache
+
+    $ sudo systemctl restart apache2
 
 
 # Change the ISO locations
@@ -50,7 +57,7 @@ If you want to access to the ISO files from localhost
 change the _URL_ field to this:
 
     $ mysql -u root -p ravada
-    mysql> update iso_images set url = 'http://192.168.122.1/iso';
+    mysql> update iso_images set url = 'http://127.0.0.1/iso/';
 
 ## From Virtual Machines
 
@@ -62,11 +69,28 @@ probably be _192.168.1.1_, check it is doing
 
 
     $ mysql -u root -p ravada
-    mysql> update iso_images set url = 'http://192.168.122.1/iso';
+    mysql> update iso_images set url = 'http://192.168.122.1/iso/';
 
 
 # Try it
 
-Remove the ISO file from _/var/lib/libvirt/images_ and verify Ravada
+Remove the ISO from the storage and from the table
+
+## Remove from the VM storage pool
+
+    $ sudo rm /var/lib/libvirt/images/*iso
+
+## Remove the device name from the table
+
+First find out the id of the iso image, then remove it.
+
+    $ mysql -u root -p ravada
+    mysql> select id,name FROM iso_images;
+    mysql> update iso_images set device = null where id=9;
+
+Restart rvd\_back and
+reload the admin page and verify Ravada
 won't download them from Internet the next time you try to install
 a new machine.
+
+    $ sudo ./bin/rvd_back.pl --debug

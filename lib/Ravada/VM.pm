@@ -94,7 +94,7 @@ sub open {
     bless($self, $class);
     my $row = $self->_do_select_vm_db( id => $id);
     lock_hash(%$row);
-    confess "ERROR: I can't find VM id=$id" if !$row;
+    confess "ERROR: I can't find VM id=$id" if !$row || !keys %$row;
 
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';

@@ -7,18 +7,27 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
-<h2><%=l 'Machines' %>
-  <button type="button" style="float: right"
-   class="btn btn-success" data-toggle="modal" data-target="#modalNM">
-    <%=l 'New Machine' %>
- </button>
-</h2>
 <div class="panel-body">
     <div class="col-lg-12">
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
+        <div class="row">
+            <div class="col-md-8"><h2>Virtual Machines</h2></div>
+            <div class="col-md-4" <align="right">
+                <h2>
+                    <a type="button" class="btn btn-success" href="/new_machine.html">
+                        <b><%=l 'New Machine' %></b>
+                    <i ng-show="download_working"
+                        class="fa fa-angle-double-down" aria-hidden="true"></i>
+                    <i ng-show="download_done && !download_working"
+                        class="fa fa-check" aria-hidden="true"></i>
+                    </a>
+                </h2>
+            </div>
+        </div>
 %=      include 'bootstrap/requests'
+
         <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
@@ -61,11 +70,11 @@
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked 
-                               ng-show="{{machine.is_base}} && !{{machine.has_clones}} && !{{machine.is_locked}}"
+                               ng-show="can_remove_base(machine)"
                             ng-click="action('machine','remove_base',machine.id)"
                             title ="<%=l 'Remove base' %>" ng-cloak>
                         <input type="checkbox" 
-                               ng-show="!{{machine.is_base}} && !{{machine.is_locked}}" 
+                               ng-show="can_prepare_base(machine)"
                             ng-click="action('machine','prepare',machine.id)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
                     </td>

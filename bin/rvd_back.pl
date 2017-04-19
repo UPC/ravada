@@ -72,6 +72,9 @@ sub do_start {
     start_process_longs() if !$NOFORK;
 
     my $ravada = Ravada->new( config => $FILE_CONFIG );
+    for my $vm (@{$ravada->vm}) {
+        $vm->id;
+    }
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();

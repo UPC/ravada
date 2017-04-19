@@ -1,34 +1,6 @@
-<!--<h2>New Base</h2>
-<form name="new_machine" method="post" action="#"
-    ng-controller="new_machine"
-    novalidate
-    >
-    <label for "name"><%=l 'Name' %></label><input type="text" size="20" name="name" ><br/>
-
-    <label for="id_iso">ISO image</label>
-    <select name ="id_iso"
-        ng-model="id_iso"
-        ng-options="item.name for item in images track by item.id"
-    >
-    </select>
-    <br/>
-    <label for="backend">Backend</label>
-    <select name="backend"
-            ng-model="backend"
-            ng-init="backend = 'KVM'"
-            ng-options="item for item in backends"
-            required=""
-            >
-    </select>
-        <br/>
-    Disk: <input type="text" name="disk" size="2"> Gb<br/>
-    Ram: <input type="text" name="ram" size="2"> Gb<br/>
-    <input type="submit" name="submit" value="create">
-
-</form>-->
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h2>New Base</h2>
+        <h2>New Machine</h2>
     </div>
     <div class="panel-body">
         <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
@@ -57,9 +29,13 @@
                 <div ng-show="id_iso.name && !id_iso.device">
                     <font color="#500000">This ISO image has not 
                     been already
-                    downloaded. Creating this machine may take many minutes, even hours
+                    downloaded. This may take many minutes, even hours
                     untill the file is fetched from Internet.</font>
+                    <a type="button" class="btn btn-warning"
+                        ng-click="iso_download(id_iso.id)"
+                    >Download now</a>
                 </div>
+
             </div>
 
             <div ng-if="backend == 'LXC'" class="from-group">
@@ -109,25 +85,7 @@
                 </div>
             </div>
 
-           <!-- <div ng-show="new_machineForm.$submitted || new_machineForm.ddsize.$touched">
-                <div ng-show="new_machineForm.ddsize.$error.required" class="alert alert-warning fade in">
-                    <strong>Error</strong> Disk Size selection is required
-                </div>
-                <div ng-show="new_machineForm.ddsize.$error.min || new_machineForm.ddsize.$error.max" class="alert alert-warning">
-                    <strong>Error</strong> Disk Size selection must be between 1GB and 10GB
-                </div>
-            </div>
-            <div ng-show="new_machineForm.$submitted || new_machineForm.ramsize.$touched">
-                <div ng-show="new_machineForm.ramsize.$error.required" class="alert alert-warning fade in">
-                    <strong>Error</strong> Ram Size selection is required
-                </div>
-                <div ng-show="new_machineForm.ramsize.$error.min || new_machineForm.ramsize.$error.max" class="alert alert-warning fade in">
-                    <strong>Error</strong> Ram Size selection must be between 1GB and 4GB
-                </div>
-            </div>-->
-
-
-            <input type="submit" class="btn btn-default" name="submit" value="Create" ng-disabled="new_machineForm.$invalid">
+            <input type="submit" class="btn btn-default" name="submit" value="Create" ng-disabled="new_machineForm.$invalid || !new_machineForm.id_iso.$viewValue.device ">
 
         </form>
     </div>

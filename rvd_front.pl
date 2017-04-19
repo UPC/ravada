@@ -519,6 +519,19 @@ get '/img/screenshots/:file' => sub {
     );
 };
 
+get '/iso/download/(#id).json' => sub {
+    my $c = shift;
+
+    return access_denied($c)    if !$USER->is_admin;
+    my $id = $c->stash('id');
+
+    my $req = Ravada::Request->download(
+        id_iso => $id
+        ,uid => $USER->id
+    );
+
+    return $c->render(json => {request => $req->id});
+};
 ###################################################
 
 sub _init_error {
@@ -731,9 +744,8 @@ sub new_machine {
         req_new_domain($c);
         $c->redirect_to("/admin/machines")    if !@error;
     }
-    warn join("\n",@error) if @error;
-
-
+    push @{$c->stash->{js}}, '/js/admin.js';
+    $c->render(template => 'main/new_machine');
 };
 
 sub req_new_domain {

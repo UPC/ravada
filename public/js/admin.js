@@ -29,6 +29,11 @@ ravadaApp.directive("solShowMachine", swMach)
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
       });
+      $scope.iso_download=function(id_iso) {
+            $http.get('/iso/download/'+id_iso+'.json').then(function() {
+                window.location.href = '/admin/machines';
+            });
+      };
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
@@ -38,6 +43,17 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.getMachines = function() {
       $http.get("/requests.json").then(function(response) {
         $scope.requests=response.data;
+        $scope.download_done=false;
+        $scope.download_working =false;
+        for (var i = 0; i < $scope.requests.length; i++){
+            if ( $scope.requests[i].command == 'download') {
+                if ($scope.requests[i].status == 'done') {
+                    $scope.download_done=true;
+                } else {
+                    $scope.download_working=true;
+                }
+            }
+        }
       });
       $http.get("/list_machines.json").then(function(response) {
         $scope.list_machines = [];
@@ -83,6 +99,20 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.set_public = function(machineId, value) {
       $http.get("/machine/public/"+machineId+"/"+value);
     };
+
+    $scope.can_remove_base = function(machine) {
+        return machine.is_base > 0 && machine.has_clones == 0 && machine.is_locked ==0;
+    };
+    $scope.can_prepare_base = function(machine) {
+        return machine.is_base == 0 && machine.is_locked ==0;
+    };
+
+    $scope.list_images=function() {
+        $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+        });
+    };
+
 
     //On load code
     $scope.rename= {new_name: 'new_name'};

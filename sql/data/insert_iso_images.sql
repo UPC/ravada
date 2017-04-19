@@ -5,7 +5,7 @@ VALUES('Debian Jessie 32 bits netinst'
     ,'i386'
     ,'jessie-i386.xml'
     ,'jessie-volume.xml'
-    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/i386/iso-cd/debian-8.5.0-i386-netinst.iso'
+    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/i386/iso-cd/'
     ,'debian-8.5.0-i386-netinst.iso'
     ,'b3cd3e2e6a74b93ab41059c47c2b43fd'
    );
