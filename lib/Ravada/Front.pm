@@ -609,7 +609,7 @@ sub _last_message {
 
     return '' if !$subject;
 
-    $subject = '' if $message =~ /^$subject/;
+    $subject = '' if $message && $message =~ /^$subject/;
     return "$subject ".($message or '');
     $sth->finish;
 
