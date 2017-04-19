@@ -8,11 +8,9 @@
     <div id="page-wrapper">
       <div id="admin-content">
 <h2><%=l 'Machines' %>
-  <button type="button" style="float: right"
-                        onclick="list_images()"
-   class="btn btn-success" data-toggle="modal" data-target="#modalNM">
+   <a href="/new_machine.html">
     <%=l 'New Machine' %>
- </button>
+ </a>
 </h2>
 <div class="panel-body">
     <div class="col-lg-12">
