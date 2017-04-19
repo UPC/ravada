@@ -1,6 +1,6 @@
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h2>New Base</h2>
+        <h2>New Machine</h2>
     </div>
     <div class="panel-body">
         <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
