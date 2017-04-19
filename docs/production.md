@@ -5,13 +5,6 @@ Ravada has two daemons that must run on the production server:
 - rvd_back : must run as root and manages the virtual machines
 - rvd_front : is the web frontend that sends requests to the backend
 
-## Apache
-
-It is advised to run an apache server or similar before the frontend.
-
-    # apt-get install apache2
-    
-In order to make ravada using apache, you must do the steps explained on [/docs/apache.md](https://github.com/UPC/ravada/blob/master/docs/apache.md)
 
 ## Systemd
 
@@ -33,6 +26,15 @@ Check the services are enabled to run at startup
 
     $ sudo systemctl start rvd_back
     $ sudo systemctl start rvd_front
+
+## Apache
+
+You can reach the Ravada frontend heading to http://your.server.ip:8081/.
+It is advised to run an Apache server or similar before the frontend.
+
+    # apt-get install apache2
+
+In order to make ravada use apache, you must follow the steps explained on [/docs/apache.md](https://github.com/UPC/ravada/blob/master/docs/apache.md)
 
 
 ## Firewall
