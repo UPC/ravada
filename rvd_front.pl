@@ -1184,9 +1184,9 @@ sub remove_clones {
             name => $clone->{name}
             ,uid => $USER->id
         );
-        push @req,($req);
+        push @req,({ request => $req->id });
     }
-    $c->render(json => { request => map { id => { $_->id } } });
+    $c->render(json => \@req );
 
 }
 
