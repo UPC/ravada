@@ -745,9 +745,8 @@ sub new_machine {
         req_new_domain($c);
         $c->redirect_to("/admin/machines")    if !@error;
     }
-    warn join("\n",@error) if @error;
-
-
+    push @{$c->stash->{js}}, '/js/admin.js';
+    $c->render(template => 'main/new_machine');
 };
 
 sub req_new_domain {
