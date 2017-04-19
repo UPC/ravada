@@ -32,6 +32,7 @@ We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](h
 The last command will show a warning about missing dependencies. Install them
 running:
 
+    $ sudo apt-get update
     $ sudo apt-get -f install
 
 ## Development Release
