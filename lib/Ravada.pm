@@ -1227,7 +1227,9 @@ sub _cmd_download {
     my $id_iso = $request->args('id_iso')
         or confess "Missing argument id_iso";
 
-    my $vm = Ravada::VM->open($request->args('id_vm'));
+    my $vm;
+    $vm = Ravada::VM->open($request->args('id_vm')) if $request->defined_arg('id_vm');
+    $vm = $self->search_vm('KVM')   if !$vm;
 
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
