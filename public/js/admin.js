@@ -34,6 +34,9 @@ ravadaApp.directive("solShowMachine", swMach)
                 window.location.href = '/admin/machines';
             });
       };
+      $scope.ddsize=20;
+      $scope.swapsize=1;
+      $scope.ramsize=1;
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {

@@ -51,7 +51,7 @@
                 <label for="disk">Disk Size: (GB)</label>
                 <input class="form-control" ng-model="ddsize" type="number" name="disk" min="1" max="40" required="">
                 <label for="swap">Swap Size: (GB)</label>
-                <input class="form-control" ng-model="swapsize" type="number" name="swap" min="1" max="40">
+                <input class="form-control" ng-model="swapsize" type="number" name="swap" min="1" max="4">
             </div>
             <div ng-show="backend == 'KVM' || backend == 'LXC'" class="from-group">
                 <label for="memory">Ram: (GB)</label>
