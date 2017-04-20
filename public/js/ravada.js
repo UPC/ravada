@@ -3,17 +3,18 @@
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
             .directive("solShowListmachines", swListMach)
-	    .directive("solShowListusers", swListUsers)
+	        .directive("solShowListusers", swListUsers)
             .directive("solShowCardsmachines", swCardsMach)
             .directive("solShowMachinesNotifications", swMachNotif)
+            .directive("nameAvailable", nameAvail)
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
-	    .service("listUsers", gtListUsers)
+    	    .service("listUsers", gtListUsers)
             .controller("SupportForm", suppFormCtrl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
-        .controller("notifCrtl", notifCrtl)
+            .controller("notifCrtl", notifCrtl)
 
     function suppFormCtrl($scope){
         this.user = {};
@@ -225,3 +226,26 @@
       $http.get(toGet);
     };
   }
+
+	function nameAvail($timeout, $q) {
+    return {
+        restrict: 'AE',
+        require: 'ngModel',
+        link: function(scope, elm, attr, model) {
+          model.$asyncValidators.nameExists = function() {
+
+        //here you should access the backend, to check if username exists
+        //and return a promise
+        //here we're using $q and $timeout to mimic a backend call 
+        //that will resolve after 1 sec
+
+            var defer = $q.defer();
+            $timeout(function(){
+              model.$setValidity('nameExists', false);
+              defer.resolve;
+            }, 1000);
+            return defer.promise;
+          };
+        }
+      }
+    };

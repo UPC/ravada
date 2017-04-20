@@ -34,6 +34,22 @@ ravadaApp.directive("solShowMachine", swMach)
                 window.location.href = '/admin/machines';
             });
       };
+      $scope.name_duplicated = false;
+
+      $scope.validate_new_name = function() {
+          $http.get('/machine/exists/'+$scope.name)
+                .then(duplicated_callback, unique_callback);
+            function duplicated_callback(response) {
+                if ( response.data ) {
+                    $scope.name_duplicated=true;
+                } else {
+                    $scope.name_duplicated=false;
+                }
+            };
+            function unique_callback() {
+                $scope.name_duplicated=false;
+            }
+      };
       $scope.ddsize=20;
       $scope.swapsize=1;
       $scope.ramsize=1;

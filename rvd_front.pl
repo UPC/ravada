@@ -37,6 +37,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Login'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
+                                              ,login_template => ''
                                               }
                                       ,file => '/etc/rvd_front.conf'
 };
@@ -614,7 +615,8 @@ sub login {
 
     sleep 5 if scalar(@error);
     $c->render(
-                    template => 'main/start'
+                    #template => ($CONFIG_FRONT->{dir}->{custom} or 'main/start')
+                    template => ($CONFIG_FRONT->{login_template} or 'main/start')
                         ,css => ['/css/main.css']
                         ,csssnippets => @css_snippets
                         ,js => ['/js/main.js']
@@ -996,6 +998,8 @@ sub init {
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
             or $home->rel_dir("public"));
     app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
+            or $home->rel_dir("templates"));
+    app->renderer->paths->[1] =($CONFIG_FRONT->{dir}->{custom}
             or $home->rel_dir("templates"));
 
 }

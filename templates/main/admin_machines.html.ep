@@ -202,14 +202,6 @@
 </div>
 </div>
 </div>
-<div id="modalNM" class="modal fade ng-scope"
- role="dialog" ng-cloak>
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <sol-show-newmachine></sol-show-newmachine>
-    </div>
-  </div>
-</div>
 %= include 'bootstrap/scripts'
 %= include 'bootstrap/footer'
 %= include 'bootstrap/messages'
