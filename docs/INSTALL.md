@@ -58,9 +58,7 @@ Create a database named "ravada". in this stage the system wants you to identify
 
 Grant all permissions to your user:
 
-    $ mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD';
-    exit
+    $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD'"
 
 ## Config file
 
