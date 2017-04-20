@@ -702,12 +702,12 @@ Before processing requests, old killed requests must be cleaned.
 sub clean_killed_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status <> 'done' "
+        ." WHERE status <> 'done' AND STATUS <> 'requested'"
     );
     $sth->execute;
     while (my ($id) = $sth->fetchrow) {
         my $req = Ravada::Request->open($id);
-        $req->status("done","Killed before completion");
+        $req->status("done","Killed ".$req->command." before completion");
     }
 
 }
