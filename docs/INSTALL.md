@@ -63,8 +63,10 @@ Grant all permissions to your user:
 ## Config file
 
 Create a config file at /etc/ravada.conf with the username and password you just declared
-at the previous step.
+at the previous step. Please note that you need to edit the user and password via an editor. Here, we present Vi as an example.
 
+
+    $ sudo vi /etc/ravada.conf
     db:
       user: rvd_user
       password: THE PASSWORD CHOSEN BEFORE
@@ -76,7 +78,7 @@ Add a new user for the ravada web. Use rvd\_back to create it.
     $ sudo /usr/sbin/rvd_back --add-user user.name
 
 
-# Firewall
+# Firewall (Optional)
 
 The server must be able to send _DHCP_ packets to its own virtual interface.
 
