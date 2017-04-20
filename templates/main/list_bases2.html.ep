@@ -7,6 +7,10 @@
 <script>
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
+% my $public_bases = 0;
+% for my $machine(@$machines) {
+%   $public_bases = 1 if $machine->{is_public};
+% }
 
 <div id="page-wrapper">
 
@@ -19,6 +23,18 @@
             <h2><%=l 'Choose a Machine to Start' %></h2>
         </div>
         <div class="panel-body">
+%       if (! $public_bases ) {
+            <div class="panel panel-warning">
+            <div class="panel-heading">
+%           if ($_user->is_admin) {
+                There are no public bases available in this system.
+                <a href="/admin/">Create one.</a>
+%           } else {
+                There are no machines available in this system.
+%           }
+            </div>
+            </div>
+%       }
 %       for my $machine (@$machines) {
 %           next if !$machine->{is_public} && !$user->is_admin;
             <div class="col-sm-4">
