@@ -5,7 +5,7 @@ Ravada has two daemons that must run on the production server:
 - rvd_back : must run as root and manages the virtual machines
 - rvd_front : is the web frontend that sends requests to the backend
 
-## Configuration
+## Configuration (Optional)
 
 The frontend has a secret passphrase that should be changed. Cookies
 and user session rely on this. You can have many passphrases that
