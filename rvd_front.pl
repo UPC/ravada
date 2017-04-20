@@ -738,14 +738,22 @@ sub admin {
 
 sub new_machine {
     my $c = shift;
-    my @error = ();
+    my @error ;
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
-        req_new_domain($c);
-        $c->redirect_to("/admin/machines")    if !@error;
+        push @error,("Invalid name '".$c->param('name')."'"
+                .".It can only contain words and numbers.")
+            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9]+$/;
+        if (!@error) {
+            req_new_domain($c);
+            $c->redirect_to("/admin/machines");
+        }
     }
+    $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
-    $c->render(template => 'main/new_machine');
+    $c->render(template => 'main/new_machine'
+        , name => $c->param('name')
+    );
 };
 
 sub req_new_domain {
