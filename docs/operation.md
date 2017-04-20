@@ -25,4 +25,25 @@ lets you made different things (like changing the password for an user).
 If you want to view the full list, execute:
 
     sudo rvd_back --help
-    
+
+# Admin
+
+## Create Virtual Machine
+
+Go to Admin -> Machines and press _New Machine_ button.
+
+If anything goes wrong check Admin -> Messages for information
+from the Ravada backend.
+
+## ISO MD5 missmatch
+
+When downloading the ISO, it may fail or get old. Check the error
+message for the name of the ISO file and the ID.
+
+* Remove the ISO file shown at the error message
+* Clean the MD5 entry in the database:
+
+    mysql -u rvd_user -p ravada
+    mysql> update iso_images set md5='' WHERE id=_ID_
+
+Then you have to create the machine from scratch, nothing has been done.

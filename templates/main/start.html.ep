@@ -15,6 +15,8 @@
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
 
                 <input type="hidden" name="url" value="<%= $url %>">
+                <input type="hidden" name="login_hash"
+                       value="<%= $login_hash %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
                 <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch">Launch</button>
                 % if (scalar @$error) {
@@ -73,9 +75,9 @@
         <center><div class="container text-center">
           <div class="row">
               <p><font size= "3" face = "Montserrat"> Ravada is a free to use, open source VDI project.</font></p>
-              <a href="https://frankiejol.github.io/ravada/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
-              <a href="https://github.com/frankiejol/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
-              <a href="https://github.com/frankiejol/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg"></a>
+              <a href="https://upc.github.io/ravada/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
+              <a href="https://github.com/UPC/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
+              <a href="https://github.com/UPC/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg"></a>
           </div>
         </div>
        </center>

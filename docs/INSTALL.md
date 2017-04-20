@@ -26,8 +26,10 @@ clones won't require many space.
 
 We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/). Downlad them and install them:
 
+    $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.4_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ sudo dpkg -i ravada_0.1.2_all.deb
+    $ sudo dpkg -i ravada_0.2.4_all.deb
 
 The last command will show a warning about missing dependencies. Install them
 running:
@@ -56,15 +58,15 @@ Create a database named "ravada". in this stage the system wants you to identify
 
 Grant all permissions to your user:
 
-    $ mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD';
-    exit
+    $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD'"
 
 ## Config file
 
 Create a config file at /etc/ravada.conf with the username and password you just declared
-at the previous step.
+at the previous step. Please note that you need to edit the user and password via an editor. Here, we present Vi as an example.
 
+
+    $ sudo vi /etc/ravada.conf
     db:
       user: rvd_user
       password: THE PASSWORD CHOSEN BEFORE
@@ -76,7 +78,7 @@ Add a new user for the ravada web. Use rvd\_back to create it.
     $ sudo /usr/sbin/rvd_back --add-user user.name
 
 
-# Firewall
+# Firewall (Optional)
 
 The server must be able to send _DHCP_ packets to its own virtual interface.
 

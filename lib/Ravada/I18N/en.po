@@ -116,7 +116,7 @@ msgstr ""
 msgid "Paused"
 msgstr ""
 
-msgid "Machine locked by requested"
+msgid "Machine locked by"
 msgstr ""
 
 msgid "process"

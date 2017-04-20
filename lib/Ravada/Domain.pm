@@ -131,6 +131,8 @@ before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 after 'shutdown_now' => \&_post_shutdown_now;
+
+before 'force_shutdown' => \&_pre_shutdown_now;
 after 'force_shutdown' => \&_post_shutdown_now;
 
 before 'remove_base' => \&_can_remove_base;
@@ -496,6 +498,7 @@ sub _pre_remove_domain {
     eval { $self->id };
     $self->pre_remove();
     $self->_allow_remove(@_);
+    $self->pre_remove();
 }
 
 sub _after_remove_domain {
@@ -849,6 +852,11 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+}
+
+sub _pre_shutdown_now {
+    my $self = shift;
+    return if !$self->is_active;
 }
 
 sub _post_shutdown_now {

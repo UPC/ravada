@@ -11,6 +11,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 use Carp qw( carp croak);
 use Data::Dumper;
+use Hash::Util qw(lock_hash);
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
@@ -72,6 +73,38 @@ before 'create_volume' => \&_connect;
 #
 # method modifiers
 #
+
+=head1 Constructors
+
+=head2 open
+
+Opens a Virtual Machine Manager (VM)
+
+Arguments: id of the VM
+
+=cut
+
+sub open {
+    my $proto = shift;
+    my $id = shift;
+
+    my $class=ref($proto) || $proto;
+
+    my $self = {};
+    bless($self, $class);
+    my $row = $self->_do_select_vm_db( id => $id);
+    lock_hash(%$row);
+    confess "ERROR: I can't find VM id=$id" if !$row || !keys %$row;
+
+    my $type = $row->{vm_type};
+    $type = 'KVM'   if $type eq 'qemu';
+    $class .= "::$type";
+    bless ($self,$class);
+
+    return $self->new();
+
+}
+
 sub _check_readonly {
     my $self = shift;
     confess "ERROR: You can't create domains in read-only mode "

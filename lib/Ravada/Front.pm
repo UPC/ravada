@@ -546,24 +546,73 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 sub list_requests {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, command, args, date_changed, status, error "
-        ." FROM requests "
-        ." WHERE command NOT IN (SELECT command FROM requests WHERE command = 'list_vm_types')"
-        ." ORDER BY date_changed DESC LIMIT 4"
+
+    my @now = localtime(time-120);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":00";
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT requests.id, command, args, date_changed, status"
+            ." ,requests.error, id_domain ,domains.name as domain"
+            ." ,date_changed "
+        ." FROM requests left join domains "
+        ."  ON requests.id_domain = domains.id"
+        ." WHERE "
+        ."    status <> 'done' "
+        ."  OR ( command = 'download' AND date_changed >= ?) "
+        ." ORDER BY date_changed DESC LIMIT 10"
     );
-    $sth->execute;
+    $sth->execute($time_recent);
     my @reqs;
-    my ($id, $command, $j_args, $date_changed, $status, $error);
-    $sth->bind_columns(\($id, $command, $j_args, $date_changed, $status, $error));
+    my ($id_request, $command, $j_args, $date_changed, $status
+        , $error, $id_domain, $domain, $date);
+    $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
+        , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
+        next if $command eq 'force_shutdown'
+                || $command eq 'start'
+                || $command eq 'shutdown'
+                || $command eq 'screenshot'
+                || $command eq 'hibernate';
         my $args;
         $args = decode_json($j_args) if $j_args;
 
-        push @reqs,{ id => $id,  command => $command, date_changed => $date_changed, status => $status, error => $error , name => $args->{name}};
+        if (!$domain && $args->{id_domain}) {
+            $domain = $args->{id_domain};
+        }
+        $domain = $args->{name} if !$domain && $args->{name};
+
+        my $message = ( $self->_last_message($id_request) or $error or '');
+        $message =~ s/^$command\s+$status(.*)/$1/i;
+
+        push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
+            ,domain => $domain
+            ,date => $date
+            ,message => $message
+        };
     }
     $sth->finish;
     return \@reqs;
+}
+
+sub _last_message {
+    my $self = shift;
+    my $id_request = shift;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT subject , message FROM messages WHERE id_request=? ORDER BY date_send DESC,id DESC");
+    $sth->execute($id_request);
+    my ($subject, $message) = $sth->fetchrow;
+
+    return '' if !$subject;
+
+    $subject = '' if $message && $message =~ /^$subject/;
+    return "$subject ".($message or '');
+    $sth->finish;
+
 }
 
 =head2 search_domain_by_id

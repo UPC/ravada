@@ -14,62 +14,14 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
+      KVM => [ id_iso => 1 ]
 );
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
 init($test->connector);
 my $USER = create_user("foo","bar");
 
-############################################3
-sub test_create_domain {
-    my $vm_name = shift;
-
-    my $vm = rvd_back->search_vm($vm_name);
-    ok($vm,"I can't find VM $vm_name") or return;
-
-    my $name = new_domain_name();
-
-    ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    };
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
-    my $domain;
-    eval { $domain = $vm->create_domain(name => $name
-                    , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
-    };
-
-    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
-    ok($domain->name
-        && $domain->name eq $name,"Expecting domain name '$name' , got "
-        .($domain->name or '<UNDEF>')
-        ." for VM $vm_name"
-    );
-
-    return $domain;
-
-}
-
-sub test_remove_domain {
-    my ($vm_name, $domain) = @_;
-
-    my @volumes = $domain->list_volumes();
-    ok(scalar@volumes,"Expecting some volumes, got :".scalar@volumes);
-
-    for my $file (@volumes) {
-        ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
-    }
-    $domain->remove($USER);
-    for my $file (@volumes) {
-        ok(!-e $file,"Expecting no volume $file exists, got : ".(-e $file or 0));
-    }
-
-}
-
-sub test_isos {
+sub test_isos_vm {
     my $vm = shift;
 
     diag("testing isos");
@@ -91,12 +43,63 @@ sub test_isos {
     $sth->finish;
 }
 
+sub test_isos_front {
+    my $vm_name = shift;
+    my  $isos = rvd_front->list_iso_images($vm_name);
+
+    my $test_device = 0;
+    my $dsl;
+    for my $iso (@$isos) {
+        ok($iso);
+#        $dsl = $iso if $iso->{name} =~ /^dsl/i;
+    }
+# TODO
+## I was trying to test the ISO downloading functions, but it
+## painful to test and bothers the providers.
+## Even setting a proxy was a little tricky, it won't cache
+## the big ISO files unless configured. At the end of the day
+## it was not a big deal to test it the old fashioned way.
+#
+#    if ($ENV{http_proxy} || _try_local_proxy()) {
+#        diag("Downloading ISO image, it may take some minutes");
+#        unlink $dsl->{device} or die "$! unlinking $dsl->{device}"
+#            if $dsl->{device};
+#        my $vm = rvd_back->search_vm($vm_name);
+#
+#        my $iso = $vm->_search_iso($dsl->{id});
+#        my $device;
+#        eval { $device = $vm->_iso_name($iso) };
+#        is($@,'');
+#        ok($device,"Expecting a device , got ".($device or ''));
+#    } else {
+#        diag("Install a http proxy and set environment variable http_proxy to it to test ISO downloads.");
+#    }
+}
+
+sub _try_local_proxy {
+    eval { require IO::Socket::PortState;};
+
+    if ($@) {
+        return if $@ =~ /bla/;
+        diag($@);
+        return;
+    }
+
+    my %port = ( tcp => { 3128 => {}});
+    IO::Socket::PortState::check_ports('localhost',2, \%port);
+
+    return if !$port{tcp}->{3128}->{open};
+
+    $ENV{http_proxy}='http://localhost:3128';
+    return 1;
+}
+
 #######################################################
 #
 
 clean();
 
-my $vm_name = 'kvm';
+my $vm_name = 'KVM';
 my $vm = rvd_back->search_vm($vm_name);
 
 SKIP: {
@@ -109,10 +112,10 @@ SKIP: {
 
     skip($msg,10)   if !$vm;
 
-    my $domain = test_create_domain($vm_name );
-    test_remove_domain($vm_name, $domain);
 
-    test_isos($vm);
+    test_isos_vm($vm);
+    test_isos_front($vm_name);
+
 }
 
 clean();
