@@ -45,6 +45,8 @@ Check the services are enabled to run at startup
     $ sudo systemctl start rvd_front
 
 Now you can access to ravada using a web browser to: http://your.ip.address:8081/
+If you face any errors durng the procedure, please read the page "Troubleshooting".
+If you do not know how to create a virtual machine, please read the page "creating virtual machines".
 
 ## Firewall
 
