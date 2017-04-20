@@ -14,22 +14,13 @@
 %       }
         <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
             <div class="form-group row">
-                <div class="form-group has-error"><label
-                        ng-show="name_duplicated"
-                        class="control-label" for="name">This
-                             name is duplicated</label>
-                </div>
                 <label for="name" class="col-lg-1 control-label">Name</label>
                 <div class="col-lg-11">
-                <input class="form-control" 
-                ng-model="name" 
-                type="text" 
-                ng-maxlength="20" 
-                name="name"
-                required=""
-                ng-pattern ="/^[a-zA-Z0-9]+$/"
-                ng-change="validate_new_name()"
-                >
+                    <input class="form-control" ng-model="name" type="text"
+                        name="name" required=""
+                        ng-pattern ="/^[a-zA-Z0-9]+$/"
+                        ng-change="validate_new_name()"
+                    >
                 </div>
             </div>
 
@@ -39,8 +30,9 @@
                 <select name="backend"
                         ng-model="backend"
                         ng-init="backend = 'KVM'"
-                        ng-options="item for item in backends track by item.id "
+                        ng-options="item for item in backends track by item "
                         required=""
+                        disabled
                 ></select>
                 </div>
             </div>
@@ -127,6 +119,9 @@
                 <div ng-show="new_machineForm.id_template.$error.required" class="alert alert-warning fade in">
                     <strong>Error</strong> Template selection is required
                 </div>
+            </div>
+            <div ng-show="name_duplicated" class="alert alert-warning fade in">
+                    <strong>Error</strong> A machine with that name already exists.
             </div>
 
           </div>
