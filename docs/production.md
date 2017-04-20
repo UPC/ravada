@@ -39,11 +39,12 @@ Check the services are enabled to run at startup
     $ sudo systemctl enable rvd_back
     $ sudo systemctl enable rvd_front
 
-### Start or stop
+### Start
 
     $ sudo systemctl start rvd_back
     $ sudo systemctl start rvd_front
 
+Now you can access to ravada using a web browser to: http://your.ip.address:8081/
 
 ## Firewall
 
