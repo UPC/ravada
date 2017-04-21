@@ -121,7 +121,6 @@ sub test_message_new_domain {
 
     my @unshown = $USER->unshown_messages;
     my $n_expected = 1;
-    $n_expected++ if $vm_name eq 'KVM';
     is(scalar @unshown, $n_expected , $test." ".Dumper(\@unshown));
     is($USER->unshown_messages,0, $test);
     is($USER->unread_messages, $n_expected, $test." ".Dumper($USER->unread_messages));
