@@ -394,8 +394,7 @@ sub is_admin {
     my $self = shift;
     my $verbose = shift;
 
-    my $admin_group =  $$CONFIG->{ldap}->{admin_group}
-        or die "ERROR: Missing ldap -> admin_group entry in the config file\n";
+    my $admin_group =  $$CONFIG->{ldap}->{admin_group} or return;
     my $group = search_group(name => $admin_group)
         or do {
             warn "WARNING: I can't find group $admin_group in the LDAP directory\n"
