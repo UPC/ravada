@@ -15,11 +15,10 @@ Step 2: Install the _deb_ package.
 Step 3: Reconfigurate the systemd.
 
     $ sudo systemctl daemon-reload
-    $ sudo systemctl enable rvd_back
-    $ sudo systemctl enable rvd_front
-    
-Step 4: Start the services.
 
-    $ sudo systemctl start rvd_back
-    $ sudo systemctl start rvd_front
+    
+Step 4: Restart the services.
+
+    $ sudo systemctl restart rvd_back
+    $ sudo systemctl restart rvd_front
     
