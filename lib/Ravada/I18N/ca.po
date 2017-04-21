@@ -115,3 +115,15 @@ msgstr "Confirma Contrasenya:"
 
 msgid "Submit"
 msgstr "Envia"
+
+msgid "Your language has been changed successfully"
+msgstr "El seu idioma ha sigut canviat correctament"
+
+msgid "Your password has been changed successfully"
+msgstr "La seva contrasenya ha sigut canviada correctament"
+
+msgid "Password too small"
+msgstr "Contrasenya massa petita"
+
+msgid "Password fields aren't equal"
+msgstr "Els camps de la contrasenya no son iguals"

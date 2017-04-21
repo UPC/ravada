@@ -8,32 +8,40 @@
 
         <!--BASES AND DOMAINS LIST-->
         <div ng-controller="user_settings">
-
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h2 class="text-center"><%=l 'Settings' %></h2>
-                        <form method='post' enctype="multipart/form-data">
-                            <p><%=l 'Language:' %> <select onchange="this.form.submit()" id="tongue" name="tongue" >
+%                         if (scalar @$errors) {
+                            <div class="panel panel-danger">
+                              <div class="panel-heading">
+%                                 for (@$errors) {
+                                    <%= $_ %>
+%                                   }
+                              </div>
+                            </div>
+%                         }
+                        
+                        <p><form method='post' enctype="multipart/form-data">
+                            <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
                                <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
                                <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
-                             </select></p>
-                        </form>
+                             </select>
+                             % if ($changed_lang) {
+                            <font color="green">   <%=l 'Your language has been changed successfully' %></font> 
+                             % }     
+                        </form>                
+                        </p>
                         <p>____<p></br>
                         <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
-
-                            <!--    <p>Xml: </p>
-                                <select name ="id_xml" id="id_xml">
-                                  <option value="id_xml_Linux_32">Linux 32 bits</option>
-                                  <option value="id_xml_Linux_64">Linux 64 bits</option>
-                                  <option value="id_xml_Win7">Windows 7</option>
-                                  <option value="id_xml_Win7"></option>
-                                </select> -->
-
-                            <p><input type='submit' value='<%=l 'Submit' %>'></input>
+                            
+                            <p><input type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Submit' %>'></input>
+                              % if ($changed_pass) {
+                               <font color="green">   <%=l 'Your password has been changed successfully' %></font> 
+                              % }     
                             </p>
                         </form>
                   </div>
@@ -42,27 +50,7 @@
         </div>
     </div>
     </div>
-
-    <!-- <script>
-    var file_name = document.getElementById('upload').value;
-    var extension = file_name.split(".").pop();
-    </script> -->
-
     %= include 'bootstrap/scripts'
     %= include 'bootstrap/footer'
 </body>
 </html>
-
-            <!--          <h2><%=l 'Machines List' %>
-                      <button type="button" style="float: right; margin: 0 0 0 15px;" class="btn btn-success" data-toggle="modal" data-target="#modalNM"><%=l 'New Machine' %></button>
-
-                      <a style="float: right; margin: 0 10px;" class="btn btn-info" href="/machines"><i class="fa fa-refresh" aria-hidden="true"></i></A>
-
-                      </h2>
-                        <div id="modalNM" class="modal fade" role="dialog" ng-controller="new_machine">
-                          <div class="modal-dialog">
-
-                            <div class="modal-content">
-
-
-                              <sol-show-newmachine></sol-show-newmachine> -->

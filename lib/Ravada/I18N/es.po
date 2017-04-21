@@ -115,3 +115,15 @@ msgstr "Confirmar Contraseña:"
 
 msgid "Submit"
 msgstr "Enviar"
+
+msgid "Your language has been changed successfully"
+msgstr "Su idioma ha sido cambiado con éxito"
+
+msgid "Your password has been changed successfully"
+msgstr "Su contraseña ha sido cambiada con éxito"
+
+msgid "Password too small"
+msgstr "Contraseña demasiado pequeña"
+
+msgid "Password fields aren't equal"
+msgstr "Los campos de la contraseña no son iguales"

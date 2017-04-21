@@ -496,20 +496,33 @@ any '/user_settings' => sub {
 
 sub user_settings {
     my $c = shift;
+    my $changed_lang;
+    my $changed_pass;
     if ($c->req->method('POST')) {
       $USER->language($c->param('tongue'));
+      $changed_lang = $c->param('tongue');
       _logged_in($c);
     }
     $c->param('tongue' => $USER->language);
-    
+    my @errors;
     if (!($c->param('password') eq "") && !($c->param('conf_password') eq "")) {
       if ($c->param('password') eq $c->param('conf_password')) {
-            $USER->change_password($c->param('password'));
-            _logged_in($c);
+            eval { 
+              $USER->change_password($c->param('password')); 
+              _logged_in($c);
+            };
+            if ($@ =~ /Password too small/) {
+              push @errors,("Password too small")
+            }
+            else {$changed_pass = 1;};
+      }
+      else {
+        push @errors,("Password fields aren't equal")
       }
     }
 
-    $c->render(template => 'bootstrap/user_settings');
+    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
+      ,errors =>\@errors);
 };
 
 ###################################################

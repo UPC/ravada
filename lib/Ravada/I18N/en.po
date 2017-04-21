@@ -115,3 +115,15 @@ msgstr ""
 
 msgid "Submit"
 msgstr ""
+
+msgid "Your language has been changed successfully"
+msgstr ""
+
+msgid "Your password has been changed successfully"
+msgstr ""
+
+msgid "Password too small"
+msgstr ""
+
+msgid "Password fields aren't equal"
+msgstr ""
