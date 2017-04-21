@@ -7,10 +7,9 @@ Steps to release
 At code -> releases draft a new release
 
 
- * tag version : aname.2
+ * tag version : 0.2.2
  * release title : 0.2.2
 
-All the 0.2 releases are called _Aname_ , so 0.2.2 is _Aname.2_
 
 ## Create the milestone
 
@@ -18,7 +17,7 @@ Create a milestone called like the tag version: 0.2.2. There must be a way to li
 
 ## Create issues
 
-Assign issues to the mileston
+Assign issues to the milestone
 
 # Close
 
@@ -26,12 +25,43 @@ Assign issues to the mileston
 
 Check the milestone has no open issues and close it.
 
+## Update the authors
+
+    $ git checkout master
+    $ cd templates/bootstrap/
+    $ ./get_authors.sh
+
+It will create a file _authors.html.ep_, review it and commit it.
+
+    $ git commit authors.html.ep
+    $ cd ../..
+
+## Modify the Changelog
+
+Check the last issues closed for this milestone and add them to the Changelog file:
+
+    $ git checkout master
+    $ gvim Changelog.md
+
 ## Create a branch
 
     $ git checkout master
-    $ git checkout -b aname.2
-    $ git push --set-upstream origin aname.2
+    $ git checkout -b 0.2.2
+    $ git push --set-upstream origin 0.2.2
 
 ## Close the release
 
 Make sure the target is the same as the branch, not the master
+
+# Release binary
+
+## Debian
+
+Create the _debian_ package.
+
+    $ fakeroot ./deb/debianize.pl
+    $ lintian ravaa_0.2.2_all.deb
+
+Upload the file to our repo and change the number at:
+
+    https://github.com/UPC/ravada/blob/master/docs/INSTALL.md
