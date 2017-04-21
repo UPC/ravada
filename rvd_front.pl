@@ -505,7 +505,7 @@ sub user_settings {
     }
     $c->param('tongue' => $USER->language);
     my @errors;
-    if (!($c->param('password') eq "") && !($c->param('conf_password') eq "")) {
+    if (!($c->param('password') eq "") || !($c->param('conf_password') eq "")) {
       if ($c->param('password') eq $c->param('conf_password')) {
             eval { 
               $USER->change_password($c->param('password')); 
