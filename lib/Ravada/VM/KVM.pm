@@ -691,20 +691,19 @@ sub _iso_name {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _download_file_external($iso->{url}, $device);
-    }
-    die "Download failed, file $device missing.\n"
-        if ! -e $device;
-    die "Download failed, MD5 id=$iso->{id} missmatched for $device."
+        die "Download failed, file $device missing.\n"
+            if ! -e $device;
+        die "Download failed, MD5 id=$iso->{id} missmatched for $device."
         ." Please read ISO "
         ." MD5 missmatch at operation docs.\n"
             if (! _check_md5($device, $iso->{md5}));
 
-    $req->status("done","File $iso->{filename} downloaded") if $req;
-    my $sth = $$CONNECTOR->dbh->prepare(
+        $req->status("done","File $iso->{filename} downloaded") if $req;
+        my $sth = $$CONNECTOR->dbh->prepare(
                 "UPDATE iso_images SET device=? WHERE id=?"
-    );
-    $sth->execute($device,$iso->{id});
-
+        );
+        $sth->execute($device,$iso->{id});
+    }
     return $device;
 }
 

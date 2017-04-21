@@ -182,6 +182,9 @@ msgstr ""
 msgid "action"
 msgstr ""
 
+msgid "New Base"
+msgstr ""
+
 msgid "will remove all the contents of the machine"
 msgstr ""
 

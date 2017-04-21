@@ -128,7 +128,6 @@ sub test_req_create_domain_iso {
     ok(!$req->error,"Error ".$req->error." creating domain ".$name) or return ;
 
     my $n_expected = 1;
-    $n_expected++ if $vm_name eq 'KVM';
     test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");
 
     my $req2 = Ravada::Request->open($req->id);
