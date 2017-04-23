@@ -1,4 +1,4 @@
-# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.3-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
+# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.4-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
 
 ## Remote Virtual Desktops Manager
 
