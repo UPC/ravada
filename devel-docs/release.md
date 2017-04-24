@@ -51,7 +51,11 @@ Check the last issues closed for this milestone and add them to the Changelog fi
 
 ## Close the release
 
-Make sure the target is the same as the branch, not the master
+Make sure the target is the same as the branch, not the master.
+Close the release at:
+
+- Close the Milestone
+- Close the Release
 
 # Release binary
 
@@ -65,3 +69,7 @@ Create the _debian_ package.
 Upload the file to our repo and change the number at:
 
     https://github.com/UPC/ravada/blob/master/docs/INSTALL.md
+
+# Publish
+
+Tweet it
