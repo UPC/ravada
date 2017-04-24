@@ -478,7 +478,11 @@ Starts the domain
 
 sub start {
     my $self = shift;
-    my %arg = @_;
+    my %arg;
+
+    if (! scalar(@_) % 2)  {
+        %arg = @_;
+    }
 
     my $set_password;
     my $remote_ip = $arg{remote_ip};
