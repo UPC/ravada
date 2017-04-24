@@ -127,3 +127,6 @@ msgstr "Contrasenya massa petita"
 
 msgid "Password fields aren't equal"
 msgstr "Els camps de la contrasenya no son iguals"
+
+msgid "Some of the password's fields are empty"
+msgstr "Algún dels camps de la contrasenya és buida"

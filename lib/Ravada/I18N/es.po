@@ -127,3 +127,6 @@ msgstr "Contraseña demasiado pequeña"
 
 msgid "Password fields aren't equal"
 msgstr "Los campos de la contraseña no son iguales"
+
+msgid "Some of the password's fields are empty"
+msgstr "Algunos de los campos de la contraseña están vacíos"

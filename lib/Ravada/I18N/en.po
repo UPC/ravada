@@ -127,3 +127,6 @@ msgstr ""
 
 msgid "Password fields aren't equal"
 msgstr ""
+
+msgid "Some of the password's fields are empty"
+msgstr ""
