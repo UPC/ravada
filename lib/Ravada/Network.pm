@@ -9,6 +9,7 @@ Ravada::Network - Networks management library for Ravada
 
 =cut
 
+use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use Moose;
 use MooseX::Types::NetAddr::IP qw( NetAddrIP );
@@ -91,6 +92,38 @@ sub allowed_anonymous {
     my $self = shift;
 
     return $self->allowed(@_,1);
+}
+
+=head2 requires_password
+
+Returns true if running a domain from this network requires a password
+
+    if ($net->requires_password) {
+        .....
+    }
+
+=cut
+
+sub requires_password {
+    my $self = shift;
+
+    for my $network ( $self->list_networks ) {
+        my ($ip,$mask) = $network->{address} =~ m{(.*)/(.*)};
+        if (!$ip ) {
+            $ip = $network->{address};
+            $mask = 24;
+        }
+        my $netaddr;
+        eval { $netaddr = NetAddr::IP->new($ip,$mask) };
+        if ($@ ) {
+            warn "Error with newtork $network->{address} [ $ip / $mask ] $@";
+            return;
+        }
+        next if !$self->address->within($netaddr);
+        warn " $ip $network->{requires_password}\n";
+        return 1 if $network->{requires_password};
+        return 0;
+    }
 }
 
 sub _allowed_domain {

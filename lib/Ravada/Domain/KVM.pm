@@ -478,7 +478,16 @@ Starts the domain
 
 sub start {
     my $self = shift;
-    $self->_set_spice_ip();
+    my %arg = @_;
+
+    my $set_password;
+    my $remote_ip = $arg{remote_ip};
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $set_password = 1 if $network->requires_password();
+    }
+    $self->_set_spice_ip($set_password);
+    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
     $self->domain->create();
 }
 
@@ -1119,6 +1128,7 @@ sub spinoff_volumes {
 
 sub _set_spice_ip {
     my $self = shift;
+    my $set_password = shift;
 
     my $doc = XML::LibXML->load_xml(string
                             => $self->domain->get_xml_description) ;
@@ -1128,6 +1138,7 @@ sub _set_spice_ip {
 
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
+        $graphics->setAttribute(passwd => $$)   if $set_password;
         my $listen;
         for my $child ( $graphics->childNodes()) {
             $listen = $child if $child->getName() eq 'listen';
@@ -1137,6 +1148,27 @@ sub _set_spice_ip {
         $listen->setAttribute('address' => $ip);
         $self->domain->update_device($graphics);
     }
+}
+
+=head2 spice_password
+
+Returns the password defined for the spice viewers
+
+=cut
+
+sub spice_password {
+    my $self = shift;
+    my $doc = XML::LibXML->load_xml(string
+                            => $self->domain->get_xml_description) ;
+    my @graphics = $doc->findnodes('/domain/devices/graphics');
+
+    my $ip = $self->_vm->ip();
+
+    for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
+        warn "$graphics\n";
+        return ($graphics->getAttribute('passwd') or undef);
+    }
+    return;
 }
 
 sub _hwaddr {
