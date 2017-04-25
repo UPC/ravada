@@ -72,4 +72,6 @@ Upload the file to our repo and change the number at:
 
 # Publish
 
-Tweet it
+- Tweet it
+- Change the release in gh-pages
+
