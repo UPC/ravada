@@ -226,7 +226,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+
     $self->_upgrade_table('networks','requires_password','int(11)');
+    $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
 }
 
 

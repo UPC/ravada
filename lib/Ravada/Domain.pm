@@ -452,6 +452,31 @@ sub _prepare_base_db {
     $self->_select_domain_db();
 }
 
+sub _set_spice_password {
+    my $self = shift;
+    my $password = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+       "UPDATE domains set spice_password=?"
+       ." WHERE id=?"
+    );
+    $sth->execute($password, $self->id);
+    $sth->finish;
+
+    $self->{_data}->{spice_password} = $password;
+}
+
+=head2 spice_password
+
+Returns the password defined for the spice viewers
+
+=cut
+
+sub spice_password {
+    my $self = shift;
+    return $self->_data('spice_password');
+}
+
 sub _insert_db {
     my $self = shift;
     my %field = @_;

@@ -120,7 +120,6 @@ sub requires_password {
             return;
         }
         next if !$self->address->within($netaddr);
-        warn " $ip $network->{requires_password}\n";
         return 1 if $network->{requires_password};
         return 0;
     }

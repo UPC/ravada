@@ -12,6 +12,7 @@ CREATE TABLE `domains` (
   `port` int(5),
   `id_owner` int(11),
   `vm` char(120) NOT NULL,
+  `spice_password` char(20) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_base` (`id_base`,`name`),
   UNIQUE KEY `name` (`name`)
