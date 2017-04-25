@@ -5,6 +5,7 @@ CREATE TABLE `networks` (
   `description` varchar(140) DEFAULT NULL,
   `all_domains` int(11) DEFAULT '0',
   `no_domains` int(11) DEFAULT '0',
+  `requires_password` int(11) DEFAULT '0',
   `n_order` int(11) DEFAULT '0',
   PRIMARY KEY (`id`)
 );

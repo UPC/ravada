@@ -478,7 +478,20 @@ Starts the domain
 
 sub start {
     my $self = shift;
-    $self->_set_spice_ip();
+    my %arg;
+
+    if (!(scalar(@_) % 2))  {
+        %arg = @_;
+    }
+
+    my $set_password=0;
+    my $remote_ip = $arg{remote_ip};
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $set_password = 1 if $network->requires_password();
+    }
+    $self->_set_spice_ip($set_password);
+#    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
     $self->domain->create();
 }
 
@@ -1119,6 +1132,7 @@ sub spinoff_volumes {
 
 sub _set_spice_ip {
     my $self = shift;
+    my $set_password = shift;
 
     my $doc = XML::LibXML->load_xml(string
                             => $self->domain->get_xml_description) ;
@@ -1128,6 +1142,16 @@ sub _set_spice_ip {
 
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
+
+        my $password;
+        if ($set_password) {
+            $password = Ravada::Utils::random_name(4);
+            $graphics->setAttribute(passwd => $password);
+        } else {
+            $graphics->removeAttribute('passwd');
+        }
+        $self->_set_spice_password($password);
+
         my $listen;
         for my $child ( $graphics->childNodes()) {
             $listen = $child if $child->getName() eq 'listen';

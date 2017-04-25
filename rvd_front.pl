@@ -984,6 +984,7 @@ sub show_link {
     _open_iptables($c,$domain)
         if !$req;
     $c->render(template => 'main/run', url => $uri , name => $domain->name
+                ,password => $domain->spice_password
                 ,login => $c->session('login'));
 }
 
