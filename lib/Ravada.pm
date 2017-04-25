@@ -162,6 +162,7 @@ sub _upgrade_table {
 
     warn "INFO: adding $field $definition to $table\n";
     $dbh->do("alter table $table add $field $definition");
+    return 1;
 }
 
 sub _create_table {
@@ -228,6 +229,12 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','device','varchar(255)');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
+    if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
+        my $sth = $CONNECTOR->dbh->prepare(
+            "UPDATE users set is_external=1 WHERE password='*LK* no pss'"
+        );
+        $sth->execute;
+    }
 }
 
 

@@ -33,8 +33,8 @@
 %                            }     
                         </form>                
                         </p>
-                        <p>____<p></br>
-                          
+%   if (!$_user->is_external) {
+                        <hr>
                         <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
@@ -44,6 +44,7 @@
 %                               }     
                             </p>
                         </form>
+%   }
                   </div>
                   </div>
             </div>

@@ -106,14 +106,16 @@ sub add_user {
         if keys %args;
 
     my $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary) VALUES(?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external)"
+            ." VALUES(?,?,?,?,?)");
 
     if ($password) {
         $password = sha1_hex($password);
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary);
+    $sth->execute($name,$password,$is_admin,$is_temporary
+        , ($args{is_external} or 0));
     $sth->finish;
 }
 
@@ -246,6 +248,21 @@ sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
 }
+
+=head2 is_external
+
+Returns true if the user authentication is not from SQL
+
+    my $is = $user->is_external;
+
+=cut
+
+
+sub is_external {
+    my $self = shift;
+    return $self->{_data}->{is_external};
+}
+
 
 =head2 is_temporary
 
