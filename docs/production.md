@@ -1,75 +1,62 @@
-#Running Ravada in production
+# Running Ravada in production
 
 Ravada has two daemons that must run on the production server:
 
-- rvd_back : must run as root and manages the virtual machines
-- rvd_front : is the web frontend that sends requests to the backend
+- rvd\_back : must run as root and manages the virtual machines
+- rvd\_front : is the web frontend that sends requests to the backend
 
-## Application directory
+## Configuration (Optional)
 
-The ravada application should be installed
-in /var/www/ravada
+The frontend has a secret passphrase that should be changed. Cookies
+and user session rely on this. You can have many passphrases that
+get rotated to improve security even more.
 
-## Ravada system user
+Change the file /etc/rvd\_front.conf line _secrets_ like this:
 
-The frontend daemon must run as a non-privileged user.
+    , secrets => ['my secret 1', 'my secret 2' ]
 
-    # useradd ravada
-
-Allow it to write to some diretories inside /var/www/ravada/
-
-    # mkdir /var/www/ravada/log
-    # chown ravada /var/www/ravada/log
-    # chgrp ravada /etc/ravada.conf
-    # chmod g+r /etc/ravada.conf
-    # mkdir -p /var/www/img/screenshots/
-    # chown ravada /var/www/img/screenshots
-
-## Apache
-
-It is advised to run an apache server or similar before the frontend.
-
-    # apt-get install apache2
-    
-## Systemd
+## System services
 
 
 ### Configuration for boot start
 
-First you have to copy the service scripts to the systemd directory:
+There are two services to start and stop the two ravada daemons:
 
-    $ cd ravada/etc/systemd/
-    $ sudo cp *service /lib/systemd/system/
+After install or upgrade you may have to refresh the systemd service units:
 
-Edit _/lib/systemd/system/rvd_front.service_ and change `User=****` to the _ravada_
-user just created.
+    $ sudo systemctl daemon-reload
 
-
-
-Then enable the services to run at startup
+Check the services are enabled to run at startup
 
     $ sudo systemctl enable rvd_back
     $ sudo systemctl enable rvd_front
 
-### Start or stop
+### Start
+
+    $ sudo systemctl start rvd_back
+    $ sudo systemctl start rvd_front
+
+### Stop
 
     $ sudo systemctl stop rvd_back
     $ sudo systemctl stop rvd_front
 
-## Other systems
+## Apache
 
-For production mode you must run the front end with a high perfomance server like hypnotoad:
+You can reach the Ravada frontend heading to http://your.server.ip:8081/.
+It is advised to run an Apache server or similar before the frontend.
 
-    $ hypnotoad ./rvd_front.pl
+    # apt-get install apache2
 
-And the backend must run from root
-    # ./bin/rvd_back.pl &
+In order to make ravada use apache, you must follow the steps explained on [/docs/apache.md](https://github.com/UPC/ravada/blob/master/docs/apache.md)
 
+If you face any errors during this procedure, please read the page "Troubleshooting".
+If you do not know how to create a virtual machine, please read the page "creating virtual machines".
 
 ## Firewall
 
 Ravada uses `iptables` to restrict the access to the virtual machines. 
-Thes iptables rules grants acess to the admin workstation to all the domains
+These iptables rules grants acess to the admin workstation to all the domains
 and disables the access to everyone else.
 When the users access through the web broker they are allowed to the port of
 their virtual machines. Ravada uses its own iptables chain called 'ravada' to
@@ -77,3 +64,4 @@ do so:
 
     -A INPUT -p tcp -m tcp -s ip.of.admin.workstation --dport 5900:7000 -j ACCEPT
     -A INPUT -p tcp -m tcp --dport 5900:7000 -j DROP
+

@@ -22,6 +22,12 @@ has 'vm' => (
     is => 'rw'
 );
 
+has 'type' => (
+    is => 'ro'
+    ,isa => 'Str'
+    ,default => 'void'
+);
+
 ##########################################################################
 #
 
@@ -78,7 +84,7 @@ sub list_domains {
 
     closedir $ls;
 
-    return sort keys %domain;
+    return keys %domain;
 }
 
 sub search_domain {

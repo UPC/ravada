@@ -1,5 +1,5 @@
 [Unit]
-Description=Web Ravada
+Description=Backend Ravada
 Requires=network.target
 After=network.target
 # put here other service requirements
@@ -9,8 +9,7 @@ Type=simple
 RemainAfterExit=yes
 SyslogIdentifier=rvd_back
 PIDFile=/var/run/rvd_back.pid
-WorkingDirectory=/var/www/ravada/
-ExecStart=/var/www/ravada/bin/rvd_back.pl --debug &
+ExecStart=/usr/sbin/rvd_back &
 
 [Install]
 WantedBy=multi-user.target

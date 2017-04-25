@@ -83,7 +83,7 @@ sub test_clone {
 sub test_mess_with_bases {
     my ($vm_name, $base, $clones) = @_;
     for my $clone (@$clones) {
-        $clone->shutdown(user => $USER, timeout => 1);
+        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
         ok($clone->id_base,"Expecting clone has id_base , got "
                 .($clone->id_base or '<UNDEF>'));
         $clone->prepare_base($USER);
@@ -97,7 +97,7 @@ sub test_mess_with_bases {
         ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
 
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1);
+        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
 
         $clone->remove_base($USER);
         eval { $clone->start($USER); };
@@ -124,6 +124,10 @@ for my $vm_name (reverse sort @VMS) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 

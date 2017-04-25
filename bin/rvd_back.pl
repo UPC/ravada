@@ -5,6 +5,7 @@ use strict;
 
 use lib './lib';
 
+use Data::Dumper;
 use Getopt::Long;
 use Proc::PID::File;
 
@@ -103,6 +104,14 @@ sub clean_killed_requests {
 }
 
 sub start {
+    {
+        my $ravada = Ravada->new( config => $FILE_CONFIG );
+        $Ravada::CONNECTOR->dbh;
+        for my $vm (@{$ravada->vm}) {
+            $vm->id;
+            $vm->vm;
+        }
+    }
     for (;;) {
         my $pid = fork();
         die "I can't fork $!" if !defined $pid;
@@ -118,7 +127,7 @@ sub start {
 sub add_user {
     my $login = shift;
 
-    print "password : ";
+    print "$login password: ";
     my $password = <STDIN>;
     chomp $password;
 
@@ -193,5 +202,5 @@ if ($ADD_USER) {
     import_domain($IMPORT_DOMAIN);
     exit;
 }
-die "Already started" if Proc::PID::File->running();
+die "Already started" if Proc::PID::File->running( name => 'rvd_back');
 start();

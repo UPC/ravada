@@ -72,6 +72,11 @@ body {
     background-color: #000;
 }
 
+.dropdown:hover .dropdown-menu {
+        display: block;
+        margin-top: 0; // remove the gap so it doesn't close
+}
+
 .top-nav>.open>.dropdown-menu {
     float: left;
     position: absolute;

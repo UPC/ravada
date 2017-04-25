@@ -1,0 +1,90 @@
+# Translators:
+# Gloria Rodriguez  <gloria.rova@gmail.com>, 2017
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-01-03 12:12+0300\n"
+"Last-Translator: Gloria Rodriguez  gloria.rova@gmail.com\n"
+"Language-Team: Galician \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ca\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Ravada broker"
+msgstr ""
+
+msgid "Machine Name"
+msgstr "Nome da máquina"
+
+msgid "Tools"
+msgstr "Ferramentas"
+
+msgid "Machines List"
+msgstr "Listado de máquinas"
+
+msgid "Users"
+msgstr "Usuarios"
+
+msgid "Choose a Machine to Start"
+msgstr "Escolle unha máquina para iniciar"
+
+msgid "Start"
+msgstr "Inicia"
+
+msgid "Stop"
+msgstr "Para"
+
+msgid "View"
+msgstr "Ver"
+
+msgid "Prepare base"
+msgstr "Preparar base"
+
+msgid "Clone"
+msgstr "Clonar"
+
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr "Non se pode preparar ou eliminar a base. A máquina ten"
+
+msgid "Clone/s"
+msgstr "clon/s"
+
+msgid "NEW"
+msgstr "NOVOS"
+
+msgid "Users List"
+msgstr "Lista de usuarios"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Log Out"
+msgstr "Saír"
+
+msgid "Available Machines"
+msgstr "Máquinas dispoñibles"
+
+msgid "Help"
+msgstr "Axuda"
+
+msgid "Requirements"
+msgstr "Requisitos"
+
+msgid "About"
+msgstr "Info"
+
+msgid "Messages"
+msgstr "Mensaxes"
+
+msgid "Mark all as Read"
+msgstr "Marca como lido"
+
+msgid "Settings"
+msgstr "Preferencias"
+
+msgid "New Machine"
+msgstr "Nova máquina"

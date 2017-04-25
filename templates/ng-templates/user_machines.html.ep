@@ -11,7 +11,7 @@
             <img id="screensh" ng-src="/img/screenshots/{{machine.id}}.png">
         </div>
         <div class="panel-body machine-card">
-            <a type="button"  class="btn btn-success" ng-href="/machine/clone/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
+            <a type="button"  class="btn btn-success" ng-href="/machine/clone/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
         </div>
         </div>
         </div>

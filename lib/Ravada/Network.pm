@@ -3,6 +3,12 @@ package Ravada::Network;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Network - Networks management library for Ravada
+
+=cut
+
 use Hash::Util qw(lock_hash);
 use Moose;
 use MooseX::Types::NetAddr::IP qw( NetAddrIP );

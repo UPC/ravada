@@ -1,0 +1,10 @@
+Package: ravada
+Version: 0.2.3
+Architecture: all
+Section: utils
+Priority: optional
+Maintainer: Francesc Guasch <frankie@telecos.upc.edu>
+Depends: perl (>=5.18),libmojolicious-perl,mysql-common,libauthen-passphrase-perl,libdbd-mysql-perl,libdbi-perl,libdbix-connector-perl,libipc-run3-perl,libnet-ldap-perl,libproc-pid-file-perl,libvirt-bin,libsys-virt-perl,libxml-libxml-perl,libconfig-yaml-perl,libmoose-perl,libjson-xs-perl,qemu-utils,perlmagick,libmoosex-types-netaddr-ip-perl,libsys-statistics-linux-perl,libio-interface-perl,libiptables-chainmgr-perl,libnet-dns-perl,wget,liblocale-maketext-lexicon-perl,libmojolicious-plugin-i18n-perl,libdbd-sqlite3-perl, debconf (>= 0.2.26), adduser, libdigest-sha-perl
+Description: Remote Virtual Desktops Manager
+ Ravada is a software that allows the user to connect to a
+ remote virtual desktop.

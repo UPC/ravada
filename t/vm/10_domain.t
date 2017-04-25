@@ -130,6 +130,65 @@ sub test_pause_domain {
 
 }
 
+sub test_shutdown_paused_domain {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    $domain->start($USER) if !$domain->is_active();
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active) or return;
+
+    eval { $domain->pause($USER) };
+    ok(!$@,"[$vm_name] Pausing domain, expecting '', got '$@'");
+
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active);
+
+    ok($domain->is_paused,"[$vm_name] Expecting domain paused, got ".$domain->is_paused);
+
+    eval { $domain->shutdown(user => $USER, timeout => 2) };
+    ok(!$@,"[$vm_name] Shutting down paused domain, expecting '', got '$@'");
+
+    ok(!$domain->is_paused,"[$vm_name] Expecting domain not paused, got ".$domain->is_paused);
+
+    eval { $domain->shutdown_now($USER) };
+    ok(!$@,"[$vm_name] Shutting down paused domain, expecting '', got '$@'");
+
+    ok(!$domain->is_active,"[$vm_name] Expecting domain not active, got ".$domain->is_active);
+
+    eval { $domain->shutdown_now($USER) };
+    ok(!$@,"[$vm_name] Shutting down paused domain, expecting '', got '$@'");
+
+}
+
+sub test_shutdown_suspended_domain {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    return if ref($domain) !~ /KVM/i;
+
+    $domain->start($USER) if !$domain->is_active();
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active) or return;
+
+    eval { $domain->domain->suspend() };
+    ok(!$@,"[$vm_name] Pausing domain, expecting '', got '$@'");
+
+    ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active);
+
+    ok($domain->is_paused,"[$vm_name] Expecting domain paused, got ".$domain->is_paused);
+
+    eval { $domain->shutdown(user => $USER, timeout => 2) };
+    ok(!$@,"[$vm_name] Shutting down paused domain, expecting '', got '$@'");
+
+    ok(!$domain->is_paused,"[$vm_name] Expecting domain not paused, got ".$domain->is_paused);
+
+    eval { $domain->shutdown_now($USER) };
+    ok(!$@,"[$vm_name] Shutting down paused domain, expecting '', got '$@'");
+
+    ok(!$domain->is_active,"[$vm_name] Expecting domain not active, got ".$domain->is_active);
+
+    eval { $domain->shutdown_now($USER) };
+    ok(!$@,"[$vm_name] Shutting down paused domain, expecting '', got '$@'");
+
+}
 
 sub test_remove_domain {
     my $vm_name = shift;
@@ -268,6 +327,11 @@ for my $vm_name (qw( Void KVM )) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
@@ -292,7 +356,11 @@ for my $vm_name (qw( Void KVM )) {
         test_screenshot_file($vm_name, $domain);
         test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
+
+        test_shutdown_suspended_domain($vm_name, $domain);
         test_pause_domain($vm_name, $domain);
+        test_shutdown_paused_domain($vm_name, $domain);
+
         test_remove_domain($vm_name, $clone1);
         test_remove_domain($vm_name, $clone2);
         test_remove_domain($vm_name, $domain);

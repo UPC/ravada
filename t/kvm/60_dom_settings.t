@@ -188,6 +188,8 @@ sub test_drivers_clone {
         is($domain->get_driver($type), $option->{value}) or next;
         _domain_shutdown($domain);
         is($domain->get_driver($type), $option->{value}) or next;
+        $domain->remove_base($USER);
+        $domain->prepare_base($USER);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         is($domain->get_driver($type), $option->{value}) or next;
         is($clone->get_driver($type), $option->{value}) or next;
@@ -253,6 +255,11 @@ eval { $vm =rvd_back->search_vm($vm_name) };
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found"
                 ." error: (".($@ or '').")";
+    if ($vm && $vm_name =~ /kvm/i && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

@@ -1,0 +1,140 @@
+# Translators:
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# Kimia mirehbar	kimia@etsetb.upc.edu
+# french 
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-01-03 12:12+0300\n"
+"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Language-Team: \n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+
+msgid "<%=l 'Ravada broker' %>"
+msgstr "Ravada Courtier"
+
+msgid "<%=l 'Restore' %>"
+msgstr "Restaurer"
+
+msgid "<%=l 'Machine Name' %>"
+msgstr "Nom de Machine"
+
+msgid "<%=l 'Tools' %>"
+msgstr "Outils"
+
+msgid "<%=l 'Machines List' %>"
+msgstr "Liste de Machines"
+
+msgid "<%=l 'Users' %>"
+msgstr "Utilisateurs"
+
+msgid "<%=l 'Choose a Machine to Start' %>"
+msgstr "Choisir un Machine Pour Commencer"
+
+msgid "<%=l 'Start' %>"
+msgstr "Début"
+
+msgid "<%=l 'Stop' %>"
+msgstr "Stop"
+
+msgid "<%=l 'View' %>"
+msgstr "Vue"
+
+msgid "<%=l 'Prepare Base' %>"
+msgstr "Preparer Base"
+
+msgid "<%=l 'Clone' %>"
+msgstr "Cloner"
+
+msgid "<%=l 'Can't Prepare Base, Remove Base nor Delete. Machine has' %>"
+msgstr "Ne Se Peux pas Preparer Base, Retirer ou Effacer la Base"
+
+msgid "<%=l 'Clone/s' %>"
+msgstr "Clones"
+
+msgid "<%=l 'NEW' %>"
+msgstr "Nouveau"
+
+msgid "<%=l 'Users List' %>"
+msgstr "Liste d'utilisateurs"
+
+msgid "<%=l 'Name' %>"
+msgstr "Nom"
+
+msgid "<%=l 'Log Out' %>"
+msgstr "Sortir"
+
+msgid "<%=l 'Available Machines' %>"
+msgstr "Machines Disponibles"
+
+msgid "<%=l 'Help' %>"
+msgstr "Aide"
+
+msgid "<%=l 'Requirements' %>"
+msgstr "Exigences"
+
+msgid "<%=l 'About' %>"
+msgstr "Sur"
+
+msgid "<%=l 'Messages' %>"
+msgstr "Messages"
+
+msgid "<%=l 'Mark all as Read' %>"
+msgstr "Marquer Tout Comme Lu' %>"
+
+msgid "<%=l 'Settings' %>"
+msgstr "Réglages"
+
+msgid "<%=l 'New Machine' %>"
+msgstr "Machine Nouveau"
+
+msgid "<%=l 'Paused' %>"
+msgstr "En Pause"
+
+msgid "<%=l 'Prepare base' %>"
+msgstr "Preparer Base"
+
+msgid "<%=l 'Machine locked by requested' %>"
+msgstr "Machine Férme par demande"
+
+msgid "<%=l 'process' %>"
+msgstr "Procès"
+
+msgid "<%=l 'Copy' %>"
+msgstr "Copie"
+
+msgid "<%=l 'Error!' %>"
+msgstr "Erreur"
+
+msgid "<%=l 'Backend no available!' %>"
+msgstr "Backend Indisponible"
+
+msgid "<%=l 'Subject' %>"
+msgstr "Sujet"
+
+msgid "<%=l 'Date' %>"
+msgstr "Date"
+
+msgid "<%=l 'Actions' %>"
+msgstr "Action"
+
+msgid "<%=l 'Mark as Read' %>"
+msgstr "Marquer Comme Lu"
+ 
+msgid "<%=l 'Mark as UnRead' %>"
+msgstr "Marquer Comme Non Lu"
+
+msgid "<%=l 'No message to show!' %>"
+msgstr "Pas de Messages à Lire' %>"
+
+msgid "<%=l 'Admin' %>"
+msgstr "Administrateur"
+
+msgid "<%=l 'Show/Hide clones' %>"
+msgstr "Afficher/Masquer des clones"

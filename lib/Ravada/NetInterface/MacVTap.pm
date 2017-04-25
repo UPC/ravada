@@ -3,6 +3,12 @@ package Ravada::NetInterface::MacVTap;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::NetInterface::MacVTap - MacVTAP network library for Ravada
+
+=cut
+
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use Hash::Util qw(lock_keys);

@@ -3,6 +3,12 @@ package Ravada::Request;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Request - Requests library for Ravada
+
+=cut
+
 use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
@@ -51,10 +57,12 @@ our %VALID_ARG = (
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
+    ,hybernate=> {uid => 1, id_domain => 1}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot);
+    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download);
 
 our $CONNECTOR;
 
@@ -68,7 +76,7 @@ sub _init_connector {
 
     Internal object builder, do not call
 
-=Cut
+=cut
 
 sub BUILD {
     _init_connector();
@@ -107,8 +115,8 @@ sub open {
     confess "I can't find id=$id " if !defined $row;
     $sth->finish;
 
-    my $args = decode_json($row->{args}) if $row->{args};
-    $args = {} if !$args;
+    my $args = {};
+    $args = decode_json($row->{args}) if $row->{args};
 
     $row->{args} = $args;
 
@@ -742,6 +750,57 @@ sub set_driver {
     return $self->_new_request(
             command => 'set_driver'
         , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 hybernate
+
+Hybernates a domain.
+
+    Ravada::Request->hybernate(
+        id_domain => $domain->id
+             ,uid => $user->id
+    );
+
+=cut
+
+sub hybernate {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('hybernate', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'hybernate'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 download
+
+Downloads a file. Actually used only to download iso images
+for KVM domains.
+
+=cut
+
+sub download {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('download', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'download'
              , args => encode_json($args)
     );
 

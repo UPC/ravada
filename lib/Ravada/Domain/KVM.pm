@@ -3,9 +3,16 @@ package Ravada::Domain::KVM;
 use warnings;
 use strict;
 
+=head2 NAME
+
+Ravada::Domain::KVM - KVM Virtual Machines library for Ravada
+
+=cut
+
 use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
+use File::Path qw(make_path);
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -123,12 +130,26 @@ sub remove_disks {
 
 }
 
+=head2 pre_remove_domain
+
+Cleanup operations executed before removing this domain
+
+    $self->pre_remove_domain
+
+=cut
+
+sub pre_remove_domain {
+    my $self = shift;
+    $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
+}
+
 sub _vol_remove {
     my $self = shift;
     my $file = shift;
     my $warning = shift;
 
-    my ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
+    my $name;
+    ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
     #TODO: do a remove_volume in the VM
     my @vols = $self->_vm->storage_pool->list_volumes();
@@ -190,6 +211,9 @@ sub _remove_file_image {
 
 sub _disk_device {
     my $self = shift;
+    my $with_target = shift;
+
+
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
         or die "ERROR: $!\n";
 
@@ -201,11 +225,17 @@ sub _disk_device {
 
         $list_disks .= $disk->toString();
 
+        my ($file,$target);
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
-                push @img , ($child->getAttribute('file'));
+                $file = $child->getAttribute('file');
+            }
+            if ($child->nodeName eq 'target') {
+                $target = $child->getAttribute('dev');
             }
         }
+        push @img,[$file,$target]   if $with_target;
+        push @img,($file)           if !$with_target;
     }
     if (!scalar @img) {
         my (@devices) = $doc->findnodes('/domain/devices/disk');
@@ -248,7 +278,7 @@ Returns the file name of the disk of the domain.
 
 sub disk_device {
     my $self = shift;
-    return $self->_disk_device();
+    return $self->_disk_device(@_);
 }
 
 sub _create_qcow_base {
@@ -257,7 +287,8 @@ sub _create_qcow_base {
     my @base_img;
 
     my $base_name = $self->name;
-    for  my $file_img ( $self->list_volumes()) {
+    for  my $vol_data ( $self->list_volumes_target()) {
+        my ($file_img,$target) = @$vol_data;
         confess "ERROR: missing $file_img"
             if !-e $file_img;
         my $base_img = $file_img;
@@ -270,7 +301,7 @@ sub _create_qcow_base {
             @cmd = _cmd_convert($file_img,$base_img);
         }
 
-        push @base_img,($base_img);
+        push @base_img,([$base_img,$target]);
 
 
         my ($in, $out, $err);
@@ -365,7 +396,44 @@ sub prepare_base {
 
 #    my @img = $self->_create_swap_base();
     my @img = $self->_create_qcow_base();
+    $self->_store_xml();
     return @img;
+}
+
+sub _store_xml {
+    my $self = shift;
+    my $xml = $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE);
+    my $sth = $self->_dbh->prepare(
+        "INSERT INTO base_xml (id_domain, xml) "
+        ." VALUES ( ?,? ) "
+    );
+    $sth->execute($self->id , $xml);
+    $sth->finish;
+}
+
+=head2 get_xml_base
+
+Returns the XML definition for the base, only if prepare_base has been run befor
+
+=cut
+
+sub get_xml_base{
+
+    my $self = shift;
+    my $sth = $self->_dbh->prepare(
+        "SELECT xml FROM base_xml WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my $xml = $sth->fetchrow;
+    return ($xml or $self->domain->get_xml_description);
+}
+
+sub _post_remove_base_domain {
+    my $self = shift;
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM base_xml WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
 }
 
 =head2 display
@@ -412,6 +480,24 @@ sub start {
     my $self = shift;
     $self->_set_spice_ip();
     $self->domain->create();
+}
+
+sub _pre_shutdown_domain {
+    my $self = shift;
+    my ($state, $reason) = $self->domain->get_state();
+
+    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN 
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN 
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED) {
+        $self->domain->pm_wakeup();
+        for ( 1 .. 10 ) {
+            last if $self->is_active;
+            sleep 1;
+        }
+    }
+
+    $self->domain->managed_save_remove()
+        if $self->domain->has_managed_save_image();
 }
 
 =head2 shutdown
@@ -495,6 +581,17 @@ sub resume {
 }
 
 
+=head2 is_hibernated
+
+Returns if the domain has a managed saved state.
+
+=cut
+
+sub is_hibernated {
+    my $self = shift;
+    return $self->domain->has_managed_save_image;
+}
+
 =head2 is_paused
 
 Returns if the domain is paused
@@ -523,6 +620,29 @@ sub is_paused {
     return 0;
 }
 
+=head2 can_hybernate
+
+Returns true (1) for KVM domains
+
+=cut
+
+sub can_hybernate { 1 };
+
+=head2 hybernate
+
+Take a snapshot of the domain's state and save the information to a
+managed save location. The domain will be automatically restored with
+this state when it is next started.
+
+    $domain->hybernate();
+
+=cut
+
+sub hybernate {
+    my $self = shift;
+    $self->domain->managed_save();
+}
+
 =head2 add_volume
 
 Adds a new volume to the domain
@@ -536,7 +656,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -546,8 +666,8 @@ sub add_volume {
     $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
     if (!$args{xml}) {
-        $args{xml} = 'etc/xml/default-volume.xml';
-        $args{xml} = 'etc/xml/swap-volume.xml'      if $args{swap};
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/default-volume.xml";
+        $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
     }
 
     my $path = $args{vm}->create_volume(
@@ -560,7 +680,7 @@ sub add_volume {
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
 #
-    my $target_dev = $self->_new_target_dev();
+    my ($target_dev) = ($args{target} or $self->_new_target_dev());
     my $pci_slot = $self->_new_pci_slot();
     my $driver_type = 'qcow2';
     my $cache = 'default';
@@ -666,6 +786,20 @@ sub list_volumes {
     return $self->disk_device();
 }
 
+=head2 list_volumes_target
+
+Returns a list of the disk volumes. Each element of the list is a string with the filename.
+For KVM it reads from the XML definition of the domain.
+
+    my @volumes = $domain->list_volumes_target();
+
+=cut
+
+sub list_volumes_target {
+    my $self = shift;
+    return $self->disk_device("target");
+}
+
 =head2 screenshot
 
 Takes a screenshot, it stores it in file.
@@ -675,6 +809,9 @@ Takes a screenshot, it stores it in file.
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
+
+    my ($path) = $file =~ m{(.*)/};
+    make_path($path) if ! -e $path;
 
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
@@ -1226,6 +1363,22 @@ sub _set_driver_sound {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+}
+
+=head2 pre_remove
+
+Code to run before removing the domain. It can be implemented in each domain.
+It is not expected to run by itself, the remove function calls it before proceeding.
+In KVM it removes saved images.
+
+    $domain->pre_remove();  # This isn't likely to be necessary
+    $domain->remove();      # Automatically calls the domain pre_remove method
+
+=cut
+
+sub pre_remove {
+    my $self = shift;
+    $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
 }
 
 1;

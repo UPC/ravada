@@ -199,6 +199,11 @@ eval { $vm_kvm = $RAVADA->search_vm('kvm')  if $RAVADA };
 
 SKIP: {
     my $msg = "SKIPPED: No KVM virtual machines manager found";
+    if ($vm_kvm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm_kvm = undef;
+    }
+
     diag($msg) if !$vm_kvm ;
     skip($msg,10) if !$vm_kvm;
 

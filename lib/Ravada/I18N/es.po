@@ -41,7 +41,7 @@ msgstr "Parar"
 msgid "View"
 msgstr "Ver"
 
-msgid "Prepare Base"
+msgid "Prepare base"
 msgstr "Preparar base"
 
 msgid "Clone"
@@ -130,3 +130,85 @@ msgstr "Los campos de la contraseña no son iguales"
 
 msgid "Some of the password's fields are empty"
 msgstr "Algunos de los campos de la contraseña están vacíos"
+
+msgid "Public"
+msgstr "Público"
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Actions"
+msgstr "Acciones"
+
+msgid "Machines"
+msgstr "Máquinas"
+
+msgid "Down"
+msgstr "Parada"
+
+msgid "Running"
+msgstr "En marcha"
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Paused"
+msgstr "Pausado"
+
+msgid "Machine locked by requested"
+msgstr "Máquina bloqueada por"
+
+msgid "process"
+msgstr "proceso"
+
+msgid "Copy"
+msgstr "Copia"
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr "Elimina base"
+
+msgid "public"
+msgstr "pública"
+
+msgid "Restore"
+msgstr "Restaura"
+
+msgid "Hybernate"
+msgstr "Hiberna"
+
+msgid "Shutdown"
+msgstr "Apagar"
+
+msgid "action"
+msgstr "acción"
+
+msgid "will remove all the contents of the machine"
+msgstr "borrará todo el contenido de la máquina"
+
+msgid "Are you sure?"
+msgstr "Estas seguro/a?"
+
+msgid "Yes"
+msgstr "Si"
+
+msgid "No"
+msgstr ""
+
+msgid "Make public"
+msgstr "Haz público"
+
+msgid "Machine settings"
+msgstr "Preferencias de la máquina"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "No se puede borrar la base, la máquina tiene clones"
+
+msgid "Show/Hide clones"
+msgstr "Ver/Esconde clones"
+>>>>>>> master

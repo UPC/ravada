@@ -41,7 +41,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-msgid "Prepare Base"
+msgid "Prepare base"
 msgstr ""
 
 msgid "Clone"
@@ -129,4 +129,148 @@ msgid "Password fields aren't equal"
 msgstr ""
 
 msgid "Some of the password's fields are empty"
+msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Machines"
+msgstr ""
+
+msgid "Down"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "ShutDown"
+msgstr ""
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Paused"
+msgstr ""
+
+msgid "Machine locked by"
+msgstr ""
+
+msgid "process"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Error!"
+msgstr ""
+
+msgid "Backend no available!"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Mark as Read"
+msgstr ""
+
+msgid "Mark as UnRead"
+msgstr ""
+
+msgid "No message to show!"
+msgstr ""
+
+msgid "Admin"
+msgstr ""
+
+msgid "machines"
+msgstr ""
+
+msgid "users"
+msgstr ""
+
+msgid "messages"
+msgstr ""
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr ""
+
+msgid "public"
+msgstr ""
+
+msgid "Restore"
+msgstr ""
+
+msgid "Hybernate"
+msgstr ""
+
+msgid "Shutdown"
+msgstr ""
+
+msgid "action"
+msgstr ""
+
+msgid "New Base"
+msgstr ""
+
+msgid "will remove all the contents of the machine"
+msgstr ""
+
+msgid "Are you sure?"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Make public"
+msgstr ""
+
+msgid "Machine settings"
+msgstr ""
+
+msgid "Cannot remove base, machine has clones"
+msgstr ""
+
+msgid "Show/Hide clones"
+msgstr ""
+
+msgid "For spice redirection you'll need to install"
+msgstr ""
+
+msgid "in your computer."
+msgstr ""
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+
+msgid "You'll need to install"
+msgstr ""
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr ""
+
+msgid "Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app."
+msgstr ""
+
+msgid "To make this possible, download"
+msgstr ""
+
+msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
 msgstr ""

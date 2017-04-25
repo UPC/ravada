@@ -1,0 +1,49 @@
+<div class="panel panel-primary" ng-hide="domain_remove_done">
+
+<div class="panel-heading"><b><%=l 'VM Drivers'%></b></div>
+
+<div class="panel-body">
+%   if ($message) {
+        <div class="panel panel-success">
+            <div class="panel-heading"><%= $message %></div>
+        </div>
+%   }
+<form action="<%= $action %>" method="post">
+    <table>
+%       if ($USER->is_admin) {
+        <tr><td>
+            <label for="ram">Memory</label>
+            </td><td>
+            <input type="text" name="ram" size="5" disabled
+                                value="<%= int($domain->get_info->{memory} / 1024) %>">
+                                <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
+                                MB available.
+            </td>
+        </tr>
+%       }
+%               for my $driver_name (qw(network sound video)) {
+%                   my $driver = $domain->drivers($driver_name);
+        <tr><td>
+                <label for="driver_<%= $driver_name %>"><%= $driver_name %></label>
+        </td>
+%                               if (!$driver) {
+                                    <b>I can't find <%= $driver_name %> driver</b>
+%                                    next;
+%                               }
+                                <td>
+                                <select name="driver_<%= $driver_name %>">
+%                               for my $option( $driver->get_options ) {
+%                                   my $selected ='';
+%                                   $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
+         <option <%= $selected %>
+            value="<%= $option->{id} %>"><%= $option->{name} %></option>
+%                               }
+                                </select>
+                                </td></tr>
+%                           }
+     </table>
+     <input type="submit" value="save">
+</form>
+
+</div>
+</div>

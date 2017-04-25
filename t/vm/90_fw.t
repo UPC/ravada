@@ -178,6 +178,11 @@ for my $vm_name (qw( Void KVM )) {
     SKIP: {
         #TODO: find out if this system has iptables
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 

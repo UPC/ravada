@@ -209,6 +209,11 @@ for my $vm_name (qw( Void KVM )) {
     
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm_ok && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm_ok = undef;
+        }
+
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
 
@@ -217,7 +222,7 @@ for my $vm_name (qw( Void KVM )) {
         test_rename_twice($vm_name);
 
         my $domain_name = test_create_domain($vm_name);
-        test_rename_domain($vm_name, $domain_name)  or return;
+        test_rename_domain($vm_name, $domain_name)  or next;
         test_create_domain($vm_name, $domain_name);
     
         $domain_name = test_create_domain($vm_name);

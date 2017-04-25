@@ -3,6 +3,12 @@ package Ravada::Auth::User;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Auth::User - User management and tools library for Ravada
+
+=cut
+
 use Carp qw(confess croak);
 use Data::Dumper;
 use Moose::Role;
@@ -94,7 +100,6 @@ sub unread_messages {
     my $skip  = ( shift or 0);
     my $count = shift;
     $count = 50 if !defined $count;
-
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
         ." WHERE id_user=? AND date_read IS NULL"

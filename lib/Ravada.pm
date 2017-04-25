@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.1.1';
+our $VERSION = '0.2.4';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -42,10 +42,19 @@ our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
+
+# Seconds to wait for other long process
+our $SECONDS_WAIT_CHILDREN = 2;
+# Limit for long processes
 our $LIMIT_PROCESS = 2;
+our $LIMIT_HUGE_PROCESS = 1;
+
+our $DIR_SQL = "sql/mysql";
+$DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
-our %LONG_COMMAND =  map { $_ => 1 } qw(prepare_base remove_base screenshot);
+our %HUGE_COMMAND = map { $_ => 1 } qw(download);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
 
 has 'vm' => (
           is => 'ro'
@@ -61,6 +70,12 @@ has 'connector' => (
 has 'config' => (
     is => 'ro'
     ,isa => 'Str'
+);
+
+has 'warn_error' => (
+    is => 'rw'
+    ,isa => 'Bool'
+    ,default => sub { 1 }
 );
 
 =head2 BUILD
@@ -85,7 +100,136 @@ sub BUILD {
         $self->connector($CONNECTOR);
     }
     Ravada::Auth::init($CONFIG);
+    $self->_create_tables();
+    $self->_upgrade_tables();
+    $self->_update_data();
 }
+
+sub _update_isos {
+    my $self = shift;
+    my $table = 'iso_images';
+    my $field = 'name';
+    my %data = (
+        zesty => {
+                    name => 'Ubuntu Zesty Zapus'
+            ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/17.04/'
+                ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
+                ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+        }
+    );
+
+    my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
+    for my $name (keys %data) {
+        my $row = $data{$name};
+        $sth_search->execute($row->{$field});
+        my ($id) = $sth_search->fetchrow;
+        next if $id;
+        warn("INFO: updating $table : $row->{$field}\n");
+
+        my $sql =
+            "INSERT INTO iso_images "
+            ."("
+            .join(" , ", sort keys %{$data{$name}})
+            .")"
+            ." VALUES ( "
+            .join(" , ", map { "?" } keys %{$data{$name}})
+            ." )"
+        ;
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute(map { $data{$name}->{$_} } sort keys %{$data{$name}});
+        $sth->finish;
+    }
+}
+
+sub _update_data {
+    my $self = shift;
+    $self->_update_isos();
+}
+
+sub _upgrade_table {
+    my $self = shift;
+    my ($table, $field, $definition) = @_;
+    my $dbh = $CONNECTOR->dbh;
+
+    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return if $row;
+
+    warn "INFO: adding $field $definition to $table\n";
+    $dbh->do("alter table $table add $field $definition");
+}
+
+sub _create_table {
+    my $self = shift;
+    my $table = shift;
+
+    my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
+    my $info = $sth->fetchrow_hashref();
+    $sth->finish;
+    return if keys %$info;
+
+    warn "INFO: creating table $table\n";
+    my $file_sql = "$DIR_SQL/$table.sql";
+    open my $in,'<',$file_sql or die "$! $file_sql";
+    my $sql = join " ",<$in>;
+    close $in;
+
+    $CONNECTOR->dbh->do($sql);
+    return 1;
+}
+
+sub _insert_data {
+    my $self = shift;
+    my $table = shift;
+
+    my $file_sql =  "$DIR_SQL/../data/insert_$table.sql";
+    return if ! -e $file_sql;
+
+    warn "INFO: inserting data for $table\n";
+    open my $in,'<',$file_sql or die "$! $file_sql";
+    my $sql = '';
+    while (my $line = <$in>) {
+        $sql .= $line;
+        next if $sql !~ /\w/ || $sql !~ /;\s*$/;
+        $CONNECTOR->dbh->do($sql);
+        $sql = '';
+    }
+    close $in;
+
+}
+
+sub _create_tables {
+    my $self = shift;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
+    while (my $file = readdir $ls) {
+        my ($table) = $file =~ m{(.*)\.sql$};
+        next if !$table;
+        $self->_insert_data($table)     if $self->_create_table($table);
+    }
+    closedir $ls;
+}
+
+sub _upgrade_tables {
+    my $self = shift;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
+    $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','md5_url','varchar(255)');
+    $self->_upgrade_table('iso_images','file_re','char(64)');
+    $self->_upgrade_table('iso_images','device','varchar(255)');
+
+    $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
+}
+
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
@@ -172,7 +316,7 @@ sub _connect_vm {
 
     my @vms;
     eval { @vms = $self->vm };
-    warn $@ if $@;
+    warn $@ if $@ && $self->warn_error;
     return if $@ && $@ =~ /No VMs found/i;
     die $@ if $@;
 
@@ -208,7 +352,7 @@ sub _create_vm {
         $err .= "\n$err_lxc" if $err_lxc;
     }
     if (!@vms) {
-        warn "No VMs found: $err\n";
+        warn "No VMs found: $err\n" if $self->warn_error;
     }
     return \@vms;
 
@@ -259,7 +403,7 @@ sub create_domain {
     my $vm_name = $args{vm};
     delete $args{vm};
 
-    my $request = $args{request}            if $args{request};
+    my $request = ( $args{request} or undef);
 
     my $vm;
     if ($vm_name) {
@@ -560,12 +704,12 @@ Before processing requests, old killed requests must be cleaned.
 sub clean_killed_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status='working' "
+        ." WHERE status <> 'done' AND STATUS <> 'requested'"
     );
     $sth->execute;
     while (my ($id) = $sth->fetchrow) {
         my $req = Ravada::Request->open($id);
-        $req->status("done","Killed before completion");
+        $req->status("done","Killed ".$req->command." before completion");
     }
 
 }
@@ -725,7 +869,7 @@ sub list_vm_types {
             my ($name) = ref($vm) =~ /.*::(.*)/;
             $type{$name}++;
     }
-    return sort keys %type;
+    return keys %type;
 }
 
 sub _execute {
@@ -753,8 +897,11 @@ sub _execute {
     $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
-    $self->_do_execute_command($sub, $request) if $pid == 0;
-    $self->_add_pid($pid, $request->id);
+    if ( $pid == 0 ) {
+        $self->_do_execute_command($sub, $request) 
+    } else {
+        $self->_add_pid($pid, $request->id);
+    }
 #    $self->_connect_vm_kvm();
     return '';
 }
@@ -844,13 +991,25 @@ sub _wait_children {
     my $req = shift or confess "Missing request";
 
     my $try = 0;
-    for ( 1 .. 10 ) {
+    for ( 1 .. $SECONDS_WAIT_CHILDREN ) {
         my $n_pids = scalar keys %{$self->{pids}};
-        my $msg = $req->id." ".$req->command." waiting for processes to finish $n_pids of $LIMIT_PROCESS running";
-        warn $msg if $DEBUG;
 
-        return if $n_pids < $LIMIT_PROCESS;
-
+        my $msg;
+        if ($HUGE_COMMAND{$req->command}) {
+            if ( $n_pids < $LIMIT_HUGE_PROCESS) {
+                $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_HUGE_PROCESS ";
+                warn $msg if $DEBUG;
+                return;
+            }
+        } elsif ( $n_pids < $LIMIT_PROCESS) {
+            $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_PROCESS ";
+            warn $msg if $DEBUG;
+            return;
+        }
         $self->_wait_pids_nohang();
         sleep 1;
 
@@ -870,7 +1029,7 @@ sub _wait_pids_nohang {
         my $kid = waitpid($pid , WNOHANG);
         next if !$kid || $kid == -1;
         $self->_set_req_done($kid);
-        delete $self->{pids}->{$kid};
+        $self->_delete_pid($kid);
     }
 
 }
@@ -902,7 +1061,7 @@ sub _wait_pids {
 #        warn "Found $kid";
         $self->_set_req_done($pid);
 
-        delete $self->{pids}->{$kid};
+        $self->_delete_pid($kid);
         return if $kid  == $pid;
     }
 }
@@ -913,6 +1072,14 @@ sub _add_pid {
     my $id_req = shift;
 
     $self->{pids}->{$pid} = $id_req;
+
+}
+
+sub _delete_pid {
+    my $self = shift;
+    my $pid = shift;
+
+    delete $self->{pids}->{$pid};
 }
 
 sub _cmd_remove {
@@ -1039,6 +1206,44 @@ sub _cmd_remove_base {
 }
 
 
+sub _cmd_hybernate {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid') or confess "Missing argument uid";
+    my $id_domain = $request->id_domain or confess "Missing request id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    $domain->hybernate($user);
+
+}
+
+sub _cmd_download {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_iso = $request->args('id_iso')
+        or confess "Missing argument id_iso";
+
+    my $vm;
+    $vm = Ravada::VM->open($request->args('id_vm')) if $request->defined_arg('id_vm');
+    $vm = $self->search_vm('KVM')   if !$vm;
+
+    my $delay = $request->defined_arg('delay');
+    sleep $delay if $delay;
+
+    my $iso = $vm->_search_iso($id_iso);
+    if ($iso->{device} && -e $iso->{device}) {
+        $request->status('done',"$iso->{device} already downloaded");
+        return;
+    }
+    my $device_cdrom = $vm->_iso_name($iso, $request);
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -1137,7 +1342,9 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
+      ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
+     ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot

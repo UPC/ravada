@@ -3,6 +3,12 @@ package Ravada::Domain;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
+
+=cut
+
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
@@ -28,6 +34,7 @@ requires 'remove';
 requires 'display';
 
 requires 'is_active';
+requires 'is_hibernated';
 requires 'is_paused';
 requires 'start';
 requires 'shutdown';
@@ -57,6 +64,9 @@ requires 'clean_swap_volumes';
 requires 'get_info';
 requires 'set_memory';
 requires 'set_max_mem';
+
+requires 'hybernate';
+
 ##########################################################
 
 has 'domain' => (
@@ -112,12 +122,17 @@ before 'start' => \&_start_preconditions;
 before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
 
+before 'hybernate' => \&_allow_manage;
+ after 'hybernate' => \&_post_pause;
+
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
 
-before 'shutdown' => \&_allow_manage_args;
+before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 after 'shutdown_now' => \&_post_shutdown_now;
+
+before 'force_shutdown' => \&_pre_shutdown_now;
 after 'force_shutdown' => \&_post_shutdown_now;
 
 before 'remove_base' => \&_can_remove_base;
@@ -200,6 +215,7 @@ sub _pre_prepare_base {
     $self->_check_has_clones();
 
     $self->is_base(0);
+    $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
         $self->{_was_active} = 1;
@@ -417,11 +433,13 @@ sub _prepare_base_db {
     }
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO file_base_images "
-        ." (id_domain , file_base_img )"
-        ." VALUES(?,?)"
+        ." (id_domain , file_base_img, target )"
+        ." VALUES(?,?,?)"
     );
     for my $file_img (@file_img) {
-        $sth->execute($self->id, $file_img );
+        my $target;
+        ($file_img, $target) = @$file_img if ref $file_img;
+        $sth->execute($self->id, $file_img, $target );
     }
     $sth->finish;
 
@@ -463,10 +481,24 @@ sub _insert_db {
 
 }
 
+=head2 pre_remove
+
+Code to run before removing the domain. It can be implemented in each domain.
+It is not expected to run by itself, the remove function calls it before proceeding.
+
+    $domain->pre_remove();  # This isn't likely to be necessary
+    $domain->remove();      # Automatically calls the domain pre_remove method
+
+=cut
+
+sub pre_remove { }
+
 sub _pre_remove_domain {
     my $self = shift;
     eval { $self->id };
+    $self->pre_remove();
     $self->_allow_remove(@_);
+    $self->pre_remove();
 }
 
 sub _after_remove_domain {
@@ -627,6 +659,7 @@ Returns a list of the filenames of this base-type domain
 
 sub list_files_base {
     my $self = shift;
+    my $with_target = shift;
 
     return if !$self->is_known();
 
@@ -635,17 +668,28 @@ sub list_files_base {
     return if $@ && $@ =~ /No DB info/i;
     die $@ if $@;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target "
         ." FROM file_base_images "
         ." WHERE id_domain=?");
     $sth->execute($self->id);
 
     my @files;
-    while ( my $img = $sth->fetchrow) {
-        push @files,($img);
+    while ( my ($img, $target) = $sth->fetchrow) {
+        push @files,($img)          if !$with_target;
+        push @files,[$img,$target]  if $with_target;
     }
     $sth->finish;
     return @files;
+}
+
+=head2 list_files_base_target
+
+Returns a list of the filenames and targets of this base-type domain
+
+=cut
+
+sub list_files_base_target {
+    return $_[0]->list_files_base("target");
 }
 
 =head2 json
@@ -710,7 +754,12 @@ sub _can_remove_base {
 sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
+    $self->_post_remove_base_domain();
 }
+
+sub _pre_shutdown_domain {}
+
+sub _post_remove_base_domain {}
 
 sub _remove_base_db {
     my $self = shift;
@@ -768,6 +817,19 @@ sub _post_pause {
     $self->_remove_iptables(user => $user);
 }
 
+sub _pre_shutdown {
+    my $self = shift;
+
+    $self->_allow_manage_args(@_);
+
+    $self->_pre_shutdown_domain();
+
+    if ($self->is_paused) {
+        my %args = @_;
+        $self->resume(user => $args{user});
+    }
+}
+
 sub _post_shutdown {
     my $self = shift;
 
@@ -792,6 +854,11 @@ sub _post_shutdown {
     }
 }
 
+sub _pre_shutdown_now {
+    my $self = shift;
+    return if !$self->is_active;
+}
+
 sub _post_shutdown_now {
     my $self = shift;
     my $user = shift;
@@ -799,6 +866,13 @@ sub _post_shutdown_now {
     $self->_post_shutdown(user => $user);
 }
 
+=head2 can_hybernate
+
+Returns wether a domain supports hybernation
+
+=cut
+
+sub can_hybernate { 0 };
 
 =head2 add_volume_swap
 
@@ -1181,5 +1255,27 @@ sub set_driver_id {
     $sth->finish;
 }
 
+sub remote_ip {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT remote_ip FROM iptables "
+        ." WHERE "
+        ."    id_domain=?"
+        ."    AND time_deleted IS NULL"
+        ." ORDER BY time_req DESC "
+    );
+    $sth->execute($self->id);
+    my ($remote_ip) = $sth->fetchrow();
+    $sth->finish;
+    return ($remote_ip or undef);
+
+}
+
+sub _dbh {
+    my $self = shift;
+    _init_connector() if !$CONNECTOR || !$$CONNECTOR;
+    return $$CONNECTOR->dbh;
+}
 
 1;

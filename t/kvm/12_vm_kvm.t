@@ -5,10 +5,15 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new();
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $BACKEND = 'KVM';
 my $CLASS= "Ravada::VM::$BACKEND";
+
+my %CONFIG = (
+        connector => $test->connector
+        ,config => 't/etc/ravada.conf'
+);
 
 use_ok('Ravada');
 use_ok($CLASS);
@@ -24,9 +29,9 @@ sub test_vm_connect {
 }
 
 sub test_search_vm {
-    my $ravada = Ravada->new();
+    my $ravada = Ravada->new(%CONFIG);
     my $vm = $ravada->search_vm($BACKEND);
-    ok($vm,"I can't find a $BACKEND virtual manager");
+    ok($vm,"Expecting valid $BACKEND virtual manager");
     ok(ref $vm eq $CLASS,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
         ." it should be $CLASS");
 }
@@ -34,7 +39,9 @@ sub test_search_vm {
 #######################################################
 
 my $RAVADA;
-eval { $RAVADA = Ravada->new() };
+eval {
+    $RAVADA = Ravada->new(%CONFIG);
+};
 
 my $err = ($@ or '');
 my $vm;

@@ -124,12 +124,12 @@ sub test_prepare_base {
     test_files_base($domain,1);
 
     my @disk = $domain->disk_device();
-    $domain->shutdown(user => $USER);
+    $domain->shutdown(user => $USER)    if $domain->is_active;
 
     touch_mtime(@disk);
 
     eval { $domain->prepare_base( $USER) };
-    ok(!$@,"Trying to prepare base again failed, it should have worked. ");
+    is($@,'');
     ok($domain->is_base);
 
     my $name_clone = new_domain_name();
@@ -340,6 +340,11 @@ for my $vm_name (reverse sort @VMS) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 

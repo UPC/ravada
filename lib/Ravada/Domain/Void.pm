@@ -45,7 +45,9 @@ sub BUILD {
 
     $self->add_volume(name => 'void-diska' , size => ( $args->{disk} or 1)
                         , path => $file_img
-                        , type => 'file');
+                        , type => 'file'
+                        , target => 'vda'
+    );
 
     $self->_set_default_info();
     $self->set_memory($args->{memory}) if $args->{memory};
@@ -84,6 +86,8 @@ sub remove {
 
     $self->remove_disks();
 }
+
+sub is_hibernated { return 0 }
 
 sub is_paused {
     my $self = shift;
@@ -222,7 +226,7 @@ sub add_volume {
 
     return if -e $args{path};
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap));
+    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap target));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -237,6 +241,7 @@ sub add_volume {
 
     my $data = { };
     $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    $args{target} = _new_target($data);
 
     $data->{device}->{$args{name}} = \%args;
     DumpFile($self->_config_file, $data);
@@ -245,6 +250,20 @@ sub add_volume {
     print $out Dumper($data->{device}->{$args{name}});
     close $out;
 
+}
+
+sub _new_target {
+    my $data = shift;
+    return 'vda'    if !$data or !keys %$data;
+    my %targets;
+    for my $dev ( keys %{$data->{device}}) {
+        $targets{$data->{device}->{$dev}->{target}}++
+    }
+    return 'vda'    if !keys %targets;
+
+    my @targets = sort keys %targets;
+    my ($prefix,$a) = $targets[-1] =~ /(.*)(.)/;
+    return $prefix.chr(ord($a)+1);
 }
 
 sub create_swap_disk {
@@ -280,7 +299,8 @@ sub disk_device {
 
 sub list_volumes {
     my $self = shift;
-    my $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data;
+    $data = LoadFile($self->_config_file) if -e $self->_config_file;
 
     return () if !exists $data->{device};
     my @vol;
@@ -290,6 +310,25 @@ sub list_volumes {
                 || $data->{device}->{$dev}->{type} ne 'base';
     }
     return @vol;
+}
+
+sub list_volumes_target {
+    my $self = shift;
+    my $data;
+    $data = LoadFile($self->_config_file) if -e $self->_config_file;
+
+    return () if !exists $data->{device};
+    my @vol;
+    for my $dev (keys %{$data->{device}}) {
+        my $vol;
+        $vol = ($data->{device}->{$dev}->{path})
+            if ! exists $data->{device}->{$dev}->{type}
+                || $data->{device}->{$dev}->{type} ne 'base';
+        next if !$vol;
+        push @vol,[$vol, $data->{device}->{$dev}->{target}];
+    }
+    return @vol;
+
 }
 
 sub screenshot {}
@@ -387,4 +426,5 @@ sub clean_swap_volumes {
     }
 }
 
+sub hybernate { confess "Not supported"; }
 1;
