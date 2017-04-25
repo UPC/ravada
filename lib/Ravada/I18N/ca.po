@@ -89,6 +89,48 @@ msgstr "Preferències"
 msgid "New Machine"
 msgstr "Nova màquina"
 
+msgid "I want to change my password"
+msgstr "Vull canviar la meva contrasenya"
+
+msgid "I want to change my language"
+msgstr "Vull canviar el meu llenguatge"
+
+msgid "Language:"
+msgstr "Llenguatge:"
+
+msgid "English"
+msgstr "Anglès"
+
+msgid "Spanish"
+msgstr "Espanyol"
+
+msgid "Catalan"
+msgstr "Català"
+
+msgid "New Password:"
+msgstr "Nova Contrasenya:"
+
+msgid "Confirm Password:"
+msgstr "Confirma Contrasenya:"
+
+msgid "Submit"
+msgstr "Envia"
+
+msgid "Your language has been changed successfully"
+msgstr "El seu idioma ha sigut canviat correctament"
+
+msgid "Your password has been changed successfully"
+msgstr "La seva contrasenya ha sigut canviada correctament"
+
+msgid "Password too small"
+msgstr "Contrasenya massa petita"
+
+msgid "Password fields aren't equal"
+msgstr "Els camps de la contrasenya no son iguals"
+
+msgid "Some of the password's fields are empty"
+msgstr "Algún dels camps de la contrasenya és buida"
+
 msgid "Public"
 msgstr "Públic"
 

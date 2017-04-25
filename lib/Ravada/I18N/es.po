@@ -89,6 +89,48 @@ msgstr "Preferencias"
 msgid "New Machine"
 msgstr "Nueva máquina"
 
+msgid "I want to change my password"
+msgstr "Quiero cambiar mi contraseña"
+
+msgid "I want to change my language"
+msgstr "Quiero cambiar mi idioma"
+
+msgid "Language:"
+msgstr "Idioma:"
+
+msgid "English"
+msgstr "Inglés"
+
+msgid "Spanish"
+msgstr "Español"
+
+msgid "Catalan"
+msgstr "Catalán"
+
+msgid "New Password:"
+msgstr "Nueva Contraseña:"
+
+msgid "Confirm Password:"
+msgstr "Confirmar Contraseña:"
+
+msgid "Submit"
+msgstr "Enviar"
+
+msgid "Your language has been changed successfully"
+msgstr "Su idioma ha sido cambiado con éxito"
+
+msgid "Your password has been changed successfully"
+msgstr "Su contraseña ha sido cambiada con éxito"
+
+msgid "Password too small"
+msgstr "Contraseña demasiado pequeña"
+
+msgid "Password fields aren't equal"
+msgstr "Los campos de la contraseña no son iguales"
+
+msgid "Some of the password's fields are empty"
+msgstr "Algunos de los campos de la contraseña están vacíos"
+
 msgid "Public"
 msgstr "Público"
 
@@ -138,7 +180,7 @@ msgid "Restore"
 msgstr "Restaura"
 
 msgid "Hybernate"
-msgstr Hiberna""
+msgstr "Hiberna"
 
 msgid "Shutdown"
 msgstr "Apagar"
@@ -169,3 +211,4 @@ msgstr "No se puede borrar la base, la máquina tiene clones"
 
 msgid "Show/Hide clones"
 msgstr "Ver/Esconde clones"
+>>>>>>> master

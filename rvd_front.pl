@@ -10,6 +10,8 @@ use Data::Dumper;
 use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+#use Mojolicious::Plugin::I18N;
+
 use Mojo::Home;
 #####
 #my $self->plugin('I18N');
@@ -493,6 +495,52 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+###################################################
+
+## user_settings
+
+any '/user_settings' => sub {
+    my $c = shift;
+    user_settings($c);
+};
+
+sub user_settings {
+    my $c = shift;
+    my $changed_lang;
+    my $changed_pass;
+    if ($c->req->method('POST')) {
+        $USER->language($c->param('tongue'));
+        $changed_lang = $c->param('tongue');
+        _logged_in($c);
+    }
+    warn $c->param('button_click');      
+    $c->param('tongue' => $USER->language);
+    my @errors;
+    if ($c->param('button_click')) {
+        if (($c->param('password') eq "") || ($c->param('conf_password') eq "")) {
+            push @errors,("Some of the password's fields are empty");
+        } 
+        else {
+            if ($c->param('password') eq $c->param('conf_password')) {
+                eval { 
+                    $USER->change_password($c->param('password')); 
+                    _logged_in($c);
+                };
+                if ($@ =~ /Password too small/) {
+                    push @errors,("Password too small")
+                }
+                else {
+                    $changed_pass = 1;
+                };
+          }
+          else {
+              push @errors,("Password fields aren't equal")
+          }
+        }
+    }
+    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
+      ,errors =>\@errors);
+};
 
 get '/img/screenshots/:file' => sub {
     my $c = shift;
@@ -552,13 +600,17 @@ sub _logged_in {
 
     _init_error($c);
     $c->stash(_logged_in => undef , _user => undef, _anonymous => 1);
-
     my $login = $c->session('login');
-    $USER = Ravada::Auth::SQL->new(name => $login)  if $login;
+    if ($login) {
+        $USER = Ravada::Auth::SQL->new(name => $login);
+        #Mojolicious::Plugin::I18N::
+        $c->languages($USER->language);
 
-    $c->stash(_logged_in => $login );
-    $c->stash(_user => $USER);
-    $c->stash(_anonymous => !$USER);
+        $c->stash(_logged_in => $login );
+        $c->stash(_user => $USER);
+        $c->stash(_anonymous => !$USER);
+
+    }
     $c->stash(url => undef);
 
     return $USER;
@@ -1100,7 +1152,7 @@ sub settings_machine {
         }
     }
     for my $req (@reqs) {
-        $RAVADA->wait_request($req, 60) 
+        $RAVADA->wait_request($req, 60)
     }
     return $c->render(template => 'main/settings_machine'
         , action => $c->req->url->to_abs->path);

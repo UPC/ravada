@@ -226,6 +226,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+
+    $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
 }
 
 
