@@ -86,7 +86,7 @@ sub _connect {
         $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
     } else {
         $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
-                              ,readonly => $self->mode
+                              ,readonly => $self->readonly
                           );
     }
     if ( ! $vm->list_storage_pools ) {
