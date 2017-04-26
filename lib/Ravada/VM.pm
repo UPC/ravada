@@ -106,8 +106,13 @@ sub open {
     $class .= "::$type";
     bless ($self,$class);
 
-    return $self->new();
+    return $self->new(host => $row->{hostname});
 
+}
+
+sub BUILD {
+    my $self = shift;
+    $self->vm;
 }
 
 sub _check_readonly {
