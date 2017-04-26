@@ -213,6 +213,12 @@ sub _remove_old_domains_kvm {
     return if !$vm;
 
     my $base_name = base_domain_name();
+
+    my @domains;
+    eval { @domains = $vm->vm->list_all_domains() };
+    return if $@ && $@ =~ /connect to host/;
+    is($@,'') or return;
+
     for my $domain ( $vm->vm->list_all_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         eval { 
@@ -276,7 +282,7 @@ sub _remove_old_disks_kvm_remote {
 
     my $vm;
     if ($ip) {
-        $vm = Ravada::VM::KVM->new(host => $ip);
+        eval { $vm = Ravada::VM::KVM->new(host => $ip) };
     } else {
         my $rvd_back = rvd_back();
         $vm = $rvd_back->search_vm('KVM');
@@ -288,6 +294,8 @@ sub _remove_old_disks_kvm_remote {
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
     eval { $vm->storage_pool->refresh() };
+    return if $@ && $@ =~ /Cannot recv data/;
+
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
     for my $volume ( $vm->storage_pool->list_all_volumes()) {
