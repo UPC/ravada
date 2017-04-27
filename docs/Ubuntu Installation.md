@@ -12,3 +12,9 @@ This document aims to demonstrate how to install Ubuntu operating system on user
 6. In this stage, you will create partitions. first try to choose Free space and then change ??? to "/".
 7. also it is strongly recommended to mark use as "swap area" to on.
 
+
+
+
+
+Comments: the ??? is a word in catalan that I am not sure about and I will ask Frankie and put it here.
+also, I will put the images as well to be more clear.
