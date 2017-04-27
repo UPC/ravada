@@ -120,6 +120,19 @@ sub _update_isos {
                 ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
                 ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
         }
+        ,serena64 => {
+            name => 'Mint 18.1 Mate 64 bits'
+    ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
+           ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+     ,xml_volume => 'xenial64-volume.xml'
+            ,url => 'http://mirrors.evowise.com/linuxmint/stable/18.1/'
+        ,file_re => 'linuxmint-18.1-mate-64bit.iso'
+        ,md5_url => ''
+            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+
+        }
+
     );
 
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
