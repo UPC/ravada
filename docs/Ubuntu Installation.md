@@ -16,3 +16,5 @@ Select "Free space" and then set the _mount point_ to "/".
 
 ### vdb
 Select "Free space" and then assign it to _swap area_
+
+7. the last step is choosing your language and region. after doing so and restarting your computer you can start using Ubuntu.
