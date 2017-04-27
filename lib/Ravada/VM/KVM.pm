@@ -685,6 +685,7 @@ sub _iso_name {
     confess "Missing MD5 field on table iso_images FOR $iso->{url}"
         if !$iso->{md5};
 
+    my $downloaded = 0;
     if (! -e $device || ! -s $device) {
         $req->status("downloading $iso_name file"
                 ,"Downloading ISO file for $iso_name "
@@ -699,6 +700,9 @@ sub _iso_name {
             if (! _check_md5($device, $iso->{md5}));
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
+        $downloaded = 1;
+    }
+    if ($downloaded || !$iso->{device} ) {
         my $sth = $$CONNECTOR->dbh->prepare(
                 "UPDATE iso_images SET device=? WHERE id=?"
         );
