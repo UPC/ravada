@@ -7,6 +7,7 @@
 * [Apache](apache.html "")
 * [Convert from VirtualBox](convert_from_virtualbox.html "to raw or qcow2")
 * [Adding custom messages](custom.html "")
+* [How to create a Virtual Machine](How_Create_Virtual_Machine.html "")
 * [How to dump a hard drive to Ravada](dump_hard_drive.html "")
 * [How to install a local LDAP](ldap_local.html "")
 * [How to add a new ISO image](new_iso_image.html "")
