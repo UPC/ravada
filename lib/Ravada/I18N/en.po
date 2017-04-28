@@ -1,4 +1,5 @@
 # Translators:
+# Joel Alarcón <joelalju100@gmail.com>, 2017
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 msgid ""
 msgstr ""

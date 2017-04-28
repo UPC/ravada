@@ -94,13 +94,19 @@ sub create_md5sums {
 
     unlink "$DEBIAN/md5sums";
 
+    open my $md5sum,'>>',"$DEBIAN/md5sums" or die $!;
     open my $find, ,'-|', 'find . -type f -printf \'%P\n\'' or die $!;
     while (<$find>) {
         chomp;
         next if /^debian/i;
-        print `md5sum $_ >> $DEBIAN/md5sums`
+        my @cmd = ('md5sum',$_);
+        my ($in,$out,$err);
+        run3(\@cmd, \$in, \$out, \$err);
+        print $md5sum $out;
     }
     close $find;
+    close $md5sum;
+
     chdir "..";
     chmod 0644,"$DIR_DST/$DEBIAN/md5sums" or die "$! $DIR_DST/$DEBIAN/md5sums";
 }

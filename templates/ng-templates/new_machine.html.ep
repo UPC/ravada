@@ -18,7 +18,7 @@
                 <div class="col-lg-11">
                     <input class="form-control" ng-model="name" type="text"
                         name="name" required=""
-                        ng-pattern ="/^[a-zA-Z0-9]+$/"
+                        ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
                         ng-change="validate_new_name()"
                     >
                 </div>
@@ -44,7 +44,7 @@
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
                         required=""
-                ></select>
+                ></select>{{id_iso.description}}
                 <div ng-show="id_iso.name && !id_iso.device">
                     <font color="#500000">This ISO image has not
                     been already
@@ -123,6 +123,10 @@
             <div ng-show="name_duplicated" class="alert alert-warning fade in">
                     <strong>Error</strong> A machine with that name already exists.
             </div>
+            <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
+                    <strong>Error</strong> The machine name must contain only alphabetic, numbers, dashes and points.
+            </div>
+
 
           </div>
           <div class="form-group row">
