@@ -5,7 +5,7 @@
 * [Ubuntu Installation](Ubuntu_Installation.html "This document aims to demonstrate how to install Ubuntu operating system on user computer.")
 * [How to add a Qemu-KVM storage pool](add_kvm_storage_pool.html "")
 * [Apache](apache.html "")
-* [Convert from VirtualBox(convert_from_virtualbox.html "to raw or qcow2")
+* [Convert from VirtualBox](convert_from_virtualbox.html "to raw or qcow2")
 * [Adding custom messages](custom.html "")
 * [How to dump a hard drive to Ravada](dump_hard_drive.html "")
 * [How to install a local LDAP](ldap_local.html "")
