@@ -16,4 +16,3 @@
 * [Troubleshooting frequent problems](troubleshooting.html "")
 * [Update your Ravada](update.html "steps for a clean update")
 * [Windows SPICE client](windows_client.html "Fix Windows registry")
-
