@@ -1,10 +1,10 @@
-#How to add a Qemu-KVM storage pool
+# How to add a Qemu-KVM storage pool
 
 If you run out of disk space you may add a new disk. KVM mush then
 be informed about this new space available by creating a new
 storage pool.
 
-##Add the drive to the system
+## Add the drive to the system
 
 Add the drive to the host. Format it.
 
@@ -23,7 +23,7 @@ Format it with large files tunning:
 
     $ sudo mkfs.ext4 -m 0.001 -T largefiles /dev/sdb1
 
-##Mount the new partition
+## Mount the new partition
 
 Add this new partition to the filesystem table:
 
@@ -36,7 +36,7 @@ issuing:
 
     sudo mount -a
 
-##Add the drive to the Virtual Manager
+## Add the drive to the Virtual Manager
 
     $ sudo virsh pool-define-as pool2 dir - - - - /var/lib/libvirt/images.2
     $ sudo virsh pool-autostart pool2
