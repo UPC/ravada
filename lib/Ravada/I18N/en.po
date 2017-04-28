@@ -150,7 +150,7 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-msgid "ShutDown"
+msgid "Shutdown"
 msgstr ""
 
 msgid "Screenshot"
@@ -180,9 +180,6 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-msgid "Actions"
-msgstr ""
-
 msgid "Mark as Read"
 msgstr ""
 
@@ -195,31 +192,16 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-msgid "machines"
-msgstr ""
-
-msgid "users"
-msgstr ""
-
-msgid "messages"
-msgstr ""
-
 msgid "Admin tools"
 msgstr ""
 
 msgid "Remove base"
 msgstr ""
 
-msgid "public"
-msgstr ""
-
 msgid "Restore"
 msgstr ""
 
 msgid "Hybernate"
-msgstr ""
-
-msgid "Shutdown"
 msgstr ""
 
 msgid "action"
