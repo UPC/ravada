@@ -11,6 +11,8 @@ mkdir -p /tmp/mds/docs /tmp/mds/devel-docs
 cp docs/* /tmp/mds/docs
 cp devel-docs/* /tmp/mds/devel-docs
 git checkout gh-pages && echo "Checkout gh-pages..."|| echo "Checkout gh-pages failed!"
+mkdir -p templer/input/docs templer/input/devel-docs
+
 for i in `ls /tmp/mds/docs/*.md`;do
     echo -e "title: $(basename $i .md)\n----\n$(cat $i)" > $i
     eval cp $i ~$PATH1/templer/input/docs/
