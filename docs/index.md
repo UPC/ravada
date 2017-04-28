@@ -16,4 +16,4 @@
 * [Swap partition](swap_partition.html "will save a lot of disk space")
 * [Troubleshooting frequent problems](troubleshooting.html "")
 * [Update your Ravada](update.html "steps for a clean update")
-* [Windows SPICE client](windows_client.html "Fix Windows registry")
+* [Windows SPICE client](windows_clients.html "Fix Windows registry")
