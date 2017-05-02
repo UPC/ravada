@@ -19,10 +19,10 @@ Add an entry to the SQL table:
 
 ## XML file
 
-A XML template file is required if you want to create machines from this ISO. In the directory etc/xml there are examples. You can make new ones creating a new machine from another tool like virt-manager. Once it is down dump the xml with
+A XML template file is required if you want to create machines from this ISO. In the directory /var/lib/ravada/xml there are examples. You can make new ones creating a new machine from another tool like virt-manager. Once it is down dump the xml with
 
     # virsh dumpxml machine name.xml
 
 ## XML Volume file
 
-Create a new xml volume file based in another one from etc/xml.
+Create a new xml volume file based in another one from /var/lib/ravada/xml.
