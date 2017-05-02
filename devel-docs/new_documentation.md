@@ -17,4 +17,4 @@ In order to run templer you need to follow these steps:
 - change to gh-pages branch
 - cd templer
 - ./templerfy.sh
-- If all is correct, upload changes to repository.
+- If the script works properly, then you have to commit the changes to repository.
