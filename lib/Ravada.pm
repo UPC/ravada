@@ -141,7 +141,7 @@ sub _update_isos {
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
         next if $id;
-        warn("INFO: updating $table : $row->{$field}\n");
+        warn("INFO: updating $table : $row->{$field}\n") if $0 !~ /\.t$/;
 
         my $sql =
             "INSERT INTO iso_images "
