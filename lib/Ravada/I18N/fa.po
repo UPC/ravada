@@ -175,3 +175,147 @@ msgstr "دو رمز عبور با هم همخوانی ندارند"
 
 msgid "Some of the password's fields are empty"
 msgstr "یک یا هردوی ردیف های رمز عبور خالی هستند"
+
+msgid "Public"
+msgstr "عمومی"
+
+msgid "Status"
+msgstr "وضعیت"
+
+msgid "Actions"
+msgstr "عملیات"
+
+msgid "Machines"
+msgstr "ماشین ها"
+
+msgid "Down"
+msgstr "عدم کارکرد"
+
+msgid "Running"
+msgstr "در حال کار"
+
+msgid "ShutDown"
+msgstr "خاموش"
+
+msgid "Screenshot"
+msgstr "تهیه عکس از صفحه نمایش"
+
+msgid "Paused"
+msgstr "متوقف"
+
+msgid "Machine locked by"
+msgstr "ماشین قفل شده است"
+
+msgid "process"
+msgstr "پروسه"
+
+msgid "Copy"
+msgstr "کپی"
+
+msgid "Error!"
+msgstr "خطا"
+
+msgid "Backend no available!"
+msgstr "بک اند موجود نیست"
+
+msgid "Subject"
+msgstr "موضوع"
+
+msgid "Date"
+msgstr "تاریخ"
+
+msgid "Actions"
+msgstr "عملیات ها"
+
+msgid "Mark as Read"
+msgstr "نمایش به عنوان خوانده شده"
+
+msgid "Mark as UnRead"
+msgstr "نمایش به عنوان خوانده نشده"
+
+msgid "No message to show!"
+msgstr "پیغام جدیدی برای نمایش وجود ندارد"
+
+msgid "Admin"
+msgstr "ادمین"
+
+msgid "machines"
+msgstr "ماشین ها"
+
+msgid "users"
+msgstr "کاربرها"
+
+msgid "messages"
+msgstr "پیغام ها"
+
+msgid "Admin tools"
+msgstr "ابزار ادمین"
+
+msgid "Remove base"
+msgstr "از بین بردن پایگاه"
+
+msgid "public"
+msgstr "عمومی"
+
+msgid "Restore"
+msgstr "بازیابی"
+
+msgid "Hybernate"
+msgstr "هایپرنت"
+
+msgid "Shutdown"
+msgstr "خاموش"
+
+msgid "action"
+msgstr "عملیات"
+
+msgid "New Base"
+msgstr "پایگاه جدید"
+
+msgid "will remove all the contents of the machine"
+msgstr "تمامی محتویات ماشین پاک خواهد شد"
+
+msgid "Are you sure?"
+msgstr "آیا مطمئن هستید"
+
+msgid "Yes"
+msgstr "بله"
+
+msgid "No"
+msgstr "خیر"
+
+msgid "Make public"
+msgstr "نمایش به طور عمومی"
+
+msgid "Machine settings"
+msgstr "تنظیمات ماشین"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "عدم توانایی پاک کردن ماشین به دلیل داشتن همسان"
+
+msgid "Show/Hide clones"
+msgstr "نمایش یا پنهان کردن همسان ها"
+
+msgid "For spice redirection you'll need to install"
+msgstr "برای هدایت شدن به صفحه اسپایس نیاز به نصب کردن برنامه دارید"
+
+msgid "in your computer."
+msgstr "در کامپیوتر شما"
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+
+msgid "You'll need to install"
+msgstr "نیاز به نضب کردن برنامه دارید"
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr "VirtViewer v5.0-25به عنوان مثال "
+
+msgid "Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app."
+msgstr توجه کنید در سیستم عامل ویندوز هدایت به صفحه اسپایس اتوماتیک انجام نمی شود. لازم است پروتکل با اپلیکیشن هماهنگ باشد"
+
+msgid "To make this possible, download"
+msgstr "به این منظور دانلود یا کپی کنید"
+
+msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
+msgstr "خطوط اسکی زیر را در یک فایل .reg ذخیره کنید و سپس فایل را اجرا کنید"
