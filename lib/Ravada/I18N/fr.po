@@ -139,40 +139,40 @@ msgid "Show/Hide clones"
 msgstr "Afficher/Masquer des clones"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "je voudrais changer mon mot de passe"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "je voudrais modifier ma langue"
 
 msgid "Language:"
-msgstr ""
+msgstr "langue"
 
 msgid "English"
-msgstr ""
+msgstr "Anglais"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Espagnol"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Catalan"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Mot de passe Nouveau"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "confirmer mot de passe"
 
 msgid "Submit"
-msgstr ""
+msgstr "soumettre"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "votre langue a été modifiée avec succès"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "votre mot de passe a été modifiée avec succès"
 
 msgid "Password too small"
-msgstr ""
+msgstr "Mot de Passe petite"
 
 msgid "Password fields aren't equal"
 msgstr ""
@@ -187,10 +187,10 @@ msgid "Status"
 msgstr ""
 
 msgid "Actions"
-msgstr ""
+msgstr "Actiones"
 
 msgid "Machines"
-msgstr ""
+msgstr "Machines"
 
 msgid "Down"
 msgstr ""
@@ -223,13 +223,13 @@ msgid "Backend no available!"
 msgstr ""
 
 msgid "Subject"
-msgstr ""
+msgstr "Sujet"
 
 msgid "Date"
-msgstr ""
+msgstr "Date"
 
 msgid "Actions"
-msgstr ""
+msgstr "Actiones"
 
 msgid "Mark as Read"
 msgstr ""
@@ -241,16 +241,16 @@ msgid "No message to show!"
 msgstr ""
 
 msgid "Admin"
-msgstr ""
+msgstr "Administrateur"
 
 msgid "machines"
-msgstr ""
+msgstr "Machines"
 
 msgid "users"
 msgstr ""
 
 msgid "messages"
-msgstr ""
+msgstr "Messages"
 
 msgid "Admin tools"
 msgstr ""
@@ -280,13 +280,13 @@ msgid "will remove all the contents of the machine"
 msgstr ""
 
 msgid "Are you sure?"
-msgstr ""
+msgstr " "
 
 msgid "Yes"
-msgstr ""
+msgstr "Oui"
 
 msgid "No"
-msgstr ""
+msgstr "Non"
 
 msgid "Make public"
 msgstr ""
