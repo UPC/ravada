@@ -48,3 +48,5 @@ Then edit your Windows xml file and point the second CD drive to that ISO. For t
 You should also ensure that the system disk cache is set to 'directsync':
 
     <driver name='qemu' type='qcow2' cache='directsync' io='native' />
+
+If you're using the NEC xhci USB controller (the default one in our environment), you'll need to obtain a suitable driver for the µPD720200 chipset. Plugable.com has it here http://plugable.com/drivers/renesas (2nd entry).
