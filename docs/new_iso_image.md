@@ -14,8 +14,8 @@ Get the md5 for the ISO file, you will need it for the next step:
 
 Add an entry to the SQL table:
 
-    mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5)
-            VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbblamd5sumjustgenerated');
+    mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5, device)
+            VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbblamd5sumjustgenerated','/var/lib/libvirt/images/file.iso');
 
 ## XML file
 
