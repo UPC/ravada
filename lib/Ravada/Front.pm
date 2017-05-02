@@ -284,6 +284,9 @@ Returns a reference to a list of the ISO images known by the system
 
 sub list_iso_images {
     my $self = shift;
+    my $vm_name = shift;
+
+    my $vm;
 
     my @iso;
     my $sth = $CONNECTOR->dbh->prepare(
@@ -292,6 +295,25 @@ sub list_iso_images {
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
+
+        next if $row->{device};
+
+        my ($file) = $row->{url} =~ m{.*/(.*)};
+        my $file_re = $row->{file_re};
+        next if !$file_re && !$file || !$vm_name;
+
+        $vm = $self->search_vm($vm_name)    if !$vm;
+
+        if ($file) {
+            warn "searching for $file";
+            my $iso_file = $vm->search_volume($file);
+            $row->{device} = $iso_file  if $iso_file;
+        }
+        if ($file_re && !$row->{device}) {
+            warn "searching for $file_re";
+            my $iso_file = $vm->search_volume_re($file_re);
+            $row->{device} = $iso_file  if $iso_file;
+        }
     }
     $sth->finish;
     return \@iso;

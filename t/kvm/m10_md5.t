@@ -43,6 +43,50 @@ sub test_isos_vm {
     $sth->finish;
 }
 
+sub _insert_iso_there {
+    my $vm_name = shift;
+    my $vm=rvd_back->search_vm($vm_name);
+
+    open my $out,'>',$vm->dir_img."/mock.iso" or die $!;
+    print $out "nothing\n";
+    close $out;
+
+    my $sth = $test->dbh->prepare(
+        "INSERT INTO iso_images "
+        ." (name,arch,url) "
+        ." VALUES(?,?,?)"
+    );
+    my $name = 'mock';
+    $sth->execute($name,'i386','http://localhost/mock.iso');
+    $sth->finish;
+
+    $sth = $test->dbh->prepare("SELECT id FROM iso_images "
+        ." WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
+
+}
+
+sub test_isos_already_there {
+    my $vm_name = shift;
+    my $vm=rvd_back->search_vm($vm_name);
+
+    my $id = _insert_iso_there($vm_name);
+
+    my $list_iso = rvd_front->list_iso_images($vm_name);
+    my $iso_mock;
+    for (@$list_iso) {
+        $iso_mock = $_ if $_->{name} eq 'mock';
+    }
+    ok($iso_mock,"Expecting an ISO for the 'mock' template");
+    ok($iso_mock->{device},"Expecting device in ISO ".Dumper($iso_mock));
+
+    my $iso = $vm->_search_iso($id);
+    ok($iso->{device},"Expecting device in ISO ".Dumper($iso));
+}
+
 sub test_isos_front {
     my $vm_name = shift;
     my  $isos = rvd_front->list_iso_images($vm_name);
@@ -115,6 +159,7 @@ SKIP: {
 
     test_isos_vm($vm);
     test_isos_front($vm_name);
+    test_isos_already_there($vm_name);
 
 }
 
