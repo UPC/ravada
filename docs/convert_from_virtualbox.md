@@ -1,5 +1,3 @@
-# How to convert a VirtualBOX VDI to Ravada
-
 In this example we have VirtualBox machine called *EXAMPLE*.
 
 ## Create an empty Virtual Machine

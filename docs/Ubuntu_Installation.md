@@ -1,4 +1,3 @@
-# Ubuntu Installation
 This document aims to demonstrate how to install Ubuntu operating system on user computer.
 ## Steps
 1. The user needs at least 4.5 GB of free space on their computer.
