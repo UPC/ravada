@@ -11,3 +11,4 @@ This index holds information that you will find useful if you want to work on th
 * [Run Ravada in development mode](run.html "")
 * [Testing environment](test.html "")
 * [Translations](translations.html "")
+* [Perl functions definition](../../navigating/ "perldoc generated")
