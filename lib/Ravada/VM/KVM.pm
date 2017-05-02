@@ -203,6 +203,33 @@ sub search_volume {
     return @volume;
 }
 
+sub search_volume_path {
+    my $self = shift;
+    my @volume = $self->search_volume(@_);
+    my @vol2 = map { $_->get_path() if ref($_) } @volume;
+
+    return $vol2[0] if !wantarray;
+    return @vol2;
+}
+
+sub search_volume_path_re {
+    my $self = shift;
+    my $pattern = shift;
+
+    my @volume;
+    for my $pool ($self->vm->list_storage_pools) {
+
+        for my $vol ( $pool->list_all_volumes()) {
+            my ($file) = $vol->get_path =~ m{.*/($pattern)};
+            next if !$file;
+
+            return $vol->get_path if !wantarray;
+            push @volume,($vol->get_path);
+        }
+    }
+    return @volume;
+}
+
 =head2 dir_img
 
 Returns the directory where disk images are stored in this Virtual Manager
