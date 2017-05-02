@@ -1,7 +1,7 @@
 # Development release
 
 If you are not sure, you probably want to install the stable release.
-Follow this [guide](https://github.com/UPC/ravada/blob/master/docs/INSTALL.md).
+Follow this [guide](https://upc.github.io/ravada/documentation/docs/INSTALL.html).
 
 You can get the development release cloning the sources. Don't do this if you install
 a packaged release.
@@ -48,5 +48,5 @@ When developping Ravada, your username must be able to read the configuration fi
     $ sudo chmod o-rx /etc/ravada.conf
     $ sudo chown your_username /etc/ravada.conf
 
-Read [devel-docs/](https://github.com/UPC/ravada/blob/master/devel-docs/) to learn how to start it.
+Read [devel-docs](https://upc.github.io/ravada/documentation/devel-docs/) to learn how to start it.
 

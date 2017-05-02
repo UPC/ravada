@@ -39,7 +39,7 @@ running:
 
 ## Development Release
 
-Read [docs/INSTALL\_devel.md](https://github.com/UPC/ravada/blob/master/docs/INSTALL_devel.md)  if you want to develop Ravada or install a bleeding
+Read [INSTALL\_devel](https://upc.github.io/ravada/documentation/docs/INSTALL_devel.html)  if you want to develop Ravada or install a bleeding
 edge, non-packaged, release.
 
 # Mysql Database
@@ -106,4 +106,4 @@ linux and it can also be downloaded for windows.
 
 # Next
 
-Read [docs/production.md](https://github.com/UPC/ravada/blob/master/docs/production.md) 
+Read [production](https://upc.github.io/ravada/documentation/docs/production.html) 
