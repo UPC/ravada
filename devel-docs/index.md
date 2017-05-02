@@ -1,9 +1,9 @@
-# Developers documentation index
+# Useful information for developers
 
 This index holds information that you will find useful if you want to work on the Ravada core development.
 
 * [Commit Rules](commit-rules.html "")
-* [Database Changes](database_chenges.html "")
+* [Database Changes](database_changes.html "")
 * [Editor configuration rules](editor-rules.html "Vim, Atom, ...")
 * [ISO Web Server](local_iso_server.html "")
 * [New documentation page](new_documentation.html "")
