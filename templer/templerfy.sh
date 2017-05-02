@@ -15,13 +15,13 @@ mkdir -p templer/input/docs templer/input/devel-docs
 rm documentation/docs/* documentation/devel-docs/*
 for i in `ls /tmp/mds/docs/*.md`;do
     NAME=(basename $i .md)
-    echo -e "title: ${NAME//_/ }\n----\n$(cat $i)"
+    echo -e "title: ${NAME//_/ }\n----\n$(cat $i)" > $i
     eval cp $i ~$PATH1/templer/input/docs/
 done
 
 for i in `ls /tmp/mds/devel-docs/*.md`;do
     NAME=(basename $i .md)
-    echo -e "title: ${NAME//_/ }\n----\n$(cat $i)"
+    echo -e "title: ${NAME//_/ }\n----\n$(cat $i)" > $i
     eval cp $i ~$PATH1/templer/input/devel-docs/
 done
 
