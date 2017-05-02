@@ -17,15 +17,45 @@
                      Settings
                  </h2>
              </div> <!-- del panel heading-->
+             <div class="tabs">
+               <button class="tablinks" onclick="openTab(event, 'Remove Machine')">Remove Machine</button>
+               <button class="tablinks" onclick="openTab(event, 'Rename')">Rename</button>
+               <button class="tablinks" onclick="openTab(event, 'Copy')">Copy</button>
+               <button class="tablinks" onclick="openTab(event, 'VM Drivers')">VM Drivers</button>
+             </div>
 % if ( $USER->is_admin ) {
+             <div id="Remove Machine" class="tabcontent">
     %= include 'main/vm_remove'
+             </div>
+             <div id="Rename" class="tabcontent">
     %= include 'main/vm_rename'
+             </div>
+             <div id="Copy" class="tabcontent">
     %= include 'main/vm_copy'
-% }
+             </div>
+% }          
+             <div id="VM Drivers" class="tabcontent">
     %= include 'main/vm_options'
+             </div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->
 </div><!-- del ng-controller -->
+
+<script>
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+</script>
 
 </div> <!-- del page-wrapper -->
 </div> <!-- del wrapper -->
