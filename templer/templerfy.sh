@@ -30,7 +30,13 @@ eval cd ~$PATH1/templer
 echo "Generation static pages..."
 templer
 echo "Deleting input directory..."
-echo "Remember upload to git, with git push"
+echo "***********************************************"
+echo "***********************************************"
+echo "*                                             *"
+echo "*  Remember to upload to git, with git push   *"
+echo "*                                             *"
+echo "***********************************************"
+echo "***********************************************"
 rm -rf input/docs/* input/devel-docs/* 
 
 #Delete al temp files
