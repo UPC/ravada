@@ -26,3 +26,25 @@ A XML template file is required if you want to create machines from this ISO. In
 ## XML Volume file
 
 Create a new xml volume file based in another one from /var/lib/ravada/xml.
+
+## Windows specifics
+
+For Windows you will need the virtio ISO that can be downloaded from https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso
+
+Save it to /var/lib/libvirt/images and change the owner as you did for the Windows ISO.
+
+    # chown 07500 /var/lib/libvirt/images/virtio-win-0.1.126.iso
+
+Then edit your Windows xml file and point the second CD drive to that ISO. For the current stable virtio version, it looks like this:
+
+    <disk type='file' device='cdrom'>
+        <driver name='qemu' type='raw'/>
+        <source file='/var/lib/libvirt/images/virtio-win-0.1.126.iso'/>
+        <target dev='hdc' bus='ide'/>
+        <readonly/>
+        <address type='drive' controller='0' bus='1' target='0' unit='0'/>
+    </disk>
+
+You should also ensure that the system disk cache is set to 'directsync':
+
+    <driver name='qemu' type='qcow2' cache='directsync' io='native' />
