@@ -5,20 +5,25 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 12:12+0300\n"
+"PO-Revision-Date: 2017-05-02 16:21+0200\n"
 "Last-Translator: Kimia Mirehbar    kimia@etsetb.upc.edu\n"
 "Language-Team: \n"
 "Language: ca\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
+"X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
 msgstr "واسطه راوادا"
 
+#, fuzzy
 msgid "Restore"
-msgstr " بازیابی"
+msgstr ""
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+" بازیابی\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"بازیابی"
 
 msgid "Machine Name"
 msgstr "نام ماشین"
@@ -95,8 +100,13 @@ msgstr "ماشین جدید"
 msgid "Paused"
 msgstr "متوقف"
 
+#, fuzzy
 msgid "Machine locked by"
-msgstr "طبق درخواست ماشین قفل شده است"
+msgstr ""
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"طبق درخواست ماشین قفل شده است\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"ماشین قفل شده است"
 
 msgid "process"
 msgstr "پروسه"
@@ -116,23 +126,40 @@ msgstr "موضوع"
 msgid "Date"
 msgstr "تاریخ"
 
+#, fuzzy
 msgid "Actions"
-msgstr "عملیات"
+msgstr ""
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"عملیات\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"عملیات\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"عملیات ها"
 
 msgid "Mark as Read"
 msgstr "نمایش به عنوان خوانده شده"
- 
+
 msgid "Mark as UnRead"
 msgstr "نمایش به عنوان خوانده نشده"
 
+#, fuzzy
 msgid "No message to show!"
-msgstr "پیغامی برای نمایش وجود ندارد"
+msgstr ""
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"پیغامی برای نمایش وجود ندارد\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"پیغام جدیدی برای نمایش وجود ندارد"
 
 msgid "Admin"
 msgstr "ادمین"
 
+#, fuzzy
 msgid "Show/Hide clones"
-msgstr "نمایش/پنهان همسان ها"
+msgstr ""
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"نمایش/پنهان همسان ها\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"نمایش یا پنهان کردن همسان ها"
 
 msgid "I want to change my password"
 msgstr "می خواهم رمز ورود را تغییر دهم"
@@ -182,9 +209,6 @@ msgstr "عمومی"
 msgid "Status"
 msgstr "وضعیت"
 
-msgid "Actions"
-msgstr "عملیات"
-
 msgid "Machines"
 msgstr "ماشین ها"
 
@@ -199,45 +223,6 @@ msgstr "خاموش"
 
 msgid "Screenshot"
 msgstr "تهیه عکس از صفحه نمایش"
-
-msgid "Paused"
-msgstr "متوقف"
-
-msgid "Machine locked by"
-msgstr "ماشین قفل شده است"
-
-msgid "process"
-msgstr "پروسه"
-
-msgid "Copy"
-msgstr "کپی"
-
-msgid "Error!"
-msgstr "خطا"
-
-msgid "Backend no available!"
-msgstr "بک اند موجود نیست"
-
-msgid "Subject"
-msgstr "موضوع"
-
-msgid "Date"
-msgstr "تاریخ"
-
-msgid "Actions"
-msgstr "عملیات ها"
-
-msgid "Mark as Read"
-msgstr "نمایش به عنوان خوانده شده"
-
-msgid "Mark as UnRead"
-msgstr "نمایش به عنوان خوانده نشده"
-
-msgid "No message to show!"
-msgstr "پیغام جدیدی برای نمایش وجود ندارد"
-
-msgid "Admin"
-msgstr "ادمین"
 
 msgid "machines"
 msgstr "ماشین ها"
@@ -256,9 +241,6 @@ msgstr "از بین بردن پایگاه"
 
 msgid "public"
 msgstr "عمومی"
-
-msgid "Restore"
-msgstr "بازیابی"
 
 msgid "Hybernate"
 msgstr "هایپرنت"
@@ -293,9 +275,6 @@ msgstr "تنظیمات ماشین"
 msgid "Cannot remove base, machine has clones"
 msgstr "عدم توانایی پاک کردن ماشین به دلیل داشتن همسان"
 
-msgid "Show/Hide clones"
-msgstr "نمایش یا پنهان کردن همسان ها"
-
 msgid "For spice redirection you'll need to install"
 msgstr "برای هدایت شدن به صفحه اسپایس نیاز به نصب کردن برنامه دارید"
 
@@ -311,11 +290,10 @@ msgstr "نیاز به نضب کردن برنامه دارید"
 msgid "e.g. VirtViewer v5.0-256 in your computer."
 msgstr "VirtViewer v5.0-25به عنوان مثال "
 
-msgid "Be aware that in Windows, spice redirection is not automatically. It's necessary associate protocol with the app."
-msgstr توجه کنید در سیستم عامل ویندوز هدایت به صفحه اسپایس اتوماتیک انجام نمی شود. لازم است پروتکل با اپلیکیشن هماهنگ باشد"
-
 msgid "To make this possible, download"
 msgstr "به این منظور دانلود یا کپی کنید"
 
-msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
 msgstr "خطوط اسکی زیر را در یک فایل .reg ذخیره کنید و سپس فایل را اجرا کنید"
