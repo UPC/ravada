@@ -135,43 +135,43 @@ msgid "Show/Hide clones"
 msgstr "نمایش/پنهان همسان ها"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "می خواهم رمز ورود را تغییر دهم"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "می خواهم زبان را تغییر دهم"
 
 msgid "Language:"
-msgstr ""
+msgstr ":زبان"
 
 msgid "English"
-msgstr ""
+msgstr "انگلیسی"
 
 msgid "Spanish"
-msgstr ""
+msgstr "اسپانیایی"
 
 msgid "Catalan"
-msgstr ""
+msgstr "کاتالان"
 
 msgid "New Password:"
-msgstr ""
+msgstr "رمز عبور جدید:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "تایید رمز عبور"
 
 msgid "Submit"
-msgstr ""
+msgstr "ثبت"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "زبان مورد نظر شما با موفقیت تغییر یافت"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "رمز عبور شما با موفقیت تغییر یافت"
 
 msgid "Password too small"
-msgstr ""
+msgstr "طول رمز عبور کوتاه است"
 
 msgid "Password fields aren't equal"
-msgstr ""
+msgstr "دو رمز عبور با هم همخوانی ندارند"
 
 msgid "Some of the password's fields are empty"
-msgstr ""
+msgstr "یک یا هردوی ردیف های رمز عبور خالی هستند"
