@@ -1,18 +1,18 @@
-Normally the documentation files are stored in /docs and /devel-docs directories.
+Normally the documentation files are stored in /docs and /devel-docs directories in master branch.
 
 When you create a new page keep in mind don't leave blanks in the filename.
 
-The file name is used to generate a "title page".
+The filename is used to generate a "title page".
 
 ## Static content generated from md files
 
-These files are used to autogenerate html page accesibles from [Ravada's web](https://upc.github.io/ravada/index.html). [Templer](https://github.com/skx/templer) is used to do this.
+These files are used to autogenerate html page accesibles from [Ravada's web](https://upc.github.io/ravada/index.html).
 
-### Templerfy
+### Run templer
 
-For do that you need to following steps: 
+In order to run templer you need to follow these steps: 
 
-(Requirements: [Templer](https://github.com/skx/templer) installed in your computer. See "Installation" section.
+(Requirements: [Templer](https://github.com/skx/templer) installed in your computer. See "Installation" section for more information.
 
 - change to gh-pages branch
 - cd templer
