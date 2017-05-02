@@ -7,7 +7,7 @@ Windows clients requires the [_virt-viewer_]( https://virt-manager.org/download/
 ## Fix Windows registry
 
 If _virt-viewer_ won't start automatically after when viewing the virtual machine,
-add  this to the Registry, thanks to @gmiranda
+add  this to the Registry, thanks to [@gmiranda](https://github.com/gmiranda)
 
     Windows Registry Editor Version 5.00
     
