@@ -18,7 +18,7 @@
                  </h2>
              </div> <!-- del panel heading-->
              <div class="tabs">
-               <button class="tablinks" onclick="openTab(event, 'Remove Machine')">Remove Machine</button>
+               <button class="tablinks" onclick="openTab(event, 'Remove Machine')" id="defaultOpen">Remove Machine</button>
                <button class="tablinks" onclick="openTab(event, 'Rename')">Rename</button>
                <button class="tablinks" onclick="openTab(event, 'Copy')">Copy</button>
                <button class="tablinks" onclick="openTab(event, 'VM Drivers')">VM Drivers</button>
@@ -55,6 +55,7 @@ function openTab(evt, tabName) {
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 }
+document.getElementById("defaultOpen").click();
 </script>
 
 </div> <!-- del page-wrapper -->
