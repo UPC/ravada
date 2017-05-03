@@ -5,14 +5,14 @@ PATH1="/src/ravada"
 
 echo "change repo directory..."
 eval cd ~$PATH1
-git checkout master && echo "Checkout master..."|| echo "Checkout master failed!"
+git checkout master && echo "Checkout master..."|| echo "Checkout master failed!";exit
 eval mkdir -p ~$PATH1/documentation/docs ~$PATH1/documentation/devel-docs
 mkdir -p /tmp/mds/docs /tmp/mds/devel-docs
 cp docs/* /tmp/mds/docs
 cp devel-docs/* /tmp/mds/devel-docs
-git checkout gh-pages && echo "Checkout gh-pages..."|| echo "Checkout gh-pages failed!"
+git checkout gh-pages && echo "Checkout gh-pages..."|| echo "Checkout gh-pages failed!";exit
 mkdir -p templer/input/docs templer/input/devel-docs
-rm documentation/docs/* documentation/devel-docs/*
+#rm documentation/docs/* documentation/devel-docs/*
 for i in `ls /tmp/mds/docs/*.md`;do
     NAME=`basename $i .md`
     echo -e "title: ${NAME//_/ }\n----\n$(cat $i)" > $i
