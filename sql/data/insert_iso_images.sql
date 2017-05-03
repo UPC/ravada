@@ -85,4 +85,14 @@ VALUES('Ubuntu Zesty Zapus',' Ubuntu 17.04 Zesty Zapus 64 bits'
     ,'ubuntu-17.04.*desktop-amd64.iso'
     ,'http://releases.ubuntu.com/17.04/MD5SUMS'
     );
-
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
+VALUES('Mint Serena 64 bits','Mint Serena based on Ubuntu Xenial 64 bits'
+    ,'amd64'
+    ,'xenial64-amd64.xml'
+    ,'xenial64-volume.xml'
+    ,'http://mirrors.evowise.com/linuxmint/stable/18.1/'
+    ,'linuxmint-18.1-cinnamon-64bit.iso'
+    ,''
+    ,'b99f4b98a1b41737ded072dc1a7060ca32224e23236074790d4fc86b51009e3c'
+    );
