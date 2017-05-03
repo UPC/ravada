@@ -50,12 +50,10 @@
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
                       <i class="fa fa-exchange fa-rotate-90"
-                       ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i>
-                      <i class="fa fa-arrow-down" ng-cloak
-                       ng-hide="orderParam[0] !== 'is_active'"></i>
-                      <i class="fa fa-arrow-up" ng-cloak
-                       ng-hide="orderParam[0] !== '-is_active'"></i>
-                      <%=l 'Status' %></th>
+                       ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i><i class="fa fa-arrow-down" ng-cloak
+                       ng-hide="orderParam[0] !== 'is_active'"></i><i class="fa fa-arrow-up"
+                                                                      ng-cloak
+                       ng-hide="orderParam[0] !== '-is_active'"></i><%=l 'Status' %></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
                 </tr>
             </thead>
@@ -84,10 +82,10 @@
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
-                        <span style="float:left;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
                         <span style="float:right;" ng-show="{{!machine.is_active && !machine.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
-                         <span style="float:right;" ng-show="{{machine.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                        <div ng-show="{{machine.is_active}}">{{machine.remote_ip}}</div>
+                        <span style="float:right;" ng-show="{{machine.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
+                        <br><span style="float:right;" ng-show="{{machine.is_active}}" class="label label-default">{{machine.remote_ip}}</span>
                     </td>
                     <td class="lgMachToggle">
 
@@ -107,7 +105,7 @@
                         <a type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
-                         title="<%=l 'ShutDown' %>">
+                         title="<%=l 'ShutDown' %>">    
                           <i class="fa fa-power-off"></i>
                        </a>
                         <a type="button" class="btn btn-primary btn-sm"
@@ -152,10 +150,10 @@
                            <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
                       <td class="lgMachActions">
                           <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
-                          <span style="float:left;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
+                          <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
                           <span style="float:right;" ng-show="{{!child.is_active && !child.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
                           <span style="float:right;" ng-show="{{child.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                          <div ng-show="{{child.is_active}}">{{child.remote_ip}}</div>
+                          <br><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{machine.remote_ip}}</span>
                       </td>
                       <td class="lgMachToggle">
 

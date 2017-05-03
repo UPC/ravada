@@ -11,7 +11,7 @@ Highlight unwanted spaces
 -------------------------
 Please, don't remove unwanted spaces if aren't yours. Highlight them with these tips: http://vim.wikia.com/wiki/Highlight_unwanted_spaces
 
-To disable autoremove of trailing spaces in Atom: 
+To disable autoremove of trailing spaces in **Atom**: 
 In Atom Preferences->Packages, select the whitespace package.
 In the whitespace package settings, disable "Remove Trailing Whitespace".
 

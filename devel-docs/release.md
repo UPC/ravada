@@ -1,4 +1,5 @@
 Steps to release
+===============
 
 # Draft
 
@@ -7,8 +8,8 @@ Steps to release
 At code -> releases draft a new release
 
 
- * tag version : 0.2.2
- * release title : 0.2.2
+ * tag version : v0.2.2
+ * release title : v0.2.2
 
 
 ## Create the milestone

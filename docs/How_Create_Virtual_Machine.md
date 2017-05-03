@@ -1,5 +1,3 @@
-# How to create a Virtual Machine
-
 ## Introduction
 It is probable that when you start reading this document, you have set up and install Ravada successfully and now it is time
 to create a virtual machine. 

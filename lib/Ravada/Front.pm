@@ -428,6 +428,8 @@ sub _ping_backend_localhost {
 Connects to a Virtual Machine Manager ( or VMM ( or VM )).
 Returns a read-only connection to the VM.
 
+  my $vm = $front->open_vm('KVM');
+
 =cut
 
 sub open_vm {
