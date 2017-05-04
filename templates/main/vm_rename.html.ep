@@ -10,7 +10,6 @@
 % }
 %# if $domain->is_paused || $domain->domain->has_managed_save_image;
 
-
     <div class="panel-body">
         % if ($message_rename) {
             <div class="panel panel-warning">

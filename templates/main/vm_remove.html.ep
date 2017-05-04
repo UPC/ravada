@@ -1,5 +1,4 @@
 
-
         <div class="panel-body">
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
 
