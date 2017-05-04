@@ -1,7 +1,3 @@
-<div class="panel panel-primary" ng-hide="domain_remove_done">
-
-<div class="panel-heading"><b><%=l 'VM Drivers'%></b></div>
-
 <div class="panel-body">
 %   if ($message) {
         <div class="panel panel-success">
@@ -45,5 +41,4 @@
      <input type="submit" value="save">
 </form>
 
-</div>
 </div>

@@ -17,47 +17,33 @@
                      Settings
                  </h2>
              </div> <!-- del panel heading-->
-             <div class="tabs">
-               <button class="tablinks" onclick="openTab(event, 'Remove Machine')" id="defaultOpen">Remove Machine</button>
-               <button class="tablinks" onclick="openTab(event, 'Rename')">Rename</button>
-               <button class="tablinks" onclick="openTab(event, 'Copy')">Copy</button>
-               <button class="tablinks" onclick="openTab(event, 'VM Drivers')">VM Drivers</button>
-             </div>
+             <ul class="nav nav-tabs" id="myTab">
+               % if ( $USER->is_admin ) {
+               <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
+               <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
+               <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
+%   }
+               <li class="nav active"><a href="#drivers" data-toggle="tab">VM Drivers</a></li>
+             </ul>
+            <div class="tab-content">
 % if ( $USER->is_admin ) {
-             <div id="Remove Machine" class="tabcontent">
+             <div class="tab-pane fade" id="remove" >
     %= include 'main/vm_remove'
              </div>
-             <div id="Rename" class="tabcontent">
+             <div class="tab-pane fade" id="rename">
     %= include 'main/vm_rename'
              </div>
-             <div id="Copy" class="tabcontent">
+             <div class="tab-pane fade" id="copy">
     %= include 'main/vm_copy'
              </div>
 % }          
-             <div id="VM Drivers" class="tabcontent">
+             <div class="tab-pane fade in active" id="drivers">
     %= include 'main/vm_options'
              </div>
+         </div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->
 </div><!-- del ng-controller -->
-
-<script>
-function openTab(evt, tabName) {
-    var i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tabcontent");
-    for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].style.display = "none";
-    }
-    tablinks = document.getElementsByClassName("tablinks");
-    for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].className = tablinks[i].className.replace(" active", "");
-    }
-    document.getElementById(tabName).style.display = "block";
-    evt.currentTarget.className += " active";
-}
-document.getElementById("defaultOpen").click();
-</script>
-
 </div> <!-- del page-wrapper -->
 </div> <!-- del wrapper -->
     %= include 'bootstrap/scripts'
