@@ -12,7 +12,7 @@ cp docs/* /tmp/mds/docs
 cp devel-docs/* /tmp/mds/devel-docs
 git checkout gh-pages && echo "Checkout gh-pages..." || { echo "Checkout gh-pages failed!" ; exit 1 ; }
 mkdir -p templer/input/docs templer/input/devel-docs
-#rm documentation/docs/* documentation/devel-docs/*
+rm documentation/docs/* documentation/devel-docs/*
 for i in `ls /tmp/mds/docs/*.md`;do
     NAME=`basename $i .md`
     echo -e "title: ${NAME//_/ }\n----\n$(cat $i)" > $i
