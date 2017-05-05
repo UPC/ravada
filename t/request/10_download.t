@@ -18,6 +18,8 @@ init($test->connector);
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
+##################################################################
+
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
     my $vm = $rvd_back->search_vm($vm_name);
