@@ -1,5 +1,3 @@
-<div class="panel panel-primary">
-    <div class="panel-heading"><%=l 'Remove Machine' %></div>
 
         <div class="panel-body">
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
@@ -56,4 +54,3 @@
                 Virtual Machine <b>{{showmachine.name}}</b> removed.
            </div>
     </div>
-</div>
