@@ -517,7 +517,6 @@ sub user_settings {
         $changed_lang = $c->param('tongue');
         _logged_in($c);
     }
-    warn $c->param('button_click');      
     $c->param('tongue' => $USER->language);
     my @errors;
     if ($c->param('button_click')) {
