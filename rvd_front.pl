@@ -36,7 +36,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 ,listen => ['http://*:8081']
                                                 }
                                               ,login_bg_file => '../img/intro-bg.jpg'
-                                              ,login_header => 'Login'
+                                              ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_template => ''
@@ -98,11 +98,15 @@ hook before_routes => sub {
   $c->stash(version => $RAVADA->version."$VERSION_TYPE");
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
-            ,js=>['/js/form.js'
-                ,'/js/ravada.js'
+            ,js=>[
+                '/js/ravada.js'
                 ]
             ,csssnippets => []
             ,navbar_custom => 0
+            ,url => undef
+            ,_logged_in => undef
+            ,_anonymous => undef
+            ,_user => undef
             );
 
   return access_denied($c)
@@ -110,10 +114,9 @@ hook before_routes => sub {
     && !_logged_in($c);
 
   return login($c)
-    if     $url !~ /\.css$/
-        && $url !~ '/requirements'
-        && $url !~ m{^/(anonymous|login|logout)}
-        && $url !~ m{^/(font|img|js)}
+    if
+        $url !~ m{^/(anonymous|login|logout|requirements)}
+        && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
 
