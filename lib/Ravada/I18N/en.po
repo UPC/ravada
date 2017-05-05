@@ -276,3 +276,12 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
+
+msgid "Login"
+msgstr ""
+
+msgid "Welcome"
+msgstr ""
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr ""

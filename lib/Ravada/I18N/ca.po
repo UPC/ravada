@@ -281,3 +281,12 @@ msgid ""
 msgstr ""
 "o copia les següents línies en un arxiu ASCII, desa'l amb l'extensió .reg, i "
 "a continuació, executa l'arxiu."
+
+msgid "Login"
+msgstr "Accedir"
+
+msgid "Welcome"
+msgstr "Benvingut"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Es necessita un visor per executar les màquines virtuals."
