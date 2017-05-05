@@ -29,10 +29,15 @@
 
                 % }
                 </form>
+                <div class="alert alert-warning">
+                    <strong>Attention!</strong> You need to have a viewer installed to run a virtual machine. More information <a href="/requirements">here</a>
+                </div> 
                 <!--<a href="#instruccions" class="btn btn-circle page-scroll">
                             <i class="fa fa-angle-double-down animated"></i></a>-->
             </div>
+               
         </div>
+     
     </header>
 
     <!-- Instruccions
