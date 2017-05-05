@@ -111,6 +111,7 @@ hook before_routes => sub {
 
   return login($c)
     if     $url !~ /\.css$/
+        && $url !~ '/requirements'
         && $url !~ m{^/(anonymous|login|logout)}
         && $url !~ m{^/(font|img|js)}
         && !_logged_in($c);
