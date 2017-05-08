@@ -100,7 +100,7 @@ sub add_user {
     my $is_admin = ($args{is_admin} or 0);
     my $is_temporary= ($args{is_temporary} or 0);
 
-    delete @args{'name','password','is_admin','is_temporary'};
+    delete @args{'name','password','is_admin','is_temporary','is_external'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
