@@ -17,6 +17,9 @@ use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Moose;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use Data::Dumper;
 
 with 'Ravada::Auth::User';
@@ -342,5 +345,20 @@ sub change_password {
       return $sth->fetchrow();
     }
   }
+
+
+=head2 remove
+
+Removes the user
+
+    $user->remove();
+
+=cut
+
+sub remove($self) {
+    my $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
 
 1;
