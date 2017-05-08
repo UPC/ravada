@@ -39,7 +39,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
-                                              ,login_template => ''
+                                              ,login_custom => ''
                                               }
                                       ,file => '/etc/rvd_front.conf'
 };
@@ -670,8 +670,7 @@ sub login {
 
     sleep 5 if scalar(@error);
     $c->render(
-                    #template => ($CONFIG_FRONT->{dir}->{custom} or 'main/start')
-                    template => ($CONFIG_FRONT->{login_template} or 'main/start')
+                    template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
                         ,csssnippets => @css_snippets
                         ,js => ['/js/main.js']
