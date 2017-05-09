@@ -7,6 +7,7 @@ use Test::More;
 use Test::SQL::Data;
 
 use v5.24; use feature qw(signatures);
+no warnings "experimental::signatures";
 
 use lib 't/lib';
 use Test::Ravada;
