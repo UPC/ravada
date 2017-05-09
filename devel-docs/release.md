@@ -58,6 +58,7 @@ Check the last issues closed for this milestone and add them to the Changelog fi
 
     $ git checkout master
     $ gvim Changelog.md
+    $ git commit -a
 
 ## Create a branch
 
