@@ -238,7 +238,11 @@ get '/list_bases.json' => sub {
 
 get '/list_images.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_iso_images);
+
+    my $vm_name = $c->param('backend');
+    warn $vm_name;
+
+    $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
 
 get '/list_machines.json' => sub {
