@@ -205,9 +205,9 @@ sub list_domains {
             $row->{is_hibernated} = 1 if $domain->is_hibernated;
             $row->{is_paused} = 1 if $domain->is_paused;
             $row->{has_clones} = $domain->has_clones;
-            $row->{disk_size} = ( $domain->disk_size or 0);
-            $row->{disk_size} /= (1024*1024*1024);
-            $row->{disk_size} = 1 if $row->{disk_size} < 1;
+#            $row->{disk_size} = ( $domain->disk_size or 0);
+#            $row->{disk_size} /= (1024*1024*1024);
+#            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
         }
         push @domains, ($row);
