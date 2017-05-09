@@ -173,7 +173,7 @@ sub _upgrade_table {
     $sth->finish;
     return if $row;
 
-    warn "INFO: adding $field $definition to $table\n";
+    warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
     return 1;
 }
