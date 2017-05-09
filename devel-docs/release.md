@@ -14,7 +14,7 @@ At code -> releases draft a new release
 
 ## Create the milestone
 
-Create a milestone called like the tag version: 0.2.2. There must be a way to link it to the _tag_ , I just don't know how.
+At the _issues_ section , create a milestone. Name it like the tag version: 0.2.2. There must be a way to link it to the _tag_ , I just don't know how.
 
 ## Create issues
 
