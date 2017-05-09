@@ -37,6 +37,21 @@ It will create a file _authors.html.ep_, review it and commit it.
     $ git commit authors.html.ep
     $ cd ../..
 
+## Update the release number
+
+### In the debian control file
+
+In _debian/control_ around line 2:
+
+    Version: 0.2.5
+
+### In Ravada.pm
+
+Modify _lib/Ravada.pm_ around line 5:
+
+    our $VERSION = '0.2.5';
+
+
 ## Modify the Changelog
 
 Check the last issues closed for this milestone and add them to the Changelog file:
