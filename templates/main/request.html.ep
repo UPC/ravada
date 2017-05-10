@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+
+        <!--BASES AND DOMAINS LIST-->
+        <div>
+        
+            <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2>Request <%= $request->{command} %> <%= $request->args->{name} %> <%= $request->{status} %></h2>
+                        <p>
+                            <a href="/request/<%= $request->{id} %>.html">Refresh</a>
+                        </p>
+                    </div>
+                    <p><%= Data::Dumper::Dumper($request) %></p>
+
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+    </div>
+
+    %= include 'bootstrap/scripts'
+</body>
+</html>

@@ -1,0 +1,1 @@
+../../mysql/file_base_images.sql

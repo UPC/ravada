@@ -1,31 +1,24 @@
-#How to Install a local LDAP
+# How to Install a local LDAP
 
-##Install and configure 389-ds
+## Install and configure 389-ds
 
     $ sudo apt-get install 389-ds-base
     $ sudo setup-ds
 
-##Insert one test user
+## Add a LDAP section in the config file
 
-First create the file user.ldif. Use the domain name that your host belongs to
-in the first line:
+The config file usually is /etc/ravada.conf. Add this configuration:
 
-    dn: uid=jdoe,ou=People,dc=domain,dc=name
-    objectClass: top
-    objectClass: person
-    objectClass: organizationalPerson
-    objectClass: inetOrgPerson
-    uid: jdoe
-    cn: John Doe
-    displayName: John Doe
-    givenName: John
-    sn: Doe
-    userPassword: test
+    ldap:
+        admin_group: test.admin.group
+        admin_user:
+            dn: cn=Directory Manager
+            password: thepasswordyouusedwhensetup-ds
+        base: 'dc=telecom,dc=bcn'
 
 
-Insert that file in the ldap server:
+## Insert one test user
 
-    $ ldapadd -h 127.0.0.1 -x -D "cn=Directory Manager" -W -f user.ldif
+The ravada backend script allows creating users in the LDAP
 
-Now you can user the former user with the login name "jdoe" and password "test"
-
+    $ sudo ./bin/ldap_admin.pl --add-user-ldap jimmy.mcnulty

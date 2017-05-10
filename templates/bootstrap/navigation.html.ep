@@ -1,33 +1,63 @@
 <!-- Navigation -->
-        <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <nav class="navbar \
+% if ($navbar_custom) {
+navbar-custom \
+% }
+navbar-inverse navbar-fixed-top" role="navigation">
             <!-- Brand and toggle get grouped for better mobile display -->
             <div class="navbar-header">
-                
-                <a class="navbar-brand" href="index.html">RAVADA VDI</a>
+
+                <a class="navbar-brand" href="/index.html">RAVADA VDI</a>
             </div>
             <!-- Top Menu Items -->
             <ul class="nav navbar-right top-nav">
+% if ($_logged_in) {
+% if ( !$_anonymous ) {
                 <li>
-                        <a href="/"><i class="fa fa-fw fa-desktop"></i> Avaiable Machines</a>
+                        <a href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                 </li>
+% }
+% if (defined $_user && $_user->is_admin ) {
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-wrench"></i>&nbsp;Tools<span class="caret"></span></a>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">
+                    <i class="fa fa-wrench"></i>&nbsp;<%=l 'Admin tools' %><span class="caret"></span></a>
+                  <ul class="dropdown-menu">
+                    <li><a href="/admin/machines">
+                      <i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'machines' %></a>
+                    </li>
+                    <li><a href="/admin/users">
+                      <i class="fa fa-user" aria-hidden="true"></i>&nbsp<%=l 'users' %></a>
+                    </li>
+                    <li><a href="/admin/messages">
+                      <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
+                    </li>
+                  </ul>
+                </li>
+% }
+% if ( !$_anonymous ) {
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;<%=l 'Help' %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="/machines">Virtual Machines</a></li>
-                        <li><a href="/users">Users</a></li>
+                        <li><a href="/requirements"><i class="fa fa-gears"></i>&nbsp;<%=l 'Requirements' %></a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/about"><i class="fa fa-info-circle"></i>&nbsp;<%=l 'About' %></a></li>
                     </ul>
                 </li>
-                
+% }
+
+% if ( !$_anonymous ) {
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li>
-                            <a href="/logout"><i class="fa fa-fw fa-power-off"></i> Log Out</a>
-                        </li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/user_settings"><i class="fa fa-cog" aria-hidden="true"></i><%=l 'Settings' %></a></li>
+                        <li><a href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a></li>
                     </ul>
                 </li>
-                
+% }
+% }
+
             </ul>
 
-            
+
         </nav>

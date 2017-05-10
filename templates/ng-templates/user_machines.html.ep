@@ -1,0 +1,19 @@
+<div class="panel-body">
+    <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
+        <strong>Error!</strong> Backend no available!
+      </div>
+    <div ng-repeat="machine in list_bases">
+        <div class="col-sm-4">
+        <div class="panel panel-success machine">
+
+        <div class="panel-heading">
+            <h3 class="panel-title">{{machine.name}} <i ng-hide="{{machine.is_public}}">( not public )</i></h3><br>
+            <img id="screensh" ng-src="/img/screenshots/{{machine.id}}.png">
+        </div>
+        <div class="panel-body machine-card">
+            <a type="button"  class="btn btn-success" ng-href="/machine/clone/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
+        </div>
+        </div>
+        </div>
+    </div>
+</div>

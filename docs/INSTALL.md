@@ -1,75 +1,109 @@
-#Install Ravada
+# Requirements
 
-Clone the sources:
+## OS
 
-    $ git clone https://github.com/frankiejol/ravada.git
+Ravada has been tested only on Ubuntu Xenial. It should also work in recent RedHat based
+systems. Debian jessie has been tried but kvm spice wasn't available there, so it won't
+work.
 
-#Packages
+## Hardware
 
-##Debian
+It depends on the number and the type of the virtual machines. For most places 
 
-- mysql-server
-- libauthen-passphrase-perl
-- libdbd-mysql-perl
-- libdbi-perl
-- libdbix-connector-perl
-- libipc-run3-perl
-- libnet-ldap-perl
-- libproc-pid-file-perl
-- libvirt-bin
-- libsys-virt-perl
-- libxml-libxml-perl
-- libconfig-yaml-perl
-- libmoose-perl
-- libjson-xs-perl
+### Memory
+RAM is
+the main issue. Multiply the number of concurrent workstations by the amount of memory
+each one requires and that is the RAM that must have the server.
+
+### Disks
+The faster the disks, the better. Ravada uses incremental files for the disks images, so
+clones won't require many space.
 
 
-##Old debian
+# Install Ravada
 
-In old debians and ubuntus Mojolicious is too outdated. Remove libmojolicious-perl and install the cpan release:
+## Ubuntu
 
-    $ sudo apt-get purge libmojolicious-perl
-    $ sudo apt-get install cpanminus
-    $ sudo cpanm Mojolicious
+We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/). Download and install them:
 
-#Mysql Database
+    $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.5_all.deb
+    $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    $ sudo dpkg -i ravada_0.2.5_all.deb
 
-Create a database named "ravada". 
+The last command will show a warning about missing dependencies. Install them
+running:
+
+    $ sudo apt-get update
+    $ sudo apt-get -f install
+
+## Development Release
+
+Read [INSTALL\_devel](https://upc.github.io/ravada/documentation/docs/INSTALL_devel.html)  if you want to develop Ravada or install a bleeding
+edge, non-packaged, release.
+
+# Mysql Database
+
+## MySQL server
+
+It is required a MySQL server, it can be installed in another host or in the
+same one as the ravada package.
+
+    $ sudo apt-get install mysql-server
+
+## MySQL user
+Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
+
+    $ mysqladmin -u root -p create ravada
 
 Grant all permissions to your user:
 
-    $ mysql -u root -p
-    mysql> grant all on ravada.* to frankie@'localhost' identified by 'figure a password';
+    $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD'"
 
-Review and run the sql files from the sql dir.
+## Config file
 
-    $ mysqladmin create ravada
-    $ cd sql/mysql
-    $ cat *.sql | mysql -p ravada
-    $ cd ..
-    $ cd data
-    $ cat *.sql | mysql -p ravada
+Create a config file at /etc/ravada.conf with the username and password you just declared
+at the previous step. Please note that you need to edit the user and password via an editor. Here, we present Vi as an example.
 
-#Config file
 
-Create a config file at /etc/ravada.conf with:
-    
+    $ sudo vi /etc/ravada.conf
     db:
-      user: frankie
-      password: *****
+      user: rvd_user
+      password: THE PASSWORD CHOSEN BEFORE
 
-#KVM backend
+# Ravada web user
 
-Install KVM and virt-manager. Create new virtual machines (called domains) there.
-See docs/operation.md
+Add a new user for the ravada web. Use rvd\_back to create it.
 
-#Ravada user
-
-Add a new user for the ravada web. This command will create a new admin user in the database:
-
-    $ ./bin/rvd_back.pl --add-user
+    $ sudo /usr/sbin/rvd_back --add-user user.name
 
 
-#Next
+# Firewall (Optional)
 
-Read docs/operation.md
+The server must be able to send _DHCP_ packets to its own virtual interface.
+
+KVM should be using a virtual interface for the NAT domnains. Look what is the address range
+and add it to your _iptables_ configuration.
+
+First we try to find out what is the new internal network:
+
+    $  sudo route -n
+    ...
+    192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
+
+So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
+
+    sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
+To confirm that the configuration was updated, check it with:
+
+    sudo iptables -S
+
+# Client
+
+The client must have a spice viewer such as virt-viewer. There is a package for
+linux and it can also be downloaded for windows.
+
+# Next
+
+Read [production](https://upc.github.io/ravada/documentation/docs/production.html). 

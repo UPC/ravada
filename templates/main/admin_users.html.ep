@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    <div ng-controller="usersPage">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div id="admin-content">
+<h2>Users</h2>
+<div class="panel-body col-lg-12">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th><%=l 'Name' %></th>
+        <th><%=l 'Admin' %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="user in list_users">
+        <td>{{user.name}}</td>
+        <td>
+          <a style="cursor:pointer;" ng-show="{{user.is_admin}}"
+          ng-click="action('users','remove_admin',user.id)"
+          class="fa fa-check" aria-hidden="true">
+          </a>
+          <a style="cursor:pointer;" ng-show="{{user.is_admin!=1}}"
+           ng-click="action('users','make_admin',user.id)"
+           class="fa fa-times" aria-hiden="true">
+          </a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+</div>
+</div>
+</div>
+%= include 'bootstrap/scripts'
+%= include 'bootstrap/footer'
+<div id="overNotifications" class="notifications" ng-controller="notifCrtl">
+<script type="text/ng-template" id="alert.html">
+<div ng-transclude></div>
+</script>
+<div uib-alert ng-repeat="alert in alerts"
+ ng-class="'alert-' + (alert.type || 'warning')"
+  ng-click="closeAlert($index)"
+  ng-mouseover="alert.showMessage = false"
+  ng-mouseleave="alert.showMessage = true"
+  ng-bind-html="alert.subject">
+  {{alert.subject}}
+  <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage" ng-bind-html="alert.message">
+    {{alert.message}}
+  </div>
+</div>
+</div>
+</body>
+</html>

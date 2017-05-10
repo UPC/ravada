@@ -34,12 +34,12 @@ body {
 
 @media(min-width:768px) {
     #wrapper {
-      
+
     }
 
     #page-wrapper {
         padding: 5px 100px;
-        min-height: 600px;
+        min-height: 763px;
         max-width: 1200px;
         margin: 0 auto;
     }
@@ -70,6 +70,11 @@ body {
 .top-nav>.open>a:focus {
     color: #fff;
     background-color: #000;
+}
+
+.dropdown:hover .dropdown-menu {
+        display: block;
+        margin-top: 0; // remove the gap so it doesn't close
 }
 
 .top-nav>.open>.dropdown-menu {
@@ -342,4 +347,37 @@ ul.alert-dropdown {
 
 .machine-card .btn{
     margin: 7px 0;
+}
+
+.hiddenRow {
+    padding: 0 !important;
+}
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
+
+.table>tbody+tbody {
+    border-top: none;
+}
+.modal-backdrop {
+  z-index: -1 !important;
+}
+
+#overNotifications {
+  position: fixed;
+  right: 20px;
+  top: 50px;
+  width: 350px;
+  z-index: 1;
+}
+
+
+#overNotifications div {
+  margin: 8px;
+  padding: 5px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 5px;
+
 }

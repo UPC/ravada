@@ -1,0 +1,138 @@
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h2>New Machine</h2>
+    </div>
+    <div class="panel-body">
+%       if (scalar @$errors) {
+            <div class="panel panel-danger">
+            <div class="panel-heading">
+%           for (@$errors) {
+                <%= $_ %>
+%           }
+            </div>
+            </div>
+%       }
+        <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
+            <div class="form-group row">
+                <label for="name" class="col-lg-1 control-label">Name</label>
+                <div class="col-lg-11">
+                    <input class="form-control" ng-model="name" type="text"
+                        name="name" required=""
+                        ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
+                        ng-change="validate_new_name()"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="backend" class="col-lg-1 control-label">Backend</label>
+                <div class="col-lg-11">
+                <select name="backend"
+                        ng-model="backend"
+                        ng-init="backend = 'KVM'"
+                        ng-options="item for item in backends track by item "
+                        required=""
+                        disabled
+                ></select>
+                </div>
+            </div>
+
+            <div ng-if="backend == 'KVM'" class="from-group row">
+                <label for="id_iso" class="col-lg-2 control-label">ISO image</label>
+                <div class="col-lg-10">
+                <select name ="id_iso"
+                        ng-model="id_iso"
+                        ng-options="item.name for item in images track by item.id"
+                        required=""
+                ></select>{{id_iso.description}}
+                <div ng-show="id_iso.name && !id_iso.device">
+                    <font color="#500000">This ISO image has not
+                    been already
+                    downloaded. This may take many minutes, even hours
+                    until the file is fetched from Internet.</font>
+                    <a type="button" class="btn btn-warning"
+                        ng-click="iso_download(id_iso.id)"
+                    >Download now</a>
+                </div>
+                </div>
+            </div>
+
+            <div ng-if="backend == 'LXC'" class="from-group row">
+                <label for="id_template" class="col-lg-2 control-label">Template</label>
+                <div class="col-lg-10">
+                    <select name ="id_template"
+                        ng-model="id_template"
+                        ng-options="item.name for item in templates_lxc track by item.id"
+                        required="">
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row" ng-if="backend == 'KVM'">
+                <label for="disk" class="col-lg-2 control-label">Disk Size: (GB)</label>
+                <div class="col-lg-10">
+                    <input class="form-control" ng-model="ddsize" type="number" name="disk"
+                        min="1" max="40" required="">
+                </div>
+            </div>
+            <div class="form-group row" ng-if="backend == 'KVM'">
+                <label for="swap" class="col-lg-2 control-label">Swap Size: (GB)</label>
+                <div class="col-lg-10">
+                    <input class="form-control" ng-model="swapsize" type="number" name="swap"
+                        min="1" max="4">
+                </div>
+            </div>
+
+          <div class="form-group row">
+            <div ng-show="backend == 'KVM' || backend == 'LXC'">
+                <label for="memory"  class="col-lg-2 control-label">Ram: (GB)</label>
+                <div class="col-lg-10">
+                    <input class="form-control" ng-model="ramsize" type="number" name="memory"
+                        min="1" max="4" required="">
+                </div>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
+                <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Machine name is required.
+                </div>
+                <div ng-show="new_machineForm.name.$error.maxlength" class="alert alert-warning fade in">
+                    <strong>Error</strong> Machine name can't exceed 20 characters.
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.backend.$touched">
+                <div ng-show="new_machineForm.backend.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Backend selection is required.
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.id_iso.$touched">
+                <div ng-show="new_machineForm.id_iso.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> ISO image selection is required
+                </div>
+            </div>
+
+            <div ng-show="new_machineForm.$submitted || new_machineForm.id_template.$touched">
+                <div ng-show="new_machineForm.id_template.$error.required" class="alert alert-warning fade in">
+                    <strong>Error</strong> Template selection is required
+                </div>
+            </div>
+            <div ng-show="name_duplicated" class="alert alert-warning fade in">
+                    <strong>Error</strong> A machine with that name already exists.
+            </div>
+            <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
+                    <strong>Error</strong> The machine name must contain only alphabetic, numbers, dashes and points.
+            </div>
+
+
+          </div>
+          <div class="form-group row">
+               <input type="submit" class="btn btn-default" name="submit" value="Create"
+                    ng-disabled="new_machineForm.$invalid || !new_machineForm.id_iso.$viewValue.device || name_duplicated">
+          </div>
+    </form>
+  </div>
+</div>

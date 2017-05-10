@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+        <div ng-controller="new_machine" ng-init="name='<%= $name %>'">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+%=      include 'ng-templates/new_machine'
+    </div>
+    </div>
+    </div>
+%= include 'bootstrap/scripts'
+%= include 'bootstrap/footer'
+</body>
+</html>

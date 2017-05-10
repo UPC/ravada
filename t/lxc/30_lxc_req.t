@@ -6,11 +6,17 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
-use_ok('Ravada');
-use_ok('Ravada::Domain::LXC');
-use_ok('Ravada::VM::LXC');
+my $CAN_LXC = 0;
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+use_ok('Ravada');
+SKIP: {
+    skip("LXC disabled in this release",2);
+    use_ok('Ravada::Domain::LXC');
+    use_ok('Ravada::VM::LXC');
+    $CAN_LXC = 1;
+}
+
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
 my $vm_lxc;
 
@@ -74,9 +80,9 @@ sub test_vm_lxc {
 
 ################################################################
 
-eval { $vm_lxc = Ravada::VM::LXC->new() };
 
 SKIP: {
+    eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
     my $msg = "No LXC backend found $@";
     diag($msg)          if !$vm_lxc;
     skip ($msg,10)    if !$vm_lxc;
