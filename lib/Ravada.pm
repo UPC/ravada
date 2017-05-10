@@ -251,6 +251,8 @@ sub _upgrade_tables {
     }
 
     $self->_upgrade_table('networks','requires_password','int(11)');
+    $self->_upgrade_table('networks','n_order','int(11) not null default 0');
+
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
 }
 
