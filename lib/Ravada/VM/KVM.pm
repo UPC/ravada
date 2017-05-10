@@ -26,6 +26,9 @@ use Sys::Virt;
 use URI;
 use XML::LibXML;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use Ravada::Domain::KVM;
 use Ravada::NetInterface::KVM;
 use Ravada::NetInterface::MacVTap;
@@ -174,8 +177,8 @@ sub storage_pool {
 Searches for a volume in all the storage pools known to the Virtual Manager
 
 Argument: the filenaname;
-Returns the path of the volume. If called in array context returns a
-list of all the paths to the volume.
+Returns the volume as a Sys::Virt::StorageGol. If called in array context returns a
+list of all the volumes.
 
     my $iso = $vm->search_volume("debian-8.iso");
 
@@ -183,51 +186,99 @@ list of all the paths to the volume.
 
 =cut
 
-sub search_volume {
-    my $self = shift;
-    my $file = shift    or confess "Missing file name";
-
-    my @volume;
-    for my $pool ($self->vm->list_storage_pools) {
-
-        my $vol;
-        eval {$vol = $pool->get_volume_by_name($file); };
-        return $vol if !wantarray;
-        push @volume,($vol);
-#        my $doc = $XML->load_xml(string => $pool->get_xml_description);
-#        my ($path) =$doc->findnodes('/pool/target/path/text()');
-
-#        return "$path/$file" if -e "$path/$file" && ! wantarray;
-#        push @volume,("$path/$file");
-    }
-    return @volume;
+sub search_volume($self,$file,$refresh=0) {
+    return $self->search_volume_re(qr(^$file$),$refresh);
 }
+
+=head2 search_volume_path
+
+Searches for a volume in all the storage pools known to the Virtual Manager
+
+Argument: the filenaname;
+Returns the path of the volume. If called in array context returns a
+list of all the paths to all the matching volumes.
+
+    my $iso = $vm->search_volume("debian-8.iso");
+
+    my @disk = $vm->search_volume("windows10-clone.img");
+
+
+
+=cut
 
 sub search_volume_path {
     my $self = shift;
     my @volume = $self->search_volume(@_);
+
     my @vol2 = map { $_->get_path() if ref($_) } @volume;
 
     return $vol2[0] if !wantarray;
     return @vol2;
 }
 
-sub search_volume_path_re {
-    my $self = shift;
-    my $pattern = shift;
+=head2 search_volume_re
+
+Searches for a volume in all the storage pools known to the Virtual Manager
+
+Argument: a regular expression;
+Returns the volume. If called in array context returns a
+list of all the matching volumes.
+
+    my $iso = $vm->search_volume(qr(debian-\d+\.iso));
+
+    my @disk = $vm->search_volume(qr(windows10-clone.*\.img));
+
+=cut
+
+sub search_volume_re($self,$pattern,$refresh=0) {
+
+    confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
+        if !ref($pattern) || ref($pattern) ne 'Regexp';
 
     my @volume;
     for my $pool ($self->vm->list_storage_pools) {
-
+        $pool->refresh()    if $refresh;
         for my $vol ( $pool->list_all_volumes()) {
-            my ($file) = $vol->get_path =~ m{.*/($pattern)};
-            next if !$file;
+            my ($file) = $vol->get_path =~ m{.*/(.*)};
+            next if $file !~ $pattern;
 
-            return $vol->get_path if !wantarray;
-            push @volume,($vol->get_path);
+            return $vol if !wantarray;
+            push @volume,($vol);
         }
     }
+    if (!scalar @volume && !$refresh && !$self->readonly
+            && time - ($self->{_time_refreshed} or 0) > 60) {
+        $self->{_time_refreshed} = time;
+        @volume = $self->search_volume_re($pattern,"refresh");
+        return $volume[0] if !wantarray && scalar @volume;
+    }
+    return if !wantarray && !scalar@volume;
     return @volume;
+}
+
+=head2 search_volume_path_re
+
+Searches for a volume in all the storage pools known to the Virtual Manager
+
+Argument: a regular expression;
+Returns the volume path. If called in array context returns a
+list of all the paths of all the matching volumes.
+
+    my $iso = $vm->search_volume(qr(debian-\d+\.iso));
+
+    my @disk = $vm->search_volume(qr(windows10-clone.*\.img));
+
+=cut
+
+
+sub search_volume_path_re($self, $pattern) {
+    my @vol = $self->search_volume_re($pattern);
+
+    return if !wantarray && !scalar @vol;
+    return $vol[0]->get_path if !wantarray;
+
+    return map { $_->get_path() if ref($_) } @vol;
+
 }
 
 =head2 dir_img

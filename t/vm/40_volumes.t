@@ -6,7 +6,7 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
-use v5.24; use feature qw(signatures);
+use v5.22; use feature qw(signatures);
 no warnings "experimental::signatures";
 
 use lib 't/lib';
@@ -331,7 +331,7 @@ sub test_search($vm_name) {
     my $file = $vm->search_volume_path("file.iso");
     is($file_out, $file);
 
-    my $file_re = $vm->search_volume_path_re("file.*so");
+    my $file_re = $vm->search_volume_path_re(qr(file.*so));
     is($file_re, $file);
 }
 

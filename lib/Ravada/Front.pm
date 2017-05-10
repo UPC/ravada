@@ -16,6 +16,9 @@ use Moose;
 use Ravada;
 use Ravada::Network;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use Data::Dumper;
 
 has 'config' => (
@@ -305,13 +308,11 @@ sub list_iso_images {
         $vm = $self->search_vm($vm_name)    if !$vm;
 
         if ($file) {
-            warn "searching for $file";
-            my $iso_file = $vm->search_volume($file);
+            my $iso_file = $vm->search_volume_path($file);
             $row->{device} = $iso_file  if $iso_file;
         }
         if ($file_re && !$row->{device}) {
-            warn "searching for $file_re";
-            my $iso_file = $vm->search_volume_re($file_re);
+            my $iso_file = $vm->search_volume_path_re(qr($file_re));
             $row->{device} = $iso_file  if $iso_file;
         }
     }

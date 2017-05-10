@@ -21,10 +21,11 @@ my @VMS = reverse keys %ARG_CREATE_DOM;
 init($test->connector);
 my $USER = create_user("foo","bar");
 
+my $ISO_FILE = "mock$$.iso";
+
 sub test_isos_vm {
     my $vm = shift;
 
-    diag("testing isos");
     my $sth = $test->connector->dbh->prepare(
         "SELECT * FROM iso_images"
     );
@@ -47,9 +48,24 @@ sub _insert_iso_there {
     my $vm_name = shift;
     my $vm=rvd_back->search_vm($vm_name);
 
-    open my $out,'>',$vm->dir_img."/mock.iso" or die $!;
+    open my $out,'>',$vm->dir_img."/$ISO_FILE" or die $!;
     print $out "nothing\n";
     close $out;
+
+    my @found = $vm->search_volume_path_re(qr(mock\d+.iso));
+    ok(@found,"Expecting mock\\d.iso found, got ".Dumper(\@found)) 
+        or return;
+
+    like($found[0], qr($ISO_FILE$)) or return;
+
+    my $found = $vm->search_volume_path_re(qr(mock\d+.iso));
+    like($found, qr($ISO_FILE))   or return;
+
+    @found = $vm->search_volume_path($ISO_FILE);
+    ok(@found,"Expecting $ISO_FILE found, got ".Dumper(\@found)) or return;
+
+    $found = $vm->search_volume_path($ISO_FILE);
+    like($found, qr($ISO_FILE))   or return;
 
     my $sth = $test->dbh->prepare(
         "INSERT INTO iso_images "
@@ -57,7 +73,7 @@ sub _insert_iso_there {
         ." VALUES(?,?,?)"
     );
     my $name = 'mock';
-    $sth->execute($name,'i386','http://localhost/mock.iso');
+    $sth->execute($name,'i386',"http://localhost/$ISO_FILE");
     $sth->finish;
 
     $sth = $test->dbh->prepare("SELECT id FROM iso_images "
@@ -69,11 +85,23 @@ sub _insert_iso_there {
 
 }
 
-sub test_isos_already_there {
+sub _remove_iso {
     my $vm_name = shift;
     my $vm=rvd_back->search_vm($vm_name);
+    for my $pool ($vm->vm->list_storage_pools) {
+        $pool->refresh();
+        for my $vol ( $pool->list_all_volumes()) {
+            $vol->delete()  if $vol->get_path =~ /mock\d+\.iso$/;
+        }
+    }
+}
 
-    my $id = _insert_iso_there($vm_name);
+sub test_isos_already_there {
+    my $vm_name = shift;
+    _remove_iso($vm_name);
+    my $vm=rvd_back->search_vm($vm_name);
+
+    my $id = _insert_iso_there($vm_name) or return;
 
     my $list_iso = rvd_front->list_iso_images($vm_name);
     my $iso_mock;
@@ -84,7 +112,8 @@ sub test_isos_already_there {
     ok($iso_mock->{device},"Expecting device in ISO ".Dumper($iso_mock));
 
     my $iso = $vm->_search_iso($id);
-    ok($iso->{device},"Expecting device in ISO ".Dumper($iso));
+    ok($iso->{device},"Expecting device in ISO ".Dumper($iso)) or return;
+    _remove_iso($vm_name);
 }
 
 sub test_isos_front {
