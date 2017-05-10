@@ -20,6 +20,8 @@ use Moose;
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
+use vars qw($AUTOLOAD);
+
 use Data::Dumper;
 
 with 'Ravada::Auth::User';
@@ -360,6 +362,54 @@ sub remove($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
     $sth->execute($self->id);
     $sth->finish;
+}
+
+sub can_do($self, $grant) {
+    return $self->{_grant}->{$grant} if exists $self->{_grant}->{$grant};
+
+    $self->_load_grants();
+
+    confess "Unknown permission '$grant'\n" if !exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant};
+}
+
+sub _load_grants($self) {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT gt.name, gu.allowed"
+        ." FROM grant_types gt LEFT JOIN grants_user gu "
+        ."      ON gt.id = gu.id_grant "
+        ."      AND gu.id_user=?"
+    );
+    $sth->execute($self->id);
+    my ($name, $allowed);
+    $sth->bind_columns(\($name, $allowed));
+
+    my $count = 0;
+    while ($sth->fetch) {
+        $count++ if defined $allowed;
+        $self->{_grant}->{$name} = ( $allowed or 0);
+    }
+    $sth->finish;
+
+    $self->grant_user_permissions($self);
+}
+
+sub grant_user_permissions($self,$user) {
+    die "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
+        if !$self->can_grant();
+}
+
+sub AUTOLOAD {
+    my $self = shift;
+
+    my $name = $AUTOLOAD;
+    $name =~ s/.*://;
+
+    confess "Can't locate object method $name via package $self"
+        if !ref($self) || $name !~ /^can_(.*)/;
+
+    my ($permission) = $name =~ /^can_([a-z_]+)/;
+    return $self->can_do($permission)  if $permission;
 }
 
 1;
