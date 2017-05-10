@@ -105,6 +105,18 @@ sub BUILD {
     $self->_update_data();
 }
 
+sub _update_user_grants {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
+    my $id;
+    $sth->bind_columns(\$id);
+    $sth->execute;
+    while ($sth->fetch) {
+        my $user = Ravada::Auth::SQL->search_by_id($id);
+    }
+    $sth->finish;
+}
+
 sub _update_isos {
     my $self = shift;
     my $table = 'iso_images';
@@ -161,6 +173,7 @@ sub _update_isos {
 sub _update_data {
     my $self = shift;
     $self->_update_isos();
+    $self->_update_user_grants();
 }
 
 sub _upgrade_table {

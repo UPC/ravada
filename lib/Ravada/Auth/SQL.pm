@@ -390,8 +390,6 @@ sub _load_grants($self) {
         $self->{_grant}->{$name} = ( $allowed or 0);
     }
     $sth->finish;
-
-    $self->grant_user_permissions($self);
 }
 
 sub grant_user_permissions($self,$user) {

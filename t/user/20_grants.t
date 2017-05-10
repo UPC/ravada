@@ -24,6 +24,7 @@ init($test->connector);
 
 sub test_defaults {
     my $user= create_user("foo","bar");
+    my $rvd_back = rvd_back();
 
     ok($user->can_clone);
     ok($user->can_change_settings);
