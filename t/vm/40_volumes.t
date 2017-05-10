@@ -333,6 +333,9 @@ sub test_search($vm_name) {
 
     my $file_re = $vm->search_volume_path_re(qr(file.*so));
     is($file_re, $file);
+
+    my @isos = $vm->search_volume_path_re(qr(.*\.iso$));
+    ok(scalar @isos,"Expecting isos, got : ".Dumper(\@isos));
 }
 
 #######################################################################33
