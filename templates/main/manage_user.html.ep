@@ -17,7 +17,7 @@ ment">
 %               $checked = 'checked' if $user->can_do($perm->{name});
                 <input type="checkbox" <%= $checked %> 
                     name="perm_<%= $perm->{id} %>">
-                <label for="perm_<%= $perm->{id} %>"><%= $perm->{description} %></label><br/>
+                <label for="perm_<%= $perm->{id} %>"><%=l($perm->{description}) %></label><br/>
 % }
             <input type="submit">
         </form>
