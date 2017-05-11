@@ -450,8 +450,11 @@ sub grant_admin_permissions($self,$user) {
 }
 
 sub grant($self,$user,$permission) {
-    die "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
-        if !$self->can_grant();
+    if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
+        my @perms = $self->list_permissions();
+        confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
+            .Dumper(\@perms);
+    }
 
     return if $user->can_do($permission);
     my $id_grant = _search_id_grant($permission);
@@ -466,7 +469,7 @@ sub grant($self,$user,$permission) {
 
 }
 
-sub list_permissions($self) {
+sub list_all_permissions($self) {
     return if !$self->is_admin;
 
     my $sth = $$CON->dbh->prepare(
@@ -476,6 +479,15 @@ sub list_permissions($self) {
     my @list;
     while (my ($type) = $sth->fetchrow) {
         push @list,($type);
+    }
+    return @list;
+}
+
+sub list_permissions($self) {
+    my @list;
+    for my $grant (sort keys %{$self->{_grant}}) {
+        push @list , (  [$grant => $self->{_grant}->{$grant} ] )
+            if $self->{_grant}->{$grant};
     }
     return @list;
 }

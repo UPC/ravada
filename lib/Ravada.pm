@@ -104,9 +104,9 @@ sub BUILD {
     }
     Ravada::Auth::init($CONFIG);
 
-    $self->_init_user_daemon();
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_init_user_daemon();
     $self->_update_data();
 }
 
@@ -126,12 +126,15 @@ sub _init_user_daemon {
 }
 sub _update_user_grants {
     my $self = shift;
+    $self->_init_user_daemon();
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
     my $id;
-    $sth->bind_columns(\$id);
     $sth->execute;
+    $sth->bind_columns(\$id);
     while ($sth->fetch) {
         my $user = Ravada::Auth::SQL->search_by_id($id);
+        next if $user->name() eq $USER_DAEMON_NAME;
+
         $USER_DAEMON->grant_user_permissions($user);
         $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }

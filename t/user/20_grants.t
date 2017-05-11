@@ -64,7 +64,7 @@ sub test_defaults {
 sub test_admin {
     my $user = create_user("foo$$","bar",1);
     ok($user->is_admin);
-    for my $perm ($user->list_permissions) {
+    for my $perm ($user->list_all_permissions) {
         is($user->can_do($perm),1);
     }
 }
