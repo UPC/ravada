@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+
+        <!--BASES AND DOMAINS LIST-->
+        <div>
+            <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2>Virtual Machine <%= $domain->name %></h2>
+                    </div>
+                        <form action="<%= $uri %>" method="post">
+                        <input type="submit" name="start" value="start" <%= $_start_disabled %>>
+                        <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
+                        <input type="submit" name="pause" value="pause" <%= $_pause_disabled %>>
+                        <input type="submit" name="resume" value="resume" <%= $_resume_disabled %>>
+                        <a href="/machine/view/<%= $domain->id %>.html">View</a>
+                        <a href="/machine/prepare/<%= $domain->id %>.html">PrepareBase</a>
+                        <a href="/machine/remove/<%= $domain->id %>.html">Remove</a>
+                        <a href="/machine/screenshot/<%= $domain->id %>.html">Screenshot</a>
+                    </form>
+                    <img src="/img/screenshots/<%= $domain->id %>.png" width=400>
+                    
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>

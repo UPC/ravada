@@ -45,6 +45,9 @@ sub test_remove_domain {
 
 ##############################################################
 
+remove_old_domains();
+remove_old_disks();
+
 eval { $VMM = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
@@ -52,9 +55,7 @@ SKIP: {
     skip $msg,10    if !$VMM;
 
 
-remove_old_disks();
-my ($name) = $0 =~ m{.*/(.*)\.t};
-$name .= "_0";
+my $name = new_domain_name();
 
 test_remove_domain($name, user_admin());
 
@@ -66,8 +67,8 @@ my $domain = $VMM->create_domain(
 );
 
 
-ok($domain,"Domain not created") and do {
-    $domain->shutdown(timeout => 5) if !$domain->is_active;
+ok($domain,"Expected a domain class, got :".ref($domain)) and do {
+    $domain->shutdown(timeout => 5, user => $USER) if $domain->is_active;
 
     for ( 1 .. 10 ){
         last if !$domain->is_active;
@@ -80,11 +81,11 @@ ok($domain,"Domain not created") and do {
     }
 
     ok(! $domain->is_active, "I can't shut down the domain") and do {
-        $domain->start();
+        $domain->start( $USER );
         ok($domain->is_active,"I don't see the domain active");
 
         if ($domain->is_active) {
-            $domain->shutdown(timeout => 3);
+            $domain->shutdown(timeout => 3, user => $USER);
         }
         ok(!$domain->is_active."Domain won't shut down") and do {
             test_remove_domain($name);

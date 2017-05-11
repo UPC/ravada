@@ -1,0 +1,34 @@
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="docu
+ment">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+<div id="page-wrapper">
+
+    <div class="page-header">
+        <div class="panel panel-default">
+             <div class="panel-heading">
+                 <h2>User <%= $user->name %></h2>
+             </div> <!-- del panel heading-->
+        </div>
+        <form>
+%           for my $perm ($_user->list_all_permissions) {
+%               my $checked = '';
+%               $checked = 'checked' if $user->can_do($perm->{name});
+                <input type="checkbox" <%= $checked %> 
+                    name="perm_<%= $perm->{id} %>">
+                <label for="perm_<%= $perm->{id} %>"><%=l($perm->{description}) %></label><br/>
+% }
+            <input type="submit">
+        </form>
+    </div>
+
+<div>
+
+</div>
+
+    %= include 'bootstrap/scripts'
+    %= include 'bootstrap/messages'
+</body>
+</html>
+

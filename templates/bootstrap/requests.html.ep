@@ -1,0 +1,15 @@
+<div id="requests" class="panel panel-primary"
+    ng-show="requests[0]"
+    ng-controler="requestsCtrl">
+    <div class="panel-heading"><b>Running processes</b></div>
+
+    <div class="panel-body">
+    <div ng-repeat="request in requests">
+        <font color="darkgray">{{request.date}} |</font>
+        {{request.command}}
+            <b>{{request.domain}}</b>
+            <i>{{request.status}}</i>
+            <font color="darkblue">{{request.message}}</font>
+    </div>
+    </div>
+</div>

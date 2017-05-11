@@ -44,6 +44,7 @@ sub test_create_domain {
     my $name = new_domain_name();
 
     my $vm = $RVD_BACK->search_vm($vm_name);
+    ok($vm,"Expecting VM $vm , got '".ref($vm)) or return;
     
     my $domain_b = $vm->create_domain(
         name => $name
@@ -51,21 +52,84 @@ sub test_create_domain {
         ,create_args($vm_name)
     );
     
+    ok($domain_b);
+
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f);
-    ok(exists $domain_f->{is_active});
 
-    eval { $domain_b->shutdown };
+    return $name;
+}
+
+sub test_start_domain { 
+
+    my $vm_name = shift;
+    my $name = shift;
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    my $domain_b = $vm->search_domain($name);
+    ok($domain_b,"Domain $name should be in backend");
+
+    my $domain_f = $RVD_FRONT->search_domain($name);
+    ok($domain_f,"Domain $name should be in frontend");
+
+    if ($domain_b->is_active) {
+        eval { $domain_b->shutdown(user => $USER)};
+        ok(!$@,"[$vm_name] Start domain $name expecting error: '' , got $@");
+    }
+
+    ok(!$domain_f->is_active);
+
+    eval { $domain_f->start($USER ) };
+    ok($@,"[$vm_name] Start should be denied from front ");
+    ok(!$domain_f->is_active,"[$vm_name] Domain should be active");
+
+    if ($vm_name =~ /kvm/i ) {
+        eval {
+            $domain_f->domain->create();
+        };
+        ok($@,"[$vm_name] domain->create should be denied from front ");
+    }
+
+    eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
-    $domain_f = $RVD_FRONT->search_domain($name);
-    ok($domain_f);
-    ok(exists $domain_f->{is_active} && !$domain_f->{is_active});
+    ok($domain_f->is_active);# && !$domain_f->is_active);
 
-    $domain_b->start;
-    $domain_f = $RVD_FRONT->search_domain($name);
-    ok($domain_f);
-    ok(exists $domain_f->{is_active} && $domain_f->{is_active});
+}
+
+sub test_shutdown_domain {
+    my $vm_name = shift;
+    my $name = shift;
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    my $domain_b = $vm->search_domain($name);
+    ok($domain_b,"Domain $name should be in backend");
+    ok(!$domain_b->readonly,"Domain $name should not be readonly");
+
+    my $domain_f = $RVD_FRONT->search_domain($name);
+    ok($domain_f,"Domain $name should be in frontend");
+    ok($domain_f->readonly,"Domain $name should be readonly");
+
+    eval { $domain_b->start };
+#    ok(!$@,"[$vm_name] Start domain $name expecting error: '' , got $@");
+
+    ok($domain_f->is_active);
+
+    eval { $domain_f->shutdown( force => 1) };
+    ok($@,"[$vm_name] Shutdown should be denied from front ");
+    ok($domain_f->is_active,"[$vm_name] Domain should be active");
+
+    if ($vm_name =~ /kvm/i ) {
+        eval {
+            $domain_f->domain->shutdown();
+        };
+        ok($@,"[$vm_name] Shutdown should be denied from front ");
+    }
+
+    eval { $domain_b->shutdown(user => $USER,force => 1) };
+    ok(!$@,$@);
+
+    ok(!$domain_f->is_active);# && !$domain_f->is_active);
 
 }
 
@@ -93,8 +157,15 @@ remove_old_domains();
 remove_old_disks();
 
 for my $vm_name (qw(Void KVM)) {
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    if ( !$vm ) {
+        diag("Skipping VM $vm_name in this system");
+        next;
+    }
     test_vm_ro($vm_name);
-    test_create_domain($vm_name);
+    my $dom_name = test_create_domain($vm_name);
+    test_start_domain($vm_name, $dom_name);
+    test_shutdown_domain($vm_name, $dom_name);
 }
 
 remove_old_domains();

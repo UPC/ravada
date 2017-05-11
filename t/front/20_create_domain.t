@@ -27,8 +27,9 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 my $USER = create_user('foo','bar');
 
 my %CREATE_ARGS = (
-    kvm => { id_iso => 1,       id_owner => $USER->id }
-    ,lxc => { id_template => 1, id_owner => $USER->id }
+    Void => { id_iso => 1,       id_owner => $USER->id }
+    ,KVM => { id_iso => 1,       id_owner => $USER->id }
+    ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 
 
@@ -68,6 +69,15 @@ sub test_remove_domain {
     ok(!search_domain_db($name),"Domain $name still in db");
 }
 
+sub test_list_bases {
+    my $vm_name = shift;
+    my $expected = shift;
+
+    my $bases = $RVD_FRONT->list_bases();
+
+    ok(scalar @$bases == $expected,"Expecting '$expected' bases, got ".scalar @$bases);
+}
+
 ####################################################################
 #
 
@@ -76,18 +86,28 @@ remove_old_disks();
 
 $RVD_FRONT->fork(0);
 
-for my $vm_name ('kvm','lxc') {
+ok(scalar $RVD_FRONT->list_vm_types(),"Expecting some in list_vm_types , got "
+    .scalar $RVD_FRONT->list_vm_types());
+
+SKIP: {
+for my $vm_name ('Void','KVM','LXC') {
 
     my $vm = $RVD_BACK->search_vm($vm_name);
+    my $msg = "Skipping VM $vm_name in this system";
+    if ($vm && $vm_name =~ /kvm/i && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     if (!$vm) {
-        diag("Skipping VM $vm_name in this system");
-        next;
+        diag($msg);
+        skip($msg,10);
     }
 
     my $name = new_domain_name();
     my $req = $RVD_FRONT->create_domain( name => $name 
-        , vm => $vm_name
         , create_args($vm_name)
+        , vm => $vm_name
     );
     ok($req, "Request $name not created");
 
@@ -96,20 +116,29 @@ for my $vm_name ('kvm','lxc') {
     ok($req->status eq 'done',"Request for create $vm domain ".$req->status);
     ok(!$req->error,$req->error);
 
+    test_list_bases($vm_name, 0);
+
     my $domain  = $RVD_FRONT->search_domain($name);
 
     ok($domain,"Domain $name not found") or exit;
-    ok($domain && $domain->{name} && 
-        $domain->{name} eq $name,"Expecting domain name $name, got "
-        .($domain->{name} or '<UNDEF>'));
+    ok($domain && $domain->name && 
+        $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
+        .($domain->name or '<UNDEF>'));
 
-    $RVD_FRONT->start_domain($name);
+    my $ip = '99.88.77.66';
+
+    $req = $RVD_FRONT->start_domain(name => $name, user =>  $USER, remote_ip => $ip);
     $RVD_FRONT->wait_request($req,10);
     ok($req->status('done'),"Request ".$req->status);
+    ok(!$req->error,"[$vm_name] Request start domain expecting no error, got '".$req->error
+        ."'") or exit;
 
-    my $display = $RVD_FRONT->domdisplay($name, $USER);
-    ok($display,"No display for domain $name found. Is it active ?");
-    ok($display && $display =~ m{\w+://.*?:\d+},"Expecting display a URL, it is '"
+    ok($domain->is_active,"[$vm_name] Expecting domain $name active, got ".$domain->is_active)
+        or exit;
+
+    my $display = $domain->display($USER);
+    ok($display,"[$vm_name] No display for domain $name found. Is it active ?");
+    ok($display && $display =~ m{\w+://.*?:\d+},"[$vm_name] Expecting display a URL, it is '"
                 .($display or '<UNDEF>')
                 ."'");
 
@@ -119,4 +148,9 @@ for my $vm_name ('kvm','lxc') {
 
     test_remove_domain($name);
 }
+}
+
+remove_old_domains();
+remove_old_disks();
+
 done_testing();

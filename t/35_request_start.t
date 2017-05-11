@@ -1,6 +1,8 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
@@ -12,18 +14,21 @@ use Test::Ravada;
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
-my $RAVADA = rvd_back($test->connector, 't/etc/ravada.conf');
+init($test->connector, 't/etc/ravada.conf');
+my $RAVADA = rvd_back();
+my $USER = create_user('foo','bar', 1);
 
-my @ARG_CREATE_DOM;
-
-sub test_request_start {
-}
+my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => 1 );
 
 sub test_remove_domain {
+    my $vm_name = shift;
     my $name = shift;
 
-    my $domain = $name if ref($name);
-    $domain = $RAVADA->search_domain($name,1);
+    my $vm = rvd_back->search_vm($vm_name) 
+        or confess "I can't find vm $vm_name";
+
+    diag("[$vm_name] removing domain $name");
+    my $domain = $vm->search_domain($name,1);
 
     my $disks_not_removed = 0;
 
@@ -35,26 +40,27 @@ sub test_remove_domain {
         };
         ok(!$@ , "Error removing domain $name ".ref($domain).": $@") or exit;
 
-        ok(! -e $domain->file_base_img ,"Image file was not removed "
-                    . $domain->file_base_img )
-                if  $domain->file_base_img;
         for (@disks) {
             ok(!-e $_,"Disk $_ should be removed") or $disks_not_removed++;
         }
 
     }
-    $domain = $RAVADA->search_domain($name,1);
-    ok(!$domain, "I can't remove old domain $name") or exit;
+    $domain = $vm->search_domain($name,1);
+    ok(!$domain, "Removing old domain $name") or exit;
     ok(!$disks_not_removed,"$disks_not_removed disks not removed from domain $name");
 }
 
 sub test_new_domain {
+    my $vm_name = shift;
     my $name = shift;
 
-    test_remove_domain($name);
+    my $vm = $RAVADA->search_vm($vm_name);
 
-    diag("Creating domain $name");
-    my $domain = $RAVADA->create_domain(name => $name, @ARG_CREATE_DOM, active => 0);
+#    test_remove_domain($vm_name, $name);
+
+    diag("[$vm_name] Creating domain $name");
+    $vm->connect();
+    my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0);
 
     ok($domain,"Domain not created");
 
@@ -63,38 +69,57 @@ sub test_new_domain {
 
 
 sub test_start {
-    my $name = new_domain_name();
-    test_remove_domain($name);
+    my $vm_name = shift;
 
+    my $name = new_domain_name();
+#    test_remove_domain($vm_name, $name);
+
+
+    my $remote_ip = '99.88.77.66';
 
     my $req = Ravada::Request->start_domain(
-        "does not exists"
+        name => "does not exists"
+        ,uid => $USER->id
+        ,remote_ip => $remote_ip
     );
-    $RAVADA->_process_requests_dont_fork();
+    $RAVADA->process_requests();
 
-    ok($req->status eq 'done', "Req ".$req->{id}." expecting status done, got ".$req->status);
+    wait_request($req);
+
+    ok($req->status eq 'done', "[$vm_name] Req ".$req->{id}." expecting status done, got ".$req->status);
     ok($req->error && $req->error =~ /unknown/i
-            ,"Req ".$req->{id}." expecting unknown domain error , got "
+            ,"[$vm_name] Req ".$req->{id}." expecting unknown domain error , got "
                 .($req->error or '<NULL>')) or return;
     $req = undef;
 
     #####################################################################3
     #
     # start
-    test_new_domain($name);
+    test_new_domain($vm_name, $name);
 
-    my $domain = $RAVADA->search_domain($name);
-    ok(!$domain->is_active,"Domain $name should be inactive") or return;
-
-    my $req2 = Ravada::Request->start_domain($name);
+    {
+        my $vm = $RAVADA->search_vm($vm_name);
+        my $domain = $vm->search_domain($name);
+        ok(!$domain->is_active,"Domain $name should be inactive") or return;
+    }
+    my $req2 = Ravada::Request->start_domain(name => $name, uid => $USER->id
+        ,remote_ip => $remote_ip
+    );
     $RAVADA->process_requests();
 
-    ok($req2->status eq 'done');
+    wait_request($req2);
+    ok($req2->status eq 'done',"Expecting request status 'done' , got "
+                                .$req2->status);
 
-    ok($domain->is_active);
+    {
+        my $domain = $RAVADA->search_domain($name);
+        $domain->start($USER)    if !$domain->is_active();
+        ok($domain->is_active);
 
-    my $domain2 = $RAVADA->search_domain($name);
-    ok($domain2->is_active);
+        my $vm = $RAVADA->search_vm($vm_name);
+        my $domain2 = $vm->search_domain($name);
+        ok($domain2->is_active);
+    }
 
     $req2 = undef;
 
@@ -102,46 +127,124 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->shutdown_domain($name);
+    my $req3 = Ravada::Request->force_shutdown_domain(name => $name, uid => $USER->id);
     $RAVADA->process_requests();
-    ok($req3->status eq 'done');
+    wait_request($req3);
+    ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
+                            .$req3->status);
+    ok(!$req3->error,"Error shutting down domain $name , expecting ''
+                        . Got '".($req3->error or ''));
 
-    ok(!$domain->is_active);
-
-    my $domain3 = $RAVADA->search_domain($name);
-    ok(!$domain3->is_active);
+    my $vm = $RAVADA->search_vm($vm_name);
+    my $domain3 = $vm->search_domain($name);
+    for ( 1 .. 60 ) {
+        last if !$domain3->is_active;
+        sleep 1;
+    }
+    ok(!$domain3->is_active,"Domain $name should not be active");
 
     return $domain3;
 
 }
 
+sub test_screenshot {
+    my $vm_name = shift;
+    my $domain_name = shift;
+
+    my $domain = $RAVADA->search_domain($domain_name);
+    $domain->start($USER) if !$domain->is_active();
+    return if !$domain->can_screenshot();
+
+    unlink $domain->_file_screenshot or die "$! ".$domain->_file_screenshot
+        if -e $domain->_file_screenshot;
+
+    ok(!-e $domain->_file_screenshot,"File screenshot ".$domain->_file_screenshot
+                                    ." should not exist");
+
+    my $file_screenshot = $domain->_file_screenshot();
+    my $domain_id = $domain->id;
+    $domain = undef;
+
+    my $req = Ravada::Request->screenshot_domain(id_domain => $domain_id );
+    ok($req);
+
+    my $dont_fork = 1;
+    rvd_back->process_all_requests(0,$dont_fork);
+    wait_request($req);
+    ok($req->status('done'),"Request should be done, it is ".$req->status);
+    ok(!$req->error(''),"Error should be '' , it is ".$req->error);
+
+    ok(-e $file_screenshot,"File screenshot ".$file_screenshot
+                                    ." should exist");
+}
+
+sub test_screenshot_file {
+    my $vm_name = shift;
+    my $domain_name = shift;
+
+    my $domain = $RAVADA->search_domain($domain_name);
+
+    $domain->start($USER) if !$domain->is_active();
+    return if !$domain->can_screenshot();
+
+    unlink $domain->_file_screenshot or die "$! ".$domain->_file_screenshot
+        if -e $domain->_file_screenshot;
+
+    ok(!-e $domain->_file_screenshot,"File screenshot should not exist");
+
+    my $file = "/var/tmp/screenshot.$$.png";
+    my $domain_id = $domain->id;
+    $domain = undef;
+
+    my $req = Ravada::Request->screenshot_domain(
+        id_domain => $domain_id
+        ,filename => $file);
+    ok($req);
+
+    my $dont_fork = 1;
+    rvd_back->process_all_requests(0,$dont_fork);
+    wait_request($req);
+
+    ok($req->status('done'),"Request should be done, it is ".$req->status);
+    ok(!$req->error(),"Error should be '' , it is ".($req->error or ''));
+
+    ok(-e $file,"File '$file' screenshot should exist");
+
+}
+
+
 ###############################################################
 #
 
-my $vmm;
+remove_old_domains();
+remove_old_disks();
 
-eval { 
-    $vmm = $RAVADA->search_vm('kvm');
-    @ARG_CREATE_DOM = ( id_iso => 1, vm => 'kvm', id_owner => 1 )  if $vmm;
+for my $vm_name (qw(KVM Void)) {
+    my $vmm = $RAVADA->search_vm($vm_name);
 
-    if (!$vmm) {
-        $vmm = $RAVADA->search_vm('lxc');
-        @ARG_CREATE_DOM = ( id_template => 1, vm => 'LXC', id_owner => 1 );
-    }
+    SKIP: {
+        my $msg = "SKIPPED: Virtual manager $vm_name not found";
+        if ($vmm && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vmm = undef;
+        }
 
-} if $RAVADA;
+        diag($msg) if !$vmm;
+        skip($msg,10) if !$vmm;
 
-SKIP: {
-    my $msg = "SKIPPED: No virtual managers found";
-    diag($msg) if !$vmm;
-    skip($msg,10) if !$vmm;
+#        $vmm->disconnect() if $vmm;
+        diag("Testing VM $vm_name");
+        my $domain = test_start($vm_name);
+#        $domain->_vm->disconnect;
+        my $domain_name = $domain->name;
+        $domain = undef;
 
-    remove_old_domains();
-    remove_old_disks();
-    my $domain = test_start();
+        test_screenshot($vm_name, $domain_name);
+        test_screenshot_file($vm_name, $domain_name);
+    };
+}
+remove_old_domains();
+remove_old_disks();
 
-    $domain->shutdown_now() if $domain;
-    $domain->remove(user_admin())       if $domain;
-};
 done_testing();
 

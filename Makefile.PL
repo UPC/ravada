@@ -15,8 +15,21 @@ WriteMakefile(
 	  ,'Net::LDAP'  => 0
       ,'Sys::Virt'  => 0
       ,'XML::LibXML'=> 0
-                ,'YAML' => 0
+             ,'YAML' => 0
+    ,'Image::Magick' => 0
+      ,'MooseX::Types::NetAddr::IP' => 0
+	,'IO::Interface' => 0
+	,'Sys::Statistics::Linux' => 0
+    ,'Test::Pod::Coverage' => 0
+    ,'Locale::Maketext::Lexicon' => 0
+    ,'Mojolicious::Plugin::I18N' => 0
+  },
+  BUILD_REQUIRES => {
+    'Test::SQL::Data' => 0
+    ,'Test::Perl::Critic' => 0
   },
 
-  test      => {TESTS => 't/*.t t/*/*.t'}
+  test      => {TESTS => 't/*.t t/*/*.t'},
+  clean     => {FILES => 't/.db' }
+
 );

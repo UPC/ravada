@@ -5,20 +5,23 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use lib 't/lib';
+use Test::Ravada;
+
 use_ok('Ravada');
 use_ok('Ravada::Front');
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
-my @rvd_args = (
-       config => 't/etc/ravada.conf' 
-   ,connector => $test->connector 
-);
+init($test->connector , 't/etc/ravada.conf');
 
-my $RVD_BACK  = Ravada->new( @rvd_args );
-my $RVD_FRONT = Ravada::Front->new( @rvd_args
-    , backend => $RVD_BACK
-    , fork => 0
+my $USER = create_user('foo','bar');
+my $RVD_BACK  = rvd_back( );
+my $RVD_FRONT = rvd_front();
+
+my %ARG_CREATE_DOM = (
+      KVM => [ id_iso => 1 ]
+    ,Void => [ ]
 );
 
 # twice so it won't warn it is only used once
@@ -43,10 +46,16 @@ sub test_empty {
 
 sub test_add_domain_db {
 
-    my $sth = $test->dbh->prepare("INSERT INTO domains "
-            ."(name, id_owner, vm) VALUES (?,?,?)");
-    $sth->execute('a',1,'Void');
-    
+    my $vm_name = shift;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain_name = new_domain_name();
+
+    my $domain = $vm->create_domain( 
+        name => $domain_name 
+        , id_owner => $USER->id
+        , @{$ARG_CREATE_DOM{$vm_name}}
+    );
     my $domains = $RVD_FRONT->list_domains();
     ok($domains,"No domains list returned");
     ok(scalar @$domains == 1, "There should be one domain ".Dumper($domains));
@@ -55,14 +64,14 @@ sub test_add_domain_db {
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
     
-    $test->dbh->do("UPDATE DOMAINS set is_base='y' WHERE name='a'");
+    $test->dbh->do("UPDATE DOMAINS set is_base=1,is_public=1 WHERE name='$domain_name'");
     
     $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
-    ok(scalar @$bases == 1, "There should 1 base");
+    ok(scalar @$bases == 1, "There should 1 base, got ".scalar(@$bases)) or exit;
     
     for my $base ( @$bases ) {
-        ok($base->{is_base} =~ /y/i);
+        ok($base->{is_base} );
     }
 }
 
@@ -79,9 +88,11 @@ my $ping = $RVD_FRONT->ping_backend();
 SKIP: {
     diag("SKIPPING: No backend found at ping")    if !$ping;
     skip("No backend found at ping",10) if !$ping;
-    test_empty();
-    test_add_domain_db();
-    test_vm_types();
+    for my $vm_name ( 'Void') {
+        test_empty();
+        test_add_domain_db($vm_name);
+        test_vm_types();
+    }
 }
  
 done_testing();

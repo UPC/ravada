@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body role="document">
+    %= include 'bootstrap/navigation'
+    <div class="container theme-showcase" role="main">
+    <div class="jumbotron">
+        <h2>Running <%= $name %></h2>
+        Hi <%= $login %>,
+        click <a href="<%= $url %>"><%= $url %></a> if your host won't come out.
+
+%       if ($password ) {
+            <div class="panel-body">
+            <div class="panel panel-warning">
+                <div class="panel-heading">
+                    The password for this virtual machine connection is : <b><%= $password %></b>
+                </div>
+            </div>
+            </div>
+%       }
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>

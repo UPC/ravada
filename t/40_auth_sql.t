@@ -13,7 +13,7 @@ use_ok('Ravada::Auth::SQL');
 
 my $RAVADA = Ravada->new(connector => $test->connector);
 
-Ravada::Auth::SQL::add_user('test',$$);
+Ravada::Auth::SQL::add_user(name => 'test',password => $$);
 
 ok($$Ravada::Auth::SQL::CON,"Undefined DB connection");
 

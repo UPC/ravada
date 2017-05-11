@@ -1,3 +1,0 @@
-<h1>Request</h1>
-<a href="/request/<%= $request->{id} %>.html">refresh</a><br>
-<%= Data::Dumper::Dumper($request) %>

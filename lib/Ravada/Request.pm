@@ -3,6 +3,12 @@ package Ravada::Request;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Ravada::Request - Requests library for Ravada
+
+=cut
+
 use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
@@ -21,25 +27,42 @@ Request a command to the ravada backend
 our %FIELD = map { $_ => 1 } qw(error);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
+our $args_manage = { name => 1 , uid => 1 };
+our $args_prepare = { id_domain => 1 , uid => 1 };
+our $args_remove_base = { id_domain => 1 , uid => 1 };
+our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
+
 our %VALID_ARG = (
-    create_domain => { 
+    create_domain => {
               vm => 1
            ,name => 1
+           ,swap => 2
          ,id_iso => 1
         ,id_base => 1
        ,id_owner => 1
     ,id_template => 1
+         ,memory => 2
+           ,disk => 2
+        ,network => 2
     }
-    ,remove_domain => {
-        name => 1
-        ,uid => 1
-    }
-    ,prepare_base => {
-        name => 1
-        ,uid => 1
-
-    }
+    ,open_iptables => $args_manage_iptables
+      ,remove_base => $args_remove_base
+     ,prepare_base => $args_prepare
+     ,pause_domain => $args_manage
+    ,resume_domain => {%$args_manage, remote_ip => 1 }
+    ,remove_domain => $args_manage
+    ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
+    ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
+    ,screenshot_domain => { id_domain => 1, filename => 2 }
+    ,start_domain => {%$args_manage, remote_ip => 1 }
+    ,rename_domain => { uid => 1, name => 1, id_domain => 1}
+    ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
+    ,hybernate=> {uid => 1, id_domain => 1}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
 );
+
+our %CMD_SEND_MESSAGE = map { $_ => 1 }
+    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download);
 
 our $CONNECTOR;
 
@@ -53,7 +76,7 @@ sub _init_connector {
 
     Internal object builder, do not call
 
-=Cut
+=cut
 
 sub BUILD {
     _init_connector();
@@ -92,8 +115,8 @@ sub open {
     confess "I can't find id=$id " if !defined $row;
     $sth->finish;
 
-    my $args = decode_json($row->{args}) if $row->{args};
-    $args = {} if !$args;
+    my $args = {};
+    $args = decode_json($row->{args}) if $row->{args};
 
     $row->{args} = $args;
 
@@ -123,6 +146,9 @@ sub create_domain {
         confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
     }
     my $self = {};
+    if ($args{network}) {
+        $args{network} = JSON::XS->new->convert_blessed->encode($args{network});
+    }
 
     bless($self,$class);
     return $self->_new_request(command => 'create' , args => encode_json(\%args));
@@ -162,7 +188,7 @@ sub remove_domain {
 
 Requests to start a domain
 
-  my $req = Ravada::Request->start_domain( name => 'name' );
+  my $req = Ravada::Request->start_domain( name => 'name', uid => $user->id );
 
 =cut
 
@@ -170,23 +196,103 @@ sub start_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
-
-    my %args = ( name => $name )    or confess "Missing domain name";
+    my $args = _check_args('start_domain', @_);
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'start' , args => encode_json({ name => $name }));
+
+    return $self->_new_request(command => 'start' , args => encode_json($args));
 }
 
+=head2 pause_domain
+
+Requests to pause a domain
+
+  my $req = Ravada::Request->pause_domain( name => 'name', uid => $user->id );
+
+=cut
+
+sub pause_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('pause_domain', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'pause' , args => encode_json($args));
+}
+
+=head2 resume_domain
+
+Requests to pause a domain
+
+  my $req = Ravada::Request->resume_domain( name => 'name', uid => $user->id );
+
+=cut
+
+sub resume_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('resume_domain', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'resume' , args => encode_json($args));
+}
+
+
+
+sub _check_args {
+    my $sub = shift;
+    my $args = { @_ };
+
+    my $valid_args = $VALID_ARG{$sub};
+
+    confess "Unknown method $sub" if !$valid_args;
+    for (keys %{$args}) {
+        confess "Invalid argument $_ , valid args ".Dumper($valid_args)
+            if !$valid_args->{$_};
+    }
+
+    for (keys %{$VALID_ARG{$sub}}) {
+        next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
+        confess "Missing argument $_"   if !exists $args->{$_};
+    }
+
+    return $args;
+}
+
+=head2 force_shutdown_domain
+
+Requests to stop a domain now !
+
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id );
+
+=cut
+
+sub force_shutdown_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('force_shutdown_domain', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'force_shutdown' , args => $args);
+}
 
 =head2 shutdown_domain
 
 Requests to stop a domain
 
-  my $req = Ravada::Request->shutdown_domain( 'name' );
-  my $req = Ravada::Request->shutdown_domain( 'name' , $timeout );
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id );
+  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id
+                                            ,timeout => $timeout );
 
 =cut
 
@@ -194,16 +300,14 @@ sub shutdown_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $name = shift;
-    $name = $name->name if ref($name) =~ /Domain/;
+    my $args = _check_args('shutdown_domain', @_ );
 
-    my $timeout = ( shift or 10 );
-
-    my %args = ( name => $name, timeout => $timeout )    or confess "Missing domain name";
+    $args->{timeout} = 10 if !exists $args->{timeout};
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'shutdown' , args => encode_json(\%args));
+
+    return $self->_new_request(command => 'shutdown' , args => encode_json($args));
 }
 
 =head2 prepare_base
@@ -219,41 +323,50 @@ sub prepare_base {
     my $class=ref($proto) || $proto;
 
     my %args = @_;
-    confess "Missing domain name"   if !$args{name};
     confess "Missing uid"           if !$args{uid};
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'remove_domain'}->{$_};
-    }
-
-    $args{name} = $args{name}->name if ref($args{name}) =~ /Domain/;
+    my $args = _check_args('prepare_base', @_);
 
     my $self = {};
     bless($self,$class);
-    return $self->_new_request(command => 'prepare_base' 
-        , args => encode_json( \%args ));
+
+    return $self->_new_request(command => 'prepare_base'
+        , id_domain => $args{id_domain}
+        , args => encode_json( $args ));
 
 }
 
-=head2 list_vm_types
+=head2 remove_base
 
-Returns a list of VM types
+Returns a new request for making a base regular domain. It marks it
+as 'non base' and removes the files.
 
-    my $req = Ravada::Request->list_vm_types();
+It must have not clones. All clones must be removed before calling
+this method.
 
-    my $types = $req->result;
+  my $req = Ravada::Request->remove_base( $name );
 
 =cut
 
-sub list_vm_types {
+sub remove_base {
     my $proto = shift;
     my $class=ref($proto) || $proto;
 
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'list_vm_types' );
+    my %_args = @_;
+    confess "Missing uid"           if !$_args{uid};
 
+    my $args = _check_args('remove_base', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    my $req = $self->_new_request(command => 'remove_base'
+        , id_domain => $args->{id_domain}
+        , args => encode_json( $args ));
+
+    return $req;
 }
+
 
 =head2 ping_backend
 
@@ -269,6 +382,7 @@ sub ping_backend {
     bless ($self, $class);
     return $self->_new_request( command => 'ping_backend' );
 }
+
 
 =head2 domdisplay
 
@@ -304,9 +418,11 @@ sub _new_request {
         delete $args{name};
     }
     if ( ref $args{args} ) {
+        $args{args}->{uid} = $args{args}->{id_owner}
+            if !exists $args{args}->{uid};
+        $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
         $args{args} = encode_json($args{args});
     }
-
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -368,6 +484,7 @@ Returns or sets the status of a request
 sub status {
     my $self = shift;
     my $status = shift;
+    my $message = shift;
 
     if (!defined $status) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
@@ -384,33 +501,50 @@ sub status {
     $sth->execute($status, $self->{id});
     $sth->finish;
 
-    $self->_send_message($status)   if $self->command ne 'domdisplay';
+    $self->_send_message($status, $message)
+        if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
+}
+
+sub _search_domain_name {
+    my $self = shift;
+    my $domain_id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains where id=?");
+    $sth->execute($domain_id);
+    return $sth->fetchrow;
 }
 
 sub _send_message {
     my $self = shift;
     my $status = shift;
+    my $message = ( shift or $self->error );
 
     my $uid;
 
-    eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') };
+    $uid = $self->args('id_owner') if $self->defined_arg('id_owner');
+    $uid = $self->args('uid')      if !$uid && $self->defined_arg('uid');
     return if !$uid;
 
-    my $domain_name;
-    eval { $domain_name = $self->args('name') };
-    $domain_name = ''               if !$domain_name;
+    my $domain_name = $self->defined_arg('name');
+    if (!$domain_name) {
+        my $domain_id = $self->defined_arg('id_domain');
+        $domain_name = $self->_search_domain_name($domain_id)   if $domain_id;
+        $domain_name = '' if !defined $domain_name;
+    }
     $domain_name = "$domain_name "  if length $domain_name;
 
     $self->_remove_unnecessary_messages() if $self->status eq 'done';
 
+    my $subject = $self->command." $domain_name ".$self->status;
+    $subject = $message if $message && $self->status eq 'done'
+            && length ($message)<60;
+
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO messages ( id_user, id_request, subject, message ) "
-        ." VALUES ( ?,?,?,?)"
+        "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
+        ." VALUES ( ?,?,?,?, NULL)"
     );
-    $sth->execute($uid, $self->id,"Command ".$self->command." $domain_name".$self->status
-        ,$self->error);
+    $sth->execute($uid, $self->id,$subject, $message);
     $sth->finish;
 }
 
@@ -418,12 +552,14 @@ sub _remove_unnecessary_messages {
     my $self = shift;
 
     my $uid;
-    eval { $uid = $self->args('id_owner') };
-    eval { $uid = $self->args('uid') };
+    $uid = $self->defined_arg('id_owner');
+    $uid = $self->defined_arg('uid')        if !$uid;
     return if !$uid;
 
+
     my $sth = $$CONNECTOR->dbh->prepare(
-        "DELETE FROM messages WHERE id_user=? AND id_request=?"
+        "DELETE FROM messages WHERE id_user=? AND id_request=? "
+        ." AND (message='' OR message IS NULL)"
     );
 
     $sth->execute($uid, $self->id);
@@ -505,9 +641,173 @@ sub args {
     return $self->{args}->{$name};
 }
 
+=head2 defined_arg
+
+Returns if an argument is defined
+
+=cut
+
+sub defined_arg {
+    my $self = shift;
+    my $name = shift;
+    confess "ERROR: missing arg name" if !defined $name;
+    return $self->{args}->{$name};
+}
+
+=head2 screenshot_domain
+
+Request the screenshot of a domain.
+
+Arguments:
+
+- optional filename , defaults to "storage_path/$id_domain.png"
+
+Returns a Ravada::Request;
+
+=cut
+
+sub screenshot_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('screenshot_domain', @_ );
+
+    $args->{filename} = '' if !exists $args->{filename};
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
+        ,args => $args);
+
+}
+
+=head2 open_iptables
+
+Request to open iptables for a remote client
+
+=cut
+
+sub open_iptables {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('open_iptables', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'open_iptables'
+        , id_domain => $args->{id_domain}
+             , args => $args);
+}
+
+=head2 rename_domain
+
+Request to rename a domain
+
+=cut
+
+sub rename_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('rename_domain', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'rename_domain'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 set_driver
+
+Sets a driver to a domain
+
+    $domain->set_driver(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,id_driver => $driver->id
+    );
+
+=cut
+
+sub set_driver {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_driver', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_driver'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 hybernate
+
+Hybernates a domain.
+
+    Ravada::Request->hybernate(
+        id_domain => $domain->id
+             ,uid => $user->id
+    );
+
+=cut
+
+sub hybernate {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('hybernate', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'hybernate'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 download
+
+Downloads a file. Actually used only to download iso images
+for KVM domains.
+
+=cut
+
+sub download {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('download', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'download'
+             , args => encode_json($args)
+    );
+
+}
+
 sub AUTOLOAD {
     my $self = shift;
-
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
@@ -516,7 +816,7 @@ sub AUTOLOAD {
         if !ref($self);
 
     my $value = shift;
-    $name =~ tr/[a-z]/_/c;
+    $name =~ tr/[a-z][A-Z]_/_/c;
 
     confess "ERROR: Unknown field $name "
         if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
@@ -535,7 +835,7 @@ sub AUTOLOAD {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
-    eval { 
+    eval {
         $sth->execute($value, $self->{id});
         $sth->finish;
     };
@@ -544,4 +844,5 @@ sub AUTOLOAD {
 
 }
 
+sub DESTROY {}
 1;

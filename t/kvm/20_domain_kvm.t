@@ -37,7 +37,8 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        $domain->remove($user);
+        eval { $domain->remove($user) };
+        ok(!$@,"Domain $name should be removed ".$@) or exit;
     }
     $domain = $RAVADA->search_domain($name);
     die "I can't remove old domain $name"
@@ -135,7 +136,7 @@ sub test_domain{
             .($n_domains+1)
             ." "
             .join(" * ", sort map { $_->name } @list)
-        );
+        ) or exit;
         ok(!$domain->is_base,"Domain shouldn't be base "
             .Dumper($domain->_select_domain_db()));
 
@@ -160,6 +161,7 @@ sub test_domain{
  
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
         my $domain2;
+        $vm->connect();
         eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
         ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
 
@@ -171,9 +173,14 @@ sub test_domain_in_virsh {
     my $name = shift;
     my $vm = $RAVADA->search_vm('kvm');
 
+    $vm->connect();
     for my $domain ($vm->vm->list_all_domains) {
-        return 1 if $domain->get_name eq $name;
+        if ( $domain->get_name eq $name ) {
+            $vm->disconnect;
+            return 1 
+        }
     }
+    $vm->disconnect();
     return 0;
 }
 
@@ -197,6 +204,7 @@ sub test_domain_missing_in_db {
 
         my $vm = $RAVADA->search_vm('kvm');
         my $domain3;
+        $vm->connect();
         eval { $domain3 = $vm->vm->get_domain_by_name($domain->name)};
         ok($domain3,"I can't find the domain in the VM") or return;
 
@@ -240,6 +248,11 @@ my $vm;
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    if ($vm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

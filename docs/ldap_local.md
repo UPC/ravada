@@ -1,11 +1,11 @@
-#How to Install a local LDAP
+# How to Install a local LDAP
 
-##Install and configure 389-ds
+## Install and configure 389-ds
 
     $ sudo apt-get install 389-ds-base
     $ sudo setup-ds
 
-##Add a LDAP section in the config file
+## Add a LDAP section in the config file
 
 The config file usually is /etc/ravada.conf. Add this configuration:
 
@@ -17,7 +17,7 @@ The config file usually is /etc/ravada.conf. Add this configuration:
         base: 'dc=telecom,dc=bcn'
 
 
-##Insert one test user
+## Insert one test user
 
 The ravada backend script allows creating users in the LDAP
 
