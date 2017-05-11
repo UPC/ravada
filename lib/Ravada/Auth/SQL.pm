@@ -139,6 +139,9 @@ sub add_user {
         );
     $sth->execute($id_grant, $id_user);
     $sth->finish;
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    $user->grant_admin_permissions($user);
 }
 
 sub _search_id_grant {
@@ -392,7 +395,7 @@ sub remove($self) {
 }
 
 sub can_do($self, $grant) {
-    return $self->{_grant}->{$grant} if exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
 
     $self->_load_grants();
 
@@ -411,10 +414,8 @@ sub _load_grants($self) {
     my ($name, $allowed);
     $sth->bind_columns(\($name, $allowed));
 
-    my $count = 0;
     while ($sth->fetch) {
-        $count++ if defined $allowed;
-        $self->{_grant}->{$name} = ( $allowed or 0);
+        $self->{_grant}->{$name} = ( $allowed or undef);
     }
     $sth->finish;
 }
@@ -452,7 +453,7 @@ sub grant($self,$user,$permission) {
     die "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
         if !$self->can_grant();
 
-    return if $user->can($permission);
+    return if $user->can_do($permission);
     my $id_grant = _search_id_grant($permission);
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
@@ -461,7 +462,22 @@ sub grant($self,$user,$permission) {
     );
     $sth->execute($id_grant, $user->id);
     $sth->finish;
+    confess "Unable to grant $permission for ".$user->name if !$user->can_do($permission);
 
+}
+
+sub list_permissions($self) {
+    return if !$self->is_admin;
+
+    my $sth = $$CON->dbh->prepare(
+        "SELECT name FROM grant_types ORDER BY name"
+    );
+    $sth->execute;
+    my @list;
+    while (my ($type) = $sth->fetchrow) {
+        push @list,($type);
+    }
+    return @list;
 }
 
 sub AUTOLOAD {

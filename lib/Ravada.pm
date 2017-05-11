@@ -132,7 +132,6 @@ sub _update_user_grants {
     $sth->execute;
     while ($sth->fetch) {
         my $user = Ravada::Auth::SQL->search_by_id($id);
-        warn $user->name;
         $USER_DAEMON->grant_user_permissions($user);
         $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }
