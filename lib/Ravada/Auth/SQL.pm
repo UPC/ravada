@@ -123,6 +123,33 @@ sub add_user {
     }
     $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
     $sth->finish;
+
+    return if !$is_admin;
+
+    my $id_grant = _search_id_grant('grant');
+    $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
+    $sth->execute($name);
+    my ($id_user) = $sth->fetchrow;
+    $sth->finish;
+
+    $sth = $$CON->dbh->prepare(
+            "INSERT INTO grants_user "
+            ." (id_grant, id_user, allowed)"
+            ." VALUES(?,?,1) "
+        );
+    $sth->execute($id_grant, $id_user);
+    $sth->finish;
+}
+
+sub _search_id_grant {
+    my $type = shift;
+    my $sth = $$CON->dbh->prepare("SELECT id FROM grant_types WHERE name = ?");
+    $sth->execute($type);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+
+    confess "Unknown grant $type"   if !$id;
+    return $id;
 }
 
 sub _load_data {
@@ -393,8 +420,48 @@ sub _load_grants($self) {
 }
 
 sub grant_user_permissions($self,$user) {
+    $self->grant($user, 'clone');
+    $self->grant($user, 'change_settings');
+    $self->grant($user, 'remove');
+    $self->grant($user, 'screenshot');
+}
+
+sub grant_operator_permissions($self,$user) {
+    $self->grant($user, 'hibernate_all');
+    #TODO
+}
+
+sub grant_manager_permissions($self,$user) {
+    $self->grant($user, 'hibernate_clone');
+    #TODO
+}
+
+sub grant_admin_permissions($self,$user) {
+    my $sth = $$CON->dbh->prepare(
+            "SELECT name FROM grant_types "
+    );
+    $sth->execute();
+    while ( my ($name) = $sth->fetchrow) {
+        $self->grant($user,$name);
+    }
+    $sth->finish;
+
+}
+
+sub grant($self,$user,$permission) {
     die "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
         if !$self->can_grant();
+
+    return if $user->can($permission);
+    my $id_grant = _search_id_grant($permission);
+    my $sth = $$CON->dbh->prepare(
+            "INSERT INTO grants_user "
+            ." (id_grant, id_user, allowed)"
+            ." VALUES(?,?,1) "
+    );
+    $sth->execute($id_grant, $user->id);
+    $sth->finish;
+
 }
 
 sub AUTOLOAD {
