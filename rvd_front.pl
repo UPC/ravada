@@ -821,6 +821,15 @@ sub admin {
 
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
+
+    if ($page eq 'users') {
+        warn $c->param('name');
+        $c->stash(list_users => []);
+        $c->stash(name => $c->param('name' or ''));
+        if ( $c->param('name') ) {
+            $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
+        }
+    }
     $c->render(template => 'main/admin_'.$page);
 
 };

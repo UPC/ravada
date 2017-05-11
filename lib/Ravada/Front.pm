@@ -349,13 +349,13 @@ Returns a reference to a list of the users
 
 =cut
 
-sub list_users {
-    my $self = shift;
+sub list_users($self,$name=undef) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
     $sth->execute();
     
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        next if defined $name && $row->{name} !~ /$name/;
         push @users, ($row);
     }
     $sth->finish;
