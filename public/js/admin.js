@@ -108,7 +108,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.orderParam = ['-'+type1,type2];
       else $scope.orderParam = [type1,'-'+type2];
     }
-    $scope.hide_clones = false;
+    $scope.hide_clones = true;
     $scope.hideClones = function(){
       $scope.hide_clones = !$scope.hide_clones;
     }

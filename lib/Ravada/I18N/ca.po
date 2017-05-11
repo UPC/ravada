@@ -1,5 +1,6 @@
 # Translators:
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# Joel Alarcón <joelalju100@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
