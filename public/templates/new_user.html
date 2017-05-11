@@ -48,7 +48,7 @@
             </div>
             
 
-            <button type="submit" ng-disabled="new_userForm.$invalid" id="submitbutton" class="btn btn-default">Submit</button> 
+            <button type="submit" ng-disabled="new_userForm.$invalid || cpassword != password" id="submitbutton" class="btn btn-default">Submit</button> 
         </form>
     </div>
 </div>
@@ -70,13 +70,14 @@ function checkPass()
         pass2.style.backgroundColor = goodColor;
         message.style.color = goodColorLetter;
         message.innerHTML = "Passwords Match!"
-        
+        return true;
         
     }else{
         pass2.style.backgroundColor = badColor;
         message.style.color = badColorLetter;
         message.innerHTML = "Passwords Do Not Match!"
-        
+        return false;
     }
+    
 }  
 </script>
