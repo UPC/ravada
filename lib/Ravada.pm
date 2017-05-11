@@ -56,6 +56,9 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
 our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
 
+our $USER_DAEMON;
+our $USER_DAEMON_NAME = 'daemon';
+
 has 'vm' => (
           is => 'ro'
         ,isa => 'ArrayRef'
@@ -100,11 +103,27 @@ sub BUILD {
         $self->connector($CONNECTOR);
     }
     Ravada::Auth::init($CONFIG);
+
+    $self->_init_user_daemon();
     $self->_create_tables();
     $self->_upgrade_tables();
     $self->_update_data();
 }
 
+sub _init_user_daemon {
+    my $self = shift;
+    return if $USER_DAEMON;
+
+    $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+    if (!$USER_DAEMON->id) {
+        $USER_DAEMON = Ravada::Auth::SQL::add_user(
+            name => $USER_DAEMON_NAME,
+            is_admin => 1
+        );
+        $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+    }
+
+}
 sub _update_user_grants {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
@@ -113,6 +132,9 @@ sub _update_user_grants {
     $sth->execute;
     while ($sth->fetch) {
         my $user = Ravada::Auth::SQL->search_by_id($id);
+        warn $user->name;
+        $USER_DAEMON->grant_user_permissions($user);
+        $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }
     $sth->finish;
 }
@@ -172,6 +194,7 @@ sub _update_isos {
 
 sub _update_data {
     my $self = shift;
+
     $self->_update_isos();
     $self->_update_user_grants();
 }
