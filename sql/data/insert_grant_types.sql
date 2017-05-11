@@ -28,3 +28,4 @@ INSERT INTO grant_types(name,description) VALUES('hibernate_all',"can hibernate 
 INSERT INTO grant_types(name,description) VALUES('screenshot_all',"can take a screenshot of any virtual machine.");
 
 INSERT INTO grant_types(name,description) VALUES('grant','can grant permissions to other users');
+INSERT INTO grant_types(name,description) VALUES('manage_users','can manage users.');
