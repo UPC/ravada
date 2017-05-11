@@ -412,11 +412,26 @@ get '/users/make_admin/(:id).(:type)' => sub {
       return make_admin($c);
 };
 
+
+get '/users/new_admin/*.json' => sub {
+       my $c = shift;
+      return new_admin($c);
+};
+
+
 ##remove admin
 
 get '/users/remove_admin/(:id).(:type)' => sub {
        my $c = shift;
        return remove_admin($c);
+};
+
+##add user
+
+any '/users/register' => sub {
+
+       my $c = shift;
+       return register($c);
 };
 
 any '/admin/user/(:id).(:type)' => sub {
@@ -433,7 +448,7 @@ any '/admin/user/(:id).(:type)' => sub {
 };
 
 ##############################################
-#
+
 
 get '/request/(:id).(:type)' => sub {
     my $c = shift;
@@ -1103,6 +1118,18 @@ sub make_admin {
     return $c->render(inline => "1");
 }
 
+sub new_admin {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($username) = $c->req->url->to_abs->path =~ m{/(\d+).json};
+    
+    warn "nom usuari $username";
+    
+   # Ravada::Auth::SQL::make_admin($id);
+        
+}
+
 sub remove_admin {
     my $c = shift;
     return login($c) if !_logged_in($c);
@@ -1111,6 +1138,45 @@ sub remove_admin {
     Ravada::Auth::SQL::remove_admin($id);
     return $c->render(inline => "1");
 }
+
+sub register {
+    
+    my $c = shift;
+    
+    my @error = ();
+       
+    my $username = $c->param('username');
+    my $password = $c->param('password');
+   
+ #   if($c ->param('submit')) {
+ #       push @error,("Name is mandatory")   if !$c->param('username');
+ #       push @error,("Invalid username '".$c->param('username')."'"
+ #               .".It can only contain words and numbers.")
+ #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
+ #       if (!@error) {
+ #           Ravada::Auth::SQL::add_user($username, $password,0);
+ #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+ #       }
+
+#    }
+#    $c->stash(errors => \@error);
+#    push @{$c->stash->{js}}, '/js/admin.js';
+#    $c->render(template => 'bootstrap/new_user_control'
+#        , name => $c->param('username')
+#)    
+    
+   if ($username) {
+       warn "username $username";
+       warn "password $password";
+        
+       Ravada::Auth::SQL::add_user($username, $password,0);
+       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+   }
+   $c->render(template => 'bootstrap/new_user');
+
+
+}
+
 
 sub manage_machine {
     my $c = shift;

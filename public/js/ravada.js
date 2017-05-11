@@ -2,6 +2,9 @@
 
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
+            .directive("solShowAdduser",swAddUser)
+            //TODO check if the next directive may be removed
+            .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
 	        .directive("solShowListusers", swListUsers)
             .directive("solShowCardsmachines", swCardsMach)
@@ -12,12 +15,33 @@
             .service("listMess", gtListMess)
     	    .service("listUsers", gtListUsers)
             .controller("SupportForm", suppFormCtrl)
+	        .controller("AddUserForm",addUserFormCrtl)
+            .controller("machines", machinesCrtl)
+            .controller("messages", messagesCrtl)
+            .controller("users", usersCrtl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
             .controller("notifCrtl", notifCrtl)
 
+
+
+    function newMachineCtrl($scope, $http) {
+
+        $http.get('/list_images.json').then(function(response) {
+                $scope.images = response.data;
+        });
+        $http.get('/list_vm_types.json').then(function(response) {
+                $scope.backends = response.data;
+        });
+        $http.get('/list_lxc_templates.json').then(function(response) {
+                $scope.templates_lxc = response.data;
+        });
+
+
+    };
+
     function suppFormCtrl($scope){
-        this.user = {};
+	this.user = {};
         $scope.showErr = false;
         $scope.isOkey = function() {
             if($scope.contactForm.$valid){
@@ -30,7 +54,7 @@
     };
 
     function swSupForm() {
-
+	
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -38,6 +62,29 @@
 
     };
 
+
+    function addUserFormCrtl($scope, $http, request){
+               
+       
+    };
+
+    function swAddUser() {
+	
+        return {
+            restrict: "E",
+            templateUrl: '/templates/new_user.html',
+        };
+
+    };
+    
+    function swNewMach() {
+
+        return {
+            restrict: "E",
+            templateUrl: '/templates/new_machine.html',
+        };
+
+    };
     // list machines
         function mainpageCrtl($scope, $http, request, listMach) {
             $scope.set_restore=function(machineId) {
@@ -188,8 +235,46 @@
 
     };
 
-    function swListUsers() {
+// list users
+    function usersCrtl($scope, $http, request, listUsers) {
 
+        $http.get('/list_users.json').then(function(response) {
+                $scope.list_users= response.data;
+        });
+
+        $scope.make_admin = function(id) {
+            $http.get('/users/make_admin/' + id + '.json')
+            location.reload();
+        };
+
+        $scope.remove_admin = function(id) {
+            $http.get('/users/remove_admin/' + id + '.json')
+            location.reload();
+        };
+
+	$scope.add_user = function() {
+            $http.get('/users/register')
+            
+        };
+
+        $scope.checkbox = [];
+
+        //if it is checked make the user admin, otherwise remove admin
+        $scope.stateChanged = function(id,userid) { 
+           if($scope.checkbox[id]) { //if it is checked
+                $http.get('/users/make_admin/' + userid + '.json')
+                location.reload();
+           }
+           else {
+                $http.get('/users/remove_admin/' + userid + '.json')
+                location.reload();
+           }
+        };
+
+    };
+
+    function swListUsers() {
+	
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
@@ -197,7 +282,7 @@
 
     };
 
-    function gtListUsers($resource){
+      function gtListUsers($resource){
 
         return $resource('/list_users.json',{},{
             get:{isArray:true}
