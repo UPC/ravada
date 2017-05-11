@@ -244,8 +244,7 @@ Makes the user admin. Returns nothing.
 
 =cut
 
-sub make_admin {
-    my $id = shift;
+sub make_admin($self, $id) {
     my $sth = $$CON->dbh->prepare(
             "UPDATE users SET is_admin=1 WHERE id=?");
 
@@ -262,8 +261,8 @@ Remove user admin privileges. Returns nothing.
 
 =cut
 
-sub remove_admin {
-    my $id = shift;
+sub remove_admin($self, $id) {
+    warn "\t remove_admin $id";
     my $sth = $$CON->dbh->prepare(
             "UPDATE users SET is_admin=NULL WHERE id=?");
 

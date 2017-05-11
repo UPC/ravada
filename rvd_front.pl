@@ -241,7 +241,6 @@ get '/list_images.json' => sub {
     my $c = shift;
 
     my $vm_name = $c->param('backend');
-    warn $vm_name;
 
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
@@ -280,7 +279,6 @@ get '/pingbackend.json' => sub {
 get '/machine/info/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
-    warn $id;
     die "No id " if !$id;
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
@@ -405,27 +403,6 @@ get '/machine/public/#id/#value' => sub {
 
 # Users ##########################################################3
 
-##make admin
-
-get '/users/make_admin/(:id).(:type)' => sub {
-       my $c = shift;
-      return make_admin($c);
-};
-
-
-get '/users/new_admin/*.json' => sub {
-       my $c = shift;
-      return new_admin($c);
-};
-
-
-##remove admin
-
-get '/users/remove_admin/(:id).(:type)' => sub {
-       my $c = shift;
-       return remove_admin($c);
-};
-
 ##add user
 
 any '/users/register' => sub {
@@ -443,6 +420,11 @@ any '/admin/user/(:id).(:type)' => sub {
     return $c->render(text => "Unknown user id: ".$c->stash('id'))
         if !$user;
 
+    if ($c->param('make_admin')) {
+        $USER->make_admin($c->stash('id'))  if $c->param('is_admin');
+        $USER->remove_admin($c->stash('id'))if !$c->param('is_admin');
+        $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+    }
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
 };
@@ -593,7 +575,6 @@ get '/img/screenshots/:file' => sub {
         my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
-            warn "not owner";
             return access_denied($c) if $USER->id != $domain->id_owner;
         }
     }
@@ -724,7 +705,6 @@ sub logout {
     $c->session(expires => 1);
     $c->session(login => undef);
 
-    warn "logout";
 }
 
 sub quick_start {
@@ -823,7 +803,6 @@ sub admin {
     push @{$c->stash->{js}}, '/js/admin.js';
 
     if ($page eq 'users') {
-        warn $c->param('name');
         $c->stash(list_users => []);
         $c->stash(name => $c->param('name' or ''));
         if ( $c->param('name') ) {
@@ -1124,27 +1103,6 @@ sub make_admin {
     my $id = $c->stash('id');
 
     Ravada::Auth::SQL::make_admin($id);
-    return $c->render(inline => "1");
-}
-
-sub new_admin {
-    my $c = shift;
-    return login($c) if !_logged_in($c);
-
-    my ($username) = $c->req->url->to_abs->path =~ m{/(\d+).json};
-    
-    warn "nom usuari $username";
-    
-   # Ravada::Auth::SQL::make_admin($id);
-        
-}
-
-sub remove_admin {
-    my $c = shift;
-    return login($c) if !_logged_in($c);
-    my $id = $c->stash('id');
-
-    Ravada::Auth::SQL::remove_admin($id);
     return $c->render(inline => "1");
 }
 
