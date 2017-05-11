@@ -52,11 +52,26 @@ sub test_defaults {
     ok(!$user->can_hibernate_clone);
     ok(!$user->can_hibernate_all);
 
+    for my $perm (user_admin->list_permissions) {
+        if ( $perm =~ m{^(clone|change_settings|screenshot|remove)$}) {
+            is($user->can_do($perm),1,$perm);
+        } else {
+            is($user->can_do($perm),undef,$perm);
+        }
+    }
 }
 
+sub test_admin {
+    my $user = create_user("foo$$","bar",1);
+    ok($user->is_admin);
+    for my $perm ($user->list_permissions) {
+        is($user->can_do($perm),1);
+    }
+}
 
 ##########################################################
 
 test_defaults();
+test_admin();
 
 done_testing();
