@@ -5,6 +5,7 @@ use strict;
 use locale ':not_characters';
 #####
 use Carp qw(confess);
+use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Data::Dumper;
 use Getopt::Long;
@@ -416,6 +417,19 @@ get '/users/make_admin/(:id).(:type)' => sub {
 get '/users/remove_admin/(:id).(:type)' => sub {
        my $c = shift;
        return remove_admin($c);
+};
+
+any '/admin/user/(:id).(:type)' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->can_manage_users();
+
+    my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+
+    return $c->render(text => "Unknown user id: ".$c->stash('id'))
+        if !$user;
+
+    $c->stash(user => $user);
+    return $c->render(template => 'main/manage_user');
 };
 
 ##############################################
