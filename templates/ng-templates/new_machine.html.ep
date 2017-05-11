@@ -38,7 +38,7 @@
             </div>
 
             <div ng-if="backend == 'KVM'" class="from-group row">
-                <label for="id_iso" class="col-lg-2 control-label">ISO image</label>
+                <label for="id_iso" class="col-lg-2 control-label">Select Template</label>
                 <div class="col-lg-10">
                 <select name ="id_iso"
                         ng-model="id_iso"
@@ -54,6 +54,14 @@
                         ng-click="iso_download(id_iso.id)"
                     >Download now</a>
                 </div>
+                </div>
+                <label for="id_iso" class="col-lg-2 control-label">Select ISO</label>
+                <div class="col-lg-10">
+                <select name ="id_iso"
+                        ng-model="id_iso"
+                        ng-options="item.name for item in isos track by item.name"
+                        required=""
+                ></select>
                 </div>
             </div>
 

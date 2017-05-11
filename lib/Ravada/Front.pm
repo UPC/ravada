@@ -297,6 +297,20 @@ sub list_iso_images {
     return \@iso;
 }
 
+=head2 list_isos
+
+Returns a reference to a list of the ISOs known by the system
+
+=cut
+
+sub list_isos {
+    my $self = shift;
+    my $vm = $self->search_vm('KVM');
+    my @isos = $vm->search(qr(.*\.iso$)); 
+    return \@isos;
+}
+
+
 =head2 list_lxc_templates
 
 Returns a reference to a list of the LXC templates known by the system

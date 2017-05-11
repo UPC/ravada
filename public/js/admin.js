@@ -23,6 +23,9 @@ ravadaApp.directive("solShowMachine", swMach)
       $http.get('/list_images.json').then(function(response) {
               $scope.images = response.data;
       });
+      $http.get('/list_isos.json').then(function(response) {
+              $scope.isos = response.data;
+      });
       $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
       });
@@ -189,4 +192,3 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.getMessages();
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
-

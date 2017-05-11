@@ -237,6 +237,11 @@ get '/list_images.json' => sub {
     $c->render(json => $RAVADA->list_iso_images);
 };
 
+get '/list_isos.json' => sub {
+    my $c = shift;
+    $c->render(json => $RAVADA->list_isos);
+};
+
 get '/list_machines.json' => sub {
     my $c = shift;
 
@@ -793,6 +798,8 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
+    my $front = 
+    my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -806,7 +813,7 @@ sub new_machine {
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
     $c->render(template => 'main/new_machine'
-        , name => $c->param('name')
+        , name => $c->param('name'), vm => $vm
     );
 };
 
