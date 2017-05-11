@@ -79,6 +79,7 @@ sub search_by_id {
     my $self = shift;
     my $id = shift;
     my $data = _load_data_by_id($id);
+    return if !keys %$data;
     return Ravada::Auth::SQL->new(name => $data->{name});
 }
 
@@ -473,12 +474,13 @@ sub list_all_permissions($self) {
     return if !$self->is_admin;
 
     my $sth = $$CON->dbh->prepare(
-        "SELECT name FROM grant_types ORDER BY name"
+        "SELECT * FROM grant_types ORDER BY name"
     );
     $sth->execute;
     my @list;
-    while (my ($type) = $sth->fetchrow) {
-        push @list,($type);
+    while (my $row = $sth->fetchrow_hashref ) {
+        lock_hash(%$row);
+        push @list,($row);
     }
     return @list;
 }
