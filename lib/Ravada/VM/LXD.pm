@@ -4,6 +4,7 @@ use Data::Dumper;
 use IPC::Run3;
 use JSON::XS qw(decode_json encode_json);
 use Moose;
+use REST::Client;
 
 use Ravada::Domain::LXD;
 
@@ -26,13 +27,45 @@ sub BUILD {
 }
 
 sub connect {
-    $CURL = `which curl`;
-    chomp $CURL;
+    #$CURL = `which curl`;
+    #chomp $CURL;
 
-    $LXC = `which lxc`;
-    chomp $LXC;
+    #$LXC = `which lxc`;
+    #chomp $LXC;
 
     $SOCKET_LXD = $DEFAULT_SOCKET_LXD;
+    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME}=0;
+    my $client = REST::Client->new();
+    die if !$client;
+
+    $client->addHeader('Content-Type', 'application/json');
+    $client->addHeader('charset', 'UTF-8');
+    $client->addHeader('Accept', 'application/json');
+
+    # Try SSL_verify_mode => SSL_VERIFY_NONE.  0 is more compatible, but may be deprecated
+    $client->getUseragent()->ssl_opts( SSL_verify_mode => 0 );
+    #A host can be set for convienience
+    $client->setHost('https://192.168.122.133:8443');
+    #X509 client authentication
+    $client->setCert('lxd-webui.crt');
+    $client->setKey('lxd-webui.key');
+
+    #add a CA to verify server certificates
+    # $client->setCa('/path/to/ca.file');
+
+    #you may set a timeout on requests, in seconds
+    $client->setTimeout(10);
+
+    $client->GET('/')->responseContent();
+    if ($client->responseCode() == 200) {
+        #print "OK\n";
+        $client->GET('/1.0')->responseContent();
+        my $r = decode_json( $client->responseContent() );
+        my @a = $r->{metadata}->{auth};
+        warn "   Certificate:        " . join( ", ", @a ) . "\n";
+    exit;
+    }
+    warn "Server not response (TODO read setHost) ";
 }
 
 sub create_domain {
