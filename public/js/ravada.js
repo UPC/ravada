@@ -2,7 +2,6 @@
 
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
-            .directive("solShowAdduser",swAddUser)
             //TODO check if the next directive may be removed
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
@@ -68,15 +67,6 @@
        
     };
 
-    function swAddUser() {
-	
-        return {
-            restrict: "E",
-            templateUrl: '/templates/new_user.html',
-        };
-
-    };
-    
     function swNewMach() {
 
         return {
