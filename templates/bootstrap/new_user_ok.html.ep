@@ -17,8 +17,7 @@
                     </div>
                    <div class="panel-body">
                         <h4>What do you want to do now?</h4>
-                        <button style="float: center; " onclick="location='/users'" ><i class="fa fa-arrow-circle-left fa-3x" aria-hidden="true"></i>Go to list users</button>
-                        <button style="float: center; " onclick="location='/users/register'" ><i class="fa fa-plus-circle fa-3x" aria-hidden="true"></i>Add a new user</button>
+                        <button style="float: center; " onclick="location='/users/register'" ><i class="fa fa-plus-circle fa-3x" aria-hidden="true"></i>Add another user</button>
                     </div>
                       
                 </div>

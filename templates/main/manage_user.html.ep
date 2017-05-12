@@ -11,16 +11,8 @@ ment">
                  <h2>User <%= $user->name %></h2>
              </div> <!-- del panel heading-->
         </div>
-        <form>
-%           for my $perm ($_user->list_all_permissions) {
-%               my $checked = '';
-%               $checked = 'checked' if $user->can_do($perm->{name});
-                <input type="checkbox" <%= $checked %> 
-                    name="perm_<%= $perm->{id} %>">
-                <label for="perm_<%= $perm->{id} %>"><%=l($perm->{description}) %></label><br/>
-% }
-            <input type="submit">
-        </form>
+        %= include '/main/manage_user_admin'
+        %= include '/main/manage_user_grants'
     </div>
 
 <div>

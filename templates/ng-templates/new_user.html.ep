@@ -1,7 +1,6 @@
-<!DOCTYPE html>
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h3>Please enter the following information to create your account.</h3>
+        <h3><%=l 'Please enter the following information to create the account.' =%></h3>
     </div>
     <div class="panel-body">
            <form name="new_userForm" role="form" method="post" action="/users/register" novalidate>

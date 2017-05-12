@@ -2,7 +2,6 @@
 
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
             .directive("solShowSupportform", swSupForm)
-            .directive("solShowAdduser",swAddUser)
             //TODO check if the next directive may be removed
             .directive("solShowNewmachine", swNewMach)
             .directive("solShowListmachines", swListMach)
@@ -16,8 +15,8 @@
     	    .service("listUsers", gtListUsers)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
-            .controller("machines", machinesCrtl)
-            .controller("messages", messagesCrtl)
+//            .controller("machines", machinesCrtl)
+//            .controller("messages", messagesCrtl)
             .controller("users", usersCrtl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
@@ -68,15 +67,6 @@
        
     };
 
-    function swAddUser() {
-	
-        return {
-            restrict: "E",
-            templateUrl: '/templates/new_user.html',
-        };
-
-    };
-    
     function swNewMach() {
 
         return {
