@@ -290,3 +290,15 @@ msgstr "Benvingut"
 
 msgid "It is required a viewer to run the virtual machines."
 msgstr "Es necessita un visor per executar les màquines virtuals."
+
+msgid "User"
+msgstr "Usuari"
+
+msgid "Password"
+msgstr "Contrasenya"
+
+msgid "Start session"
+msgstr "Inicieu la Sessió"
+
+msgid "Login with Intranet UPC's username."
+msgstr "Identifiqueu-vos amb el nom d'usuari de la Intranet UPC."
