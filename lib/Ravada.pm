@@ -239,7 +239,10 @@ sub _upgrade_tables {
     return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
+
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
+    $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
+
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
