@@ -11,11 +11,10 @@
            <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>Create a new account
-                        <button style="float: right; margin: 0 10px;" class="btn btn-info" onclick="location.reload('forceGet')"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+                        <h2><%= l 'Create a new account' %>
                         </h2>
                     </div>
-                            <sol-show-adduser></sol-show-adduser>                            
+                    %= include '/ng-templates/new_user'
                 </div>
             </div>
                   
