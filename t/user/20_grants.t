@@ -69,9 +69,33 @@ sub test_admin {
     }
 }
 
+sub test_grant {
+    my $user = create_user("bar$$","bar",1);
+    ok($user->is_admin);
+    for my $perm ($user->list_all_permissions) {
+        user_admin()->grant($user,$perm->{name});
+        ok($user->can_do($perm->{name}));
+        user_admin()->grant($user,$perm->{name});
+        ok($user->can_do($perm->{name}));
+
+        user_admin()->revoke($user,$perm->{name});
+        is($user->can_do($perm->{name}),0, $perm->{name}) or exit;
+        user_admin()->revoke($user,$perm->{name});
+        is($user->can_do($perm->{name}),0, $perm->{name}) or exit;
+
+        user_admin()->grant($user,$perm->{name});
+        ok($user->can_do($perm->{name}));
+        user_admin()->revoke($user,$perm->{name});
+        is($user->can_do($perm->{name}),0, $perm->{name});
+
+    }
+
+}
+
 ##########################################################
 
 test_defaults();
 test_admin();
+test_grant();
 
 done_testing();

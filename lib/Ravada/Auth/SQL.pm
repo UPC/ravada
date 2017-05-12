@@ -452,25 +452,44 @@ sub grant_admin_permissions($self,$user) {
 
 }
 
-sub grant($self,$user,$permission) {
+sub grant($self,$user,$permission,$value=1) {
     if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
         my @perms = $self->list_permissions();
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
             .Dumper(\@perms);
     }
 
-    return if $user->can_do($permission);
+    return 0 if !$value && !$user->can_do($permission);
+    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
+
     my $id_grant = _search_id_grant($permission);
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"
-            ." VALUES(?,?,1) "
+            ." VALUES(?,?,?) "
     );
-    $sth->execute($id_grant, $user->id);
+    eval { $sth->execute($id_grant, $user->id, $value) };
     $sth->finish;
-    confess "Unable to grant $permission for ".$user->name if !$user->can_do($permission);
+    if ($@ && $@ =~ /UNIQUE/i) {
+        $sth = $$CON->dbh->prepare(
+            "UPDATE grants_user "
+            ." set allowed=?"
+            ." WHERE id_grant = ? AND id_user=?"
+        );
+        $sth->execute($value, $id_grant, $user->id);
+        $sth->finish;
+    }
+    $user->{_grant}->{$permission} = $value;
+    confess "Unable to grant $permission for ".$user->name ." expecting=$value "
+            ." got= ".$user->can_do($permission)
+        if $user->can_do($permission) ne $value;
 
 }
+
+sub revoke($self,$user,$permission) {
+    return $self->grant($user,$permission,0);
+}
+
 
 sub list_all_permissions($self) {
     return if !$self->is_admin;

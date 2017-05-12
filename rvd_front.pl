@@ -425,6 +425,24 @@ any '/admin/user/(:id).(:type)' => sub {
         $USER->remove_admin($c->stash('id'))if !$c->param('is_admin');
         $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
     }
+    if ($c->param('grant')) {
+        return access_denied($c)    if !$USER->can_grant();
+        my %grant;
+        for my $param_name (@{$c->req->params->names}) {
+            if ( $param_name =~ /^perm_(.*)/ ) {
+                $grant{$1} = 1;
+            } elsif ($param_name =~ /^off_perm_(.*)/) {
+                $grant{$1} = 0 if !exists $grant{$1};
+            }
+        }
+        for my $perm (keys %grant) {
+            if ( $grant{$_} ) {
+                $USER->grant($user, $perm);
+            } else {
+                $USER->revoke($user, $perm);
+            }
+        }
+    }
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
 };
