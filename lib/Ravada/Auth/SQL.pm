@@ -39,8 +39,8 @@ sub _init_connector {
     $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
 
     if (!$CON || !$$CON) {
-        my $ravada = Ravada->new();
-        $CON= \$Ravada::CONNECTOR;
+        my $connector = Ravada::_connect_dbh();
+        $CON = \$connector;
     }
 
     die "Undefined connector"   if !$CON || !$$CON;
@@ -162,6 +162,7 @@ sub _load_data {
 
     die "No login name nor id " if !$self->name && !$self->id;
 
+    confess "Undefined \$\$CON" if !defined $$CON;
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE name=? ");
     $sth->execute($self->name);
@@ -345,6 +346,8 @@ Arguments: password
 sub change_password {
     my $self = shift;
     my $password = shift or die "ERROR: password required\n";
+
+    _init_connector();
 
     die "Password too small" if length($password)<6;
 
