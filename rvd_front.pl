@@ -119,7 +119,7 @@ hook before_routes => sub {
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
-
+    _logged_in($c)  if $url =~ m{^/requirements};
 };
 
 

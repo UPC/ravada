@@ -6,7 +6,7 @@ ISO images are required to create KVM virtual machines. They can be placed or do
 
 Copy the .iso file to the KVM storage, it is /var/lib/libvirt/images by default. Make sure everybody can read it
 
-    # chown 0755 file.iso
+    # chmod 755 file.iso
 
 Get the md5 for the ISO file, you will need it for the next step:
 
