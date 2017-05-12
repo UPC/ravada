@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+           <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2>Congrats
+                            <!--<button style="float: right; margin: 0 10px;" onclick="location='/users'" ><i class="fa fa-arrow-circle-left" aria-hidden="true"></i></button>-->
+                        </h2>
+                    </div>
+                    <div class="alert alert-success">
+                        <h3>The new user <strong><%= $username %> </strong> has been added successfully!<h3>
+                    </div>
+                   <div class="panel-body">
+                        <h4>What do you want to do now?</h4>
+                        <button style="float: center; " onclick="location='/users/register'" ><i class="fa fa-plus-circle fa-3x" aria-hidden="true"></i>Add another user</button>
+                    </div>
+                      
+                </div>
+            </div>
+                  
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
