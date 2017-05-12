@@ -290,3 +290,6 @@ msgstr "Benvingut"
 
 msgid "It is required a viewer to run the virtual machines."
 msgstr "Es necessita un visor per executar les màquines virtuals."
+
+msgid "Virtual Machines"
+msgstr "Màquines Virtuals"
