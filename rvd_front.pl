@@ -1133,10 +1133,7 @@ sub register {
 #)    
     
    if ($username) {
-       warn "username $username";
-       warn "password $password";
-        
-       Ravada::Auth::SQL::add_user($username, $password,0);
+       Ravada::Auth::SQL::add_user(name => $username, password => $password);
        return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
    }
    $c->render(template => 'bootstrap/new_user');
