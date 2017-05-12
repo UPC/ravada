@@ -66,6 +66,10 @@
            <li class="page-scroll">
                <a href="../../index.html#get-started">Get Started</a>
            </li>
+           <li>
+               <a href="../../docs/index.html">Documentation</a>
+           </li>
+
            <li class="page-scroll">
                <a href="../../index.html#devel-features">Developers</a>
            </li>
