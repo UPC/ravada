@@ -17,3 +17,4 @@ Select "Free space" and then set the _mount point_ to "/".
 Select "Free space" and then assign it to _swap area_
 
 7. The last step is choosing your language and region. after doing so and restarting your computer you can start using Ubuntu.
+![alt text](https://github.com/UPC/ravada/blob/master/Images/install-ubuntu-desktop_7.jpg)
