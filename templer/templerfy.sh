@@ -3,6 +3,12 @@
 # pod2html.pl
 PATH1="/src/ravada"
 
+templer=`which templer`
+if [ -z "$templer"]; then
+    echo "ERROR: you need templer"
+    exit
+fi
+
 echo "change repo directory..."
 eval cd ~$PATH1
 git checkout master && echo "Checkout master..." || { echo 'Checkout master failed!' ; exit 1 ; }
