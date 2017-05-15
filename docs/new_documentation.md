@@ -1,4 +1,4 @@
-Normally the documentation files are stored in /docs and /devel-docs directories in master branch.
+Documentation files are stored in /docs and /devel-docs directories in master branch.
 
 When you create a new page keep in mind don't leave blanks in the filename.
 
