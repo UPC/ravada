@@ -43,12 +43,16 @@ Remove also the SWAP image file:
 
 Make sure the VirtualBox machine is down, then convert the VDI to raw, then to qcow2
 
+### DIRECTLY VDI TO QCOW2
 
-### Convert to raw
+    $ qemu-img convert -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
+    
+### OR IN TWO STEPS
+### 1. Convert to raw
 
     $ VBoxManage clonehd --format RAW EXAMPLE.vdi EXAMPLE.img
 
-### Convert to qcow2
+### 2. Convert to qcow2
 
 Convert to qcow2 using the name you saw before in the _XML_ definition of the machine:
 
