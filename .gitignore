@@ -3,7 +3,6 @@ MYMETA.yml
 Makefile
 Makefile.old
 blib/
-documentation/docs/new_documentation.html
 pm_to_blib
 t/
 templates/
