@@ -152,6 +152,15 @@ sub test_files_base {
         ,"check duplicate files base ".join(",",sort keys %files_base)." <-> "
         .join(",",sort @files_base));
 
+    for my $volume (keys %files_base) {
+        ok( -s $volume < 128,"Expecting volume $volume size small, got :".(-s $volume)) or exit;
+    }
+
+    $domain->stop if $domain->is_active;
+    eval { $domain->start($USER) };
+    ok(!$@,"Expecting no error, got : '".($@ or '')."'");
+    ok($domain->is_active,"Expecting domain active");
+
 }
 
 sub test_domain_2_volumes {
