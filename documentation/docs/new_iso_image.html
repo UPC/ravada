@@ -110,7 +110,7 @@
 
 <p>Copy the .iso file to the KVM storage, it is /var/lib/libvirt/images by default. Make sure everybody can read it</p>
 
-<pre><code># chown 0755 file.iso
+<pre><code># chmod 755 file.iso
 </code></pre>
 
 <p>Get the md5 for the ISO file, you will need it for the next step:</p>
@@ -142,10 +142,10 @@ mysql&gt; INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5,
 
 <p>Save it to /var/lib/libvirt/images and change the owner as you did for the Windows ISO.</p>
 
-<pre><code># chown 0750 /var/lib/libvirt/images/virtio-win-0.1.126.iso
+<pre><code># chmod 755 /var/lib/libvirt/images/virtio-win-0.1.126.iso
 </code></pre>
 
-<p>Then edit your Windows xml file and point the second CD drive to that ISO. For the current stable virtio version, it looks like this:</p>
+<p>Then edit your Windows xml file and point the second CD drive to that ISO. For the current stable virtio version, it looks like this: virsh edit machinename</p>
 
 <pre><code>&lt;disk type='file' device='cdrom'&gt;
     &lt;driver name='qemu' type='raw'/&gt;
