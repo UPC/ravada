@@ -52,5 +52,5 @@ Make sure the VirtualBox machine is down, then convert the VDI to raw, then to q
 
 Convert to qcow2 using the name you saw before in the _XML_ definition of the machine:
 
-    $ sudo qemu-img convert -f raw EXAMPLE.vdi -O /var/lib/libvirt/images/EXAMPLE-vda-id8Q.img
+    $ sudo qemu-img convert -f raw EXAMPLE.vdi -O qcow2 /var/lib/libvirt/images/EXAMPLE-vda-id8Q.img
 
