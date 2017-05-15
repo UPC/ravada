@@ -12,7 +12,7 @@ These files are used to autogenerate html page accesibles from [Ravada's web](ht
 
 In order to run templer you need to follow these steps: 
 
-(Requirements: [Templer](https://github.com/skx/templer) installed in your computer. See "Installation" section for more information.
+Requirements: [Templer](https://github.com/skx/templer) installed in your computer. See "Installation" section for more information.
 
 - change to gh-pages branch
 - cd templer
