@@ -397,6 +397,15 @@ sub remove($self) {
     $sth->finish;
 }
 
+=head2 can_do
+
+Returns if the user is allowed to perform a privileged action
+
+    if ($user->can_do("remove")) { 
+        ...
+
+=cut
+
 sub can_do($self, $grant) {
     return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
 
@@ -423,6 +432,12 @@ sub _load_grants($self) {
     $sth->finish;
 }
 
+=head2 grant_user_permissions
+
+Grant an user permissions for normal users
+
+=cut
+
 sub grant_user_permissions($self,$user) {
     $self->grant($user, 'clone');
     $self->grant($user, 'change_settings');
@@ -430,15 +445,33 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'screenshot');
 }
 
+=head2 grant_operator_permissions
+
+Grant an user operator permissions, ie: hibernate all
+
+=cut
+
 sub grant_operator_permissions($self,$user) {
     $self->grant($user, 'hibernate_all');
     #TODO
 }
 
+=head2 grant_manager_permissions
+
+Grant an user manager permissions, ie: hibernate all clones
+
+=cut
+
 sub grant_manager_permissions($self,$user) {
     $self->grant($user, 'hibernate_clone');
     #TODO
 }
+
+=head2 grant_admin_permissions
+
+Grant an user all the permissions
+
+=cut
 
 sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
@@ -451,6 +484,17 @@ sub grant_admin_permissions($self,$user) {
     $sth->finish;
 
 }
+
+=head2 grant
+
+Grant an user a specific permission, or revoke it
+
+    $admin_user->grant($user2,"clone");    # both are 
+    $admin_user->grant($user3,"clone",1);  # the same
+
+    $admin_user->grant($user4,"clone",0);  # revoke a grant
+
+=cut
 
 sub grant($self,$user,$permission,$value=1) {
     if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
@@ -470,7 +514,7 @@ sub grant($self,$user,$permission,$value=1) {
     );
     eval { $sth->execute($id_grant, $user->id, $value) };
     $sth->finish;
-    if ($@ && $@ =~ /UNIQUE/i) {
+    if ($@ && $@ =~ /UNIQUE|duplicate/i) {
         $sth = $$CON->dbh->prepare(
             "UPDATE grants_user "
             ." set allowed=?"
@@ -483,13 +527,27 @@ sub grant($self,$user,$permission,$value=1) {
     confess "Unable to grant $permission for ".$user->name ." expecting=$value "
             ." got= ".$user->can_do($permission)
         if $user->can_do($permission) ne $value;
-
+    return $value;
 }
+
+=head2 revoke
+
+Revoke a permission from an user
+
+    $admin_user->revoke($user2,"clone");
+
+=cut
 
 sub revoke($self,$user,$permission) {
     return $self->grant($user,$permission,0);
 }
 
+
+=head2 list_all_permissions
+
+Returns a list of all the available permissions
+
+=cut
 
 sub list_all_permissions($self) {
     return if !$self->is_admin;
@@ -505,6 +563,12 @@ sub list_all_permissions($self) {
     }
     return @list;
 }
+
+=head2 list_permissions
+
+Returns a list of all the permissions granted to the user
+
+=cut
 
 sub list_permissions($self) {
     my @list;
