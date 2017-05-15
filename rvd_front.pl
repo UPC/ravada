@@ -436,7 +436,7 @@ any '/admin/user/(:id).(:type)' => sub {
             }
         }
         for my $perm (keys %grant) {
-            if ( $grant{$_} ) {
+            if ( $grant{$perm} ) {
                 $USER->grant($user, $perm);
             } else {
                 $USER->revoke($user, $perm);
