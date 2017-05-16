@@ -30,7 +30,7 @@ lib/Ravada/Request.pm
 lib/Ravada/Domain/Void.pm
 lib/Ravada/Domain/KVM.pm
 lib/Ravada/Domain/Driver.pm
-lib/Ravada/Domain/LXC.pm
+lib/Ravada/Domain/LXD.pm
 lib/Ravada/NetInterface/MacVTap.pm
 lib/Ravada/NetInterface/Void.pm
 lib/Ravada/NetInterface/KVM.pm
@@ -40,7 +40,7 @@ lib/Ravada/Utils.pm
 lib/Ravada/I18N.pm
 lib/Ravada/VM/Void.pm
 lib/Ravada/VM/KVM.pm
-lib/Ravada/VM/LXC.pm
+lib/Ravada/VM/LXD.pm
 lib/Ravada/Auth/SQL.pm
 lib/Ravada/Auth/User.pm
 lib/Ravada/Auth/LDAP.pm

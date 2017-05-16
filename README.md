@@ -7,7 +7,7 @@ remote virtual desktop.
 
 In the current release we use the
 KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual Machines.
- [LXC](https://linuxcontainers.org/) support is currently in development.
+ [LXD](https://linuxcontainers.org/) support is currently in development.
 
 ### Features
 

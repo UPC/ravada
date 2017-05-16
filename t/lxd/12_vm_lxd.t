@@ -50,7 +50,7 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-test_vm_connect();
+#test_vm_connect();
 test_search_vm();
 
 };
