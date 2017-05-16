@@ -329,7 +329,7 @@ Returns a reference to a list of the ISOs known by the system
 sub list_isos {
     my $self = shift;
     my $vm = $self->search_vm('KVM');
-    my @isos = $vm->search(qr(.*\.iso$)); 
+    my @isos = $vm->search_volume_path_re(qr(.*\.iso$)); 
     return \@isos;
 }
 

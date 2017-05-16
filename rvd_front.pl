@@ -247,7 +247,7 @@ get '/list_images.json' => sub {
 
 get '/list_isos.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_isos);
+    $c->render(json => $RAVADA->list_isos());
 };
 
 get '/list_machines.json' => sub {

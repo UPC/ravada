@@ -65,7 +65,7 @@
                 <div class="col-lg-10">
                 <select name ="id_iso"
                         ng-model="id_iso"
-                        ng-options="item.name for item in isos track by item.name"
+                        ng-options="item for item in isos track by item.name"
                         required=""
                 ></select>
                 </div>
