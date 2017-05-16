@@ -1,12 +1,19 @@
 use warnings;
 use strict;
 
+use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new();
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
-my $CLASS= 'Ravada::VM::LXD';
+my $BACKEND = 'LXD';
+my $CLASS= "Ravada::VM::$BACKEND";
+
+my %CONFIG = (
+        connector => $test->connector
+        ,config => 't/etc/ravada.conf'
+);
 
 use_ok('Ravada');
 use_ok($CLASS);
@@ -15,7 +22,7 @@ use_ok($CLASS);
 
 sub test_vm_connect {
     my $vm = Ravada::VM::LXD->new();
-    ok($vm);
+    ok($vm->host eq 'https://localhost:8443/');
 }
 
 sub test_search_vm {
@@ -33,10 +40,12 @@ eval { $RAVADA = Ravada->new() };
 
 my $vm;
 
-eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+eval { $vm = $RAVADA->search_vm('lxd') } if $RAVADA;
 
 SKIP: {
+
     my $msg = "SKIPPED test: No VM backend found";
+warn "msg: $vm";
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

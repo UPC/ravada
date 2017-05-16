@@ -18,6 +18,10 @@ has 'domain' => (
 our $LXC = `which lxc`;
 chomp $LXC;
 die "Missing lxc"   if !$LXC;
+
+our $LXD = `which lxd`;
+chomp $LXD;
+die "Missing lxd"   if !$LXD;
 #
 #
 ###############################################################3
@@ -53,6 +57,10 @@ sub _prepare_base_file {
     #TODO
 }
 
+sub _do_force_shutdown {
+    #TODO
+}
+
 sub prepare_base {
     my $self = shift;
 
@@ -60,4 +68,37 @@ sub prepare_base {
     $self->_prepare_base_db($file_base);
 }
 
+sub add_volume {}
+
+sub clean_swap_volumes {}
+
+sub disk_device {}
+
+sub disk_size {}
+
+sub force_shutdown {}
+
+sub get_info {}
+
+sub hybernate {}
+
+sub is_hibernated {}
+
+sub is_paused {}
+
+sub list_volumes {}
+
+sub rename {}
+
+sub resume {}
+
+sub set_max_mem {}
+
+sub set_memory {}
+
+sub shutdown_now {}
+
+sub spinoff_volumes {}
+
+sub screenshot {}
 1;
