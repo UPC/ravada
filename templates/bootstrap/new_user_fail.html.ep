@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+           <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2>Ouch
+                        </h2>
+                    </div>
+                    <div class="alert alert-danger">
+                        <h3>The user <strong><%= $username %> </strong> already exists, please choose another one<h3>
+                    </div>
+                   <div class="panel-body">
+                        <button style="float: center;" onclick="location='/users/register'" ><i class="fa fa-chevron-circle-left fa-3x" aria-hidden="true"></i>Back</button>
+                    </div>
+                      
+                </div>
+            </div>
+                  
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
