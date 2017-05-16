@@ -250,7 +250,6 @@ sub _post_prepare_base {
     $self->_remove_id_base();
 };
 
-
 sub _check_has_clones {
     my $self = shift;
     return if !$self->is_known();

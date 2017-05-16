@@ -678,6 +678,7 @@ sub add_volume {
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
     confess "Missing name " if !$args{name};
+    confess "Missing target"if !$args{target};
     if (!$args{xml}) {
         $args{xml} = $Ravada::VM::KVM::DIR_XML."/default-volume.xml";
         $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
@@ -688,6 +689,7 @@ sub add_volume {
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
+        ,target => $args{target}
     );
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out

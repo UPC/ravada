@@ -493,6 +493,7 @@ sub _volume_path {
 
     my %args = @_;
     my $target = $args{target};
+    confess "ERROR: target is mandatory"    if !$target;
     my $dir_img = $self->dir_img();
     my $suffix = ".img";
     $suffix = ".SWAP.img"   if $args{swap};
