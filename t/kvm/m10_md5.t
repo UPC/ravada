@@ -3,6 +3,8 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use LWP::UserAgent;
+use HTTP::Request;
 use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
@@ -167,6 +169,78 @@ sub _try_local_proxy {
     return 1;
 }
 
+=head2 test_isos_localhost
+
+A local apache server with the directory /iso
+
+=cut
+
+sub test_isos_localhost {
+    my $vm_name = shift;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $ua = new LWP::UserAgent;
+    my $req = HTTP::Request->new(GET => 'http://localhost/iso');
+    my $res = $ua->request($req);
+    SKIP: {
+        skip("No local apache with isos detected",10) if !$res->is_success; 
+        my $iso_list  = rvd_front->list_iso_images;
+        for my $iso (@$iso_list) {
+            next if $iso->{name} !~ /fedora/i;
+            for my $tag ( qw(md5_url sha256_url url) ) {
+                next if !$iso->{$tag};
+                $iso->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2};
+
+                my ($url,$file) = ($iso->{$tag});
+                ($url,$file) = $iso->{$tag} =~ m{(\w+://.*)/(.*)} if $iso->{$tag} =~ /\*/;
+                if ($file) {
+                    $url = extract_file($url,$file);
+                    warn "WARNING: I can't extract $file from $url" if !$url;
+                    $iso->{$tag} = $url if $url;
+                }
+                $iso->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2};
+
+                $res = $ua->request(HTTP::Request->new(GET => $url))    if $url;
+                if (!$url || !$res->is_success) {
+                    diag("Missing $iso->{$tag}");
+                    $iso->{failed}++;
+                    next;
+                }
+            }
+            next if $iso->{failed};
+            like($iso->{device}, qr(^[a-z0-9./_-]*$)i, "Expecting filename or empty, got : '"
+                                                    .($iso->{device} or '')."'")
+                    or next;
+
+            unlink $iso->{device} or die "$! $iso->{device}"    if $iso->{device};
+
+            my $iso2 = $vm->_search_iso($iso->{id});
+            for my $tag ( qw(md5_url sha256_url url) ) {
+                next if !$iso2->{$tag};
+                $iso2->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2};
+            }
+            my $device;
+            eval { $device = $vm->_iso_name($iso2) };
+            is($@,'');
+            ok($device,"Expecting a device , got ".($device or ''));
+        }
+    }
+}
+
+sub extract_file {
+    my ($url, $file) = @_;
+
+    my $ua = new LWP::UserAgent;
+    my $res = $ua->request(HTTP::Request->new(GET => $url));
+    return if !$res->is_success;
+
+    for my $line (split /\n/,$res->content ) {
+        my ($found) = $line =~ qr/<a href="($file)"/;
+        return "$url/$found" if $found;
+    }
+    return;
+}
+
 #######################################################
 #
 
@@ -186,10 +260,12 @@ SKIP: {
     skip($msg,10)   if !$vm;
 
 
+#    $Ravada::VM::KVM::WGET = "";
     test_isos_vm($vm);
     test_isos_front($vm_name);
     test_isos_already_there($vm_name);
 
+    test_isos_localhost($vm_name);
 }
 
 clean();

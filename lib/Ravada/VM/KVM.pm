@@ -68,6 +68,9 @@ our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
+our $WGET = `which wget`;
+chomp $WGET;
+
 ##########################################################################
 
 
@@ -762,8 +765,8 @@ sub _iso_name {
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
-    confess "Missing MD5 field on table iso_images FOR $iso->{url}"
-        if !$iso->{md5};
+    confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
+        if !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
     if (! -e $device || ! -s $device) {
@@ -774,10 +777,18 @@ sub _iso_name {
         _download_file_external($iso->{url}, $device);
         die "Download failed, file $device missing.\n"
             if ! -e $device;
-        die "Download failed, MD5 id=$iso->{id} missmatched for $device."
-        ." Please read ISO "
-        ." MD5 missmatch at operation docs.\n"
-            if (! _check_md5($device, $iso->{md5}));
+
+        my $verified = 0;
+        for my $check ( qw(md5 sha256)) {
+            next if !$iso->{$check};
+
+            die "Download failed, $check id=$iso->{id} missmatched for $device."
+            ." Please read ISO "
+            ." verification missmatch at operation docs.\n"
+            if (! _check_signature($device, $iso->{$check}, $check));
+            $verified++;
+        }
+        warn "WARNING: $device signature not verified"    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -793,6 +804,7 @@ sub _iso_name {
 
 sub _check_md5 {
     my ($file, $md5 ) =@_;
+    return if !$md5;
 
     my  $ctx = Digest::MD5->new;
     open my $in,'<',$file or die "$! $file";
@@ -807,6 +819,33 @@ sub _check_md5 {
         ."expecting: $md5\n"
         ;
     return 0;
+}
+
+sub _check_sha256 {
+    my ($file, $sha ) =@_;
+    return if !$sha;
+
+    my @cmd = ('sha256sum',$file);
+    my ($in, $out, $err);
+    run3(\@cmd,\$in, \$out, \$err);
+    die "$err ".join(@cmd)  if $err;
+
+    my ($digest) =  $out =~ m{([0-9a-f]+)};
+
+    return 1 if $digest eq $sha;
+
+    warn "$file SHA256 fails\n"
+        ." got  : $digest\n"
+        ."expecting: $sha\n"
+        ;
+    return 0;
+}
+
+
+sub _check_signature($file, $expected, $type) {
+    return _check_md5($file,$expected) if $type eq 'md5';
+    return _check_sha256($file,$expected) if $type eq 'sha256';
+    die "Unknown signature type $type";
 }
 
 sub _download_file_lwp_progress {
@@ -857,7 +896,8 @@ sub _download_file_lwp {
 
 sub _download_file_external {
     my ($url,$device) = @_;
-    my @cmd = ("/usr/bin/wget",,'--quiet',$url,'-O',$device);
+    confess "ERROR: wget missing"   if !$WGET;
+    my @cmd = ($WGET,'--quiet',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
@@ -878,6 +918,7 @@ sub _search_iso {
 
     $self->_fetch_filename($row);#    if $row->{file_re};
     $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
+    $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
 
     if ( !$row->{device}) {
         if (my $volume = $self->search_volume($row->{filename})) {
@@ -891,10 +932,8 @@ sub _search_iso {
     return $row;
 }
 
-sub _download {
-    my $self = shift;
-    my $url = shift;
-
+sub _download($self, $url) {
+    confess "Wrong url '$url'" if $url =~ m{\*};
     my $cache = $self->_cache_get($url);
     return $cache if $cache;
 
@@ -903,15 +942,12 @@ sub _download {
     my $req = HTTP::Request->new( GET => $url);
     my $res = $ua->request($req);
 
-    die $res->status_line if !$res->is_success;
+    die $res->status_line." $url" if !$res->is_success;
 
     return $self->_cache_store($url,$res->content);
 }
 
-sub _cache_get {
-    my $self = shift;
-    my $url = shift;
-
+sub _cache_get($self, $url) {
     my $file = _cache_filename($url);
 
     my @stat = stat($file)  or return;
@@ -933,11 +969,14 @@ sub _cache_store {
 
 }
 
-sub _cache_filename {
-    my $url = shift;
+sub _cache_filename($url) {
+    confess "Undefined url" if !$url;
 
     my $file = $url;
+
     $file =~ tr{/:}{_-};
+    $file =~ tr{a-zA-Z0-9_-}{_}c;
+    $file =~ s/__+/_/g;
 
     return "/var/tmp/$file";
 }
@@ -947,10 +986,16 @@ sub _fetch_filename {
     my $row = shift;
 
     if (!$row->{file_re}) {
-        my ($file) = $row->{url} =~ m{.*/(.*)};
+        my ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)};
         confess "No filename in $row->{url}" if !$file;
-        $row->{filename} = $file;
-        return;
+
+        if ($file =~ /\*/) {
+            $row->{url} = $new_url;
+            $row->{file_re} = $file;
+        } else {
+            $row->{filename} = $file;
+            return;
+        }
     }
     confess "No file_re" if !$row->{file_re};
 
@@ -967,26 +1012,62 @@ sub _fetch_filename {
     die "No ".qr($row->{file_re})." found on $row->{url}"   if !$file;
 
     $row->{filename} = $file;
+    $row->{url} .= "/" if $row->{url} !~ m{/$};
     $row->{url} .= $file;
 }
 
-sub _fetch_md5 {
-    my $self = shift;
-    my $row = shift;
+sub _expand_url($self, $url, $file) {
+    my $ua = new LWP::UserAgent;
+    my $res = $ua->request(HTTP::Request->new(GET => $url));
+    return if !$res->is_success;
+
+    for my $line (split /\n/,$res->content ) {
+        my ($found) = $line =~ qr/<a href="($file)"/;
+        return "$url/$found" if $found;
+    }
+    die "$file not found in $url";
+    return;
+
+}
+
+sub _fetch_this($self,$row,$type){
 
     my ($file) = $row->{url} =~ m{.*/(.*)};
     confess "No file for $row->{url}"   if !$file;
 
-    my $content = $self->_download($row->{md5_url});
+    my $url_orig = $row->{"${type}_url"};
+
+    if ($url_orig =~ m{\*}) {
+        my ($url,$file) = $url_orig =~ m{(\w+://.*)/(.*)};
+        my $url_expanded = $self->_expand_url($url, $file);
+        $row->{"${type}_url"} = $url_expanded;
+        my $sth = $$CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET ${type}_url =? WHERE id=?"
+        );
+        $sth->execute($url_expanded,$row->{id});
+
+    }
+    my $content = $self->_download($row->{"${type}_url"});
 
     for my $line (split/\n/,$content) {
-        my ($md5) = $line =~ m{^\s*(.*?)\s+.*?$file};
-        next if !$md5;
-        $row->{md5} = $md5;
-        return;
+        my ($value) = $line =~ m{^\s*(.*?)\s+.*?$file};
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
+        if ($value) {
+            $row->{$type} = $value;
+            return;
+        }
     }
 
-    die "No MD5 for $file in $row->{md5_url}\n".$content;
+    confess "No $type for $file in ".$row->{"${type}_url"}."\n".$content;
+}
+
+sub _fetch_md5($self,$row) {
+    return $self->_fetch_this($row,'md5');
+}
+
+
+sub _fetch_sha256($self,$row) {
+    return $self->_fetch_this($row,'sha256');
 }
 
 ###################################################################################

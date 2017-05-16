@@ -135,6 +135,15 @@ sub _update_isos {
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
 
         }
+        ,fedora => {
+            name => 'Fedora 25'
+            ,description => 'RedHat Fedora 25 Workstation 64 bits'
+            ,url => 'https://download.fedoraproject.org/pub/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+        }
 
     );
 
@@ -235,7 +244,7 @@ sub _create_tables {
 
 sub _upgrade_tables {
     my $self = shift;
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+#    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
 
@@ -245,6 +254,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
+    $self->_upgrade_table('iso_images','sha256','varchar(255)');
+    $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
 
