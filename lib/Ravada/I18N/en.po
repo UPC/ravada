@@ -288,3 +288,15 @@ msgstr ""
 
 msgid "Virtual Machines"
 msgstr ""
+
+msgid "user"
+msgstr ""
+
+msgid "password"
+msgstr ""
+
+msgid "Start session"
+msgstr ""
+
+msgid "Login with Intranet UPC's username."
+msgstr ""
