@@ -44,7 +44,7 @@ our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
-our $CAN_LXC = 0;
+our $CAN_LXD = 1;
 
 # Seconds to wait for other long process
 our $SECONDS_WAIT_CHILDREN = 2;
@@ -346,7 +346,7 @@ sub disconnect_vm {
     $self->_disconnect_vm();
 }
 
-sub _disconnect_vm{
+sub _disconnect_vm {
     my $self = shift;
     return $self->_connect_vm(0);
 }
@@ -377,7 +377,7 @@ sub _connect_vm {
 
 sub _create_vm_lxd {
     my $vm_lxd;
-    $vm_lxd = Ravada::VM::LXD->new( );
+    $vm_lxd = Ravada::VM::LXD->new();
     my $err_lxd = $@;
     return $vm_lxd;
 }
@@ -394,31 +394,31 @@ sub _create_vm {
 
     push @vms,($vm_kvm) if $vm_kvm;
 
-    my $vm_lxc;
-
-    eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
-    push @vms,($vm_lxc) if $vm_lxc;
-    my $err_lxc = $@;
-
     my $vm_lxd;
-    eval { $vm_lxd = _create_vm_lxd() } ;
+
+    eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) };
     push @vms,($vm_lxd) if $vm_lxd;
     my $err_lxd = $@;
 
-    if (!@vms) {
-        die "No VMs found: $err_lxc\n$err_kvm\n$err_lxd\n";
+    #my $vm_lxd;
+    #eval { $vm_lxd = _create_vm_lxd() } ;
+    #push @vms,($vm_lxd) if $vm_lxd;
+    #my $err_lxd = $@;
 
-    if ($CAN_LXC) {
-        eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
-        push @vms,($vm_lxc) if $vm_lxc;
-        my $err_lxc = $@;
-        $err .= "\n$err_lxc" if $err_lxc;
+    if (!@vms) {
+        die "No VMs found: $err_lxd\n$err_kvm\n";
+
+    if ($CAN_LXD) {
+        eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) };
+        push @vms,($vm_lxd) if $vm_lxd;
+        my $err_lxd = $@;
+        $err .= "\n$err_lxd" if $err_lxd;
     }
     if (!@vms) {
         warn "No VMs found: $err\n" if $self->warn_error;
     }
     return \@vms;
-
+    }
 }
 
 sub _check_vms {

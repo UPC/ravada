@@ -15,7 +15,7 @@ with 'Ravada::VM';
 
 #our $DEFAULT_SOCKET_LXD = '/var/lib/lxd/unix.socket';
 #our $CURL;
-our $DEFAULT_URL_LXD = "https://localhost:8443";
+our $DEFAULT_URL_LXD = "https://localhost:8443/";
 our $LXC;
 our $LXD;
 our $URL_LXD;
@@ -47,7 +47,7 @@ sub connect {
     #$client->addHeader('Accept', 'application/json');
 
     # Try SSL_verify_mode => SSL_VERIFY_NONE.  0 is more compatible, but may be deprecated
-    #$client->getUseragent()->ssl_opts( SSL_verify_mode => 0 );
+    $client->getUseragent()->ssl_opts( SSL_verify_mode => 0 );
     #A host can be set for convienience
     $client->setHost($URL_LXD);
     #X509 client authentication
@@ -68,7 +68,7 @@ sub connect {
         #my @a = $r->{metadata}->{auth};
         #warn "   Certificate:        " . join( ", ", @a ) . "\n";
         warn "Success";
-    #exit;
+    exit;
     }
     warn "Server not response (TODO read setHost) ";
 }
