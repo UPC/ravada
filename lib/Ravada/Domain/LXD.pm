@@ -101,4 +101,5 @@ sub shutdown_now {}
 sub spinoff_volumes {}
 
 sub screenshot {}
+
 1;
