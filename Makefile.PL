@@ -24,8 +24,9 @@ WriteMakefile(
     ,'Locale::Maketext::Lexicon' => 0
     ,'Mojolicious::Plugin::I18N' => 0
   },
-  TEST_REQUIRES => {
+  BUILD_REQUIRES => {
     'Test::SQL::Data' => 0
+    ,'Test::Perl::Critic' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},

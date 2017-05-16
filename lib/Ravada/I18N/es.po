@@ -212,4 +212,3 @@ msgstr "No se puede borrar la base, la máquina tiene clones"
 
 msgid "Show/Hide clones"
 msgstr "Ver/Esconde clones"
->>>>>>> master

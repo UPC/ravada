@@ -36,10 +36,10 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 ,listen => ['http://*:8081']
                                                 }
                                               ,login_bg_file => '../img/intro-bg.jpg'
-                                              ,login_header => 'Login'
+                                              ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
-                                              ,login_template => ''
+                                              ,login_custom => ''
                                               }
                                       ,file => '/etc/rvd_front.conf'
 };
@@ -98,11 +98,15 @@ hook before_routes => sub {
   $c->stash(version => $RAVADA->version."$VERSION_TYPE");
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
-            ,js=>['/js/form.js'
-                ,'/js/ravada.js'
+            ,js=>[
+                '/js/ravada.js'
                 ]
             ,csssnippets => []
             ,navbar_custom => 0
+            ,url => undef
+            ,_logged_in => undef
+            ,_anonymous => undef
+            ,_user => undef
             );
 
   return access_denied($c)
@@ -110,12 +114,12 @@ hook before_routes => sub {
     && !_logged_in($c);
 
   return login($c)
-    if     $url !~ /\.css$/
-        && $url !~ m{^/(anonymous|login|logout)}
-        && $url !~ m{^/(font|img|js)}
+    if
+        $url !~ m{^/(anonymous|login|logout|requirements)}
+        && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
-
+    _logged_in($c)  if $url =~ m{^/requirements};
 };
 
 
@@ -234,7 +238,11 @@ get '/list_bases.json' => sub {
 
 get '/list_images.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_iso_images);
+
+    my $vm_name = $c->param('backend');
+    warn $vm_name;
+
+    $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
 
 get '/list_isos.json' => sub {
@@ -518,7 +526,6 @@ sub user_settings {
         $changed_lang = $c->param('tongue');
         _logged_in($c);
     }
-    warn $c->param('button_click');      
     $c->param('tongue' => $USER->language);
     my @errors;
     if ($c->param('button_click')) {
@@ -672,8 +679,7 @@ sub login {
 
     sleep 5 if scalar(@error);
     $c->render(
-                    #template => ($CONFIG_FRONT->{dir}->{custom} or 'main/start')
-                    template => ($CONFIG_FRONT->{login_template} or 'main/start')
+                    template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
                         ,csssnippets => @css_snippets
                         ,js => ['/js/main.js']

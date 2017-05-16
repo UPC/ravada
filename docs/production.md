@@ -48,7 +48,7 @@ It is advised to run an Apache server or similar before the frontend.
 
     # apt-get install apache2
 
-In order to make ravada use apache, you must follow the steps explained on [/docs/apache.md](https://github.com/UPC/ravada/blob/master/docs/apache.md)
+In order to make ravada use apache, you must follow the steps explained on [here](apache.html).
 
 If you face any errors during this procedure, please read the page "Troubleshooting".
 If you do not know how to create a virtual machine, please read the page "creating virtual machines".

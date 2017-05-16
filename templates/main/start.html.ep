@@ -7,7 +7,7 @@
         <div class="intro-body">
             <div class="container" ng-controller="">
                 <form class="form-singin" method="post">
-                <h2 class="form-signin-heading"><%= $login_header %></h2>
+                <h2 class="form-signin-heading"><%=l($login_header) %></h2>
                 <p><%= $login_message %></p>
 
                 <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User">
@@ -18,7 +18,7 @@
                 <input type="hidden" name="login_hash"
                        value="<%= $login_hash %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-                <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch">Launch</button>
+               <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
                 % if (scalar @$error) {
 
                 %       for my $i (@$error) {
@@ -29,10 +29,16 @@
 
                 % }
                 </form>
+                <div class="alert alert-warning">
+                    <%=l 'It is required a viewer to run the virtual machines.' %>
+                    <a href="/requirements"><%=l 'Read more.' %></a>
+                </div> 
                 <!--<a href="#instruccions" class="btn btn-circle page-scroll">
                             <i class="fa fa-angle-double-down animated"></i></a>-->
             </div>
+               
         </div>
+     
     </header>
 
     <!-- Instruccions

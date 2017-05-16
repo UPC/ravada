@@ -70,6 +70,10 @@ sub create_domain {
 sub create_volume {
 }
 
+sub dir_img {
+    return $Ravada::Domain::Void::DIR_TMP;
+}
+
 sub list_domains {
     opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
@@ -109,6 +113,35 @@ sub search_domain {
 
 sub list_networks {
     return Ravada::NetInterface::Void->new();
+}
+
+sub search_volume {
+    my $self = shift;
+    my $pattern = shift;
+
+    opendir my $ls,$self->dir_img or die $!;
+    while (my $file = readdir $ls) {
+        return $self->dir_img."/".$file if $file eq $pattern;
+    }
+    closedir $ls;
+    return;
+}
+
+sub search_volume_path {
+    return search_volume(@_);
+}
+
+sub search_volume_path_re {
+    my $self = shift;
+    my $pattern = shift;
+
+    opendir my $ls,$self->dir_img or die $!;
+    while (my $file = readdir $ls) {
+        return $self->dir_img."/".$file if $file =~ m{$pattern};
+    }
+    closedir $ls;
+    return;
+
 }
 
 #########################################################################3

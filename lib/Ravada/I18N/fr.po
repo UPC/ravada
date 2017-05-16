@@ -1,19 +1,19 @@
 # Translators:
 # Kimia mirehbar	kimia@etsetb.upc.edu
-# french 
+# french
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 12:12+0300\n"
+"PO-Revision-Date: 2017-05-02 16:20+0200\n"
 "Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
 "Language-Team: \n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
+"X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Courtier"
@@ -120,12 +120,19 @@ msgstr "Sujet"
 msgid "Date"
 msgstr "Date"
 
+#, fuzzy
 msgid "Actions"
-msgstr "Action"
+msgstr ""
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"Action\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"Actiones\n"
+"#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
+"Actiones"
 
 msgid "Mark as Read"
 msgstr "Marquer Comme Lu"
- 
+
 msgid "Mark as UnRead"
 msgstr "Marquer Comme Non Lu"
 
@@ -139,43 +146,146 @@ msgid "Show/Hide clones"
 msgstr "Afficher/Masquer des clones"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "je voudrais changer mon mot de passe"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "je voudrais modifier ma langue"
 
 msgid "Language:"
-msgstr ""
+msgstr "langue"
 
 msgid "English"
-msgstr ""
+msgstr "Anglais"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Espagnol"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Catalan"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Mot de passe Nouveau"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "confirmer mot de passe"
 
 msgid "Submit"
-msgstr ""
+msgstr "soumettre"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "votre langue a été modifiée avec succès"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "votre mot de passe a été modifiée avec succès"
 
 msgid "Password too small"
-msgstr ""
+msgstr "Mot de Passe petite"
 
 msgid "Password fields aren't equal"
 msgstr ""
 
 msgid "Some of the password's fields are empty"
+msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Machines"
+msgstr "Machines"
+
+msgid "Down"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "ShutDown"
+msgstr ""
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Machine locked by"
+msgstr ""
+
+msgid "machines"
+msgstr "Machines"
+
+msgid "users"
+msgstr ""
+
+msgid "messages"
+msgstr "Messages"
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr ""
+
+msgid "public"
+msgstr ""
+
+msgid "Hybernate"
+msgstr ""
+
+msgid "Shutdown"
+msgstr ""
+
+msgid "action"
+msgstr ""
+
+msgid "New Base"
+msgstr ""
+
+msgid "will remove all the contents of the machine"
+msgstr ""
+
+msgid "Are you sure?"
+msgstr " "
+
+msgid "Yes"
+msgstr "Oui"
+
+msgid "No"
+msgstr "Non"
+
+msgid "Make public"
+msgstr ""
+
+msgid "Machine settings"
+msgstr ""
+
+msgid "Cannot remove base, machine has clones"
+msgstr ""
+
+msgid "For spice redirection you'll need to install"
+msgstr ""
+
+msgid "in your computer."
+msgstr ""
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+
+msgid "You'll need to install"
+msgstr ""
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr ""
+
+msgid ""
+"Be aware that in Windows, spice redirection is not automatically. It's "
+"necessary associate protocol with the app."
+msgstr ""
+
+msgid "To make this possible, download"
+msgstr ""
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
 msgstr ""

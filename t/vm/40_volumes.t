@@ -6,6 +6,9 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
+use v5.22; use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -312,6 +315,29 @@ sub test_domain_swap {
     }
 
 }
+
+sub test_search($vm_name) {
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $file_out = $vm->dir_img."/file.iso";
+
+    open my $out,">",$file_out or do {
+        warn "$! $file_out";
+        return;
+    };
+    print $out "foo.bar\n";
+    close $out;
+
+    my $file = $vm->search_volume_path("file.iso");
+    is($file_out, $file);
+
+    my $file_re = $vm->search_volume_path_re(qr(file.*so));
+    is($file_re, $file);
+
+    my @isos = $vm->search_volume_path_re(qr(.*\.iso$));
+    ok(scalar @isos,"Expecting isos, got : ".Dumper(\@isos));
+}
+
 #######################################################################33
 
 remove_old_domains();
@@ -344,7 +370,7 @@ for my $vm_name (reverse sort @VMS) {
         for ( 3..6) {
             test_domain_n_volumes($vm_name,$_);
         }
-
+        test_search($vm_name);
     }
 }
 

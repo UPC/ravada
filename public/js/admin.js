@@ -29,6 +29,13 @@ ravadaApp.directive("solShowMachine", swMach)
       $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
       });
+
+      //This may have to reload when changing backends
+      url_images = "/list_images.json?backend=KVM";
+      $http.get(url_images).then(function(response) {
+              $scope.images = response.data;
+      });
+
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
       });

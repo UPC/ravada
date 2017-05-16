@@ -141,7 +141,7 @@ sub _update_isos {
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
         next if $id;
-        warn("INFO: updating $table : $row->{$field}\n");
+        warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
             "INSERT INTO iso_images "
@@ -173,7 +173,7 @@ sub _upgrade_table {
     $sth->finish;
     return if $row;
 
-    warn "INFO: adding $field $definition to $table\n";
+    warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
     return 1;
 }
@@ -251,6 +251,8 @@ sub _upgrade_tables {
     }
 
     $self->_upgrade_table('networks','requires_password','int(11)');
+    $self->_upgrade_table('networks','n_order','int(11) not null default 0');
+
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
 }
 

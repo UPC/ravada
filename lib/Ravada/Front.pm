@@ -16,6 +16,9 @@ use Moose;
 use Ravada;
 use Ravada::Network;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use Data::Dumper;
 
 has 'config' => (
@@ -205,9 +208,9 @@ sub list_domains {
             $row->{is_hibernated} = 1 if $domain->is_hibernated;
             $row->{is_paused} = 1 if $domain->is_paused;
             $row->{has_clones} = $domain->has_clones;
-            $row->{disk_size} = ( $domain->disk_size or 0);
-            $row->{disk_size} /= (1024*1024*1024);
-            $row->{disk_size} = 1 if $row->{disk_size} < 1;
+#            $row->{disk_size} = ( $domain->disk_size or 0);
+#            $row->{disk_size} /= (1024*1024*1024);
+#            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
         }
         push @domains, ($row);
@@ -284,6 +287,9 @@ Returns a reference to a list of the ISO images known by the system
 
 sub list_iso_images {
     my $self = shift;
+    my $vm_name = shift;
+
+    my $vm;
 
     my @iso;
     my $sth = $CONNECTOR->dbh->prepare(
@@ -292,6 +298,23 @@ sub list_iso_images {
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
+
+        next if $row->{device};
+
+        my ($file) = $row->{url} =~ m{.*/(.*)};
+        my $file_re = $row->{file_re};
+        next if !$file_re && !$file || !$vm_name;
+
+        $vm = $self->search_vm($vm_name)    if !$vm;
+
+        if ($file) {
+            my $iso_file = $vm->search_volume_path($file);
+            $row->{device} = $iso_file  if $iso_file;
+        }
+        if ($file_re && !$row->{device}) {
+            my $iso_file = $vm->search_volume_path_re(qr($file_re));
+            $row->{device} = $iso_file  if $iso_file;
+        }
     }
     $sth->finish;
     return \@iso;

@@ -64,6 +64,9 @@ sub add_user {
     my ($name, $password, $is_admin) = @_;
 
     _init_ldap_admin();
+
+    confess "No dc base in config ".Dumper($$CONFIG->{ldap})
+        if !_dc_base();
     my ($givenName, $sn) = $name =~ m{(\w+)\.(.*)};
 
     my $apr=Authen::Passphrase::SaltedDigest->new(passphrase => $password, algorithm => "MD5");
@@ -83,7 +86,7 @@ sub add_user {
 
     my $mesg = $LDAP_ADMIN->add($dn, attr => [%entry]);
     if ($mesg->code) {
-        die "Error afegint $name ".$mesg->error;
+        die "Error afegint $name to $dn ".$mesg->error;
     }
 }
 
@@ -408,6 +411,14 @@ sub is_admin {
     return grep /^$dn$/,$group->get_value('uniqueMember');
 
 }
+
+=head2 is_external
+
+Returns true if the user authentication is external to SQL, so true for LDAP users always
+
+=cut
+
+sub is_external { return 1 }
 
 =head2 init
 
