@@ -27,7 +27,7 @@ sub test_vm_connect {
 
 sub test_search_vm {
     my $ravada = Ravada->new();
-    my $vm = $ravada->search_vm('lxd');
+    my $vm = $ravada->search_vm('LXD');
     ok($vm,"I can't find a lxd virtual manager");
     ok(ref $vm eq $CLASS,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
         ." it should be $CLASS");
@@ -40,12 +40,11 @@ eval { $RAVADA = Ravada->new() };
 
 my $vm;
 
-eval { $vm = $RAVADA->search_vm('lxd') } if $RAVADA;
+eval { $vm = $RAVADA->search_vm('LXD') } if $RAVADA;
 
 SKIP: {
 
     my $msg = "SKIPPED test: No VM backend found";
-warn "msg: $vm";
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
