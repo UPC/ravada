@@ -93,7 +93,9 @@ clean();
 
 for my $vm_name ( @{rvd_front->list_vm_types}) {
 
-    my $vm = rvd_back->search_vm($vm_name);
+    my $vm;
+    eval { $vm = rvd_back->search_vm($vm_name)};
+    diag($@)    if $@ !~ /Invalid VM/;
 
     SKIP: {
 
