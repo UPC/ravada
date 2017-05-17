@@ -6,7 +6,8 @@ use JSON::XS qw(decode_json encode_json);
 use Moose;
 use REST::Client;
 
-use Ravada::Domain::LXD;
+require Ravada::Domain::LXD or die $@;
+Ravada::Domain::LXD->import;
 
 with 'Ravada::VM';
 

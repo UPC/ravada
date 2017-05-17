@@ -17,10 +17,21 @@ use Socket qw( inet_aton inet_ntoa );
 
 use Ravada::Auth;
 use Ravada::Request;
-use Ravada::VM::KVM;
 
-use Ravada::VM::LXD;
+our %VALID_VM;
 
+eval {
+    require Ravada::VM::KVM and do {
+        Ravada::VM::KVM->import;
+    };
+    $VALID_VM{KVM} = 1;
+};
+eval {
+    require Ravada::VM::LXD and do {
+        Ravada::VM::LXD->import;
+    };
+    $VALID_VM{LXD} = 1;
+};
 use Ravada::VM::Void;
 
 =head1 NAME
@@ -44,7 +55,6 @@ our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
 our $CAN_FORK = 1;
-our $CAN_LXD = 1;
 
 # Seconds to wait for other long process
 our $SECONDS_WAIT_CHILDREN = 2;
@@ -396,7 +406,7 @@ sub _create_vm {
 
     my $vm_lxd;
 
-    eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) };
+    eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) }   if $VALID_VM{LXD};
     push @vms,($vm_lxd) if $vm_lxd;
     my $err_lxd = $@;
 
@@ -408,17 +418,10 @@ sub _create_vm {
     if (!@vms) {
         die "No VMs found: $err_lxd\n$err_kvm\n";
 
-    if ($CAN_LXD) {
-        eval { $vm_lxd = Ravada::VM::LXD->new( connector => ( $self->connector or $CONNECTOR )) };
-        push @vms,($vm_lxd) if $vm_lxd;
-        my $err_lxd = $@;
-        $err .= "\n$err_lxd" if $err_lxd;
-    }
-    if (!@vms) {
         warn "No VMs found: $err\n" if $self->warn_error;
+        return;
     }
     return \@vms;
-    }
 }
 
 sub _check_vms {
@@ -1448,6 +1451,9 @@ sub search_vm {
     my $type = shift;
 
     confess "Missing VM type"   if !$type;
+    confess "Invalid VM type '$type'"
+        if !$VALID_VM{$type} && !$VALID_VM{lc($type)} 
+            && !$VALID_VM{uc($type)}&& $type ne 'Void';
 
     my $class = 'Ravada::VM::'.uc($type);
 
