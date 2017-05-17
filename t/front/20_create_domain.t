@@ -29,7 +29,7 @@ my $USER = create_user('foo','bar');
 my %CREATE_ARGS = (
     Void => { id_iso => 1,       id_owner => $USER->id }
     ,KVM => { id_iso => 1,       id_owner => $USER->id }
-    ,LXC => { id_template => 1, id_owner => $USER->id }
+    ,LXD => { id_template => 1, id_owner => $USER->id }
 );
 
 
@@ -89,10 +89,11 @@ $RVD_FRONT->fork(0);
 ok(scalar $RVD_FRONT->list_vm_types(),"Expecting some in list_vm_types , got "
     .scalar $RVD_FRONT->list_vm_types());
 
-SKIP: {
-for my $vm_name ('Void','KVM','LXC') {
+for my $vm_name (keys %CREATE_ARGS) {
 
-    my $vm = $RVD_BACK->search_vm($vm_name);
+SKIP: {
+    my $vm;
+    eval { $vm = $RVD_BACK->search_vm($vm_name)};
     my $msg = "Skipping VM $vm_name in this system";
     if ($vm && $vm_name =~ /kvm/i && $>) {
         $msg = "SKIPPED: Test must run as root";
@@ -101,9 +102,8 @@ for my $vm_name ('Void','KVM','LXC') {
 
     if (!$vm) {
         diag($msg);
-        skip($msg,10);
+        skip($msg,1);
     }
-
     my $name = new_domain_name();
     my $req = $RVD_FRONT->create_domain( name => $name 
         , create_args($vm_name)
