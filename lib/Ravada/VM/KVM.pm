@@ -783,7 +783,7 @@ sub _iso_name {
             die "Download failed, $check id=$iso->{id} missmatched for $device."
             ." Please read ISO "
             ." verification missmatch at operation docs.\n"
-            if (! _check_signature($device, $iso->{$check}, $check));
+            if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
         warn "WARNING: $device signature not verified"    if !$verified;
@@ -819,9 +819,9 @@ sub _check_md5 {
     return 0;
 }
 
-sub _check_sha256 {
-    my ($file, $sha ) =@_;
+sub _check_sha256($file,$sha) {
     return if !$sha;
+    confess "Wrong SHA256 '$sha'" if $sha !~ /[a-f0-9]{9}/;
 
     my @cmd = ('sha256sum',$file);
     my ($in, $out, $err);
@@ -840,9 +840,11 @@ sub _check_sha256 {
 }
 
 
-sub _check_signature($file, $expected, $type) {
-    return _check_md5($file,$expected) if $type eq 'md5';
-    return _check_sha256($file,$expected) if $type eq 'sha256';
+sub _check_signature($file, $type, $expected) {
+    confess "ERROR: Wrong signature '$expected'"
+        if $expected !~ /^[0-9a-f]{7}/;
+    return _check_md5($file,$expected) if $type =~ /md5/i;
+    return _check_sha256($file,$expected) if $type =~ /sha256/i;
     die "Unknown signature type $type";
 }
 
@@ -1048,11 +1050,11 @@ sub _fetch_this($self,$row,$type){
     my $content = $self->_download($row->{"${type}_url"});
 
     for my $line (split/\n/,$content) {
-        my ($value) = $line =~ m{^\s*(.*?)\s+.*?$file};
+        my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
         ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
         if ($value) {
             $row->{$type} = $value;
-            return;
+            return $value;
         }
     }
 
@@ -1060,12 +1062,18 @@ sub _fetch_this($self,$row,$type){
 }
 
 sub _fetch_md5($self,$row) {
-    return $self->_fetch_this($row,'md5');
+    my $signature = $self->_fetch_this($row,'md5');
+    die "ERROR: Wrong signature '$signature'"
+         if $signature !~ /^[0-9a-f]{9}/;
+    return $signature;
 }
 
 
 sub _fetch_sha256($self,$row) {
-    return $self->_fetch_this($row,'sha256');
+    my $signature = $self->_fetch_this($row,'sha256');
+    die "ERROR: Wrong signature '$signature'"
+         if $signature !~ /^[0-9a-f]{9}/;
+    return $signature;
 }
 
 ###################################################################################
