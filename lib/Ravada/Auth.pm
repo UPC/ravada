@@ -50,14 +50,14 @@ Tries login in all the submodules
 =cut
 
 sub login {
-    my ($name, $pass) = @_;
+    my ($name, $pass, $quiet) = @_;
 
     my $login_ok;
     if (!defined $LDAP || $LDAP) {
         eval {
             $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
         };
-        warn $@ if $@ && $LDAP;
+        warn $@ if $@ && $LDAP && !$quiet;
         return $login_ok if $login_ok;
     }
 

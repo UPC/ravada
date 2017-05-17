@@ -9,8 +9,6 @@
 %   $disable_rename = 1;
 % }
 %# if $domain->is_paused || $domain->domain->has_managed_save_image;
-<div class="panel panel-primary" ng-hide="domain_remove_done">
-    <div class="panel-heading"><b><%=l 'Rename'%></b></div>
 
     <div class="panel-body">
         % if ($message_rename) {
@@ -33,4 +31,3 @@
                               </label>
         </div>
     </div>
-</div>

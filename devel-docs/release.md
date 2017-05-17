@@ -14,7 +14,7 @@ At code -> releases draft a new release
 
 ## Create the milestone
 
-Create a milestone called like the tag version: 0.2.2. There must be a way to link it to the _tag_ , I just don't know how.
+At the _issues_ section , create a milestone. Name it like the tag version: 0.2.2. There must be a way to link it to the _tag_ , I just don't know how.
 
 ## Create issues
 
@@ -37,12 +37,28 @@ It will create a file _authors.html.ep_, review it and commit it.
     $ git commit authors.html.ep
     $ cd ../..
 
+## Update the release number
+
+### In the debian control file
+
+In _debian/control_ around line 2:
+
+    Version: 0.2.5
+
+### In Ravada.pm
+
+Modify _lib/Ravada.pm_ around line 5:
+
+    our $VERSION = '0.2.5';
+
+
 ## Modify the Changelog
 
 Check the last issues closed for this milestone and add them to the Changelog file:
 
     $ git checkout master
     $ gvim Changelog.md
+    $ git commit -a
 
 ## Create a branch
 
@@ -70,6 +86,12 @@ Create the _debian_ package.
 Upload the file to our repo and change the number at:
 
     https://github.com/UPC/ravada/blob/master/docs/INSTALL.md
+
+    $ git checkout master
+    $ git merge v0.2.5
+    $ gvim docs/INSTALL.md
+    $ git commit -a
+    $ git push
 
 # Publish
 

@@ -17,6 +17,9 @@ use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Moose;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use Data::Dumper;
 
 with 'Ravada::Auth::User';
@@ -99,11 +102,13 @@ sub add_user {
     my $password = $args{password};
     my $is_admin = ($args{is_admin} or 0);
     my $is_temporary= ($args{is_temporary} or 0);
+    my $is_external= ($args{is_external} or 0);
 
-    delete @args{'name','password','is_admin','is_temporary'};
+    delete @args{'name','password','is_admin','is_temporary','is_external'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
+
 
     my $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password,is_admin,is_temporary, is_external)"
@@ -114,8 +119,7 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary
-        , ($args{is_external} or 0));
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
     $sth->finish;
 }
 
@@ -342,5 +346,20 @@ sub change_password {
       return $sth->fetchrow();
     }
   }
+
+
+=head2 remove
+
+Removes the user
+
+    $user->remove();
+
+=cut
+
+sub remove($self) {
+    my $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
 
 1;

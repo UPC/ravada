@@ -1,6 +1,4 @@
-<div class="panel panel-primary" ng-hide="domain_remove_done">
 
-    <div class="panel-heading"><b><%=l 'Copy'%></b></div>
     <div class="panel-body">
                         <form method="post" action="/machine/copy">
                             <input type="hidden" name="id_base" value="{{showmachine.id}}">
@@ -29,4 +27,3 @@
                           <input type="submit">
                         </form>
     </div>
-</div>

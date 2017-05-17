@@ -23,3 +23,13 @@ practice is to keep a disk volume *only for swap*.
 
 Linux
 -----
+
+It is reccommended keep the swapping the less possible. If possible
+remove the swap partitions and the swap configuration in _/etc/fstab_.
+
+Some software on Linux requires some swap to run. If so, set the
+_swappiness_ to the minimun this way:
+
+    $ sudo sysctl vm.swappiness=1
+
+To make this change permanent add it to the file: _/etc/sysctl.conf_
