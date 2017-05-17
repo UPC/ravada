@@ -26,6 +26,7 @@ our $SOCK_PATH = '/var/lib/lxd/unix.socket';
 sub BUILD {
     my $self = shift;
 
+    $self->{_connection} = '';
     $self->connect();                #if !defined $SOCKET_LXD;
     #die "No LXD backend found\n"    if !$URL_LXD;
 #    die "Missing curl\n"            if !$CURL;
@@ -35,7 +36,12 @@ sub BUILD {
 
 sub connect {
     my $self = shift;
-    return $self->_connect_socket();
+
+    return $self->_connect_http if $self->{_connection} eq 'http';
+    return $self->_connect_socket if $self->{_connection} eq 'socket';
+
+    my $client = $self->_connect_http;
+    return $self->_connect_socket() if $self->host eq 'localhost' || $self->host eq '127.0.0.1';
 }
 
 sub _connect_http {
@@ -77,33 +83,38 @@ sub _connect_http {
         #my @a = $r->{metadata}->{auth};
         #warn "   Certificate:        " . join( ", ", @a ) . "\n";
         warn "Success";
-        return;
+        $self->{_connection} = 'http';
+        return $client;
     }
     warn "Server $URL_LXD didn't answer (TODO read setHost) code: ".$client->responseCode."\n";
-    return $self->_connect_socket();
 }
 
 sub _connect_socket {
+    my $self = shift;
 
     my $client = IO::Socket::UNIX->new(
         Type => SOCK_STREAM(),
         Peer => $SOCK_PATH,
     );
-    print $client 
+    print $client
         "GET /1.0/containers HTTP/1.1\n"
         ."Host: 127.0.0.1\n"
         ."\n";
     my $line = <$client>;
     chomp $line;
     die $line if $line !~ / 200 OK/;
+    $self->{_connection} = 'http';
+    return $client;
 }
 
 sub create_domain {
-#    my $self = shift;
-#    my %args = @_;
+    my $self = shift;
+    my %args = @_;
 
-#    my $name = $args{name} or confess "Missing domain name: name => 'somename'";
+    my $name = $args{name} or confess "Missing domain name: name => 'somename'";
 
+    # connect each time, it is painless and the socket may close
+    my $client = $self->connect();
 #    my $data = {
 #        name => $name,
 ##        architecture => 'i686',
