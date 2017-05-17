@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
@@ -26,14 +27,15 @@ my $CONT= 0;
 
 
 sub test_remove_domain($vm_lxd, $name) {
-    my $domain = $vm_lxd->search_domain($name,1) or return;
+    confess "Wrong LXD " if !ref($vm_lxd);
+    my $domain = $vm_lxd->search_domain($vm_lxd, $name,1) or return;
     diag("Removing domain $name");
     $domain->remove() if $domain;
     diag ("$@");
-    ok(!$@ , "Error removing domain $name : $@") or exit;
+    ok(!$@ , "Error removing domain $name : $@") or return;
   
-    $domain = $RAVADA->search_domain($name,1);
-    ok(!$domain, "I can't remove old domain $name") or exit;
+    $domain = $RAVADA->search_domain($vm_lxd, $name,1);
+    ok(!$domain, "I can't remove old domain $name") or return;
 
     ok(!search_domain_db($name),"Domain $name still in db");
 
@@ -47,9 +49,8 @@ sub test_remove_domain_by_name($vm_lxd, $name) {
     diag("Removing domain: $name");
     $vm_lxd->remove_domain($name);
 
-    my $domain = $vm_lxd->search_domain($name);
-    die "I can't remove old domain $name"
-        if $domain;
+    my $domain = $vm_lxd->search_domain($vm_lxd, $name);
+    ok(!$domain,"Expecting old domain $name no more, got $domain");
 }
 
 sub search_domain_db {
@@ -70,13 +71,13 @@ sub test_new_domain {
     
     my $name = _new_name();
     diag ("Test remove domain");
-    test_remove_domain($name);
+    test_remove_domain($vm_lxd, $name);
 
     diag("Creating container $name.");
     my $domain = $vm_lxd->create_domain(name => $name, id_template => 1, active => $active);
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::LXD';
-    ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
+    ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain)) or return
         if $domain;
 
 
@@ -97,8 +98,8 @@ sub test_new_domain {
     return $domain;
 }
 
-sub test_domain_inactive {
-    my $domain = test_domain(0);
+sub test_domain_inactive($vm_lxd) {
+    my $domain = test_domain($vm_lxd, 0);
 }
 
 sub test_prepare_base {
@@ -112,15 +113,14 @@ sub test_prepare_base {
     $sth->finish;
 }
 
-sub test_domain{
-    my $active = shift;
+sub test_domain($vm_lxd, $active = 1){
     $active = 1 if !defined $active;
 
     my $vm = $RAVADA->search_vm('lxd');
 
-    my $n_domains = scalar $vm->list_domains();
+    my $n_domains = (scalar $vm->list_domains() or 0);
     diag("Test new domain n_domains= $n_domains");
-    my $domain = test_new_domain($active);
+    my $domain = test_new_domain($vm_lxd, $active);
     if (ok($domain,"test domain not created")) {
         my $name_here;
         eval { $name_here = $domain->name };
@@ -153,7 +153,7 @@ sub test_domain{
         #ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
         #ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
-        test_remove_domain($domain->name);
+        test_remove_domain($vm_lxd, $domain->name);
     }
 }
 
@@ -189,8 +189,9 @@ SKIP: {
     ok($vm,"I can't find a LXD virtual manager from ravada");
 
     remove_old_domains();
-    my $domain = test_domain();
-    test_remove_domain($domain);
+    my $domain = test_domain($vm_lxd);
+    test_remove_domain($vm_lxd, $domain)    if $domain;
 }
+remove_old_domains();
 
 done_testing();
