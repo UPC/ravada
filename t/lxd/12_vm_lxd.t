@@ -22,7 +22,7 @@ use_ok("Ravada::VM::$BACKEND");
 
 sub test_vm_connect {
     my $vm = Ravada::VM::LXD->new();
-    ok($vm->host eq 'https://localhost:8443/');
+    is($vm->host,'localhost');
 }
 
 sub test_search_vm {
@@ -37,16 +37,18 @@ sub test_search_vm {
 
 my $RAVADA;
 eval { $RAVADA = Ravada->new(%CONFIG) };
+ok(!$@,$@);
+ok($RAVADA);
 
 my $err = ($@ or '');
 my $vm;
 
-eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA;
+{ $vm = $RAVADA->search_vm($BACKEND) };
 $err .= ($@ or '');
 
 SKIP: {
 
-    my $msg = "SKIPPED test: No $BACKEND backend found";
+    my $msg = "SKIPPED test: No $BACKEND backend found : $err";
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

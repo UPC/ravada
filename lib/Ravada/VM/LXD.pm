@@ -2,6 +2,7 @@ package Ravada::VM::LXD;
 
 use Data::Dumper;
 use IPC::Run3;
+use IO::Socket::UNIX;
 use JSON::XS qw(decode_json encode_json);
 use Moose;
 use REST::Client;
@@ -20,6 +21,7 @@ our $DEFAULT_URL_LXD = "https://localhost:8443/";
 our $LXC;
 our $LXD;
 our $URL_LXD;
+our $SOCK_PATH = '/var/lib/lxd/unix.socket';
 
 sub BUILD {
     my $self = shift;
@@ -32,6 +34,7 @@ sub BUILD {
 }
 
 sub connect {
+    my $self = shift;
     $LXC = `which lxc`;
     chomp $LXC;
 
@@ -61,7 +64,7 @@ sub connect {
     #you may set a timeout on requests, in seconds
     #$client->setTimeout(10);
 
-    $client->GET('/')->responseContent();
+    $client->GET('/1.0');#->responseContent();
     if ($client->responseCode() == 200) {
         #print "OK\n";
         #$client->GET('/1.0')->responseContent();
@@ -69,9 +72,21 @@ sub connect {
         #my @a = $r->{metadata}->{auth};
         #warn "   Certificate:        " . join( ", ", @a ) . "\n";
         warn "Success";
-    exit;
+        return;
     }
-    warn "Server not response (TODO read setHost) ";
+    warn "Server $URL_LXD didn't answer (TODO read setHost) code: ".$client->responseCode."\n";
+    return $self->_connect_socket();
+}
+
+sub _connect_socket {
+
+    my $client = IO::Socket::UNIX->new(
+        Type => SOCK_STREAM(),
+        Peer => $SOCK_PATH,
+    );
+    print $client '/'."\n";
+    my $line = <$client>;
+    warn $line;
 }
 
 sub create_domain {
