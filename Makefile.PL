@@ -23,7 +23,7 @@ WriteMakefile(
     ,'Test::Pod::Coverage' => 0
     ,'Locale::Maketext::Lexicon' => 0
     ,'Mojolicious::Plugin::I18N' => 0
-    ,'Rest::Client' => 0
+    ,'REST::Client' => 0
   },
   BUILD_REQUIRES => {
     'Test::SQL::Data' => 0
