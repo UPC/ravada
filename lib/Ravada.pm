@@ -18,6 +18,8 @@ use Socket qw( inet_aton inet_ntoa );
 use Ravada::Auth;
 use Ravada::Request;
 
+our @VM = qw (KVM LXD);
+
 our %VALID_VM;
 
 eval {
@@ -1471,6 +1473,14 @@ sub search_vm {
     }
     return;
 }
+
+=head2 list_available_vms
+
+Returns a list of available Virtual Machine Managers
+
+=cut
+
+sub list_available_vms { return @VM }
 
 =head2 import_domain
 
