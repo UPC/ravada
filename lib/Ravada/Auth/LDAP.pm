@@ -350,7 +350,8 @@ sub _connect_ldap {
             $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
         }
         last if $ldap;
-        warn "WARNING: I can't connect to LDAP server at $host / $port : $@ [ retry $retry ]";
+        warn "WARNING: I can't connect to LDAP server at $host / $port : $@ [ retry $retry ]"
+            if $0 !~ /\.t$/;
         sleep 1 + $retry;
     }
     die "I can't connect to LDAP server at $host / $port : $@"  if !$ldap;
