@@ -54,7 +54,7 @@ sub test_wrong_args {
     my ($vm_name, $vm) = @_;
 
     eval { $RVD_BACK->import_domain( vm => 'nonvm', user => $USER->name, name => 'a') };
-    like($@,qr/unknown VM/i);
+    like($@,qr/unknown|invalid VM/i);
 
     eval { $RVD_BACK->import_domain( vm => $vm_name,user => 'nobody', name => 'a') };
     like($@,qr/unknown user/i);
