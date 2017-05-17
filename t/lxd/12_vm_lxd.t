@@ -16,7 +16,6 @@ my %CONFIG = (
 );
 
 use_ok('Ravada');
-use_ok($CLASS);
 
 ##########################################################
 
@@ -46,12 +45,13 @@ $err .= ($@ or '');
 
 SKIP: {
 
-    my $msg = "SKIPPED test: No VM backend found";
+    my $msg = "SKIPPED test: No $BACKEND backend found";
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-test_vm_connect();
-test_search_vm();
+    use_ok($CLASS);
+    test_vm_connect();
+    test_search_vm();
 
 };
 done_testing();
