@@ -219,8 +219,9 @@ sub test_screenshot_file {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (qw(KVM Void)) {
-    my $vmm = $RAVADA->search_vm($vm_name);
+for my $vm_name ($RAVADA->list_available_vms(),'Void') {
+    my $vmm;
+    eval { $vmm = $RAVADA->search_vm($vm_name) };
 
     SKIP: {
         my $msg = "SKIPPED: Virtual manager $vm_name not found";
