@@ -6,13 +6,18 @@ use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
 
-use_ok('Ravada');
-use_ok('Ravada::Domain::LXD');
-use_ok('Ravada::VM::LXD');
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA= Ravada->new( connector => $test->connector);
-my $vm_lxd;
+use lib 't/lib';
+use Test::Ravada;
+
+
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
+init($test->connector, 't/etc/ravada.conf');
+use_ok('Ravada');
+
+my $RAVADA = rvd_back();
 
 my ($n,$DOMAIN_NAME) = $0 =~ m{.*/(\d+)_(.*)\.t};
 $DOMAIN_NAME =~ tr/_/-/;
@@ -20,8 +25,7 @@ $DOMAIN_NAME .= "$n";
 my $CONT= 0;
 
 
-sub test_remove_domain {
-    my $name = shift;
+sub test_remove_domain($vm_lxd, $name) {
     my $domain = $vm_lxd->search_domain($name,1) or return;
     diag("Removing domain $name");
     $domain->remove() if $domain;
@@ -38,8 +42,7 @@ sub test_remove_domain {
 #    ok($?,"I can't remove old domain $name $out") or exit;
 }
 
-sub test_remove_domain_by_name {
-    my $name = shift;
+sub test_remove_domain_by_name($vm_lxd, $name) {
 
     diag("Removing domain: $name");
     $vm_lxd->remove_domain($name);
@@ -62,6 +65,7 @@ sub _new_name {
 }
 
 sub test_new_domain {
+    my $vm_lxd = shift;
     my $active = shift;
     
     my $name = _new_name();
@@ -153,24 +157,19 @@ sub test_domain{
     }
 }
 
-sub remove_old_domains {
-    for ( 0 .. 10 ) {
-        my $dom_name = $DOMAIN_NAME."_$_";
-
-        my $domain = $RAVADA->search_domain($dom_name,1);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
-
-}
-
 ################################################################
-eval { $vm_lxd = Ravada::VM::LXD->new() };
+my $vm_lxd;
+eval { $vm_lxd = rvd_back->search_vm('LXD') };
+
+use_ok('Ravada::Domain::LXD')   if $vm_lxd;
+use_ok('Ravada::VM::LXD')       if $vm_lxd;
+
 SKIP: {
 
     my $msg = ($@ or "No LXD vitual manager found");
 
-    my $vm = $RAVADA->search_vm('lxd') if $RAVADA;
+    my $vm;
+    eval { $vm = $RAVADA->search_vm('lxd') } if $RAVADA;
 
     if (!$vm_lxd) {
         ok(!$vm,"There should be no LXD backends");
