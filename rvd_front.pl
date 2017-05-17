@@ -240,7 +240,6 @@ get '/list_images.json' => sub {
     my $c = shift;
 
     my $vm_name = $c->param('backend');
-    warn $vm_name;
 
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
@@ -564,7 +563,6 @@ get '/img/screenshots/:file' => sub {
         my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
-            warn "not owner";
             return access_denied($c) if $USER->id != $domain->id_owner;
         }
     }
