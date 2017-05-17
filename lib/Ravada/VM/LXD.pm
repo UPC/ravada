@@ -35,6 +35,11 @@ sub BUILD {
 
 sub connect {
     my $self = shift;
+    return $self->_connect_socket();
+}
+
+sub _connect_http {
+    my $self = shift;
     $LXC = `which lxc`;
     chomp $LXC;
 
@@ -84,9 +89,13 @@ sub _connect_socket {
         Type => SOCK_STREAM(),
         Peer => $SOCK_PATH,
     );
-    print $client '/'."\n";
+    print $client 
+        "GET /1.0/containers HTTP/1.1\n"
+        ."Host: 127.0.0.1\n"
+        ."\n";
     my $line = <$client>;
-    warn $line;
+    chomp $line;
+    die $line if $line !~ / 200 OK/;
 }
 
 sub create_domain {
