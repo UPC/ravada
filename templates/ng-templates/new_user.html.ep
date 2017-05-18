@@ -6,7 +6,7 @@
            <form name="new_userForm" role="form" method="post" action="/users/register" novalidate>
             <div class="from-group">
                 <label for="username">Username</label>
-                <input class="form-control" ng-model="username" placeholder="Enter Username" type="text" ng-maxlength="20" name="username" required=""><br/>
+                <input class="form-control" ng-model="username" placeholder="Enter Username" type="text" ng-maxlength="20" name="username" id="username" required=""><br/>
             </div>
             
             <div class="from-group">
@@ -48,6 +48,13 @@
             
 
             <button type="submit" ng-disabled="new_userForm.$invalid || cpassword != password" id="submitbutton" class="btn btn-default">Submit</button> 
+            % if (scalar @$error) {
+                        
+                %       for my $i (@$error) {
+                             <h3><div class="alert alert-danger"><%= $i %></div></h3>
+                %       }
+                        
+                % }
         </form>
     </div>
 </div>
@@ -79,4 +86,4 @@ function checkPass()
     }
     
 }  
-</script>
+

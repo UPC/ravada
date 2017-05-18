@@ -1138,8 +1138,8 @@ sub register {
        warn join(", ", @list_users);
       
        if (grep {$_ eq $username} @list_users) {
-           #username already exists
-           return $c->render(template => 'bootstrap/new_user_fail' , username => $username);
+           push @error,("Username already exists, please choose another one"); 
+           $c->render(template => 'bootstrap/new_user',error => \@error);
        }
        else {
            #username don't exists
@@ -1147,7 +1147,7 @@ sub register {
            return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
        }
    }
-   $c->render(template => 'bootstrap/new_user');
+   $c->render(template => 'bootstrap/new_user',error => \@error);
 
 }
 
