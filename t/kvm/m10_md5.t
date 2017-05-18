@@ -241,6 +241,23 @@ sub extract_file {
     return;
 }
 
+sub test_isos_custom {
+    my $vm_name = shift;
+
+    my $sth = $test->dbh->prepare(
+        "INSERT INTO iso_images "
+        ." (id,device,name)"
+        ." VALUES(?,?,?)"
+    );
+    $sth->execute(999,"/var/lib/blah.iso","blah");
+    $sth->finish;
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $iso = $vm->_search_iso(99);
+    ok($iso,"Expecting an ISO ref , got ".ref($iso));
+    is($iso->{filename},"blah.iso");
+}
+
 #######################################################
 #
 
@@ -266,6 +283,8 @@ SKIP: {
     test_isos_already_there($vm_name);
 
     test_isos_localhost($vm_name);
+
+    test_isos_custom($vm_name);
 }
 
 clean();
