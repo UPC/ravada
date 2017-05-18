@@ -293,3 +293,18 @@ msgstr "Es necessita un visor per executar les màquines virtuals."
 
 msgid "can create bases."
 msgstr "pot crear bases."
+
+msgid "Virtual Machines"
+msgstr "Màquines Virtuals"
+
+msgid "User"
+msgstr "Usuari"
+
+msgid "Password"
+msgstr "Contrasenya"
+
+msgid "Start session"
+msgstr "Inicieu la Sessió"
+
+msgid "Login with Intranet UPC's username."
+msgstr "Identifiqueu-vos amb el nom d'usuari de la Intranet UPC."

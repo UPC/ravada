@@ -13,7 +13,7 @@
         <strong>Error!</strong> Backend no available!
       </div>
         <div class="row">
-            <div class="col-md-8"><h2>Virtual Machines</h2></div>
+            <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
                 <h2>
                     <a type="button" class="btn btn-success" href="/new_machine.html">

@@ -18,3 +18,4 @@
 * [Update your Ravada](update.html "steps for a clean update")
 * [Windows SPICE client](windows_clients.html "Fix Windows registry")
 * [Custom login template](custom_login.html "How to change login template")
+* [New documentation page](new_documentation.html "")

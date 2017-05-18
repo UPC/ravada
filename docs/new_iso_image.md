@@ -6,7 +6,7 @@ ISO images are required to create KVM virtual machines. They can be placed or do
 
 Copy the .iso file to the KVM storage, it is /var/lib/libvirt/images by default. Make sure everybody can read it
 
-    # chown 0755 file.iso
+    # chmod 755 file.iso
 
 Get the md5 for the ISO file, you will need it for the next step:
 
@@ -34,9 +34,9 @@ For Windows you will need the virtio ISO that can be downloaded from https://fed
 
 Save it to /var/lib/libvirt/images and change the owner as you did for the Windows ISO.
 
-    # chown 0750 /var/lib/libvirt/images/virtio-win-0.1.126.iso
+    # chmod 755 /var/lib/libvirt/images/virtio-win-0.1.126.iso
 
-Then edit your Windows xml file and point the second CD drive to that ISO. For the current stable virtio version, it looks like this:
+Then edit your Windows xml file and point the second CD drive to that ISO. For the current stable virtio version, it looks like this: virsh edit machinename
 
     <disk type='file' device='cdrom'>
         <driver name='qemu' type='raw'/>
