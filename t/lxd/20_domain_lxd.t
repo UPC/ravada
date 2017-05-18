@@ -74,7 +74,7 @@ sub test_new_domain {
     test_remove_domain($vm_lxd, $name);
 
     diag("Creating container $name.");
-    my $domain = $vm_lxd->create_domain(name => $name, id_template => 1, active => $active);
+    my $domain = $vm_lxd->_create_domain_socket(name => $name, id_template => 1, active => $active);
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::LXD';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain)) or return
