@@ -244,16 +244,17 @@ sub extract_file {
 sub test_isos_custom {
     my $vm_name = shift;
 
+    my $id_iso = 995;
     my $sth = $test->dbh->prepare(
         "INSERT INTO iso_images "
         ." (id,device,name)"
         ." VALUES(?,?,?)"
     );
-    $sth->execute(999,"/var/lib/blah.iso","blah");
+    $sth->execute($id_iso,"/var/lib/blah.iso","blah");
     $sth->finish;
 
     my $vm = rvd_back->search_vm($vm_name);
-    my $iso = $vm->_search_iso(99);
+    my $iso = $vm->_search_iso($id_iso);
     ok($iso,"Expecting an ISO ref , got ".ref($iso));
     is($iso->{filename},"blah.iso");
 }
