@@ -76,7 +76,7 @@ sub _connect_http {
 
     $client->GET('/1.0');#->responseContent();
     if ($client->responseCode() == 200) {
-        #print "OK\n";
+        warn "Response 200\n";
         #$client->GET('/1.0')->responseContent();
         #my $r = decode_json( $client->responseContent() );
         #my @a = $r->{metadata}->{auth};
@@ -101,7 +101,7 @@ sub _connect_socket {
     my $line = <$client>;
     chomp $line;
     die $line if $line !~ / 200 OK/;
-    $self->{_connection} = 'http';
+    $self->{_connection} = 'socket';
     return $client;
 }
 

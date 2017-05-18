@@ -22,6 +22,8 @@ use_ok("Ravada::VM::$BACKEND");
 
 sub test_vm_connect {
     my $vm = Ravada::VM::LXD->new();
+    $vm->connect();
+    ok($vm->{_connection});
     is($vm->host,'localhost');
 }
 
