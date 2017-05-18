@@ -34,6 +34,7 @@ eval {
     };
     $VALID_VM{LXD} = 1;
 };
+warn $@ if $@;
 use Ravada::VM::Void;
 
 =head1 NAME

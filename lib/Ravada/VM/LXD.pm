@@ -7,8 +7,7 @@ use JSON::XS qw(decode_json encode_json);
 use Moose;
 use REST::Client;
 
-require Ravada::Domain::LXD or die $@;
-Ravada::Domain::LXD->import;
+use Ravada::Domain::LXD;
 
 with 'Ravada::VM';
 
@@ -17,7 +16,7 @@ with 'Ravada::VM';
 
 #our $DEFAULT_SOCKET_LXD = '/var/lib/lxd/unix.socket';
 #our $CURL;
-our $DEFAULT_URL_LXD = "https://localhost:8443/";
+our $DEFAULT_URL_LXD = "https://localhost:8443";
 our $LXC;
 our $LXD;
 our $URL_LXD;
@@ -82,7 +81,6 @@ sub _connect_http {
         #my $r = decode_json( $client->responseContent() );
         #my @a = $r->{metadata}->{auth};
         #warn "   Certificate:        " . join( ", ", @a ) . "\n";
-        warn "Success";
         $self->{_connection} = 'http';
         return $client;
     }
@@ -148,6 +146,38 @@ sub create_domain {
 #    $domain->_insert_db( name => $name);
 #    return $domain;
 
+}
+
+sub _create_domain_socket {
+    my $self = shift;
+    my %args = @_;
+    my $client = $self->_connect_socket();
+    $args{name} = 'KAKA';
+
+    warn "create domain $args{name}\n";
+    my $data = {
+        name => $args{name}
+#        ,ephemeral => 'true'
+        ,config => {
+            #           'limit.cpu' => "2"
+        }
+        ,source => {
+            type => 'image'
+            ,mode => 'pull'
+            ,protocol => 'simplestreams'
+            ,server => 'https://cloud-images.ubuntu.com/releases'
+            ,alias => '14:04'
+        }
+    };
+    my @cmd = ("curl","-s","--unix-socket",$SOCK_PATH,
+        ,"-X","POST",
+        ,"-d",encode_json($data)
+        ,"a/1.0/containers")
+    ;
+    warn @cmd;
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    warn Dumper(decode_json($out));
 }
 
 sub remove_domain {
