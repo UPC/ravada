@@ -758,8 +758,11 @@ sub _iso_name {
     my $iso = shift;
     my $req = shift;
 
-    my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
-    $iso_name = $iso->{url} if !$iso_name;
+    my $iso_name;
+    ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
+    ($iso_name) = $iso->{device} if !$iso_name;
+
+    confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
@@ -986,7 +989,9 @@ sub _fetch_filename {
     my $row = shift;
 
     if (!$row->{file_re}) {
-        my ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)};
+        my ($new_url, $file);
+        ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
+        ($file) = $row->{device} =~ m{.*/(.*)}  if !$file;
         confess "No filename in $row->{url}" if !$file;
 
         if ($file =~ /\*/) {

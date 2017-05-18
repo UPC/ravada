@@ -20,6 +20,8 @@ use Moose;
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
+use vars qw($AUTOLOAD);
+
 use Data::Dumper;
 
 with 'Ravada::Auth::User';
@@ -37,8 +39,8 @@ sub _init_connector {
     $CON= \$Ravada::Front::CONNECTOR   if !$CON || !$$CON;
 
     if (!$CON || !$$CON) {
-        my $ravada = Ravada->new();
-        $CON= \$Ravada::CONNECTOR;
+        my $connector = Ravada::_connect_dbh();
+        $CON = \$connector;
     }
 
     die "Undefined connector"   if !$CON || !$$CON;
@@ -77,6 +79,7 @@ sub search_by_id {
     my $self = shift;
     my $id = shift;
     my $data = _load_data_by_id($id);
+    return if !keys %$data;
     return Ravada::Auth::SQL->new(name => $data->{name});
 }
 
@@ -121,6 +124,36 @@ sub add_user {
     }
     $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
     $sth->finish;
+
+    return if !$is_admin;
+
+    my $id_grant = _search_id_grant('grant');
+    $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
+    $sth->execute($name);
+    my ($id_user) = $sth->fetchrow;
+    $sth->finish;
+
+    $sth = $$CON->dbh->prepare(
+            "INSERT INTO grants_user "
+            ." (id_grant, id_user, allowed)"
+            ." VALUES(?,?,1) "
+        );
+    $sth->execute($id_grant, $id_user);
+    $sth->finish;
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    $user->grant_admin_permissions($user);
+}
+
+sub _search_id_grant {
+    my $type = shift;
+    my $sth = $$CON->dbh->prepare("SELECT id FROM grant_types WHERE name = ?");
+    $sth->execute($type);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+
+    confess "Unknown grant $type"   if !$id;
+    return $id;
 }
 
 sub _load_data {
@@ -129,6 +162,7 @@ sub _load_data {
 
     die "No login name nor id " if !$self->name && !$self->id;
 
+    confess "Undefined \$\$CON" if !defined $$CON;
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE name=? ");
     $sth->execute($self->name);
@@ -211,8 +245,7 @@ Makes the user admin. Returns nothing.
 
 =cut
 
-sub make_admin {
-    my $id = shift;
+sub make_admin($self, $id) {
     my $sth = $$CON->dbh->prepare(
             "UPDATE users SET is_admin=1 WHERE id=?");
 
@@ -229,8 +262,8 @@ Remove user admin privileges. Returns nothing.
 
 =cut
 
-sub remove_admin {
-    my $id = shift;
+sub remove_admin($self, $id) {
+    warn "\t remove_admin $id";
     my $sth = $$CON->dbh->prepare(
             "UPDATE users SET is_admin=NULL WHERE id=?");
 
@@ -314,6 +347,8 @@ sub change_password {
     my $self = shift;
     my $password = shift or die "ERROR: password required\n";
 
+    _init_connector();
+
     die "Password too small" if length($password)<6;
 
     my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
@@ -360,6 +395,201 @@ sub remove($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
     $sth->execute($self->id);
     $sth->finish;
+}
+
+=head2 can_do
+
+Returns if the user is allowed to perform a privileged action
+
+    if ($user->can_do("remove")) { 
+        ...
+
+=cut
+
+sub can_do($self, $grant) {
+    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+
+    $self->_load_grants();
+
+    confess "Unknown permission '$grant'\n" if !exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant};
+}
+
+sub _load_grants($self) {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT gt.name, gu.allowed"
+        ." FROM grant_types gt LEFT JOIN grants_user gu "
+        ."      ON gt.id = gu.id_grant "
+        ."      AND gu.id_user=?"
+    );
+    $sth->execute($self->id);
+    my ($name, $allowed);
+    $sth->bind_columns(\($name, $allowed));
+
+    while ($sth->fetch) {
+        $self->{_grant}->{$name} = ( $allowed or undef);
+    }
+    $sth->finish;
+}
+
+=head2 grant_user_permissions
+
+Grant an user permissions for normal users
+
+=cut
+
+sub grant_user_permissions($self,$user) {
+    $self->grant($user, 'clone');
+    $self->grant($user, 'change_settings');
+    $self->grant($user, 'remove');
+    $self->grant($user, 'screenshot');
+}
+
+=head2 grant_operator_permissions
+
+Grant an user operator permissions, ie: hibernate all
+
+=cut
+
+sub grant_operator_permissions($self,$user) {
+    $self->grant($user, 'hibernate_all');
+    #TODO
+}
+
+=head2 grant_manager_permissions
+
+Grant an user manager permissions, ie: hibernate all clones
+
+=cut
+
+sub grant_manager_permissions($self,$user) {
+    $self->grant($user, 'hibernate_clone');
+    #TODO
+}
+
+=head2 grant_admin_permissions
+
+Grant an user all the permissions
+
+=cut
+
+sub grant_admin_permissions($self,$user) {
+    my $sth = $$CON->dbh->prepare(
+            "SELECT name FROM grant_types "
+    );
+    $sth->execute();
+    while ( my ($name) = $sth->fetchrow) {
+        $self->grant($user,$name);
+    }
+    $sth->finish;
+
+}
+
+=head2 grant
+
+Grant an user a specific permission, or revoke it
+
+    $admin_user->grant($user2,"clone");    # both are 
+    $admin_user->grant($user3,"clone",1);  # the same
+
+    $admin_user->grant($user4,"clone",0);  # revoke a grant
+
+=cut
+
+sub grant($self,$user,$permission,$value=1) {
+    if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
+        my @perms = $self->list_permissions();
+        confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
+            .Dumper(\@perms);
+    }
+
+    return 0 if !$value && !$user->can_do($permission);
+    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
+
+    my $id_grant = _search_id_grant($permission);
+    my $sth = $$CON->dbh->prepare(
+            "INSERT INTO grants_user "
+            ." (id_grant, id_user, allowed)"
+            ." VALUES(?,?,?) "
+    );
+    eval { $sth->execute($id_grant, $user->id, $value) };
+    $sth->finish;
+    if ($@ && $@ =~ /UNIQUE|duplicate/i) {
+        $sth = $$CON->dbh->prepare(
+            "UPDATE grants_user "
+            ." set allowed=?"
+            ." WHERE id_grant = ? AND id_user=?"
+        );
+        $sth->execute($value, $id_grant, $user->id);
+        $sth->finish;
+    }
+    $user->{_grant}->{$permission} = $value;
+    confess "Unable to grant $permission for ".$user->name ." expecting=$value "
+            ." got= ".$user->can_do($permission)
+        if $user->can_do($permission) ne $value;
+    return $value;
+}
+
+=head2 revoke
+
+Revoke a permission from an user
+
+    $admin_user->revoke($user2,"clone");
+
+=cut
+
+sub revoke($self,$user,$permission) {
+    return $self->grant($user,$permission,0);
+}
+
+
+=head2 list_all_permissions
+
+Returns a list of all the available permissions
+
+=cut
+
+sub list_all_permissions($self) {
+    return if !$self->is_admin;
+
+    my $sth = $$CON->dbh->prepare(
+        "SELECT * FROM grant_types ORDER BY name"
+    );
+    $sth->execute;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref ) {
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    return @list;
+}
+
+=head2 list_permissions
+
+Returns a list of all the permissions granted to the user
+
+=cut
+
+sub list_permissions($self) {
+    my @list;
+    for my $grant (sort keys %{$self->{_grant}}) {
+        push @list , (  [$grant => $self->{_grant}->{$grant} ] )
+            if $self->{_grant}->{$grant};
+    }
+    return @list;
+}
+
+sub AUTOLOAD {
+    my $self = shift;
+
+    my $name = $AUTOLOAD;
+    $name =~ s/.*://;
+
+    confess "Can't locate object method $name via package $self"
+        if !ref($self) || $name !~ /^can_(.*)/;
+
+    my ($permission) = $name =~ /^can_([a-z_]+)/;
+    return $self->can_do($permission)  if $permission;
 }
 
 1;
