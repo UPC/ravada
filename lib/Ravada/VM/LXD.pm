@@ -189,7 +189,6 @@ sub _create_domain_http {
     my $self = shift;
     my %args = @_;
     my $client = $self->_connect_http();
-    $args{name} = 'ACME';
 
     warn "create domain $args{name}\n";
     my $data = {
@@ -208,11 +207,6 @@ sub _create_domain_http {
         }
     };
     $client->POST('/1.0/containers',encode_json($data))->responseContent();
-    #my @cmd = ("curl","-s","--unix-socket",$SOCK_PATH,
-    #    ,"-X","POST",
-    #    ,"-d",encode_json($data)
-    #    ,"a/1.0/containers")
-    #;
     warn Dumper(decode_json( $client->responseContent() ));
 }
 
