@@ -171,39 +171,7 @@ sub _create_domain_socket {
             ,mode => 'pull'
             ,protocol => 'simplestreams'
             ,server => 'https://cloud-images.ubuntu.com/releases'
-            ,alias => '14:04'
-        }
-    };
-    my @cmd = ("curl","-s","--unix-socket",$SOCK_PATH,
-        ,"-X","POST",
-        ,"-d",encode_json($data)
-        ,"a/1.0/containers")
-    ;
-    warn @cmd;
-    my ($in, $out, $err);
-    run3(\@cmd, \$in, \$out, \$err);
-    warn Dumper(decode_json($out));
-}
-
-sub _create_domain_socket {
-    my $self = shift;
-    my %args = @_;
-    my $client = $self->_connect_socket();
-    $args{name} = 'KAKA';
-
-    warn "create domain $args{name}\n";
-    my $data = {
-        name => $args{name}
-#        ,ephemeral => 'true'
-        ,config => {
-            #           'limit.cpu' => "2"
-        }
-        ,source => {
-            type => 'image'
-            ,mode => 'pull'
-            ,protocol => 'simplestreams'
-            ,server => 'https://cloud-images.ubuntu.com/releases'
-            ,alias => '14:04'
+            ,alias => '17.04'
         }
     };
     my @cmd = ("curl","-s","--unix-socket",$SOCK_PATH,
@@ -236,7 +204,7 @@ sub _create_domain_http {
             ,mode => 'pull'
             ,protocol => 'simplestreams'
             ,server => 'https://cloud-images.ubuntu.com/releases'
-            ,alias => '14:04'
+            ,alias => '17.04'
         }
     };
     $client->POST('/1.0/containers',encode_json($data))->responseContent();
