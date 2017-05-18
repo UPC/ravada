@@ -65,8 +65,12 @@ sub _connect_http {
     #A host can be set for convienience
     $client->setHost($URL_LXD);
     #X509 client authentication
-    #$client->setCert('lxd-webui.crt');
-    #$client->setKey('lxd-webui.key');
+
+    $client->setCert(glob('~/.config/lxc/client.crt'));
+    $client->setKey(glob('~/.config/lxc/client.key'));
+    # lxc config trust list
+    # Add cert: lxc config trust add ~/.config/lxc/client.crt
+
 
     #add a CA to verify server certificates
     # $client->setCa('/path/to/ca.file');
@@ -76,7 +80,7 @@ sub _connect_http {
 
     $client->GET('/1.0');#->responseContent();
     if ($client->responseCode() == 200) {
-        warn "Response 200\n";
+        warn "Response 200 http\n";
         #$client->GET('/1.0')->responseContent();
         #my $r = decode_json( $client->responseContent() );
         #my @a = $r->{metadata}->{auth};
@@ -102,6 +106,7 @@ sub _connect_socket {
     chomp $line;
     die $line if $line !~ / 200 OK/;
     $self->{_connection} = 'socket';
+    warn "Response 200 socket\n";
     return $client;
 }
 
@@ -178,6 +183,69 @@ sub _create_domain_socket {
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     warn Dumper(decode_json($out));
+}
+
+sub _create_domain_socket {
+    my $self = shift;
+    my %args = @_;
+    my $client = $self->_connect_socket();
+    $args{name} = 'KAKA';
+
+    warn "create domain $args{name}\n";
+    my $data = {
+        name => $args{name}
+#        ,ephemeral => 'true'
+        ,config => {
+            #           'limit.cpu' => "2"
+        }
+        ,source => {
+            type => 'image'
+            ,mode => 'pull'
+            ,protocol => 'simplestreams'
+            ,server => 'https://cloud-images.ubuntu.com/releases'
+            ,alias => '14:04'
+        }
+    };
+    my @cmd = ("curl","-s","--unix-socket",$SOCK_PATH,
+        ,"-X","POST",
+        ,"-d",encode_json($data)
+        ,"a/1.0/containers")
+    ;
+    warn @cmd;
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    warn Dumper(decode_json($out));
+}
+
+sub _create_domain_http {
+    my $self = shift;
+    my %args = @_;
+    my $client = $self->_connect_http();
+    $args{name} = 'ACME';
+
+    warn "create domain $args{name}\n";
+    my $data = {
+        name => $args{name}
+        ,architecture => 'x86_64',
+#        ,ephemeral => 'true'
+        ,config => {
+            #           'limit.cpu' => "2"
+        }
+        ,source => {
+            type => 'image'
+            ,mode => 'pull'
+            ,protocol => 'simplestreams'
+            ,server => 'https://cloud-images.ubuntu.com/releases'
+            ,alias => '14:04'
+        }
+    };
+    $client->POST('/1.0/containers',encode_json($data))->responseContent();
+    #my @cmd = ("curl","-s","--unix-socket",$SOCK_PATH,
+    #    ,"-X","POST",
+    #    ,"-d",encode_json($data)
+    #    ,"a/1.0/containers")
+    #;
+    warn Dumper(decode_json( $client->responseContent() ));
 }
 
 sub remove_domain {

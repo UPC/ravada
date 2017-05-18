@@ -159,7 +159,7 @@ sub test_domain($vm_lxd, $active = 1){
 
 ################################################################
 my $vm_lxd;
-eval { $vm_lxd = rvd_back->search_vm('LXD') };
+eval { $vm_lxd = rvd_back->search_vm('lxd') };
 
 use_ok('Ravada::Domain::LXD')   if $vm_lxd;
 use_ok('Ravada::VM::LXD')       if $vm_lxd;
