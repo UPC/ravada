@@ -1,5 +1,14 @@
 package Ravada::VM::LXD;
 
+use warnings;
+use strict;
+
+=head1 NAME
+
+Ravada::VM::LXD - LXD Virtual Managers library for Ravada
+
+=cut
+
 use Data::Dumper;
 use IPC::Run3;
 use IO::Socket::UNIX;
@@ -11,11 +20,6 @@ use Ravada::Domain::LXD;
 
 with 'Ravada::VM';
 
-#our $SOCKET_LXD;
-#our $CONNECTOR = \$Ravada::CONNECTOR;
-
-#our $DEFAULT_SOCKET_LXD = '/var/lib/lxd/unix.socket';
-#our $CURL;
 our $DEFAULT_URL_LXD = "https://localhost:8443";
 our $LXC;
 our $LXD;
@@ -32,6 +36,12 @@ sub BUILD {
 #    die "Missing lxc\n"             if !$LXC;
 #    die "Missing lxd\n"             if !$LXD;
 }
+
+=head2 connect
+
+Connect to the LXD Virtual Machine Manager
+
+=cut
 
 sub connect {
     my $self = shift;
@@ -56,9 +66,9 @@ sub _connect_http {
     my $client = REST::Client->new();
     die if !$client;
 
-    #$client->addHeader('Content-Type', 'application/json');
-    #$client->addHeader('charset', 'UTF-8');
-    #$client->addHeader('Accept', 'application/json');
+    $client->addHeader('Content-Type', 'application/json');
+    $client->addHeader('charset', 'UTF-8');
+    $client->addHeader('Accept', 'application/json');
 
     # Try SSL_verify_mode => SSL_VERIFY_NONE.  0 is more compatible, but may be deprecated
     $client->getUseragent()->ssl_opts( SSL_verify_mode => 0 );
@@ -211,9 +221,13 @@ sub _create_domain_http {
 }
 
 sub remove_domain {
-#    my $self = shift;
-#    my $name = shift;
-#    warn "Removing domain $name";
+    my $self = shift;
+    my %args = @_;
+    my $client = $self->_connect_http();
+    
+    $client->DELETE('/1.0/containers/'.'$args{name}')->responseContent();
+    warn Dumper(decode_json( $client->responseContent() ));
+    warn "Removing domain $args{name}";
 }
 
 sub create_volume {}

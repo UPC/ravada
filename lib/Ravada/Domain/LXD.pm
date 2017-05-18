@@ -1,4 +1,14 @@
 package Ravada::Domain::LXD;
+
+use warnings;
+use strict;
+
+=head2 NAME
+
+Ravada::Domain::LXD - LXD Virtual Machines library for Ravada
+
+=cut
+
 use Carp qw(cluck croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
@@ -31,9 +41,17 @@ sub display {
 
 sub is_active {}
 
+=head2 name
+
+Returns the name of the domain
+
+=cut
+
 sub name {
     my $self = shift;
-    return $self->domain;
+    $self->{_name} = $self->domain->get_name if !$self->{_name};
+    return $self->{_name};
+    #return $self->domain;
 }
 
 sub pause { }
