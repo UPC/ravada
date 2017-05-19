@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::Auth::SQL</title>
+	<meta name="description" content="Pod documentation for Ravada::Auth::SQL" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Auth/SQL.pm" />
 	<meta name="outputfile" content="./SQL.html" />
-	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,8 +14,7 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
+<ul><li><a href="#NAME">NAME</a>
 <ul><li><a href="#BUILD">BUILD</a></li>
 <li><a href="#search_by_id">search_by_id</a></li>
 <li><a href="#add_user">add_user</a></li>
@@ -23,15 +22,32 @@
 <li><a href="#make_admin">make_admin</a></li>
 <li><a href="#remove_admin">remove_admin</a></li>
 <li><a href="#is_admin">is_admin</a></li>
+<li><a href="#is_external">is_external</a></li>
 <li><a href="#is_temporary">is_temporary</a></li>
 <li><a href="#id">id</a></li>
-<li><a href="#change_password">change_password</a>
+<li><a href="#change_password">change_password</a></li>
+<li><a href="#language">language</a></li>
+<li><a href="#remove">remove</a></li>
+<li><a href="#can_do">can_do</a></li>
+<li><a href="#grant_user_permissions">grant_user_permissions</a></li>
+<li><a href="#grant_operator_permissions">grant_operator_permissions</a></li>
+<li><a href="#grant_manager_permissions">grant_manager_permissions</a></li>
+<li><a href="#grant_admin_permissions">grant_admin_permissions</a></li>
+<li><a href="#grant">grant</a></li>
+<li><a href="#revoke">revoke</a></li>
+<li><a href="#list_all_permissions">list_all_permissions</a></li>
+<li><a href="#list_permissions">list_permissions</a>
 </li>
 </ul>
 </li>
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::Auth::SQL - SQL authentication library for Ravada</p>
+
+</div>
 <h2 id="BUILD">BUILD</h2>
 <div id="BUILD_CONTENT">
 <p>Internal OO build method</p>
@@ -48,7 +64,7 @@
 <h2 id="add_user">add_user</h2>
 <div id="add_user_CONTENT">
 <p>Adds a new user in the SQL database. Returns nothing.</p>
-<pre>    Ravada::Auth::SQL::add_user( 
+<pre>    Ravada::Auth::SQL::add_user(
                  name =&gt; $user
            , password =&gt; $pass
            , is_admin =&gt; 0
@@ -92,6 +108,14 @@
 </pre>
 
 </div>
+<h2 id="is_external">is_external</h2>
+<div id="is_external_CONTENT">
+<p>Returns true if the user authentication is not from SQL</p>
+<pre>    my $is = $user-&gt;is_external;
+
+</pre>
+
+</div>
 <h2 id="is_temporary">is_temporary</h2>
 <div id="is_temporary_CONTENT">
 <p>Returns true if the user is admin.</p>
@@ -115,6 +139,83 @@
 
 </pre>
 <p>Arguments: password</p>
+
+</div>
+<h2 id="language">language</h2>
+<div id="language_CONTENT">
+<pre>  Updates or selects the language selected for an User
+
+    $user-&gt;language();
+
+  Arguments: lang
+
+</pre>
+
+</div>
+<h2 id="remove">remove</h2>
+<div id="remove_CONTENT">
+<p>Removes the user</p>
+<pre>    $user-&gt;remove();
+
+</pre>
+
+</div>
+<h2 id="can_do">can_do</h2>
+<div id="can_do_CONTENT">
+<p>Returns if the user is allowed to perform a privileged action</p>
+<pre>    if ($user-&gt;can_do(&quot;remove&quot;)) { 
+        ...
+
+</pre>
+
+</div>
+<h2 id="grant_user_permissions">grant_user_permissions</h2>
+<div id="grant_user_permissions_CONTENT">
+<p>Grant an user permissions for normal users</p>
+
+</div>
+<h2 id="grant_operator_permissions">grant_operator_permissions</h2>
+<div id="grant_operator_permissions_CONTENT">
+<p>Grant an user operator permissions, ie: hibernate all</p>
+
+</div>
+<h2 id="grant_manager_permissions">grant_manager_permissions</h2>
+<div id="grant_manager_permissions_CONTENT">
+<p>Grant an user manager permissions, ie: hibernate all clones</p>
+
+</div>
+<h2 id="grant_admin_permissions">grant_admin_permissions</h2>
+<div id="grant_admin_permissions_CONTENT">
+<p>Grant an user all the permissions</p>
+
+</div>
+<h2 id="grant">grant</h2>
+<div id="grant_CONTENT">
+<p>Grant an user a specific permission, or revoke it</p>
+<pre>    $admin_user-&gt;grant($user2,&quot;clone&quot;);    # both are 
+    $admin_user-&gt;grant($user3,&quot;clone&quot;,1);  # the same
+
+    $admin_user-&gt;grant($user4,&quot;clone&quot;,0);  # revoke a grant
+
+</pre>
+
+</div>
+<h2 id="revoke">revoke</h2>
+<div id="revoke_CONTENT">
+<p>Revoke a permission from an user</p>
+<pre>    $admin_user-&gt;revoke($user2,&quot;clone&quot;);
+
+</pre>
+
+</div>
+<h2 id="list_all_permissions">list_all_permissions</h2>
+<div id="list_all_permissions_CONTENT">
+<p>Returns a list of all the available permissions</p>
+
+</div>
+<h2 id="list_permissions">list_permissions</h2>
+<div id="list_permissions_CONTENT">
+<p>Returns a list of all the permissions granted to the user</p>
 
 </div>
 </div></body>

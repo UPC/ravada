@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::Auth::LDAP</title>
+	<meta name="description" content="Pod documentation for Ravada::Auth::LDAP" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Auth/LDAP.pm" />
 	<meta name="outputfile" content="./LDAP.html" />
-	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,8 +14,7 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
+<ul><li><a href="#NAME">NAME</a>
 <ul><li><a href="#BUILD">BUILD</a></li>
 <li><a href="#add_user">add_user</a></li>
 <li><a href="#remove_user">remove_user</a></li>
@@ -26,6 +25,7 @@
 <li><a href="#add_to_group">add_to_group</a></li>
 <li><a href="#login">login</a></li>
 <li><a href="#is_admin">is_admin</a></li>
+<li><a href="#is_external">is_external</a></li>
 <li><a href="#init">init</a>
 </li>
 </ul>
@@ -33,6 +33,11 @@
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::Auth::LDAP - LDAP library for Ravada</p>
+
+</div>
 <h2 id="BUILD">BUILD</h2>
 <div id="BUILD_CONTENT">
 <p>Internal OO build</p>
@@ -100,6 +105,11 @@
 <h2 id="is_admin">is_admin</h2>
 <div id="is_admin_CONTENT">
 <p>Returns wether an user is admin</p>
+
+</div>
+<h2 id="is_external">is_external</h2>
+<div id="is_external_CONTENT">
+<p>Returns true if the user authentication is external to SQL, so true for LDAP users always</p>
 
 </div>
 <h2 id="init">init</h2>

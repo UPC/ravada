@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::Request</title>
+	<meta name="description" content="Pod documentation for Ravada::Request" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Request.pm" />
 	<meta name="outputfile" content="./Request.html" />
-	<meta name="created" content="Tue Mar 14 00:43:42 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,8 +14,7 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
+<ul><li><a href="#NAME">NAME</a>
 <ul><li><a href="#BUILD">BUILD</a></li>
 <li><a href="#open">open</a></li>
 <li><a href="#create_domain">create_domain</a></li>
@@ -38,29 +37,24 @@
 <li><a href="#screenshot_domain">screenshot_domain</a></li>
 <li><a href="#open_iptables">open_iptables</a></li>
 <li><a href="#rename_domain">rename_domain</a></li>
-<li><a href="#set_driver">set_driver</a>
+<li><a href="#set_driver">set_driver</a></li>
+<li><a href="#hybernate">hybernate</a></li>
+<li><a href="#download">download</a>
 </li>
 </ul>
 </li>
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::Request - Requests library for Ravada</p>
 <p>Request a command to the ravada backend</p>
+
+</div>
 <h2 id="BUILD">BUILD</h2>
 <div id="BUILD_CONTENT">
 <pre>    Internal object builder, do not call
-
-</pre>
-<p>sub BUILD {
-    _init_connector();
-}</p>
-<p>sub _request {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;</p>
-<pre>    my $self = {};
-    bless ($self, $class);
-    return $self;
-}
 
 </pre>
 
@@ -246,6 +240,23 @@ this method.</p>
     );
 
 </pre>
+
+</div>
+<h2 id="hybernate">hybernate</h2>
+<div id="hybernate_CONTENT">
+<p>Hybernates a domain.</p>
+<pre>    Ravada::Request-&gt;hybernate(
+        id_domain =&gt; $domain-&gt;id
+             ,uid =&gt; $user-&gt;id
+    );
+
+</pre>
+
+</div>
+<h2 id="download">download</h2>
+<div id="download_CONTENT">
+<p>Downloads a file. Actually used only to download iso images
+for KVM domains.</p>
 
 </div>
 </div></body>

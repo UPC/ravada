@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::VM</title>
+	<meta name="description" content="Pod documentation for Ravada::VM" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/VM.pm" />
 	<meta name="outputfile" content="./VM.html" />
-	<meta name="created" content="Tue Mar 14 00:43:42 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,18 +14,36 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
-<ul><li><a href="#domain_remove">domain_remove</a></li>
+<ul><li><a href="#NAME">NAME</a></li>
+<li><a href="#Constructors">Constructors</a>
+<ul><li><a href="#open">open</a></li>
+<li><a href="#domain_remove">domain_remove</a></li>
 <li><a href="#name">name</a></li>
 <li><a href="#search_domain_by_id">search_domain_by_id</a></li>
-<li><a href="#ip">ip</a>
+<li><a href="#ip">ip</a></li>
+<li><a href="#id">id</a></li>
+<li><a href="#default_storage_pool_name">default_storage_pool_name</a>
 </li>
 </ul>
 </li>
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::VM - Virtual Managers library for Ravada</p>
+
+</div>
+<h1 id="Constructors">Constructors</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="Constructors_CONTENT">
+
+</div>
+<h2 id="open">open</h2>
+<div id="open_CONTENT">
+<p>Opens a Virtual Machine Manager (VM)</p>
+<p>Arguments: id of the VM</p>
+
+</div>
 <h2 id="domain_remove">domain_remove</h2>
 <div id="domain_remove_CONTENT">
 <p>Remove the domain. Returns nothing.</p>
@@ -50,6 +68,20 @@
 <h2 id="ip">ip</h2>
 <div id="ip_CONTENT">
 <p>Returns the external IP this for this VM</p>
+
+</div>
+<h2 id="id">id</h2>
+<div id="id_CONTENT">
+<p>Returns the id value of the domain. This id is used in the database
+tables and is not related to the virtual machine engine.</p>
+
+</div>
+<h2 id="default_storage_pool_name">default_storage_pool_name</h2>
+<div id="default_storage_pool_name_CONTENT">
+<p>Set the default storage pool name for this Virtual Machine Manager</p>
+<pre>    $vm-&gt;default_storage_pool_name('default');
+
+</pre>
 
 </div>
 </div></body>

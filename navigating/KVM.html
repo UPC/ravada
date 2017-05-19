@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::VM::KVM</title>
+	<meta name="description" content="Pod documentation for Ravada::VM::KVM" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/VM/KVM.pm" />
 	<meta name="outputfile" content="./KVM.html" />
-	<meta name="created" content="Tue Mar 14 00:43:42 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,17 +14,19 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
+<ul><li><a href="#NAME">NAME</a>
 <ul><li><a href="#disconnect">disconnect</a></li>
 <li><a href="#connect">connect</a></li>
 <li><a href="#storage_pool">storage_pool</a></li>
+<li><a href="#search_volume">search_volume</a></li>
+<li><a href="#search_volume_path">search_volume_path</a></li>
+<li><a href="#search_volume_re">search_volume_re</a></li>
+<li><a href="#search_volume_path_re">search_volume_path_re</a></li>
 <li><a href="#dir_img">dir_img</a></li>
 <li><a href="#create_domain">create_domain</a></li>
 <li><a href="#search_domain">search_domain</a></li>
 <li><a href="#list_domains">list_domains</a></li>
 <li><a href="#create_volume">create_volume</a></li>
-<li><a href="#search_volume">search_volume</a></li>
 <li><a href="#list_networks">list_networks</a></li>
 <li><a href="#import_domain">import_domain</a>
 </li>
@@ -33,6 +35,11 @@
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::VM::KVM - KVM Virtual Managers library for Ravada</p>
+
+</div>
 <h2 id="disconnect">disconnect</h2>
 <div id="disconnect_CONTENT">
 <p>Disconnect from the Virtual Machine Manager</p>
@@ -46,6 +53,64 @@
 <h2 id="storage_pool">storage_pool</h2>
 <div id="storage_pool_CONTENT">
 <p>Returns a storage pool usable by the domain to store new volumes.</p>
+
+</div>
+<h2 id="search_volume">search_volume</h2>
+<div id="search_volume_CONTENT">
+<p>Searches for a volume in all the storage pools known to the Virtual Manager</p>
+<p>Argument: the filenaname;
+Returns the volume as a Sys::Virt::StorageGol. If called in array context returns a
+list of all the volumes.</p>
+<pre>    my $iso = $vm-&gt;search_volume(&quot;debian-8.iso&quot;);
+
+    my @disk = $vm-&gt;search_volume(&quot;windows10-clone.img&quot;);
+
+</pre>
+
+</div>
+<h2 id="search_volume_path">search_volume_path</h2>
+<div id="search_volume_path_CONTENT">
+<p>Searches for a volume in all the storage pools known to the Virtual Manager</p>
+<p>Argument: the filenaname;
+Returns the path of the volume. If called in array context returns a
+list of all the paths to all the matching volumes.</p>
+<pre>    my $iso = $vm-&gt;search_volume(&quot;debian-8.iso&quot;);
+
+    my @disk = $vm-&gt;search_volume(&quot;windows10-clone.img&quot;);
+
+
+
+
+
+
+
+</pre>
+
+</div>
+<h2 id="search_volume_re">search_volume_re</h2>
+<div id="search_volume_re_CONTENT">
+<p>Searches for a volume in all the storage pools known to the Virtual Manager</p>
+<p>Argument: a regular expression;
+Returns the volume. If called in array context returns a
+list of all the matching volumes.</p>
+<pre>    my $iso = $vm-&gt;search_volume(qr(debian-\d+\.iso));
+
+    my @disk = $vm-&gt;search_volume(qr(windows10-clone.*\.img));
+
+</pre>
+
+</div>
+<h2 id="search_volume_path_re">search_volume_path_re</h2>
+<div id="search_volume_path_re_CONTENT">
+<p>Searches for a volume in all the storage pools known to the Virtual Manager</p>
+<p>Argument: a regular expression;
+Returns the volume path. If called in array context returns a
+list of all the paths of all the matching volumes.</p>
+<pre>    my $iso = $vm-&gt;search_volume(qr(debian-\d+\.iso));
+
+    my @disk = $vm-&gt;search_volume(qr(windows10-clone.*\.img));
+
+</pre>
 
 </div>
 <h2 id="dir_img">dir_img</h2>
@@ -82,14 +147,6 @@
 <div id="create_volume_CONTENT">
 <p>Creates a new storage volume. It requires a name and a xml template file defining the volume</p>
 <pre>   my $vol = $vm-&gt;create_volume(name =&gt; $name, name =&gt; $file_xml);
-
-</pre>
-
-</div>
-<h2 id="search_volume">search_volume</h2>
-<div id="search_volume_CONTENT">
-<p>Searches a volume</p>
-<pre>    my $vol =$vm-&gt;search_volume($name);
 
 </pre>
 

@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::Front</title>
+	<meta name="description" content="Pod documentation for Ravada::Front" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Front.pm" />
 	<meta name="outputfile" content="./Front.html" />
-	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,8 +14,7 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
+<ul><li><a href="#NAME">NAME</a>
 <ul><li><a href="#BUILD">BUILD</a></li>
 <li><a href="#list_bases">list_bases</a></li>
 <li><a href="#list_machines_user">list_machines_user</a></li>
@@ -54,6 +53,11 @@
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::Front - Web Frontend library for Ravada</p>
+
+</div>
 <h2 id="BUILD">BUILD</h2>
 <div id="BUILD_CONTENT">
 <p>Internal constructor</p>
@@ -168,6 +172,9 @@ base data if not.</p>
 <div id="open_vm_CONTENT">
 <p>Connects to a Virtual Machine Manager ( or VMM ( or VM )).
 Returns a read-only connection to the VM.</p>
+<pre>  my $vm = $front-&gt;open_vm('KVM');
+
+</pre>
 
 </div>
 <h2 id="search_vm">search_vm</h2>
@@ -224,12 +231,8 @@ Returns a read-only connection to the VM.</p>
 	<dt>user =&gt; $user : a Ravada::Auth::SQL user</dt>
 	<dt>name =&gt; $name : the domain name</dt>
 	<dt>remote_ip =&gt; $remote_ip: a Ravada::Auth::SQL user</dt>
-	<dd>
-
-
-
-
-		<p>Returns an object: Ravada::Request.</p>
+</dl>
+<p>Returns an object: Ravada::Request.</p>
 <pre>    my $req = $rvd_front-&gt;start_domain(
                user =&gt; $user
               ,name =&gt; 'mydomain'
@@ -240,7 +243,7 @@ Returns a read-only connection to the VM.</p>
 </div>
 <h2 id="list_bases_anonymous">list_bases_anonymous</h2>
 <div id="list_bases_anonymous_CONTENT">
-		<p>List the available bases for anonymous user in a remote IP</p>
+<p>List the available bases for anonymous user in a remote IP</p>
 <pre>    my $list = $rvd_front-&gt;list_bases_anonymous($remote_ip);
 
 </pre>
@@ -248,12 +251,12 @@ Returns a read-only connection to the VM.</p>
 </div>
 <h2 id="disconnect_vm">disconnect_vm </h2>
 <div id="disconnect_vm_CONTENT">
-		<p>Disconnects all the conneted VMs</p>
+<p>Disconnects all the conneted VMs</p>
 
 </div>
 <h2 id="version">version</h2>
 <div id="version_CONTENT">
-		<p>Returns the version of the main module</p>
+<p>Returns the version of the main module</p>
 
 </div>
 </div></body>

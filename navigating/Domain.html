@@ -2,11 +2,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-	<title></title>
-	<meta name="description" content="Pod documentation for " />
+	<title>Ravada::Domain</title>
+	<meta name="description" content="Pod documentation for Ravada::Domain" />
 	<meta name="inputfile" content="/home/fer/src/ravada/lib/Ravada/Domain.pm" />
 	<meta name="outputfile" content="./Domain.html" />
-	<meta name="created" content="Tue Mar 14 00:43:41 2017" />
+	<meta name="created" content="Fri May 19 14:37:14 2017" />
 	<meta name="generator" content="Pod::Xhtml 1.61" />
 </head>
 <body>
@@ -14,13 +14,14 @@
 <!-- INDEX START -->
 <h3 id="TOP">Index</h3>
 
-<ul>
-<li>
+<ul><li><a href="#NAME">NAME</a>
 <ul><li><a href="#id_Returns_the_id_of_the_domain_my_i">id
 Returns the id of  the domain
     my $id = $domain-&gt;id();
 =cut</a></li>
 <li><a href="#is_known">is_known</a></li>
+<li><a href="#spice_password">spice_password</a></li>
+<li><a href="#pre_remove">pre_remove</a></li>
 <li><a href="#is_base_Returns_true_or_false_if_the">is_base
 Returns true or  false if the domain is a prepared base
 =cut</a></li>
@@ -49,6 +50,7 @@ Returns the number of clones from this virtual machine
 <li><a href="#list_files_base_Returns_a_list_of_th">list_files_base
 Returns a list of the filenames of this base-type domain
 =cut</a></li>
+<li><a href="#list_files_base_target">list_files_base_target</a></li>
 <li><a href="#json_Returns_the_domain_information_">json
 Returns the domain information as json
 =cut</a></li>
@@ -62,6 +64,7 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 <ul><li><a href="#arguments">arguments</a></li>
 </ul>
 </li>
+<li><a href="#can_hybernate">can_hybernate</a></li>
 <li><a href="#add_volume_swap">add_volume_swap</a></li>
 <li><a href="#open_iptables">open_iptables</a></li>
 <li><a href="#is_public">is_public</a></li>
@@ -74,6 +77,11 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 </ul><hr />
 <!-- INDEX END -->
 
+<h1 id="NAME">NAME</h1><p><a href="#TOP" class="toplink">Top</a></p>
+<div id="NAME_CONTENT">
+<p>Ravada::Domain - Domains ( Virtual Machines ) library for Ravada</p>
+
+</div>
 <h2 id="id_Returns_the_id_of_the_domain_my_i">id
 Returns the id of  the domain
     my $id = $domain-&gt;id();
@@ -120,6 +128,21 @@ Returns the id of  the domain
 <h2 id="is_known">is_known</h2>
 <div id="is_known_CONTENT">
 <p>Returns if the domain is known in Ravada.</p>
+
+</div>
+<h2 id="spice_password">spice_password</h2>
+<div id="spice_password_CONTENT">
+<p>Returns the password defined for the spice viewers</p>
+
+</div>
+<h2 id="pre_remove">pre_remove</h2>
+<div id="pre_remove_CONTENT">
+<p>Code to run before removing the domain. It can be implemented in each domain.
+It is not expected to run by itself, the remove function calls it before proceeding.</p>
+<pre>    $domain-&gt;pre_remove();  # This isn't likely to be necessary
+    $domain-&gt;remove();      # Automatically calls the domain pre_remove method
+
+</pre>
 
 </div>
 <h2 id="is_base_Returns_true_or_false_if_the">is_base
@@ -251,7 +274,8 @@ Returns a list of the filenames of this base-type domain
 =cut</h2>
 <div id="list_files_base_Returns_a_list_of_th-2">
 <p>sub list_files_base {
-    my $self = shift;</p>
+    my $self = shift;
+    my $with_target = shift;</p>
 <pre>    return if !$self-&gt;is_known();
 
     my $id;
@@ -259,20 +283,26 @@ Returns a list of the filenames of this base-type domain
     return if $@ &amp;&amp; $@ =~ /No DB info/i;
     die $@ if $@;
 
-    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;SELECT file_base_img &quot;
+    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;SELECT file_base_img, target &quot;
         .&quot; FROM file_base_images &quot;
         .&quot; WHERE id_domain=?&quot;);
     $sth-&gt;execute($self-&gt;id);
 
     my @files;
-    while ( my $img = $sth-&gt;fetchrow) {
-        push @files,($img);
+    while ( my ($img, $target) = $sth-&gt;fetchrow) {
+        push @files,($img)          if !$with_target;
+        push @files,[$img,$target]  if $with_target;
     }
     $sth-&gt;finish;
     return @files;
 }
 
 </pre>
+
+</div>
+<h2 id="list_files_base_target">list_files_base_target</h2>
+<div id="list_files_base_target_CONTENT">
+<p>Returns a list of the filenames and targets of this base-type domain</p>
 
 </div>
 <h2 id="json_Returns_the_domain_information_">json
@@ -337,7 +367,10 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 <p>sub _post_remove_base {
     my $self = shift;
     $self-&gt;_remove_base_db(@_);
+    $self-&gt;_post_remove_base_domain();
 }</p>
+<p>sub _pre_shutdown_domain {}</p>
+<p>sub _post_remove_base_domain {}</p>
 <p>sub _remove_base_db {
     my $self = shift;</p>
 <pre>    my $sth = $$CONNECTOR-&gt;dbh-&gt;prepare(&quot;DELETE FROM file_base_images &quot;
@@ -361,6 +394,11 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 	<dt>user =&gt; $user : The user that owns the clone</dt>
 	<dt>name =&gt; $name : Name of the new clone</dt>
 </dl>
+
+</div>
+<h2 id="can_hybernate">can_hybernate</h2>
+<div id="can_hybernate_CONTENT">
+<p>Returns wether a domain supports hybernation</p>
 
 </div>
 <h2 id="add_volume_swap">add_volume_swap</h2>
