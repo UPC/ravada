@@ -199,7 +199,7 @@ sub _create_domain_http {
     my $self = shift;
     my %args = @_;
     my $client = $self->_connect_http();
-
+    my $name = $args{name};
     warn "create domain $args{name}\n";
     my $data = {
         name => $args{name}
@@ -218,6 +218,13 @@ sub _create_domain_http {
     };
     $client->POST('/1.0/containers',encode_json($data))->responseContent();
     warn Dumper(decode_json( $client->responseContent() ));
+
+    my $domain = Ravada::Domain::LXD->new(
+              _vm => $self
+         , domain => $name #$dom
+    #   , storage => $self->storage_pool
+    );
+    return $domain;
 }
 
 sub remove_domain {
@@ -233,28 +240,55 @@ sub remove_domain {
 sub create_volume {}
 
 sub list_domains {
-#    my $self = shift;
+    my $self = shift;
 #
-#    my @cmd = ($LXC,'list');
-#    my ($in, $out, $err);
-#    run3(\@cmd, \$in, \$out, \$err);
+    my @cmd = ($LXC,'list');
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
 #
-#    my @list;
-#
-#    for my $line ( split /\n/,$out ) {
-#        next if $line =~ m{^.----};
-#        next if $line =~ m{NAME};
-#        my ($name) = $line =~ m{([\w\d-]+)};
-#        next if !$name;
-#        my $domain = Ravada::Domain::LXD->new( domain => $name);
-#        push @list,($domain);
-#    }
+    my @list;
 
-#    return @list   if wantarray;
-#    return scalar(@list)-1;
+    for my $line ( split /\n/,$out ) {
+        next if $line =~ m{^.----};
+        next if $line =~ m{NAME};
+        my ($name) = $line =~ m{([\w\d-]+)};
+        next if !$name;
+        my $domain = Ravada::Domain::LXD->new( domain => $name);
+        push @list,($domain);
+    }
+
+    return @list   if wantarray;
+    return scalar(@list)-1;
 }
 
-sub search_domain {}
+sub search_domain {
+    my $self = shift;
+    my $name = shift or confess "Missing name";
+
+    $self->connect();
+    my @all_domains;
+    eval { @all_domains = $self->vm->list_all_domains() };
+    confess $@ if $@;
+
+    for my $dom (@all_domains) {
+        next if $dom->get_name ne $name;
+
+        my $domain;
+
+        eval {
+            $domain = Ravada::Domain::LXD->new(
+                domain => $dom
+                ,readonly => $self->readonly
+                ,_vm => $self
+            );
+        };
+        warn $@ if $@;
+        if ($domain) {
+            return $domain;
+        }
+    }
+    return;
+}
 
 sub search_domain_by_id {}
 

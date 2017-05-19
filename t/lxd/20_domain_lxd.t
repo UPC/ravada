@@ -116,7 +116,7 @@ sub test_prepare_base {
 sub test_domain($vm_lxd, $active = 1){
     $active = 1 if !defined $active;
 
-    my $vm = $RAVADA->search_vm('lxd');
+    my $vm = $RAVADA->search_vm('LXD');
 
     my $n_domains = (scalar $vm->list_domains() or 0);
     diag("Test new domain n_domains= $n_domains");
@@ -159,7 +159,7 @@ sub test_domain($vm_lxd, $active = 1){
 
 ################################################################
 my $vm_lxd;
-eval { $vm_lxd = rvd_back->search_vm('lxd') };
+eval { $vm_lxd = rvd_back->search_vm('LXD') };
 
 use_ok('Ravada::Domain::LXD')   if $vm_lxd;
 use_ok('Ravada::VM::LXD')       if $vm_lxd;
@@ -169,7 +169,7 @@ SKIP: {
     my $msg = ($@ or "No LXD vitual manager found");
 
     my $vm;
-    eval { $vm = $RAVADA->search_vm('lxd') } if $RAVADA;
+    eval { $vm = $RAVADA->search_vm('LXD') } if $RAVADA;
 
     if (!$vm_lxd) {
         ok(!$vm,"There should be no LXD backends");

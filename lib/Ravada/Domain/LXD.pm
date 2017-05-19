@@ -49,9 +49,7 @@ Returns the name of the domain
 
 sub name {
     my $self = shift;
-    $self->{_name} = $self->domain->get_name if !$self->{_name};
-    return $self->{_name};
-    #return $self->domain;
+    return $self->domain;
 }
 
 sub pause { }
