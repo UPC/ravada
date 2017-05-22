@@ -301,7 +301,8 @@ sub list_iso_images {
 
         next if $row->{device};
 
-        my ($file) = $row->{url} =~ m{.*/(.*)};
+        my $file;
+        ($file) = $row->{url} =~ m{.*/(.*)} if $row->{url};
         my $file_re = $row->{file_re};
         next if !$file_re && !$file || !$vm_name;
 
