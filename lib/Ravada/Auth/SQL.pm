@@ -113,10 +113,12 @@ sub add_user {
         if keys %args;
 
 
-    my $sth = $$CON->dbh->prepare(
+    my $sth;
+    eval { $sth = $$CON->dbh->prepare(
             "INSERT INTO users (name,password,is_admin,is_temporary, is_external)"
             ." VALUES(?,?,?,?,?)");
-
+    };
+    confess $@ if $@;
     if ($password) {
         $password = sha1_hex($password);
     } else {
