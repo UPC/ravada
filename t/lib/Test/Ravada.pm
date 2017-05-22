@@ -87,13 +87,15 @@ sub new_pool_name {
 
 sub rvd_back {
     my ($connector, $config) = @_;
-    init($connector,$config)    if $connector;
+    init($connector,$config,0)    if $connector;
 
-    return Ravada->new(
+    my $rvd = Ravada->new(
             connector => $CONNECTOR
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
+    $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
+    return $rvd;
 }
 
 sub rvd_front {
@@ -105,13 +107,16 @@ sub rvd_front {
 }
 
 sub init {
-    ($CONNECTOR,$CONFIG) = @_;
+    my $create_user;
+    ($CONNECTOR, $CONFIG, $create_user) = @_;
+
+    $create_user = 1 if !defined $create_user;
 
     confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
 
     $Ravada::CONNECTOR = $CONNECTOR if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
-    $USER_ADMIN = create_user('admin','admin',1);
+    $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 }
