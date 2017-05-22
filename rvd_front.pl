@@ -114,9 +114,10 @@ hook before_routes => sub {
     if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
 
+    warn "'$url'";
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
@@ -125,6 +126,12 @@ hook before_routes => sub {
 
 
 ############################################################################3
+
+any '/robots.txt' => sub {
+    my $c = shift;
+    warn "robots";
+    return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
+};
 
 any '/' => sub {
     my $c = shift;
