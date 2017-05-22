@@ -242,6 +242,7 @@ sub set_version {
     open my $out,'>',$file_out  or die "$! $file_out";
 
     my $version = Ravada::version();
+    $version =~ s/_/-/g;
 
     my $changed = 0;
     while (my $lin=<$in>) {
