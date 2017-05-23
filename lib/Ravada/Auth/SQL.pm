@@ -83,6 +83,24 @@ sub search_by_id {
     return Ravada::Auth::SQL->new(name => $data->{name});
 }
 
+=head2 list_all_users
+
+Returns a list of all the usernames
+
+=cut
+
+sub list_all_users() {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT(name) FROM users ORDER BY name"
+    );
+    $sth->execute;
+    my @list;
+    while (my $row = $sth->fetchrow) {
+        push @list,($row);
+    }
+    return @list;
+}
+
 =head2 add_user
 
 Adds a new user in the SQL database. Returns nothing.
@@ -185,6 +203,22 @@ sub _load_data_by_id {
     my $sth = $$CON->dbh->prepare(
        "SELECT * FROM users WHERE id=? ");
     $sth->execute($id);
+    my ($found) = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    delete $found->{password};
+    lock_hash %$found;
+
+    return $found;
+}
+
+sub _load_data_by_username {
+    my $username = shift;
+    _init_connector();
+
+    my $sth = $$CON->dbh->prepare(
+       "SELECT * FROM users WHERE name=? ");
+    $sth->execute($username);
     my ($found) = $sth->fetchrow_hashref;
     $sth->finish;
 
