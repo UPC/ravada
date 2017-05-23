@@ -13,7 +13,7 @@
         <strong>Error!</strong> Backend no available!
       </div>
         <div class="row">
-            <div class="col-md-8"><h2>Virtual Machines</h2></div>
+            <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
                 <h2>
                     <a type="button" class="btn btn-success" href="/new_machine.html">
@@ -61,8 +61,8 @@
                 <tr ng-repeat-start="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
                         <a align="right" href="/machine/settings/{{machine.id}}.html"
-                        title ="<%=l 'Machine settings' %>"><i class="fa fa-fw fa-cog"></i></a>
-                        <b ng-cloak>{{machine.name}}</b>
+                        title ="<%=l 'Machine settings' %>"><b
+                        ng-cloak>{{machine.name}}</b></a>
                     </td>
                     <td class="lgMachToggle">
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
@@ -128,8 +128,8 @@
                           &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
                           <a align="right" href="/machine/settings/{{child.id}}.html"
-                          title ="Machine settings"><i class="fa fa-fw fa-cog"></i></a>
-                          <i ng-cloak>&nbsp;{{child.name}}</i>
+                          title ="Machine settings"><i
+                             ng-cloak>&nbsp;{{child.name}}</i></a>
                           <span style="color:gray">[ Cloned ]</span>
                       </td>
                       <td class="lgMachToggle">
@@ -153,7 +153,7 @@
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
                           <span style="float:right;" ng-show="{{!child.is_active && !child.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
                           <span style="float:right;" ng-show="{{child.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                          <br><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{machine.remote_ip}}</span>
+                          <br><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{child.remote_ip}}</span>
                       </td>
                       <td class="lgMachToggle">
 

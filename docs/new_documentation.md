@@ -1,4 +1,4 @@
-Normally the documentation files are stored in /docs and /devel-docs directories in master branch.
+Documentation files are stored in /docs and /devel-docs directories in master branch.
 
 When you create a new page keep in mind don't leave blanks in the filename.
 
@@ -12,7 +12,7 @@ These files are used to autogenerate html page accesibles from [Ravada's web](ht
 
 In order to run templer you need to follow these steps: 
 
-(Requirements: [Templer](https://github.com/skx/templer) installed in your computer. See "Installation" section for more information.
+Requirements: [Templer](https://github.com/skx/templer) installed in your computer. See "Installation" section for more information.
 
 - change to gh-pages branch
 - cd templer

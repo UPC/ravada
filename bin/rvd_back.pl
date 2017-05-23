@@ -127,6 +127,7 @@ sub start {
 sub add_user {
     my $login = shift;
 
+    my $ravada = Ravada->new();
     print "$login password: ";
     my $password = <STDIN>;
     chomp $password;

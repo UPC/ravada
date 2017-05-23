@@ -261,7 +261,7 @@ msgstr ""
 msgid "You'll need to install"
 msgstr ""
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
 msgstr ""
 
 msgid ""
@@ -284,4 +284,22 @@ msgid "Welcome"
 msgstr ""
 
 msgid "It is required a viewer to run the virtual machines."
+msgstr ""
+
+msgid "Virtual Machines"
+msgstr ""
+
+msgid "user"
+msgstr ""
+
+msgid "password"
+msgstr ""
+
+msgid "Start session"
+msgstr ""
+
+msgid "Login with Intranet UPC's username."
+msgstr ""
+
+msgid "bits) in your computer."
 msgstr ""

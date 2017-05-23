@@ -3,18 +3,14 @@
 
 **Implemented enhancements:**
 
-- Add information message in login page [\#212]
-- Convert machine settings page to tabs [\#210]
-- Hide clones in Admin / List Machines [\#206]
-- Add support for Linux Mint [\#204]
-- Improve List machines look and feel [\#203]
-- Set a password for SPICE [\#197]
-- Keep synced install docs [\#186]
+- Support sha256 for ISO [\#225]
+- Create virtual machine from Fedora Workstation ISO
+- Create virtual machine from Lubuntu Desktop ISO
+- Create virtual machine from Xubuntu Desktop ISO
 
 **Fixed bugs:**
 
-- LDAP login fails for new users [\#215]
-- Check ISO file already downloaded [\#209]
-- Review LDAP admin group [\#196]
-- Add Settings for the normal user [\#136]
-- Set locale in user preferences [\#82]
+- No filename for custom iso images [\#232]
+- Client IP is missing from machines list [\#227]
+- The header in the requirements page doesn't show options [\#221]
+- list iso images fails for fresh installs [\#235]
