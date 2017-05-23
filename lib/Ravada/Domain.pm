@@ -135,7 +135,7 @@ after 'shutdown_now' => \&_post_shutdown_now;
 before 'force_shutdown' => \&_pre_shutdown_now;
 after 'force_shutdown' => \&_post_shutdown_now;
 
-before 'remove_base' => \&_can_remove_base;
+before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
 
 before 'rename' => \&_pre_rename;
@@ -770,9 +770,10 @@ sub _do_remove_base {
     $self->storage_refresh()    if $self->storage();
 }
 
-sub _can_remove_base {
+sub _pre_remove_base {
     _allow_manage(@_);
     _check_has_clones(@_);
+    $_[0]->spinoff_volumes();
 }
 
 sub _post_remove_base {
