@@ -301,20 +301,27 @@ sub list_iso_images {
 
         next if $row->{device};
 
-        my $file;
-        ($file) = $row->{url} =~ m{.*/(.*)} if $row->{url};
+        my ($file);
+        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
         my $file_re = $row->{file_re};
         next if !$file_re && !$file || !$vm_name;
 
         $vm = $self->search_vm($vm_name)    if !$vm;
 
+        next if $row->{device};
         if ($file) {
             my $iso_file = $vm->search_volume_path($file);
-            $row->{device} = $iso_file  if $iso_file;
+            if ($iso_file) {
+                $row->{device} = $iso_file;
+                next;
+            }
         }
-        if ($file_re && !$row->{device}) {
+        if ($file_re) {
             my $iso_file = $vm->search_volume_path_re(qr($file_re));
-            $row->{device} = $iso_file  if $iso_file;
+            if ($iso_file) {
+                $row->{device} = $iso_file;
+                next;
+            }
         }
     }
     $sth->finish;
