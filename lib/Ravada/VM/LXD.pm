@@ -15,6 +15,7 @@ use IO::Socket::UNIX;
 use JSON::XS qw(decode_json encode_json);
 use Moose;
 use REST::Client;
+use File::Basename;
 
 use Ravada::Domain::LXD;
 
@@ -241,22 +242,19 @@ sub create_volume {}
 
 sub list_domains {
     my $self = shift;
-#
-    my @cmd = ($LXC,'list');
-    my ($in, $out, $err);
-    run3(\@cmd, \$in, \$out, \$err);
-#
+    confess "Missing vm" if !$self->vm;
+
+    my $client = $self->_connect_http();
+    $client->GET('/1.0/containers')->responseContent();
+    my $decoded = decode_json( $client->responseContent() );
+
+    #my @a = $r->{metadata};
     my @list;
-
-    for my $line ( split /\n/,$out ) {
-        next if $line =~ m{^.----};
-        next if $line =~ m{NAME};
-        my ($name) = $line =~ m{([\w\d-]+)};
-        next if !$name;
-        my $domain = Ravada::Domain::LXD->new( domain => $name);
-        push @list,($domain);
-    }
-
+    my @containers = @{ $decoded->{'metadata'} };
+    @containers = map basename($_), @containers;
+        foreach my $c ( @containers ) {
+            push @list, basename($c);
+        }
     return @list   if wantarray;
     return scalar(@list)-1;
 }
