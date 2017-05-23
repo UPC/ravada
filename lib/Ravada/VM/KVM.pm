@@ -513,10 +513,17 @@ sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
 
+    my %args2 = %args;
     for (qw(id_iso id_owner name)) {
+        delete $args2{$_};
         croak "argument $_ required"
             if !$args{$_};
     }
+    for (qw(disk swap active request vm memory)) {
+        delete $args2{$_};
+    }
+    confess "Unknown parameters : ".join(" , ",sort keys %args2)
+        if keys %args2;
 
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
@@ -622,25 +629,30 @@ sub _create_disk_qcow2 {
         my $file_out = "$dir_img/$name-".($target or _random_name(2))
             ."-"._random_name(2).$ext;
 
+        $self->_clone_disk($file_base, $file_out);
+        push @files_out,($file_out);
+    }
+    return @files_out;
+
+}
+
+# this may become official API eventually
+
+sub _clone_disk($self, $file_base, $file_out) {
+
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
                 ,"-b", $file_base
                 ,$file_out
         );
-#    warn join(" ",@cmd)."\n";
 
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
-#        print $out  if $out;
-#        warn $err   if $err;
 
         if (! -e $file_out) {
             warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
             exit;
         }
-        push @files_out,($file_out);
-    }
-    return @files_out;
 
 }
 
