@@ -114,7 +114,6 @@ hook before_routes => sub {
     if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
 
-    warn "'$url'";
   return login($c)
     if
         $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
