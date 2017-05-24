@@ -88,6 +88,9 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
 
+    for my $dom2 ( $vm->list_domains ) {
+        is(ref($dom2),ref($domain)) if $vm_name ne 'Void';
+    }
 
     return $domain;
 }
