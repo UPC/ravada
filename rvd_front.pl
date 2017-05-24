@@ -29,7 +29,6 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
-our $VERSION_TYPE = "";
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
@@ -96,7 +95,9 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
+  my $version = $RAVADA->version();
+  $version =~ s/-/_/g;
+  $c->stash(version => $version);
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
