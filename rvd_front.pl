@@ -116,7 +116,7 @@ hook before_routes => sub {
 
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
@@ -125,6 +125,12 @@ hook before_routes => sub {
 
 
 ############################################################################3
+
+any '/robots.txt' => sub {
+    my $c = shift;
+    warn "robots";
+    return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
+};
 
 any '/' => sub {
     my $c = shift;
@@ -854,20 +860,23 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
+    my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
     $swap *= 1024*1024*1024;
-    my $req = $RAVADA->create_domain(
+
+    my %args = (
            name => $name
-        ,id_iso => $c->param('id_iso')
-        ,id_template => $c->param('id_template')
-        ,vm=> $c->param('backend')
+        ,vm=> $vm
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
 
-    return $req;
+    $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
+    $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
+
+    return $RAVADA->create_domain(%args);
 }
 
 sub _show_request {
