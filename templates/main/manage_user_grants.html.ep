@@ -1,0 +1,12 @@
+<form method="post">
+% for my $perm ($_user->list_all_permissions) {
+%     my $checked = '';
+%     $checked = 'checked' if $user->can_do($perm->{name});
+      <input type="checkbox" <%= $checked %> 
+                    name="perm_<%= $perm->{name} %>">
+      <input type="hidden" name="off_perm_<%= $perm->{name} %>" value="off">
+      <label for="perm_<%= $perm->{name} %>"><%=l($perm->{description}) %></label><br/>
+% }
+    <input type="submit" name="grant">
+</form>
+

@@ -233,12 +233,42 @@ sub make_pl {
     die $err if $err;
 }
 
+sub set_version {
+
+    my $file_in = "$DIR_DST/DEBIAN/control";
+    my $file_out = "$file_in.version";
+
+    open my $in ,'<',$file_in   or die "$! $file_in";
+    open my $out,'>',$file_out  or die "$! $file_out";
+
+    my $version = Ravada::version();
+    $version =~ s/_/-/g;
+
+    my $changed = 0;
+    while (my $lin=<$in>) {
+        my $lin2 = $lin;
+        $lin2 =~ s/^(Version:\s+)([0-9\.]+)/$1$version/;
+        $changed++ if $lin ne $lin2;
+
+        print $out $lin2;
+    }
+
+    close $out;
+    close $in;
+
+    if ($changed) {
+        copy($file_out, $file_in) or die "$! $file_out -> $file_in";
+    }
+    unlink $file_out;
+}
+
 #########################################################################
 
 clean();
 make_pl();
 copy_dirs();
 copy_files();
+set_version();
 remove_not_needed();
 remove_use_lib();
 change_mod();
