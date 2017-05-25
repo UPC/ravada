@@ -9,7 +9,7 @@ Welcome to Ravada VDI documentation
 Chances are you're here because you searched information about free Virtual Desktop Infraestructure.
 Whether it is a large or a small project, you can start in VDI and see its benefits. We are assuming that you want to start your VDI project as quickly as possible.
 
-`Ravada VDI`_ is a software that allows the user to connect to an virtual desktop. So it is a **VDI broker**.
+`Ravada VDI`_ is a software that allows the user to connect to an virtual desktop. So it is a VDI broker.
 
 Ravada delivers
 ---------------
@@ -22,6 +22,9 @@ Who is Ravada meant for?
 Ravada is meant for sysadmins who have some background in GNU/Linux, and want to deploy a VDI project.
 
 .. note:: Get started on VDI, without reinvent the wheel.
+
+Development Tools
+-----------------
 
 We're proud to program it in `Perl`_. Perl 5 is a highly capable, feature-rich programming language with over 29 years of development. `More about why we love Perl...`_.
 We use `Mojolicious`_, a real-time web framework. We use `MySQL`_. It's the world's most popular open source database. With its proven performance, reliability, and ease-of-use.
