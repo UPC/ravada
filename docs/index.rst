@@ -23,33 +23,12 @@ Ravada is meant for sysadmins who have some background in GNU/Linux, and want to
 
 .. note:: Get started on VDI, without reinvent the wheel.
 
-Development Tools
------------------
-
-We're proud to program it in `Perl`_. Perl 5 is a highly capable, feature-rich programming language with over 29 years of development. `More about why we love Perl...`_.
-We use `Mojolicious`_, a real-time web framework. We use `MySQL`_. It's the world's most popular open source database. With its proven performance, reliability, and ease-of-use.
-We use a lot of powerful free source like `GNU`_/Linux `Ubuntu`_, `KVM`_ or `Spice`_, among others. Responsive web made with `Bootstrap`_ and `AngularJS`_.
-
-We use `Transifex`_ to provide a cleaner and easy to use interface for translators. It's meant for adapting applications and text to enable their usability in a particular cultural or linguistic market.
-
 Then we build documentation and host it in `Read the Docs`_ for you.
-
 Think of it as *Continuous Documentation*.
 
 Our code is licensed with `AGPL`_ and is `available on GitHub`_.
 
 .. _Ravada VDI: https://ravada.upc.edu/
-.. _Perl: https://www.perl.org/
-.. _More about why we love Perl...: https://www.perl.org/about.html
-.. _Mojolicious: http://www.mojolicious.org/
-.. _Mysql: https://www.mysql.com/
-.. _GNU: https://www.gnu.org/
-.. _Ubuntu: https://www.ubuntu.com/server
-.. _KVM: http://www.linux-kvm.org/
-.. _Spice: https://www.spice-space.org/
-.. _Bootstrap: getbootstrap.com/
-.. _AngularJS: https://angularjs.org/
-.. _Transifex: https://www.transifex.com/ravada/ravada/
 .. _AGPL: https://github.com/UPC/ravada/blob/master/LICENSE
 .. _Read the Docs: http://readthedocs.org/
 .. _available on GitHub: https://github.com/UPC/ravada
@@ -95,6 +74,7 @@ Information about development is also available:
    :maxdepth: 2
    :glob:
    :caption: Feature Documentation
+
    docs/new_documentation
    devel-docs/translations
          
@@ -108,7 +88,7 @@ Information about development is also available:
 
 .. toctree::
    :maxdepth: 2
-      :caption: Developer Documentation
+   :caption: Developer Documentation
 
    devel-docs/commit-rules
    devel-docs/database_changes
