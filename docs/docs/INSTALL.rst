@@ -59,7 +59,7 @@ Development Release
 -------------------
 
 Read
-`INSTALL\_devel <http://ravada.readthedocs.io/en/latest/INSTALL_devel.html>`__
+`Development Release <http://ravada.readthedocs.io/en/latest/docs/INSTALL_devel.html>`__
 if you want to develop Ravada or install a bleeding edge, non-packaged, release.
 
 Mysql Database
@@ -152,4 +152,4 @@ Next
 ----
 
 Read
-`production <http://ravada.readthedocs.io/en/latest/production.html>`__.
+`Running Ravada in production <http://ravada.readthedocs.io/en/latest/docs/production.html>`__.

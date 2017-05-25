@@ -5,8 +5,9 @@ Development release
     If you are not sure, you probably want to install the stable release. 
     Follow this `guide <http://ravada.readthedocs.io/en/latest/docs/INSTALL.html>`__.
 
-You can get the development release cloning the sources. Don't do this
-if you install a packaged release.
+You can get the development release cloning the sources. 
+
+.. Warning:: Don't do this if you install a packaged release.
 
 ::
 
@@ -60,6 +61,4 @@ yours.
     $ sudo chmod o-rx /etc/ravada.conf
     $ sudo chown your_username /etc/ravada.conf
 
-Read
-`devel-docs <http://ravada.readthedocs.io/en/latest/devel-docs/>`__
-to learn how to start it.
+Read :ref:`dev-docs` to learn how to start it.
