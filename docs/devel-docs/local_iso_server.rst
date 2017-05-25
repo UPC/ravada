@@ -11,7 +11,7 @@ development virtual ravadas download them from there.
 Copy the ISO files
 ~~~~~~~~~~~~~~~~~~
 
-Copy the ``*.iso*`` files to the directory ``/var/www/html/iso``.
+Copy the ``.iso`` files to the directory ``/var/www/html/iso``.
 
 ::
 
