@@ -55,7 +55,6 @@ Information about development is also available:
    docs/add_kvm_storage_pool
    docs/apache
    docs/convert_from_virtualbox
-   docs/custom
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
    docs/ldap_local
@@ -66,7 +65,6 @@ Information about development is also available:
    docs/troubleshooting
    docs/update
    docs/windows_clients
-   docs/custom_login
 
 .. _feature-docs:
 
@@ -75,6 +73,8 @@ Information about development is also available:
    :glob:
    :caption: Feature Documentation
 
+   docs/custom
+   docs/custom_login
    docs/new_documentation
    devel-docs/translations
          

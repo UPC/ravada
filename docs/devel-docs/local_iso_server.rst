@@ -1,14 +1,17 @@
+Local ISO server
+================
+
 ISO Web Server
-==============
+--------------
 
 It is pointless and resource consuming download each time the ISO files
 from the Internet. Set up a webserver in the main host and let the
 development virtual ravadas download them from there.
 
 Copy the ISO files
-==================
+~~~~~~~~~~~~~~~~~~
 
-Copy the *.iso* files to the directory */var/www/html/iso*.
+Copy the ``*.iso*`` files to the directory ``/var/www/html/iso``.
 
 ::
 
@@ -16,10 +19,10 @@ Copy the *.iso* files to the directory */var/www/html/iso*.
     $ sudo cp /var/lib/libvirt/images/*iso /var/www/html/iso
 
 Apache
-======
+------
 
 Install Apache
---------------
+~~~~~~~~~~~~~~
 
 Install apache web server:
 
@@ -28,7 +31,7 @@ Install apache web server:
     $ sudo apt-get install apache2
 
 Config apache
--------------
+~~~~~~~~~~~~~
 
 Configure it so ISOs are donwloaded from the storage pool, and only the
 local virtual network is able to access to it.
@@ -52,20 +55,20 @@ Edit */etc/apache2/sites-enabled/000-default.conf* and add:
     </Location>
 
 Restart apache
---------------
+~~~~~~~~~~~~~~
 
 ::
 
     $ sudo systemctl restart apache2
 
 Change the ISO locations
-========================
+------------------------
 
 In the table iso\_images there is an entry that states where are located
 original ISO files, change it.
 
 From localhost
---------------
+~~~~~~~~~~~~~~
 
 If you want to access to the ISO files from localhost change the *URL*
 field to this:
@@ -76,11 +79,10 @@ field to this:
     mysql> update iso_images set url = 'http://127.0.0.1/iso/';
 
 From Virtual Machines
----------------------
-
+~~~~~~~~~~~~~~~~~~~~~
 If you install ravada in a virtual machine inside the host you have to
 change the URLs to the virtual address, it will probably be
-*192.168.1.1*, check it is doing
+``192.168.1.1``, check it is doing
 
 ::
 
@@ -91,19 +93,19 @@ change the URLs to the virtual address, it will probably be
     mysql> update iso_images set url = 'http://192.168.122.1/iso/';
 
 Try it
-======
+------
 
 Remove the ISO from the storage and from the table
 
 Remove from the VM storage pool
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
     $ sudo rm /var/lib/libvirt/images/*iso
 
 Remove the device name from the table
--------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First find out the id of the iso image, then remove it.
 

@@ -5,7 +5,7 @@ Download Virt Viewer
 --------------------
 
 Windows clients requires the
-`*virt-viewer* <https://virt-manager.org/download/sources/virt-viewer/virt-viewer-x86-5.0.msi>`__
+`virt-viewer <https://virt-manager.org/download/sources/virt-viewer/virt-viewer-x86-5.0.msi>`__
 tool to connect to their Virtual Machine.
 
 Fix Windows registry
@@ -13,7 +13,7 @@ Fix Windows registry
 
 If *virt-viewer* won't start automatically after when viewing the
 virtual machine, add this to the Registry, thanks to
-[@gmiranda](https://github.com/gmiranda)
+`@gmiranda <https://github.com/gmiranda>`__.
 
 ::
 
