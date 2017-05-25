@@ -1,5 +1,11 @@
+Operation
+=========
+
+
+.. note:: Must be run from the command line interface (CLI)
+
 Create users
-============
+------------
 
 ::
 
@@ -7,8 +13,8 @@ Create users
 
     sudo ./usr/sbin/rvd_back --add-user-ldap=username
 
-Import KVM virtual machines.
-============================
+Import KVM virtual machines
+---------------------------
 
 Usually, virtual machines are created within ravada, but they can be
 imported from existing KVM domains. Once the domain is created :
@@ -20,7 +26,7 @@ imported from existing KVM domains. Once the domain is created :
 It will ask the name of the user the domain will be owned by.
 
 View all rvd\_back options
-==========================
+--------------------------
 
 In order to manage your backend easily, rvd\_back has a few flags that
 lets you made different things (like changing the password for an user).
@@ -32,10 +38,12 @@ If you want to view the full list, execute:
     sudo rvd_back --help
 
 Admin
-=====
+-----
+
+.. note:: Must be run from the frontend web
 
 Create Virtual Machine
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 Go to Admin -> Machines and press *New Machine* button.
 
@@ -43,7 +51,7 @@ If anything goes wrong check Admin -> Messages for information from the
 Ravada backend.
 
 ISO MD5 missmatch
------------------
+~~~~~~~~~~~~~~~~~
 
 When downloading the ISO, it may fail or get old. Check the error
 message for the name of the ISO file and the ID.
