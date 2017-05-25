@@ -20,3 +20,4 @@ Then we build documentation and host it in `Read the Docs`_ for you.
 .. _Bootstrap: getbootstrap.com/
 .. _AngularJS: https://angularjs.org/
 .. _Transifex: https://www.transifex.com/ravada/ravada/
+.. _Read the Docs: http://readthedocs.org/
