@@ -1,9 +1,9 @@
 Development release
 ===================
 
-If you are not sure, you probably want to install the stable release.
-Follow this
-`guide <https://upc.github.io/ravada/documentation/docs/INSTALL.html>`__.
+.. note ::
+    If you are not sure, you probably want to install the stable release. 
+    Follow this `guide <http://ravada.readthedocs.io/en/latest/INSTALL.html>`__.
 
 You can get the development release cloning the sources. Don't do this
 if you install a packaged release.
@@ -49,7 +49,7 @@ development release.
 -  libmojolicious-plugin-i18n-perl
 
 Config file
-===========
+-----------
 
 When developping Ravada, your username must be able to read the
 configuration file. Protect the config file from others and make it

@@ -2,10 +2,10 @@ Steps to release
 ================
 
 Draft
-=====
+-----
 
 Draft the release
------------------
+~~~~~~~~~~~~~~~~~
 
 At code -> releases draft a new release
 
@@ -25,10 +25,10 @@ Create issues
 Assign issues to the milestone
 
 Close
-=====
+-----
 
 Close the milestone
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Check the milestone has no open issues and close it.
 
@@ -91,10 +91,10 @@ the release at:
 -  Close the Release
 
 Release binary
-==============
+--------------
 
 Debian
-------
+~~~~~~
 
 Create the *debian* package.
 
@@ -116,7 +116,7 @@ Upload the file to our repo and change the number at:
     $ git push
 
 Publish
-=======
+-------
 
 -  Tweet it
 -  Change the release in gh-pages

@@ -1,5 +1,8 @@
+Install Ravada 
+==============
+
 Requirements
-============
+------------
 
 OS
 --
@@ -28,7 +31,7 @@ The faster the disks, the better. Ravada uses incremental files for the
 disks images, so clones won't require many space.
 
 Install Ravada
-==============
+--------------
 
 Ubuntu
 ------
@@ -56,15 +59,14 @@ Development Release
 -------------------
 
 Read
-`INSTALL\_devel <https://upc.github.io/ravada/documentation/docs/INSTALL_devel.html>`__
-if you want to develop Ravada or install a bleeding edge, non-packaged,
-release.
+`INSTALL\_devel <http://ravada.readthedocs.io/en/latest/INSTALL_devel.html>`__
+if you want to develop Ravada or install a bleeding edge, non-packaged, release.
 
 Mysql Database
-==============
+--------------
 
 MySQL server
-------------
+~~~~~~~~~~~~
 
 It is required a MySQL server, it can be installed in another host or in
 the same one as the ravada package.
@@ -74,7 +76,7 @@ the same one as the ravada package.
     $ sudo apt-get install mysql-server
 
 MySQL user
-----------
+~~~~~~~~~~
 
 Create a database named "ravada". in this stage the system wants you to
 identify a password for your sql.
@@ -90,7 +92,7 @@ Grant all permissions to your user:
     $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD'"
 
 Config file
------------
+~~~~~~~~~~~
 
 Create a config file at /etc/ravada.conf with the username and password
 you just declared at the previous step. Please note that you need to
@@ -105,7 +107,7 @@ example.
       password: THE PASSWORD CHOSEN BEFORE
 
 Ravada web user
-===============
+---------------
 
 Add a new user for the ravada web. Use rvd\_back to create it.
 
@@ -114,13 +116,11 @@ Add a new user for the ravada web. Use rvd\_back to create it.
     $ sudo /usr/sbin/rvd_back --add-user user.name
 
 Firewall (Optional)
-===================
+-------------------
 
-The server must be able to send *DHCP* packets to its own virtual
-interface.
+The server must be able to send *DHCP* packets to its own virtual interface.
 
-KVM should be using a virtual interface for the NAT domnains. Look what
-is the address range and add it to your *iptables* configuration.
+KVM should be using a virtual interface for the NAT domnains. Look what is the address range and add it to your *iptables* configuration.
 
 First we try to find out what is the new internal network:
 
@@ -130,8 +130,7 @@ First we try to find out what is the new internal network:
     ...
     192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
 
-So it is 192.168.122.0 , netmask 24. Add it to your iptables
-configuration:
+So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
 
 ::
 
@@ -144,13 +143,13 @@ To confirm that the configuration was updated, check it with:
     sudo iptables -S
 
 Client
-======
+------
 
 The client must have a spice viewer such as virt-viewer. There is a
 package for linux and it can also be downloaded for windows.
 
 Next
-====
+----
 
 Read
-`production <https://upc.github.io/ravada/documentation/docs/production.html>`__.
+`production <http://ravada.readthedocs.io/en/latest/production.html>`__.
