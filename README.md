@@ -24,18 +24,18 @@ KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual
 
 ## Install
 
-Read [INSTALL](https://upc.github.io/ravada/documentation/docs/INSTALL.html).
+Read [INSTALL](http://ravada.readthedocs.io/en/latest/docs/INSTALL.html).
 
 
 ### Production
 
-See [production](https://upc.github.io/ravada/documentation/docs/production.html)
+See [production](http://ravada.readthedocs.io/en/latest/docs/production.html)
 for production fine-tuning guidelines.
 
 ### Operation
 
-See [operation](https://upc.github.io/ravada/documentation/docs/operation.html).
+See [operation](http://ravada.readthedocs.io/en/latest/docs/operation.html).
 
 ### Update
 
-See [update](https://upc.github.io/ravada/documentation/docs/update.html).
+See [update](http://ravada.readthedocs.io/en/latest/docs/update.html).
