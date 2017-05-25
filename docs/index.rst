@@ -7,6 +7,8 @@ Welcome to Ravada VDI's documentation!
 ======================================
 
 .. toctree::
+   :name: masterIndex
+   :maxdepth: 2
    :caption: Contents:
    
    docs/INSTALL
