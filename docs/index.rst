@@ -8,6 +8,8 @@ Welcome to Ravada VDI's documentation!
 
 .. toctree::
    :caption: Contents
+   :name: masterIndex
+   :maxdepth: 1
    
    docs/INSTALL
    docs/INSTALL_devel
@@ -36,10 +38,3 @@ Welcome to Ravada VDI's documentation!
    devel-docs/run
    devel-docs/test
    devel-docs/translations
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
