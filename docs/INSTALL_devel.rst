@@ -49,7 +49,7 @@ development release.
 -  libmojolicious-plugin-i18n-perl
 
 Config file
-===========
+-----------
 
 When developping Ravada, your username must be able to read the
 configuration file. Protect the config file from others and make it
