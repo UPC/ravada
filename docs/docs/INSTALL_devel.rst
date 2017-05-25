@@ -5,9 +5,9 @@ Development release
     If you are not sure, you probably want to install the stable release. 
     Follow this `guide <http://ravada.readthedocs.io/en/latest/docs/INSTALL.html>`__.
 
-You can get the development release cloning the sources. 
-
 .. Warning:: Don't do this if you install a packaged release.
+
+You can get the development release cloning the sources. 
 
 ::
 

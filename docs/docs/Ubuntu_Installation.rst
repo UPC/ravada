@@ -3,6 +3,8 @@ Ubuntu installation
 
 This document aims to demonstrate how to install Ubuntu operating system on user computer. 
 
+.. Tips:: You can try `Ubuntu Desktop <https://www.ubuntu.com/desktop>`__ or `Server <https://www.ubuntu.com/desktop>`__, last is recommended.
+
 Steps
 -----
 
