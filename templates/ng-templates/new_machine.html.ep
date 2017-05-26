@@ -1,4 +1,4 @@
-<div class="panel panel-default">
+ tambi<div class="panel panel-default">
     <div class="panel-heading">
         <h2>New Machine</h2>
     </div>
@@ -63,8 +63,8 @@
                 </div>
                 <label for="id_iso" class="col-lg-2 control-label">Select ISO</label>
                 <div class="col-lg-10">
-                <select name ="id_iso"
-                        ng-model="id_iso"
+                <select name ="iso_file"
+                        ng-model="id_isos"
                         ng-options="item for item in isos track by item.name"
                         required=""
                 ></select>

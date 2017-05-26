@@ -832,6 +832,7 @@ sub req_new_domain {
            name => $name
         ,id_iso => $c->param('id_iso')
         ,id_template => $c->param('id_template')
+        ,iso_file => $c->param('iso_file')
         ,vm=> $c->param('backend')
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
