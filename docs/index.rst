@@ -57,6 +57,7 @@ Information about development is also available:
    docs/convert_from_virtualbox
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
+   docs/resize_hard_drive
    docs/ldap_local
    docs/new_iso_image
    docs/operation
