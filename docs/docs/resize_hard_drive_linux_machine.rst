@@ -1,0 +1,46 @@
+How do you increase a Ravada VM Linux guest's disk space
+========================================================
+
+Here we will show how to expand the system partition of a Linux host by 10 GB.
+
+1. Shutdown the virtual machine
+::
+
+2. Consult the hard drive name of the Virtual Machine you want resize:
+::
+  virsh edit VirtualMachineName
+
+Here is our image file:
+::
+
+  <source file='/path_to_img_file/VirtualDiskImageName.img'/>
+
+
+3. Use qemu-resize to increase the image size by 10GB:
+::
+  qemu-img resize VirtualDiskImageName.img +10GB
+
+4. Now start the Virtual Machine. Open a terminal and type:
+::
+  sudo fdisk /dev/vda
+  
+Delete the partition
+::
+  d
+Create a new partition
+::
+  n
+Accept all by default and exit saving
+::
+  w
+
+5. Restart the Virtual Machine.
+::
+
+6. When it starts in a terminal:
+::
+  sudo resize2fs /dev/vda1
+
+You can check if the disk was increased with the 'df' command.
+::
+ 
