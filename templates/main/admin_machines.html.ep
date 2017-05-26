@@ -99,7 +99,7 @@
                     </td>
                     <td class="lgMachToggle">
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
-%              if ($USER -> can_clone){
+%              if ($_user-> can_clone){
                       <div ng-hide="{{machine.is_locked}}">
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
