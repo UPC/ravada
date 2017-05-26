@@ -2,7 +2,9 @@ Development Tools
 -----------------
 
 We're proud to program it in `Perl`_. Perl 5 is a highly capable, feature-rich programming language with over 29 years of development. `More about why we love Perl...`_.
+
 We use `Mojolicious`_, a real-time web framework. We use `MySQL`_. It's the world's most popular open source database. With its proven performance, reliability, and ease-of-use.
+
 We use a lot of powerful free source like `GNU`_/Linux `Ubuntu`_, `KVM`_ or `Spice`_, among others. Responsive web made with `Bootstrap`_ and `AngularJS`_.
 
 We use `Transifex`_ to provide a cleaner and easy to use interface for translators. It's meant for adapting applications and text to enable their usability in a particular cultural or linguistic market.
