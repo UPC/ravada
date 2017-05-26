@@ -32,3 +32,11 @@ Sidebar
 
 The organization of the sidebar is configured in the ``index.rst``.
 
+Convert POD files
+-----------------
+
+Install ``libpod-pom-view-restructured-perl`` in your computer.
+
+
+
+
