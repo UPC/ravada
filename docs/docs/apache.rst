@@ -40,3 +40,5 @@ Edit /etc/apache2/sites-enabled/000-default.conf
         ServerName hostname.domainname
         Redirect / https://hostname.domainname/
     </virtualhost>
+    
+.. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
