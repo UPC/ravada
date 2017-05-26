@@ -20,7 +20,11 @@ Here is our image file:
 ::
   qemu-img resize VirtualDiskImageName.img +10GB
 
-4. Now start the Virtual Machine. Open a terminal and type:
+4. IMPORTANT. Do a backup before continue.
+::
+  cp VirtualDiskImageName.img ./VirtualDiskImageName.img.backup
+
+5. Now start the Virtual Machine. Open a terminal and type:
 ::
   sudo fdisk /dev/vda
   
@@ -34,10 +38,10 @@ Accept all by default and exit saving
 ::
   w
 
-5. Restart the Virtual Machine.
+6. Restart the Virtual Machine.
 ::
 
-6. When it starts in a terminal:
+7. When it starts in a terminal:
 ::
   sudo resize2fs /dev/vda1
 
