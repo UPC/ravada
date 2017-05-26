@@ -51,6 +51,7 @@ sub connect {
     return $self->_connect_socket if $self->{_connection} eq 'socket';
 
     my $client = $self->_connect_http;
+    return $client if $client;
     return $self->_connect_socket() if $self->host eq 'localhost' || $self->host eq '127.0.0.1';
 }
 
@@ -242,7 +243,7 @@ sub create_volume {}
 
 sub list_domains {
     my $self = shift;
-    confess "Missing vm" if !$self->vm;
+    #confess "Missing vm" if !$self->vm;
 
     my $client = $self->_connect_http();
     $client->GET('/1.0/containers')->responseContent();
@@ -260,32 +261,32 @@ sub list_domains {
 }
 
 sub search_domain {
-    my $self = shift;
-    my $name = shift or confess "Missing name";
-
-    $self->connect();
-    my @all_domains;
-    eval { @all_domains = $self->vm->list_all_domains() };
-    confess $@ if $@;
-
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
-
-        my $domain;
-
-        eval {
-            $domain = Ravada::Domain::LXD->new(
-                domain => $dom
-                ,readonly => $self->readonly
-                ,_vm => $self
-            );
-        };
-        warn $@ if $@;
-        if ($domain) {
-            return $domain;
-        }
-    }
-    return;
+#    my $self = shift;
+#    my $name = shift or confess "Missing name";
+#
+#    $self->connect();
+#    my @all_domains;
+#    eval { @all_domains = $self->vm->list_all_domains() };
+#    confess $@ if $@;
+#
+#    for my $dom (@all_domains) {
+#        next if $dom->get_name ne $name;
+#
+#        my $domain;
+#
+#        eval {
+#            $domain = Ravada::Domain::LXD->new(
+#                domain => $dom
+#                ,readonly => $self->readonly
+#                ,_vm => $self
+#            );
+#        };
+#        warn $@ if $@;
+#        if ($domain) {
+#            return $domain;
+#        }
+#    }
+#    return;
 }
 
 sub search_domain_by_id {}
