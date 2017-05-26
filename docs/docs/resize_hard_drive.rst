@@ -9,7 +9,7 @@ Expanding a Windows 10 guest
 ----------------------------
 Here we will show how to expand the system partition of a Windows 10 host by 10 GB.
 
-First, retrieve the path to the hard drive file that you want to resize. For a VM named 'Windows10Slim', we would do the following:
+First, retrieve the path to the hard drive file that you want to resize. For a VM named ``Windows10Slim``, we would do the following:
 ::
   virsh dumpxml Windows10Slim
 Here is our image file:
@@ -27,7 +27,7 @@ The output will look like this:
   /dev/sda2  partition  07   20G   /dev/sda
   /dev/sda   device     -    20G   -
 
-And that means we are going to resize /dev/sda2 in this example.
+And that means we are going to resize ``/dev/sda2`` in this example.
 
 Use qemu-img to create a new qcow2 hard drive file. As we want to add 10 GB, the resulting disk will be a 30 GB file
 ::
