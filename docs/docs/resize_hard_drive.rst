@@ -3,6 +3,10 @@ How to resize a Ravada VM hard drive
 
 More info: http://libguestfs.org/virt-resize.1.html#expanding-a-virtual-machine-disk
 
+Important info
+--------------
+- Use truncate only for raw image files. For qcow2 files, use qemu-img
+
 Expanding a Windows 10 guest
 ----------------------------
 Here we will show how to expand the system partition of a Windows 10 host by 10 GB.
@@ -27,12 +31,9 @@ The output will look like this:
 
 And that means we are going to resize /dev/sda2 in this example.
 
-Use truncate to create a new hard drive file based on the original one
+Use qemu-img to create a new qcow2 hard drive file. As we want to add 10 GB, the resulting disk will be a 30 GB file
 ::
-  truncate -r /var/lib/libvirt/images-celerra1/Windows10Slim-vda-UrQ2.img /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
-As we want to add 10 GB, we need to tell truncate to extend the size
-::
-  truncate -s +10G  /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
+  qemu-img create -f qcow2 -o preallocation=metadata /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img 30G
 Now virt-resize will expand the image into the new file
 ::
  virt-resize --expand /dev/sda2 /var/lib/libvirt/images-celerra1/Windows10Slim-vda-UrQ2.img /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
