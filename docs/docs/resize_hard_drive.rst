@@ -3,9 +3,7 @@ How to resize a Ravada VM hard drive
 
 More info: http://libguestfs.org/virt-resize.1.html#expanding-a-virtual-machine-disk
 
-Important info
---------------
-- Use truncate only for raw image files. For qcow2 files, use qemu-img
+.. Warning:: Use truncate only for raw image files. For qcow2 files, use qemu-img
 
 Expanding a Windows 10 guest
 ----------------------------
