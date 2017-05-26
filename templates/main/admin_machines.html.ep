@@ -98,14 +98,16 @@
                         <br><span style="float:right;" ng-show="{{machine.is_active}}" class="label label-default">{{machine.remote_ip}}</span>
                     </td>
                     <td class="lgMachToggle">
-
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
+%              if ($USER -> can_clone){
+                      <div ng-hide="{{machine.is_locked}}">
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
                          ng-disabled="machine.is_active"
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
                         </a>
+%				}
                         <a type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hybernate',machine.id)"
                          ng-disabled="!machine.is_active"
