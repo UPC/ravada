@@ -1,27 +1,34 @@
-Documentation files are stored in /docs and /devel-docs directories in
-master branch.
+New documentation
+=================
 
-When you create a new page keep in mind don't leave blanks in the
-filename.
 
-The filename is used to generate a "title page".
+We build documentation and host it in `Read the Docs`_.
 
-Static content generated from md files
---------------------------------------
+.. _Read the Docs: http://readthedocs.org/
+.. _reStructuredText: http://docutils.sourceforge.net/rst.html
 
-These files are used to autogenerate html page accesibles from `Ravada's
-web <https://upc.github.io/ravada/index.html>`__.
+All documentation files are stored only in ``gh-pages`` branch, with the following directory structure::
 
-Run templer
-~~~~~~~~~~~
+    docs
+    ├── _config.yml
+    ├── devel-docs
+    ├── docs
+    └── index.rst
 
-In order to run templer you need to follow these steps:
+Documentation is created using `reStructuredText`_ , is an easy-to-read, what-you-see-is-what-you-get plaintext markup syntax and parser system.
 
-Requirements: `Templer <https://github.com/skx/templer>`__ installed in
-your computer. See "Installation" section for more information.
+Procedure
+---------
 
--  change to gh-pages branch
--  cd templer
--  ./templerfy.sh
--  If the script works properly, then you have to commit the changes to
-   repository.
+    1. Consider the editing style of existing pages. 
+    2. Edit a doc page or create a new one in ``gh-pages`` branch.
+    3. Insert in ``index.rst`` according to the section.
+
+.. note:: Documentation web is updated automatically, thanks to `Read the Docs`_.
+
+
+Sidebar
+-------
+
+The organization of the sidebar is configured in the ``index.rst``.
+
