@@ -310,7 +310,9 @@ msgstr ""
 msgid "can change the settings of any virtual machines."
 msgstr ""
 
-msgid "can change the settings of any virtual machines cloned from one base owned by the user."
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
 msgstr ""
 
 msgid "can clone public virtual machines."
