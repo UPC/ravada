@@ -21,8 +21,8 @@ Memory
 ~~~~~~
 
 RAM is the main issue. Multiply the number of concurrent workstations by
-the amount of memory each one requires and that is the RAM that must
-have the server.
+the amount of memory each one requires and that is the total RAM the server
+must have.
 
 Disks
 ~~~~~
