@@ -70,6 +70,8 @@ sub test_add_volume {
     my $volume_name = shift or confess "Missing volume name";
     my $swap = shift;
 
+    $domain->shutdown_now($USER) if $domain->is_active;
+
     my @volumes = $domain->list_volumes();
 
 #    diag("[".$domain->vm."] adding volume $volume_name to domain ".$domain->name);
@@ -77,10 +79,27 @@ sub test_add_volume {
     $domain->add_volume(name => $domain->name.".$volume_name", size => 512*1024 , vm => $vm
         ,swap => $swap);
 
+    my ($vm_name) = $vm->name =~ /^(.*)_/;
+    my $vmb = rvd_back->search_vm($vm_name);
+    ok($vmb,"I can't find a VM ".$vm_name) or return;
+    my $domainb = $vmb->search_domain($domain->name);
+    my @volumesb2 = $domainb->list_volumes();
+
+    my $domain_xml = '';
+    $domain_xml = $domain->domain->get_xml_description()    if $vm->type =~ /kvm|qemu/i;
+    ok(scalar @volumesb2 == scalar @volumes + 1,
+        "[".$domain->vm."] Domain ".$domain->name." expecting "
+            .(scalar @volumes+1)." volumes, got ".scalar(@volumesb2)
+            .Dumper(\@volumes)."\n".Dumper(\@volumesb2)."\n"
+            .$domain_xml)
+        or exit;
+
+
     my @volumes2 = $domain->list_volumes();
 
     ok(scalar @volumes2 == scalar @volumes + 1,
-        "[".$domain->vm."] Expecting ".(scalar @volumes+1)." volumes, got ".scalar(@volumes2))
+        "[".$domain->vm."] Domain ".$domain->name." expecting "
+            .(scalar @volumes+1)." volumes, got ".scalar(@volumes2))
         or exit;
 }
 
@@ -151,6 +170,19 @@ sub test_files_base {
     ok(scalar keys %files_base == scalar @files_base
         ,"check duplicate files base ".join(",",sort keys %files_base)." <-> "
         .join(",",sort @files_base));
+
+    if ($vm_name eq 'KVM'){
+        for my $volume ($domain->list_volumes) {
+            my $info = `qemu-img info $volume`;
+            my ($backing) = $info =~ m{(backing.*)}gm;
+            like($backing,qr{^backing file\s*:\s*.+},$info) or exit;
+        }
+    }
+
+    $domain->stop if $domain->is_active;
+    eval { $domain->start($USER) };
+    ok(!$@,"Expecting no error, got : '".($@ or '')."'");
+    ok($domain->is_active,"Expecting domain active");
 
 }
 

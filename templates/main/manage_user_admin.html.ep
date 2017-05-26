@@ -1,0 +1,7 @@
+<form method="post">
+%   my $checked = '';
+%   $checked = 'checked' if $user->is_admin;
+    <input type="checkbox" name="is_admin" value="1" <%= $checked %>>
+    <label for="is_admin">is admin</label><br/>
+    <input type="submit" name="make_admin">
+</form>

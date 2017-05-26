@@ -27,9 +27,9 @@ clones won't require many space.
 We provide _deb_ Ubuntu packages. Download it from the [UPC ETSETB repository](http://infoteleco.upc.edu/img/debian/). Download and install them:
 
     $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.5_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.6_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ sudo dpkg -i ravada_0.2.5_all.deb
+    $ sudo dpkg -i ravada_0.2.6_all.deb
 
 The last command will show a warning about missing dependencies. Install them
 running:

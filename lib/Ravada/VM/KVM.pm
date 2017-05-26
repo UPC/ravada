@@ -513,10 +513,17 @@ sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
 
+    my %args2 = %args;
     for (qw(id_iso id_owner name)) {
+        delete $args2{$_};
         croak "argument $_ required"
             if !$args{$_};
     }
+    for (qw(disk swap active request vm memory)) {
+        delete $args2{$_};
+    }
+    confess "Unknown parameters : ".join(" , ",sort keys %args2)
+        if keys %args2;
 
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
@@ -622,25 +629,30 @@ sub _create_disk_qcow2 {
         my $file_out = "$dir_img/$name-".($target or _random_name(2))
             ."-"._random_name(2).$ext;
 
+        $self->_clone_disk($file_base, $file_out);
+        push @files_out,($file_out);
+    }
+    return @files_out;
+
+}
+
+# this may become official API eventually
+
+sub _clone_disk($self, $file_base, $file_out) {
+
         my @cmd = ('qemu-img','create'
                 ,'-f','qcow2'
                 ,"-b", $file_base
                 ,$file_out
         );
-#    warn join(" ",@cmd)."\n";
 
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
-#        print $out  if $out;
-#        warn $err   if $err;
 
         if (! -e $file_out) {
             warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
             exit;
         }
-        push @files_out,($file_out);
-    }
-    return @files_out;
 
 }
 
@@ -760,8 +772,11 @@ sub _iso_name {
     my $iso = shift;
     my $req = shift;
 
-    my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
-    $iso_name = $iso->{url} if !$iso_name;
+    my $iso_name;
+    ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
+    ($iso_name) = $iso->{device} if !$iso_name;
+
+    confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
@@ -785,7 +800,7 @@ sub _iso_name {
             die "Download failed, $check id=$iso->{id} missmatched for $device."
             ." Please read ISO "
             ." verification missmatch at operation docs.\n"
-            if (! _check_signature($device, $iso->{$check}, $check));
+            if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
         warn "WARNING: $device signature not verified"    if !$verified;
@@ -821,9 +836,9 @@ sub _check_md5 {
     return 0;
 }
 
-sub _check_sha256 {
-    my ($file, $sha ) =@_;
+sub _check_sha256($file,$sha) {
     return if !$sha;
+    confess "Wrong SHA256 '$sha'" if $sha !~ /[a-f0-9]{9}/;
 
     my @cmd = ('sha256sum',$file);
     my ($in, $out, $err);
@@ -842,9 +857,11 @@ sub _check_sha256 {
 }
 
 
-sub _check_signature($file, $expected, $type) {
-    return _check_md5($file,$expected) if $type eq 'md5';
-    return _check_sha256($file,$expected) if $type eq 'sha256';
+sub _check_signature($file, $type, $expected) {
+    confess "ERROR: Wrong signature '$expected'"
+        if $expected !~ /^[0-9a-f]{7}/;
+    return _check_md5($file,$expected) if $type =~ /md5/i;
+    return _check_sha256($file,$expected) if $type =~ /sha256/i;
     die "Unknown signature type $type";
 }
 
@@ -986,7 +1003,9 @@ sub _fetch_filename {
     my $row = shift;
 
     if (!$row->{file_re}) {
-        my ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)};
+        my ($new_url, $file);
+        ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
+        ($file) = $row->{device} =~ m{.*/(.*)}  if !$file;
         confess "No filename in $row->{url}" if !$file;
 
         if ($file =~ /\*/) {
@@ -1050,11 +1069,11 @@ sub _fetch_this($self,$row,$type){
     my $content = $self->_download($row->{"${type}_url"});
 
     for my $line (split/\n/,$content) {
-        my ($value) = $line =~ m{^\s*(.*?)\s+.*?$file};
+        my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
         ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
         if ($value) {
             $row->{$type} = $value;
-            return;
+            return $value;
         }
     }
 
@@ -1062,12 +1081,18 @@ sub _fetch_this($self,$row,$type){
 }
 
 sub _fetch_md5($self,$row) {
-    return $self->_fetch_this($row,'md5');
+    my $signature = $self->_fetch_this($row,'md5');
+    die "ERROR: Wrong signature '$signature'"
+         if $signature !~ /^[0-9a-f]{9}/;
+    return $signature;
 }
 
 
 sub _fetch_sha256($self,$row) {
-    return $self->_fetch_this($row,'sha256');
+    my $signature = $self->_fetch_this($row,'sha256');
+    die "ERROR: Wrong signature '$signature'"
+         if $signature !~ /^[0-9a-f]{9}/;
+    return $signature;
 }
 
 ###################################################################################

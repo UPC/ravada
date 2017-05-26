@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.5';
+our $VERSION = '0.2.7-beta1';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -72,6 +72,9 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
 our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
 
+our $USER_DAEMON;
+our $USER_DAEMON_NAME = 'daemon';
+
 has 'vm' => (
           is => 'ro'
         ,isa => 'ArrayRef'
@@ -116,9 +119,42 @@ sub BUILD {
         $self->connector($CONNECTOR);
     }
     Ravada::Auth::init($CONFIG);
+
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_init_user_daemon();
     $self->_update_data();
+}
+
+sub _init_user_daemon {
+    my $self = shift;
+    return if $USER_DAEMON;
+
+    $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+    if (!$USER_DAEMON->id) {
+        $USER_DAEMON = Ravada::Auth::SQL::add_user(
+            name => $USER_DAEMON_NAME,
+            is_admin => 1
+        );
+        $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+    }
+
+}
+sub _update_user_grants {
+    my $self = shift;
+    $self->_init_user_daemon();
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
+    my $id;
+    $sth->execute;
+    $sth->bind_columns(\$id);
+    while ($sth->fetch) {
+        my $user = Ravada::Auth::SQL->search_by_id($id);
+        next if $user->name() eq $USER_DAEMON_NAME;
+
+        $USER_DAEMON->grant_user_permissions($user);
+        $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
+    }
+    $sth->finish;
 }
 
 sub _update_isos {
@@ -151,11 +187,44 @@ sub _update_isos {
         ,fedora => {
             name => 'Fedora 25'
             ,description => 'RedHat Fedora 25 Workstation 64 bits'
-            ,url => 'https://download.fedoraproject.org/pub/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+        }
+        ,xubuntu_zesty => {
+            name => 'Xubuntu Zesty Zapus'
+            ,description => 'Xubuntu 17.04 Zesty Zapus 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5 => '6bd80e10bf223a04d3aafe0f997d046b'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot/mini.iso'
+        }
+        ,xubuntu_xenial => {
+            name => 'Xubuntu Xenial Xerus'
+            ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/mini.iso'
+           ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5 => 'fe495d34188a9568c8d166efc5898d22'
+        }
+        ,lubuntu_zesty => {
+            name => 'Lubuntu Zesty Zapus'
+            ,description => 'Lubuntu 17.04 Zesty Zapus 64 bits'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/lubuntu-17.04-desktop-amd64.iso'
+            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/MD5SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+        }
+        ,lubuntu_xenial => {
+            name => 'Lubuntu Xenial Xerus'
+            ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/lubuntu-16.04.2-desktop-amd64.iso'
+            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
         }
 
     );
@@ -185,7 +254,9 @@ sub _update_isos {
 
 sub _update_data {
     my $self = shift;
+
     $self->_update_isos();
+    $self->_update_user_grants();
 }
 
 sub _upgrade_table {
@@ -244,12 +315,16 @@ sub _insert_data {
 
 sub _create_tables {
     my $self = shift;
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+#    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
+    $DIR_SQL =~ s{(.*)/.*}{$1/$driver};
 
     opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
     while (my $file = readdir $ls) {
         my ($table) = $file =~ m{(.*)\.sql$};
         next if !$table;
+        next if $table =~ /^insert/;
         $self->_insert_data($table)     if $self->_create_table($table);
     }
     closedir $ls;
