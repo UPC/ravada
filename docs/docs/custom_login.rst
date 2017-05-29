@@ -13,7 +13,9 @@ Add your template in ``/etc/rvd_front.conf``
    
 .. warning :: Do not include the extension file ``.html.ep`` in the path. E.g. ``custom_login.html.ep`` -> ``custom_login``
 
-,login\_custom => 'main/custom/custom\_login'
+::
+
+    ,login\_custom => 'main/custom/custom\_login'
 
 Path for CSS, js and images
 ---------------------------
