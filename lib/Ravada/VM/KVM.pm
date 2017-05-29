@@ -1491,8 +1491,10 @@ sub _xml_modify_disk {
             $child->setAttribute(type => 'qcow2');
         } elsif ($child->nodeName eq 'source') {
             my $new_device
-                    = $device->[$cont++] or confess "Missing device $cont "
+                    = $device->[$cont] or confess "Missing device $cont "
+                    .$child->toString."\n"
                     .Dumper($device);
+            $cont++;
             $child->setAttribute(file => $new_device);
         }
     }
