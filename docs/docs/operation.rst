@@ -62,8 +62,9 @@ Option 1: clean ISO and MD5
 -  Remove the ISO file shown at the error message
 -  Clean the MD5 entry in the database:
 
-   mysql -u rvd\_user -p ravada mysql> update iso\_images set md5=''
-   WHERE id=\ *ID*
+::
+
+    $ mysql -u rvd_user -p ravada mysql > update iso_images set md5='' WHERE id=*ID*
 
 Then you have to create the machine again from scratch and make it
 download the ISO file.
