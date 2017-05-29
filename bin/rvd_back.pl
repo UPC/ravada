@@ -163,7 +163,6 @@ sub add_user {
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
-    my $ravada = Ravada->new();
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);
