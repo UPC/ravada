@@ -63,8 +63,9 @@
 %               }
             </div>
             <div class="panel-body">
-		if ($USER ->can_screenshot) {
-                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>}
+%		if ($_user->can_screenshot) {
+                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
+%                }
 %               if (!$machine->{is_locked}) {
 %                   if ( $machine->{id_clone} && $machine->{is_active} ) {
                         <select ng-model="host_action"
