@@ -351,7 +351,13 @@ sub _connect_dbh {
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
     my $db_pass = ($CONFIG->{db}->{password} or undef);
     my $db = ( $CONFIG->{db}->{db} or 'ravada' );
-    return DBIx::Connector->new("DBI:$driver:$db"
+    my $host = $CONFIG->{db}->{host};
+
+    my $data_source = "DBI:$driver:$db";
+    $data_source = "DBI:$driver:database=$db;host=$host"    
+        if $host && $host ne 'localhost';
+
+    return DBIx::Connector->new($data_source
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
 
