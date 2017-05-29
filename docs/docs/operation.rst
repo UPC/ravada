@@ -2,7 +2,7 @@ Operation
 =========
 
 
-.. note:: Must be run from the command line interface (CLI)
+.. note:: Must run from the command line interface (CLI)
 
 Create users
 ------------
@@ -40,7 +40,7 @@ If you want to view the full list, execute:
 Admin
 -----
 
-.. note:: Must be run from the frontend web
+.. note:: Must run from the frontend
 
 Create Virtual Machine
 ~~~~~~~~~~~~~~~~~~~~~~
