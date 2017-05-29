@@ -15,13 +15,13 @@ Add your template in ``/etc/rvd_front.conf``
 
 ::
 
-    ,login\_custom => 'main/custom/custom\_login'
+    ,login_custom => 'main/custom/custom_login'
 
 Path for CSS, js and images
 ---------------------------
 
-If CSS, js or images are needed save in: public/css/custom,
-public/js/custom or public/img/custom respectively.
+If CSS, js or images are needed save in: ``public/css/custom``,
+``public/js/custom`` or ``public/img/custom`` respectively.
 
 .. note ::
     Make sure your CSS, JS or images in custom template refers to those paths.
