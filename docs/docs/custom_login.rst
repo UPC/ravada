@@ -6,7 +6,7 @@ If you need custom login template create one and save it in templates/main/custo
 Configuration
 -------------
 
-Add your template in ``/etc/rvd\_front.conf``
+Add your template in ``/etc/rvd_front.conf``
 
 .. warning ::
    Check that rvd_front.conf exists. If you work on a Development release you has an example here ``etc/rvd_front.conf.example``.
