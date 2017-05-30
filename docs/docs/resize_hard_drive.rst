@@ -1,4 +1,4 @@
-How to expand a Ravada Windows guest's disk space
+How to extend a Ravada Windows guest's disk space
 =================================================
 
 More info: http://libguestfs.org/virt-resize.1.html#expanding-a-virtual-machine-disk
