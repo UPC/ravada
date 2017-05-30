@@ -159,6 +159,7 @@ sub change_password {
     chomp $login;
     return if !$login;
 
+    my $ravada = Ravada->new( config => $FILE_CONFIG );
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
