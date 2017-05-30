@@ -42,7 +42,6 @@ The main documentation for the site is organized into a couple sections:
 Information about development is also available:
 
 * :ref:`dev-docs`
-* :ref:`pod-docs`
 
 .. _user-docs:
 
@@ -100,25 +99,3 @@ Information about development is also available:
    devel-docs/release
    devel-docs/run
    devel-docs/test
-
-.. _pod-docs:
-
-.. toctree::
-   :caption: Perl Modules
-
-   devel-docs/pod/Ravada
-   devel-docs/pod/Ravada-Front
-   devel-docs/pod/Ravada-Network
-   devel-docs/pod/Ravada-Request
-   devel-docs/pod/Ravada-Utils
-   devel-docs/pod/Ravada-Auth
-   devel-docs/pod/Ravada-Auth-LDAP
-   devel-docs/pod/Ravada-Auth-SQL
-   devel-docs/pod/Ravada-Auth-User
-   devel-docs/pod/Ravada-Domain
-   devel-docs/pod/Ravada-Domain-KVM
-   devel-docs/pod/Ravada-Domain-LXC
-   devel-docs/pod/Ravada-NetInterface-KVM
-   devel-docs/pod/Ravada-NetInterface-MacVTAP
-   devel-docs/pod/Ravada/VM
-   devel-docs/pod/Ravada-VM-KVM
