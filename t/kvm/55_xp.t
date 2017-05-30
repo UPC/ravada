@@ -110,6 +110,7 @@ sub test_clone_domain {
 
     ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
 
+
     open my $fh,'<', $file_xml or die "$! $file_xml";
     binmode $fh;
     my $xml = XML::LibXML->load_xml( IO => $fh);
@@ -132,6 +133,9 @@ sub test_clone_domain {
             .$controller_base[$n]->toString) or exit;
         is($controller_clone[$n]->toString, $controller_base[$n]->toString) or last;
     }
+
+    eval {$clone->start($USER) };
+    ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
 
 }
 
