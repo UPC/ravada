@@ -1,4 +1,4 @@
-How to increase a Ravada Linux guest's disk space
+How to expand a Ravada Linux guest's disk space
 ========================================================
 
 Here we will show how to expand the system partition of a Linux host by 10 GB.
