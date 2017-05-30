@@ -42,7 +42,7 @@ The main documentation for the site is organized into a couple sections:
 Information about development is also available:
 
 * :ref:`dev-docs`
-* :ref:`pods-docs`
+* :ref:`pod-docs`
 
 .. _user-docs:
 
@@ -101,27 +101,25 @@ Information about development is also available:
    devel-docs/run
    devel-docs/test
 
-.. _pods-docs:
+.. _pod-docs:
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Perl Modules (PODs)
+   :maxdepth: 1
+   :caption: Perl Modules
 
    devel-docs/pod/Ravada
-   devel-docs/pod/Ravada/Auth.rst
-   devel-docs/pod/Ravada/Domain.rst
-   devel-docs/pod/Ravada/Front.rst
-   devel-docs/pod/Ravada/Network.rst
-   devel-docs/pod/Ravada/Request.rst
-   devel-docs/pod/Ravada/Utils.rst
-   devel-docs/pod/Ravada/VM.rst
-   devel-docs/pod/Ravada/Auth/LDAP.rst
-   devel-docs/pod/Ravada/Auth/SQL.rst
-   devel-docs/pod/Ravada/Auth/User.rst
-   devel-docs/pod/Ravada/Domain/KVM.rst
-   devel-docs/pod/Ravada/Domain/LXC.rst
-   devel-docs/pod/Ravada/Domain/Void.rst
-   devel-docs/pod/Ravada/NetInterface/KVM.rst
-   devel-docs/pod/Ravada/NetInterface/MacVTAP.rst
-   devel-docs/pod/Ravada/NetInterface/Void.rst
-   devel-docs/pod/Ravada/VM/KVM.rst
+   devel-docs/pod/Ravada/Auth
+   devel-docs/pod/Ravada/Domain
+   devel-docs/pod/Ravada/Front
+   devel-docs/pod/Ravada/Network
+   devel-docs/pod/Ravada/Request
+   devel-docs/pod/Ravada/Utils
+   devel-docs/pod/Ravada/VM
+   devel-docs/pod/Ravada/Auth/LDAP
+   devel-docs/pod/Ravada/Auth/SQL
+   devel-docs/pod/Ravada/Auth/User
+   devel-docs/pod/Ravada/Domain/KVM
+   devel-docs/pod/Ravada/Domain/LXC
+   devel-docs/pod/Ravada/NetInterface/KVM
+   devel-docs/pod/Ravada/NetInterface/MacVTAP
+   devel-docs/pod/Ravada/VM/KVM
