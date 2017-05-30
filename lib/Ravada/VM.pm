@@ -146,7 +146,7 @@ sub _around_import_domain {
 
     warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
     $domain->spinoff_volumes();
-
+    return $domain;
 }
 
 ############################################################
