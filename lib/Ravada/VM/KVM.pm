@@ -1618,8 +1618,6 @@ sub import_domain {
                 , storage => $self->storage_pool
     );
 
-    $domain->_insert_db(name => $name, id_owner => $user->id);
-
     return $domain;
 }
 
