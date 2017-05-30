@@ -104,8 +104,6 @@ Information about development is also available:
 .. _pod-docs:
 
 .. toctree::
-   :maxdepth: 2
-   :glob:
    :caption: Perl Modules
 
    devel-docs/pod/Ravada
@@ -114,13 +112,13 @@ Information about development is also available:
    devel-docs/pod/Ravada-Request
    devel-docs/pod/Ravada-Utils
    devel-docs/pod/Ravada-Auth
-   :doc:`Ravada::Auth::LDAP <devel-docs/pod/Ravada-Auth-LDAP>`
-   :doc:`Ravada::Auth::SQL <devel-docs/pod/Ravada-Auth-SQL>`
-   :doc:`Ravada::Auth:User <devel-docs/pod/Ravada-Auth-User>`
-   :doc:`Ravada::Domain <devel-docs/pod/Ravada-Domain>`
-   :doc:`Ravada::Domain::KVM <devel-docs/pod/Ravada-Domain-KVM>`
-   :doc:`Ravada::Domain::LXC <devel-docs/pod/Ravada-Domain-LXC>`
-   :doc:`Ravada::NetInterface::KVM <devel-docs/pod/Ravada-NetInterface-KVM>`
-   :doc:`Ravada::NetInterface::MacVTAP <devel-docs/pod/Ravada-NetInterface-MacVTAP>`
-   :doc:`Ravada:VM <devel-docs/pod/Ravada/VM>`
-   :doc:`Ravada::VM::KVM <devel-docs/pod/Ravada-VM-KVM>`
+   devel-docs/pod/Ravada-Auth-LDAP
+   devel-docs/pod/Ravada-Auth-SQL
+   devel-docs/pod/Ravada-Auth-User
+   devel-docs/pod/Ravada-Domain
+   devel-docs/pod/Ravada-Domain-KVM
+   devel-docs/pod/Ravada-Domain-LXC
+   devel-docs/pod/Ravada-NetInterface-KVM
+   devel-docs/pod/Ravada-NetInterface-MacVTAP
+   devel-docs/pod/Ravada/VM
+   devel-docs/pod/Ravada-VM-KVM
