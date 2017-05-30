@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-NAME
-====
-
-
 Ravada::Domain::KVM - KVM Virtual Machines library for Ravada
-
+=============================================================
 
 name
 ====

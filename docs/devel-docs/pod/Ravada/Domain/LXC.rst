@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::Domain::LXC - LXC containers library for Ravada
+=======================================================
 
 pause
 =====

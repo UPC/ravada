@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::Auth - Authentication library for Ravada users
+======================================================
 
 init
 ====

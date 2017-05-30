@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::Utils - Misc util libraries for Ravada
+==============================================
 
 now
 ===

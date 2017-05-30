@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::VM::KVM - KVM Virtual Managers library for Ravada
+=========================================================
 
 disconnect
 ==========

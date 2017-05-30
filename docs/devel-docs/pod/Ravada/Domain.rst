@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
+================================================================
 
 id
 Returns the id of  the domain

@@ -1,12 +1,10 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
+Ravada::Auth::SQL
+=================
 
-
-Ravada::Auth::SQL - SQL authentication library for Ravada
+SQL authentication library for Ravada
 
 BUILD
 =====

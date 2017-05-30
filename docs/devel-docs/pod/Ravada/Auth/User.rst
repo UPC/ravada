@@ -1,12 +1,10 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
+Ravada::Auth::User
+==================
 
-
-Ravada::Auth::User - User management and tools library for Ravada
+User management and tools library for Ravada
 
 BUILD
 =====

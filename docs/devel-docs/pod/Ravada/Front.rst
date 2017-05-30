@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::Front - Web Frontend library for Ravada
+===============================================
 
 BUILD
 =====

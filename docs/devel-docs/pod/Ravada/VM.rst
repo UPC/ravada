@@ -1,17 +1,8 @@
 .. highlight:: perl
 
 
-##########
-Ravada::VM
-##########
-
-****
-NAME
-****
-
-
 Ravada::VM - Virtual Managers library for Ravada
-
+================================================
 
 ************
 Constructors

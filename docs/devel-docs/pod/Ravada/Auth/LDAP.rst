@@ -1,12 +1,10 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
+Ravada::Auth::LDAP 
+==================
 
-
-Ravada::Auth::LDAP - LDAP library for Ravada
+LDAP library for Ravada
 
 BUILD
 =====

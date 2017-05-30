@@ -1,17 +1,8 @@
 .. highlight:: perl
 
 
-###############
-Ravada::Network
-###############
-
-****
-NAME
-****
-
-
 Ravada::Network - Networks management library for Ravada
-
+========================================================
 
 ***********
 Description
