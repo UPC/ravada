@@ -105,10 +105,13 @@ Information about development is also available:
 
 .. toctree::
    :maxdepth: 2
+   :glob:
    :caption: Perl Modules
 
    :doc:`Ravada <devel-docs/pod/Ravada>`
+       Remove Virtual Desktop Manager
    :doc:`Ravada::Auth <devel-docs/pod/Ravada/Auth>`
+       Authentication library for Ravada users
    :doc:`Ravada::Domain <devel-docs/pod/Ravada/Domain>`
    :doc:`Ravada::Front <devel-docs/pod/Ravada/Front>`
    :doc:`Ravada::Network <devel-docs/pod/Ravada/Network>`
