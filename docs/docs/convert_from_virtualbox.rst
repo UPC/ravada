@@ -1,7 +1,10 @@
+How to import a Virtualbox image
+================================
+
 .. note:: In this example we have VirtualBox machine called *EXAMPLE*.
 
 Create an empty Virtual Machine
-===============================
+-------------------------------
 
 From the Ravada admin form, create a new virtual machine with the same
 operative system as the one installed in the virtual box machine.
