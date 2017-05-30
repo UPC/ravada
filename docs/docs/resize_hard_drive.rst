@@ -1,5 +1,5 @@
-How to resize a Ravada VM hard drive
-====================================
+How to expand a Ravada Windows guest's disk space
+=================================================
 
 More info: http://libguestfs.org/virt-resize.1.html#expanding-a-virtual-machine-disk
 
