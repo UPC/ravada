@@ -1,12 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada::Request - Requests library for Ravada
+=============================================
 
 Request a command to the ravada backend
 

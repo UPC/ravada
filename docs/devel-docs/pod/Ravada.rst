@@ -1,13 +1,8 @@
 .. highlight:: perl
 
 
-****
-NAME
-****
-
-
 Ravada - Remove Virtual Desktop Manager
-
+=======================================
 
 ********
 SYNOPSIS
