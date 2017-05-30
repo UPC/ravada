@@ -17,7 +17,6 @@ my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
     ,'etc/xml'  => 'var/lib/ravada'
-    ,'docs/' => 'usr/share/docs/ravada'
     ,sql => 'usr/share/doc/ravada'
     ,'lib/' => 'usr/share/perl5'
     ,'blib/man3' => 'usr/share/man'
