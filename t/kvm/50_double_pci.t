@@ -46,7 +46,7 @@ sub test_create_domain_xml {
 
     my $dom;
     eval { $dom = $vm->vm->define_domain($xml) };
-    ok(!$@,"Expecting error='' , got '".($@ or '')."'") or return
+    ok(!$@,"Expecting error='' , got '".($@ or '')."'\n$xml") or exit;
     ok($dom,"Expecting a VM defined from $file_xml") or return;
 
     eval{ $dom->create };

@@ -171,7 +171,7 @@ sub change_password {
 sub import_domain {
     my $name = shift;
     print "Virtual Manager: KVM\n";
-    print "User name : ";
+    print "User name that will own the domain in Ravada : ";
     my $user = <STDIN>;
     chomp $user;
     my $ravada = Ravada->new( config => $FILE_CONFIG );
