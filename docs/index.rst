@@ -108,13 +108,12 @@ Information about development is also available:
    :glob:
    :caption: Perl Modules
 
-   :doc:`Ravada <devel-docs/pod/Ravada>`
-       Remove Virtual Desktop Manager
-   :doc:`Ravada::Front <devel-docs/pod/Ravada-Front>`
-   :doc:`Ravada::Network <devel-docs/pod/Ravada-Network>`
-   :doc:`Ravada::Request <devel-docs/pod/Ravada-Request>`
-   :doc:`Ravada::Utils <devel-docs/pod/Ravada-Utils>`
-   :doc:`Ravada::Auth <devel-docs/pod/Ravada-Auth>`
+   devel-docs/pod/Ravada
+   devel-docs/pod/Ravada-Front
+   devel-docs/pod/Ravada-Network
+   devel-docs/pod/Ravada-Request
+   devel-docs/pod/Ravada-Utils
+   devel-docs/pod/Ravada-Auth
    :doc:`Ravada::Auth::LDAP <devel-docs/pod/Ravada-Auth-LDAP>`
    :doc:`Ravada::Auth::SQL <devel-docs/pod/Ravada-Auth-SQL>`
    :doc:`Ravada::Auth:User <devel-docs/pod/Ravada-Auth-User>`
