@@ -740,25 +740,34 @@ sub _fix_pci_slots {
 
         # skip IDE PCI, reserved before
         next if $dev->getAttribute('type')
-            && $dev->getAttribute('type') eq 'ide';
+            && $dev->getAttribute('type') =~ /^(ide)$/i;
 
 #        warn "finding address of type ".$dev->getAttribute('type')."\n";
 
         for my $child ($dev->findnodes('address')) {
             my $bus = $child->getAttribute('bus');
-            my $slot = $child->getAttribute('slot');
+            my $slot = ($child->getAttribute('slot') or '');
+            my $function = ($child->getAttribute('function') or '');
+            my $multifunction = $child->getAttribute('multifunction');
+
+            my $index = "$bus/$slot/$function";
+
             next if !defined $slot;
-            next if !$dupe{"$bus/$slot"}++;
+
+            if (!$dupe{$index} || ($multifunction && $multifunction eq 'on') ) {
+                $dupe{$index} = $dev->toString();
+                next;
+            }
 
             my $new_slot = $slot;
             for (;;) {
-                last if !$dupe{"$bus/$new_slot"};
+                last if !$dupe{"$bus/$new_slot/$function"};
                 my ($n) = $new_slot =~ m{x(\d+)};
                 $n++;
                 $n= "0$n" if length($n)<2;
                 $new_slot="0x$n";
             }
-            $dupe{"$bus/$new_slot"}++;
+            $dupe{"$bus/$new_slot/$function"}++;
             $child->setAttribute(slot => $new_slot);
         }
     }
