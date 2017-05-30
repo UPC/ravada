@@ -42,13 +42,14 @@ The main documentation for the site is organized into a couple sections:
 Information about development is also available:
 
 * :ref:`dev-docs`
+* :ref:`pods-docs`
 
 .. _user-docs:
 
 .. toctree::
    :caption: User Documentation
    :maxdepth: 2
-   
+
    docs/INSTALL
    docs/INSTALL_devel
    docs/Ubuntu_Installation
@@ -78,7 +79,7 @@ Information about development is also available:
    docs/custom_login
    docs/new_documentation
    devel-docs/translations
-         
+
 .. _about-docs:
 
 .. toctree::
@@ -99,3 +100,28 @@ Information about development is also available:
    devel-docs/release
    devel-docs/run
    devel-docs/test
+
+.. _pods-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Perl Modules (PODs)
+
+   devel-docs/pod/Ravada
+   devel-docs/pod/Ravada/Auth.rst
+   devel-docs/pod/Ravada/Domain.rst
+   devel-docs/pod/Ravada/Front.rst
+   devel-docs/pod/Ravada/Network.rst
+   devel-docs/pod/Ravada/Request.rst
+   devel-docs/pod/Ravada/Utils.rst
+   devel-docs/pod/Ravada/VM.rst
+   devel-docs/pod/Ravada/Auth/LDAP.rst
+   devel-docs/pod/Ravada/Auth/SQL.rst
+   devel-docs/pod/Ravada/Auth/User.rst
+   devel-docs/pod/Ravada/Domain/KVM.rst
+   devel-docs/pod/Ravada/Domain/LXC.rst
+   devel-docs/pod/Ravada/Domain/Void.rst
+   devel-docs/pod/Ravada/NetInterface/KVM.rst
+   devel-docs/pod/Ravada/NetInterface/MacVTAP.rst
+   devel-docs/pod/Ravada/NetInterface/Void.rst
+   devel-docs/pod/Ravada/VM/KVM.rst
