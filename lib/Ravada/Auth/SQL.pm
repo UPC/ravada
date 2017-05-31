@@ -252,6 +252,9 @@ sub make_admin($self, $id) {
     $sth->execute($id);
     $sth->finish;
 
+    my $user = $self->search_by_id($id);
+    $self->grant_admin_permissions($user);
+
 }
 
 =head2 remove_admin
