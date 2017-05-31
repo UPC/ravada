@@ -476,6 +476,53 @@ sub spice_password {
     return $self->_data('spice_password');
 }
 
+=head2 display_file
+
+Returns a file with the display information. Defaults to spice.
+
+=cut
+
+sub display_file {
+    my $self = shift;
+    return $self->_display_file_spice();
+}
+
+sub _display_file_spice {
+    my $self = shift;
+    # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
+    my $ret = "[virt-viewer]
+        type=%s
+        host=%s\n";
+    if ($self->tls) {
+        $ret .= "tls-port=%s\n";
+    } else {
+        $ret .= "port=%s\n";
+    }
+    $ret .="password=%s\n"  if $self->spice_password();
+
+    $ret .=
+        "fullscreen=1
+        title=%s:%sd - Press SHIFT+F12 to exit
+        enable-smartcard=0
+        enable-usb-autoshare=1
+        delete-this-file=1
+        usb-filter=-1,-1,-1,-1,0\n";
+
+    $ret .=";" if !$self->tls;
+    $ret .= "tls-ciphers=DEFAULT
+        ;host-subject=O=%s,CN=%s\n";
+
+    $ret .=";"  if !$self->tls;
+    $ret .="ca=%r
+        toggle-fullscreen=shift+f11
+        release-cursor=shift+f12
+        secure-attention=ctrl+alt+end\n";
+    $ret .=";" if !$self->tls;
+    $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
+
+    return $ret;
+}
+
 sub _insert_db {
     my $self = shift;
     my %field = @_;
