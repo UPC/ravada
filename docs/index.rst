@@ -48,7 +48,7 @@ Information about development is also available:
 .. toctree::
    :caption: User Documentation
    :maxdepth: 2
-   
+
    docs/INSTALL
    docs/INSTALL_devel
    docs/Ubuntu_Installation
@@ -78,7 +78,7 @@ Information about development is also available:
    docs/custom_login
    docs/new_documentation
    devel-docs/translations
-         
+
 .. _about-docs:
 
 .. toctree::
