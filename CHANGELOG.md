@@ -3,14 +3,12 @@
 
 **Implemented enhancements:**
 
-- Support sha256 for ISO [\#225]
-- Create virtual machine from Fedora Workstation ISO
-- Create virtual machine from Lubuntu Desktop ISO
-- Create virtual machine from Xubuntu Desktop ISO
+- Remove original file for bases [\#217]
+- Spinoff incremental KVM volumes only when necessary [\#252]
+- Test import KVM domain [\#253]
+- Spinoff KVM volumes on import [\#254]
 
 **Fixed bugs:**
 
-- No filename for custom iso images [\#232]
-- Client IP is missing from machines list [\#227]
-- The header in the requirements page doesn't show options [\#221]
-- list iso images fails for fresh installs [\#235]
+- Windows XP clone fails [\#247]
+- Add user remote database issue [\#248]
