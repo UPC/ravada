@@ -37,7 +37,7 @@ my $USAGE = "$0 "
         ." --import-domain : import a domain\n"
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG"
-        ." -X : start in foreground\n"
+        ."\n"
     ;
 
 $FILE_CONFIG = undef if ! -e $FILE_CONFIG;
@@ -154,6 +154,10 @@ sub add_user {
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
+<<<<<<< 5ed73ac15218056f12170b224fa829b6e9e680b2
+=======
+    my $ravada = Ravada->new(config => $FILE_CONFIG);
+>>>>>>> [#231] Grant and revoke admin permissions
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);
@@ -175,8 +179,12 @@ sub change_password {
     chomp $login;
     return if !$login;
 
+<<<<<<< 5ed73ac15218056f12170b224fa829b6e9e680b2
     my $ravada = Ravada->new( %CONFIG );
     
+=======
+    my $ravada = Ravada->new(config => $FILE_CONFIG);
+>>>>>>> [#231] Grant and revoke admin permissions
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
@@ -189,7 +197,11 @@ sub change_password {
 sub make_admin {
     my $login = shift;
 
+<<<<<<< 5ed73ac15218056f12170b224fa829b6e9e680b2
     my $ravada = Ravada->new( %CONFIG);
+=======
+    my $ravada = Ravada->new(config => $FILE_CONFIG);
+>>>>>>> [#231] Grant and revoke admin permissions
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
@@ -200,7 +212,11 @@ sub make_admin {
 sub remove_admin {
     my $login = shift;
 
+<<<<<<< 5ed73ac15218056f12170b224fa829b6e9e680b2
     my $ravada = Ravada->new( %CONFIG);
+=======
+    my $ravada = Ravada->new(config => $FILE_CONFIG);
+>>>>>>> [#231] Grant and revoke admin permissions
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
