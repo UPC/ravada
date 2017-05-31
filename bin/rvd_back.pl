@@ -210,7 +210,7 @@ sub add_user {
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
-
+    my $ravada = Ravada->new(config => $FILE_CONFIG);
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);
@@ -233,7 +233,6 @@ sub change_password {
     return if !$login;
 
     my $ravada = Ravada->new( %CONFIG );
-
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
