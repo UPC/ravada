@@ -66,7 +66,7 @@ sub test_domain_no_password {
     is($@,'');
     is($password_f , $password,"Expecting password : '".($password or '')."'"
                                 ." got : '".($password_f or '')."'");
-    $domain->shutdown_now($USER);
+    $domain->shutdown_now($USER)    if $domain->is_active();
 }
 
 sub test_domain_password2 {
