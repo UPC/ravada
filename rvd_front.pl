@@ -245,9 +245,11 @@ get '/list_images.json' => sub {
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
 
-get '/list_isos.json' => sub {
+get '/iso_file.json' => sub {
     my $c = shift;
-    $c->render(json => $RAVADA->list_isos());
+    my @isos =('<NONE>');
+    push @isos,(@{$RAVADA->iso_file});
+    $c->render(json => \@isos);
 };
 
 get '/list_machines.json' => sub {

@@ -320,13 +320,13 @@ sub list_iso_images {
     return \@iso;
 }
 
-=head2 list_isos
+=head2 iso_file
 
 Returns a reference to a list of the ISOs known by the system
 
 =cut
 
-sub list_isos {
+sub iso_file {
     my $self = shift;
     my $vm = $self->search_vm('KVM');
     my @isos = $vm->search_volume_path_re(qr(.*\.iso$)); 

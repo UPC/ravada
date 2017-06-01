@@ -520,14 +520,19 @@ sub _domain_create_from_iso {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-
     my $iso = $self->_search_iso($args{id_iso});
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
-
-    my $device_cdrom = $self->_iso_name($iso, $args{request});
-
+        
+    my $device_cdrom;
+    if (%args{iso_file} eq "<NONE>") {
+        $device_cdrom = $self->_iso_name($iso, %args{request});
+    }
+    else {
+        $device_cdrom = $args{iso_file};
+    }
+    
     my $disk_size;
     $disk_size = $args{disk} if $args{disk};
 

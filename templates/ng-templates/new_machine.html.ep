@@ -1,4 +1,4 @@
- tambi<div class="panel panel-default">
+<div class="panel panel-default">
     <div class="panel-heading">
         <h2>New Machine</h2>
     </div>
@@ -50,8 +50,8 @@
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
                         required=""
-                ></select>{{id_iso.description}}
-                <div ng-show="id_iso.name && !id_iso.device">
+                ></select>
+                <div ng-show="id_iso.name && !id_iso.device && iso_file == '<NONE>' ">
                     <font color="#500000">This ISO image has not
                     been already
                     downloaded. This may take many minutes, even hours
@@ -61,11 +61,11 @@
                     >Download now</a>
                 </div>
                 </div>
-                <label for="id_iso" class="col-lg-2 control-label">Select ISO</label>
+                <label for="iso_file" class="col-lg-2 control-label">Select ISO</label>
                 <div class="col-lg-10">
                 <select name ="iso_file"
-                        ng-model="id_isos"
-                        ng-options="item for item in isos track by item.name"
+                        ng-model="iso_file"
+                        ng-options="item for item in isos track by item"
                         required=""
                 ></select>
                 </div>
@@ -145,7 +145,7 @@
           </div>
           <div class="form-group row">
                <input type="submit" class="btn btn-default" name="submit" value="Create"
-                    ng-disabled="new_machineForm.$invalid || !new_machineForm.id_iso.$viewValue.device || name_duplicated">
+                    ng-disabled="new_machineForm.$invalid || (!new_machineForm.id_iso.$viewValue.device && (new_machineForm.iso_file.$modelValue == '<NONE>')) || name_duplicated">
           </div>
     </form>
     </div>
