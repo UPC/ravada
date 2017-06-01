@@ -85,9 +85,9 @@ our $USER;
 our $DOCUMENT_ROOT = "/var/www";
 
 # session times out in 5 minutes
-our $SESSION_TIMEOUT = 5 * 60;
+our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
-our $SESSION_TIMEOUT_ADMIN = 15 * 60;
+our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
 init();
 ############################################################################3
@@ -805,7 +805,6 @@ sub quick_start_domain {
 
     return show_failure($c, $domain_name) if !$domain;
 
-    $c->session(expiration => 60) if !$USER->is_admin;
     return show_link($c,$domain);
 
 }
@@ -1034,8 +1033,11 @@ sub show_link {
     }
     _open_iptables($c,$domain)
         if !$req;
-    $c->render(template => 'main/run', url => $uri , name => $domain->name
+#    $c->stash(url => $uri);
+    $c->render(template => 'main/run'
+                ,name => $domain->name
                 ,password => $domain->spice_password
+                ,url_display => $uri
                 ,login => $c->session('login'));
 }
 
