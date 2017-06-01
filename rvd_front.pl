@@ -1033,8 +1033,11 @@ sub show_link {
     }
     _open_iptables($c,$domain)
         if !$req;
-    $c->render(template => 'main/run', url => $uri , name => $domain->name
+#    $c->stash(url => $uri);
+    $c->render(template => 'main/run'
+                ,name => $domain->name
                 ,password => $domain->spice_password
+                ,url_display => $uri
                 ,login => $c->session('login'));
 }
 
