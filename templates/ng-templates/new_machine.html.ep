@@ -51,7 +51,8 @@
                         ng-options="item.name for item in images track by item.id"
                         required=""
                 ></select>
-                <div ng-show="id_iso.name && !id_iso.device && iso_file == '<NONE>' ">
+                <div ng-show="id_iso.name && !id_iso.device && iso_file == '<NONE>' " 
+                     ng-init="iso_file = '<NONE>'">
                     <font color="#500000">This ISO image has not
                     been already
                     downloaded. This may take many minutes, even hours
