@@ -39,6 +39,7 @@ requires 'create_volume';
 
 requires 'connect';
 requires 'disconnect';
+requires 'import_domain';
 
 ############################################################
 
@@ -69,6 +70,7 @@ before 'search_domain' => \&_connect;
 
 before 'create_volume' => \&_connect;
 
+around 'import_domain' => \&_around_import_domain;
 #############################################################
 #
 # method modifiers
@@ -130,6 +132,20 @@ sub _around_create_domain {
     $self->_pre_create_domain(@_);
     my $domain = $self->$orig(@_);
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    return $domain;
+}
+
+sub _around_import_domain {
+    my $orig = shift;
+    my $self = shift;
+    my ($name, $user) = @_;
+
+    my $domain = $self->$orig(@_);
+
+    $domain->_insert_db(name => $name, id_owner => $user->id);
+
+    warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
+    $domain->spinoff_volumes();
     return $domain;
 }
 

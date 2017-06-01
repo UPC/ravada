@@ -262,8 +262,8 @@ msgstr "Cerca a la teva distribució, p.e. en Debia/Ubuntu amb"
 msgid "You'll need to install"
 msgstr "Necessitaràs instal·lar"
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
-msgstr "p.e. VirtViewer v5.0-256 al teu ordinador."
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgstr "p.e. VirtViewer v5.0-256, i els drivers USB ("
 
 msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "
@@ -290,3 +290,24 @@ msgstr "Benvingut"
 
 msgid "It is required a viewer to run the virtual machines."
 msgstr "Es necessita un visor per executar les màquines virtuals."
+
+msgid "can create bases."
+msgstr "pot crear bases."
+
+msgid "Virtual Machines"
+msgstr "Màquines Virtuals"
+
+msgid "User"
+msgstr "Usuari"
+
+msgid "Password"
+msgstr "Contrasenya"
+
+msgid "Start session"
+msgstr "Inicieu la Sessió"
+
+msgid "Login with Intranet UPC's username."
+msgstr "Identifiqueu-vos amb el nom d'usuari de la Intranet UPC."
+
+msgid "bits) in your computer."
+msgstr "bits) al teu ordinador."

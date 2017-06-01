@@ -85,4 +85,3 @@ VALUES('Ubuntu Zesty Zapus',' Ubuntu 17.04 Zesty Zapus 64 bits'
     ,'ubuntu-17.04.*desktop-amd64.iso'
     ,'http://releases.ubuntu.com/17.04/MD5SUMS'
     );
-
