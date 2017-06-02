@@ -67,6 +67,7 @@ Mysql Database
 
 MySQL server
 ~~~~~~~~~~~~
+.. Warning::  MySql required minimum version 5.6
 
 It is required a MySQL server, it can be installed in another host or in
 the same one as the ravada package.
