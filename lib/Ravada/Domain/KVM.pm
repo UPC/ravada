@@ -1386,6 +1386,31 @@ sub _set_driver_generic {
 
 }
 
+sub _set_driver_image {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/graphics/image',@_);
+}
+
+sub _set_driver_jpeg {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/graphics/jpeg',@_);
+}
+
+sub _set_driver_zlib {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/graphics/zlib',@_);
+}
+
+sub _set_driver_playback {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/graphics/playback',@_);
+}
+
+sub _set_driver_streaming {
+    my $self = shift;
+    return $self->_set_driver_generic('/domain/devices/graphics/streaming',@_);
+}
+
 sub _set_driver_video {
     my $self = shift;
     return $self->_set_driver_generic('/domain/devices/video',@_);
