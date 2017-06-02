@@ -9,7 +9,7 @@ Configuration
 Add your template in ``/etc/rvd_front.conf``
 
 .. warning ::
-   Check that rvd_front.conf exists. If you work on a Development release you has an example here ``etc/rvd_front.conf.example``.
+   Check that rvd_front.conf exists. If you work on a Development release you have an example here ``etc/rvd_front.conf.example``.
    
 .. warning :: Do not include the extension file ``.html.ep`` in the path. E.g. ``custom_login.html.ep`` -> ``custom_login``
 

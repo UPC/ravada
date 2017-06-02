@@ -7,7 +7,7 @@ Requirements
 OS
 --
 
-Ravada has been tested only on Ubuntu Xenial. It should also work in
+Ravada has been successfully tested only on Ubuntu 16.10 and 17.04. It should also work in
 recent RedHat based systems. Debian jessie has been tried but kvm spice
 wasn't available there, so it won't work.
 
