@@ -14,8 +14,7 @@ wasn't available there, so it won't work.
 Hardware
 --------
 
-It depends on the number and the type of the virtual machines. For most
-places
+It depends on the number and type of virtual machines. For common scenarios, the server memory, storage, and network bandwidth will be the most critical.
 
 Memory
 ~~~~~~
