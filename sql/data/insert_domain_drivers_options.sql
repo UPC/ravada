@@ -9,3 +9,4 @@ INSERT INTO `domain_drivers_options` VALUES (7,2,'ac97','model="ac97"');
 INSERT INTO `domain_drivers_options` VALUES (8,3,'virtio','type="virtio"');
 INSERT INTO `domain_drivers_options` VALUES (9,3,'e1000','type="e1000"');
 INSERT INTO `domain_drivers_options` VALUES (10,3,'rtl8139','type="rtl8139"');
+INSERT INTO `domain_drivers_options` VALUES (11,4,'rtl8139','type="rtl8139"');
