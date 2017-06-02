@@ -43,9 +43,9 @@ install them:
 ::
 
     $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.6_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.7_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ sudo dpkg -i ravada_0.2.6_all.deb
+    $ sudo dpkg -i ravada_0.2.7_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
@@ -67,6 +67,7 @@ Mysql Database
 
 MySQL server
 ~~~~~~~~~~~~
+.. Warning::  MySql required minimum version 5.6
 
 It is required a MySQL server, it can be installed in another host or in
 the same one as the ravada package.
