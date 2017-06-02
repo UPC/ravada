@@ -13,6 +13,26 @@ Fix Windows registry
 
 If *virt-viewer* won't start automatically after when viewing the
 virtual machine, add this to the Registry, thanks to
-`@gmiranda <https://github.com/gmiranda>`__.
+`@gmiranda <https://github.com/gmiranda>`__. Download `spice.reg <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/spice.reg>`
 
-.. literalinclude:: https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/spice.reg
+::
+
+    Windows Registry Editor Version 5.00
+
+    [HKEY_CLASSES_ROOT\spice]
+    @="URL:spice"
+    "URL Protocol"=""
+
+    [HKEY_CLASSES_ROOT\spice\DefaultIcon]
+    @="C:\\Program Files\\VirtViewer v5.0-256\\bin\\remote-viewer.exe,1"
+
+    [HKEY_CLASSES_ROOT\spice\Extensions]
+
+    [HKEY_CLASSES_ROOT\spice\shell]
+    @="open"
+
+    [HKEY_CLASSES_ROOT\spice\shell\open]
+
+
+    [HKEY_CLASSES_ROOT\spice\shell\open\command]
+    @="\"C:\\Program Files\\VirtViewer v5.0-256\\bin\\remote-viewer.exe\" \"%1\""
