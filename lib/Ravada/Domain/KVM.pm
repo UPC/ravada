@@ -42,11 +42,21 @@ our %GET_DRIVER_SUB = (
     network => \&_get_driver_network
      ,sound => \&_get_driver_sound
      ,video => \&_get_driver_video
+     ,image => \&_get_driver_image
+     ,jpeg => \&_get_driver_jpeg
+     ,zlib => \&_get_driver_zlib
+     ,playback => \&_get_driver_playback
+     ,streaming => \&_get_driver_streaming
 );
 our %SET_DRIVER_SUB = (
     network => \&_set_driver_network
      ,sound => \&_set_driver_sound
      ,video => \&_set_driver_video
+     ,image => \&_set_driver_image
+     ,jpeg => \&_set_driver_jpeg
+     ,zlib => \&_set_driver_zlib
+     ,playback => \&_set_driver_playback
+     ,streaming => \&_set_driver_streaming
 );
 
 ##################################################
@@ -1273,6 +1283,31 @@ sub _get_driver_generic {
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_driver_image {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/graphics/image',@_);
+}
+
+sub _get_driver_jpeg {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/graphics/jpeg',@_);
+}
+
+sub _get_driver_zlib {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/graphics/zlib',@_);
+}
+
+sub _get_driver_playback {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/graphics/playback',@_);
+}
+
+sub _get_driver_streaming {
+    my $self = shift;
+    return $self->_get_driver_generic('/domain/devices/graphics/streaming',@_);
 }
 
 sub _get_driver_video {

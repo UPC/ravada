@@ -25,8 +25,8 @@ INSERT INTO `domain_drivers_options` VALUES (20,6,'auto','compression="auto"');
 INSERT INTO `domain_drivers_options` VALUES (21,6,'never','compression="never"');
 INSERT INTO `domain_drivers_options` VALUES (22,6,'always','compression="always"');
 
-INSERT INTO `domain_drivers_options` VALUES (23,7,'auto','compression="on"');
-INSERT INTO `domain_drivers_options` VALUES (24,7,'auto','compression="off"');
+INSERT INTO `domain_drivers_options` VALUES (23,7,'on','compression="on"');
+INSERT INTO `domain_drivers_options` VALUES (24,7,'off','compression="off"');
 
 INSERT INTO `domain_drivers_options` VALUES (25,8,'filter','compression="filter"');
 INSERT INTO `domain_drivers_options` VALUES (26,8,'all','compression="all"');
