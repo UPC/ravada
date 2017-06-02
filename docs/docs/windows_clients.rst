@@ -13,7 +13,7 @@ Fix Windows registry
 
 If *virt-viewer* won't start automatically after when viewing the
 virtual machine, add this to the Registry, thanks to
-`@gmiranda <https://github.com/gmiranda>`__. Download `spice.reg <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/spice.reg>`
+`@gmiranda <https://github.com/gmiranda>`__. Download `spice.reg <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/spice.reg>`_
 
 ::
 
