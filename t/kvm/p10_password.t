@@ -162,7 +162,7 @@ sub test_any_network_password {
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
 
     my $password = $domain->spice_password();
-    is($password, undef ,"Expecting no password, got '".($password or '')."'");
+    is($password, undef ,"Expecting no password, got '".($password or '')."'") or exit;
     $domain->shutdown_now($USER);
 
     $domain->start(user => $USER, remote_ip => '10.0.0.1');
@@ -236,6 +236,10 @@ sub add_network_10 {
     $requires_password = 1 if !defined $requires_password;
 
     my $sth = $test->connector->dbh->prepare(
+        "DELETE FROM networks where address='10.0.0.0/24'"
+    );
+    $sth->execute;
+    $sth = $test->connector->dbh->prepare(
         "INSERT INTO networks (name,address,all_domains,requires_password)"
         ."VALUES('10','10.0.0.0/24',1,?)"
     );
@@ -247,8 +251,13 @@ sub add_network_any {
     $requires_password = 1 if !defined $requires_password;
 
     my $sth = $test->connector->dbh->prepare(
-        "INSERT INTO networks (name,address,all_domains,requires_password)"
-        ."VALUES('any','0.0.0.0/0',1,?)"
+        "DELETE FROM networks where address='0.0.0.0/0'"
+    );
+    $sth->execute;
+
+    $sth = $test->connector->dbh->prepare(
+        "INSERT INTO networks (name,address,all_domains,requires_password,n_order)"
+        ."VALUES('any','0.0.0.0/0',1,?,999)"
     );
     $sth->execute($requires_password);
 }
@@ -260,6 +269,15 @@ sub remove_network_10 {
     $sth->execute();
 
 }
+
+sub remove_network_default {
+    my $sth = $test->connector->dbh->prepare(
+        "DELETE FROM networks where name='default'"
+    );
+    $sth->execute();
+
+}
+
 
 #######################################################
 
@@ -286,6 +304,13 @@ SKIP: {
 
     $domain1->start(user => $USER, remote_ip => '10.0.0.1');
     my $password = $domain1->spice_password();
+    ok($password,"Expecting password, got : '".($password or '')."'");
+
+    remove_network_default();
+    $domain1->shutdown_now($USER);
+    $domain1->start(user => $USER, remote_ip => '10.0.0.1');
+    $password = $domain1->spice_password();
+
     is($password,undef,"Expecting no password, got : '".($password or '')."'");
     $domain1->shutdown_now($USER)   if $domain1->is_active;
 
