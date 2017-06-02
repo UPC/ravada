@@ -23,7 +23,7 @@
                <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
                <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
                <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
-               <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
+               <li class="nav"><a href="#video_compression" data-toggle="tab">Video Compression</a></li>
 %   }
              </ul>
             <div class="tab-content">
@@ -37,8 +37,8 @@
              <div class="tab-pane fade" id="copy">
     %= include 'main/vm_copy'
              </div>
-             <div class="tab-pane fade" id="graphics">
-    %= include 'main/vm_graphics'
+             <div class="tab-pane fade" id="video_compression">
+    %= include 'main/vm_video_compression'
              </div>
 % }          
              <div class="tab-pane fade in active" id="drivers">
