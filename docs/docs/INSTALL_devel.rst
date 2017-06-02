@@ -17,12 +17,11 @@ Possible development scenarios where to deploy
 ----------------------------------------------
 
 Obviously if you can deploy on a physical machine will be better but it is not always possible. 
-
 In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 
-.. note:: KVM requires `VT-X / AMD-V. <http://www.linux-kvm.org/page/FAQ#What_do_I_need_to_use_KVM.3F>`_
+.. note:: KVM requires `VT-X / AMD-V <http://www.linux-kvm.org/page/FAQ#What_do_I_need_to_use_KVM.3F>`_.
 
-.. warning:: Do not consider VirtualBox because it does not pass VT-X / AMD-V to the guest operating system.
+.. warning:: Do not consider `VirtualBox <https://www.virtualbox.org/>`_ in this situation, because it doesn't pass VT-X / AMD-V to the guest operating system.
 
 
 
