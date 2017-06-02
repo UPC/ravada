@@ -7,14 +7,15 @@ Requirements
 OS
 --
 
-Ravada has been tested only on Ubuntu Xenial. It should also work in
+Ravada has been successfully tested only on Ubuntu 16.10 and 17.04. It should also work in
 recent RedHat based systems. Debian jessie has been tried but kvm spice
 wasn't available there, so it won't work.
 
 Hardware
 --------
 
-It depends on the number and type of virtual machines. For common scenarios, the server memory, storage, and network bandwidth will be the most critical.
+It depends on the number and the type of the virtual machines. For most
+places
 
 Memory
 ~~~~~~
