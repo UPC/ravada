@@ -12,6 +12,19 @@ You can get the development release cloning the sources.
 ::
 
     $ git clone https://github.com/frankiejol/ravada.git
+    
+Possible development scenarios where to deploy
+----------------------------------------------
+
+Obviously if you can deploy on a physical machine will be better but it is not always possible. 
+
+In that case you can test on a nested KVM, that is, a KVM inside another KVM.
+
+.. tip:: KVM requires VT-X / AMD-V. 
+
+.. warning:: Do not consider VirtualBox because it does not pass VT-X / AMD-V to the guest operating system.
+
+
 
 Ubuntu required packages
 ------------------------
