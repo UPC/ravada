@@ -408,6 +408,25 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/display/#id' => sub {
+    my $c = shift;
+
+    my $id = $c->stash('id');
+
+    my $domain = $RAVADA->search_domain_by_id($id);
+    return $c->render(text => "unknown machine id=$id") if !$id;
+
+    return access_denied($c)
+        if $USER->id ne $domain->id_owner
+        && !$USER->is_admin;
+
+    $c->res->headers->content_type('application/x-virt-viewer');
+    $c->res->headers->content_disposition(
+        "attachment;filename=".$domain->id.".vv");
+
+    return $c->render(data => $domain->display_file($USER));
+};
+
 # Users ##########################################################3
 
 ##add user
@@ -1053,12 +1072,14 @@ sub show_link {
     }
     _open_iptables($c,$domain)
         if !$req;
+    my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
                 ,url_display => $uri
+                ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
                 ,login => $c->session('login'));
