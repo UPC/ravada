@@ -539,6 +539,26 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+any '/auto_start/(#value)/' => sub {
+    my $c = shift;
+    my $value = $c->stash('value');
+    if ($value =~ /toggle/i) {
+        $value = $c->session('auto_start');
+        if ($value) {
+            $value = 0;
+        } else {
+            $value = 1;
+        }
+    }
+    $c->session('auto_start' => $value);
+    return $c->render(json => {auto_start => $c->session('auto_start') });
+};
+
+get '/auto_start' => sub {
+    my $c = shift;
+    return $c->render(json => {auto_start => $c->session('auto_start') });
+};
+
 ###################################################
 
 ## user_settings
@@ -1033,11 +1053,14 @@ sub show_link {
     }
     _open_iptables($c,$domain)
         if !$req;
-#    $c->stash(url => $uri);
+    $c->stash(url => $uri)  if $c->session('auto_start');
+    my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
                 ,url_display => $uri
+                ,display_ip => $display_ip
+                ,display_port => $display_port
                 ,login => $c->session('login'));
 }
 
