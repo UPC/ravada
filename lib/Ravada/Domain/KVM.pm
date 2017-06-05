@@ -455,7 +455,7 @@ sub display {
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
 
-    die "Unable to get port for domain ".$self->name
+    die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
     return "$type://$address:$port";

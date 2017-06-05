@@ -12,9 +12,6 @@
     <apic/>
     <pae/>
   </features>
-  <cpu mode='custom' match='exact'>
-    <model fallback='allow'>Nehalem</model>
-  </cpu>
   <clock offset='localtime'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
