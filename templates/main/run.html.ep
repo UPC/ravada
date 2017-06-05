@@ -25,11 +25,9 @@
 %           }
             >Start automatically next time</input>
             <br/>
-            <a type="button" class="btn btn-success" href="<%= $url_display %>">
-                <b><%=l 'start' %></b></a>
             <a type="button" class="btn btn-success"
                     href="<%= $url_display_file %>">
-                <b><%=l 'start full-screen'%></b></a>
+                <b><%=l 'start'%></b></a>
 
         </div>
         <div class="panel-body">
