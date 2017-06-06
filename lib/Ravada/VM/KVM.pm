@@ -536,8 +536,8 @@ sub _domain_create_from_iso {
         if !$iso->{xml_volume};
         
     my $device_cdrom;
-    if (%args{iso_file} eq "<NONE>") {
-        $device_cdrom = $self->_iso_name($iso, %args{request});
+    if ($args{iso_file} eq "<NONE>") {
+        $device_cdrom = $self->_iso_name($iso, $args{request});
     }
     else {
         $device_cdrom = $args{iso_file};
