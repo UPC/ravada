@@ -44,7 +44,7 @@ When running the screenshot command it returns:
 Apparmor
 ^^^^^^^^
 
-At the file : usr.lib.libvirt.virt-aa-helper
+At the file : ``/etc/apparmor.d/usr.lib.libvirt.virt-aa-helper``
 
 ::
 
