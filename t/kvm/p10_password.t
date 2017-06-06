@@ -202,8 +202,10 @@ sub test_any_network_password_hybernate{
     ok(!$@,"Expecting no error start hybernated domain, got : '".($@ or '')."'");
     is($domain->is_active(),1,"Expecting domain active");
 
-    $password = $domain->spice_password();
-    is($password, undef ,"Expecting no password, got '".($password or '')."' after hybernate");
+    my $password2 = $domain->spice_password();
+    is($password2, undef ,"Expecting no password, got '".($password2 or '')."' after hybernate");
+
+    is($password2,$password);
 
     # create another domain to start from far away
     $domain = $vm->create_domain( name => new_domain_name
@@ -226,7 +228,25 @@ sub test_any_network_password_hybernate{
 
     eval { $password = $domain->spice_password() };
     is($@,'',"Expecting no error after \$domain->spice_password hybernate/start");
-    like($password,qr/./,"Expecting a password, got '".($password or '')."'");
+    is($password, undef ,"Expecting no password, got '".($password2 or '')."' after hybernate");
+
+    $domain->shutdown_now($USER);
+    is($domain->is_active(),0);
+
+    eval { $domain->start(user => $USER, remote_ip => '1.2.3.4') };
+    ok(!$@,"Expecting no error after \$domain->start, got : '".($@ or '')."'");
+    eval { $password = $domain->spice_password() };
+    like($password,qr/./,"Expecting a password, got '".($password2 or '')."'");
+
+    $domain->hybernate($USER);
+    is($domain->is_hibernated(),1,"Domain should be hybernated");
+
+    eval { $password2 = $domain->spice_password() };
+    is($@,'',"Expecting no error after \$domain->spice_password hybernate/start");
+    like($password2,qr/./,"Expecting a password, got '".($password2 or '')."'");
+
+    is($password2,$password);
+
     $domain->shutdown_now($USER)    if $domain->is_active;
 
 }
