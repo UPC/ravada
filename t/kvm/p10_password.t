@@ -229,6 +229,7 @@ sub test_any_network_password_hybernate{
     eval { $password = $domain->spice_password() };
     is($@,'',"Expecting no error after \$domain->spice_password hybernate/start");
     is($password, undef ,"Expecting no password, got '".($password2 or '')."' after hybernate");
+    is($domain->spice_password,$password);
 
     $domain->shutdown_now($USER);
     is($domain->is_active(),0);
@@ -246,6 +247,14 @@ sub test_any_network_password_hybernate{
     like($password2,qr/./,"Expecting a password, got '".($password2 or '')."'");
 
     is($password2,$password);
+
+    eval { $domain->start(user => $USER, remote_ip => '1.2.3.4') };
+    ok(!$@,"Expecting no error after \$domain->start, got : '".($@ or '')."'");
+
+    my $password3;
+    eval { $password3 = $domain->spice_password() };
+    like($password3,qr/./,"Expecting a password, got '".($password3 or '')."'");
+    is($password3,$password2);
 
     $domain->shutdown_now($USER)    if $domain->is_active;
 

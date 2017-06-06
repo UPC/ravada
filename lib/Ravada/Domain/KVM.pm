@@ -490,7 +490,7 @@ sub start {
     my $remote_ip = $arg{remote_ip};
     if ($remote_ip) {
         my $network = Ravada::Network->new(address => $remote_ip);
-        $set_password = 1 if $network->requires_password() && !$self->is_hibernated();
+        $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
 #    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
@@ -1146,14 +1146,16 @@ sub _set_spice_ip {
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
 
-        my $password;
-        if ($set_password) {
-            $password = Ravada::Utils::random_name(4);
-            $graphics->setAttribute(passwd => $password);
-        } else {
-            $graphics->removeAttribute('passwd');
+        if ( !$self->is_hibernated() ) {
+            my $password;
+            if ($set_password) {
+                $password = Ravada::Utils::random_name(4);
+                $graphics->setAttribute(passwd => $password);
+            } else {
+                $graphics->removeAttribute('passwd');
+            }
+            $self->_set_spice_password($password);
         }
-        $self->_set_spice_password($password);
 
         my $listen;
         for my $child ( $graphics->childNodes()) {
