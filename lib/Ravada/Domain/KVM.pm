@@ -465,7 +465,7 @@ sub display {
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
 
-    die "Unable to get port for domain ".$self->name
+    die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
     return "$type://$address:$port";
@@ -500,7 +500,7 @@ sub start {
     my $remote_ip = $arg{remote_ip};
     if ($remote_ip) {
         my $network = Ravada::Network->new(address => $remote_ip);
-        $set_password = 1 if $network->requires_password();
+        $set_password = 1 if $network->requires_password() && !$self->is_hibernated();
     }
     $self->_set_spice_ip($set_password);
 #    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
