@@ -1272,12 +1272,16 @@ sub _get_driver_generic {
     my $self = shift;
     my $xml_path = shift;
 
+    my ($tag) = $xml_path =~ m{.*/(.*)};
+
+    warn $xml_path;
+
     my @ret;
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     for my $driver ($doc->findnodes($xml_path)) {
         my $str = $driver->toString;
-        $str =~ s{^<model (.*)/>}{$1};
+        $str =~ s{^<$tag (.*)/>}{$1};
         push @ret,($str);
     }
 
@@ -1285,29 +1289,52 @@ sub _get_driver_generic {
     return @ret;
 }
 
+sub _get_driver_graphics {
+    my $self = shift;
+    my $xml_path = shift;
+
+    my ($tag) = $xml_path =~ m{.*/(.*)};
+
+    warn $xml_path;
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $tags (qw(image jpeg zlib playback streaming)){
+        for my $driver ($doc->findnodes($xml_path)) {
+            my $str = $driver->toString;
+            $str =~ s{^<$tag (.*)/>}{$1};
+            push @ret,($str);
+        }
+
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+    }
+}
+
 sub _get_driver_image {
     my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/graphics/image',@_);
+    return $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
 }
 
 sub _get_driver_jpeg {
     my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/graphics/jpeg',@_);
+    return $self->_get_driver_graphics('/domain/devices/graphics/jpeg',@_);
 }
 
 sub _get_driver_zlib {
     my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/graphics/zlib',@_);
+    return $self->_get_driver_graphics('/domain/devices/graphics/zlib',@_);
 }
 
 sub _get_driver_playback {
     my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/graphics/playback',@_);
+    return $self->_get_driver_graphics('/domain/devices/graphics/playback',@_);
 }
 
 sub _get_driver_streaming {
     my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/graphics/streaming',@_);
+    return $self->_get_driver_graphics('/domain/devices/graphics/streaming',@_);
 }
 
 sub _get_driver_video {
