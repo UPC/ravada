@@ -19,6 +19,9 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 requires 'connect';
 
 # global DB Connection
@@ -393,5 +396,8 @@ sub default_storage_pool_name {
     return $self->_data('default_storage');
 }
 
+sub list_drivers($self, $name=undef) {
+    return Ravada::Domain::drivers(undef,$name,$self->type);
+}
 
 1;
