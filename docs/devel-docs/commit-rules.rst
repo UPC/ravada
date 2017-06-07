@@ -38,6 +38,8 @@ Show the branch in the message
 Add the file *prepare-commit-msg* to the directory *.git/hooks/* with
 this content:
 
+.. note:: Remember add execution permission with ``chmod a+x prepare-commit-msg``
+
 ::
 
     #!/bin/sh
