@@ -66,7 +66,7 @@ Testing
 -------
 
 Before committing, make sure it passes all the tests. This should be run
-specially when chaning the *master* and *develop* branches. Notice some
+specially when changing the *master* and *develop* branches. Notice some
 tests require *root* access, so it must run with *sudo*.
 
 ::
