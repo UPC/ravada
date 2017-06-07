@@ -152,7 +152,7 @@ msgid "I want to change my language"
 msgstr "je voudrais modifier ma langue"
 
 msgid "Language:"
-msgstr "langue"
+msgstr "Langue"
 
 msgid "English"
 msgstr "Anglais"
@@ -182,70 +182,70 @@ msgid "Password too small"
 msgstr "Mot de Passe petite"
 
 msgid "Password fields aren't equal"
-msgstr ""
+msgstr "les espaces du  mot de passe n'est pas egaleés"
 
 msgid "Some of the password's fields are empty"
-msgstr ""
+msgstr "quelques espaces du mot de passe sont vides"
 
 msgid "Public"
-msgstr ""
+msgstr "Public"
 
 msgid "Status"
-msgstr ""
+msgstr "Statut"
 
 msgid "Machines"
 msgstr "Machines"
 
 msgid "Down"
-msgstr ""
+msgstr "Arrêté"
 
 msgid "Running"
-msgstr ""
+msgstr "fonctionne"
 
 msgid "ShutDown"
-msgstr ""
+msgstr "Fermer"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "capture d'écran"
 
 msgid "Machine locked by"
-msgstr ""
+msgstr "Machine verrouillée par"
 
 msgid "machines"
 msgstr "Machines"
 
 msgid "users"
-msgstr ""
+msgstr "Utilisateurs"
 
 msgid "messages"
 msgstr "Messages"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Outils d'administration"
 
 msgid "Remove base"
-msgstr ""
+msgstr "Supprimer base"
 
 msgid "public"
-msgstr ""
+msgstr "Public"
 
 msgid "Hybernate"
-msgstr ""
+msgstr "Hiberner"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "Fermer"
 
 msgid "action"
-msgstr ""
+msgstr "action"
 
 msgid "New Base"
-msgstr ""
+msgstr "Base Nouveau"
 
 msgid "will remove all the contents of the machine"
-msgstr ""
+msgstr "supprimer tout les contenus de machine"
 
 msgid "Are you sure?"
-msgstr " "
+msgstr "vous etes certain?"
 
 msgid "Yes"
 msgstr "Oui"
@@ -254,38 +254,134 @@ msgid "No"
 msgstr "Non"
 
 msgid "Make public"
-msgstr ""
+msgstr "Rendre publique"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "Réglage de machine"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "clones Ne peut pas enlever la base, la machine a un clone"
 
 msgid "For spice redirection you'll need to install"
-msgstr ""
+msgstr "Pour Spice redirection vous necessitez installer"
 
 msgid "in your computer."
-msgstr ""
+msgstr "dans votre ordinateur"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "Cherchez dans votre distro, par example dans Debian/Ubuntu avec"
 
 msgid "You'll need to install"
-msgstr ""
+msgstr "vous necessitez installer "
 
 msgid "e.g. VirtViewer v5.0-256 in your computer."
-msgstr ""
+msgstr "par example VirtViewer v5.0-256 dans votre ordinateur. "
 
 msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "
 "necessary associate protocol with the app."
 msgstr ""
+"Faites attention quoi dans Windows, Spice redirection no est pas automatiquement."
+" il est necessaire associer le protocole avec l'app."
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "pour rendre cela possible, téléchargez"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
+"ou copiez les lingnes suivants dans un fichier et Enregistrez avec extension .reg"
+"ensuit exécutez le fichier"
+
+
+msgid "Login"
+msgstr "S'identifier"
+
+msgid "Welcome"
+msgstr "Bienvenue"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "C'est necessaire un logiciel de Viewer pour fonctionner les machines virtuelles."
+
+msgid "Virtual Machines"
+msgstr "Machine Virtuelle"
+
+msgid "user"
+msgstr "Utilisateur"
+
+msgid "password"
+msgstr "Mot de passe"
+
+msgid "Start session"
+msgstr "Commencer session"
+
+msgid "Login with Intranet UPC's username."
+msgstr "s'identifier avec Nom d'utilisateur de la UPC"
+
+msgid "Permissions"
+msgstr "Permissions"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "On peut échanger les reglages des machines virtuelle Sur leur possession"
+
+msgid "can change the settings of any virtual machines."
+msgstr "On peut échanger les reglages des quelques machines virtuelles"
+
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+"On peut échanger les reglages des quelques machines virtuelle"
+"clonées d'une base sur la posession d'utilisateur"
+
+msgid "can clone public virtual machines."
+msgstr "On peut cloner machines virtuelles publiques"
+
+msgid "can clone any virtual machine."
+msgstr "On peut cloner quelques machines virtuelles"
+
+msgid "can create bases."
+msgstr "On Peut créer bases"
+
+msgid "can create virtual machines."
+msgstr "On peut créer machines virtuelles"
+
+msgid "can grant permissions to other users"
+msgstr "On peut donner la permission á autres utilisateurs"
+
+msgid "can hibernate any virtual machine."
+msgstr "On peut hiberner quelques machines virtuelles"
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr "On peut hiberner clones des machines virtuelle Sur leur possession"
+
+msgid "can hibernate any clone."
+msgstr "On peut hiberner quelques clones"
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "On peut supprimer quelques machines virtuelles machines virtuelle Sur leur possession"
+
+msgid "can remove any virtual machine."
+msgstr "On peut supprimer quelques machine virtuelles"
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "On peut supprimer clones de machines virtuelle Sur leur possession"
+
+msgid "can remove any clone."
+msgstr "On peut supprimer quelques clones"
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr "On peut Prendre une capture d'écran de quelques machines virtuelle Sur leur possession"
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "On peut Prendre une capture d'écran de quelques machines virtuelles"
+
+msgid "can shutdown any virtual machine."
+msgstr "On peut fermer quelques machines virtuelles"
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "On peut fermer les clone des machines virtuelle Sur leur possession"
+
+msgid "Submit Query"
+msgstr "Soumettre Question" 
