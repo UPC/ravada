@@ -96,7 +96,8 @@ Create base of a Virtual Machine
 Go to Admin tools -> Virtual Machines
 
 1st Base
-~~~~~~~~
+--------
+
 If you have configured your Virtual Machine, now you can do the Base:
 
 -  Select the Base checkbox.
@@ -104,7 +105,7 @@ If you have configured your Virtual Machine, now you can do the Base:
 The Virtual Machine will be published if you select the Public checkbox.
 
 2nd base or more
-~~~~~~~~~~~~~~~~
+----------------
 
 In this case, you have a previous Base and you've made some changes at the machine. Now you must prepare a Base again.
 
