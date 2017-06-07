@@ -66,6 +66,7 @@ Information about development is also available:
    docs/troubleshooting
    docs/update
    docs/windows_clients
+   docs/change_windows_driver_to_virtio
 
 .. _feature-docs:
 
