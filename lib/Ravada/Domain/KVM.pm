@@ -455,7 +455,7 @@ sub display {
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
 
-    die "Unable to get port for domain ".$self->name
+    die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
     return "$type://$address:$port";
@@ -1146,14 +1146,16 @@ sub _set_spice_ip {
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
 
-        my $password;
-        if ($set_password) {
-            $password = Ravada::Utils::random_name(4);
-            $graphics->setAttribute(passwd => $password);
-        } else {
-            $graphics->removeAttribute('passwd');
+        if ( !$self->is_hibernated() ) {
+            my $password;
+            if ($set_password) {
+                $password = Ravada::Utils::random_name(4);
+                $graphics->setAttribute(passwd => $password);
+            } else {
+                $graphics->removeAttribute('passwd');
+            }
+            $self->_set_spice_password($password);
         }
-        $self->_set_spice_password($password);
 
         my $listen;
         for my $child ( $graphics->childNodes()) {

@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.7-beta3';
+our $VERSION = '0.2.7';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -1562,7 +1562,13 @@ Returns the version of the module
 =cut
 
 sub version {
-    return $VERSION;
+    my $version = $VERSION;
+    if ($version =~ /beta$/) {
+        my $rev_count = `git rev-list --count --all`;
+        chomp $rev_count;
+        $version .= $rev_count;
+    }
+    return $version;
 }
 
 
