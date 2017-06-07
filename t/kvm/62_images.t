@@ -47,7 +47,11 @@ sub test_create_domain_xml {
         push @nodes, ( $node ) if $node;
     }
     return if @nodes;
-
+    Ravada::VM::KVM::_xml_add_graphics_image($xml);
+    Ravada::VM::KVM::_xml_add_graphics_jpeg($xml);
+    Ravada::VM::KVM::_xml_add_graphics_zlib($xml);
+    Ravada::VM::KVM::_xml_add_graphics_playback($xml);
+    Ravada::VM::KVM::_xml_add_graphics_streaming($xml);
     Ravada::VM::KVM::_xml_modify_disk($xml,[$device_disk]);
     my $dom;
     eval { $dom = $vm->vm->define_domain($xml) };
@@ -73,6 +77,7 @@ sub test_drivers_type {
     my $driver_type = $domain->drivers($type);
 
     my $value = $driver_type->get_value();
+    warn ("HERE: $value");
     is($value,undef,"Expecting no value for $type");
 
     $value = $domain->get_driver($type);
@@ -86,7 +91,7 @@ sub test_drivers_type {
     for my $option (@options) {
         _domain_shutdown($domain);
 
-         diag("Setting $type $option->{value}");
+        diag("Setting $type $option->{value}");
 
         die "No value for driver ".Dumper($option)  if !$option->{value};
         eval { $domain->set_driver($type => $option->{value}) };
