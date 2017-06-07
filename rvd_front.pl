@@ -329,6 +329,7 @@ get '/machine/clone/(:id).(:type)' => sub {
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)        if !$USER ->can_shutdown_clone();
         return shutdown_machine($c);
 };
 
