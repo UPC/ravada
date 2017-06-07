@@ -396,6 +396,19 @@ sub default_storage_pool_name {
     return $self->_data('default_storage');
 }
 
+=head2 list_drivers
+
+Lists the drivers available for this Virtual Machine Manager
+
+Arguments: Optional driver type
+
+Returns a list of strings with the nams of the drivers.
+
+    my @drivers = $vm->list_drivers();
+    my @drivers = $vm->list_drivers('image');
+
+=cut
+
 sub list_drivers($self, $name=undef) {
     return Ravada::Domain::drivers(undef,$name,$self->type);
 }
