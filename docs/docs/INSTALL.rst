@@ -8,8 +8,7 @@ OS
 --
 
 Ravada has been successfully tested only on Ubuntu 16.10 and 17.04. It should also work in
-recent RedHat based systems. Debian jessie has been tried but kvm spice
-wasn't available there, so it won't work.
+recent RedHat based systems. Follow this ``guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
 Hardware
 --------
