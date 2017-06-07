@@ -23,12 +23,13 @@
 %                                   my $selected ='';
 %                                   $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
                                     <option <%= $selected %>
-                                    value="<%= $option->{id} %>"><%= $option->{name} %></option>
+                                    value="<%= $option->{name} %>"><%= $option->{name} %></option>
 %                               }
                                 </select>
                                 </td></tr>
 %                           }
-     </table>
+    <p>Recommended options: <b>image</b>:auto_glz  <b>jpeg</b>:auto  <b>zlib</b>:auto  <b>playback</b>:on  <b>streaming</b>:filter</p>
+    </table>
      <input type="submit" value="save">
 </form>
 
