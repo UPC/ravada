@@ -19,6 +19,9 @@ use Moose;
 use Sys::Virt::Stream;
 use XML::LibXML;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 with 'Ravada::Domain';
 
 has 'domain' => (
@@ -1274,8 +1277,6 @@ sub _get_driver_generic {
 
     my ($tag) = $xml_path =~ m{.*/(.*)};
 
-    warn $xml_path;
-
     my @ret;
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
@@ -1294,8 +1295,6 @@ sub _get_driver_graphics {
     my $xml_path = shift;
 
     my ($tag) = $xml_path =~ m{.*/(.*)};
-
-    warn $xml_path;
 
     my @ret;
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
@@ -1388,6 +1387,8 @@ sub _set_driver_generic {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     my %value = _text_to_hash($value_str);
+    my $changed = 0;
+
     for my $video($doc->findnodes($xml_path)) {
         my $old_driver = $video->toString();
         for my $node ($video->findnodes('model')) {
@@ -1405,8 +1406,43 @@ sub _set_driver_generic {
                 $node->setAttribute( $name => $value{$name} );
             }
         }
-        return if $old_driver eq $video->toString();
+        $changed++ if $old_driver ne $video->toString();
     }
+    return if !$changed;
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+
+sub _set_driver_generic_simple($self, $xml_path, $value_str) {
+    my %value = _text_to_hash($value_str);
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my $changed = 0;
+    my $found = 0;
+    for my $node ( $doc->findnodes($xml_path)) {
+        $found++;
+        my $old_driver = $node->toString();
+        for my $attrib ( $node->attributes ) {
+            my ( $name ) =$attrib =~ /\s*(.*)=/;
+            next if !defined $name;
+            my $new_value = ($value{$name} or '');
+            if ($value{$name}) {
+                $node->setAttribute($name => $value{$name});
+            } else {
+                $node->removeAttribute($name);
+            }
+        }
+        for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+        }
+        $changed++ if $old_driver ne $node->toString();
+    }
+    die "No $xml_path found in ".$self->name    if !$found;
+    return if !$changed;
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
@@ -1415,27 +1451,30 @@ sub _set_driver_generic {
 
 sub _set_driver_image {
     my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/graphics/image',@_);
+    my $value_str = shift or confess "Missing value";
+    my $xml_path = '/domain/devices/graphics/image';
+
+    return $self->_set_driver_generic_simple($xml_path, $value_str);
 }
 
 sub _set_driver_jpeg {
     my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/graphics/jpeg',@_);
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/jpeg',@_);
 }
 
 sub _set_driver_zlib {
     my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/graphics/zlib',@_);
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/zlib',@_);
 }
 
 sub _set_driver_playback {
     my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/graphics/playback',@_);
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/playback',@_);
 }
 
 sub _set_driver_streaming {
     my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/graphics/streaming',@_);
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/streaming',@_);
 }
 
 sub _set_driver_video {
