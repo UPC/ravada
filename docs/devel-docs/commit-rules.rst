@@ -72,6 +72,12 @@ tests require *root* access, so it must run with *sudo*.
 ::
 
     perl Makefile.PL && make && sudo make test
+    
+If you want to run only one test:
+
+::
+
+    perl Makefile.PL && make && sudo prove -b t/dir/file.t
 
 Proper testing requires the Perl Module Test::SQL::Data , available
 here: https://github.com/frankiejol/Test-SQL-Data
