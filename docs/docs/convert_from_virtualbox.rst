@@ -12,7 +12,7 @@ operative system as the one installed in the virtual box machine.
 Do not install anything in that machine, keep it off. Check what is the
 name of the disk volume and remove the other volumes.
 
-Check the contents *file* attribute with the command `` virsh edit EXAMPLE``, 
+Check the contents *file* attribute with the command ``virsh edit EXAMPLE``, 
 
 ::
 
