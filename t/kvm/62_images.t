@@ -47,11 +47,6 @@ sub test_create_domain_xml {
         push @nodes, ( $node ) if $node;
     }
     return if @nodes;
-    Ravada::VM::KVM::_xml_add_graphics_image($xml);
-    Ravada::VM::KVM::_xml_add_graphics_jpeg($xml);
-    Ravada::VM::KVM::_xml_add_graphics_zlib($xml);
-    Ravada::VM::KVM::_xml_add_graphics_playback($xml);
-    Ravada::VM::KVM::_xml_add_graphics_streaming($xml);
     Ravada::VM::KVM::_xml_modify_disk($xml,[$device_disk]);
     my $dom;
     eval { $dom = $vm->vm->define_domain($xml) };
