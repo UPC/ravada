@@ -32,7 +32,7 @@ Uncomment the lines: *spice_tls = 1*  and *spice_tls_x509_cert_dir = "/etc/pki/l
 Add path in Apparmor 
 --------------------
 
-Add */etc/pki/libvirt-spice/** r,* in ``/etc/apparmor.d/abstractions/libvirt-qemu`` 
+Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-qemu`` 
 
 ::
     # access PKI infrastructure
