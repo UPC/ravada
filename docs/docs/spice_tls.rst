@@ -71,7 +71,7 @@ For example in VM with id 2, you can edit the libvirt graphics node if you want 
 Configuration in .vv file
 -------------------------
 
-.. tip:: Use the following command ``openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "``to copy in ``host-subject=``.
+.. tip:: Use the following command ``openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "`` to copy in ``host-subject=``.
 
 .. tip:: Use the following command ``awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' server-cert.pem`` to convert ``server-cert.pem`` file to a value that can copy in ``ca=``.
 
