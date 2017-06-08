@@ -1305,7 +1305,6 @@ sub _get_driver_graphics {
             $str =~ s{^<$tag (.*)/>}{$1};
             push @ret,($str);
         }
-
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
     }
@@ -1313,7 +1312,14 @@ sub _get_driver_graphics {
 
 sub _get_driver_image {
     my $self = shift;
-    return $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
+
+    my $image = $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
+
+    if ( !defined $image ) {
+        my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+        Ravada::VM::KVM::xml_add_graphics_image($doc);
+    }
+    return $image;
 }
 
 sub _get_driver_jpeg {

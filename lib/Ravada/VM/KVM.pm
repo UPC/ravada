@@ -1574,8 +1574,7 @@ sub _xml_modify_mac {
     die "I can't find a new unique mac" if !$new_mac;
 }
 
-sub _xml_add_graphics_image {
-    my $self = shift;
+sub xml_add_graphics_image {
     my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
