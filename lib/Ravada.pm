@@ -15,6 +15,9 @@ use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada::Auth;
 use Ravada::Request;
 use Ravada::VM::KVM;
@@ -626,6 +629,16 @@ sub search_domain_by_id {
     return $self->search_domain($name);
 }
 
+=head2 list_vms
+
+List all the Virtual Machine Managers
+
+=cut
+
+sub list_vms($self) {
+    return @{$self->vm};
+}
+
 =head2 list_domains
 
 List all created domains
@@ -637,7 +650,7 @@ List all created domains
 sub list_domains {
     my $self = shift;
     my @domains;
-    for my $vm (@{$self->vm}) {
+    for my $vm ($self->list_vms) {
         for my $domain ($vm->list_domains) {
             push @domains,($domain);
         }
