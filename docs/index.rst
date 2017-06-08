@@ -100,3 +100,4 @@ Information about development is also available:
    devel-docs/release
    devel-docs/run
    devel-docs/test
+   docs/spice_tls
