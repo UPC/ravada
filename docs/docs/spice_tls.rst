@@ -3,12 +3,51 @@ Hardening Spice security with TLS
 
 TLS support allows to encrypt all/some of the channels Spice uses for its communication. A separate port is used for the encrypted channels.
 
+Change libvirtd configuration
+-----------------------------
+
+The certificate must be specified in libvirtd configuration file in /etc/libvirt/qemu.conf 
+
+Uncomment the lines: *spice_tls = 1*  and *spice_tls_x509_cert_dir = "/etc/pki/libvirt-spice"*
+
+::
+    # Enable use of TLS encryption on the SPICE server.
+    #
+    # It is necessary to setup CA and issue a server certificate
+    # before enabling this.
+    #
+    spice_tls = 1
+    # Use of TLS requires that x509 certificates be issued. The
+    # default it to keep them in /etc/pki/libvirt-spice. This directory
+    # must contain
+    #
+    #  ca-cert.pem - the CA master certificate
+    #  server-cert.pem - the server certificate signed with ca-cert.pem
+    #  server-key.pem  - the server private key
+    #
+    # This option allows the certificate directory to be changed.
+    #
+    spice_tls_x509_cert_dir = "/etc/pki/libvirt-spice"
+
+Add path in Apparmor 
+--------------------
+
+Add */etc/pki/libvirt-spice/** r,* in ``/etc/apparmor.d/abstractions/libvirt-qemu`` 
+
+::
+    # access PKI infrastructure
+    /etc/pki/libvirt-vnc/** r,
+    /etc/pki/libvirt-spice/** r,
+
+.. note:: Remmember restart the services: ``systemctl restart apparmor.service`` & ``systemctl restart libvirtd.service``
+
+Configuration in XML
+--------------------
 
 For example in this VM with id 1, the connection is possible both through TLS and without any encryption:
 
 ::
     <graphics type='spice' autoport='yes' listen='172.17.0.1' keymap='es'>
-
 
 ::
     $ virsh domdisplay 1
@@ -22,6 +61,38 @@ For example in VM with id 2, you can edit the libvirt graphics node if you want 
 ::
     $ virsh domdisplay 2
     spice://171.17.0.1?tls-port=5900
+
+Configuration in .vv file
+-------------------------
+
+.. tip:: Use the following to copy in ``host-subject=`` *openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "*
+
+.. tip:: Use the following UNIX command to convert each .pem file to a value that can copy in ``ca=``  *awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' server-cert.pem*
+
+See this file reproduced below:
+
+::
+    [virt-viewer]
+    type=spice
+    host=172.17.0.1
+    tls-port=5902
+    fullscreen=1
+    title=Acme - Press SHIFT+F12 to exit
+    enable-usbredir=1
+    enable-smartcard=0
+    enable-usb-autoshare=1
+    delete-this-file=0
+    usb-filter=-1,-1,-1,-1,0
+    tls-ciphers=DEFAULT
+    host-subject=C=XX, L=XXX, O=XXXX, CN=my server
+    ca=-----BEGIN CERTIFICATE-----\nMIICUDCCAbmgAwIBAgIJAOgNQo8MIorJMA0GSGSIb3DQEBCwUAMEExCzAJBgNV\nBAYTAklMMRAwDgYDVQQHDAdSYWFuYW5hMRAwDgYDVQQKDAdSZWQgSGF0MQ4wDAYD\nVQQDDAVteSBDQTAeFw0xNzA2MDcxODDlaFw0yMDA2MDYxODI2NDlaMEExCzAJ\nBgNVBAYTAklMMRAwDgYDVQQHDAdSYWFuYW5hMRAwDgYDVQQKDAdSZWQgSGF0MQ4w\nDAYDVQQDDAVteSBDQTCBnzANBkhkiG9w0BAQEFAAOBjQAwgYkCgYEAq2QtZdu7\nCLuGhagxwS8d7U4EEQjzgiMKcm8/fLE+rliV/wFMtwYD+7TtDEFDrafQC8Y7Zd1B\nrdBT9VC+orAc9PqpImXJ3pN152P9rvyZvI3OxKkVTkGFQi+9z3M1AmxTp5nmKA\nrazPM6t/YzV3vraynBXp4x65qLdc2yF2A0cCAwEAAaNQME4wHQYDVR0OBBYEFFGm\nvI6T/86+cpQZ7ob3xd0PgCMB8GA1UdIwQYMBaAFFGmvI6T/86+cpQZ7zohb3xd\n0PgCMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADgYEALG0TBhPTQwXNpUGi\nia/zxdOh0r7mJWeYcRgZ2lZtesCozYyZz9P2CDb5OnZlu75qs6Ws/fjztRLG/0j\n4r51Og212Up+mQ8eaq2Lox7S/7Ao0P8QWgHZNviltSBb3l9eaYpHENZjW9mMB/JH\nYmIRDdTW1bYuXIsinDPBk0OS20=\n-----END CERTIFICATE-----
+    toggle-fullscreen=shift+f11
+    release-cursor=shift+f12
+    secure-attention=ctrl+alt+end
+    disable-effects=all
+    ;secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard
+
+
 
 
 More information `about <https://www.spice-space.org/docs/manual/>`_
