@@ -99,6 +99,9 @@ Perform the following script, to generate the cert files for ssl , and then copy
     # echo --host-subject
     echo "your --host-subject is" \" `openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "` \"
  
+.. warning::
+    Whatever method you use to generate the certificate and key files, the Common Name value used for the server and client certificates/keys must each differ from the Common Name value used for the CA certificate. Otherwise, the certificate and key files will not work for servers compiled using OpenSSL.
+
 Configuration in XML
 --------------------
 
