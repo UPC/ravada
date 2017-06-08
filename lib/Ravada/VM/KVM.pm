@@ -573,7 +573,6 @@ sub _domain_create_common {
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml);
-    $self->_xml_add_graphics_image($xml);
     $self->_fix_pci_slots($xml);
 
     my $dom;
@@ -1576,6 +1575,7 @@ sub _xml_modify_mac {
 }
 
 sub _xml_add_graphics_image {
+    my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
@@ -1590,6 +1590,7 @@ sub _xml_add_graphics_image {
 }
 
 sub _xml_add_graphics_jpeg {
+    my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
@@ -1604,6 +1605,7 @@ sub _xml_add_graphics_jpeg {
 }
 
 sub _xml_add_graphics_zlib {
+    my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
@@ -1618,6 +1620,7 @@ sub _xml_add_graphics_zlib {
 }
 
 sub _xml_add_graphics_playback {
+    my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
@@ -1632,6 +1635,7 @@ sub _xml_add_graphics_playback {
 }
 
 sub _xml_add_graphics_streaming {
+    my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')

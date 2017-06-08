@@ -23,7 +23,7 @@
 %                                   my $selected ='';
 %                                   $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
                                     <option <%= $selected %>
-                                    value="<%= $option->{name} %>"><%= $option->{name} %></option>
+                                    value="<%= $option->{id} %>"><%= $option->{name} %></option>
 %                               }
                                 </select>
                                 </td></tr>
