@@ -68,6 +68,17 @@ For example in VM with id 2, you can edit the libvirt graphics node if you want 
     $ virsh domdisplay 2
     spice://171.17.0.1?tls-port=5900
 
+From command line
+-----------------
+
+With self-signed certificates, it's necessary pass to the client the certificate of the authority which signed the host certificate.
+
+::
+    
+    SUBJECT=`openssl x509 -noout -text -in /etc/pki/libvirt-spice/server-cert.pem | grep Subject: | cut -f 10- -d " "`
+    
+    remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.pem spice://172.17.0.1?tls-port=5902 "--spice-host-subject=$SUBJECT"
+
 Configuration in .vv file
 -------------------------
 
