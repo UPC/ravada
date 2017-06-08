@@ -46,7 +46,7 @@ Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-q
 Generate certificates
 ---------------------
 
-Perform the following script, to generate the cert files for ssl , and then copy ``*.pem`` file info ``/etc/pkil/libvirt-spice`` directory: (`source <http://fedoraproject.org/w/index.php?title=QA:Testcase_Virtualization_Manually_set_spice_listening_port_with_TLS_port_set>`_)
+Perform the following script, to generate the cert files for ssl , and then copy ``*.pem`` file into ``/etc/pkil/libvirt-spice`` directory: (`source <http://fedoraproject.org/w/index.php?title=QA:Testcase_Virtualization_Manually_set_spice_listening_port_with_TLS_port_set>`_)
 
 ::
     
