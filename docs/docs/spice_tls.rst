@@ -11,6 +11,7 @@ The certificate must be specified in libvirtd configuration file in /etc/libvirt
 Uncomment the lines: *spice_tls = 1*  and *spice_tls_x509_cert_dir = "/etc/pki/libvirt-spice"*
 
 ::
+
     # Enable use of TLS encryption on the SPICE server.
     #
     # It is necessary to setup CA and issue a server certificate
@@ -35,6 +36,7 @@ Add path in Apparmor
 Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-qemu`` 
 
 ::
+
     # access PKI infrastructure
     /etc/pki/libvirt-vnc/** r,
     /etc/pki/libvirt-spice/** r,
@@ -47,31 +49,36 @@ Configuration in XML
 For example in this VM with id 1, the connection is possible both through TLS and without any encryption:
 
 ::
+
     <graphics type='spice' autoport='yes' listen='172.17.0.1' keymap='es'>
 
 ::
+
     $ virsh domdisplay 1
     spice://172.17.0.1:5901?tls-port=5902
 
 For example in VM with id 2, you can edit the libvirt graphics node if you want to change that behaviour and only allow connections through TLS: 
 
 ::
+
     <graphics type='spice' autoport='yes’ listen='171.17.0.1' defaultMode='secure'>
 
 ::
+
     $ virsh domdisplay 2
     spice://171.17.0.1?tls-port=5900
 
 Configuration in .vv file
 -------------------------
 
-.. tip:: Use the following to copy in ``host-subject=`` *openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "*
+.. tip:: Use the following command to copy in ``host-subject=``: ``openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "``
 
-.. tip:: Use the following UNIX command to convert each .pem file to a value that can copy in ``ca=``  *awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' server-cert.pem*
+.. tip:: Use the following command to convert each ``.pem`` file to a value that can copy in ``ca=``: ``awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' server-cert.pem``
 
 See this file reproduced below:
 
 ::
+
     [virt-viewer]
     type=spice
     host=172.17.0.1
@@ -91,8 +98,5 @@ See this file reproduced below:
     secure-attention=ctrl+alt+end
     disable-effects=all
     ;secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard
-
-
-
 
 More information `about <https://www.spice-space.org/docs/manual/>`_
