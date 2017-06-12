@@ -21,7 +21,7 @@ From KVM server
     2     ubuntu-box1                    running
     3     ubuntu-box2                    running
 
-    Type the following command from KVM host to login to the guest named ubuntu-box1
+Type the following command from KVM host to login to the guest named ubuntu-box1
     
 ::
     
