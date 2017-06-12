@@ -1,7 +1,10 @@
+How to import a Virtualbox image
+================================
+
 .. note:: In this example we have VirtualBox machine called *EXAMPLE*.
 
 Create an empty Virtual Machine
-===============================
+-------------------------------
 
 From the Ravada admin form, create a new virtual machine with the same
 operative system as the one installed in the virtual box machine.
@@ -9,15 +12,15 @@ operative system as the one installed in the virtual box machine.
 Do not install anything in that machine, keep it off. Check what is the
 name of the disk volume and remove the other volumes.
 
-Check the contents *file* attribute:
+Check the contents *file* attribute with the command ``virsh edit EXAMPLE``, 
 
 ::
 
     source file='/var/lib/libvirt/images/EXAMPLE-vda-id8Q.img'/
 
-Remove the *swap* , *cdrom* and other disk volumes.
+Remove the ``swap``, ``cdrom`` and other disk volumes.
 
-This is the SWAP volume, notice its name ends in *.SWAP.img*.
+This is the SWAP volume, notice its name ends in ``.SWAP.img``.
 
 ::
 
@@ -28,7 +31,7 @@ This is the SWAP volume, notice its name ends in *.SWAP.img*.
       <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
     </disk>
 
-This is the *cdrom* disk drive, remove it too.
+This is the ``cdrom`` disk drive, remove it too.
 
 .. raw:: html
 
@@ -47,8 +50,7 @@ Remove also the SWAP image file:
 Convert the image file
 ----------------------
 
-Make sure the VirtualBox machine is down, then convert the VDI to raw,
-then to qcow2
+Make sure the VirtualBox machine is down, then convert the VDI to raw, then to qcow2
 
 DIRECTLY VDI TO QCOW2
 ~~~~~~~~~~~~~~~~~~~~~

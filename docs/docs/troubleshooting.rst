@@ -44,9 +44,28 @@ When running the screenshot command it returns:
 Apparmor
 ^^^^^^^^
 
-At the file : usr.lib.libvirt.virt-aa-helper
+At the file : ``/etc/apparmor.d/usr.lib.libvirt.virt-aa-helper``
 
 ::
 
     /var/cache/libvirt/qemu/ rw,
     /var/cache/libvirt/qemu/** rw,
+
+Error with MySQL version < 5.6
+------------------------------
+
+For example the following message:
+
+:: 
+    
+    DBD::mysql::db do failed: Invalid default value for 'date_send' at /usr/share/perl5/Ravada.pm line 276.
+    
+DEFAULT CURRENT_TIMESTAMP support for a DATETIME (datatype) was added in MySQL 5.6.
+
+Upgrade your MySQL server or change:  ``datetime`` for ``timestamp``
+
+::
+
+    date_send datetime default now(),  >>>>>>  date_send timestamp default now(),
+    
+More information `about <https://stackoverflow.com/questions/36882149/error-1067-42000-invalid-default-value-for-created-at>`_.

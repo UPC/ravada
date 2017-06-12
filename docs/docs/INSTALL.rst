@@ -7,15 +7,13 @@ Requirements
 OS
 --
 
-Ravada has been tested only on Ubuntu Xenial. It should also work in
-recent RedHat based systems. Debian jessie has been tried but kvm spice
-wasn't available there, so it won't work.
+Ravada has been successfully tested only on Ubuntu 16.10 and 17.04. It should also work in
+recent RedHat based systems. Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
 Hardware
 --------
 
-It depends on the number and the type of the virtual machines. For most
-places
+It depends on the number and type of virtual machines. For common scenarios are server memory, storage and network bandwidth the most critical requirements.
 
 Memory
 ~~~~~~
@@ -43,9 +41,9 @@ install them:
 ::
 
     $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.6_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.8_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ sudo dpkg -i ravada_0.2.6_all.deb
+    $ sudo dpkg -i ravada_0.2.8_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
@@ -67,6 +65,7 @@ Mysql Database
 
 MySQL server
 ~~~~~~~~~~~~
+.. Warning::  MySql required minimum version 5.6
 
 It is required a MySQL server, it can be installed in another host or in
 the same one as the ravada package.

@@ -48,7 +48,7 @@ Information about development is also available:
 .. toctree::
    :caption: User Documentation
    :maxdepth: 2
-   
+
    docs/INSTALL
    docs/INSTALL_devel
    docs/Ubuntu_Installation
@@ -66,6 +66,7 @@ Information about development is also available:
    docs/troubleshooting
    docs/update
    docs/windows_clients
+   docs/change_windows_driver_to_virtio
 
 .. _feature-docs:
 
@@ -78,7 +79,7 @@ Information about development is also available:
    docs/custom_login
    docs/new_documentation
    devel-docs/translations
-         
+
 .. _about-docs:
 
 .. toctree::
@@ -99,3 +100,4 @@ Information about development is also available:
    devel-docs/release
    devel-docs/run
    devel-docs/test
+   docs/spice_tls

@@ -62,8 +62,9 @@ Option 1: clean ISO and MD5
 -  Remove the ISO file shown at the error message
 -  Clean the MD5 entry in the database:
 
-   mysql -u rvd\_user -p ravada mysql> update iso\_images set md5=''
-   WHERE id=\ *ID*
+::
+
+    $ mysql -u rvd_user -p ravada mysql > update iso_images set md5='' WHERE id=*ID*
 
 Then you have to create the machine again from scratch and make it
 download the ISO file.
@@ -87,3 +88,29 @@ Insert the data from the SQL file installed with the package:
 
 It will report duplicated entry errors, but the removed row should be
 inserted again.
+
+
+Create base of a Virtual Machine
+--------------------------------
+
+Go to Admin tools -> Virtual Machines
+
+1st Base
+~~~~~~~~
+
+If you have configured your Virtual Machine, now you can do the Base:
+
+-  Select the Base checkbox.
+
+The Virtual Machine will be published if you select the Public checkbox.
+
+2nd base or more
+~~~~~~~~~~~~~~~~
+
+In this case, you have a previous Base and you've made some changes at the machine. Now you must prepare a Base again.
+
+Steps:
+
+1.  Remove all clones of this Virtual Machine.
+
+2.  Select the Base checkbox to prepare base.

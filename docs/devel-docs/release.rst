@@ -1,6 +1,15 @@
 Steps to release
 ================
 
+Create a branch
+---------------
+
+::
+
+    $ git checkout master
+    $ git checkout -b 0.2.2
+    $ git push --set-upstream origin 0.2.2
+
 Draft
 -----
 
@@ -72,14 +81,7 @@ Changelog file:
     $ gvim Changelog.md
     $ git commit -a
 
-Create a branch
----------------
 
-::
-
-    $ git checkout master
-    $ git checkout -b 0.2.2
-    $ git push --set-upstream origin 0.2.2
 
 Close the release
 -----------------

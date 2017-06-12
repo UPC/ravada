@@ -38,6 +38,8 @@ Show the branch in the message
 Add the file *prepare-commit-msg* to the directory *.git/hooks/* with
 this content:
 
+.. note:: Remember to give permission to execute, ``chmod a+x prepare-commit-msg``
+
 ::
 
     #!/bin/sh
@@ -66,12 +68,18 @@ Testing
 -------
 
 Before committing, make sure it passes all the tests. This should be run
-specially when chaning the *master* and *develop* branches. Notice some
+specially when changing the *master* and *develop* branches. Notice some
 tests require *root* access, so it must run with *sudo*.
 
 ::
 
     perl Makefile.PL && make && sudo make test
+    
+If you want to run only one test:
+
+::
+
+    perl Makefile.PL && make && sudo prove -b t/dir/file.t
 
 Proper testing requires the Perl Module Test::SQL::Data , available
 here: https://github.com/frankiejol/Test-SQL-Data
