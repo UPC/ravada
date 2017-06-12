@@ -53,7 +53,10 @@ sub test_create_domain_xml {
     ok(!$@,"Expecting error='' , got '".($@ or '')."'") or return
     ok($dom,"Expecting a VM defined from $file_xml") or return;
 
-    return Ravada::Domain::KVM->new(domain => $dom, _vm => $vm);
+    my $domain = Ravada::Domain::KVM->new(domain => $dom, _vm => $vm);
+    $domain->_insert_db(name=> $name, id_owner => $USER->id);
+
+    return $domain;
 }
 
 sub test_drivers_type {
@@ -72,12 +75,10 @@ sub test_drivers_type {
     my $driver_type = $domain->drivers($type);
 
     my $value = $driver_type->get_value();
-    warn ("HERE: $value");
     is($value,undef,"Expecting no value for $type");
 
     $value = $domain->get_driver($type);
     is($value,undef,"Expecting no value for $type");
-
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
