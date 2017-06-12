@@ -1447,12 +1447,40 @@ sub _set_driver_generic_simple($self, $xml_path, $value_str) {
         }
         $changed++ if $old_driver ne $node->toString();
     }
-    die "No $xml_path found in ".$self->name    if !$found;
+    $self->_add_driver($xml_path, \%value)       if !$found;
+
     return if !$changed;
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+}
+
+sub _add_driver($self, $xml_path, $attributes=undef) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my @nodes = $doc->findnodes($xml_path);
+    return if @nodes;
+
+    my ($xml_parent, $new_node) = $xml_path =~ m{(.*)/(.*)};
+    my @parent = $doc->findnodes($xml_parent);
+
+    confess "Expecting one parent, I don't know what to do with ".scalar @parent
+        if scalar@parent > 1;
+
+    @parent = add_driver($self, $xml_parent)  if !@parent;
+
+    my $node = $parent[0]->addNewChild(undef,$new_node);
+
+    for my $name (keys %$attributes) {
+        $node->setAttribute($name => $attributes->{$name});
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+    return $node;
 }
 
 sub _set_driver_image {
