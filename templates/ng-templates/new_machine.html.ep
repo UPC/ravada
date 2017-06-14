@@ -28,7 +28,6 @@
                 <label for="backend" class="col-lg-1 control-label">Backend</label>
                 <div class="col-lg-11">
                 <select name="backend"
-                        class="selectpicker ng-pristine ng-untouched ng-valid ng-not-empty ng-valid-required"
                         ng-model="backend"
                         ng-init="backend = 'KVM'"
                         ng-options="item for item in backends track by item "
@@ -42,7 +41,6 @@
                 <label for="id_iso" class="col-lg-2 control-label">ISO image</label>
                 <div class="col-lg-10">
                 <select name ="id_iso"
-                        class="selectpicker ng-pristine ng-untouched ng-valid ng-not-empty ng-valid-required"
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
                         required=""
