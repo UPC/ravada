@@ -43,7 +43,10 @@ sub user_admin {
 sub create_domain {
     my $vm_name = shift;
     my $user = (shift or $USER_ADMIN);
+    my $id_iso = shift;
 
+    $id_iso = search_id_iso($id_iso)
+        if $id_iso && $id_iso !~ /^\d+$/;
     my $vm = rvd_back()->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 
@@ -53,12 +56,14 @@ sub create_domain {
         diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
         return;
     };
-    my @arg_create = @{$ARG_CREATE_DOM{lc($vm_name)}};
+    my %arg_create = @{$ARG_CREATE_DOM{lc($vm_name)}};
+    $arg_create{id_iso} = $id_iso if $id_iso;
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
-                    , @arg_create
+                    , %arg_create
+                    , active => 0
            );
     };
     is($@,'');
