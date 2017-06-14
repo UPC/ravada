@@ -1314,11 +1314,11 @@ sub _get_driver_image {
     my $self = shift;
 
     my $image = $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
-
-    if ( !defined $image ) {
-        my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-        Ravada::VM::KVM::xml_add_graphics_image($doc);
-    }
+#
+#    if ( !defined $image ) {
+#        my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+#        Ravada::VM::KVM::xml_add_graphics_image($doc);
+#    }
     return $image;
 }
 

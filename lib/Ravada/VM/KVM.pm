@@ -1574,6 +1574,9 @@ sub _xml_modify_mac {
     die "I can't find a new unique mac" if !$new_mac;
 }
 
+
+=pod
+
 sub xml_add_graphics_image {
     my $doc = shift or confess "Missing XML doc";
 
@@ -1587,6 +1590,8 @@ sub xml_add_graphics_image {
     }
     $listen->setAttribute(compression => 'auto_glz');
 }
+
+=cut
 
 sub _xml_add_graphics_jpeg {
     my $self = shift;
