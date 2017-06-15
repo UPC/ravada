@@ -41,7 +41,7 @@ The main documentation for the site is divided into three main sections:
 * :ref:`feature-docs`
 * :ref:`about-docs`
 
-Do you feel like giving us a hand? Here you have all the information you need as a developer:
+Do you feel like giving us a hand? Here you have all the information you need as *a developer*:
 
 * :ref:`dev-docs`
 
