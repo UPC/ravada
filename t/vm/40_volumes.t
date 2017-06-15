@@ -183,7 +183,7 @@ sub test_files_base {
     eval { $domain->start($USER) };
     ok(!$@,"Expecting no error, got : '".($@ or '')."'");
     ok($domain->is_active,"Expecting domain active");
-
+    $domain->shutdown_now($USER)    if $domain->is_active;
 }
 
 sub test_domain_2_volumes {

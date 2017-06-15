@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.7-beta1';
+our $VERSION = '0.2.7';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -14,6 +14,9 @@ use POSIX qw(WNOHANG);
 use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use Ravada::Auth;
 use Ravada::Request;
@@ -367,7 +370,13 @@ sub _connect_dbh {
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
     my $db_pass = ($CONFIG->{db}->{password} or undef);
     my $db = ( $CONFIG->{db}->{db} or 'ravada' );
-    return DBIx::Connector->new("DBI:$driver:$db"
+    my $host = $CONFIG->{db}->{host};
+
+    my $data_source = "DBI:$driver:$db";
+    $data_source = "DBI:$driver:database=$db;host=$host"    
+        if $host && $host ne 'localhost';
+
+    return DBIx::Connector->new($data_source
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
 
@@ -649,6 +658,16 @@ sub search_domain_by_id {
     return $self->search_domain($name);
 }
 
+=head2 list_vms
+
+List all the Virtual Machine Managers
+
+=cut
+
+sub list_vms($self) {
+    return @{$self->vm};
+}
+
 =head2 list_domains
 
 List all created domains
@@ -660,7 +679,7 @@ List all created domains
 sub list_domains {
     my $self = shift;
     my @domains;
-    for my $vm (@{$self->vm}) {
+    for my $vm ($self->list_vms) {
         for my $domain ($vm->list_domains) {
             push @domains,($domain);
         }
@@ -1596,7 +1615,13 @@ Returns the version of the module
 =cut
 
 sub version {
-    return $VERSION;
+    my $version = $VERSION;
+    if ($version =~ /beta$/) {
+        my $rev_count = `git rev-list --count --all`;
+        chomp $rev_count;
+        $version .= $rev_count;
+    }
+    return $version;
 }
 
 

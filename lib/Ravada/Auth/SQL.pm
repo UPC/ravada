@@ -299,13 +299,15 @@ Remove user admin privileges. Returns nothing.
 =cut
 
 sub remove_admin($self, $id) {
-    warn "\t remove_admin $id";
     my $sth = $$CON->dbh->prepare(
             "UPDATE users SET is_admin=NULL WHERE id=?");
 
     $sth->execute($id);
     $sth->finish;
 
+    my $user = $self->search_by_id($id);
+    $self->revoke_all_permissions($user);
+    $self->grant_user_permissions($user);
 }
 
 =head2 is_admin
@@ -521,6 +523,25 @@ sub grant_admin_permissions($self,$user) {
 
 }
 
+=head2 revoke_all_permissions
+
+Revoke all permissions from an user
+
+=cut
+
+sub revoke_all_permissions($self,$user) {
+    my $sth = $$CON->dbh->prepare(
+            "SELECT name FROM grant_types "
+    );
+    $sth->execute();
+    while ( my ($name) = $sth->fetchrow) {
+        $self->revoke($user,$name);
+    }
+    $sth->finish;
+
+}
+
+
 =head2 grant
 
 Grant an user a specific permission, or revoke it
@@ -540,18 +561,21 @@ sub grant($self,$user,$permission,$value=1) {
     }
 
     return 0 if !$value && !$user->can_do($permission);
-    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
+
+    my $value_sql = $user->can_do($permission);
+    return $value if defined $value_sql && $value_sql eq $value;
 
     my $id_grant = _search_id_grant($permission);
-    my $sth = $$CON->dbh->prepare(
+    if (! defined $value_sql ) {
+        my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"
             ." VALUES(?,?,?) "
-    );
-    eval { $sth->execute($id_grant, $user->id, $value) };
-    $sth->finish;
-    if ($@ && $@ =~ /UNIQUE|duplicate/i) {
-        $sth = $$CON->dbh->prepare(
+        );
+        $sth->execute($id_grant, $user->id, $value);
+        $sth->finish;
+    } else {
+        my $sth = $$CON->dbh->prepare(
             "UPDATE grants_user "
             ." set allowed=?"
             ." WHERE id_grant = ? AND id_user=?"
