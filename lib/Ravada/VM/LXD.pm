@@ -21,6 +21,24 @@ use Ravada::Domain::LXD;
 
 with 'Ravada::VM';
 
+##########################################################################
+#
+
+has vm => (
+#    isa => 'Sys::Virt'
+    is => 'rw'
+    ,builder => '_connect'
+    ,lazy => 1
+);
+
+has type => (
+    isa => 'Str'
+    ,is => 'ro'
+    ,default => 'qemu'
+);
+
+#########################################################################3
+
 our $DEFAULT_URL_LXD = "https://localhost:8443";
 our $LXC;
 our $LXD;
@@ -240,6 +258,8 @@ sub remove_domain {
 }
 
 sub create_volume {}
+
+sub import_domain {}
 
 sub list_domains {
     my $self = shift;

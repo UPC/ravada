@@ -32,7 +32,6 @@
                         ng-init="backend = 'KVM'"
                         ng-options="item for item in backends track by item "
                         required=""
-                        disabled
                 ></select>
                 </div>
             </div>
@@ -57,7 +56,7 @@
                 </div>
             </div>
 
-            <div ng-if="backend == 'LXC'" class="from-group row">
+            <div ng-if="backend == 'LXD'" class="from-group row">
                 <label for="id_template" class="col-lg-2 control-label">Template</label>
                 <div class="col-lg-10">
                     <select name ="id_template"
@@ -84,7 +83,7 @@
             </div>
 
           <div class="form-group row">
-            <div ng-show="backend == 'KVM' || backend == 'LXC'">
+            <div ng-show="backend == 'KVM' || backend == 'LXD'">
                 <label for="memory"  class="col-lg-2 control-label">Ram: (GB)</label>
                 <div class="col-lg-10">
                     <input class="form-control" ng-model="ramsize" type="number" name="memory"
@@ -129,9 +128,13 @@
 
 
           </div>
-          <div class="form-group row">
+          <div  ng-show="backend == 'KVM'" class="form-group row">
                <input type="submit" class="btn btn-default" name="submit" value="Create"
                     ng-disabled="new_machineForm.$invalid || !new_machineForm.id_iso.$viewValue.device || name_duplicated">
+          </div>
+          <div  ng-show="backend == 'LXD'" class="form-group row">
+               <input type="submit" class="btn btn-default" name="submit" value="Create"
+                    ng-disabled="new_machineForm.$invalid || !new_machineForm.id_template || name_duplicated">
           </div>
     </form>
   </div>
