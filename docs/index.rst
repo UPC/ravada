@@ -6,40 +6,42 @@
 Welcome to Ravada VDI documentation
 ===================================
 
-Chances are you're here because you searched information about free Virtual Desktop Infraestructure.
-Whether it is a large or a small project, you can start in VDI and see its benefits. We are assuming that you want to start your VDI project as quickly as possible.
+The chances are you're here because you've been searching for free Virtual Desktop Infraestructure (VDI) documentation.
+Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you 
+do want to start your VDI project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
 
-`Ravada VDI`_ is a software that allows the user to connect to an virtual desktop. So it is a VDI broker.
+`Ravada VDI`_ is an open-source project that allows users to connect to a virtual desktop. So it is a VDI broker.
 
 Ravada delivers
 ---------------
 
-With some configurations and following the documentation, you'll be ready to deploy a VM in just a few hours.
+By following the documentation and editing some configuration files, you'll be able to deploy a VM within minutes.
 
 Who is Ravada meant for?
 ------------------------
 
 Ravada is meant for sysadmins who have some background in GNU/Linux, and want to deploy a VDI project.
 
-.. note:: Get started on VDI, without reinvent the wheel.
+.. note:: Get started with VDI, without reinventing the wheel.
 
-Then we build documentation and host it in `Read the Docs`_ for you.
-Think of it as *Continuous Documentation*.
+We have written some documentation and hosted it in `Read the Docs`_ for you.
+This documentation is *on-going*, so if there is something you think is missing, don't hesitate and drop us a line! In the
+meantime, we are still improving RAVADA VDI and its documentation, so new sections will be popping out from time to time.
 
-Our code is licensed with `AGPL`_ and is `available on GitHub`_.
+Our code uses the `AGPL`_ license and it is `available on GitHub`_.
 
 .. _Ravada VDI: https://ravada.upc.edu/
 .. _AGPL: https://github.com/UPC/ravada/blob/master/LICENSE
 .. _Read the Docs: http://readthedocs.org/
 .. _available on GitHub: https://github.com/UPC/ravada
 
-The main documentation for the site is organized into a couple sections:
+The main documentation for the site is divided into three main sections:
 
 * :ref:`user-docs`
 * :ref:`feature-docs`
 * :ref:`about-docs`
 
-Information about development is also available:
+Do you feel like giving us a hand? Here you have all the information you need as a developer:
 
 * :ref:`dev-docs`
 
