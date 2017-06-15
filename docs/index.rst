@@ -24,7 +24,7 @@ Ravada is meant for sysadmins who have some background in GNU/Linux, and want to
 
 .. note:: Get started with VDI, without reinventing the wheel.
 
-We have written some documentation and hosted it in `Read the Docs`_ for you.
+We have written some documentation and hosted it on `Read the Docs`_ for you.
 This documentation is *on-going*, so if there is something you think is missing, don't hesitate and drop us a line! In the
 meantime, we are still improving RAVADA VDI and its documentation, so new sections will be popping out from time to time.
 
