@@ -886,7 +886,6 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
-    my $front = 
     my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
@@ -911,7 +910,6 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
     $swap *= 1024*1024*1024;
-
     my %args = (
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -923,7 +921,6 @@ sub req_new_domain {
         ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
-
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
