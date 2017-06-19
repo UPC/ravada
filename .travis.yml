@@ -8,7 +8,7 @@ perl:
 #  - "5.12"
 before_install:
   - git clone https://github.com/frankiejol/Test-SQL-Data.git ~/Test-SQL-Data
-  - source ~/Test-SQL-Data
+  - cd ~/Test-SQL-Data
   - perl Makefile.PL
   - make install
 script: "perl Makefile.PL && make test"
