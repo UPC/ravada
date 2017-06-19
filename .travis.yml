@@ -16,3 +16,7 @@ script: "perl Makefile.PL && make test"
 #   only:
 #     - master
 #env:
+group: "stable"
+#dist: "zesty"
+#dist: "yakkety"
+dist: "trusty"
