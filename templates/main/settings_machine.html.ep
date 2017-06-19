@@ -28,7 +28,7 @@
 %   }
              </ul>
             <div class="tab-content">
-% if ( $USER->is_admin ) {
+% if ( $USER->can_remove ) {
              <div class="tab-pane fade" id="remove" >
     %= include 'main/vm_remove'
              </div>
