@@ -12,7 +12,7 @@ before_install:
   - perl Makefile.PL
   - make install
 install:
-- cpan-install --deps       # installs prereqs, including recommends
+  - cpan-install YAML
 script: "perl Makefile.PL && make test"
 # branches:
 #   only:
