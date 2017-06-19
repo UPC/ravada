@@ -465,7 +465,7 @@ sub _load_grants($self) {
     $sth->bind_columns(\($name, $allowed));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = ( $allowed or undef);
+        $self->{_grant}->{$name} = $allowed;# or undef);
     }
     $sth->finish;
 }
