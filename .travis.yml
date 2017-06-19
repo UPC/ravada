@@ -13,7 +13,7 @@ before_install:
   - make install
   - sudo apt-get -qq update
   - sudo apt-get install -y libyaml-perl libconfig-yaml-perl
-  - cd ~/ravada
+  - cd ~
 script: "perl Makefile.PL && make test"
 # branches:
 #   only:
