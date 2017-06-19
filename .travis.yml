@@ -11,6 +11,8 @@ before_install:
   - cd ~/Test-SQL-Data
   - perl Makefile.PL
   - make install
+install:
+- cpan-install --deps       # installs prereqs, including recommends
 script: "perl Makefile.PL && make test"
 # branches:
 #   only:
