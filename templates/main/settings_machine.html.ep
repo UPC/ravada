@@ -27,7 +27,7 @@
 
              </ul>
             <div class="tab-content">
-% if ( $USER->can_remove ) {
+
              <div class="tab-pane fade" id="remove" >
     %= include 'main/vm_remove'
              </div>
@@ -37,7 +37,7 @@
              <div class="tab-pane fade" id="copy">
     %= include 'main/vm_copy'
              </div>
-% }          
+       
              <div class="tab-pane fade in active" id="drivers">
     %= include 'main/vm_options'
              </div>
