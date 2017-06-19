@@ -20,6 +20,9 @@ use Ravada::Request;
 use Ravada::VM::KVM;
 use Ravada::VM::Void;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 =head1 NAME
 
 Ravada - Remove Virtual Desktop Manager
@@ -213,25 +216,70 @@ sub _update_isos {
 
     );
 
+    $self->_update_table($table, $field, \%data);
+
+}
+
+sub _update_domain_drivers_types($self) {
+
+    my $data = {
+        image => {
+            id => 4,
+            ,name => 'image'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+        },
+        jpeg => {
+            id => 5,
+            ,name => 'jpeg'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+        },
+        zlib => {
+            id => 6,
+            ,name => 'zlib'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+        },
+        playback => {
+            id => 7,
+            ,name => 'playback'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+
+        },
+        streaming => {
+            id => 8,
+            ,name => 'streaming'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+
+        }
+    };
+    $self->_update_table('domain_drivers_types','id',$data);
+}
+
+sub _update_table($self, $table, $field, $data) {
+
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %data) {
-        my $row = $data{$name};
+    for my $name (keys %$data) {
+        my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
         next if $id;
         warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
-            "INSERT INTO iso_images "
+            "INSERT INTO $table "
             ."("
-            .join(" , ", sort keys %{$data{$name}})
+            .join(" , ", sort keys %{$data->{$name}})
             .")"
             ." VALUES ( "
-            .join(" , ", map { "?" } keys %{$data{$name}})
+            .join(" , ", map { "?" } keys %{$data->{$name}})
             ." )"
         ;
         my $sth = $CONNECTOR->dbh->prepare($sql);
-        $sth->execute(map { $data{$name}->{$_} } sort keys %{$data{$name}});
+        $sth->execute(map { $data->{$name}->{$_} } sort keys %{$data->{$name}});
         $sth->finish;
     }
 }
@@ -241,6 +289,7 @@ sub _update_data {
 
     $self->_update_isos();
     $self->_update_user_grants();
+    $self->_update_domain_drivers_types();
 }
 
 sub _upgrade_table {
