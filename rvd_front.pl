@@ -1256,14 +1256,14 @@ sub settings_machine {
 
     $c->stash(message => '');
     my @reqs = ();
-    for (qw(sound video network)) {
+    for (qw(sound video network image jpeg zlib playback streaming)) {
         my $driver = "driver_$_";
         if ( $c->param($driver) ) {
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
                 , id_option => $c->param($driver)
             );
-            $c->stash(message => 'Driver change will apply on next start');
+            $c->stash(message => 'Changes will apply on next start');
             push @reqs,($req2);
         }
     }
