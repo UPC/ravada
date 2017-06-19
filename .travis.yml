@@ -23,5 +23,6 @@ script: "perl Makefile.PL && make test"
 group: edge
 #dist: "zesty"
 #dist: "yakkety"
-sudo: false
-dist: trusty
+sudo: required
+#sudo: false
+#dist: trusty
