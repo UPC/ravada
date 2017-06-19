@@ -12,7 +12,7 @@ before_install:
   - perl Makefile.PL
   - make install
   - sudo apt-get -qq update
-  - sudo apt-get install -y libyaml-perl
+  - sudo apt-get install -y libyaml-perl libconfig-yaml-perl
 script: "perl Makefile.PL && make test"
 # branches:
 #   only:
