@@ -20,7 +20,8 @@ script: "perl Makefile.PL && make test"
 #     - master
 #env:
 #group: "stable"
-group: "edge"
+group: edge
 #dist: "zesty"
 #dist: "yakkety"
-dist: "trusty"
+sudo: false
+dist: trusty
