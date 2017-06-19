@@ -7,13 +7,13 @@ perl:
 #  - "5.14"
 #  - "5.12"
 before_install:
+  - git clone git://github.com/travis-perl/helpers ~/travis-perl-helpers
+  - source ~/travis-perl-helpers/init --auto
   - git clone https://github.com/frankiejol/Test-SQL-Data.git ~/Test-SQL-Data
   - cd ~/Test-SQL-Data
   - perl Makefile.PL
   - make install
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libyaml-perl libconfig-yaml-perl
-  - cd ~
+  - cd -
 script: "perl Makefile.PL && make test"
 # branches:
 #   only:
