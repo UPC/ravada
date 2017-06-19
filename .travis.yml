@@ -11,8 +11,8 @@ before_install:
   - cd ~/Test-SQL-Data
   - perl Makefile.PL
   - make install
-install:
-  - cpan-install YAML
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libyaml-perl
 script: "perl Makefile.PL && make test"
 # branches:
 #   only:
