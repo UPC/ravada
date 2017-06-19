@@ -340,6 +340,7 @@ get '/machine/shutdown/(:id).(:type)' => sub {
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)       if !$USER -> can_remove();
         return remove_machine($c);
 };
 
@@ -401,6 +402,7 @@ get '/machine/exists/#name' => sub {
 
 get '/machine/rename/#id' => sub {
     my $c = shift;
+    return access_denied($c)       if !$USER -> can_rename();
     return rename_machine($c);
 };
 
@@ -411,6 +413,7 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
+    return access_denied($c)    if !$USER -> can_copy();
     return copy_machine($c);
 };
 
