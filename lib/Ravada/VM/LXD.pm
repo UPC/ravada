@@ -25,7 +25,6 @@ with 'Ravada::VM';
 #
 
 has vm => (
-#    isa => 'Sys::Virt'
     is => 'rw'
     ,builder => '_connect'
     ,lazy => 1
@@ -34,7 +33,7 @@ has vm => (
 has type => (
     isa => 'Str'
     ,is => 'ro'
-    ,default => 'qemu'
+#    ,default => 'qemu'
 );
 
 #########################################################################3
@@ -110,7 +109,7 @@ sub _connect_http {
 
     $client->GET('/1.0');#->responseContent();
     if ($client->responseCode() == 200) {
-        warn "Response 200 http\n";
+        #warn "Response 200 http\n";
         #$client->GET('/1.0')->responseContent();
         #my $r = decode_json( $client->responseContent() );
         #my @a = $r->{metadata}->{auth};
@@ -136,7 +135,7 @@ sub _connect_socket {
     chomp $line;
     die $line if $line !~ / 200 OK/;
     $self->{_connection} = 'socket';
-    warn "Response 200 socket\n";
+#    warn "Response 200 socket\n";
     return $client;
 }
 
@@ -187,9 +186,9 @@ sub _create_domain_socket {
     my $self = shift;
     my %args = @_;
     my $client = $self->_connect_socket();
-    $args{name} = 'KAKA';
-
+    my $name = $args{name};
     warn "create domain $args{name}\n";
+
     my $data = {
         name => $args{name}
 #        ,ephemeral => 'true'
@@ -277,37 +276,30 @@ sub list_domains {
             push @list, basename($c);
         }
     return @list   if wantarray;
-    return scalar(@list)-1;
+    return scalar(@list);
 }
 
 sub search_domain {
-#    my $self = shift;
-#    my $name = shift or confess "Missing name";
-#
-#    $self->connect();
-#    my @all_domains;
-#    eval { @all_domains = $self->vm->list_all_domains() };
-#    confess $@ if $@;
-#
-#    for my $dom (@all_domains) {
-#        next if $dom->get_name ne $name;
-#
-#        my $domain;
-#
-#        eval {
-#            $domain = Ravada::Domain::LXD->new(
-#                domain => $dom
-#                ,readonly => $self->readonly
-#                ,_vm => $self
-#            );
-#        };
-#        warn $@ if $@;
-#        if ($domain) {
-#            return $domain;
-#        }
-#    }
-#    return;
+    my $self = shift;
+    #confess "Missing vm" if !$self->vm;
+    my $name = shift or confess "Missing name";
+
+    my $client = $self->_connect_http();
+    $client->GET('/1.0/containers/$name')->responseContent();
+
+    my $decoded = decode_json( $client->responseContent() );
+
+    my $domain;
+
+    my @containers = @{ $decoded->{'metadata'} };
+    @containers = map basename($_), @containers;
+
+    if ($domain) {
+            return $domain;
+        }
+    return;
 }
+
 
 sub search_domain_by_id {}
 

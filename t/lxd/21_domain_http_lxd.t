@@ -71,7 +71,7 @@ sub test_new_domain {
     my $active = shift;
     
     my $name = _new_name();
-    diag ("Test remove domain");
+    diag ("Test remove domain $name.");
     test_remove_domain($vm_lxd, $name);
 
     diag("Creating container $name.");
@@ -120,7 +120,7 @@ sub test_domain($vm_lxd, $active = 1){
         eval { $name_here = $domain->name };
         ok($name_here, "No name found for domain ".($@ or ''));
         my @list = $vm->list_domains();
-        ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
+        ok(scalar(@list) == $n_domains,"Found ".scalar(@list)." domains, expecting "
             .($n_domains+1)
             .". List: "
             .join(" * ", sort map { $_->name } @list)
