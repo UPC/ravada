@@ -4,22 +4,22 @@ storage pool.
 
 ## Add the drive to the system
 
-Add the drive to the host. Format it.
-
 After booting with the new drive, check dmesg to find out the
 name of the new disk. It will probably be called /dev/sdSOMETHING.
 
 Double check this is actually the new disk, if not you may erase
-all the contents of the system. Type df to see the old disk partitions.
+all the contents of the system. Type _df_ to see the old disk partitions.
 
-Create a new partition with fdisk. It should show it as empty. Add only
+Create a new partition with _fdisk_. It should show it as empty. Add only
 one primary partition for all the free space.
 
-    $ sudo fdisk /dev/sdb
+Replace _sdX_ by the real name of the new device:
+
+    $ sudo fdisk /dev/sdX
 
 Format it with large files tunning:
 
-    $ sudo mkfs.ext4 -m 0.001 -T largefiles /dev/sdb1
+    $ sudo mkfs.ext4 -m 0.001 -T largefiles /dev/sdX1
 
 ## Mount the new partition
 

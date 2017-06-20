@@ -29,7 +29,6 @@ use POSIX qw(locale_h);
 
 my $help;
 my $FILE_CONFIG = "/etc/ravada.conf";
-our $VERSION_TYPE = "";
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
@@ -96,7 +95,9 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
+  my $version = $RAVADA->version();
+  $version =~ s/-/_/g;
+  $c->stash(version => $version);
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
@@ -116,7 +117,7 @@ hook before_routes => sub {
 
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
@@ -125,6 +126,12 @@ hook before_routes => sub {
 
 
 ############################################################################3
+
+any '/robots.txt' => sub {
+    my $c = shift;
+    warn "robots";
+    return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
+};
 
 any '/' => sub {
     my $c = shift;
@@ -862,20 +869,23 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
+    my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
     $swap *= 1024*1024*1024;
-    my $req = $RAVADA->create_domain(
+
+    my %args = (
            name => $name
-        ,id_iso => $c->param('id_iso')
-        ,id_template => $c->param('id_template')
-        ,vm=> $c->param('backend')
+        ,vm=> $vm
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
 
-    return $req;
+    $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
+    $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
+
+    return $RAVADA->create_domain(%args);
 }
 
 sub _show_request {
@@ -1141,32 +1151,23 @@ sub register {
     my $username = $c->param('username');
     my $password = $c->param('password');
    
- #   if($c ->param('submit')) {
- #       push @error,("Name is mandatory")   if !$c->param('username');
- #       push @error,("Invalid username '".$c->param('username')."'"
- #               .".It can only contain words and numbers.")
- #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
- #       if (!@error) {
- #           Ravada::Auth::SQL::add_user($username, $password,0);
- #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
- #       }
-
-#    }
-#    $c->stash(errors => \@error);
-#    push @{$c->stash->{js}}, '/js/admin.js';
-#    $c->render(template => 'bootstrap/new_user_control'
-#        , name => $c->param('username')
-#)    
-    
-   if ($username) {
-       Ravada::Auth::SQL::add_user(name => $username, password => $password);
-       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+   if($username) {
+       my @list_users = Ravada::Auth::SQL::list_all_users();
+       warn join(", ", @list_users);
+      
+       if (grep {$_ eq $username} @list_users) {
+           push @error,("Username already exists, please choose another one"); 
+           $c->render(template => 'bootstrap/new_user',error => \@error);
+       }
+       else {
+           #username don't exists
+           Ravada::Auth::SQL::add_user(name => $username, password => $password);
+           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+       }
    }
-   $c->render(template => 'bootstrap/new_user');
-
+   $c->render(template => 'bootstrap/new_user',error => \@error);
 
 }
-
 
 sub manage_machine {
     my $c = shift;

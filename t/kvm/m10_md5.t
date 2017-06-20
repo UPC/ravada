@@ -186,7 +186,6 @@ sub test_isos_localhost {
         skip("No local apache with isos detected",10) if !$res->is_success; 
         my $iso_list  = rvd_front->list_iso_images;
         for my $iso (@$iso_list) {
-            next if $iso->{name} !~ /fedora/i;
             for my $tag ( qw(md5_url sha256_url url) ) {
                 next if !$iso->{$tag};
                 $iso->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2};
@@ -194,15 +193,16 @@ sub test_isos_localhost {
                 my ($url,$file) = ($iso->{$tag});
                 ($url,$file) = $iso->{$tag} =~ m{(\w+://.*)/(.*)} if $iso->{$tag} =~ /\*/;
                 if ($file) {
-                    $url = extract_file($url,$file);
-                    warn "WARNING: I can't extract $file from $url" if !$url;
-                    $iso->{$tag} = $url if $url;
+                    my $url2 = extract_file($url,$file);
+                    warn "WARNING: I can't extract $file from $url" if !$url2;
+                    $iso->{$tag} = $url2 if $url2;
                 }
-                $iso->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2};
-
-                $res = $ua->request(HTTP::Request->new(GET => $url))    if $url;
-                if (!$url || !$res->is_success) {
-                    diag("Missing $iso->{$tag}");
+                $iso->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2}
+                    if !$iso->{$tag} =~ /localhost/;
+                $res = $ua->request(HTTP::Request->new(GET => $iso->{$tag}))
+                    if $iso->{$tag};
+                if (!$iso->{$tag}|| !$res->is_success) {
+#                    diag("Missing $iso->{$tag}");
                     $iso->{failed}++;
                     next;
                 }
@@ -241,6 +241,24 @@ sub extract_file {
     return;
 }
 
+sub test_isos_custom {
+    my $vm_name = shift;
+
+    my $id_iso = 995;
+    my $sth = $test->dbh->prepare(
+        "INSERT INTO iso_images "
+        ." (id,device,name)"
+        ." VALUES(?,?,?)"
+    );
+    $sth->execute($id_iso,"/var/lib/blah.iso","blah");
+    $sth->finish;
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $iso = $vm->_search_iso($id_iso);
+    ok($iso,"Expecting an ISO ref , got ".ref($iso));
+    is($iso->{filename},"blah.iso");
+}
+
 #######################################################
 #
 
@@ -266,6 +284,8 @@ SKIP: {
     test_isos_already_there($vm_name);
 
     test_isos_localhost($vm_name);
+
+    test_isos_custom($vm_name);
 }
 
 clean();

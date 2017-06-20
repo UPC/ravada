@@ -261,7 +261,7 @@ msgstr ""
 msgid "You'll need to install"
 msgstr ""
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
 msgstr ""
 
 msgid ""
@@ -299,6 +299,9 @@ msgid "Start session"
 msgstr ""
 
 msgid "Login with Intranet UPC's username."
+msgstr ""
+
+msgid "bits) in your computer."
 msgstr ""
 
 msgid "Permissions"

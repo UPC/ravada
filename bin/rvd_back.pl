@@ -69,7 +69,7 @@ my $PID_LONGS;
 #
 
 sub do_start {
-    warn "Starting rvd_back\n";
+    warn "Starting rvd_back v".$Ravada::VERSION."\n";
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
@@ -132,6 +132,7 @@ sub start {
 sub add_user {
     my $login = shift;
 
+    my $ravada = Ravada->new();
     print "$login password: ";
     my $password = <STDIN>;
     chomp $password;
@@ -143,6 +144,7 @@ sub add_user {
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
     my $ravada = Ravada->new(config => $FILE_CONFIG);
+
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);

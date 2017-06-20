@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.5';
+our $VERSION = '0.2.7-beta1';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -171,11 +171,44 @@ sub _update_isos {
         ,fedora => {
             name => 'Fedora 25'
             ,description => 'RedHat Fedora 25 Workstation 64 bits'
-            ,url => 'https://download.fedoraproject.org/pub/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+        }
+        ,xubuntu_zesty => {
+            name => 'Xubuntu Zesty Zapus'
+            ,description => 'Xubuntu 17.04 Zesty Zapus 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5 => '6bd80e10bf223a04d3aafe0f997d046b'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot/mini.iso'
+        }
+        ,xubuntu_xenial => {
+            name => 'Xubuntu Xenial Xerus'
+            ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/mini.iso'
+           ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5 => 'fe495d34188a9568c8d166efc5898d22'
+        }
+        ,lubuntu_zesty => {
+            name => 'Lubuntu Zesty Zapus'
+            ,description => 'Lubuntu 17.04 Zesty Zapus 64 bits'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/lubuntu-17.04-desktop-amd64.iso'
+            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/MD5SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+        }
+        ,lubuntu_xenial => {
+            name => 'Lubuntu Xenial Xerus'
+            ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/lubuntu-16.04.2-desktop-amd64.iso'
+            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
         }
 
     );
@@ -266,12 +299,16 @@ sub _insert_data {
 
 sub _create_tables {
     my $self = shift;
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+#    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
+    $DIR_SQL =~ s{(.*)/.*}{$1/$driver};
 
     opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
     while (my $file = readdir $ls) {
         my ($table) = $file =~ m{(.*)\.sql$};
         next if !$table;
+        next if $table =~ /^insert/;
         $self->_insert_data($table)     if $self->_create_table($table);
     }
     closedir $ls;
