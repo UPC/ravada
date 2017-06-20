@@ -338,6 +338,7 @@ sub iso_file {
     my $self = shift;
     my $vm = $self->search_vm('KVM');
     my @isos = $vm->search_volume_path_re(qr(.*\.iso$)); 
+    #TODO remove path from device
     return \@isos;
 }
 
