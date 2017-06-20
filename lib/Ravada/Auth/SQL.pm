@@ -288,6 +288,9 @@ sub make_admin($self, $id) {
     $sth->execute($id);
     $sth->finish;
 
+    my $user = $self->search_by_id($id);
+    $self->grant_admin_permissions($user);
+
 }
 
 =head2 remove_admin
@@ -299,13 +302,15 @@ Remove user admin privileges. Returns nothing.
 =cut
 
 sub remove_admin($self, $id) {
-    warn "\t remove_admin $id";
     my $sth = $$CON->dbh->prepare(
             "UPDATE users SET is_admin=NULL WHERE id=?");
 
     $sth->execute($id);
     $sth->finish;
 
+    my $user = $self->search_by_id($id);
+    $self->revoke_all_permissions($user);
+    $self->grant_user_permissions($user);
 }
 
 =head2 is_admin
@@ -520,6 +525,25 @@ sub grant_admin_permissions($self,$user) {
     $sth->finish;
 
 }
+
+=head2 revoke_all_permissions
+
+Revoke all permissions from an user
+
+=cut
+
+sub revoke_all_permissions($self,$user) {
+    my $sth = $$CON->dbh->prepare(
+            "SELECT name FROM grant_types "
+    );
+    $sth->execute();
+    while ( my ($name) = $sth->fetchrow) {
+        $self->revoke($user,$name);
+    }
+    $sth->finish;
+
+}
+
 
 =head2 grant
 

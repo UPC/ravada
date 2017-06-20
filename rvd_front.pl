@@ -315,17 +315,20 @@ get '/machine/clone/(:id).(:type)' => sub {
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)        if !$USER ->can_shutdown_all();
         return shutdown_machine($c);
 };
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)        if !$USER ->can_shutdown_all();
         return shutdown_machine($c);
 };
 
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)       if !$USER -> can_remove();
         return remove_machine($c);
 };
 
@@ -362,6 +365,7 @@ get '/machine/pause/(:id).(:type)' => sub {
 
 get '/machine/hybernate/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)   if !$USER ->can_hibernate_all();
         return hybernate_machine($c);
 };
 
@@ -387,6 +391,7 @@ get '/machine/exists/#name' => sub {
 
 get '/machine/rename/#id' => sub {
     my $c = shift;
+    return access_denied($c)       if !$USER -> can_rename();
     return rename_machine($c);
 };
 
@@ -397,6 +402,7 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
+    return access_denied($c)    if !$USER -> can_copy();
     return copy_machine($c);
 };
 

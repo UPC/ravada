@@ -297,3 +297,96 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr "خطوط اسکی زیر را در یک فایل .reg ذخیره کنید و سپس فایل را اجرا کنید"
+
+
+msgid "Login"
+msgstr "ورود"
+
+msgid "Welcome"
+msgstr "خوش آمدید"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "برای نمایش به نرم افزار نمایشگر نیاز است"
+
+msgid "Virtual Machines"
+msgstr "ماشین مجازی"
+
+msgid "user"
+msgstr "کاربر"
+
+msgid "password"
+msgstr "رمز عبور"
+
+msgid "Start session"
+msgstr "شروع"
+
+msgid "Login with Intranet UPC's username."
+msgstr "با استفاده از نام کاربری یو پی سی وارد شوید"
+
+msgid "Permissions"
+msgstr "مجوزها"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "کاربر می تواند تنظیمات مربوط به ماشین مجازی خود را تغییر دهد"
+
+msgid "can change the settings of any virtual machines."
+msgstr "کاربر می تواند تنظیمات مربوط به هر ماشین مجازی را تغییر دهد"
+
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+"کاربر می تواند تنظیمات مربوط به هر ماشین مجازی که"
+"در سیستم خود همسان سازی نموده تغییر دهد."
+
+msgid "can clone public virtual machines."
+msgstr "کاربر می تواند ماشین های مجازی عمومی را همسان سازی کند"
+
+msgid "can clone any virtual machine."
+msgstr "کاربر می تواند ماشین های مجازی را همسان سازی کند"
+
+msgid "can create bases."
+msgstr "کاربر می تواند پایگاه ایجاد کند"
+
+msgid "can create virtual machines."
+msgstr "کاربر می تواند ماشین های مجازی ایجاد کند"
+
+msgid "can grant permissions to other users"
+msgstr "کاربر می تواند به کاربرهای دیگر مجوز اعطا کند"
+
+msgid "can hibernate any virtual machine."
+msgstr "کاربر می تواند هر ماشین مجازی را به حالت استراحت در بیاورد"
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr "کاربر می تواند ماشین های همسان شده مربوط به خود را به حالت استراحت دربیاورد"
+
+msgid "can hibernate any clone."
+msgstr "کاربر می تواند هر همسانی را به حالت استراحت دربیاورد"
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "کاربر می تواند هر ماشین مجازی مربوط به خودش را پاک کند"
+
+msgid "can remove any virtual machine."
+msgstr "کاربر می تواند هر ماشین مجازی را پاک کند"
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "کاربر می تواند همسان های متعلق به خود را پاک کند"
+
+msgid "can remove any clone."
+msgstr "کاربر می تواند هر همسانی را پاک کند"
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr "کاربر می تواند از ماشین های مجازی خودش عکس تصویر تهیه کند"
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "کاربر می تواند از هر ماشین مجازی تصویر تهیه کند"
+
+msgid "can shutdown any virtual machine."
+msgstr "کاربر می تواند هر ماشین مجازی را خاموش نماید"
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "کاربر می تواند ماشین های مجازی همسان شده مربوط به خودش را خاموش نماید"
+
+msgid "Submit Query"
+msgstr "ثبت"
+

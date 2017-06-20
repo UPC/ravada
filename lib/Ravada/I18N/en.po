@@ -367,4 +367,4 @@ msgid "can shutdown clones from virtual machines owned by the user."
 msgstr ""
 
 msgid "Submit Query"
-msgstr ""
+msgstr "" 
