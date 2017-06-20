@@ -250,7 +250,7 @@ sub remove_domain {
     my $self = shift;
     my %args = @_;
     my $client = $self->_connect_http();
-    
+
     $client->DELETE('/1.0/containers/'.'$args{name}')->responseContent();
     warn Dumper(decode_json( $client->responseContent() ));
     warn "Removing domain $args{name}";
@@ -286,17 +286,9 @@ sub search_domain {
 
     my $client = $self->_connect_http();
     $client->GET('/1.0/containers/$name')->responseContent();
-
-    my $decoded = decode_json( $client->responseContent() );
-
-    my $domain;
-
-    my @containers = @{ $decoded->{'metadata'} };
-    @containers = map basename($_), @containers;
-
-    if ($domain) {
-            return $domain;
-        }
+    if( $client->responseCode() eq '200' ){
+    return $name;
+    }
     return;
 }
 
