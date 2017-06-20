@@ -26,5 +26,5 @@ group: edge
 #dist: "zesty"
 #dist: "yakkety"
 #sudo: required
-sudo: false
+#sudo: false
 dist: trusty
