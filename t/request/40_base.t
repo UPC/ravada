@@ -176,13 +176,17 @@ sub test_req_prepare_base {
     my $name = shift;
 
     my $rvd_back = rvd_back();
+    {
+        my $domain = $rvd_back->search_domain($name);
+        $domain->shutdown_now($USER)    if $domain->is_active();
+        is($domain->is_active(),0);
+    }
     my $req;
     {
         my $vm = rvd_front()->search_vm($vm_name);
         my $domain = $vm->search_domain($name);
         ok($domain, "Searching for domain $name, got ".ref($name)) or return;
         ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
-
         $req = Ravada::Request->prepare_base(
             id_domain => $domain->id
             ,uid => $USER->id
@@ -207,6 +211,11 @@ sub test_req_prepare_base {
 
     my @messages = $USER->messages;
     like($messages[-1]->{subject}, qr/done|downloaded/i);
+
+    {
+        my $domain = $rvd_back->search_domain($name);
+        is($domain->is_active(),0);
+    }
 
 }
 
