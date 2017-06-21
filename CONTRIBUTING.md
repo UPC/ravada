@@ -48,7 +48,7 @@ and a **code sample**, an **executable test case** or a step by step guide demon
 At this point, you're ready to make your changes! Feel free to ask for help;
 everyone is a beginner at first :smile_cat:
 
-Follow this guide for running [http://ravada.readthedocs.io/en/latest/devel-docs/run.html](Ravada in development mode).
+Follow this guide about running [Ravada in development mode](http://ravada.readthedocs.io/en/latest/devel-docs/run.html).
 
 ### 6. Make a Pull Request
 
