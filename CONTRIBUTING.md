@@ -25,7 +25,7 @@ git checkout -b 325_boost_performance
 ```
 
 If you contribute code, *thank you* ! Plase, follow this rules so our
-code in sync:
+code is in sync:
 
 - Use spaces, don't do tabs.
 - Add the issue number at the very beggining of the commit message
