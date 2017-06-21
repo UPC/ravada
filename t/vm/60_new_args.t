@@ -264,9 +264,6 @@ $Data::Dumper::Sortkeys = 1;
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $vm_ok;
     eval {
@@ -286,6 +283,8 @@ for my $vm_name (qw( Void KVM )) {
 
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
+
+        use_ok("Ravada::VM::$vm_name");
         test_args($vm_name);
         test_small($vm_name);
     };

@@ -16,7 +16,6 @@ my %CONFIG = (
 );
 
 use_ok('Ravada');
-use_ok($CLASS);
 
 ##########################################################
 
@@ -54,6 +53,8 @@ SKIP: {
     diag($msg)      if !$vm;
     diag($err)      if !$vm;
     skip $msg,10    if !$vm;
+
+    use_ok($CLASS);
 
 test_vm_connect();
 test_search_vm();
