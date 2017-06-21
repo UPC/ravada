@@ -1410,15 +1410,8 @@ sub prepare_machine {
             if  $domain->is_locked();
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    if (! -e $file_screenshot && $domain->can_screenshot() ) {
-        if ( !$domain->is_active() ) {
-            Ravada::Request->start_domain(
-                       uid => $USER->id
-                     ,name => $domain->name
-                ,remote_ip => _remote_ip($c)
-            );
-            sleep 3;
-        }
+    if (! -e $file_screenshot && $domain->can_screenshot()
+            && $domain->is_active) {
         Ravada::Request->screenshot_domain (
             id_domain => $domain->id
             ,filename => $file_screenshot
