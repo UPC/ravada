@@ -1139,7 +1139,7 @@ sub _log_iptable {
 
     my $user = $args{user};
     my $uid = $args{uid};
-    confess "Chyoose wehter uid or user "
+    confess "Chyoose wether uid or user "
         if $user && $uid;
     lock_hash(%args);
 
