@@ -216,7 +216,14 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
-
+        ,debian_stretch => {
+            name =>'Debian Stretch 64 bits XFCE'
+            ,description => 'Debian 9.0 Stretch 64 bits'
+            ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.0.0-amd64-xfce-CD-1.iso'
+            ,md5 => '9346436c0cf1862af71cb0a03d9a703c'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
     );
 
     $self->_update_table($table, $field, \%data);
