@@ -17,8 +17,16 @@ use Socket qw( inet_aton inet_ntoa );
 
 use Ravada::Auth;
 use Ravada::Request;
-use Ravada::VM::KVM;
 use Ravada::VM::Void;
+
+our %VALID_VM;
+
+eval {
+    require Ravada::VM::KVM and do {
+        Ravada::VM::KVM->import;
+    };
+    $VALID_VM{KVM} = 1;
+};
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -604,6 +612,7 @@ sub _init_config {
 
 sub _create_vm_kvm {
     my $self = shift;
+    return (undef, "KVM not installed") if !$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
