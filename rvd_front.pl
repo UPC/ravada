@@ -1265,14 +1265,14 @@ sub settings_machine {
 
     $c->stash(message => '');
     my @reqs = ();
-    for (qw(sound video network)) {
+    for (qw(sound video network image jpeg zlib playback streaming)) {
         my $driver = "driver_$_";
         if ( $c->param($driver) ) {
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
                 , id_option => $c->param($driver)
             );
-            $c->stash(message => 'Driver change will apply on next start');
+            $c->stash(message => 'Changes will apply on next start');
             push @reqs,($req2);
         }
     }
@@ -1419,15 +1419,8 @@ sub prepare_machine {
             if  $domain->is_locked();
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    if (! -e $file_screenshot && $domain->can_screenshot() ) {
-        if ( !$domain->is_active() ) {
-            Ravada::Request->start_domain(
-                       uid => $USER->id
-                     ,name => $domain->name
-                ,remote_ip => _remote_ip($c)
-            );
-            sleep 3;
-        }
+    if (! -e $file_screenshot && $domain->can_screenshot()
+            && $domain->is_active) {
         Ravada::Request->screenshot_domain (
             id_domain => $domain->id
             ,filename => $file_screenshot

@@ -1,8 +1,8 @@
 <domain type='kvm'>
   <name>WinXP_Labview_DAQ6016</name>
   <uuid>07e59340-ced0-4187-b946-986651613270</uuid>
-  <memory unit='KiB'>2097152</memory>
-  <currentMemory unit='KiB'>2097152</currentMemory>
+  <memory unit='KiB'>1048000</memory>
+  <currentMemory unit='KiB'>1048000</currentMemory>
   <vcpu placement='static'>1</vcpu>
   <os>
     <type arch='x86_64' machine='pc-i440fx-xenial'>hvm</type>

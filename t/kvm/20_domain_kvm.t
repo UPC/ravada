@@ -12,7 +12,6 @@ use Test::Ravada;
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
-use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 
@@ -305,6 +304,8 @@ SKIP: {
 
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
+
+    use_ok("Ravada::Domain::$BACKEND");
 
 test_vm_kvm();
 
