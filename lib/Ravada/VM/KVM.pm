@@ -1574,6 +1574,85 @@ sub _xml_modify_mac {
     die "I can't find a new unique mac" if !$new_mac;
 }
 
+
+=pod
+
+sub xml_add_graphics_image {
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/image');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"image");
+    }
+    $listen->setAttribute(compression => 'auto_glz');
+}
+
+=cut
+
+sub _xml_add_graphics_jpeg {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/jpeg');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"jpeg");
+    }
+    $listen->setAttribute(compression => 'auto');
+}
+
+sub _xml_add_graphics_zlib {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/zlib');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"zlib");
+    }
+    $listen->setAttribute(compression => 'auto');
+}
+
+sub _xml_add_graphics_playback {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/playback');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"playback");
+    }
+    $listen->setAttribute(compression => 'on');
+}
+
+sub _xml_add_graphics_streaming {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/streaming');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"streaming");
+    }
+    $listen->setAttribute(mode => 'filter');
+}
+
 =head2 list_networks
 
 Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object

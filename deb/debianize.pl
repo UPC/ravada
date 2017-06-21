@@ -10,7 +10,8 @@ use lib './lib';
 use Ravada;
 use File::Copy;
 
-my $DIR_DST = getcwd."/../ravada-".Ravada::version();
+my $VERSION = Ravada::version();
+my $DIR_DST = getcwd."/../ravada-$VERSION";
 my $DEBIAN = "DEBIAN";
 
 my %DIR = (
@@ -111,7 +112,7 @@ sub create_md5sums {
 }
 
 sub create_deb {
-    my $deb = "ravada_${Ravada::VERSION}_all.deb";
+    my $deb = "ravada_${VERSION}_all.deb";
     my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -136,6 +137,23 @@ sub remove_use_lib {
         unlink "$path.old" or die "$! $path.old";
         chmod 0755,$path or die "$! chmod 755 $path";
     }
+}
+
+sub change_version {
+    my $path = "$DIR_DST/usr//share/perl5/Ravada.pm";
+    copy($path, "$path.old") or die "$! $path -> $path.old";
+    open my $in,'<',"$path.old" or die "$! $path.old";
+    open my $out,'>',$path      or die "$! $path";
+    while (<$in>) {
+        s/(.*our \$VERSION\s*=\s*').*('.*)/$1$VERSION$2/;
+        print $out $_;
+    }
+    close $out;
+    close $in;
+
+    unlink "$path.old" or die "$! $path.old";
+    chmod 0755,$path or die "$! chmod 755 $path";
+
 }
 
 sub change_mod {
@@ -213,8 +231,8 @@ sub chmod_ravada_conf {
 }
 
 sub tar {
-    my @cmd = ('tar','czvf',"ravada_".Ravada::version.".orig.tar.gz"
-       ,"ravada-".Ravada::version()
+    my @cmd = ('tar','czvf',"ravada_$VERSION.orig.tar.gz"
+       ,"ravada-$VERSION"
     );
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -240,7 +258,7 @@ sub set_version {
     open my $in ,'<',$file_in   or die "$! $file_in";
     open my $out,'>',$file_out  or die "$! $file_out";
 
-    my $version = Ravada::version();
+    my $version = $VERSION;
     $version =~ s/_/-/g;
 
     my $changed = 0;
@@ -270,6 +288,7 @@ copy_files();
 set_version();
 remove_not_needed();
 remove_use_lib();
+change_version();
 change_mod();
 gzip_docs();
 gzip_man();

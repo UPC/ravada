@@ -19,6 +19,9 @@ use Moose;
 use Sys::Virt::Stream;
 use XML::LibXML;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 with 'Ravada::Domain';
 
 has 'domain' => (
@@ -42,11 +45,21 @@ our %GET_DRIVER_SUB = (
     network => \&_get_driver_network
      ,sound => \&_get_driver_sound
      ,video => \&_get_driver_video
+     ,image => \&_get_driver_image
+     ,jpeg => \&_get_driver_jpeg
+     ,zlib => \&_get_driver_zlib
+     ,playback => \&_get_driver_playback
+     ,streaming => \&_get_driver_streaming
 );
 our %SET_DRIVER_SUB = (
     network => \&_set_driver_network
      ,sound => \&_set_driver_sound
      ,video => \&_set_driver_video
+     ,image => \&_set_driver_image
+     ,jpeg => \&_set_driver_jpeg
+     ,zlib => \&_set_driver_zlib
+     ,playback => \&_set_driver_playback
+     ,streaming => \&_set_driver_streaming
 );
 
 ##################################################
@@ -455,7 +468,7 @@ sub display {
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
 
-    die "Unable to get port for domain ".$self->name
+    die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
     return "$type://$address:$port";
@@ -1146,14 +1159,16 @@ sub _set_spice_ip {
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
 
-        my $password;
-        if ($set_password) {
-            $password = Ravada::Utils::random_name(4);
-            $graphics->setAttribute(passwd => $password);
-        } else {
-            $graphics->removeAttribute('passwd');
+        if ( !$self->is_hibernated() ) {
+            my $password;
+            if ($set_password) {
+                $password = Ravada::Utils::random_name(4);
+                $graphics->setAttribute(passwd => $password);
+            } else {
+                $graphics->removeAttribute('passwd');
+            }
+            $self->_set_spice_password($password);
         }
-        $self->_set_spice_password($password);
 
         my $listen;
         for my $child ( $graphics->childNodes()) {
@@ -1262,17 +1277,71 @@ sub _get_driver_generic {
     my $self = shift;
     my $xml_path = shift;
 
+    my ($tag) = $xml_path =~ m{.*/(.*)};
+
     my @ret;
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     for my $driver ($doc->findnodes($xml_path)) {
         my $str = $driver->toString;
-        $str =~ s{^<model (.*)/>}{$1};
+        $str =~ s{^<$tag (.*)/>}{$1};
         push @ret,($str);
     }
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_driver_graphics {
+    my $self = shift;
+    my $xml_path = shift;
+
+    my ($tag) = $xml_path =~ m{.*/(.*)};
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $tags (qw(image jpeg zlib playback streaming)){
+        for my $driver ($doc->findnodes($xml_path)) {
+            my $str = $driver->toString;
+            $str =~ s{^<$tag (.*)/>}{$1};
+            push @ret,($str);
+        }
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+    }
+}
+
+sub _get_driver_image {
+    my $self = shift;
+
+    my $image = $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
+#
+#    if ( !defined $image ) {
+#        my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+#        Ravada::VM::KVM::xml_add_graphics_image($doc);
+#    }
+    return $image;
+}
+
+sub _get_driver_jpeg {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/jpeg',@_);
+}
+
+sub _get_driver_zlib {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/zlib',@_);
+}
+
+sub _get_driver_playback {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/playback',@_);
+}
+
+sub _get_driver_streaming {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/streaming',@_);
 }
 
 sub _get_driver_video {
@@ -1326,6 +1395,8 @@ sub _set_driver_generic {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     my %value = _text_to_hash($value_str);
+    my $changed = 0;
+
     for my $video($doc->findnodes($xml_path)) {
         my $old_driver = $video->toString();
         for my $node ($video->findnodes('model')) {
@@ -1343,12 +1414,103 @@ sub _set_driver_generic {
                 $node->setAttribute( $name => $value{$name} );
             }
         }
-        return if $old_driver eq $video->toString();
+        $changed++ if $old_driver ne $video->toString();
+    }
+    return if !$changed;
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+
+sub _set_driver_generic_simple($self, $xml_path, $value_str) {
+    my %value = _text_to_hash($value_str);
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my $changed = 0;
+    my $found = 0;
+    for my $node ( $doc->findnodes($xml_path)) {
+        $found++;
+        my $old_driver = $node->toString();
+        for my $attrib ( $node->attributes ) {
+            my ( $name ) =$attrib =~ /\s*(.*)=/;
+            next if !defined $name;
+            my $new_value = ($value{$name} or '');
+            if ($value{$name}) {
+                $node->setAttribute($name => $value{$name});
+            } else {
+                $node->removeAttribute($name);
+            }
+        }
+        for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+        }
+        $changed++ if $old_driver ne $node->toString();
+    }
+    $self->_add_driver($xml_path, \%value)       if !$found;
+
+    return if !$changed;
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+sub _add_driver($self, $xml_path, $attributes=undef) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my @nodes = $doc->findnodes($xml_path);
+    return if @nodes;
+
+    my ($xml_parent, $new_node) = $xml_path =~ m{(.*)/(.*)};
+    my @parent = $doc->findnodes($xml_parent);
+
+    confess "Expecting one parent, I don't know what to do with ".scalar @parent
+        if scalar@parent > 1;
+
+    @parent = add_driver($self, $xml_parent)  if !@parent;
+
+    my $node = $parent[0]->addNewChild(undef,$new_node);
+
+    for my $name (keys %$attributes) {
+        $node->setAttribute($name => $attributes->{$name});
     }
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+    return $node;
+}
+
+sub _set_driver_image {
+    my $self = shift;
+    my $value_str = shift or confess "Missing value";
+    my $xml_path = '/domain/devices/graphics/image';
+
+    return $self->_set_driver_generic_simple($xml_path, $value_str);
+}
+
+sub _set_driver_jpeg {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/jpeg',@_);
+}
+
+sub _set_driver_zlib {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/zlib',@_);
+}
+
+sub _set_driver_playback {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/playback',@_);
+}
+
+sub _set_driver_streaming {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/streaming',@_);
 }
 
 sub _set_driver_video {

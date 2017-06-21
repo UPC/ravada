@@ -3,14 +3,9 @@
 
 **Implemented enhancements:**
 
-- Support sha256 for ISO [\#225]
-- Create virtual machine from Fedora Workstation ISO
-- Create virtual machine from Lubuntu Desktop ISO
-- Create virtual machine from Xubuntu Desktop ISO
+- Improve URL for viewing domains [\#200]
+- View Domains at fullscreen [\#30]
 
 **Fixed bugs:**
 
-- No filename for custom iso images [\#232]
-- Client IP is missing from machines list [\#227]
-- The header in the requirements page doesn't show options [\#221]
-- list iso images fails for fresh installs [\#235]
+- Hibernated domains restart with new spice password [\#263]

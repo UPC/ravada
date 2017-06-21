@@ -23,6 +23,7 @@
                <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
                <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
                <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
+               <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
 %   }
              </ul>
             <div class="tab-content">
@@ -36,6 +37,9 @@
              <div class="tab-pane fade" id="copy">
     %= include 'main/vm_copy'
              </div>
+             <div class="tab-pane fade" id="graphics">
+    %= include 'main/vm_graphics'
+             </div>
 % }          
              <div class="tab-pane fade in active" id="drivers">
     %= include 'main/vm_options'
@@ -48,5 +52,34 @@
 </div> <!-- del wrapper -->
     %= include 'bootstrap/scripts'
     %= include 'bootstrap/messages'
+<script type="text/javascript">
+if (location.hash) {
+  $('a[href=\'' + location.hash + '\']').tab('show');
+}
+var activeTab = localStorage.getItem('activeTab');
+if (activeTab) {
+  $('a[href="' + activeTab + '"]').tab('show');
+}
+
+$('body').on('click', 'a[data-toggle=\'tab\']', function (e) {
+  e.preventDefault()
+  var tab_name = this.getAttribute('href')
+  if (history.pushState) {
+    history.pushState(null, null, tab_name)
+  }
+  else {
+    location.hash = tab_name
+  }
+  localStorage.setItem('activeTab', tab_name)
+
+  $(this).tab('show');
+  return false;
+});
+$(window).on('popstate', function () {
+  var anchor = location.hash ||
+    $('a[data-toggle=\'tab\']').first().attr('href');
+  $('a[href=\'' + anchor + '\']').tab('show');
+});
+</script>
 </body>
 </html>

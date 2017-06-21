@@ -1,24 +1,41 @@
 
 <!DOCTYPE html>
-<html>
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/navigation'
-    <div class="container theme-showcase" role="main">
+    <div class="container theme-showcase" role="main" ng-controller="run_domain">
     <div class="jumbotron">
-        <h2>Running <%= $name %></h2>
-        Hi <%= $login %>,
-        click <a href="<%= $url %>"><%= $url %></a> if your host won't come out.
+        <h2>Running <a href="<%= $url_display %>"><%= $name %></a></h2>
 
-%       if ($password ) {
-            <div class="panel-body">
-            <div class="panel panel-warning">
-                <div class="panel-heading">
-                    The password for this virtual machine connection is : <b><%= $password %></b>
-                </div>
+        <div class="panel-body">
+            <ul>
+%               if ($password ) {
+                    <li><%=l 'The password for this virtual machine connection is :'%>
+                        <b><%= $password %></b></li>
+%               }
+                <li><%=l 'Display URL :' %>
+                    <a href="<%= $url_display %>"><%= $url_display %></a></li>
+                <li><%=l 'Display IP:' %> <b><%= $display_ip %></b></li>
+                <li><%=l 'Display Port:' %> <b><%= $display_port %></b></li>
+            </ul>
+            <label for="automatic"><input type="checkbox" ng-click="toggle_auto_start()"
+%           if ($c->session('auto_start')) {
+                checked
+%           }
+            >Start automatically next time</input>
+            <br/>
+            <a type="button" class="btn btn-success"
+                    href="<%= $url_display_file %>">
+                <b><%=l 'start'%></b></a>
+
+        </div>
+        <div class="panel-body">
+            <div class="alert alert-warning">
+                    <%=l 'It is required a viewer to run the virtual machines.' %>
+                    <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-            </div>
-%       }
+        </div>
     </div>
     </div>
     %= include 'bootstrap/scripts'

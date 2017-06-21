@@ -11,23 +11,32 @@
 %# if $domain->is_paused || $domain->domain->has_managed_save_image;
 
     <div class="panel-body">
-        % if ($message_rename) {
-            <div class="panel panel-warning">
-               <div class="panel-heading"><%= $message_rename %></div>
-            </div>
-        % }
-        <input type="text" name="new_name" ng-model="new_name"
+        <div class="row">
+            <div class="col-md-6">
+    
+                % if ($message_rename) {
+                    <div class="panel panel-warning">
+                       <div class="panel-heading"><%= $message_rename %></div>
+                    </div>
+                % }
+                <input class="form-control" type="text" name="new_name" ng-model="new_name"
                              ng-change="validate_new_name(showmachine.name)"
                              ng-disabled="<%= $disable_rename %>"
-        >
-        <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated"
+                >
+                <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated"
                              ng-click="rename(showmachine.id, showmachine.name)">
                               <i class="fa fa-check" aria-hidden="true"></i>
-        </button>
-        <div class="form-group has-error">
+                </button>
+                <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">
                                This name is duplicated
                               </label>
+                </div>
+            </div>
+            <div class="col-md-6">
+
+
+            </div>
         </div>
     </div>

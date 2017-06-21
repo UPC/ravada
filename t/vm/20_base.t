@@ -110,10 +110,12 @@ sub test_prepare_base {
     my $domain = shift;
 
     test_files_base($domain,0);
+    $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( $USER) };
     ok(!$@, $@);
     ok($domain->is_base);
+    is($domain->is_active(),0);
 
     eval { $domain->prepare_base( $USER) };
     ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "

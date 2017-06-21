@@ -85,9 +85,9 @@ our $USER;
 our $DOCUMENT_ROOT = "/var/www";
 
 # session times out in 5 minutes
-our $SESSION_TIMEOUT = 5 * 60;
+our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
-our $SESSION_TIMEOUT_ADMIN = 15 * 60;
+our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
 init();
 ############################################################################3
@@ -408,6 +408,25 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/display/#id' => sub {
+    my $c = shift;
+
+    my $id = $c->stash('id');
+
+    my $domain = $RAVADA->search_domain_by_id($id);
+    return $c->render(text => "unknown machine id=$id") if !$id;
+
+    return access_denied($c)
+        if $USER->id ne $domain->id_owner
+        && !$USER->is_admin;
+
+    $c->res->headers->content_type('application/x-virt-viewer');
+    $c->res->headers->content_disposition(
+        "attachment;filename=".$domain->id.".vv");
+
+    return $c->render(data => $domain->display_file($USER));
+};
+
 # Users ##########################################################3
 
 ##add user
@@ -537,6 +556,26 @@ any '/settings' => sub {
     $c->stash(version => $RAVADA->version );
 
     $c->render(template => 'main/settings');
+};
+
+any '/auto_start/(#value)/' => sub {
+    my $c = shift;
+    my $value = $c->stash('value');
+    if ($value =~ /toggle/i) {
+        $value = $c->session('auto_start');
+        if ($value) {
+            $value = 0;
+        } else {
+            $value = 1;
+        }
+    }
+    $c->session('auto_start' => $value);
+    return $c->render(json => {auto_start => $c->session('auto_start') });
+};
+
+get '/auto_start' => sub {
+    my $c = shift;
+    return $c->render(json => {auto_start => $c->session('auto_start') });
 };
 
 ###################################################
@@ -805,7 +844,6 @@ sub quick_start_domain {
 
     return show_failure($c, $domain_name) if !$domain;
 
-    $c->session(expiration => 60) if !$USER->is_admin;
     return show_link($c,$domain);
 
 }
@@ -1034,8 +1072,16 @@ sub show_link {
     }
     _open_iptables($c,$domain)
         if !$req;
-    $c->render(template => 'main/run', url => $uri , name => $domain->name
+    my $uri_file = "/machine/display/".$domain->id;
+    $c->stash(url => $uri_file)  if $c->session('auto_start');
+    my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
+    $c->render(template => 'main/run'
+                ,name => $domain->name
                 ,password => $domain->spice_password
+                ,url_display => $uri
+                ,url_display_file => $uri_file
+                ,display_ip => $display_ip
+                ,display_port => $display_port
                 ,login => $c->session('login'));
 }
 
@@ -1210,14 +1256,14 @@ sub settings_machine {
 
     $c->stash(message => '');
     my @reqs = ();
-    for (qw(sound video network)) {
+    for (qw(sound video network image jpeg zlib playback streaming)) {
         my $driver = "driver_$_";
         if ( $c->param($driver) ) {
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
                 , id_option => $c->param($driver)
             );
-            $c->stash(message => 'Driver change will apply on next start');
+            $c->stash(message => 'Changes will apply on next start');
             push @reqs,($req2);
         }
     }
@@ -1364,15 +1410,8 @@ sub prepare_machine {
             if  $domain->is_locked();
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    if (! -e $file_screenshot && $domain->can_screenshot() ) {
-        if ( !$domain->is_active() ) {
-            Ravada::Request->start_domain(
-                       uid => $USER->id
-                     ,name => $domain->name
-                ,remote_ip => _remote_ip($c)
-            );
-            sleep 3;
-        }
+    if (! -e $file_screenshot && $domain->can_screenshot()
+            && $domain->is_active) {
         Ravada::Request->screenshot_domain (
             id_domain => $domain->id
             ,filename => $file_screenshot
