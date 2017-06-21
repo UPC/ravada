@@ -15,7 +15,7 @@ If not, go ahead and [make one](https://github.com/UPC/ravada/issues/new)!
 ### 2. Fork & create a branch
 
 If this is something you think you can fix, then
-[fork Active Admin](https://help.github.com/articles/fork-a-repo)
+[fork Ravada](https://help.github.com/articles/fork-a-repo)
 and create a branch with a descriptive name.
 
 A good branch name would be (where issue #325 is the ticket you're working on):
