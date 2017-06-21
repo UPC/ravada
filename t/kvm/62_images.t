@@ -111,6 +111,7 @@ sub test_drivers_type {
         }
 
     }
+    $domain->remove($USER);
 }
 
 sub _domain_shutdown {
