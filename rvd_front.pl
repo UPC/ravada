@@ -102,9 +102,7 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  my $version = $RAVADA->version();
-  $version =~ s/-/_/g;
-  $c->stash(version => $version);
+  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
@@ -124,7 +122,7 @@ hook before_routes => sub {
 
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
+        $url !~ m{^/(anonymous|login|logout|requirements)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
@@ -133,12 +131,6 @@ hook before_routes => sub {
 
 
 ############################################################################3
-
-any '/robots.txt' => sub {
-    my $c = shift;
-    warn "robots";
-    return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
-};
 
 any '/' => sub {
     my $c = shift;
@@ -210,15 +202,12 @@ any '/admin/(#type)' => sub {
   my $c = shift;
 
   return access_denied($c)    if !$USER->is_admin;
-
   return admin($c);
 };
 
 any '/new_machine' => sub {
     my $c = shift;
-
-    return access_denied($c)    if !$USER->is_admin;
-
+    return access_denied($c)    if !$USER->can_create_domain;
     return new_machine($c);
 };
 
@@ -305,7 +294,9 @@ get '/machine/info/(:id).(:type)' => sub {
 };
 
 any '/machine/settings/(:id).(:type)' => sub {
-    return settings_machine(@_);
+   	 my $c = shift;
+	 return access_denied($c)     if !$USER->can_change_settings();
+	 return settings_machine($c);
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
@@ -937,7 +928,6 @@ sub new_machine {
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
-    my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
     $swap *= 1024*1024*1024;
     my %args = (
@@ -1202,6 +1192,8 @@ sub init {
 
 sub _search_requested_machine {
     my $c = shift;
+    confess "Missing \$c" if !defined $c;
+
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
@@ -1235,23 +1227,32 @@ sub register {
     my $username = $c->param('username');
     my $password = $c->param('password');
    
-   if($username) {
-       my @list_users = Ravada::Auth::SQL::list_all_users();
-       warn join(", ", @list_users);
-      
-       if (grep {$_ eq $username} @list_users) {
-           push @error,("Username already exists, please choose another one"); 
-           $c->render(template => 'bootstrap/new_user',error => \@error);
-       }
-       else {
-           #username don't exists
-           Ravada::Auth::SQL::add_user(name => $username, password => $password);
-           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
-       }
+ #   if($c ->param('submit')) {
+ #       push @error,("Name is mandatory")   if !$c->param('username');
+ #       push @error,("Invalid username '".$c->param('username')."'"
+ #               .".It can only contain words and numbers.")
+ #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
+ #       if (!@error) {
+ #           Ravada::Auth::SQL::add_user($username, $password,0);
+ #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+ #       }
+
+#    }
+#    $c->stash(errors => \@error);
+#    push @{$c->stash->{js}}, '/js/admin.js';
+#    $c->render(template => 'bootstrap/new_user_control'
+#        , name => $c->param('username')
+#)    
+    
+   if ($username) {
+       Ravada::Auth::SQL::add_user(name => $username, password => $password);
+       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
    }
-   $c->render(template => 'bootstrap/new_user',error => \@error);
+   $c->render(template => 'bootstrap/new_user');
+
 
 }
+
 
 sub manage_machine {
     my $c = shift;
