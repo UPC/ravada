@@ -281,10 +281,12 @@ sub list_domains {
 
 sub search_domain {
     my $self = shift;
+    my %args = @_;
     #confess "Missing vm" if !$self->vm;
-    my $name = shift or confess "Missing name";
+    my $name = $args{name} or confess "Missing domain name: name => 'somename'";
 
     my $client = $self->_connect_http();
+warn "NAME $name";
     $client->GET('/1.0/containers/$name')->responseContent();
     if( $client->responseCode() eq '200' ){
     return $name;
