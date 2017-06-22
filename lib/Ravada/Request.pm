@@ -38,6 +38,7 @@ our %VALID_ARG = (
            ,name => 1
            ,swap => 2
          ,id_iso => 1
+         ,iso_file => 2
         ,id_base => 1
        ,id_owner => 1
     ,id_template => 1
