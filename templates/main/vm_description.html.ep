@@ -1,10 +1,11 @@
+% my $description;
 <div class="panel-body">
     <div class="form-group">
         <div class="row">
             <div class="col-md-6">
                 <form class="form-inline" action="<%= $action %>" method="post">
                     <label>This information will be available to user</label>
-                    <textarea class="col-md-12" rows="6" placeholder="E.g.&#10;Perl Dev Classrom&#10;Group B&#10;Login: uservm&#10;Password: uservm&#10;Version 2.1" required></textarea>
+                    <textarea class="col-md-12" rows="6" placeholder="E.g.&#10;Perl Dev Classrom&#10;Group B&#10;Login: uservm&#10;Password: uservm&#10;Version 2.1" required><%= $description %></textarea>
             </div>
             <div class="col-md-6">
             </div>

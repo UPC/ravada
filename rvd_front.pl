@@ -1084,6 +1084,7 @@ sub show_link {
     my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
+    my $description;
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1091,6 +1092,7 @@ sub show_link {
                 ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
+                ,description => $description
                 ,login => $c->session('login'));
 }
 
@@ -1536,6 +1538,25 @@ sub rename_machine {
     );
 
     return $c->render(json => { req => $req->id });
+}
+
+sub description {
+    my $c = shift;
+    my $id_domain = $c->stash('id');
+    my $description = $c->stash('description');
+    return login($c) if !_logged_in($c);
+    return access_denied($c)    if !$USER->is_admin();
+    
+    return $c->render(data => "Machine id not found")
+        if !$id_domain;
+
+    my $req = Ravada::Request->description(      uid => $USER->id
+                                          ,id_domain => $id_domain
+                                        ,description => $description
+    );
+
+    return $c->render(json => { req => $req->id });
+
 }
 
 sub pause_machine {
