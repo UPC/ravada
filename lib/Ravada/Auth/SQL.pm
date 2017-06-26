@@ -327,6 +327,19 @@ sub is_admin {
     return $self->{_data}->{is_admin};
 }
 
+=head2 is_operator
+
+Returns true if the user is admin or has been granted special permissions
+
+=cut
+
+sub is_operator {
+    my $self = shift;
+    return $self->is_admin() 
+        || $self->can_shutdown_clone()
+        || $self->can_remove_clone();
+}
+
 =head2 is_external
 
 Returns true if the user authentication is not from SQL
@@ -563,7 +576,8 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
-    return 0 if !$value && !$user->can_do($permission);
+    return 0 if defined $value && !$value
+             && defined $user->can_do($permission) && $user->can_do($permission) == 0;
     return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
 
     my $id_grant = _search_id_grant($permission);

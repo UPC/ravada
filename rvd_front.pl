@@ -195,7 +195,11 @@ any '/admin' => sub {
 any '/admin/(#type)' => sub {
   my $c = shift;
 
-  return access_denied($c)    if !$USER->is_admin;
+  return admin($c)  if $c->stash('type') eq 'machines'
+                        && $USER->is_operator;
+
+  return access_denied($c)    if !$USER->is_operator;
+
   return admin($c);
 };
 
