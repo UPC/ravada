@@ -164,23 +164,28 @@ sub test_remove {
 
     is($user->can_remove,0) or return;
 
+    # user can't remove own domains
     my $domain = create_domain($vm_name, $user);
     eval { $domain->remove($user)};
-    ok($@,qr'.');
+    like($@,qr'.');
 
+    # user can't remove domains from others
     my $domain2 = create_domain($vm_name, user_admin());
     eval { $domain2->remove($user)};
-    ok($@,qr'.');
+    like($@,qr'.');
 
+    # user is granted remove
     user_admin()->grant($user,'remove');
     eval { $domain->remove($user)};
-    ok($@,'');
+    is($@,'');
 
+    # but can't remove domains from others
     eval { $domain2->remove($user)};
-    ok($@,qr'.');
+    like($@,qr'.');
 
+    # admin can remove the domain
     eval { $domain2->remove(user_admin())};
-    ok($@,qr'.');
+    is($@,'');
 
 }
 
