@@ -336,7 +336,8 @@ Returns true if the user is admin or has been granted special permissions
 sub is_operator {
     my $self = shift;
     return $self->is_admin() 
-        || $self->can_shutdown_clone();
+        || $self->can_shutdown_clone()
+        || $self->can_remove_clone();
 }
 
 =head2 is_external
@@ -575,10 +576,9 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
-    return 0 if !$value && !$user->can_do($permission);
-
-    my $value_sql = $user->can_do($permission);
-    return $value if defined $value_sql && $value_sql eq $value;
+    return 0 if defined $value && !$value
+             && defined $user->can_do($permission) && $user->can_do($permission) == 0;
+    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
 
     my $id_grant = _search_id_grant($permission);
     if (! defined $value_sql ) {
