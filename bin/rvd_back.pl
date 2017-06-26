@@ -132,7 +132,7 @@ sub start {
 sub add_user {
     my $login = shift;
 
-    my $ravada = Ravada->new();
+    my $ravada = Ravada->new(config => $FILE_CONFIG);
     print "$login password: ";
     my $password = <STDIN>;
     chomp $password;
@@ -143,7 +143,6 @@ sub add_user {
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
-    my $ravada = Ravada->new(config => $FILE_CONFIG);
 
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
