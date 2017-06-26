@@ -92,10 +92,107 @@ sub test_grant {
 
 }
 
+sub test_operator {
+    my $usero = create_user("oper$$","bar");
+    ok(!$usero->is_operator);
+    ok(!$usero->is_admin);
+
+    my $usera = create_user("admin$$","bar",'is admin');
+    ok($usera->is_operator);
+    ok($usera->is_admin);
+
+    $usera->grant($usero,'shutdown_clone');
+    ok($usero->is_operator);
+    ok(!$usero->is_admin);
+
+    $usero->remove();
+    $usera->remove();
+}
+
+sub test_shutdown_clone {
+    my $vm_name = shift;
+
+    my $user = create_user("oper$$","bar");
+    ok(!$user->is_operator);
+    ok(!$user->is_admin);
+
+    my $usera = create_user("admin$$","bar",'is admin');
+    ok($usera->is_operator);
+    ok($usera->is_admin);
+
+
+    my $domain = create_domain($vm_name, $user);
+    $domain->prepare_base($user);
+    ok($domain->is_base) or return;
+
+    my $clone = $domain->clone(user => $usera,name => new_domain_name());
+    $clone->start($usera);
+
+    is($clone->is_active,1) or return;
+
+    eval { $clone->shutdown_now($user); };
+    like($@,qr(.));
+
+    is($clone->is_active,1) or return;
+
+    $usera->grant($user,'shutdown_clone');
+
+    eval { $clone->shutdown_now($user); };
+    is($@,'');
+    is($clone->is_active,0);
+
+    $clone->remove($usera);
+    $domain->remove($user);
+
+    my $domain2 = create_domain($vm_name, $user);
+    $domain2->start($user);
+    $domain2->shutdown_now($user);
+    $domain2->remove($user);
+
+    $user->remove();
+    $usera->remove();
+}
+
+sub test_remove {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_r$$","bar");
+    ok(!$user->is_operator);
+    ok(!$user->is_admin);
+
+    user_admin()->revoke($user,'remove');
+
+    ok(!$user->can_remove) or return;
+
+    my $domain = create_domain($vm_name, $user);
+    eval { $domain->remove($user)};
+    ok($@,qr'.');
+
+    my $domain2 = create_domain($vm_name, user_admin());
+    eval { $domain2->remove($user)};
+    ok($@,qr'.');
+
+    user_admin()->grant($user,'remove');
+    eval { $domain->remove($user)};
+    ok($@,'');
+
+    eval { $domain2->remove($user)};
+    ok($@,qr'.');
+
+    eval { $domain2->remove(user_admin())};
+    ok($@,qr'.');
+
+}
+
 ##########################################################
 
 test_defaults();
 test_admin();
 test_grant();
+
+test_operator();
+
+test_shutdown_clone('Void');
+test_remove('Void');
 
 done_testing();
