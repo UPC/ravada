@@ -264,7 +264,6 @@ sub _allow_remove {
     my $self = shift;
     my ($user) = @_;
 
-    warn $user->name. " ".$user->can_remove();
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
 
