@@ -162,7 +162,7 @@ sub test_remove {
 
     user_admin()->revoke($user,'remove');
 
-    ok(!$user->can_remove) or return;
+    is($user->can_remove,0) or return;
 
     my $domain = create_domain($vm_name, $user);
     eval { $domain->remove($user)};
