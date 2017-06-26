@@ -34,6 +34,7 @@ our $CHAIN = 'RAVADA';
 
 my %ARG_CREATE_DOM = (
       kvm => [ id_iso => 1 ]
+      ,void => []
 );
 
 sub user_admin {
