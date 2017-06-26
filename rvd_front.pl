@@ -121,7 +121,7 @@ hook before_routes => sub {
 
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
@@ -130,6 +130,12 @@ hook before_routes => sub {
 
 
 ############################################################################3
+
+any '/robots.txt' => sub {
+    my $c = shift;
+    warn "robots";
+    return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
+};
 
 any '/' => sub {
     my $c = shift;
@@ -932,6 +938,7 @@ sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
     my $swap = ($c->param('swap') or 0);
+    my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
     my %args = (
            name => $name
