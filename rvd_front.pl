@@ -1278,6 +1278,17 @@ sub settings_machine {
             push @reqs,($req2);
         }
     }
+
+    my $description;
+    if ( $c->param($description) ) {
+        my $req3 = Ravada::Request->set_description(uid => $USER->id
+                , id_domain => $domain->id
+                , id_option => $c->param($description)
+            );
+            $c->stash(message => 'Description applied!');
+            push @reqs,($req3);
+    }
+
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
     }
@@ -1538,25 +1549,6 @@ sub rename_machine {
     );
 
     return $c->render(json => { req => $req->id });
-}
-
-sub description {
-    my $c = shift;
-    my $id_domain = $c->stash('id');
-    my $description = $c->stash('description');
-    return login($c) if !_logged_in($c);
-    return access_denied($c)    if !$USER->is_admin();
-    
-    return $c->render(data => "Machine id not found")
-        if !$id_domain;
-
-    my $req = Ravada::Request->description(      uid => $USER->id
-                                          ,id_domain => $id_domain
-                                        ,description => $description
-    );
-
-    return $c->render(json => { req => $req->id });
-
 }
 
 sub pause_machine {

@@ -1021,6 +1021,18 @@ sub rename {
     $self->domain->rename($new_name);
 }
 
+sub description {
+    my $self = shift;
+    my %args = @_;
+    my $new_name = $args{name};
+
+    $sth = $test->connector->dbh->prepare(
+        "INSERT INTO domains (id,id_base,name,created,error,uri,is_base,is_public,file_base_img,file_screenshot,port,id_owner,vm,spice_password,description)"
+        ."VALUES('34','NULL','Acme',0,'NULL','NULL',1,0,'NULL','/var/www/img/screenshots/34.png','NULL',2,'KVM','NULL',?)"
+    );
+    $sth->execute($description);
+}
+
 =head2 disk_size
 
 Returns the size of the domains disk or disks
@@ -1552,6 +1564,14 @@ sub _set_driver_sound {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+}
+
+sub _set_description{
+    my $self = shift;
+    my %args = @_;
+    my $description = $args{name};
+
+    $self->domain->rename($new_name);
 }
 
 =head2 pre_remove

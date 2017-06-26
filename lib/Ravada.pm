@@ -1653,6 +1653,22 @@ sub _cmd_ping_backend {
     return 1;
 }
 
+sub _cmd_description {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->args('description');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    confess "Unkown domain ".Dumper($request)   if !$domain;
+
+    #$domain->description(user => $user, description => $description);
+}
+
 sub _cmd_rename_domain {
     my $self = shift;
     my $request = shift;
@@ -1706,12 +1722,14 @@ sub _req_method {
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
    ,remove_base => \&_cmd_remove_base
+   ,description => \&_cmd_description
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
+
     );
     return $methods{$cmd};
 }
