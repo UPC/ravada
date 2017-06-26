@@ -327,6 +327,18 @@ sub is_admin {
     return $self->{_data}->{is_admin};
 }
 
+=head2 is_operator
+
+Returns true if the user is admin or has been granted special permissions
+
+=cut
+
+sub is_operator {
+    my $self = shift;
+    return $self->is_admin() 
+        || $self->can_shutdown_clone();
+}
+
 =head2 is_external
 
 Returns true if the user authentication is not from SQL
