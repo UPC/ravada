@@ -264,9 +264,27 @@ sub _allow_remove {
     my $self = shift;
     my ($user) = @_;
 
+    warn $user->name. " ".$user->can_remove();
+    die "ERROR: remove not allowed for user ".$user->name
+        if !$user->can_remove();
+
     $self->_allowed($user);
     $self->_check_has_clones() if $self->is_known();
 
+}
+
+sub _allow_shutdown {
+    my $self = shift;
+    my %args = @_;
+
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    if ( $self->id_base() && $user->can_shutdown_clone()) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    } else {
+        $self->_allowed($user);
+    }
 }
 
 sub _pre_prepare_base {
@@ -398,7 +416,7 @@ sub _allowed {
     eval { $id_owner = $self->id_owner };
     my $err = $@;
 
-    die "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
         ." owned by ".($id_owner or '<UNDEF>')."\n".Dumper($self)
             if (defined $id_owner && $id_owner != $user->id );
 
@@ -987,7 +1005,7 @@ sub _post_pause {
 sub _pre_shutdown {
     my $self = shift;
 
-    $self->_allow_manage_args(@_);
+    $self->_allow_shutdown(@_);
 
     $self->_pre_shutdown_domain();
 
