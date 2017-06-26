@@ -29,10 +29,10 @@ navbar-inverse navbar-fixed-top" role="navigation">
                         <li><a href="/admin/users">
                         <i class="fa fa-user" aria-hidden="true"></i>&nbsp<%=l 'users' %></a>
                         </li>
-                        <li><a href="/admin/messages">
-                        <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
-                        </li>
 %                   }
+                    <li><a href="/admin/messages">
+                    <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
+                    </li>
                   </ul>
                 </li>
 % }
