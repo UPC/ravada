@@ -756,6 +756,35 @@ sub set_driver {
 
 }
 
+=head2 set_description
+
+Sets a description to a domain
+
+    $domain->set_description(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,description => $description
+    );
+
+=cut
+
+sub set_description {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_description', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_description'
+        , id_domain => $args->{id_domain}
+             , args => encode_json($args)
+    );
+
+}
+
 =head2 hybernate
 
 Hybernates a domain.
