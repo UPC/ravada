@@ -1025,13 +1025,17 @@ sub rename {
 sub description {
     my $self = shift;
     my %args = @_;
-    my $new_name = $args{name};
+    my $domain = $args{name};
+    my $description = $args{description};
+
+#Check if domain exists and update description
 
     $sth = $test->connector->dbh->prepare(
-        "INSERT INTO domains (id,id_base,name,created,error,uri,is_base,is_public,file_base_img,file_screenshot,port,id_owner,vm,spice_password,description)"
-        ."VALUES('34','NULL','Acme',0,'NULL','NULL',1,0,'NULL','/var/www/img/screenshots/34.png','NULL',2,'KVM','NULL',?)"
-    );
-    $sth->execute($description);
+        "UPDATE domains SET description=?"
+        ." WHERE name=?"
+        );
+    $sth->execute($description, $domain);
+    $sth->finish;
 }
 =cut 
 
