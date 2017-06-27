@@ -46,6 +46,17 @@ XML Volume file
 Create a new xml volume file based in another one from
 /var/lib/ravada/xml.
 
+URL based ISO (simplified)
+--------------------------
+
+For most Linux based distributions, you won't need to manually download the ISO. Here we're assuming that there are a valid VM definition XML and a volume XML files (based on Ubuntu 16.04 Xenial Xerus).
+
+::
+
+    $ mysql -u rvd_user -p ravada
+    mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, url, sha256_url)
+            VALUES ('Mint 18.2 BETA Mate 64 bits','Mint Serena 18.2 BETA with Mate Desktop based on Ubuntu Xenial 64 bits', 'amd64', 'xenial64-amd64.xml' ,'xenial64-volume.xml','http://ftp.cixug.es/mint/linuxmint.com/testing/linuxmint-18.2-cinnamon-64bit-beta.iso', 'https://ftp.heanet.ie/mirrors/linuxmint.com/testing/sha256sum.txt');
+
 Windows specifics
 -----------------
 
