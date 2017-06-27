@@ -19,11 +19,11 @@
              </div> <!-- del panel heading-->
              <ul class="nav nav-tabs" id="myTab">
                <li class="nav active"><a href="#drivers" data-toggle="tab">Drivers</a></li>
+               <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
                % if ( $USER->is_admin ) {
-               <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
                <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
                <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
-               <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
+               <li class="nav"><a href="#remove" data-toggle="tab">Delete Machine</a></li>
 %   }
              </ul>
             <div class="tab-content">

@@ -252,6 +252,13 @@ get '/list_images.json' => sub {
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
 
+get '/iso_file.json' => sub {
+    my $c = shift;
+    my @isos =('<NONE>');
+    push @isos,(@{$RAVADA->iso_file});
+    $c->render(json => \@isos);
+};
+
 get '/list_machines.json' => sub {
     my $c = shift;
 
@@ -879,6 +886,7 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
+    my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -892,7 +900,7 @@ sub new_machine {
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
     $c->render(template => 'main/new_machine'
-        , name => $c->param('name')
+        , name => $c->param('name'), vm => $vm
     );
 };
 
@@ -902,16 +910,17 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
     $swap *= 1024*1024*1024;
-
     my %args = (
            name => $name
+        ,id_iso => $c->param('id_iso')
+        ,id_template => $c->param('id_template')
+        ,iso_file => $c->param('iso_file')
         ,vm=> $vm
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
-
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 

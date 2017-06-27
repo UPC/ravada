@@ -1,5 +1,5 @@
 
-        <div class="panel-body">
+        <div class="panel-body nav--danger">
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
 
                 <div class="panel-heading">
@@ -13,21 +13,24 @@
                           >
                           <%=l 'Remove Clones' %>
                 </a>
-
-                <a type="button" class="btn btn-danger"
+                <h2 class="Subhead-heading">
+                Danger Zone
+                </h2>
+                    <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
+                    <a type="button" class="btn btn-danger"
                               ng-hide="showmachine.has_clones > 0"
                               ng-click="domain_remove=1"
-                          >
-                          <%=l 'Remove' %>
-                </a>
+                            >
+                            <%=l 'Delete this machine' %>
+                    </a>
             </div>
 
             <div ng-show="domain_remove">
-                        <b>Danger</b>.
+                        <span class="text-danger"><b>Danger</b>.
                         This will remove all the contents of the machine
                         <i><%= $domain->name %></i>.
                         <b>This action can't be undone</b>.
-                        Are you sure ? <br/>
+                        Are you sure ? </span><br/>
                         <a type="button" class="btn btn-danger"
                             ng-click="domain_remove=0"
                         >No</a>

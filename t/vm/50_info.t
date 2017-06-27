@@ -91,9 +91,6 @@ $Data::Dumper::Sortkeys = 1;
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $ravada;
     eval { $ravada = Ravada->new(@ARG_RVD) };
@@ -110,6 +107,8 @@ for my $vm_name (qw( Void KVM )) {
         }
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok("Ravada::VM::$vm_name");
 
         my $domain = test_create_domain($vm_name);
         $domain->start($USER);

@@ -18,7 +18,6 @@ init($test->connector, $FILE_CONFIG);
 my $USER = create_user('foo','bar');
 my $TIMEOUT_SHUTDOWN = 10;
 
-use_ok('Ravada::Domain::KVM');
 ################################################################
 
 
@@ -112,6 +111,7 @@ sub test_drivers_type {
         }
 
     }
+    $domain->remove($USER);
 }
 
 sub _domain_shutdown {
@@ -149,6 +149,7 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    use_ok('Ravada::Domain::KVM');
     test_settings($vm_name, "t/kvm/etc/winxp.xml" );
 };
 remove_old_domains();
