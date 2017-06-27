@@ -1021,6 +1021,7 @@ sub rename {
     $self->domain->rename($new_name);
 }
 
+=begin comment
 sub description {
     my $self = shift;
     my %args = @_;
@@ -1032,6 +1033,7 @@ sub description {
     );
     $sth->execute($description);
 }
+=cut 
 
 =head2 disk_size
 
@@ -1566,6 +1568,7 @@ sub _set_driver_sound {
 
 }
 
+=begin comment
 sub _set_description{
     my $self = shift;
     my %args = @_;
@@ -1573,6 +1576,7 @@ sub _set_description{
 
     $self->domain->rename($new_name);
 }
+=cut
 
 =head2 pre_remove
 
