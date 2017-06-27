@@ -171,6 +171,9 @@ msgstr ""
 msgid "Error!"
 msgstr ""
 
+msgid "Error"
+msgstr ""
+
 msgid "Backend no available!"
 msgstr ""
 
@@ -302,4 +305,61 @@ msgid "Login with Intranet UPC's username."
 msgstr ""
 
 msgid "bits) in your computer."
+msgstr ""
+
+msgid "From Template"
+msgstr ""
+
+msgid "From Machine"
+msgstr ""
+
+msgid "Backend"
+msgstr ""
+
+msgid "Select Template"
+msgstr ""
+
+msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
+msgstr ""
+
+msgid "Download now"
+msgstr ""
+
+msgid "Select ISO"
+msgstr ""
+
+msgid "Template"
+msgstr ""
+
+msgid "Disk Size: (GB)"
+msgstr ""
+
+msgid "Swap Size: (GB)"
+msgstr ""
+
+msgid "Ram: (GB)"
+msgstr ""
+
+msgid "Machine name is required."
+msgstr ""
+
+msgid "Machine name can't exceed 20 characters."
+msgstr ""
+
+msgid "Backend selection is required."
+msgstr ""
+
+msgid "ISO image selection is required."
+msgstr ""
+
+msgid "Template selection is required."
+msgstr ""
+
+msgid "A machine with that name already exists."
+msgstr ""
+
+msgid "The machine name must contain only alphabetic, numbers, dashes and points."
+msgstr ""
+
+msgid "Create"
 msgstr ""

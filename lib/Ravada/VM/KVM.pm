@@ -1,3 +1,4 @@
+
 package Ravada::VM::KVM;
 
 use warnings;
@@ -350,7 +351,6 @@ Creates a domain.
 sub create_domain {
     my $self = shift;
     my %args = @_;
-
     $args{active} = 1 if !defined $args{active};
 
     croak "argument name required"       if !$args{name};
@@ -512,14 +512,13 @@ sub _volume_path {
 sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
-
     my %args2 = %args;
     for (qw(id_iso id_owner name)) {
         delete $args2{$_};
         croak "argument $_ required"
             if !$args{$_};
     }
-    for (qw(disk swap active request vm memory)) {
+    for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
@@ -530,14 +529,27 @@ sub _domain_create_from_iso {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-
     my $iso = $self->_search_iso($args{id_iso});
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
-
-    my $device_cdrom = $self->_iso_name($iso, $args{request});
-
+        
+    my $device_cdrom;
+    
+    if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
+      $device_cdrom = $args{iso_file};
+    }
+    else {
+      $device_cdrom = $self->_iso_name($iso, $args{request});
+    }
+    
+    #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
+    #    $device_cdrom = $self->_iso_name($iso, $args{request});
+    #}
+    #else {
+    #    $device_cdrom = $args{iso_file};
+    #}
+    
     my $disk_size;
     $disk_size = $args{disk} if $args{disk};
 

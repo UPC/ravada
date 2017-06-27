@@ -20,6 +20,12 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function newMachineCtrl($scope, $http) {
+      $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+      });
+      $http.get('/iso_file.json').then(function(response) {
+              $scope.isos = response.data;
+      });
       $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
       });
@@ -39,6 +45,13 @@ ravadaApp.directive("solShowMachine", swMach)
             });
       };
       $scope.name_duplicated = false;
+
+      $scope.change_iso = function(device) {
+          if (device != null) {
+             return device;
+          }
+          else return "<NONE>";
+      }
 
       $scope.validate_new_name = function() {
           $http.get('/machine/exists/'+$scope.name)
