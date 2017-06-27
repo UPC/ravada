@@ -86,7 +86,7 @@ but here's the suggested workflow:
 ```sh
 git checkout 325_boost_performance
 git pull --rebase upstream master
-git push --force-with-lease 325_boost_performance
+git push --force-with-lease origin 325_boost_performance
 ```
 
 ### 8. Merging a PR (maintainers only)
