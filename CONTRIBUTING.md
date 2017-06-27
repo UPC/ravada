@@ -58,7 +58,7 @@ up to date with Ravada's master branch:
 ```sh
 git remote add upstream git@github.com:UPC/ravada.git
 git checkout master
-git pull upstream master
+git pull --rebase origin master
 ```
 
 Then update your feature branch from your local copy of master, and push it!
