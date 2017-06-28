@@ -12,28 +12,19 @@
             </div>
             </div>
 %       }
-        <ul class="nav nav-tabs" id="myTab">
-          <li class="nav active"><a href="#fromtemplate" data-toggle="tab"><%=l 'From Template' %></a></li>
-          <li class="nav"><a href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
-        </ul>
+<!--        <ul class="nav nav-tabs" id="myTab">
+         <li class="nav active"><a href="#fromtemplate" data-toggle="tab"><%=l 'From Template' %></a></li>
+         <li class="nav"><a href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
+       </ul> -->
       <div class="tab-content">
         <div class="tab-pane fade in active" id="fromtemplate" >
         <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
-            <div class="form-group row">
-                <label for="name" class="col-lg-1 control-label"><%=l 'Name' %></label>
-                <div class="col-lg-11">
-                    <input class="form-control" ng-model="name" type="text"
-                        name="name" required=""
-                        ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
-                        ng-change="validate_new_name()"
-                    >
-                </div>
-            </div>
 
             <div class="form-group row">
-                <label for="backend" class="col-lg-1 control-label"><%=l 'Backend' %></label>
-                <div class="col-lg-11">
-                <select name="backend"
+                <label for="backend" class="col-lg-2 control-label"><%=l 'Backend' %></label>
+                <div class="col-lg-10">
+                <select class= "form-control"
+                        name="backend"
                         ng-model="backend"
                         ng-init="backend = 'KVM'"
                         ng-options="item for item in backends track by item "
@@ -43,10 +34,12 @@
                 </div>
             </div>
 
-            <div ng-if="backend == 'KVM'" class="from-group row">
+            <div ng-if="backend == 'KVM'" class="form-group">
+                <div class="from-group row">
                 <label for="id_iso" class="col-lg-2 control-label"><%=l 'Select Template' %></label>
                 <div class="col-lg-10">
-                <select name ="id_iso"
+                <select class="form-control"
+                        name ="id_iso"
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
                         ng-change="iso_file = change_iso(id_iso.device)"
@@ -57,16 +50,33 @@
                     <a type="button" class="btn btn-warning"
                         ng-click="iso_download(id_iso.id)"
                     > <%=l "Download now" %></a>
-                </div>
-                </div>
-                <label for="iso_file" class="col-lg-2 control-label"><%=l 'Select ISO' %></label>
-                <div class="col-lg-10" ng-init="iso_file = '<NONE>'" >
-                <select name ="iso_file"
-                        ng-model="iso_file"
-                        ng-options="item for item in isos track by item"
-                        required=""
-                ></select>
+                </div><br>
               </div>
+                </div>
+                <div class="from-group row">
+                <div ng-show="id_iso.name">
+                  <label for="iso_file" class="col-lg-2 control-label"><%=l 'Select ISO' %></label>
+                  <div class="col-lg-10"  ng-init="iso_file = '<NONE>'" >
+                    <select class="form-control"
+                            name ="iso_file"
+                            ng-model="iso_file"
+                            ng-options="item for item in isos track by item"
+                            required=""
+                    ></select>
+                  </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="name" class="col-lg-2 control-label"><%=l 'Name' %></label>
+                <div class="col-lg-10">
+                    <input class="form-control" ng-model="name" type="text"
+                        name="name" required=""
+                        ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
+                        ng-change="validate_new_name()"
+                    >
+                </div>
             </div>
 
             <div ng-if="backend == 'LXC'" class="from-group row">
@@ -82,14 +92,14 @@
 
             <div class="form-group row" ng-if="backend == 'KVM'">
                 <label for="disk" class="col-lg-2 control-label"><%=l 'Disk Size: (GB)' %></label>
-                <div class="col-lg-10">
+                <div class="col-lg-2">
                     <input class="form-control" ng-model="ddsize" type="number" name="disk"
-                        min="1" max="40" required="">
+                        min="1" max="100" required="">
                 </div>
             </div>
             <div class="form-group row" ng-if="backend == 'KVM'">
                 <label for="swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
-                <div class="col-lg-10">
+                <div class="col-lg-2">
                     <input class="form-control" ng-model="swapsize" type="number" name="swap"
                         min="1" max="4">
                 </div>
@@ -98,13 +108,12 @@
           <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
                 <label for="memory"  class="col-lg-2 control-label"><%=l 'Ram: (GB)' %></label>
-                <div class="col-lg-10">
+                <div class="col-lg-2">
                     <input class="form-control" ng-model="ramsize" type="number" name="memory"
                         min="1" max="4" required="">
                 </div>
             </div>
           </div>
-
           <div class="form-group row">
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
@@ -120,6 +129,21 @@
                     <strong><%=l 'Error' %></strong> <%=l 'Backend selection is required.' %>
                 </div>
             </div>
+          <!--  <div ng-show="new_machineForm.$submitted || new_machineForm.ddsize.$touched">
+                <div ng-show="new_machineForm.ddsize.$error" class="alert alert-warning fade in">
+                    <strong><%=l 'Error' %></strong> <%=l 'Disk size must be between 1 and 40 GB.' %>
+                </div>
+            </div>
+            <div ng-show="new_machineForm.$submitted || new_machineForm.swapsize.$touched">
+                <div ng-show="swapsize" class="alert alert-warning fade in">
+                    <strong><%=l 'Error' %></strong> <%=l 'Swap size must be between 1 and 4 GB.' %>
+                </div>
+            </div>
+            <div ng-show="new_machineForm.$submitted || new_machineForm.ramsize.$touched">
+                <div ng-show="ramsize" class="alert alert-warning fade in">
+                    <strong><%=l 'Error' %></strong> <%=l 'Ram size must be between 1 and 4 GB.' %>
+                </div>
+            </div> -->
 
             <div ng-show="new_machineForm.$submitted || new_machineForm.id_iso.$touched">
                 <div ng-show="new_machineForm.id_iso.$error.required" class="alert alert-warning fade in">
