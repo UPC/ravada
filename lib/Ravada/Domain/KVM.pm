@@ -1572,16 +1572,6 @@ sub _set_driver_sound {
 
 }
 
-=begin comment
-sub _set_description{
-    my $self = shift;
-    my %args = @_;
-    my $description = $args{name};
-
-    $self->domain->rename($new_name);
-}
-=cut
-
 =head2 pre_remove
 
 Code to run before removing the domain. It can be implemented in each domain.
