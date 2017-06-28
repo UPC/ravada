@@ -11,7 +11,7 @@ You can get the development release cloning the sources.
 
 ::
 
-    $ git clone https://github.com/frankiejol/ravada.git
+    $ git clone https://github.com/UPC/ravada.git
     
 Possible development scenarios where to deploy
 ----------------------------------------------
