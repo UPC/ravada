@@ -7,8 +7,6 @@ use locale ':not_characters';
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
-use Data::Dumper;
-use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 #use Mojolicious::Plugin::I18N;
@@ -19,8 +17,6 @@ use Mojo::Home;
 #package Ravada::I18N:en;
 #####
 
-use YAML qw(LoadFile);
-
 use lib 'lib';
 
 use Ravada::Front;
@@ -28,7 +24,12 @@ use Ravada::Auth;
 use POSIX qw(locale_h);
 
 my $help;
-my $FILE_CONFIG = "/etc/ravada.conf";
+
+my $FILE_CONFIG;
+for ( "/etc/rvd_front.conf" , "$ENV{HOME}/rvd_front.conf") {
+    $FILE_CONFIG = $_ if -e $_;
+    last if $FILE_CONFIG;
+}
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
@@ -40,8 +41,9 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,config => ''
                                               }
-                                      ,file => '/etc/rvd_front.conf'
+                                      ,file => $FILE_CONFIG
 };
 #####
 #####
@@ -66,19 +68,9 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
-
 plugin 'RenderFile';
-GetOptions(
-     'config=s' => \$FILE_CONFIG
-         ,help  => \$help
-     ) or exit;
 
-if ($help) {
-    print "$0 [--help] [--config=$FILE_CONFIG]\n";
-    exit;
-}
-
-our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
+our $RAVADA = Ravada::Front->new();
 our $USER;
 
 # TODO: get those from the config file
