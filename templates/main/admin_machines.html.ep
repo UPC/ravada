@@ -31,7 +31,7 @@
         <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
-                    <th class="lgMachName machine-button"
+                    <th ><div class="lgMachName machine-button" style="display:inline;float:down"
                      ng-click="orderMachineList('name','')">
                       <i class="fa fa-exchange fa-rotate-90"
                        ng-hide="orderParam[0] === 'name' || orderParam[0] === '-name'"></i>
@@ -39,7 +39,7 @@
                        ng-hide="orderParam[0] !== 'name'"></i>
                       <i class="fa fa-arrow-up" ng-cloak
                        ng-hide="orderParam[0] !== '-name'"></i>
-                      <%=l 'Machine Name' %></th>
+                      <%=l 'Machine Name' %></div><a ng-show="hide_clones" ng-click="hideClones()" class="label label-primary" style="float:right" align="right">show clones</a><a type="button" ng-show="!hide_clones" ng-click="hideClones()" class="label label-primary" style="float:right" align="right">hide clones</a></th>
                     <th class="lgMachToggle">
                       <i class="fa machine-button"
                        ng-class="{ 'fa-eye':!hide_clones, 'fa-eye-slash':hide_clones }"
