@@ -40,6 +40,9 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,admin => {
+                                                    hide_clones => 15
+                                              }
                                               }
                                       ,file => '/etc/rvd_front.conf'
 };
@@ -878,6 +881,16 @@ sub admin {
         if ( $c->param('name') ) {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
+    }
+    if ($page eq 'machines') {
+        $c->stash(hide_clones => 0 );
+
+        my $list_domains = $RAVADA->list_domains();
+
+        $c->stash(hide_clones => 1 )
+            if scalar @$list_domains
+                        > $CONFIG_FRONT->{admin}->{hide_clones};
+
     }
     $c->render(template => 'main/admin_'.$page);
 
