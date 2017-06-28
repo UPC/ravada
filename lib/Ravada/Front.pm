@@ -24,7 +24,6 @@ use Data::Dumper;
 has 'config' => (
     is => 'ro'
     ,isa => 'Str'
-    ,default => $Ravada::FILE_CONFIG
 );
 has 'connector' => (
         is => 'rw'
@@ -60,7 +59,7 @@ sub BUILD {
     if ($self->connector) {
         $CONNECTOR = $self->connector;
     } else {
-        Ravada::_init_config($self->config());
+        Ravada::_init_config($self->config()) if $self->config;
         $CONNECTOR = Ravada::_connect_dbh();
     }
     $CONNECTOR->dbh();
