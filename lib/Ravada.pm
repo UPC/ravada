@@ -48,6 +48,7 @@ Ravada - Remove Virtual Desktop Manager
 
 
 our $FILE_CONFIG = "/etc/ravada.conf";
+$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 ###########################################################################
 
@@ -107,7 +108,7 @@ sub BUILD {
     if ($self->config()) {
         _init_config($self->config);
     } else {
-        _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
+        _init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
     }
 
     if ( $self->connector ) {
