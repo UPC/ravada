@@ -891,6 +891,11 @@ sub admin {
             if scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
+        # count clones from list_domains grepping those that have id_base
+        $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
+
+        # if we find no clones do not hide them. They may be created later
+        $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
     }
     $c->render(template => 'main/admin_'.$page);
 

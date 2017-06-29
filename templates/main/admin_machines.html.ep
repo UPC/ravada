@@ -39,13 +39,21 @@
                        ng-hide="orderParam[0] !== 'name'"></i>
                       <i class="fa fa-arrow-up" ng-cloak
                        ng-hide="orderParam[0] !== '-name'"></i>
-                      <%=l 'Machine Name' %></div><a ng-show="hide_clones" ng-click="hideClones()" class="label label-primary" style="float:right" align="right">show clones</a><a type="button" ng-show="!hide_clones" ng-click="hideClones()" class="label label-primary" style="float:right" align="right">hide clones</a></th>
+                      <%=l 'Machine Name' %></div>
+%                     if ($n_clones) {
+                        <a ng-show="hide_clones" ng-click="hideClones()"
+                          class="label label-primary" style="float:right"
+                          align="right">show clones</a>
+                        <a ng-show="!hide_clones" ng-click="hideClones()"
+                          class="label label-primary" style="float:right"
+                          align="right">hide clones</a>
+%                     }
+                    </th>
                     <th class="lgMachToggle">
-                      <i class="fa machine-button"
-                       ng-class="{ 'fa-eye':!hide_clones, 'fa-eye-slash':hide_clones }"
+                      <span
                        ng-click="hideClones()"
-                       title="<%=l 'Show/Hide clones' %>"></i>
-                      <%=l 'Base' %></th>
+                       title="<%=l 'Show/Hide clones' %>">
+                       <%=l 'Base' %></span></th>
                     <th class="lgMachToggle"><%=l 'Public'%></th>
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
