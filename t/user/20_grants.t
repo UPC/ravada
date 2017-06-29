@@ -109,6 +109,49 @@ sub test_operator {
     $usera->remove();
 }
 
+sub test_remove_clone {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_rm$$","bar");
+    my $usera = create_user("admin_rm$$","bar",'is admin');
+
+    my $domain = create_domain($vm_name, $user);
+    $domain->prepare_base($user);
+    ok($domain->is_base) or return;
+
+    my $clone = $domain->clone(user => $usera,name => new_domain_name());
+    eval { $clone->remove($user); };
+    like($@,qr(.));
+
+    my $clone2;
+    eval { $clone2 = rvd_back->search_domain($clone->name) };
+    ok($clone2, "Expecting ".$clone->name." not removed");
+
+    $usera->grant($user,'remove_clone');
+    eval { $clone->remove($user); };
+    like($@,'');
+
+    eval { $clone2 = rvd_back->search_domain($clone->name) };
+    ok(!$clone2, "Expecting ".$clone->name." removed");
+
+    # revoking remove clone permission
+
+    $clone = $domain->clone(user => $usera,name => new_domain_name());
+    $usera->revoke($user,'remove_clone');
+
+    eval { $clone->remove($user); };
+    like($@,qr(.));
+
+    eval { $clone2 = rvd_back->search_domain($clone->name) };
+    ok($clone2, "Expecting ".$clone->name." not removed");
+
+    $clone->remove($usera);
+    $domain->remove($usera);
+
+    $user->remove();
+    $usera->remove();
+}
+
 sub test_shutdown_clone {
     my $vm_name = shift;
 
@@ -193,6 +236,9 @@ test_grant();
 test_operator();
 
 test_shutdown_clone('Void');
+#test_shutdown_all('Void');
+
 test_remove('Void');
+test_remove_clone('Void');
 
 done_testing();
