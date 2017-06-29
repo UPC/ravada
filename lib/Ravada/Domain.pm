@@ -185,11 +185,11 @@ sub _start_preconditions{
 
 sub _update_description {
     my $self = shift;
-    my $description;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains SET description=? "
         ." WHERE id=?");
-    $sth->execute($description,$self->id);
+    $sth->execute($self->description,$self->id);
     $sth->finish;
 }
 

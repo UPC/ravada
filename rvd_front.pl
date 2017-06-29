@@ -1301,14 +1301,10 @@ sub settings_machine {
         }
     }
 
-    my $description;
-    if ( $c->param($description) ) {
-        my $req3 = Ravada::Request->set_description(uid => $USER->id
-                , id_domain => $domain->id
-                , id_option => $c->param($description)
-            );
-            $c->stash(message => 'Description applied!');
-            push @reqs,($req3);
+    if ( $c->param("description") ) {
+        $domain->description($c->param("description"));
+        $c->stash(message => 'Description applied!');
+        $c->stash(description => $domain->description);
     }
 
     for my $req (@reqs) {

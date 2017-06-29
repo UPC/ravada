@@ -1021,24 +1021,6 @@ sub rename {
     $self->domain->rename($new_name);
 }
 
-=begin comment
-sub description {
-    my $self = shift;
-    my %args = @_;
-    my $domain = $args{name};
-    my $description = $args{description};
-
-#Check if domain exists and update description
-
-    $sth = $test->connector->dbh->prepare(
-        "UPDATE domains SET description=?"
-        ." WHERE name=?"
-        );
-    $sth->execute($description, $domain);
-    $sth->finish;
-}
-=cut 
-
 =head2 disk_size
 
 Returns the size of the domains disk or disks
