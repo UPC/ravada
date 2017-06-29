@@ -75,7 +75,9 @@
 
 %                   }
 %                   if ( $machine->{id_clone}) {
+%			if ($_user->can_change_settings){
                         <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
+%      							}
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">
                         <b><%=l 'Restore' %></b> <%=l 'will remove all the contents of the machine' %>
                         <i><b><%= $machine->{name_clone} %></b></i>.
