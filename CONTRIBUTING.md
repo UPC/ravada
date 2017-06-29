@@ -58,7 +58,7 @@ up to date with Ravada's master branch:
 ```sh
 git remote add upstream git@github.com:UPC/ravada.git
 git checkout master
-git pull upstream master
+git pull --rebase origin master
 ```
 
 Then update your feature branch from your local copy of master, and push it!
@@ -86,7 +86,7 @@ but here's the suggested workflow:
 ```sh
 git checkout 325_boost_performance
 git pull --rebase upstream master
-git push --force-with-lease 325_boost_performance
+git push --force-with-lease origin 325_boost_performance
 ```
 
 ### 8. Merging a PR (maintainers only)
