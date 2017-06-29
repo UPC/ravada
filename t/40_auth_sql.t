@@ -5,16 +5,17 @@ use Data::Dumper;
 use Test::More;
 use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
 
-ok($Ravada::Auth::SQL::CON,"Undefined DB connection");
 
 my $RAVADA = Ravada->new(connector => $test->connector);
 
-Ravada::Auth::SQL::add_user('test',$$);
+Ravada::Auth::SQL::add_user(name => 'test',password => $$);
+
+ok($$Ravada::Auth::SQL::CON,"Undefined DB connection");
 
 my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT * FROM users WHERE name=?");
 $sth->execute('test');

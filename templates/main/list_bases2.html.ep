@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
+<div id="wrapper">
+%= include 'bootstrap/navigation'
+<script>
+    $_anonymous=<%= ($_anonymous or 0) %>;
+</script>
+% my $public_bases = 0;
+% for my $machine(@$machines) {
+%   $public_bases = 1 if $machine->{is_public};
+% }
+
+<div id="page-wrapper">
+
+    <!--MACHINES SELECTION-->
+<div class="page-header" ng-controller="bases">
+    <div class="row">
+    <div class="col-lg-12">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h2><%=l 'Choose a Machine to Start' %></h2>
+        </div>
+        <div class="panel-body">
+%       if (! $public_bases ) {
+            <div class="panel panel-warning">
+            <div class="panel-heading">
+%           if ($_user->is_admin) {
+                There are no public bases available in this system.
+                <a href="/admin/">Create one.</a>
+%           } else {
+                There are no machines available in this system.
+%           }
+            </div>
+            </div>
+%       }
+%       for my $machine (@$machines) {
+%           next if !$machine->{is_public} && !$user->is_admin;
+            <div class="col-sm-4">
+            <div class="panel panel-success">
+            <div class="panel-heading">
+                <h3 class="panel-title"><a
+                   href="/machine/clone/<%= $machine->{id} %>.html"><%= $machine->{name} %></a>
+%                   if ( !$machine->{is_public} ) {
+                        <i>( not public )</i>
+%                   }
+                </h3>
+%               if ($machine->{screenshot} ) {
+                    <img src="<%= $machine->{screenshot} %>" width="260">
+%               }
+            </div>
+            <div class="panel-body">
+                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
+%               if (!$machine->{is_locked}) {
+%                   if ( $machine->{id_clone} && $machine->{is_active} ) {
+                        <select ng-model="host_action"
+                        ng-change="action(<%= $machine->{id_clone} %>)"
+                        >
+                        <option value=""><%=l 'action'%></option>
+%                       if ($machine->{is_active}) {
+                            <option value="shutdown.<%= $machine->{id_clone} %>"><%=l 'Shutdown' %></option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hybernate' %></option>
+%                       }
+%                       if ($machine->{id_clone}) {
+                            <option value="restore.<%= $machine->{id_clone} %>"><%=l 'Restore'%></option>
+%                       }
+                        </select>
+%                   } elsif ($machine->{id_clone}) {
+                        <a type="button" class="btn btn-danger"
+                             ng-click="host_restore=<%= $machine->{id_clone} %>"
+                        ><strong><i class="fa fa-off" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
+
+%                   }
+%                   if ( $machine->{id_clone}) {
+                        <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
+                    <div ng-show="host_restore == <%= $machine->{id_clone} %>">
+                        <b><%=l 'Restore' %></b> <%=l 'will remove all the contents of the machine' %>
+                        <i><b><%= $machine->{name_clone} %></b></i>.
+                        <%=l 'Are you sure?' %><br/>
+                        <a type="button" class="btn btn-danger"
+                            ng-click="host_restore=0"
+                        ><%=l 'No' %></a>
+                        <a type="button" class="btn btn-warning"
+                            ng-click="restore(<%= $machine->{id_clone} %>)"
+                            ><%=l 'Yes' %></a>
+                    </div>
+                    <div ng-show="host_shutdown == <%= $machine->{id_clone} %>">
+                            <b>Shutting down ... </b>
+                            It may take a couple of minutes.
+                    </div>
+                    <div ng-show="host_hybernate== <%= $machine->{id_clone} %>">
+                            <b>Hybernating ... </b>
+                            It may take a couple of minutes.
+                    </div>
+
+%                   }
+%               }
+            </div>
+            </div>
+            </div>
+%       }
+        </div>
+    </div>
+    </div>
+    </div>
+</div><!-- page header -->
+</div><!-- page wrapper -->
+%= include 'bootstrap/scripts'
+</div>
+
+%= include 'bootstrap/footer'
+%= include 'bootstrap/messages'
+</body>
+</html>

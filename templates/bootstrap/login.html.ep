@@ -8,8 +8,7 @@
         <div class="intro-body">
             <div class="container">
                 <form class="form-singin" method="post">
-                <h2 class="form-signin-heading">Login</h2>
-
+                <h2 class="form-signin-heading"><%= $login_message %></h2>
                 <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User/Email">
 
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">

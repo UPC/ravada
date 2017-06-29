@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div id="admin-content">
+        <h2>Users</h2>
+        <form method="post" action="/admin/users">
+            <input type="text" name="name" value="<%= $name %>">
+            <input type="submit" value="<%=l 'search' %>">
+            <button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'">Add new user</button>
+        </form>
+        <table class="table table-striped">
+        <thead>
+            <tr>
+            <th><%=l 'Name' %></th>
+            </tr>
+        </thead>
+        <tbody>
+%       for my $user (@$list_users) {
+            <tr>
+                <td><a href="/admin/user/<%= $user->{id} %>.html"><%= $user->{name} %></a></td>
+            </tr>
+%       }
+        </tbody>
+        </table>
+      </div>
+    </div>
+</div>
+%= include 'bootstrap/footer'
+</body>
+</html>

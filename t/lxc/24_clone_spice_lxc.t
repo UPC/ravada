@@ -7,10 +7,16 @@ use Test::More;
 use Test::SQL::Data;
 
 use_ok('Ravada');
-use_ok('Ravada::Domain::LXC');
-use_ok('Ravada::VM::LXC');
+my $CAN_LXC = 0;
+SKIP: {
+    skip("LXC disabled in this release",2);
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+    use_ok('Ravada::Domain::LXC');
+    use_ok('Ravada::VM::LXC');
+    $CAN_LXC = 1;
+}
+
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
 my $vm_lxc;
 
@@ -93,7 +99,7 @@ sub test_domain{
 
 
 ################################################################
-eval { $vm_lxc = Ravada::VM::LXC->new() };
+eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {
 
     my $msg = ($@ or "No LXC vitual manager found");
@@ -110,7 +116,7 @@ SKIP: {
         $Ravada::VM::LXC::CMD_LXC_LS = '';
         diag("Testing missing LXC");
 
-        my $ravada2 = Ravada->new();
+        my $ravada2= Ravada->new( connector => $test->connector);
         my $vm2 = $ravada2->search_vm('lxc');
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
     }

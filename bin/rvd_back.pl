@@ -3,416 +3,253 @@
 use warnings;
 use strict;
 
-use DBIx::Connector;
-use Carp qw(confess);
-use Data::Dumper;
-use File::Copy;
-use Fcntl qw(:flock);
-use Getopt::Long;
-use Hash::Util qw(lock_hash);
-use HTTP::Request;
-use IPC::Run3;
-use LWP::UserAgent;
-use Socket qw( inet_aton inet_ntoa );
-use Proc::PID::File;
-use Sys::Hostname;
-use Sys::Virt;
-use XML::LibXML;
-use YAML;
-
 use lib './lib';
+
+use Data::Dumper;
+use Getopt::Long;
+use Proc::PID::File;
 
 use Ravada;
 use Ravada::Auth::SQL;
+use Ravada::Auth::LDAP;
 
 my $help;
-my $FORCE;
-my $VM_TYPE = 'qemu';
 
-my ($BASE,$PREPARE, $DAEMON, $DEBUG, $REMOVE, $PROVISION, $ADD_USER, $CREATE );
-my $REMOVE_NOW;
-my $VERBOSE = $ENV{TERM};
+my ($DEBUG, $ADD_USER );
+
 my $FILE_CONFIG = "/etc/ravada.conf";
 
-my $USAGE = "$0 --base=".($BASE or 'BASE')
-        ." [--debug] [--prepare] [--daemon] [--file-config=$FILE_CONFIG] "
-        ." [name]\n"
-        ." --create : creates an empty virtual machine\n"
-        ." --prepare : prepares a base system with one of the created nodes\n"
+my $ADD_USER_LDAP;
+my $IMPORT_DOMAIN;
+my $CHANGE_PASSWORD;
+my $NOFORK;
+my $MAKE_ADMIN_USER;
+my $REMOVE_ADMIN_USER;
+
+my $USAGE = "$0 "
+        ." [--debug] [--config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
+        ." [--change-password] [--make-admin=username]"
+        ." [-X] [start|stop|status]"
+        ."\n"
         ." --add-user : adds a new db user\n"
-        ." --provision : provisions a new domain\n"
-        ." --remove : removes a domain\n"
-        ." --remove-now : removes a domain, doesn't wait a nice shutdown\n"
-        ." --daemon : listens for request from the web frontend\n"
+        ." --add-user-ldap : adds a new LDAP user\n"
+        ." --change-password : changes the password of an user\n"
+        ." --import-domain : import a domain\n"
+        ." --make-admin : make user admin\n"
+        ." --config : config file, defaults to $FILE_CONFIG"
+        ." -X : start in foreground\n"
     ;
 
+$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
+
 GetOptions (       help => \$help
-                 ,force => \$FORCE
                  ,debug => \$DEBUG
-                ,create => \$CREATE
-                ,daemon => \$DAEMON
-                ,remove => \$REMOVE
-               ,'base=s'=> \$BASE
-               ,prepare => \$PREPARE
-               ,verbose => \$VERBOSE
+              ,'no-fork'=> \$NOFORK
              ,'config=s'=> \$FILE_CONFIG
-             ,'add-user'=> \$ADD_USER
-             ,provision => \$PROVISION
-           ,'remove-now'=> \$REMOVE_NOW
+           ,'add-user=s'=> \$ADD_USER
+        ,'make-admin=s' => \$MAKE_ADMIN_USER
+      ,'remove-admin=s' => \$REMOVE_ADMIN_USER
+      ,'change-password'=> \$CHANGE_PASSWORD
+      ,'add-user-ldap=s'=> \$ADD_USER_LDAP
+      ,'import-domain=s' => \$IMPORT_DOMAIN
 ) or exit;
 
 #####################################################################
 #
 # check arguments
 #
-my $CONFIG=YAML::LoadFile($FILE_CONFIG) if -e $FILE_CONFIG;
-
-if ($REMOVE_NOW) {
-    $REMOVE = 1;
-    $CONFIG->{timeout_shutdown}= 1;
-}
-
-if ($REMOVE || $PROVISION || $ADD_USER || $CREATE) {
-    if ( ! @ARGV ) {
-        $help=1;
-        warn "ERROR: missing username.\n"   if $ADD_USER;
-        warn "ERROR: Missing domain names.\n"   if $PROVISION || $REMOVE;
-    }
-    $|=1;
-}
-if ($PROVISION && !$BASE ) {
-    warn "ERROR: Missing base\n";
-    $help =1;
-}
-
 if ($help) {
     print $USAGE;
     exit;
 }
 
+die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
+die "ERROR: Missing file config $FILE_CONFIG\n"
+    if $FILE_CONFIG && ! -e $FILE_CONFIG;
+
+my %CONFIG;
+%CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
+
 $Ravada::DEBUG=1    if $DEBUG;
+$Ravada::CAN_FORK=0    if $NOFORK;
 ###################################################################
 
-our ($FH_DOWNLOAD, $DOWNLOAD_TOTAL);
-
-my $RAVADA = Ravada->new( config => $FILE_CONFIG );
-my $REMOTE_VIEWER;
+my $PID_LONGS;
 ###################################################################
 #
 
-sub init_config {
+sub do_start {
+    warn "Starting rvd_back v".Ravada::version."\n";
+    my $old_error = ($@ or '');
+    my $cnt_error = 0;
 
+    clean_killed_requests();
+
+    start_process_longs() if !$NOFORK;
+
+    my $ravada = Ravada->new( %CONFIG );
+    for (;;) {
+        my $t0 = time;
+        $ravada->process_requests();
+        $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
+        sleep 1 if time - $t0 <1;
+    }
 }
 
-sub init {
-    init_config();
-}
-
-sub new_uuid {
-    my $uuid = shift;
-    
-
-    my ($principi, $f1,$f2) = $uuid =~ /(.*)(.)(.)/;
-
-    return $principi.int(rand(10)).int(rand(10));
-    
-}
-
-sub which {
-    # TODO: findbin or whatever
-    my $prg = shift;
-    my $bin = `which $prg`;
-    chomp $bin;
-    return $bin;
-}
-
-sub sysprep {
-    my $name = shift;
-    my $virt_sysprep=which('virt-sysprep') or do {
-        warn "WARNING: Missing virt-sysprep, the new domain is dirty.\n";
+sub start_process_longs {
+    my $pid = fork();
+    die "I can't fork" if !defined $pid;
+    if ( $pid ) {
+        $PID_LONGS = $pid;
         return;
-    };
-    my @cmd = ($virt_sysprep
-                ,'-d',  $name
-                ,'--hostname', $name
-                ,'--enable',
-                ,'udev-persistent-net,bash-history,logfiles,utmp,script'
-    );
-    my ($in, $out, $err);
-    run3(\@cmd,\$in, \$out, \$err);
-    print $out if $out;
-    print join ( " ",@cmd)."\n".$err    if $err;
-
-}
-
-sub provision {
-    my ($base_name, $dom_name) = @_;
-    confess "Missing base\n" if !$base_name;
-    confess "Missing name\n" if !$dom_name;
-
-    if ($RAVADA->search_domain($dom_name)) {
-        warn "WARNING: domain $dom_name already exists\n";
-        return display_uri($dom_name)
     }
-    my $base = $RAVADA->search_domain($base_name) or die "ERROR: Unknown base $base_name";
-
-    if (!$base->is_base) {
-        warn "WARNING: Domain $base_name is not a base, preparing it ...\n";
-        $base->prepare_base();
-    }
-
-    my $domain = $RAVADA->create_domain(name => $dom_name , id_base => $base->id );
-    return view_domain($domain);
     
+    warn "Processing long requests in pid $$\n" if $DEBUG;
+    my $ravada = Ravada->new( %CONFIG );
+    for (;;) {
+        my $t0 = time;
+        $ravada->process_long_requests();
+        sleep 1 if time - $t0 <1;
+    }
 }
 
-sub prepare_base {
-    my $name = shift;
-    my $domain = $RAVADA->search_domain($name) or die "Unknown domain $name";
-    warn "Preparing $name base\n";
-    $domain->prepare_base();
-    warn "Done.\n";
-}
-
-sub display_uri{
-    my $domain = shift;
+sub clean_killed_requests {
+    my $ravada = Ravada->new( %CONFIG );
+    $ravada->clean_killed_requests();
 }
 
 sub start {
-    warn "Starting daemon mode\n";
+    {
+        my $ravada = Ravada->new( %CONFIG );
+        $Ravada::CONNECTOR->dbh;
+        for my $vm (@{$ravada->vm}) {
+            $vm->id;
+            $vm->vm;
+        }
+    }
     for (;;) {
-        $RAVADA->process_requests();
-        sleep 1;
-    }
-}
-
-sub start_domain {
-    my $req = shift;
-    my $id = $req->{id} or confess "Missing id in ".Dumper($req);
-    my $name = $req->{name};
-
-    my @cmd = ('virsh','start',$name);
-    my ($in,$out,$err);
-    run3(\@cmd,\$in,\$out,\$err);
-    print join(" ",@cmd)."\n"   if $VERBOSE;
-    print $out if $VERBOSE;
-
-    warn $err if $VERBOSE && $err;
-
-    set_request_done($id,$err);
-
-}
-
-sub list_domains {
-
-    my @list = sort { $a->name cmp $b->name } $RAVADA->list_domains ;
-    return \@list;
-
-}
-
-sub select_base_domain {
-    my $domains = shift;
-
-    my $option;
-    while (1) {
-        print "Choose base domain:\n";
-        for my $dom (0 .. $#$domains) {
-            my $n = $dom+1;
-            $n = " ".$n if length($n)<2;
-            print "$n: ".$domains->[$dom]->name
-                    ."\n";
+        my $pid = fork();
+        die "I can't fork $!" if !defined $pid;
+        if ($pid == 0 ) {
+            do_start();
+            exit;
         }
-        print " X: EXIT\n";
-        print "Option: ";
-        $option = <STDIN>;
-        chomp $option;
-        exit if $option =~ /x/i;
-        last if $option =~ /^\d+$/ && $option <= $#$domains+1 && $option>0;
-        print "ERROR: Wrong option '$option'\n\n";
+        warn "Waiting for pid $pid\n";
+        waitpid($pid,0);
     }
-    return $domains->[$option-1];
-}
-
-sub disks_remove {
-    my $name = shift;
-
-    my $kvm = $RAVADA->search_vm('kvm');
-    if ($kvm) {
-        my $dir_img = $kvm->dir_img();
-        my $disk = $dir_img."/$name.img";
-        if ( -e $disk ) {
-            warn "Removing $disk\n";
-            unlink $disk or die "I can't remove $disk";
-        }
-        $kvm->storage_pool->refresh();
-    }
-}
-
-sub domain_remove {
-    my $name = shift;
-    my $dom = $RAVADA->search_domain($name);
-    if (!$dom) {
-        warn "ERROR: I can't find domain $name\n";
-    } else {
-        $dom->remove();
-    }
-    disks_remove($name);
 }
 
 sub add_user {
+    my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
+
+    print "$login password: ";
+    my $password = <STDIN>;
+    chomp $password;
+
+    print "is admin ? : [y/n] ";
+    my $is_admin_q = <STDIN>;
+    my $is_admin = 0;
+
+    $is_admin = 1 if $is_admin_q =~ /y/i;
+
+    Ravada::Auth::SQL::add_user(      name => $login
+                                , password => $password
+                                , is_admin => $is_admin);
+}
+
+sub add_user_ldap {
     my $login = shift;
 
     print "password : ";
     my $password = <STDIN>;
     chomp $password;
 
-    Ravada::Auth::SQL::add_user($login, $password);
+    Ravada::Auth::LDAP::add_user($login, $password);
 }
 
-sub select_iso {
-    my $sth = $RAVADA->connector->dbh->prepare("SELECT * FROM iso_images ORDER BY name");
-    $sth->execute;
-    my @isos;
-    while (my $row = $sth->fetchrow_hashref) {
-        lock_hash(%$row);
-        push @isos,($row);
-    }
-    $sth->finish;
-    my $option;
-    while (1) {
-        print "Choose base ISO image\n";
-        for my $dom (0 .. $#isos) {
-            my $n = $dom+1;
-            $n = " ".$n if length($n)<2;
-            print "$n: ".$isos[$dom]->{name}
-                    ."\n";
-        }
-        print " X: EXIT\n";
-        print "Option: ";
-        $option = <STDIN>;
-        chomp $option;
-        exit if $option =~ /x/i;
-        last if $option =~ /^\d+$/ && $option <= $#isos+1 && $option>0;
-        print "ERROR: Wrong option '$option'\n\n";
-    }
-    return $isos[$option-1];
-}
+sub change_password {
+    print "User login name : ";
+    my $login = <STDIN>;
+    chomp $login;
+    return if !$login;
 
-sub search_iso {
-    my $id_iso = shift;
-    my $sth = $RAVADA->connector->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
-    $sth->execute($id_iso);
-    my $row = $sth->fetchrow_hashref;
-    die "Missing iso_image id=$id_iso" if !keys %$row;
-    return $row;
-}
-
-sub download_file_progress {
-    my( $data, $response, $proto ) = @_;
-
-    warn "progress";
-    print $FH_DOWNLOAD $data; # write data to file
-    $DOWNLOAD_TOTAL += length($data);
-    my $size = $response->header('Content-Length');
-    print floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-}
-
-sub download_file {
-    my ($url, $device) = @_;
-
-    $url = "http://localhost/ubuntu-14.04.3-desktop-amd64.iso";
-    my $ua= LWP::UserAgent->new( keep_alive => 1);
-
-    warn "downloading $url";
-
-    $DOWNLOAD_TOTAL = 0;
-    open $FH_DOWNLOAD,">",$device or die "$! $device";
-    my $res = $ua->request(HTTP::Request->new(GET => $url),
-        \&download_file_progress);
-
-    if ($res->code != 200 ) {
-        die $res->status_line;
-        close $FH_DOWNLOAD;
-        unlink $device;
-    }
-    close $FH_DOWNLOAD or die "$! $device";
-}
-
-sub iso_name {
-    my $iso = shift;
-    my ($iso_name) = $iso->{url} =~ m{.*/(.*)};
-    my $device = Ravada::Domain::KVM::dir_img()."/$iso_name";
-
-    if (! -e $device || ! -s $device) {
-        download_file($iso->{url}, $device);
-    }
-    return $device;
-}
-
-sub create_base {
-    my ($req_base) = @_;
-    my ($dom_name, $id_iso) = @_;
-    if (ref($req_base) =~ /HASH/) {
-        $dom_name = $req_base->{name};
-        $id_iso = $req_base->{id_iso};
-    } else {
-        $req_base = undef;
-    }
-
-    if ( $RAVADA->search_domain($dom_name) ) {
-        die "There is already a domain called '$dom_name'.\n"
-            if !$FORCE;
-        $RAVADA->remove_domain($dom_name);
-    }
-
-    my $iso;
-    if ($id_iso) {
-        $iso = search_iso($id_iso);
-    } else {
-        $iso = select_iso();
-    }
-    my $domain = $RAVADA->create_domain( name => $dom_name, id_iso => $iso->{id});
-    warn "$dom_name created, available on ".$domain->display."\n";
+    my $ravada = Ravada->new( %CONFIG );
     
-    return view_domain($domain);
+    my $user = Ravada::Auth::SQL->new(name => $login);
+    die "ERROR: Unknown user '$login'\n" if !$user->id;
+
+    print "password : ";
+    my $password = <STDIN>;
+    chomp $password;
+    $user->change_password($password);
 }
 
-sub view_domain {
-    my $domain = shift;
+sub make_admin {
+    my $login = shift;
 
-    print $domain->display."\n";
-    if ( $REMOTE_VIEWER) {
-        my @cmd = ($REMOTE_VIEWER,$domain->display);
-        my ($in,$out,$err);
-        run3(\@cmd,\($in, $out, $err));
-    }
+    my $ravada = Ravada->new( %CONFIG);
+    my $user = Ravada::Auth::SQL->new(name => $login);
+    die "ERROR: Unknown user '$login'\n" if !$user->id;
+
+    $Ravada::USER_DAEMON->make_admin($user->id);
+    print "USER $login granted admin permissions\n";
+}
+
+sub remove_admin {
+    my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
+    my $user = Ravada::Auth::SQL->new(name => $login);
+    die "ERROR: Unknown user '$login'\n" if !$user->id;
+
+    $Ravada::USER_DAEMON->remove_admin($user->id);
+    print "USER $login removed admin permissions, granted normal user permissions.\n";
+}
+
+
+sub import_domain {
+    my $name = shift;
+    print "Virtual Manager: KVM\n";
+    print "User name that will own the domain in Ravada : ";
+    my $user = <STDIN>;
+    chomp $user;
+    my $ravada = Ravada->new( %CONFIG );
+    $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
+}
+
+sub DESTROY {
+    return if !$PID_LONGS;
+    warn "Killing pid: $PID_LONGS";
+
+    my $cnt = kill 15 , $PID_LONGS;
+    return if !$cnt;
+
+    kill 9 , $PID_LONGS;
+    
 }
 
 #################################################################
+if ($ADD_USER) {
+    add_user($ADD_USER);
+    exit;
+} elsif ($ADD_USER_LDAP) {
+    add_user($ADD_USER_LDAP);
+    exit;
+} elsif ($CHANGE_PASSWORD) {
+    change_password();
+    exit;
+} elsif ($IMPORT_DOMAIN) {
+    import_domain($IMPORT_DOMAIN);
+    exit;
+} elsif ($MAKE_ADMIN_USER) {
+    make_admin($MAKE_ADMIN_USER);
+    exit;
+} elsif ($REMOVE_ADMIN_USER) {
+    remove_admin($REMOVE_ADMIN_USER);
+    exit;
+} 
 
-init();
-if ($PREPARE) {
-    for (@ARGV) {
-        prepare_base($_);
-    }
-    exit;
-} elsif ($REMOVE) {
-    for (@ARGV) {
-        domain_remove($_);
-    }
-    exit;
-} elsif ($PROVISION) {
-    for (@ARGV) {
-        provision($BASE, $_);
-    }
-} elsif ($ADD_USER) {
-    for (@ARGV) {
-        add_user($_);
-    }
-}elsif ($CREATE) {
-    create_base(@ARGV);
-} else {
-    die "Already running\n"
-        if Proc::PID::File->running;
-    start();
-}
+die "Already started" if Proc::PID::File->running( name => 'rvd_back');
+start();

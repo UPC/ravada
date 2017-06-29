@@ -17,9 +17,10 @@ use Ravada::Domain::LXC;
 with 'Ravada::VM';
 
 our $CMD_LXC_LS;
-#our $CONNECTOR = \$Ravada::CONNECTOR;
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 sub BUILD {
+    die "LXC disabled in this release";
     my $self = shift;
 
     $self->connect()                if !defined $CMD_LXC_LS;
@@ -53,11 +54,11 @@ sub create_domain {
     $args{active} = 1 if !defined $args{active};
     
     croak "argument name required"       if !$args{name};
-    croak "argument id_iso or id_base required" 
-        if !$args{id_iso} && !$args{id_base};
+    croak "argument id_template or id_base required" 
+        if !$args{id_template} && !$args{id_base};
 
     my $domain;
-    if ($args{id_iso}) {
+    if ($args{id_template}) {
         $domain = $self->_domain_create_from_template(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
@@ -72,16 +73,16 @@ sub _domain_create_from_template {
     my $self = shift;
     my %args = @_;
     
-    croak "argument id_iso required" 
-        if !$args{id_iso};
+    croak "argument id_template required" 
+        if !$args{id_template};
 
     die "Domain $args{name} already exists"
         if $self->search_domain($args{name});
     
-    my $template = "ubuntu";
+    my $template = $self->_search_template($args{id_template});
     my $name = $args{name};
 
-    my @cmd = ('lxc-create','-n',$name,'-t', $template);
+    my @cmd = ('lxc-create','-n',$name,'-t', $template->{name});
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
@@ -92,15 +93,28 @@ sub _domain_create_from_template {
     return $domain;
 }
 
-sub prepare_base {
+sub _search_template {
+    my $self = shift;
+    my $id_template = shift or confess "Missing id_template";
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM lxc_templates WHERE id = ?");
+    $sth->execute($id_template);
+    my $row = $sth->fetchrow_hashref;
+    die "Missing lx_template id=$id_template" if !keys %$row;
+    lock_hash(%$row);
+    return $row;
+
 }
 
 sub _domain_create_from_base {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my %arg = @_;
+    my $newname = $arg{name} or confess "Missing name";
+    my $id_base = $arg{id_base} or confess "Missing id_base";
 
-    my $newname = $name . "_cow";
-    my @cmd = ('lxc-copy','-n',$name,"-N",$newname,"-B","overlayfs","-s");
+    my $base = $self->search_domain_by_id($id_base);
+
+    my @cmd = ('lxc-copy','-n',$base->name,"-N",$newname,"-B","overlayfs","-s");
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
@@ -131,10 +145,18 @@ sub search_domain {
     return;
 }
 
-
-
 sub search_domain_by_id {
-   }
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains "
+        ." WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return if !$name;
+
+    return $self->search_domain($name);
+} 
 
  sub _list_domains {
     my $self = shift;

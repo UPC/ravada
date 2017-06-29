@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    <div ng-controller="settings">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div class="page-header col-md-8 col-md-offset-2">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3><%=l 'Settings' %></h3>
+  </ul>
+</div>
+
+
+                    </div>
+
+                </div>
+            </div>
+    </div>
+    </div>
+    </div>
+    %= include 'bootstrap/scripts'
+    %= include 'bootstrap/footer'
+</body>
+</html>

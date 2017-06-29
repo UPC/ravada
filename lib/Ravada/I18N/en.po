@@ -1,0 +1,365 @@
+# Translators:
+# Joel Alarcón <joelalju100@gmail.com>, 2017
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-05-02 16:20+0200\n"
+"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Language-Team: \n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.7.1\n"
+
+msgid "Ravada broker"
+msgstr ""
+
+msgid "Machine Name"
+msgstr ""
+
+msgid "Tools"
+msgstr ""
+
+msgid "Machines List"
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "Choose a Machine to Start"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Stop"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Prepare base"
+msgstr ""
+
+msgid "Clone"
+msgstr ""
+
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr ""
+
+msgid "Clone/s"
+msgstr ""
+
+msgid "NEW"
+msgstr ""
+
+msgid "Users List"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Log Out"
+msgstr ""
+
+msgid "Available Machines"
+msgstr ""
+
+msgid "Help"
+msgstr ""
+
+msgid "Requirements"
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "Messages"
+msgstr ""
+
+msgid "Mark all as Read"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "New Machine"
+msgstr ""
+
+msgid "I want to change my password"
+msgstr ""
+
+msgid "I want to change my language"
+msgstr ""
+
+msgid "Language:"
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid "Spanish"
+msgstr ""
+
+msgid "Catalan"
+msgstr ""
+
+msgid "New Password:"
+msgstr ""
+
+msgid "Confirm Password:"
+msgstr ""
+
+msgid "Submit"
+msgstr ""
+
+msgid "Your language has been changed successfully"
+msgstr ""
+
+msgid "Your password has been changed successfully"
+msgstr ""
+
+msgid "Password too small"
+msgstr ""
+
+msgid "Password fields aren't equal"
+msgstr ""
+
+msgid "Some of the password's fields are empty"
+msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Machines"
+msgstr ""
+
+msgid "Down"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "ShutDown"
+msgstr ""
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Paused"
+msgstr ""
+
+msgid "Machine locked by"
+msgstr ""
+
+msgid "process"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Error!"
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Backend no available!"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Mark as Read"
+msgstr ""
+
+msgid "Mark as UnRead"
+msgstr ""
+
+msgid "No message to show!"
+msgstr ""
+
+msgid "Admin"
+msgstr ""
+
+msgid "machines"
+msgstr ""
+
+msgid "users"
+msgstr ""
+
+msgid "messages"
+msgstr ""
+
+msgid "Admin tools"
+msgstr ""
+
+msgid "Remove base"
+msgstr ""
+
+msgid "public"
+msgstr ""
+
+msgid "Restore"
+msgstr ""
+
+msgid "Hybernate"
+msgstr ""
+
+msgid "Shutdown"
+msgstr ""
+
+msgid "action"
+msgstr ""
+
+msgid "New Base"
+msgstr ""
+
+msgid "will remove all the contents of the machine"
+msgstr ""
+
+msgid "Are you sure?"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Make public"
+msgstr ""
+
+msgid "Machine settings"
+msgstr ""
+
+msgid "Cannot remove base, machine has clones"
+msgstr ""
+
+msgid "Show/Hide clones"
+msgstr ""
+
+msgid "For spice redirection you'll need to install"
+msgstr ""
+
+msgid "in your computer."
+msgstr ""
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+
+msgid "You'll need to install"
+msgstr ""
+
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgstr ""
+
+msgid ""
+"Be aware that in Windows, spice redirection is not automatically. It's "
+"necessary associate protocol with the app."
+msgstr ""
+
+msgid "To make this possible, download"
+msgstr ""
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+
+msgid "Login"
+msgstr ""
+
+msgid "Welcome"
+msgstr ""
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr ""
+
+msgid "Virtual Machines"
+msgstr ""
+
+msgid "user"
+msgstr ""
+
+msgid "password"
+msgstr ""
+
+msgid "Start session"
+msgstr ""
+
+msgid "Login with Intranet UPC's username."
+msgstr ""
+
+msgid "bits) in your computer."
+msgstr ""
+
+msgid "From Template"
+msgstr ""
+
+msgid "From Machine"
+msgstr ""
+
+msgid "Backend"
+msgstr ""
+
+msgid "Select Template"
+msgstr ""
+
+msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
+msgstr ""
+
+msgid "Download now"
+msgstr ""
+
+msgid "Select ISO"
+msgstr ""
+
+msgid "Template"
+msgstr ""
+
+msgid "Disk Size: (GB)"
+msgstr ""
+
+msgid "Swap Size: (GB)"
+msgstr ""
+
+msgid "Ram: (GB)"
+msgstr ""
+
+msgid "Machine name is required."
+msgstr ""
+
+msgid "Machine name can't exceed 20 characters."
+msgstr ""
+
+msgid "Backend selection is required."
+msgstr ""
+
+msgid "ISO image selection is required."
+msgstr ""
+
+msgid "Template selection is required."
+msgstr ""
+
+msgid "A machine with that name already exists."
+msgstr ""
+
+msgid "The machine name must contain only alphabetic, numbers, dashes and points."
+msgstr ""
+
+msgid "Create"
+msgstr ""

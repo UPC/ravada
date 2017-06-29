@@ -3,6 +3,12 @@ package Ravada::Domain::LXC;
 use warnings;
 use strict;
 
+=head1 NAME
+
+Ravada::Domain::LXC - LXC containers library for Ravada
+
+=cut
+
 use Carp qw(cluck croak);
 use Data::Dumper;
 use IPC::Run3 qw(run3);
@@ -27,7 +33,6 @@ sub remove {
     my $self = shift;
     my $name = $self->name or confess "Missing domain name";
     my @cmd = ('lxc-destroy','-n',$name,'-f');
-    warn @cmd;
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     warn $out  if $out;
@@ -177,7 +182,8 @@ sub start {
 
 sub shutdown {
     my $self = shift;
-    my $name = shift or confess "Missing domain name";
+    my $name = $self->name;
+#    my $name = shift or confess "Missing domain name";
 
     my @cmd = ('lxc-stop','-n',$name);
     my ($in,$out,$err);
@@ -186,6 +192,11 @@ sub shutdown {
     warn $err   if $err;
     return;
 
+}
+
+sub shutdown_now {
+    my $self = shift;
+    return $self->shutdown(@_);
 }
 
 
@@ -218,5 +229,41 @@ sub unpause {
     warn $err   if $err;
     return;
 }
+
+=head2 prepare_base
+
+Makes the container available to be a base for other containers.
+
+=cut
+
+sub prepare_base {
+    my $self = shift;
+    $self->_prepare_base_db();
+}
+
+sub disk_device {
+    confess "TODO";
+}
+
+=head2 add_volume
+
+Adds a new volume to the domain
+
+    $domain->add_volume($size);
+
+=cut
+
+sub add_volume {
+}
+
+sub list_volumes {
+}
+
+sub list_files_base {
+}
+
+sub is_paused {}
+
+sub resume {}
 
 1;

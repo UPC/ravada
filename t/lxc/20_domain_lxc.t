@@ -7,20 +7,28 @@ use Test::More;
 use Test::SQL::Data;
 
 use_ok('Ravada');
-use_ok('Ravada::Domain::LXC');
-use_ok('Ravada::VM::LXC');
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
+my $CAN_LXC = 0;
+SKIP: {
+    skip("LXC disabled in this release",3);
+    use_ok('Ravada::Domain::LXC');
+    use_ok('Ravada::VM::LXC');
+    $CAN_LXC = 1;
+};
+
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
+
 my $vm_lxc;
 
+my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.t};
 my $CONT= 0;
 
 
 sub test_remove_domain {
     my $name = shift;
+    my $domain = $vm_lxc->search_domain($name,1) or return;
     diag("Removing domain $name");
-    my $domain = $vm_lxc->search_domain($name,1);
     $domain->remove() if $domain;
     diag ("$@");
     ok(!$@ , "Error removing domain $name : $@") or exit;
@@ -53,16 +61,41 @@ sub search_domain_db {
     return $row;
 }
 
+sub _new_name {
+    return $DOMAIN_NAME."_".$CONT++;
+}
+
+sub test_domain_from_base {
+    my $base_name = shift;
+    my $base = $vm_lxc->search_domain($base_name,1) or die "Unknown domain $base_name";
+
+    my $name = _new_name();
+    test_remove_domain($name);
+    my $domain = $vm_lxc->create_domain(name => $name
+        , id_base => $base->id);#, active => $active);
+
+    ok($domain,"Domain not created") or return;
+    my $exp_ref= 'Ravada::Domain::LXC';
+    ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
+        if $domain;
+
+    my @cmd = ('lxc-info','-n',$name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
+
+    return $domain;
+}
+
 sub test_new_domain {
     my $active = shift;
     
-    my ($name) = $0 =~ m{.*/(.*)\.t};
-    $name .= "_".$CONT++;
+    my $name = _new_name();
     diag ("Test remove domain");
     test_remove_domain($name);
 
-    diag("Creating container $name. It may take looong time the very first time.");
-    my $domain = $vm_lxc->create_domain(name => $name, id_iso => 1, active => $active);
+    diag("Creating container $name.");
+    my $domain = $vm_lxc->create_domain(name => $name, id_template => 1, active => $active);
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::LXC';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
@@ -88,6 +121,17 @@ sub test_domain_inactive {
     my $domain = test_domain(0);
 }
 
+sub test_prepare_base {
+    my $domain = shift;
+    $domain->prepare_base();
+
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base=1");
+    $sth->execute($domain->name);
+    my $row =  $sth->fetchrow_hashref;
+    ok($row->{name} && $row->{name} eq $domain->name,"I can't find ".$domain->name." in bases");
+    $sth->finish;
+}
+
 sub test_domain{
     my $active = shift;
     $active = 1 if !defined $active;
@@ -97,7 +141,6 @@ sub test_domain{
     my $n_domains = scalar $vm->list_domains();
     diag("Test new domain n_domains= $n_domains");
     my $domain = test_new_domain($active);
-warn $domain;
     if (ok($domain,"test domain not created")) {
         my @list = $vm->list_domains();
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
@@ -119,26 +162,31 @@ warn $domain;
 
         # test prepare base
         test_prepare_base($domain);
-        ok($domain->is_base,"Domain should be base"
+        ok($domain->is_base,"Domain should be base "
+            ."is_base=".$domain->is_base." "
             .Dumper($domain->_select_domain_db())
 
         );
         ok(!$domain->is_active,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active,"domain should active") if defined $active && $active==1;
 
-        ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
-        my $domain2;
-        eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
-        ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
-
-        test_remove_domain($domain->name);
     }
 }
 
-################################################################
-eval { $vm_lxc = Ravada::VM::LXC->new() };
-SKIP: {
+sub remove_old_domains {
+    for ( 0 .. 10 ) {
+        my $dom_name = $DOMAIN_NAME."_$_";
 
+        my $domain = $RAVADA->search_domain($dom_name,1);
+        $domain->shutdown_now() if $domain;
+        test_remove_domain($dom_name);
+    }
+
+}
+
+################################################################
+eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
+SKIP: {
     my $msg = ($@ or "No LXC vitual manager found");
 
     my $vm = $RAVADA->search_vm('lxc') if $RAVADA;
@@ -148,19 +196,23 @@ SKIP: {
         diag("SKIPPING LXC tests: $msg");
         skip $msg,10;
     } else {
-        $Ravada::VM::LXC::CMD_LXC_LS = '';
-        # twice to ignore warnings
+        my $lxc_ls = $Ravada::VM::LXC::CMD_LXC_LS;
         $Ravada::VM::LXC::CMD_LXC_LS = '';
         diag("Testing missing LXC");
 
-        my $ravada2 = Ravada->new( connector => $test->connector);
-        my $vm2 = $ravada2->search_vm('lxc');
+        my $ravada2;
+        eval { $ravada2 = Ravada->new( connector => $test->connector); };
+        my $vm2 = $ravada2->search_vm('lxc')    if $ravada2;
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
+        $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
+        remove_old_domains();
+        my $domain = test_domain();
+        my $domain2 = test_domain_from_base($domain);
+        test_remove_domain($domain);
+        test_remove_domain($domain2);
     }
     ok($vm,"I can't find a LXC virtual manager from ravada");
 
-my $domain = test_domain();
-test_remove_domain($domain);
 }
 
 done_testing();

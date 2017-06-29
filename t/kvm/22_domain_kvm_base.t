@@ -8,18 +8,22 @@ use Test::More;
 use Test::SQL::Data;
 use XML::LibXML;
 
+use lib 't/lib';
+use Test::Ravada;
+
+my $BACKEND = 'KVM';
+
 use_ok('Ravada');
-use_ok('Ravada::Domain::KVM');
 
-my $test = Test::SQL::Data->new( config => 't/etc/ravada.conf');
-my $RAVADA;
 
-eval { $RAVADA = Ravada->new( connector => $test->connector) };
+my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
+my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 $DOMAIN_NAME_SON =~ s/base_//;
 
+my $USER = create_user('foo','bar');
 
 sub test_vm_kvm {
     my $vm = $RAVADA->vm->[0];
@@ -38,12 +42,12 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
+        my @files_base = $domain->list_files_base;
+        eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") ;
 
-        if ( $domain->file_base_img ) {
-            ok(! -e $domain->file_base_img ,"Image file was not removed "
-                                        .$domain->file_base_img )
+        for my $file ( @files_base) {
+            ok(! -e $file,"Image file $file should beremoved ");
         }
 
     }
@@ -60,7 +64,12 @@ sub test_new_domain_from_iso {
 
     diag("Creating domain $name from iso");
     my $domain;
-    eval { $domain = $RAVADA->create_domain(name => $name, id_iso => 1) };
+    eval { $domain = $RAVADA->create_domain(name => $name
+                                        , id_iso => 1
+                                        ,vm => $BACKEND
+                                        ,id_owner => $USER->id
+            ) 
+    };
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -79,7 +88,37 @@ sub test_new_domain_from_iso {
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
     $sth->finish;
 
+    test_usb($domain);
+
     return $domain;
+}
+
+sub test_usb {
+    my $domain = shift;
+
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+
+    my ($devices)= $xml->findnodes('/domain/devices');
+
+    my @redir = $devices->findnodes('redirdev');
+    ok(scalar @redir == 1,"Expecting 1 redirdev, got ".scalar(@redir)
+        ." in ".$devices->toString);
+
+    for my $model ( 'nec-xhci') {
+        my @usb = $devices->findnodes('controller');
+        my @usb_found;
+
+        for my $dev (@usb) {
+            next if $dev->getAttribute('type') ne 'usb';
+            next if ! $dev->getAttribute('model') 
+                    || $dev->getAttribute('model') ne $model;
+
+            push @usb_found,($dev);
+        }
+        ok(scalar @usb_found == 1,"Expecting 1 USB model $model , got ".scalar(@usb_found)
+            ."\n"
+            .join("\n" , map { $_->toString } @usb_found));
+    }
 }
 
 sub test_prepare_base {
@@ -90,12 +129,12 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    $domain->prepare_base();
+    $domain->prepare_base($USER);
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base='y'");
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
-    ok($row->{name} && $row->{name} eq $domain->name);
+    ok($row->{is_base});
     $sth->finish;
 
     my @list2 = $RAVADA->list_bases();
@@ -113,7 +152,12 @@ sub test_new_domain_from_base {
     test_remove_domain($name);
 
     diag("Creating domain $name from ".$base->name);
-    my $domain = $RAVADA->create_domain(name => $name, id_base => $base->id);
+    my $domain = $RAVADA->create_domain(
+                name => $name
+            ,id_base => $base->id
+           ,id_owner => $USER->id
+            ,vm => $BACKEND
+    );
     ok($domain,"Domain not created");
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
@@ -137,6 +181,7 @@ sub test_new_domain_from_base {
     }
 
     test_domain_not_cdrom($domain);
+    test_usb($domain);
     return $domain;
 
 }
@@ -222,8 +267,15 @@ eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    if ($vm && $>) {
+        $msg = "SKIPPED: Test must run as root";
+        $vm = undef;
+    }
+
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
+
+    use_ok("Ravada::Domain::$BACKEND");
 
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);

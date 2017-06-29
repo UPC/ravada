@@ -1,19 +1,37 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
-use Test::More;
+use POSIX qw(WNOHANG);
+use Test::More;# tests => 82;
 use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
-my $test = Test::SQL::Data->new(config => 't/etc/ravada.conf');
+use lib 't/lib';
+use Test::Ravada;
+
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
+
+init($test->connector, 't/etc/ravada.conf');
+
+my $RVD_BACK = rvd_back();# $test->connector , 't/etc/ravada.conf');
+my $USER = create_user("foo","bar");
+$RVD_BACK = undef;
+
+my @ARG_CREATE_DOM = (
+        id_iso => 1
+        ,id_owner => $USER->id
+);
+
+$Ravada::CAN_FORK = 0;
 
 #######################################################################
 
@@ -23,62 +41,114 @@ sub test_empty_request {
 }
 
 sub test_remove_domain {
+    my $vm = shift;
     my $name = shift;
 
     my $domain = $name if ref($name);
-    $domain = $ravada->search_domain($name,1);
+    $domain = $vm->search_domain($name,1);
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove() };
+        eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
-        ok(! -e $domain->file_base_img ,"Image file was not removed "
-                    . $domain->file_base_img )
-                if  $domain->file_base_img;
+        # TODO check remove files base
 
     }
-    $domain = $ravada->search_domain($name,1);
-    ok(!$domain, "I can't remove old domain $name") or exit;
+    $domain = $vm->search_domain($name,1);
+    ok(!$domain, "I can't remove old domain $name");
+
+}
+
+sub test_req_start_domain {
+    my $vm_name = shift;
+    my $name = shift;
+
+    $USER->mark_all_messages_read();
+    test_unread_messages($USER,0, "[$vm_name] start domain $name");
+
+    my $req = Ravada::Request->start_domain( 
+        name => $name
+        ,uid => $USER->id
+        ,remote_ip => '127.0.0.1'
+    );
+    ok($req);
+    ok($req->status);
+    $ravada->process_requests();
+    $ravada->_wait_pids();
+    wait_request($req);
+
+    ok($req->status eq 'done'
+        ,"Status of request is ".$req->status." it should be done") 
+            or return ;
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name) 
+            or return ;
+
+    my $n_expected = 1;
+    test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");
 
 }
 
 sub test_req_create_domain_iso {
+    my $vm_name = shift;
 
-    my $name = $DOMAIN_NAME."_iso";
+    my $name = new_domain_name();
     diag("Requesting create domain $name");
-    my $req = Ravada::Request->create_domain( 
+
+    $USER->mark_all_messages_read();
+    test_unread_messages($USER,0, "[$vm_name] create domain $name");
+
+    my $req;
+    eval { $req = Ravada::Request->create_domain( 
         name => $name
-        ,id_iso => 1
-    );
+        ,@ARG_CREATE_DOM
+        );
+    };
+    ok(!$@,"Expecting \$@=''  , got='".($@ or '')."'") or return;
     ok($req);
     ok($req->status);
+    ok($req->args('id_owner'));
+
+    
     ok(defined $req->args->{name} 
         && $req->args->{name} eq $name
             ,"Expecting args->{name} eq $name "
              ." ,got '".($req->args->{name} or '<UNDEF>')."'");
 
     ok($req->status eq 'requested'
-        ,"Status of request is ".$req->status." it should be requested");
+        ,"$$ Status of request is ".$req->status." it should be requested");
 
     $ravada->process_requests();
 
+    $ravada->_wait_pids();
+    wait_request($req);
+
     ok($req->status eq 'done'
-        ,"Status of request is ".$req->status." it should be done");
-    ok(!$req->error,"Error ".$req->error." creating domain ".$name);
+        ,"Status of request is ".$req->status." it should be done") or return ;
+    ok(!$req->error,"Error ".$req->error." creating domain ".$name) or return ;
 
-    my $domain =  $ravada->search_domain($name);
+    my $n_expected = 1;
+    test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");
 
-    ok($domain,"I can't find domain $name");
+    my $req2 = Ravada::Request->open($req->id);
+    ok($req2->{id} == $req->id,"iso req2->{id} = ".$req2->{id}." , expecting ".$req->id);
+
+    my $vm = $ravada->search_vm($vm_name);
+    my $domain =  $vm->search_domain($name);
+
+    ok($domain,"[$vm_name] I can't find domain $name");
+
+    $USER->mark_all_messages_read();
     return $domain;
 }
 
 sub test_req_create_base {
 
-    my $name = $DOMAIN_NAME."_base";
+    my $name = new_domain_name();
+
     my $req = Ravada::Request->create_domain( 
         name => $name
-        ,id_iso => 1
+        ,@ARG_CREATE_DOM
     );
     ok($req);
     ok($req->status);
@@ -90,7 +160,7 @@ sub test_req_create_base {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -99,7 +169,7 @@ sub test_req_create_base {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name") && do {
-        $domain->prepare_base();
+        $domain->prepare_base($USER);
         ok($domain && $domain->is_base,"Domain $name should be base");
     };
     return $domain;
@@ -107,54 +177,49 @@ sub test_req_create_base {
 
 
 sub test_req_remove_domain_obj {
+    my $vm = shift;
     my $domain = shift;
 
-    my $req = Ravada::Request->remove_domain($domain);
-    $ravada->process_requests();
+    my $domain_name = $domain->name;
+    my $req = Ravada::Request->remove_domain(name => $domain->name, uid => user_admin->id);
+    $ravada->_process_requests_dont_fork();
 
-    my $domain2 =  $ravada->search_domain($domain->name);
-    ok(!$domain2,"Domain ".$domain->name." should be removed");
-    ok(!$req->error,"Error ".$req->error." removing domain ".$domain->name);
+    ok($req->status eq 'done',ref($vm)." status ".$req->status." should be done");
+    ok(!$req->error ,ref($vm)." error : '".$req->error."' , should be ''");
+    my $domain2;
+    eval { $domain2 =  $vm->search_domain($domain->name) };
+    ok(!$domain2,ref($vm)." Domain $domain_name should be removed ");
+
 
 }
 
 sub test_req_remove_domain_name {
+    my $vm = shift;
     my $name = shift;
 
-    my $req = Ravada::Request->remove_domain($name);
+    my $req = Ravada::Request->remove_domain(name => $name, uid => user_admin()->id);
 
-    $ravada->process_requests();
+    rvd_back->_process_all_requests_dont_fork();
 
-    my $domain =  $ravada->search_domain($name);
-    ok(!$domain,"Domain $name should be removed");
+    ok($req->status eq 'done',ref($vm)." status ".$req->status." should be done");
+    ok(!$req->error ,ref($vm)." error : '".$req->error."' , should be ''");
+
+    my $domain =  $vm->search_domain($name);
+    ok(!$domain,ref($vm)." Domain $name should be removed") or exit;
     ok(!$req->error,"Error ".$req->error." removing domain $name");
 
 }
 
-sub remove_old_disks {
-    my ($name) = $0 =~ m{.*/(.*)\.t};
+sub test_unread_messages {
+    my ($user, $n_unread, $test) = @_;
+    confess "Missing test name" if !$test;
 
-    my $vm = $ravada->search_vm('kvm');
-    diag("remove old disks");
-    return if !$vm;
-    ok($vm,"I can't find a KVM virtual manager");
+    my @messages = $user->unread_messages();
 
-    my $dir_img = $vm->dir_img();
-    ok($dir_img," I cant find a dir_img in the KVM virtual manager") or return;
+    ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
+        .scalar@messages." ".Dumper(\@messages));
 
-    for my $count ( 0 .. 10 ) {
-        my $disk = $dir_img."/$name"."_$count.img";
-        if ( -e $disk ) {
-            unlink $disk or die "I can't remove $disk";
-        }
-    }
-    for (qw(iso base)) {
-        my $disk = $dir_img."/$name".'_'."$_.img";
-        unlink $disk or die "I can't remove $disk"
-            if -e $disk;
-    }
-
-    $vm->storage_pool->refresh();
+    $user->mark_all_messages_read();
 }
 
 
@@ -162,39 +227,41 @@ sub remove_old_disks {
 eval { $ravada = Ravada->new(connector => $test->connector) };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
+remove_old_domains();
+remove_old_disks();
 
-my ($vm_kvm, $vm_lxc);
-eval { $vm_kvm = $ravada->search_vm('kvm')  if $ravada };
-eval { $vm_lxc = $ravada->search_vm('lxc')  if $ravada };
+for my $vm_name ( qw(Void KVM)) {
+    my $vm;
+    eval {
+        $vm= $ravada->search_vm($vm_name)  if $ravada;
+        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id )       if $vm;
+    };
 
-SKIP: {
-    my $msg = "SKIPPED: No KVM nor LXC virtual managers found";
-    diag($msg) if !$vm_kvm && !$vm_lxc;
-    skip($msg,10) if !$vm_kvm && !$vm_lxc;
+    SKIP: {
+        my $msg = "SKIPPED: No virtual managers found";
+        if ($vm && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+        skip($msg,10)   if !$vm;
+    
+        diag("Testing requests with ".(ref $vm or '<UNDEF>'));
+    
+        my $domain_iso0 = test_req_create_domain_iso($vm_name);
+        test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;
+    
+        my $domain_iso = test_req_create_domain_iso($vm_name);
+        test_req_remove_domain_name($vm, $domain_iso->name)  if $domain_iso;
+    
+        my $domain_base = test_req_create_base($vm);
+        if ($domain_base) {
+            test_req_start_domain($vm,$domain_base->name);
+            test_req_remove_domain_name($vm, $domain_base->name);
+        }
+    };
+}
 
-    diag("Testing with kvm=".($vm_kvm or 0)." , lxc=".($vm_lxc or 0));
-    test_remove_domain($DOMAIN_NAME."_iso");
-    test_remove_domain($DOMAIN_NAME."_base");
-    remove_old_disks();
-
-    {
-    my $domain = test_req_create_domain_iso();
-    test_req_remove_domain_obj($domain)         if $domain;
-    }
-
-    {
-    my $domain = test_req_create_domain_iso();
-    test_req_remove_domain_name($domain->name)  if $domain;
-    }
-
-    {
-    my $domain = test_req_create_base();
-    test_req_remove_domain_name($domain->name)  if $domain;
-    }
-
-
-    test_remove_domain($DOMAIN_NAME."_iso");
-
-};
+remove_old_domains();
+remove_old_disks();
 
 done_testing();
