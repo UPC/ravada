@@ -129,7 +129,7 @@ sub test_remove_clone {
 
     $usera->grant($user,'remove_clone');
     eval { $clone->remove($user); };
-    like($@,'');
+    is($@,'');
 
     eval { $clone2 = rvd_back->search_domain($clone->name) };
     ok(!$clone2, "Expecting ".$clone->name." removed");
