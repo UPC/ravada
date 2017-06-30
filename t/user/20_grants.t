@@ -232,6 +232,43 @@ sub test_remove {
 
 }
 
+sub test_shutdown_all {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_sa$$","bar");
+    is($user->can_shutdown_all,undef) or return;
+
+    my $usera = create_user("admin_sa$$","bar",1);
+    is($usera->can_shutdown_all,1);
+
+    my $domain = create_domain($vm_name, $usera);
+    $domain->start($usera)      if !$domain->is_active;
+    is($domain->is_active,1)    or return;
+
+    eval { $domain->shutdown_now($user)};
+    like($@,qr'.');
+    is($domain->is_active,1)    or return;
+
+    $usera->grant($user,'shutdown_all');
+    is($user->can_shutdown_all,1) or return;
+
+    eval { $domain->shutdown_now($user)};
+    is($@,'');
+
+    is($domain->is_active,0);
+
+    # revoke the grant
+    $domain->start($usera)      if !$domain->is_active;
+    is($domain->is_active,1);
+
+    $usera->revoke($user,'shutdown_all');
+    eval { $domain->shutdown_now($user)};
+    like($@,qr'.');
+    is($domain->is_active,1);
+
+    $domain->remove($usera);
+}
+
 ##########################################################
 
 test_defaults();
@@ -241,9 +278,10 @@ test_grant();
 test_operator();
 
 test_shutdown_clone('Void');
-#test_shutdown_all('Void');
+test_shutdown_all('Void');
 
 test_remove('Void');
 test_remove_clone('Void');
+#test_remove_all('Void');
 
 done_testing();
