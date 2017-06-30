@@ -41,12 +41,14 @@
                        ng-hide="orderParam[0] !== '-name'"></i>
                       <%=l 'Machine Name' %></div>
 %                     if ($n_clones) {
-                        <a ng-show="hide_clones" ng-click="hideClones()"
-                          class="label label-primary" style="float:right"
-                          align="right">show clones</a>
-                        <a ng-show="!hide_clones" ng-click="hideClones()"
-                          class="label label-primary" style="float:right"
-                          align="right">hide clones</a>
+                        <div style="float:right">
+                            <a ng-show="hide_clones" ng-click="hideClones()"
+                              class="label label-primary"
+                              align="right">show clones</a>
+                            <a ng-show="!hide_clones" ng-click="hideClones()"
+                              class="label label-primary"
+                              align="right">hide clones</a>
+                        </div>
 %                     }
                     </th>
                     <th class="lgMachToggle">
