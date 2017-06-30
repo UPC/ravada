@@ -1304,7 +1304,8 @@ sub settings_machine {
     if ( $c->param("description") ) {
         $domain->description($c->param("description"));
         $c->stash(message => 'Description applied!');
-        $c->stash(description => $domain->description);
+        my $description = $domain->description;
+        $c->stash(description => $description);
     }
 
     for my $req (@reqs) {
