@@ -169,12 +169,13 @@ sub test_shutdown_clone {
     ok($domain->is_base) or return;
 
     my $clone = $domain->clone(user => $usera,name => new_domain_name());
-    $clone->start($usera);
+    $clone->start($usera)   if !$clone->is_active;
 
     is($clone->is_active,1) or return;
 
     eval { $clone->shutdown_now($user); };
     like($@,qr(.));
+    is($clone->is_active,1);
 
     is($clone->is_active,1) or return;
 
@@ -183,6 +184,15 @@ sub test_shutdown_clone {
     eval { $clone->shutdown_now($user); };
     is($@,'');
     is($clone->is_active,0);
+
+
+    $clone->start($usera)   if !$clone->is_active;
+    is($clone->is_active,1);
+
+    $usera->revoke($user,'shutdown_clone');
+    eval { $clone->shutdown_now($user); };
+    like($@,qr(.));
+    is($clone->is_active,1);
 
     $clone->remove($usera);
     $domain->remove($user);
