@@ -29,8 +29,6 @@ warn $@ if $@;
 
 use Ravada::VM::Void;
 
-our %VALID_VM;
-
 eval {
     require Ravada::VM::KVM and do {
         Ravada::VM::KVM->import;
