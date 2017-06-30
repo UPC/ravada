@@ -285,6 +285,8 @@ sub _allow_shutdown {
     if ( $self->id_base() && $user->can_shutdown_clone()) {
         my $base = $self->open($self->id_base);
         return if $base->id_owner == $user->id;
+    } elsif($user->can_shutdown_all) {
+        return;
     } else {
         $self->_allowed($user);
     }
