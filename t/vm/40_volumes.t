@@ -378,9 +378,6 @@ remove_old_disks();
 for my $vm_name (reverse sort @VMS) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS);
 
     my $vm;
     eval { $vm = $RVD_BACK->search_vm($vm_name) } if $RVD_BACK;
@@ -394,6 +391,8 @@ for my $vm_name (reverse sort @VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok("Ravada::VM::$vm_name");
 
         test_domain_swap($vm_name);
         test_domain_create_with_swap($vm_name);

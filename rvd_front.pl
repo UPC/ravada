@@ -7,8 +7,6 @@ use locale ':not_characters';
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
-use Data::Dumper;
-use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 #use Mojolicious::Plugin::I18N;
@@ -19,8 +17,6 @@ use Mojo::Home;
 #package Ravada::I18N:en;
 #####
 
-use YAML qw(LoadFile);
-
 use lib 'lib';
 
 use Ravada::Front;
@@ -28,7 +24,20 @@ use Ravada::Auth;
 use POSIX qw(locale_h);
 
 my $help;
-my $FILE_CONFIG = "/etc/ravada.conf";
+
+my $FILE_CONFIG;
+for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
+    warn "WARNING: Found config file at $_ and at $FILE_CONFIG\n"
+        if -e $file && $FILE_CONFIG;
+    $FILE_CONFIG = $file if -e $file;
+}
+
+my $FILE_CONFIG_RAVADA;
+for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG_RAVADA\n"
+        if -e $file && $FILE_CONFIG_RAVADA;
+    $FILE_CONFIG_RAVADA = $file if -e $file;
+}
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
@@ -40,8 +49,12 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,admin => {
+                                                    hide_clones => 15
                                               }
-                                      ,file => '/etc/rvd_front.conf'
+                                              ,config => $FILE_CONFIG_RAVADA
+                                              }
+                                      ,file => $FILE_CONFIG
 };
 #####
 #####
@@ -66,19 +79,13 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
-
 plugin 'RenderFile';
-GetOptions(
-     'config=s' => \$FILE_CONFIG
-         ,help  => \$help
-     ) or exit;
 
-if ($help) {
-    print "$0 [--help] [--config=$FILE_CONFIG]\n";
-    exit;
-}
+my %config;
+%config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
 
-our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
+our $RAVADA = Ravada::Front->new(%config);
+
 our $USER;
 
 # TODO: get those from the config file
@@ -250,6 +257,13 @@ get '/list_images.json' => sub {
     my $vm_name = $c->param('backend');
 
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
+};
+
+get '/iso_file.json' => sub {
+    my $c = shift;
+    my @isos =('<NONE>');
+    push @isos,(@{$RAVADA->iso_file});
+    $c->render(json => \@isos);
 };
 
 get '/list_machines.json' => sub {
@@ -872,6 +886,21 @@ sub admin {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
     }
+    if ($page eq 'machines') {
+        $c->stash(hide_clones => 0 );
+
+        my $list_domains = $RAVADA->list_domains();
+
+        $c->stash(hide_clones => 1 )
+            if scalar @$list_domains
+                        > $CONFIG_FRONT->{admin}->{hide_clones};
+
+        # count clones from list_domains grepping those that have id_base
+        $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
+
+        # if we find no clones do not hide them. They may be created later
+        $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
+    }
     $c->render(template => 'main/admin_'.$page);
 
 };
@@ -879,6 +908,7 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
+    my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -892,7 +922,7 @@ sub new_machine {
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
     $c->render(template => 'main/new_machine'
-        , name => $c->param('name')
+        , name => $c->param('name'), vm => $vm
     );
 };
 
@@ -902,16 +932,17 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
     $swap *= 1024*1024*1024;
-
     my %args = (
            name => $name
+        ,id_iso => $c->param('id_iso')
+        ,id_template => $c->param('id_template')
+        ,iso_file => $c->param('iso_file')
         ,vm=> $vm
         ,id_owner => $USER->id
         ,memory => int($c->param('memory')*1024*1024)
         ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
-
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
@@ -1256,14 +1287,14 @@ sub settings_machine {
 
     $c->stash(message => '');
     my @reqs = ();
-    for (qw(sound video network)) {
+    for (qw(sound video network image jpeg zlib playback streaming)) {
         my $driver = "driver_$_";
         if ( $c->param($driver) ) {
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
                 , id_option => $c->param($driver)
             );
-            $c->stash(message => 'Driver change will apply on next start');
+            $c->stash(message => 'Changes will apply on next start');
             push @reqs,($req2);
         }
     }
@@ -1410,15 +1441,8 @@ sub prepare_machine {
             if  $domain->is_locked();
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    if (! -e $file_screenshot && $domain->can_screenshot() ) {
-        if ( !$domain->is_active() ) {
-            Ravada::Request->start_domain(
-                       uid => $USER->id
-                     ,name => $domain->name
-                ,remote_ip => _remote_ip($c)
-            );
-            sleep 3;
-        }
+    if (! -e $file_screenshot && $domain->can_screenshot()
+            && $domain->is_active) {
         Ravada::Request->screenshot_domain (
             id_domain => $domain->id
             ,filename => $file_screenshot

@@ -168,9 +168,6 @@ remove_old_disks();
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $vm;
     eval { $vm = $RVD_BACK->search_vm($vm_name) };
@@ -185,6 +182,8 @@ for my $vm_name (qw( Void KVM )) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok("Ravada::VM::$vm_name");
 
         flush_rules();
 

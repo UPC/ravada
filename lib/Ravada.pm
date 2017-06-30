@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.7';
+our $VERSION = '0.2.9-alpha';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -25,20 +25,28 @@ our @VM = qw (KVM LXD);
 
 our %VALID_VM;
 
+warn $@ if $@;
+
+use Ravada::VM::Void;
+
+our %VALID_VM;
+
 eval {
     require Ravada::VM::KVM and do {
         Ravada::VM::KVM->import;
     };
     $VALID_VM{KVM} = 1;
 };
+
 eval {
     require Ravada::VM::LXD and do {
         Ravada::VM::LXD->import;
     };
     $VALID_VM{LXD} = 1;
 };
-warn $@ if $@;
-use Ravada::VM::Void;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 =head1 NAME
 
@@ -54,6 +62,7 @@ Ravada - Remove Virtual Desktop Manager
 
 
 our $FILE_CONFIG = "/etc/ravada.conf";
+$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 ###########################################################################
 
@@ -112,7 +121,7 @@ sub BUILD {
     if ($self->config()) {
         _init_config($self->config);
     } else {
-        _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
+        _init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
     }
 
     if ( $self->connector ) {
@@ -229,28 +238,243 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
-
+        ,debian_stretch => {
+            name =>'Debian Stretch 64 bits XFCE'
+            ,description => 'Debian 9.0 Stretch 64 bits'
+            ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.0.0-amd64-xfce-CD-1.iso'
+            ,md5 => '9346436c0cf1862af71cb0a03d9a703c'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
     );
 
+    $self->_update_table($table, $field, \%data);
+
+}
+
+sub _update_domain_drivers_types($self) {
+
+    my $data = {
+        image => {
+            id => 4,
+            ,name => 'image'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+        },
+        jpeg => {
+            id => 5,
+            ,name => 'jpeg'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+        },
+        zlib => {
+            id => 6,
+            ,name => 'zlib'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+        },
+        playback => {
+            id => 7,
+            ,name => 'playback'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+
+        },
+        streaming => {
+            id => 8,
+            ,name => 'streaming'
+           ,description => 'Graphics Options'
+           ,vm => 'qemu'
+
+        }
+    };
+    $self->_update_table('domain_drivers_types','id',$data);
+}
+
+sub _update_domain_drivers_options($self) {
+
+    my $data = {
+        qxl => {
+            id => 1,
+            ,id_driver_type => 1,
+            ,name => 'QXL'
+           ,value => 'type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"'
+        },
+        vmvga => {
+            id => 2,
+            ,id_driver_type => 1,
+            ,name => 'VMVGA'
+           ,value => 'type="vmvga" vram="16384" heads="1" primary="yes"'
+        },
+        cirrus => {
+            id => 3,
+            ,id_driver_type => 1,
+            ,name => 'Cirrus'
+           ,value => 'type="cirrus" vram="16384" heads="1" primary="yes"'
+        },
+        vga => {
+            id => 4,
+            ,id_driver_type => 1,
+            ,name => 'VGA'
+           ,value => 'type="vga" vram="16384" heads="1" primary="yes"'
+        },
+        ich6 => {
+            id => 6,
+            ,id_driver_type => 2,
+            ,name => 'ich6'
+           ,value => 'model="ich6"'
+        },
+        ac97 => {
+            id => 7,
+            ,id_driver_type => 2,
+            ,name => 'ac97'
+           ,value => 'model="ac97"'
+        },
+        virtio => {
+            id => 8,
+            ,id_driver_type => 3,
+            ,name => 'virtio'
+           ,value => 'type="virtio"'
+        },
+        e1000 => {
+            id => 9,
+            ,id_driver_type => 3,
+            ,name => 'e1000'
+           ,value => 'type="e1000"'
+        },
+        rtl8139 => {
+            id => 10,
+            ,id_driver_type => 3,
+            ,name => 'rtl8139'
+           ,value => 'type="rtl8139"'
+        },
+        auto_glz => {
+            id => 11,
+            ,id_driver_type => 4,
+            ,name => 'auto_glz'
+           ,value => 'compression="auto_glz"'
+        },
+        auto_lz => {
+            id => 12,
+            ,id_driver_type => 4,
+            ,name => 'auto_lz'
+           ,value => 'compression="auto_lz"'
+        },
+        quic => {
+            id => 13,
+            ,id_driver_type => 4,
+            ,name => 'quic'
+           ,value => 'compression="quic"'
+        },
+        glz => {
+            id => 14,
+            ,id_driver_type => 4,
+            ,name => 'glz'
+           ,value => 'compression="glz"'
+        },
+        lz => {
+            id => 15,
+            ,id_driver_type => 4,
+            ,name => 'lz'
+           ,value => 'compression="lz"'
+        },
+        off => {
+            id => 16,
+            ,id_driver_type => 4,
+            ,name => 'off'
+           ,value => 'compression="off"'
+        },
+        auto => {
+            id => 17,
+            ,id_driver_type => 5,
+            ,name => 'auto'
+           ,value => 'compression="auto"'
+        },
+        never => {
+            id => 18,
+            ,id_driver_type => 5,
+            ,name => 'never'
+           ,value => 'compression="never"'
+        },
+        always => {
+            id => 19,
+            ,id_driver_type => 5,
+            ,name => 'always'
+           ,value => 'compression="always"'
+        },
+        auto1 => {
+            id => 20,
+            ,id_driver_type => 6,
+            ,name => 'auto'
+           ,value => 'compression="auto"'
+        },
+        never1 => {
+            id => 21,
+            ,id_driver_type => 6,
+            ,name => 'never'
+           ,value => 'compression="never"'
+        },
+        always1 => {
+            id => 22,
+            ,id_driver_type => 6,
+            ,name => 'always'
+           ,value => 'compression="always"'
+        },
+        on => {
+            id => 23,
+            ,id_driver_type => 7,
+            ,name => 'on'
+           ,value => 'compression="on"'
+        },
+        off1 => {
+            id => 24,
+            ,id_driver_type => 7,
+            ,name => 'off'
+           ,value => 'compression="off"'
+        },
+        filter => {
+            id => 25,
+            ,id_driver_type => 8,
+            ,name => 'filter'
+           ,value => 'mode="filter"'
+        },
+        all => {
+            id => 26,
+            ,id_driver_type => 8,
+            ,name => 'all'
+           ,value => 'mode="all"'
+        },
+        off2 => {
+            id => 27,
+            ,id_driver_type => 8,
+            ,name => 'off'
+           ,value => 'mode="off"'
+        }
+    };
+    $self->_update_table('domain_drivers_options','id',$data);
+}
+
+sub _update_table($self, $table, $field, $data) {
+
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %data) {
-        my $row = $data{$name};
+    for my $name (keys %$data) {
+        my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
         next if $id;
         warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
-            "INSERT INTO iso_images "
+            "INSERT INTO $table "
             ."("
-            .join(" , ", sort keys %{$data{$name}})
+            .join(" , ", sort keys %{$data->{$name}})
             .")"
             ." VALUES ( "
-            .join(" , ", map { "?" } keys %{$data{$name}})
+            .join(" , ", map { "?" } keys %{$data->{$name}})
             ." )"
         ;
         my $sth = $CONNECTOR->dbh->prepare($sql);
-        $sth->execute(map { $data{$name}->{$_} } sort keys %{$data{$name}});
+        $sth->execute(map { $data->{$name}->{$_} } sort keys %{$data->{$name}});
         $sth->finish;
     }
 }
@@ -260,6 +484,8 @@ sub _update_data {
 
     $self->_update_isos();
     $self->_update_user_grants();
+    $self->_update_domain_drivers_types();
+    $self->_update_domain_drivers_options();
 }
 
 sub _upgrade_table {
@@ -410,6 +636,7 @@ sub _init_config {
 
 sub _create_vm_kvm {
     my $self = shift;
+    return (undef, "KVM not installed") if !$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
@@ -1616,7 +1843,7 @@ Returns the version of the module
 
 sub version {
     my $version = $VERSION;
-    if ($version =~ /beta$/) {
+    if ($version =~ /(alpha|beta)$/) {
         my $rev_count = `git rev-list --count --all`;
         chomp $rev_count;
         $version .= $rev_count;

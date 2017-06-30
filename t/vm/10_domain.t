@@ -319,7 +319,6 @@ for my $vm_name (qw( Void KVM )) {
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS) or next;
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -338,6 +337,7 @@ for my $vm_name (qw( Void KVM )) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok($CLASS) or next;
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
 

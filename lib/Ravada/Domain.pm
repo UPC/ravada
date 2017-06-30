@@ -520,7 +520,7 @@ sub _display_file_spice($self,$user) {
         ."title=".$self->name." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=0\n"
+        ."delete-this-file=1\n"
         ."usb-filter=-1,-1,-1,-1,0\n";
 
     $ret .=";" if !$self->tls;
@@ -1141,7 +1141,7 @@ sub _log_iptable {
 
     my $user = $args{user};
     my $uid = $args{uid};
-    confess "Chyoose wehter uid or user "
+    confess "Chyoose wether uid or user "
         if $user && $uid;
     lock_hash(%args);
 
