@@ -227,8 +227,12 @@ sub _allow_remove {
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
 
-    $self->_allowed($user);
     $self->_check_has_clones() if $self->is_known();
+    if ($user->can_remove_clone() && $self->id_base) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    }
+    $self->_allowed($user);
 
 }
 
