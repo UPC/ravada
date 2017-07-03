@@ -514,6 +514,37 @@ sub test_grant_clone {
     $usera->remove();
 }
 
+sub test_create_domain {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_c$$","bar");
+    my $usera = create_user("admin_c$$","bar",1);
+
+    $usera->revoke('create_domain',$user);
+    is($user->can_create_domain,0) or return;
+
+    my $domain_name = new_domain_name();
+    my $domain;
+    eval { $domain = $vm->create_domain($domain_name)};
+    like($@,qr'.');
+
+    my $domain2 = $vm->search_domain($domain_name);
+    ok(!$domain2);
+    $domain2->remove($usera)    if $domain2;
+
+    $usera->grant('create_domain',$user);
+    is($user->can_create_domain,1) or return;
+
+    $domain_name = new_domain_name();
+    eval { $domain = $vm->create_domain($domain_name)};
+    is($@,'');
+
+    my $domain3 = $vm->search_domain($domain_name);
+    ok($domain3);
+    $domain3->remove();
+}
 ##########################################################
 
 test_defaults();
