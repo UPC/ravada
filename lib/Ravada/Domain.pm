@@ -1372,6 +1372,19 @@ sub remote_ip {
 
 }
 
+sub get_description {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT description FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($self->name);
+    my ($description) = $sth->fetchrow();
+    $sth->finish;
+    return ($description or undef);
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;

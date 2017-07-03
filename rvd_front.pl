@@ -1301,10 +1301,14 @@ sub settings_machine {
         }
     }
 
+    $c->stash(description => '');
+    my $description = $domain->get_description;
+    $c->stash(description => $description);
+
     if ( $c->param("description") ) {
         $domain->description($c->param("description"));
         $c->stash(message => 'Description applied!');
-        my $description = $domain->description;
+        my $description = $domain->get_description;
         $c->stash(description => $description);
     }
 
