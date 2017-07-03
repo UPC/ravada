@@ -348,6 +348,7 @@ sub is_operator {
 	|| $self->can_hibernate_clone
 	|| $self->can_change_settings_clones()
         || $self->can_remove_clone();
+        || $self->can_create_base();
 }
 
 =head2 is_external

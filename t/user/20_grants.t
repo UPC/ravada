@@ -325,6 +325,46 @@ sub test_remove_clone_all {
     $domain->remove($usera);
 }
 
+sub test_prepare_base {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_pb$$","bar");
+    my $usera = create_user("admin_pb$$","bar",1);
+
+    my $domain = create_domain($vm_name, $user);
+    is($domain->is_base,0) or return;
+
+    eval{ $domain->prepare_base($user) };
+    like($@,qr'.');
+    is($domain->is_base,0);
+    $domain->remove();
+
+    $domain = create_domain($vm_name, $user);
+
+    $usera->grant($user,'create_base');
+    is($user->can_create_base,1);
+    eval{ $domain->prepare_base($user) };
+    is($@,'');
+    is($domain->is_base,1);
+
+    my $clone;
+    eval { $clone = $domain->clone(user=>$user, name => new_domain_name) };
+    ok($clone);
+
+    $usera->revoke($user,'create_base');
+    is($user->can_create_base,0);
+
+    eval { $clone->prepare_base() };
+    like($@,qr'.');
+    is($clone->is_base,0);
+
+    $domain->remove($usera);
+    $clone->remove($usera);
+
+    $user->remove();
+    $usera->remove();
+
+}
 ##########################################################
 
 test_defaults();
@@ -341,5 +381,7 @@ test_remove_clone('Void');
 #test_remove_all('Void');
 
 test_remove_clone_all('Void');
+
+test_prepare_base('Void');
 
 done_testing();
