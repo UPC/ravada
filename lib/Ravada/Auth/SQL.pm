@@ -337,7 +337,8 @@ sub is_operator {
     my $self = shift;
     return $self->is_admin() 
         || $self->can_shutdown_clone()
-        || $self->can_remove_clone();
+        || $self->can_remove_clone()
+        || $self->can_create_base();
 }
 
 =head2 is_external
