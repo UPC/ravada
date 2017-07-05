@@ -11,7 +11,7 @@ You can get the development release cloning the sources.
 
 ::
 
-    $ git clone https://github.com/frankiejol/ravada.git
+    $ git clone https://github.com/UPC/ravada.git
     
 Possible development scenarios where to deploy
 ----------------------------------------------
@@ -103,19 +103,6 @@ Create a config file at ``/etc/ravada.conf`` with the ``username`` and ``passwor
     db:
       user: rvd_user
       password: *****
-
-Create tables
--------------
-
-Review and run the sql files from the sql dir. If you are using a packaged release you can find these files at ``/usr/share/doc/ravada/doc``. For development, the files are at the ``sql`` directory inside the sources.
-
-::
-
-    $ cd /usr/share/doc/ravada/sql/mysql
-    $ cat *.sql | mysql -p -u rvd_user ravada
-    $ cd ../data
-    $ cat *.sql | mysql -p -u rvd_user ravada
-
 
 Ravada web user
 ---------------
