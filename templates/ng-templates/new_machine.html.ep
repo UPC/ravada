@@ -101,7 +101,7 @@
                 <label for="swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
                 <div class="col-lg-2">
                     <input class="form-control" ng-model="swapsize" type="number" name="swap"
-                        min="1" max="4">
+                        min="0" max="4">
                 </div>
             </div>
 
