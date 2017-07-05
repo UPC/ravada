@@ -68,7 +68,7 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
       $scope.ddsize=20;
-      $scope.swapsize=1;
+      $scope.swapsize=0;
       $scope.ramsize=1;
   };
 
