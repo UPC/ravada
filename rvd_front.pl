@@ -7,8 +7,6 @@ use locale ':not_characters';
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
-use Data::Dumper;
-use Getopt::Long;
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 #use Mojolicious::Plugin::I18N;
@@ -19,8 +17,6 @@ use Mojo::Home;
 #package Ravada::I18N:en;
 #####
 
-use YAML qw(LoadFile);
-
 use lib 'lib';
 
 use Ravada::Front;
@@ -28,7 +24,20 @@ use Ravada::Auth;
 use POSIX qw(locale_h);
 
 my $help;
-my $FILE_CONFIG = "/etc/ravada.conf";
+
+my $FILE_CONFIG;
+for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
+    warn "WARNING: Found config file at $_ and at $FILE_CONFIG\n"
+        if -e $file && $FILE_CONFIG;
+    $FILE_CONFIG = $file if -e $file;
+}
+
+my $FILE_CONFIG_RAVADA;
+for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG_RAVADA\n"
+        if -e $file && $FILE_CONFIG_RAVADA;
+    $FILE_CONFIG_RAVADA = $file if -e $file;
+}
 
 my $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
@@ -40,8 +49,12 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,admin => {
+                                                    hide_clones => 15
                                               }
-                                      ,file => '/etc/rvd_front.conf'
+                                              ,config => $FILE_CONFIG_RAVADA
+                                              }
+                                      ,file => $FILE_CONFIG
 };
 #####
 #####
@@ -66,12 +79,12 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
-
 plugin 'RenderFile';
 
 my %config;
-%config = ( config => $FILE_CONFIG ) if $FILE_CONFIG && -e $FILE_CONFIG;
+%config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
 our $RAVADA = Ravada::Front->new(%config);
+
 our $USER;
 
 # TODO: get those from the config file
@@ -872,6 +885,21 @@ sub admin {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
     }
+    if ($page eq 'machines') {
+        $c->stash(hide_clones => 0 );
+
+        my $list_domains = $RAVADA->list_domains();
+
+        $c->stash(hide_clones => 1 )
+            if scalar @$list_domains
+                        > $CONFIG_FRONT->{admin}->{hide_clones};
+
+        # count clones from list_domains grepping those that have id_base
+        $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
+
+        # if we find no clones do not hide them. They may be created later
+        $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
+    }
     $c->render(template => 'main/admin_'.$page);
 
 };
@@ -1077,6 +1105,8 @@ sub show_link {
     my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
+    my $description = $domain->get_description;
+    $c->stash(description => $description);
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1084,6 +1114,7 @@ sub show_link {
                 ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
+                ,description => $description
                 ,login => $c->session('login'));
 }
 
@@ -1269,6 +1300,18 @@ sub settings_machine {
             push @reqs,($req2);
         }
     }
+
+    $c->stash(description => '');
+    my $description = $domain->get_description;
+    $c->stash(description => $description);
+
+    if ( $c->param("description") ) {
+        $domain->description($c->param("description"));
+        $c->stash(message => 'Description applied!');
+        my $description = $domain->get_description;
+        $c->stash(description => $description);
+    }
+
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
     }
