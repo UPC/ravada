@@ -907,6 +907,7 @@ sub clone {
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
+        ,description => $self->description
     );
 }
 
