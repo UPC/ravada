@@ -68,17 +68,10 @@ setlocale(LC_CTYPE, $old_locale);
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
 plugin 'RenderFile';
-GetOptions(
-     'config=s' => \$FILE_CONFIG
-         ,help  => \$help
-     ) or exit;
 
-if ($help) {
-    print "$0 [--help] [--config=$FILE_CONFIG]\n";
-    exit;
-}
-
-our $RAVADA = Ravada::Front->new(config => $FILE_CONFIG);
+my %config;
+%config = ( config => $FILE_CONFIG ) if $FILE_CONFIG && -e $FILE_CONFIG;
+our $RAVADA = Ravada::Front->new(%config);
 our $USER;
 
 # TODO: get those from the config file
