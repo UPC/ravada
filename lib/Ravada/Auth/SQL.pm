@@ -337,6 +337,9 @@ sub is_operator {
     my $self = shift;
     return $self->is_admin() 
         || $self->can_shutdown_clone()
+	|| $self->can_hibernate_clone
+	|| $self->can_change_settings_clones()
+	|| $self->can_shutdown_clone()
         || $self->can_remove_clone();
 }
 
