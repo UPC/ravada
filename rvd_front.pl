@@ -311,7 +311,7 @@ get '/machine/view/(:id).(:type)' => sub {
 
 get '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;      
-    return access_denied($c)	     if !$USER->can_clone();
+    return access_denied($c)	     if !$USER->can_clone_all();
     return clone_machine($c);
 };
 
@@ -336,6 +336,7 @@ any '/machine/remove/(:id).(:type)' => sub {
 
 any '/machine/remove_clones/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)	if !$USER ->can_remove_clone();
         return remove_clones($c);
 };
 
@@ -404,7 +405,7 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER -> can_copy();
+    return access_denied($c)    if !$USER -> can_clone_all();
     return copy_machine($c);
 };
 
@@ -875,7 +876,7 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
 
-    my %args )= (
+    my %args = (
            name => $name
         ,vm=> $vm
         ,id_owner => $USER->id
@@ -1426,7 +1427,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    return access_denied($c)    if !$USER->is_admin();
+    
 
     my $id_base= $c->param('id_base');
 
