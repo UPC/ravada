@@ -23,7 +23,7 @@
                              ng-change="validate_new_name(showmachine.name)"
                              ng-disabled="<%= $disable_rename %>"
                 >
-                <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated"
+                <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated ||message_rename"
                              ng-click="rename(showmachine.id, showmachine.name)">
                               <i class="fa fa-check" aria-hidden="true"></i>
                 </button>
@@ -33,6 +33,8 @@
                                This name is duplicated
                               </label>
                 </div>
+                <div ng-show="message_rename"
+                    class="alert alert-warning">Renaming machine </div>
             </div>
             <div class="col-md-6">
 

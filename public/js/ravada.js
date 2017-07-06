@@ -154,6 +154,7 @@
             if ($scope.new_name_duplicated) return;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            $scope.message_rename = 1;
           };
 
           $scope.validate_new_name = function(old_name) {
