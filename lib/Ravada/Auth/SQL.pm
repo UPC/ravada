@@ -345,10 +345,26 @@ sub is_operator {
     my $self = shift;
     return $self->is_admin()
         || $self->can_shutdown_clone()
-	|| $self->can_hibernate_clone
-	|| $self->can_change_settings_clones()
-        || $self->can_remove_clone()
-        || $self->can_create_base();
+	|| $self->can_screenshot()
+	|| $self->can_change_settings()
+	|| $self->can_clone()
+	|| $self->can_create_domain()
+	|| $self->can_remove()
+	|| $self->can_create_base()
+	|| $self->can_change_settings_clone()
+	|| $self->can_hibernate_clone()
+	|| $self->can_change_settings_all()
+	|| $self->can_clone_all()
+	|| $self->can_remove_clone_all()
+	|| $self->can_hibernate_clone_all()
+	|| $self->can_clone_all()
+	|| $self->can_remove_all()
+	|| $self->can_shutdown_all()
+	|| $self->can_hibernate_all()
+	|| $self->can_screenshot_all()
+	|| $self->can_grant()
+	|| $self->can_manage_users()
+        || $self->can_remove_clone();
 }
 
 =head2 can_list_own_machines
