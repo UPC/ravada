@@ -160,6 +160,11 @@ after 'rename' => \&_post_rename;
 after 'screenshot' => \&_post_screenshot;
 ##################################################
 
+sub BUILD {
+    my $self = shift;
+    $self->_init_connector();
+}
+
 sub _vm_connect {
     my $self = shift;
     $self->_vm->connect();
