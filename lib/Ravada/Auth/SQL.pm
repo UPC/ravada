@@ -335,8 +335,11 @@ Returns true if the user is admin or has been granted special permissions
 
 sub is_operator {
     my $self = shift;
-    return $self->is_admin() 
+    return $self->is_admin()
         || $self->can_shutdown_clone()
+	|| $self->can_hibernate_clone
+	|| $self->can_change_settings_clones()
+	|| $self->can_shutdown_clone()
         || $self->can_remove_clone();
 }
 

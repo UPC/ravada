@@ -23,8 +23,9 @@
                <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
 % }
                <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
+%		if ($USER->can_clone_all){
                <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
-
+%					}
              </ul>
             <div class="tab-content">
 
