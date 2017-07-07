@@ -237,6 +237,7 @@ sub _update_isos {
           name => 'windows_7'
           ,description => 'Windows 7 64 bits'
           ,xml => 'windows_7.xml'
+          ,xml_volume => 'windows10-volume.xml'
         }
     );
 
