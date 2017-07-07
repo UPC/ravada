@@ -96,7 +96,23 @@
                     <input class="form-control" ng-model="ddsize" type="number" name="disk"
                         min="1" max="100" required="">
                 </div>
+          </div>
+          <div>
+                            <a ng-init= "hide_swap = 0" ng-show="!hide_swap"
+                              ng-click="hide_swap = 1"
+                              class="label label-primary"
+                              align="right">Show swap</a>
+                            <a ng-show="hide_swap" ng-click="hide_swap = 0"
+                              class="label label-primary"
+                              align="right">Hide swap</a>
+            <div class="form-group row" ng-if="backend == 'KVM'">
+                <label for="swap" ng-show="hide_swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
+                <div class="col-lg-2">
+                    <input class="form-control" ng-show="hide_swap" ng-model="swapsize" type="number" name="swap"
+                        min="0" max="4">
+                </div>
             </div>
+          </div>
           <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
                 <label for="memory"  class="col-lg-2 control-label"><%=l 'Ram: (GB)' %></label>
@@ -105,14 +121,6 @@
                         min="1" max="4" required="">
                 </div>
             </div>
-          </div>
-          <button class="col-lg-3" type='button' ng-init= "swap_button = 0" ng-show= "!swap_button" ng-click="swap_button = !swap_button">Select Swap (Optional)</button>
-          <div class="form-group row" ng-if="backend == 'KVM'">
-              <label for="swap" ng-show="swap_button" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
-              <div class="col-lg-2">
-                  <input class="form-control" ng-show="swap_button" ng-model="swapsize" type="number" name="swap"
-                      min="0" max="4">
-              </div>
           </div>
           <div class="form-group row">
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
