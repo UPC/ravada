@@ -233,6 +233,11 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
+        ,windows_7 => {
+          name => 'windows_7'
+          ,description => 'Windows 7 64 bits'
+          ,xml => 'windows_7.xml'
+        }
     );
 
     $self->_update_table($table, $field, \%data);
