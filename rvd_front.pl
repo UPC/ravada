@@ -44,7 +44,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 pid_file => 'log/rvd_front.pid'
                                                 ,listen => ['http://*:8081']
                                                 }
-                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_bg_file => '/img/intro-bg.jpg'
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
