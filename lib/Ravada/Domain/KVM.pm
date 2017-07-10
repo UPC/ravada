@@ -745,7 +745,8 @@ sub _new_target_dev {
     my %target;
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
+        next if $disk->getAttribute('device') ne 'disk'
+            && $disk->getAttribute('device') ne 'cdrom';
 
 
         for my $child ($disk->childNodes) {
