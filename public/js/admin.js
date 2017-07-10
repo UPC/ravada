@@ -51,7 +51,7 @@ ravadaApp.directive("solShowMachine", swMach)
              return device;
           }
           else return "<NONE>";
-      }
+      };
 
       $scope.validate_new_name = function() {
           $http.get('/machine/exists/'+$scope.name)
@@ -68,13 +68,15 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
       $scope.ddsize=20;
-      $scope.swapsize=0;
+      $scope.swapsize={value:0};
       $scope.ramsize=1;
       $scope.seeswap=0;
       
       $scope.show_swap = function() {
         $scope.seeswap = !($scope.seeswap);
-      }
+        $scope.swapsize.value=0;
+
+      };
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
