@@ -24,8 +24,14 @@ my $USER = create_user('foo','bar');
 
 sub test_custom_iso {
     my $vm_name = shift;
+    my $swap = shift;
+
+    my %args_create = ();
+    $args_create{swap} = 1000000  if $swap;
 
     my $vm = rvd_back->search_vm($vm_name);
+    ok($vm,"Expecting a vm of type $vm_name") or return;
+
     my $id_iso = search_id_iso("windows_7");
 
     my $name = new_domain_name();
@@ -35,6 +41,7 @@ sub test_custom_iso {
                     , id_owner => $USER->id
                     , id_iso => $id_iso
                     , active => 0
+                    , %args_create
            );
     };
     like($@,qr'Template .* has no URL'i);
@@ -52,15 +59,20 @@ sub test_custom_iso {
                     , id_iso => $id_iso
                     , active => 0
                     , iso_file => $iso_file
+                    , %args_create
            );
     };
     is($@,'');
     ok($domain,"Expecting domain created, got ".($domain or '<UNDEF>'));
 
     eval {   $domain->start($USER) if !$domain->is_active; };
-    ok($@,'');
+    is($@,'');
 
     unlink $iso_file if -e $iso_file;
+}
+
+sub test_custom_iso_swap {
+    test_custom_iso(@_,'swap');
 }
 
 #########################################################################
@@ -84,6 +96,7 @@ SKIP: {
     skip $msg,10    if !$vm;
 
     test_custom_iso($vm_name);
+    test_custom_iso_swap($vm_name);
 
 };
 
