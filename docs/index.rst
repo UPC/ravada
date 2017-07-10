@@ -52,6 +52,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
 
    docs/INSTALL
+   docs/production
    docs/INSTALL_devel
    docs/Ubuntu_Installation
    docs/add_kvm_storage_pool
@@ -63,7 +64,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/ldap_local
    docs/new_iso_image
    docs/operation
-   docs/production
    docs/swap_partition
    docs/troubleshooting
    docs/update
