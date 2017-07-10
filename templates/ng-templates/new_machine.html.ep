@@ -96,19 +96,19 @@
                     <input class="form-control" ng-model="ddsize" type="number" name="disk"
                         min="1" max="100" required="">
                 </div>
-                <a ng-show="!hideswap"
+                <a ng-show="!seeswap"
                    ng-click="show_swap()"
                    class="label label-primary"
                    align="right">Show swap</a>
-                <a ng-show="hideswap"
+                <a ng-show="seeswap"
                    ng-click="show_swap()"
                    class="label label-primary"
                    align="right">Hide swap</a>
             </div>
             <div class="form-group row" ng-if="backend == 'KVM'">
-                <label for="swap" ng-show="hideswap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
+                <label for="swap" ng-show="seeswap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-show="hideswap" ng-model="swapsize" type="number" name="swap"
+                    <input class="form-control" ng-show="seeswap" ng-model="swapsize" type="number" name="swap"
                         min="0" max="4">
                 </div>
             </div>
