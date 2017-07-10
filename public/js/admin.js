@@ -70,6 +70,11 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.ddsize=20;
       $scope.swapsize=0;
       $scope.ramsize=1;
+      $scope.seeswap=0;
+      
+      $scope.show_swap = function() {
+        $scope.seeswap = !($scope.seeswap);
+      }
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
