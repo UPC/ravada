@@ -234,7 +234,7 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
         }
         ,windows_7 => {
-          name => 'windows_7'
+          name => 'Windows 7'
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
