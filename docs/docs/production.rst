@@ -90,7 +90,7 @@ Help
 ----
 
 Struggling with the installation procedure ? We tried to make it easy but
-let us know if you need `assistance <http://ravada.upc.edu/#help-modal-question>`__.
+let us know if you need `assistance <http://ravada.upc.edu/#help>`__.
 
 There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
 admins may face.
