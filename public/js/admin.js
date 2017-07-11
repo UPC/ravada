@@ -70,6 +70,11 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.ddsize=20;
       $scope.swapsize=1;
       $scope.ramsize=1;
+      
+      $http.get('/list_machines.json').then(function(response) {
+              $scope.base = response.data;
+      });
+      
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
