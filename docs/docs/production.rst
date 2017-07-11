@@ -95,4 +95,4 @@ let us know if you need `assistance <http://ravada.upc.edu/#help>`__.
 There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
 admins may face.
 
-If you do not know how to create a virtual machine, please read `creating virtual machines <How_Create_Virtual_Machine.html>'__.
+If you do not know how to create a virtual machine, please read `creating virtual machines <How_Create_Virtual_Machine.html>`__.
