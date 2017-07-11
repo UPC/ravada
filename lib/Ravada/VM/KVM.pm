@@ -191,6 +191,7 @@ list of all the volumes.
 =cut
 
 sub search_volume($self,$file,$refresh=0) {
+    confess "ERROR: undefined file" if !defined $file;
     return $self->search_volume_re(qr(^$file$),$refresh);
 }
 
@@ -535,7 +536,10 @@ sub _domain_create_from_iso {
         if !$iso->{xml_volume};
         
     my $device_cdrom;
-    
+
+    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
+        if !$iso->{url} && !$args{iso_file};
+
     if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
       $device_cdrom = $args{iso_file};
     }
@@ -956,7 +960,7 @@ sub _search_iso {
     $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
     $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
 
-    if ( !$row->{device}) {
+    if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume($row->{filename})) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
@@ -1021,6 +1025,7 @@ sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
