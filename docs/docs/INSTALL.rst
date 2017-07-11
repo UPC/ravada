@@ -146,3 +146,13 @@ Client
 
 The client must have a spice viewer such as virt-viewer. There is a
 package for linux and it can also be downloaded for windows.
+
+Help
+----
+
+Struggling with the installation procedure ? We tried to make it easy but
+let us know if you need <a href="http://ravada.upc.edu/#help-modal-question">assistance</a>.
+
+There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
+admins may face.
+

@@ -71,9 +71,6 @@ similar before the frontend.
 In order to make ravada use apache, you must follow the steps explained
 on `here <apache.html>`__.
 
-If you face any errors during this procedure, please read the page
-"Troubleshooting". If you do not know how to create a virtual machine,
-please read the page "creating virtual machines".
 
 Firewall
 --------
@@ -88,3 +85,14 @@ machines. Ravada uses its own iptables chain called 'ravada' to do so:
 
     -A INPUT -p tcp -m tcp -s ip.of.admin.workstation --dport 5900:7000 -j ACCEPT
     -A INPUT -p tcp -m tcp --dport 5900:7000 -j DROP
+
+Help
+----
+
+Struggling with the installation procedure ? We tried to make it easy but
+let us know if you need <a href="http://ravada.upc.edu/#help-modal-question">assistance</a>.
+
+There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
+admins may face.
+
+If you do not know how to create a virtual machine, please read `creating virtual machines <How_Create_Virtual_Machine.html>'__.
