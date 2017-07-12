@@ -1,4 +1,4 @@
-How to add a new ISO image
+How to add a KVM template
 ==========================
 
 ISO images are required to create KVM virtual machines. They can be
