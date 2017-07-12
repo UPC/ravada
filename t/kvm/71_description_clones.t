@@ -12,7 +12,6 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 my $FILE_CONFIG = 't/etc/ravada.conf';
-my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
 my %ARG_CREATE_DOM = (
       KVM => [ id_iso => 1 ]
@@ -203,7 +202,7 @@ sub test_prepare_base {
     #ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
     #    ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
 
-    my $domain_clone2 = $RVD_FRONT->search_clone(
+    my $domain_clone2 = rvd_front->search_clone(
          id_base => $domain->id,
         id_owner => $USER->id
     );
