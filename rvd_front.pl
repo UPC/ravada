@@ -1115,7 +1115,7 @@ sub show_link {
                 ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
-                ,description => $description
+                ,description => $domain->description
                 ,login => $c->session('login'));
 }
 
