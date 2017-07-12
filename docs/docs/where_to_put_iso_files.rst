@@ -10,4 +10,6 @@ first place it inside the directory where Ravada reads its XML and ISOs:
     
 After you placed the ISO, Ravada is able to use it when selecting an ISO
 while creating a machine.
-Also, the ISO you download from Ravada can also be found in that directory.
+Also, ISOs that were downloaded from Ravada can also be found in this directory.
+
+Ravada may also detect ISOs from ISO directories from your directory /home.
