@@ -88,12 +88,12 @@ If running VMs crash with that message:
 You are probably running Ravada inside a virtual machine or you are using the private network that KVM uses for another interface.
 This is likely to happen when running Ravad in a Nested Virtual environment.
 
-*Solution:* Change the KVM network definition. Edit the file `/etc/libvirt/qemu/networks/default.xml` and replace all the
+**Solution:** Change the KVM network definition. Edit the file `/etc/libvirt/qemu/networks/default.xml` and replace all the
  192.168.122 network instances by another one, ie: 192.168.123.
  
  ::
  
-     $ sudo gedit /etc/libvirt/qemu/networks/default.xml
+     $ sudo virsh net-edit default
      <ip address='192.168.122.1' netmask='255.255.255.0'>
         <dhcp>
           <range start='192.168.122.2' end='192.168.122.254'/>
