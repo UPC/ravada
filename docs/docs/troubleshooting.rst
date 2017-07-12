@@ -77,3 +77,27 @@ Spice-Warning Error in certificate chain verification
 
 
 spicec looks for %APPDATA%\spicec\spice_truststore.pem / $HOME/.spicec/spice_truststore.pem. This needs to be identical to the ca-cert.pem on the server, i.e. the ca used to sign the server certificate. The client will use this to authenticate the server.
+
+Network is already in use
+-------------------------
+
+If running VMs crash with that message:
+
+    libvirt error code: 1, message: internal error: Network is already in use by interface
+
+You are probably running Ravada inside a virtual machine or you are using the private network that KVM uses for another interface.
+This is likely to happen when running Ravad in a Nested Virtual environment.
+
+*Solution:* Change the KVM network definition. Edit the file `/etc/libvirt/qemu/networks/default.xml` and replace all the
+ 192.168.122 network instances by another one, ie: 192.168.123.
+ 
+ ::
+ 
+     $ sudo gedit /etc/libvirt/qemu/networks/default.xml
+     <ip address='192.168.122.1' netmask='255.255.255.0'>
+        <dhcp>
+          <range start='192.168.122.2' end='192.168.122.254'/>
+        </dhcp>
+      </ip>
+      
+ Then reboot the whole system.
