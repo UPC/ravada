@@ -188,7 +188,7 @@ sub _update_description {
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains SET description=? "
-        ." WHERE id=? AND description IS NOT ?");
+        ." WHERE id=? AND description <> ?");
     $sth->execute($self->description,$self->id, $self->description);
     $sth->finish;
 }
