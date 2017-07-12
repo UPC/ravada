@@ -82,7 +82,6 @@ clean();
 
 my $vm;
 my $vm_name = 'KVM';
-use_ok("Ravada::VM::$vm_name");
 
 eval { $vm = rvd_back->search_vm('KVM') };
 diag($@) if $@;
@@ -96,6 +95,7 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    use_ok("Ravada::VM::$vm_name");
     test_custom_iso($vm_name);
     test_custom_iso_swap($vm_name);
 
