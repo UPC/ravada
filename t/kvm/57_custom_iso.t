@@ -60,13 +60,14 @@ sub test_custom_iso {
                     , active => 0
                     , iso_file => $iso_file
                     , %args_create
+		    , remove_cpu => 1
            );
     };
     is($@,'');
     ok($domain,"Expecting domain created, got ".($domain or '<UNDEF>'));
 
     eval {   $domain->start($USER) if !$domain->is_active; };
-    is($@,'');
+    ok(!$@,"Expecting no error, got ".($@ or ''));
 
     unlink $iso_file if -e $iso_file;
 }
