@@ -61,6 +61,10 @@ sub test_create_domain {
 }
 sub test_clone {
     my ($vm_name, $base) = @_;
+    my $description = "The description text $$";
+    $base->description($description);
+    is($base->description,$description);
+
                 my $clone1;
                 my $name_clone = new_domain_name();
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
@@ -68,6 +72,7 @@ sub test_clone {
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
 
+    is($clone1->description,$description);
                 $clone1->shutdown_now($USER) if $clone1->is_active();
                 eval { $clone1->start($USER) };
                 is($@,'');
@@ -77,6 +82,7 @@ sub test_clone {
                 ok($clone1b,"Expecting new cloned domain ".$name_clone);
                 $clone1->shutdown_now($USER) if $clone1->is_active;
                 ok(!$clone1->is_active);
+    is($clone1b->description,$description);
     return $clone1;
 }
 
