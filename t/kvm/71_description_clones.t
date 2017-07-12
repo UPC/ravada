@@ -32,6 +32,7 @@ sub test_create_domain {
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
+    diag("Test create domain $name");
 
     if (!$ARG_CREATE_DOM{$vm_name}) {
         diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
@@ -80,53 +81,9 @@ sub touch_mtime {
 
 }
 
-sub test_devices_clone {
-    my $vm_name = shift;
-    my $domain = shift;
-
-    my @volumes = $domain->list_volumes();
-    ok(scalar(@volumes),"[$vm_name] domain ".$domain->name
-        ." Expecting at least 1 volume cloned "
-        ." got ".scalar(@volumes)) or exit;
-    for my $disk (@volumes ) {
-        ok(-e $disk,"Checking volume ".Dumper($disk)." exists") or exit;
-    }
-}
-
-sub test_display {
-    my ($vm_name, $domain) = @_;
-
-    my $display;
-    $domain->start($USER) if !$domain->is_active;
-    eval { $display = $domain->display($USER)};
-    is($@,'');
-    ok($display,"Expecting a display URI, got '".($display or '')."'") or return;
-
-    my ($ip) = $display =~ m{^\w+://(.*):\d+} if defined $display;
-
-    ok($ip,"Expecting an IP , got ''") or return;
-
-    ok($ip ne '127.0.0.1', "[$vm_name] Expecting IP no '127.0.0.1', got '$ip'") or exit;
-
-
-    # only test this for Void, it will fail on real VMs
-    return if $vm_name ne 'Void';
-
-    $Ravada::CONFIG->{display_ip} = $DISPLAY_IP;
-    eval { $display = $domain->display($USER) };
-    is($@,'');
-    ($ip) = $display =~ m{^\w+://(.*):\d+};
-
-    my $expected_ip =  Ravada::display_ip();
-    ok($expected_ip,"[$vm_name] Expecting display_ip '$DISPLAY_IP' , got none in config "
-        .Dumper($Ravada::CONFIG)) or exit;
-
-    ok($ip eq $expected_ip,"Expecting display IP '$expected_ip', got '$ip'");
-
-}
-
 sub test_prepare_base_active {
     my $vm_name = shift;
+    diag("Test prepare base active $vm_name");
 
     my $domain = test_create_domain($vm_name);
 
@@ -150,7 +107,8 @@ sub test_prepare_base_active {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
-    
+    diag("Test prepare base $vm_name");
+
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
     
@@ -196,19 +154,17 @@ sub test_prepare_base {
     };
     ok(!$@,"Clone domain, expecting error='' , got='".($@ or '')."'") or exit;
     ok($domain_clone,"Trying to clone from ".$domain->name." to $name_clone");
-    test_devices_clone($vm_name, $domain_clone);
-    test_display($vm_name, $domain_clone);
 
-    #ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
-    #    ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
+    ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
+          ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
 
     my $domain_clone2 = rvd_front->search_clone(
          id_base => $domain->id,
         id_owner => $USER->id
     );
-    ok($domain_clone2,"Searching for clone id_base=".$domain->id." user=".$USER->id
-        ." expecting domain , got nothing "
-        ." ".Dumper($domain_clone)) or exit;
+    #ok($domain_clone2,"Searching for clone id_base=".$domain->id." user=".$USER->id
+    #    ." expecting domain , got nothing "
+    #    ." ".Dumper($domain_clone)) or exit;
 
     if ($domain_clone2) {
         ok( $domain_clone2->name eq $domain_clone->name
@@ -246,6 +202,7 @@ sub add_description {
     my $domain = shift;
     my $description = shift;
     my $name = $domain->name;
+    diag("Add description $name");
 
     $domain->description($description);
 }
@@ -253,7 +210,7 @@ sub add_description {
 sub test_description {
     my $vm_name = shift;
 
-    diag("Testing add description $vm_name");
+    diag("Testing description $vm_name");
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
@@ -261,8 +218,6 @@ sub test_description {
     test_prepare_base_active($vm_name);
 
     my $description = "This is a description test";
-    #add_description($domain, $description);
-
     my $domain2 = rvd_back->search_domain($domain->name);
     ok ($domain2->get_description eq $description, "I can't find description");
 }

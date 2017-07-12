@@ -1106,7 +1106,7 @@ sub show_link {
     my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
-    my $description = $domain->get_description;
+    my $description = $domain->description;
     $c->stash(description => $description);
     $c->render(template => 'main/run'
                 ,name => $domain->name
@@ -1303,13 +1303,13 @@ sub settings_machine {
     }
 
     $c->stash(description => '');
-    my $description = $domain->get_description;
+    my $description = $domain->description;
     $c->stash(description => $description);
 
     if ( $c->param("description") ) {
         $domain->description($c->param("description"));
         $c->stash(message => 'Description applied!');
-        my $description = $domain->get_description;
+        my $description = $domain->description;
         $c->stash(description => $description);
     }
 
