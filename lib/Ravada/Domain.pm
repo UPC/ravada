@@ -188,8 +188,8 @@ sub _update_description {
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains SET description=? "
-        ." WHERE id=?");
-    $sth->execute($self->description,$self->id);
+        ." WHERE id=? AND description IS NOT ?");
+    $sth->execute($self->description,$self->id, $self->description);
     $sth->finish;
 }
 
@@ -443,6 +443,7 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
+    $self->description($row->{description}) if defined $row->{description};
     return $row if $row->{id};
 }
 
@@ -893,7 +894,6 @@ sub clone {
     my %args = @_;
 
     my $name = $args{name} or confess "ERROR: Missing domain cloned name";
-    my $description = $args{description} or confess "ERROR: Missing domain cloned description";
     confess "ERROR: Missing request user" if !$args{user};
 
     my $uid = $args{user}->id;
@@ -902,14 +902,15 @@ sub clone {
 
     my $id_base = $self->id;
 
-    return $self->_vm->create_domain(
+    my $clone = $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
-        ,description => $self->description
     );
+    $clone->description($self->description);
+    return $clone;
 }
 
 sub _post_pause {
@@ -1372,19 +1373,6 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
-}
-
-sub get_description {
-    my $self = shift;
-
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT description FROM domains "
-        ." WHERE name=?"
-    );
-    $sth->execute($self->name);
-    my ($description) = $sth->fetchrow();
-    $sth->finish;
-    return ($description or undef);
 }
 
 sub _dbh {
