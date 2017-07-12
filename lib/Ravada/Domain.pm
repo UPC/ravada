@@ -893,6 +893,7 @@ sub clone {
     my %args = @_;
 
     my $name = $args{name} or confess "ERROR: Missing domain cloned name";
+    my $description = $args{description} or confess "ERROR: Missing domain cloned description";
     confess "ERROR: Missing request user" if !$args{user};
 
     my $uid = $args{user}->id;

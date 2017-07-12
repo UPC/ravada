@@ -134,6 +134,7 @@ sub _around_create_domain {
 
     $self->_pre_create_domain(@_);
     my $domain = $self->$orig(@_);
+
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
     $domain->description($args{description}) if $args{description};
     return $domain;
