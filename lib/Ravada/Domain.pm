@@ -186,11 +186,16 @@ sub _start_preconditions{
 sub _update_description {
     my $self = shift;
 
+    return if defined $self->description
+        && defined $self->_data('description')
+        && $self->description eq $self->_data('description');
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains SET description=? "
-        ." WHERE id=? AND description <> ?");
-    $sth->execute($self->description,$self->id, $self->description);
+        ." WHERE id=? ");
+    $sth->execute($self->description,$self->id);
     $sth->finish;
+    $self->{_data}->{description} = $self->{description};
 }
 
 sub _allow_manage_args {
@@ -575,7 +580,7 @@ sub _insert_db {
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         #warn "$query\n".Dumper(\%field);
-        die $@;
+        confess $@;
     }
     $sth->finish;
 

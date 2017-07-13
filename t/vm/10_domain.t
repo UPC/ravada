@@ -319,7 +319,7 @@ sub test_description {
     is($domain->description, $description);
 
     my $domain2 = rvd_back->search_domain($domain->name);
-    is($domain2->description, $description);
+    is($domain2->description, $description) or exit;
 }
 #######################################################
 
