@@ -219,7 +219,7 @@ sub test_description {
 
     my $description = "This is a description test";
     my $domain2 = rvd_back->search_domain($domain->name);
-    ok ($domain2->get_description eq $description, "I can't find description");
+    ok ($domain2->description eq $description, "I can't find description");
 }
 
 sub test_remove_base {
