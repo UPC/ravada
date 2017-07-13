@@ -10,6 +10,15 @@
 
         <div class="panel-body">
             <ul>
+%               if ($description) {
+                <li><%=l 'Description:' %>
+                    <div class="panel-body">
+                        <div class="alert alert-info">
+                            <%= $description %>
+                        </div>
+                    </div>
+%               }
+            <ul>
 %               if ($password ) {
                     <li><%=l 'The password for this virtual machine connection is :'%>
                         <b><%= $password %></b></li>
@@ -23,7 +32,7 @@
 %           if ($c->session('auto_start')) {
                 checked
 %           }
-            >Start automatically next time</input>
+            > Start automatically next time</input>
             <br/>
             <a type="button" class="btn btn-success"
                     href="<%= $url_display_file %>">

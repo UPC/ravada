@@ -226,12 +226,19 @@ sub _update_isos {
             ,xml_volume => 'yakkety64-volume.xml'
         }
         ,debian_stretch => {
-            name =>'Debian Stretch 64 bits XFCE'
-            ,description => 'Debian 9.0 Stretch 64 bits'
+            name =>'Debian Stretch 64 bits'
+            ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.0.0-amd64-xfce-CD-1.iso'
             ,md5 => '9346436c0cf1862af71cb0a03d9a703c'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+        }
+        ,windows_7 => {
+          name => 'Windows 7'
+          ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
+            .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_7.xml'
+          ,xml_volume => 'windows10-volume.xml'
         }
     );
 
@@ -575,6 +582,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
 
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
+    $self->_upgrade_table('domains','description','text DEFAULT NULL');
 }
 
 
@@ -1719,6 +1727,7 @@ sub _req_method {
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
+
     );
     return $methods{$cmd};
 }

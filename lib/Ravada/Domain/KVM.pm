@@ -744,19 +744,24 @@ sub _new_target_dev {
 
     my %target;
 
+    my $dev;
+
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
+        next if $disk->getAttribute('device') ne 'disk'
+            && $disk->getAttribute('device') ne 'cdrom';
 
 
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'target') {
 #                die $child->toString();
-                $target{ $child->getAttribute('dev') }++;
+                my $cur_dev = $child->getAttribute('dev');
+                $target{$cur_dev}++;
+                if (!$dev && $disk->getAttribute('device') eq 'disk') {
+                    ($dev) = $cur_dev =~ /(.*).$/;
+                }
             }
         }
     }
-    my ($dev) = keys %target;
-    $dev =~ s/(.*).$/$1/;
     for ('b' .. 'z') {
         my $new = "$dev$_";
         return $new if !$target{$new};
