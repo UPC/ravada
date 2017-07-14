@@ -70,10 +70,8 @@ sub test_description {
 
     my $description = "This is a description test";
     add_description($domain, $description);
-    warn ($domain->description);
 
     my $domain2 = rvd_back->search_domain($domain->name);
-    warn ($domain2->description);
     ok ($domain2->description eq $description, "I can't find description");
 }
 #######################################################
