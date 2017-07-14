@@ -64,7 +64,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/ldap_local
    docs/new_kvm_template
    docs/new_iso_image
-   docs/
    docs/operation
    docs/swap_partition
    docs/troubleshooting
