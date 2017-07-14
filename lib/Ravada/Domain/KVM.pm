@@ -796,16 +796,6 @@ sub _new_pci_slot{
     }
 }
 
-=head2 BUILD
-
-internal build method
-
-=cut
-
-sub BUILD {
-    my $self = shift;
-}
-
 =head2 list_volumes
 
 Returns a list of the disk volumes. Each element of the list is a string with the filename.
