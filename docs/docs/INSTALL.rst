@@ -100,7 +100,7 @@ example.
 
 ::
 
-    $ sudo vi /etc/ravada.conf
+    $ sudo gedit /etc/ravada.conf
     db:
       user: rvd_user
       password: THE PASSWORD CHOSEN BEFORE
