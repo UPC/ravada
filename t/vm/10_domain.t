@@ -309,6 +309,18 @@ sub set_bogus_ip {
 
     $domain->domain->update_device($graphics[0]);
 }
+
+sub test_description {
+    my ($vm_name, $domain) = @_;
+
+    my $description = "Description bla bla bla $$";
+
+    $domain->description($description);
+    is($domain->description, $description);
+
+    my $domain2 = rvd_back->search_domain($domain->name);
+    is($domain2->description, $description) or exit;
+}
 #######################################################
 
 remove_old_domains();
@@ -342,6 +354,7 @@ for my $vm_name (qw( Void KVM )) {
         test_search_vm($vm_name);
 
         my $domain = test_create_domain($vm_name);
+        test_description($vm_name, $domain);
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
         my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);

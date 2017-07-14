@@ -58,11 +58,6 @@ sub add_description {
     my $description = shift;
     my $name = $domain->name;
 
-    my $sth = $test->connector->dbh->prepare(
-        "DELETE FROM domains WHERE name=?".
-        " AND description=?"
-        );
-    $sth->execute($name,$description);
     $domain->description($description);
 }
 
@@ -75,9 +70,11 @@ sub test_description {
 
     my $description = "This is a description test";
     add_description($domain, $description);
+    warn ($domain->description);
 
     my $domain2 = rvd_back->search_domain($domain->name);
-    ok ($domain2->get_description eq $description, "I can't find description");
+    warn ($domain2->description);
+    ok ($domain2->description eq $description, "I can't find description");
 }
 #######################################################
 
