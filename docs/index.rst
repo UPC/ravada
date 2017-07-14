@@ -62,7 +62,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/dump_hard_drive
    docs/resize_hard_drive
    docs/ldap_local
+   docs/new_kvm_template
    docs/new_iso_image
+   docs/
    docs/operation
    docs/swap_partition
    docs/troubleshooting
