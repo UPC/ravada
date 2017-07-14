@@ -90,7 +90,7 @@ has 'readonly' => (
 );
 
 has 'storage' => (
-    is => 'ro',
+    is => 'ro'
     ,isa => 'Object'
     ,required => 0
 );
@@ -105,6 +105,13 @@ has 'tls' => (
     is => 'rw'
     ,isa => 'Int'
     ,default => 0
+);
+
+has 'description' => (
+    is => 'rw'
+    ,isa => 'Str'
+    ,required => 0
+    ,trigger => \&_update_description
 );
 
 ##################################################################################3
@@ -176,7 +183,15 @@ sub _start_preconditions{
 
 }
 
+sub _update_description {
+    my $self = shift;
 
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains SET description=? "
+        ." WHERE id=?");
+    $sth->execute($self->description,$self->id);
+    $sth->finish;
+}
 
 sub _allow_manage_args {
     my $self = shift;
@@ -1355,6 +1370,19 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
+}
+
+sub get_description {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT description FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($self->name);
+    my ($description) = $sth->fetchrow();
+    $sth->finish;
+    return ($description or undef);
 }
 
 sub _dbh {

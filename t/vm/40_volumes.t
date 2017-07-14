@@ -181,7 +181,8 @@ sub test_files_base {
 
     $domain->stop if $domain->is_active;
     eval { $domain->start($USER) };
-    ok(!$@,"Expecting no error, got : '".($@ or '')."'");
+    ok(!$@,"Expecting no error, got : '".($@ or '')."'")
+        or confess "[$vm_name] Error starting ".$domain->name;
     ok($domain->is_active,"Expecting domain active");
     $domain->shutdown_now($USER)    if $domain->is_active;
 }
@@ -221,9 +222,12 @@ sub test_domain_n_volumes {
     my $vm = $RVD_BACK->search_vm($vm_name);
 
     my $domain = test_create_domain($vm_name);
+    diag("Creating domain ".$domain->name." with $n volumes");
+
     test_add_volume($vm, $domain, 'vdb',"swap");
     for ( reverse 3 .. $n) {
-        test_add_volume($vm, $domain, 'vd'.chr(ord('a')-1+$_));
+        my $vol_name = 'vd'.chr(ord('a')-1+$_);
+        test_add_volume($vm, $domain, $vol_name);
     }
 
     my @volumes = $domain->list_volumes;
