@@ -3,9 +3,8 @@
 
 **Implemented enhancements:**
 
-- Improve URL for viewing domains [\#200]
-- View Domains at fullscreen [\#30]
+- Add graphics options in VM settings [\#260]
 
 **Fixed bugs:**
 
-- Hibernated domains restart with new spice password [\#263]
+- KVM domains start when creating base [\#271]
