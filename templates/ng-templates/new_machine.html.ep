@@ -223,7 +223,7 @@
                        </div>
                        
                         <div class="form-group row alert alert-warning"
-                                ng-show="list_machines.id_base">
+                                ng-hide="list_machines.is_base">
                             The source machine is not a base. It must be
                             prepared before it can be copied. This
                             process may take some minutes.
