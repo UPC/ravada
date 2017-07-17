@@ -1,4 +1,3 @@
-use warnings;
 use strict;
 
 use Test::More;
@@ -12,9 +11,12 @@ SKIP: {
     skip(2,$@)  if $@;
     for my $type ( qw(VM Domain ) ){
         Test::Pod::Coverage::pod_coverage_ok( "Ravada::$type"
+                , { also_private => [ qr/^[A-Z]+$/ ]}
                 , "Ravada::$type is covered" );
         for my $backend (keys %Ravada::VALID_VM ) {
-            Test::Pod::Coverage::pod_coverage_ok( "Ravada::$type::$backend"
+            Test::Pod::Coverage::pod_coverage_ok(
+                "Ravada::$type::$backend"
+                , { also_private => [ qr/^[A-Z]+$/ ]}
                 , "Ravada::$type::$backend is covered" );
         }
     }
