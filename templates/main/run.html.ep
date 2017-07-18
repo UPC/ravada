@@ -6,12 +6,11 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main" ng-controller="run_domain">
     <div class="jumbotron">
-        <h2>Running <a href="<%= $url_display %>"><%= $name %></a></h2>
+        <h2>Running <a ng-click="copy_password()"
+                       href="<%= $url_display_file %>"><%= $name %></a></h2>
 
         <div class="panel-body">
-            <ul>
 %               if ($description) {
-                <li><%=l 'Description:' %>
                     <div class="panel-body">
                         <div class="alert alert-info">
                             <%= $description %>
@@ -21,10 +20,18 @@
             <ul>
 %               if ($password ) {
                     <li><%=l 'The password for this virtual machine connection is :'%>
-                        <b><%= $password %></b></li>
+                        <input
+                            ng-init="password='<%= $password %>';"
+                            ng-model="password"
+                            type="text" class="js-copytextarea" value="<%= $password %>"
+                            size="<%= length($password) %>"
+                            ng-change="password='<%= $password %>';"
+                         />
+                    </li>
 %               }
                 <li><%=l 'Display URL :' %>
-                    <a href="<%= $url_display %>"><%= $url_display %></a></li>
+                    <a ng-click="copy_password()"
+                        href="<%= $url_display %>"><%= $url_display %></a></li>
                 <li><%=l 'Display IP:' %> <b><%= $display_ip %></b></li>
                 <li><%=l 'Display Port:' %> <b><%= $display_port %></b></li>
             </ul>
@@ -35,6 +42,7 @@
             > Start automatically next time</input>
             <br/>
             <a type="button" class="btn btn-success"
+                    ng-click="copy_password()"
                     href="<%= $url_display_file %>">
                 <b><%=l 'start'%></b></a>
 
