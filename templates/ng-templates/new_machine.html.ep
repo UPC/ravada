@@ -220,10 +220,9 @@
                                     min="1" max="4" required="">
                           </div>
                         </div>
-                       </div>
                        
                         <div class="form-group row alert alert-warning"
-                                ng-hide="list_machines.is_base">
+                                ng-hide="list_machines.is_base || !list_machines">
                             The source machine is not a base. It must be
                             prepared before it can be copied. This
                             process may take some minutes.
@@ -232,6 +231,7 @@
                            <input type="submit" class="btn btn-default">
                        </div>
                         </div>
+                       </div>
                 </form>
                 <div class="col-md-6">
                     <!-- Description -->
