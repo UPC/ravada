@@ -406,17 +406,27 @@ sub _data {
     return $self->{_data}->{$field};
 }
 
-sub __open {
-    my $self = shift;
+=head2 open
 
-    my %args = @_;
+Open a domain
 
-    my $id = $args{id} or confess "Missing required argument id";
-    delete $args{id};
+Argument: id
 
-    my $row = $self->_select_domain_db ( );
-    return $self->search_domain($row->{name});
-#    confess $row;
+Returns: Domain object read only
+
+=cut
+
+sub open($class, $id) {
+    my $self = {};
+    bless $self,$class;
+
+    my $row = $self->_select_domain_db ( id => $id );
+
+    my $vm = { readonly => 1 };
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm, $vm_class;
+
+    return $vm->search_domain($row->{name});
 }
 
 =head2 is_known
