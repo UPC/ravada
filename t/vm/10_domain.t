@@ -95,6 +95,18 @@ sub test_create_domain {
     return $domain;
 }
 
+sub test_open {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+
+    is($domain2->id, $domain->id);
+    is($domain2->name, $domain->name);
+    is($domain2->description, $domain->description);
+    is($domain2->vm, $domain->vm);
+}
+
 sub test_manage_domain {
     my $vm_name = shift;
     my $domain = shift;
@@ -354,6 +366,8 @@ for my $vm_name (qw( Void KVM )) {
         test_search_vm($vm_name);
 
         my $domain = test_create_domain($vm_name);
+        test_open($vm_name, $domain);
+
         test_description($vm_name, $domain);
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
