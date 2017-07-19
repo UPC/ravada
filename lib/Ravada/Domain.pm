@@ -422,9 +422,11 @@ sub open($class, $id) {
 
     my $row = $self->_select_domain_db ( id => $id );
 
-    my $vm = { readonly => 1 };
+    my $vm0 = {};
     my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm, $vm_class;
+    bless $vm0, $vm_class;
+
+    my $vm = $vm0->new( readonly => 1);
 
     return $vm->search_domain($row->{name});
 }
