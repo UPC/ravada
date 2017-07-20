@@ -1107,6 +1107,10 @@ sub show_link {
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     my $description = $domain->description;
+    if (!$description && $domain->id_base) {
+        my $base = Ravada::Domain->open($domain->id_base);
+        $description = $base->description();
+    }
     $c->stash(description => $description);
     $c->render(template => 'main/run'
                 ,name => $domain->name
@@ -1115,7 +1119,7 @@ sub show_link {
                 ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
-                ,description => $domain->description
+                ,description => $description
                 ,login => $c->session('login'));
 }
 
