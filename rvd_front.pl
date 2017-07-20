@@ -102,7 +102,7 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  $c->stash(version => $RAVADA->version."$VERSION_TYPE");
+  $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
