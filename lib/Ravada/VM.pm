@@ -137,12 +137,6 @@ sub _around_create_domain {
 
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
 
-    if ($args{description}) {
-        $domain->description($args{description});
-    } elsif ($args{id_base}) {
-        my $base = Ravada::Domain->open($args{id_base});
-        $domain->description($base->description) if defined $base->description;
-    }
     return $domain;
 }
 
