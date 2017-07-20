@@ -484,7 +484,7 @@ sub _load_grants($self) {
     $sth->bind_columns(\($name, $allowed));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = ( $allowed or undef);
+        $self->{_grant}->{$name} = $allowed;# or undef);
     }
     $sth->finish;
 }
@@ -579,20 +579,22 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
-    return 0 if defined $value && !$value
-             && defined $user->can_do($permission) && $user->can_do($permission) == 0;
-    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
+    return 0 if !$value && !$user->can_do($permission);
+
+    my $value_sql = $user->can_do($permission);
+    return $value if defined $value_sql && $value_sql eq $value;
 
     my $id_grant = _search_id_grant($permission);
-    my $sth = $$CON->dbh->prepare(
+    if (! defined $value_sql ) {
+        my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"
             ." VALUES(?,?,?) "
-    );
-    eval { $sth->execute($id_grant, $user->id, $value) };
-    $sth->finish;
-    if ($@ && $@ =~ /UNIQUE|duplicate/i) {
-        $sth = $$CON->dbh->prepare(
+        );
+        $sth->execute($id_grant, $user->id, $value);
+        $sth->finish;
+    } else {
+        my $sth = $$CON->dbh->prepare(
             "UPDATE grants_user "
             ." set allowed=?"
             ." WHERE id_grant = ? AND id_user=?"

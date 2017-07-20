@@ -147,9 +147,6 @@ remove_old_disks();
 for my $vm_name (reverse sort @VMS) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS);
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -168,6 +165,7 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok("Ravada::VM::$vm_name");
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
         my $domain_clone = test_clone($vm_name, $domain);

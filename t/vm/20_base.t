@@ -110,10 +110,23 @@ sub test_prepare_base {
     my $domain = shift;
 
     test_files_base($domain,0);
+    $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( $USER) };
     ok(!$@, $@);
     ok($domain->is_base);
+    is($domain->is_active(),0);
+
+    my $front_domains = rvd_front->list_domains();
+    my ($dom_front) = grep { $_->{name} eq $domain->name }
+        @$front_domains;
+
+    ok($dom_front,"Expecting the domain ".$domain->name
+                    ." in list domains");
+
+    if ($dom_front) {
+        ok($dom_front->{is_base});
+    }
 
     eval { $domain->prepare_base( $USER) };
     ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
@@ -329,7 +342,6 @@ for my $vm_name (reverse sort @VMS) {
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS);
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -347,6 +359,8 @@ for my $vm_name (reverse sort @VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok($CLASS);
 
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);

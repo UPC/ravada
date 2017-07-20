@@ -18,6 +18,9 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada::Domain::Driver;
 use Ravada::Utils;
 
@@ -87,7 +90,7 @@ has 'readonly' => (
 );
 
 has 'storage' => (
-    is => 'ro',
+    is => 'ro'
     ,isa => 'Object'
     ,required => 0
 );
@@ -96,6 +99,19 @@ has '_vm' => (
     is => 'ro',
     ,isa => 'Object'
     ,required => 1
+);
+
+has 'tls' => (
+    is => 'rw'
+    ,isa => 'Int'
+    ,default => 0
+);
+
+has 'description' => (
+    is => 'rw'
+    ,isa => 'Str'
+    ,required => 0
+    ,trigger => \&_update_description
 );
 
 ##################################################################################3
@@ -143,6 +159,12 @@ after 'rename' => \&_post_rename;
 
 after 'screenshot' => \&_post_screenshot;
 ##################################################
+#
+
+sub BUILD {
+    my $self = shift;
+    $self->is_known();
+}
 
 =head2 open
 
@@ -193,6 +215,21 @@ sub _start_preconditions{
     _check_free_memory();
     _check_used_memory(@_);
 
+}
+
+sub _update_description {
+    my $self = shift;
+
+    return if defined $self->description
+        && defined $self->_data('description')
+        && $self->description eq $self->_data('description');
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains SET description=? "
+        ." WHERE id=? ");
+    $sth->execute($self->description,$self->id);
+    $sth->finish;
+    $self->{_data}->{description} = $self->{description};
 }
 
 sub _allow_manage_args {
@@ -468,6 +505,7 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
+    $self->description($row->{description}) if defined $row->{description};
     return $row if $row->{id};
 }
 
@@ -525,6 +563,57 @@ sub spice_password {
     return $self->_data('spice_password');
 }
 
+=head2 display_file
+
+Returns a file with the display information. Defaults to spice.
+
+=cut
+
+sub display_file($self,$user) {
+    return $self->_display_file_spice($user);
+}
+
+# taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
+sub _display_file_spice($self,$user) {
+
+    my ($ip,$port) = $self->display($user) =~ m{spice://(\d+\.\d+\.\d+\.\d+):(\d+)};
+
+    die "I can't find ip port in ".$self->display   if !$ip ||!$port;
+
+    my $ret =
+        "[virt-viewer]\n"
+        ."type=spice\n"
+        ."host=$ip\n";
+    if ($self->tls) {
+        $ret .= "tls-port=%s\n";
+    } else {
+        $ret .= "port=$port\n";
+    }
+    $ret .="password=%s\n"  if $self->spice_password();
+
+    $ret .=
+        "fullscreen=1\n"
+        ."title=".$self->name." - Press SHIFT+F12 to exit\n"
+        ."enable-smartcard=0\n"
+        ."enable-usb-autoshare=1\n"
+        ."delete-this-file=1\n"
+        ."usb-filter=-1,-1,-1,-1,0\n";
+
+    $ret .=";" if !$self->tls;
+    $ret .= "tls-ciphers=DEFAULT\n"
+        .";host-subject=O=".$ip.",CN=?\n";
+
+    $ret .=";"  if !$self->tls;
+    $ret .="ca=CA\n"
+        ."toggle-fullscreen=shift+f11\n"
+        ."release-cursor=shift+f12\n"
+        ."secure-attention=ctrl+alt+end\n";
+    $ret .=";" if !$self->tls;
+    $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
+
+    return $ret;
+}
+
 sub _insert_db {
     my $self = shift;
     my %field = @_;
@@ -548,7 +637,7 @@ sub _insert_db {
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         #warn "$query\n".Dumper(\%field);
-        die $@;
+        confess $@;
     }
     $sth->finish;
 
@@ -875,13 +964,15 @@ sub clone {
 
     my $id_base = $self->id;
 
-    return $self->_vm->create_domain(
+    my $clone = $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
     );
+    $clone->description($self->description) if defined $self->description;
+    return $clone;
 }
 
 sub _post_pause {
@@ -1128,7 +1219,7 @@ sub _log_iptable {
 
     my $user = $args{user};
     my $uid = $args{uid};
-    confess "Chyoose wehter uid or user "
+    confess "Chyoose wether uid or user "
         if $user && $uid;
     lock_hash(%args);
 

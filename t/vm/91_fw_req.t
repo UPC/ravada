@@ -160,30 +160,6 @@ sub test_fw_domain_pause {
     }
 }
 
-
-sub open_ipt {
-    my %opts = (
-    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
-	    'ipt_rules_file' => '',  # optional file path from
-	                             # which to read iptables rules
-	    'iptout'   => '/tmp/iptables.out',
-	    'ipterr'   => '/tmp/iptables.err',
-	    'debug'    => 0,
-	    'verbose'  => 0,
-
-	    ### advanced options
-	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
-	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
-	                                    ### 'system', or 'popen'.
-	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
-	                           ### iptables commands (default is 0).
-	);
-
-	my $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	or die "[*] Could not acquire IPTables::ChainMgr object";
-
-}
-
 sub search_rule {
 
     my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
@@ -211,11 +187,6 @@ sub test_chain {
 
 }
 
-sub flush_rules {
-    my $ipt = open_ipt();
-    $ipt->flush_chain('filter', $CHAIN);
-    $ipt->delete_chain('filter', 'INPUT', $CHAIN);
-}
 #######################################################
 
 remove_old_domains();
@@ -228,9 +199,6 @@ remove_old_disks();
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $vm_ok;
     eval {
@@ -249,6 +217,8 @@ for my $vm_name (qw( Void KVM )) {
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
 
+        use_ok("Ravada::VM::$vm_name");
+
         flush_rules();
 
         my $domain_name = test_create_domain($vm_name);
@@ -257,7 +227,7 @@ for my $vm_name (qw( Void KVM )) {
 
     };
 }
-flush_rules();
+flush_rules() if !$>;
 remove_old_domains();
 remove_old_disks();
 

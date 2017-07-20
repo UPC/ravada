@@ -7,4 +7,5 @@ CREATE TABLE `networks` (
 ,  `no_domains` integer DEFAULT '0'
 ,  `requires_password` integer DEFAULT '0'
 ,  `n_order` integer DEFAULT '0'
+,  unique('address')
 );

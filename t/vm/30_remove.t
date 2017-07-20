@@ -174,8 +174,6 @@ for my $vm_name (@VMS) {
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS);
-
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
 
@@ -192,6 +190,8 @@ for my $vm_name (@VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok($CLASS);
 
         test_remove_domain($vm_name);
         test_remove_domain_base($vm_name);
