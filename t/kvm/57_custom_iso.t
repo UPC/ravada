@@ -60,13 +60,14 @@ sub test_custom_iso {
                     , active => 0
                     , iso_file => $iso_file
                     , %args_create
+		    , remove_cpu => 1
            );
     };
     is($@,'');
     ok($domain,"Expecting domain created, got ".($domain or '<UNDEF>'));
 
     eval {   $domain->start($USER) if !$domain->is_active; };
-    is($@,'');
+    ok(!$@,"Expecting no error, got ".($@ or ''));
 
     unlink $iso_file if -e $iso_file;
 }
@@ -81,7 +82,6 @@ clean();
 
 my $vm;
 my $vm_name = 'KVM';
-use_ok("Ravada::VM::$vm_name");
 
 eval { $vm = rvd_back->search_vm('KVM') };
 diag($@) if $@;
@@ -95,6 +95,7 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    use_ok("Ravada::VM::$vm_name");
     test_custom_iso($vm_name);
     test_custom_iso_swap($vm_name);
 

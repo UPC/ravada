@@ -227,7 +227,7 @@ for my $vm_name (qw( Void KVM )) {
         test_fw_domain_stored($vm_name, $domain2->name);
     };
 }
-flush_rules();
+flush_rules() if !$>;
 remove_old_domains();
 remove_old_disks();
 

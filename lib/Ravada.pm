@@ -497,6 +497,24 @@ sub _upgrade_table {
     return 1;
 }
 
+sub _remove_field {
+    my $self = shift;
+    my ($table, $field ) = @_;
+
+    my $dbh = $CONNECTOR->dbh;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return if !$row;
+
+    warn "INFO: removing $field to $table\n"  if $0 !~ /\.t$/;
+    $dbh->do("alter table $table drop column $field");
+    return 1;
+
+}
+
 sub _create_table {
     my $self = shift;
     my $table = shift;

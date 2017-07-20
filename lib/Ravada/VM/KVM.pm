@@ -347,6 +347,12 @@ Creates a domain.
     $dom = $vm->create_domain(name => $name , id_iso => $id_iso);
     $dom = $vm->create_domain(name => $name , id_base => $id_base);
 
+Creates a domain and removes the CPU defined in the XML template:
+
+    $dom = $vm->create_domain(        name => $name 
+                                  , id_iso => $id_iso
+                              , remove_cpu => 1);
+
 =cut
 
 sub create_domain {
@@ -519,6 +525,7 @@ sub _domain_create_from_iso {
         croak "argument $_ required"
             if !$args{$_};
     }
+    my $remove_cpu = delete $args2{remove_cpu};
     for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
@@ -569,6 +576,7 @@ sub _domain_create_from_iso {
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
     _xml_modify_cdrom($xml, $device_cdrom);
+    _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
@@ -1139,6 +1147,13 @@ sub _define_xml {
 
     return $doc;
 
+}
+
+sub _xml_remove_cpu {
+    my $doc = shift;
+    my ($domain) = $doc->findnodes('/domain') or confess "Missing node domain";
+    my ($cpu) = $domain->findnodes('cpu');
+    $domain->removeChild($cpu);
 }
 
 sub _xml_modify_video {
