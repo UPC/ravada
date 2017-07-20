@@ -73,7 +73,7 @@ sub test_clone {
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
 
-    is($clone1->description,$description);
+    is($clone1->description,undef);
                 $clone1->shutdown_now($USER) if $clone1->is_active();
                 eval { $clone1->start($USER) };
                 is($@,'');
@@ -83,8 +83,8 @@ sub test_clone {
                 ok($clone1b,"Expecting new cloned domain ".$name_clone);
                 $clone1->shutdown_now($USER) if $clone1->is_active;
                 ok(!$clone1->is_active);
-    is($clone1b->description,$description,"[$vm_name] description for "
-            .$clone1b->name) or exit;
+    is($clone1b->description,undef,"[$vm_name] description for "
+            .$clone1b->name);
     return $clone1;
 }
 
@@ -128,6 +128,8 @@ sub test_description {
          ,id_base => $domain->id
         ,id_owner => $USER->id
     );
+    is($clone->description, undef);
+    $clone->prepare_base($USER);
     is($clone->description, $domain->description);
 }
 
