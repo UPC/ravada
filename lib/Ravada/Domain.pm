@@ -920,7 +920,6 @@ sub clone {
         ,vm => $self->vm
         ,_vm => $self->_vm
     );
-    $clone->description($self->description) if defined $self->description;
     return $clone;
 }
 
