@@ -4,18 +4,18 @@
             <div class="row">
                 <form class="form-inline" method="post" action="/machine/copy" ng-controller="new_machine">
                     <div class="form-group row">
-                        <input class="form-control" type="hidden" name="id_base" value="{{list_machines.id}}">
-                        <label for="list_machines" class="col-lg-2 control-label"><%=l 'Source Machine' %></label>
+                        <input class="form-control" type="hidden" name="id_base" value="{{src_machine.id}}">
+                        <label for="src_machine" class="col-lg-2 control-label"><%=l 'Source Machine' %></label>
                         <div class="col-lg-10">
                             <select class="form-control"
-                                name ="list_machines"
-                                ng-model="list_machines"
+                                name ="src_machine"
+                                ng-model="src_machine"
                                 ng-options="item.name for item in base track by item.id"
                                 required=""
                             ></select>
                         </div>
                     </div>
-                    <div ng_show="list_machines">
+                    <div ng-show="src_machine">
                         <div class="form-group row">
                             <div class="col-lg-2">
                             <h5><strong><%=l 'Destination Machine' %></strong></h5>
@@ -23,11 +23,11 @@
                         </div>
                         <div class="form-group row">
                             <div class="col-lg-2">
-                                <label class="col-lg-12 text-muted" for="copy_name_{{list_machines.id}}"><%=l 'Name' %>:</label>
+                                <label class="col-lg-12 text-muted" for="copy_name_{{src_machine.id}}"><%=l 'Name' %>:</label>
                             </div>
                             <div class="col-lg-10">
-                                <input class="form-control" name="copy_name_{{list_machines.id}}" type="text" size="40"
-                                value="{{list_machines.name}}-copy">
+                                <input class="form-control" name="copy_name_{{src_machine.id}}" type="text" size="40"
+                                value="{{src_machine.name}}-copy">
                                 <!-- todo check unique name -->
                             </div>
                         </div>
@@ -43,7 +43,7 @@
                         </div>
                    
                         <div class="form-group row alert alert-warning"
-                            ng-hide="list_machines.is_base || !list_machines">
+                            ng-hide="src_machine.is_base || !src_machine">
                             The source machine is not a base. It must be
                             prepared before it can be copied. This
                             process may take some minutes.
