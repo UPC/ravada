@@ -261,6 +261,12 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub _refresh_storage_pools($self) {
+    for my $pool ($self->vm->list_storage_pools) {
+        $pool->refresh();
+    }
+}
+
 =head2 search_volume_path_re
 
 Searches for a volume in all the storage pools known to the Virtual Manager
@@ -740,7 +746,6 @@ sub _domain_create_from_base {
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
-    $self->storage_pool->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
@@ -821,6 +826,7 @@ sub _iso_name {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _download_file_external($iso->{url}, $device);
+        $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
 
