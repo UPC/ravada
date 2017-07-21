@@ -799,7 +799,17 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    return $vm->create_domain(@_);
+    my $domain;
+    eval { $domain = $vm->create_domain(@_) };
+    my $error = $@;
+    warn "ERROR AQUI: $error" if $error;
+    $request->error($error) if $error;
+    if ($error =~ /has requests/) {
+        warn "hey ".$request->id;
+        $request->error("Waiting for other requests from base");
+        $request->status('retry');
+    }
+    return $domain;
 }
 
 =head2 remove_domain
@@ -1123,7 +1133,7 @@ sub process_requests {
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
-        ."    ( status='requested' OR status like 'retry %' OR status='waiting')"
+        ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
         ." ORDER BY date_req"
     );
@@ -1275,9 +1285,11 @@ sub _execute {
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
         eval { $sub->($self,$request) };
+        warn $request->id." ".$request->status()." ".($request->error or '');
         my $err = ($@ or '');
-        $request->error($err);
-        $request->status('done') if $request->status() ne 'done';
+        $request->error($err) if $err;
+        $request->status('done') if $request->status() ne 'done'
+                                    && $request->status !~ /retry/;
         return $err;
     }
 
@@ -1316,7 +1328,9 @@ sub _do_execute_command {
     };
     my $err = ( $@ or '');
     $request->error($err);
-    $request->status('done') if $request->status() ne 'done';
+    $request->status('done') 
+        if $request->status() ne 'done'
+            && $request->status() !~ /^retry/i;
     exit;
 
 }
@@ -1370,9 +1384,9 @@ sub _cmd_create{
             .$request->args('name')."</a>"
             ." created."
         ;
+        $request->status('done',$msg);
     }
 
-    $request->status('done',$msg);
 
 }
 
