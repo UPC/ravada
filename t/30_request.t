@@ -222,6 +222,45 @@ sub test_unread_messages {
     $user->mark_all_messages_read();
 }
 
+sub test_requests_by_domain {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = create_domain($vm_name, user_admin);
+    ok($domain,"Expecting new domain created") or exit;
+
+    my $req1 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 1);
+
+    my $req2 = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 2);
+
+    my $clone_name = new_domain_name();
+    my $req_clone = Ravada::Request->create_domain (
+        name => $clone_name
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,vm => $vm_name
+    );
+
+    my $req3 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 3);
+
+    eval {
+            rvd_back->_process_all_requests_dont_fork(1);
+    };
+
+    is($@,'');
+    like($req_clone->error,qr(Waiting));
+    is($req_clone->status , 'retry');
+
+    rvd_back->_process_all_requests_dont_fork(1);
+    like($req_clone->error,qr(done));
+    is($req_clone->status , 'done');
+
+    my $clone = $vm->search_domain($clone_name);
+    ok($clone,"Expecting domain $clone_name created") or exit;
+}
 
 ################################################
 eval { $ravada = Ravada->new(connector => $test->connector) };
@@ -247,6 +286,7 @@ for my $vm_name ( qw(Void KVM)) {
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
     
+        test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);
         test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;
     
@@ -258,6 +298,7 @@ for my $vm_name ( qw(Void KVM)) {
             test_req_start_domain($vm,$domain_base->name);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
+
     };
 }
 
