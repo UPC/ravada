@@ -735,6 +735,9 @@ sub _create_vm {
     if (!@vms) {
         warn "No VMs found: $err\n" if $self->warn_error;
     }
+    if ($0 =~ /\.t$/) {
+        push @vms,(Ravada::VM::Void->new());
+    }
     return \@vms;
 
 }
