@@ -1510,21 +1510,20 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    return create_domain($c, $id_base, $name, $ram, $disk)
-       if $base->is_base && !$rebase;
+    if (!$base->is_base || $base->is_locked) {
+        my $req = Ravada::Request->prepare_base(
+            id_domain => $id_base
+            ,uid => $USER->id
+        );
+        return $c->render("Problem preparing base for domain ".$base->name)
+            if !$req;
 
-    my $req = Ravada::Request->prepare_base(
-        id_domain => $id_base
-        ,uid => $USER->id
-    );
-    return $c->render("Problem preparing base for domain ".$base->name)
-        if $rebase && !$req;
+        sleep 1;
 
-    sleep 1;
-    # TODO fix requests for the same domain must queue
+    }
     my @create_args =( memory => $ram ) if $ram;
     push @create_args , ( disk => $disk ) if $disk;
-    $req = Ravada::Request->create_domain(
+    my $req2 = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
        , id_owner => $USER->id
