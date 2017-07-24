@@ -1902,7 +1902,6 @@ sub _enforce_limits_active {
 #        my @list = map { $_->name => $_->start_time } @domains_user;
         my $last = pop @domains_user;
         for my $domain (@domains_user) {
-            warn "requesting shut down ".$domain->name;
             #TODO check the domain shutdown has been already requested
             $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
         }
