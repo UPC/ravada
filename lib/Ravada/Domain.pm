@@ -158,6 +158,9 @@ before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
 
 after 'screenshot' => \&_post_screenshot;
+
+after '_select_domain_db' => \&_post_select_domain_db;
+
 ##################################################
 #
 
@@ -281,6 +284,11 @@ sub _post_prepare_base {
         $self->start($user) if !$self->is_active;
     }
     delete $self->{_was_active};
+
+    if ($self->id_base && !$self->description()) {
+        my $base = Ravada::Domain->open($self->id_base);
+        $self->description($base->description)  if $base->description();
+    }
 
     $self->_remove_id_base();
 };
@@ -466,9 +474,15 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
-    $self->description($row->{description}) if defined $row->{description};
+
     return $row if $row->{id};
 }
+
+sub _post_select_domain_db {
+    my $self = shift;
+    $self->description($self->{_data}->{description})
+        if defined $self->{_data}->{description}
+};
 
 sub _prepare_base_db {
     my $self = shift;
@@ -891,7 +905,7 @@ sub _remove_base_db {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM file_base_images "
         ." WHERE id_domain=?");
 
-    $sth->execute($self->id);
+    $sth->execute($self->{_data}->{id});
     $sth->finish;
 
 }
@@ -932,7 +946,6 @@ sub clone {
         ,vm => $self->vm
         ,_vm => $self->_vm
     );
-    $clone->description($self->description) if defined $self->description;
     return $clone;
 }
 
