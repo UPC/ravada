@@ -10,7 +10,7 @@ All the users in the LDAP can have access to ravada:
 
 ::
 
-ldap:
+  ldap:
     server: 192.168.1.44
     port: 636
     base: dc=domain,dc=com
@@ -26,7 +26,7 @@ Allow only a group of users to access ravada:
 
 ::
 
-ldap:
+  ldap:
     server: 192.168.1.44
     port: 636
     base: ou=users,ou=groupname,dc=upc,dc=edu
