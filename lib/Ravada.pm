@@ -912,13 +912,36 @@ List all created domains
 
   my @list = $ravada->list_domains();
 
+This list can be filtered:
+
+  my @active = $ravada->list_domains(active => 1);
+  my @inactive = $ravada->list_domains(active => 0);
+
+  my @user_domains = $ravada->list_domains(user => $id_user);
+
+  my @user_active = $ravada->list_domains(user => $id_user, active => 1);
+
 =cut
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
+
+    my $active = delete $args{active};
+    my $user = delete $args{user};
+
+    die "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
     my @domains;
     for my $vm ($self->list_vms) {
         for my $domain ($vm->list_domains) {
+            next if defined $active &&
+                ( $domain->is_active && !$active
+                    || !$domain->is_active && $active );
+
+            next if $user && $domain->id_owner != $user->id;
+
             push @domains,($domain);
         }
     }
