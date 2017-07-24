@@ -1520,7 +1520,7 @@ Returns a list of pending requests from the domain
 sub list_requests {
     my $self = shift;
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM requests WHERE id_domain = ? AND status ne 'done'"
+        "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
     );
     $sth->execute($self->id);
     my @list;
