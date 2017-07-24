@@ -243,20 +243,30 @@ sub test_requests_by_domain {
         ,vm => $vm_name
     );
 
-    my $req3 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
     ok($domain->list_requests == 3);
 
     eval {
-            rvd_back->_process_all_requests_dont_fork(1);
+            rvd_back->_process_all_requests_dont_fork();
     };
 
+
+    is($req1->status , 'done');
+    is($req2->status , 'done');
+
     is($@,'');
-    like($req_clone->error,qr(Waiting));
+    like($req_clone->error,qr(has \d req)) or exit;
     is($req_clone->status , 'retry');
 
-    rvd_back->_process_all_requests_dont_fork(1);
-    like($req_clone->error,qr(done));
-    is($req_clone->status , 'done');
+    is($req4->status , 'done');
+    is($domain->is_base,1) or exit;
+
+    my $req4b = Ravada::Request->open($req4->id);
+    is($req4b->status , 'done') or exit;
+
+    rvd_back->_process_all_requests_dont_fork();
+    like($req_clone->status,qr(done)) or exit;
+    is($req_clone->error, '') or exit;
 
     my $clone = $vm->search_domain($clone_name);
     ok($clone,"Expecting domain $clone_name created") or exit;
