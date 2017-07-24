@@ -419,6 +419,40 @@ sub test_private_base {
     ok(!$clone2,"Expecting no clone");
 }
 
+sub test_domain_limit {
+    my $vm_name = shift;
+
+    for my $domain ( rvd_back->list_domains()) {
+        $domain->shutdown_now(user_admin);
+    }
+    my $domain = create_domain($vm_name, $USER);
+    ok($domain,"Expecting a new domain created") or exit;
+    $domain->shutdown_now($USER)    if $domain->is_active;
+
+    is(rvd_back->list_domains(user => $USER, active => 1),0
+        ,Dumper(rvd_back->list_domains())) or exit;
+
+    $domain->start($USER);
+    is($domain->is_active,1);
+
+    ok($domain->start_time <= time,"Expecting start time <= ".time
+                                    ." got ".time);
+
+    sleep 1;
+    is(rvd_back->list_domains(user => $USER, active => 1),1);
+
+    my $domain2 = create_domain($vm_name, $USER);
+    $domain2->shutdown_now($USER)   if $domain2->is_active;
+    is(rvd_back->list_domains(user => $USER, active => 1),1);
+
+    $domain2->start($USER);
+    rvd_back->enforce_limits(timeout => 2);
+    sleep 2;
+    rvd_back->_process_requests_dont_fork(1);
+    my @list = rvd_back->list_domains(user => $USER, active => 1);
+    is(scalar @list,1) or die Dumper(\@list);
+    is($list[0]->name, $domain2->name) if $list[0];
+}
 #######################################################################33
 
 
@@ -459,6 +493,7 @@ for my $vm_name ('Void','KVM') {
         test_private_base($vm_name);
 
         test_spinned_off_base($vm_name);
+        test_domain_limit($vm_name);
     }
 }
 
