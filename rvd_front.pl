@@ -1512,7 +1512,7 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    if (!$base->is_base) {
+    if (!$base->is_base || $base->is_locked) {
         my $req = Ravada::Request->prepare_base(
             id_domain => $id_base
             ,uid => $USER->id
