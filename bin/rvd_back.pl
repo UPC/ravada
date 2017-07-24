@@ -92,6 +92,7 @@ sub do_start {
         my $t0 = time;
         $ravada->process_requests();
         $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
+        $ravada->enforce_limits();
         sleep 1 if time - $t0 <1;
     }
 }
