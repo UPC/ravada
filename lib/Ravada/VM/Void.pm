@@ -75,28 +75,38 @@ sub dir_img {
 }
 
 sub list_domains {
+    my $self = shift;
+
     opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
-    my %domain;
+    my @list;
     while (my $file = readdir $ls ) {
         next if $file !~ /\.yml$/;
         $file =~ s/\.\w+//;
         $file =~ s/(.*)\.qcow.*$/$1/;
         next if $file !~ /\w/;
-        $domain{$file}++;
+
+        my $domain = Ravada::Domain::Void->new(
+            domain => $file
+            , _vm => $self
+        );
+        eval { $domain->id };
+        next if $@ && $@ =~ /No db info/i;
+        die $@ if $@;
+        push @list,($domain);
     }
 
     closedir $ls;
 
-    return keys %domain;
+    return @list;
 }
 
 sub search_domain {
     my $self = shift;
     my $name = shift or confess "ERROR: Missing name";
 
-    for my $name_vm ( $self->list_domains ) {
-        next if $name_vm ne $name;
+    for my $domain ( $self->list_domains ) {
+        next if $domain->name ne $name;
 
         my $domain = Ravada::Domain::Void->new( 
             domain => $name
