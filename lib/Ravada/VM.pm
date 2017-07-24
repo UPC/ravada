@@ -300,7 +300,8 @@ sub _check_require_base {
 
     my $base = Ravada::Domain->open($args{id_base});
     if ($base->list_requests) {
-        die "ERROR: Domain ".$self->name." has ".$base->list_requests." requests ";
+        die "ERROR: Domain ".$base->name." has ".$base->list_requests
+            ." requests.\n";
     }
 
     die "ERROR: Domain ".$self->name." is not base"
