@@ -150,10 +150,9 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
-after 'shutdown_now' => \&_post_shutdown_now;
 
-before 'force_shutdown' => \&_pre_shutdown_now;
-after 'force_shutdown' => \&_post_shutdown_now;
+around 'shutdown_now' => \&_around_shutdown_now;
+around 'force_shutdown' => \&_around_shutdown_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -1024,14 +1023,22 @@ sub _post_pause {
 
 sub _pre_shutdown {
     my $self = shift;
+    my %arg = @_;
+
+    my $user = delete $arg{user};
+    delete $arg{timeout};
+
+    confess "Unknown args ".join(",",sort keys %arg)
+        if keys %arg;
 
     $self->_allow_shutdown(@_);
+    $self->_allow_manage_args(user => $user);
 
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
         my %args = @_;
-        $self->resume(user => $args{user});
+        $self->resume(user => $user);
     }
 }
 
@@ -1059,15 +1066,14 @@ sub _post_shutdown {
     }
 }
 
-sub _pre_shutdown_now {
-    my $self = shift;
-    return if !$self->is_active;
-}
-
-sub _post_shutdown_now {
+sub _around_shutdown_now {
+    my $orig = shift;
     my $self = shift;
     my $user = shift;
 
+    if ($self->is_active) {
+        $self->$orig($user);
+    }
     $self->_post_shutdown(user => $user);
 }
 
