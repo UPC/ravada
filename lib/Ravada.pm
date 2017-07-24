@@ -802,11 +802,8 @@ sub create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(@_) };
     my $error = $@;
-    warn "ERROR AQUI: $error" if $error;
     $request->error($error) if $error;
-    if ($error =~ /has requests/) {
-        warn "hey ".$request->id;
-        $request->error("Waiting for other requests from base");
+    if ($error =~ /has \d+ requests/) {
         $request->status('retry');
     }
     return $domain;
@@ -1170,6 +1167,8 @@ sub process_requests {
             if ( $n_retry < 3) {
                 warn $req->id." ".$req->command." to retry" if $DEBUG;
                 $req->status("retry ".++$n_retry)
+            } else {
+                $req->status("done");
             }
         }
         next if !$DEBUG && !$debug;
@@ -1282,10 +1281,10 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
+    $request->error('');
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
         eval { $sub->($self,$request) };
-        warn $request->id." ".$request->status()." ".($request->error or '');
         my $err = ($@ or '');
         $request->error($err) if $err;
         $request->status('done') if $request->status() ne 'done'
