@@ -1865,6 +1865,50 @@ sub import_domain {
     return $vm->import_domain($name, $user);
 }
 
+=head enforce_limits
+
+Check no user has passed the limits and take action.
+
+Some limits:
+
+- More than 1 domain running at a time ( older get shut down )
+
+
+=cut
+
+sub enforce_limits {
+    _enforce_limits_active(@_);
+}
+
+sub _enforce_limits_active {
+    my $self = shift;
+    my %args = @_;
+
+    my $timeout = (delete $args{timeout} or 10);
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my %domains;
+    for my $domain ($self->list_domains( active => 1 )) {
+        push @{$domains{$domain->id_owner}},$domain;
+    }
+    for my $id_user(keys %domains) {
+        next if scalar @{$domains{$id_user}}<2;
+
+        my @domains_user = sort { $a->start_time <=> $b->start_time }
+                        @{$domains{$id_user}};
+
+#        my @list = map { $_->name => $_->start_time } @domains_user;
+        my $last = pop @domains_user;
+        for my $domain (@domains_user) {
+            warn "requesting shut down ".$domain->name;
+            #TODO check the domain shutdown has been already requested
+            $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
+        }
+    }
+}
+
 =head2 version
 
 Returns the version of the module
