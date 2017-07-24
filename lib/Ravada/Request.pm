@@ -34,7 +34,7 @@ our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
-              vm => 1
+              vm => 2
            ,name => 1
            ,swap => 2
          ,id_iso => 2
