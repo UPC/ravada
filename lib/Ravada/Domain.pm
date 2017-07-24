@@ -450,6 +450,18 @@ sub is_known {
     return $self->_select_domain_db(name => $self->name);
 }
 
+=head2 start_time
+
+Returns the last time (epoch format in seconds) the
+domain was started.
+
+=cut
+
+sub start_time {
+    my $self = shift;
+    return $self->_data('start_time');
+}
+
 sub _select_domain_db {
     my $self = shift;
     my %args = @_;
@@ -1081,6 +1093,13 @@ sub _post_resume {
 
 sub _post_start {
     my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set start_time=? "
+        ." WHERE id=?"
+    );
+    $sth->execute(time, $self->id);
+    $sth->finish;
 
     $self->_add_iptable(@_);
 }
