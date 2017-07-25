@@ -1313,9 +1313,9 @@ sub _execute {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
-        $request->error($err) if $err;
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
+        $request->error($err) if $err;
         return $err;
     }
 
@@ -1679,16 +1679,16 @@ sub _cmd_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $id_domain = $request->args('id_domain');
     my $timeout = ($request->args('timeout') or 60);
 
     my $domain;
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+    $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    $domain->shutdown(timeout => $timeout, name => $name, user => $user
+    $domain->shutdown(timeout => $timeout, id_domain => $id_domain, user => $user
                     , request => $request);
 
 }
@@ -1698,11 +1698,11 @@ sub _cmd_force_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $id_domain = $request->args('id_domain');
 
     my $domain;
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+    $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
@@ -1901,9 +1901,16 @@ sub _enforce_limits_active {
 
 #        my @list = map { $_->name => $_->start_time } @domains_user;
         my $last = pop @domains_user;
-        for my $domain (@domains_user) {
+        DOMAIN: for my $domain (@domains_user) {
             #TODO check the domain shutdown has been already requested
-            $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
+            for my $request ($domain->list_requests) {
+                next DOMAIN if $request->command =~ /shutdown/;
+            }
+            if ($domain->can_hybernate) {
+                $domain->hybernate($USER_DAEMON);
+            } else {
+                $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
+            }
         }
     }
 }
