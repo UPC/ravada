@@ -1688,7 +1688,7 @@ sub _cmd_shutdown {
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    $domain->shutdown(timeout => $timeout, id_domain => $id_domain, user => $user
+    $domain->shutdown(timeout => $timeout, user => $user
                     , request => $request);
 
 }

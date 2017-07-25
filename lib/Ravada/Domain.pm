@@ -973,6 +973,7 @@ sub _pre_shutdown {
 
     my $user = delete $arg{user};
     delete $arg{timeout};
+    delete $arg{request};
 
     confess "Unknown args ".join(",",sort keys %arg)
         if keys %arg;
@@ -983,7 +984,6 @@ sub _pre_shutdown {
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        my %args = @_;
         $self->resume(user => $user);
     }
 }
@@ -1005,7 +1005,7 @@ sub _post_shutdown {
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
-                 name => $self->name
+            id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$timeout 
         );
