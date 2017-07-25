@@ -421,8 +421,13 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
-        $args{id_domain} = $args{args}->{id_domain}
-            if exists $args{args}->{id_domain} && ! $args{id_domain};
+        my $id_domain_args = $args{args}->{id_domain};
+
+        if ($id_domain_args) {
+            confess "ERROR: Different id_domain: ".Dumper(\%args)
+                if $args{id_domain} && $args{id_domain} ne $id_domain_args;
+            $args{id_domain} = $id_domain_args;
+        }
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;

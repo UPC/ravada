@@ -60,7 +60,6 @@ sub display {
 
 sub is_active {
     my $self = shift;
-
     return ($self->_value('is_active') or 0);
 }
 
