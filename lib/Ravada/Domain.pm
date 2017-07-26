@@ -665,7 +665,7 @@ sub _pre_remove_domain {
     my $self = shift;
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove(@_);
+    $self->_allow_remove(@_)    if $self->{_data};
     $self->pre_remove();
 }
 
