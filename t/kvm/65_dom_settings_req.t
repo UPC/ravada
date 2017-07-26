@@ -16,9 +16,6 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user('foo','bar');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 our $TIMEOUT_SHUTDOWN = 10;
 
 ################################################################

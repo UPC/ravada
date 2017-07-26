@@ -17,11 +17,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my $RVD_BACK;
 
 eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };

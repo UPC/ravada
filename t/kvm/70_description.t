@@ -12,10 +12,6 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
-
 my @VMS = reverse keys %ARG_CREATE_DOM;
 init($test->connector);
 my $USER = create_user("foo","bar");
