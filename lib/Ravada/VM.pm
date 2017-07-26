@@ -136,7 +136,7 @@ sub _around_create_domain {
     my $domain = $self->$orig(@_);
 
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
-    $domain->description($args{description}) if $args{description};
+
     return $domain;
 }
 
@@ -306,7 +306,7 @@ sub _check_require_base {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
     die "ERROR: Base ".$base->name." is not public\n"
-        if !$user->can_clone_all || !$base->is_public;
+        unless $user->can_clone_all || $base->is_public;
 }
 
 =head2 id
