@@ -217,7 +217,6 @@ sub open($class, $id) {
     my $vm = $vm0->new( readonly => 1);
 
     return $vm->search_domain($row->{name});
->>>>>>> Merge the two opens
 }
 
 sub _vm_connect {
@@ -564,43 +563,6 @@ sub _data($self, $field, $value=undef) {
     confess "No field $field in domains"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
-}
-
-=head2 open
-
-Open a domain
-
-Argument: id
-
-Returns: Domain object read only
-
-=cut
-
-sub open($class, $id) {
-    confess "Missing id"    if !defined $id;
-
-    my $self = {};
-
-    if (ref($class)) {
-        $self = $class;
-    } else {
-        bless $self,$class
-    }
-
-    my $row = $self->_select_domain_db ( id => $id );
-
-    die "ERROR: Domain not found id=$id\n"
-        if !keys %$row;
-
-    my $vm0 = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm0, $vm_class;
-
-    my @ro = ();
-    @ro = (readonly => 1 ) if $>;
-    my $vm = $vm0->new( @ro );
-
-    return $vm->search_domain($row->{name});
 }
 
 =head2 is_known
