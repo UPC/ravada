@@ -29,7 +29,6 @@ my $REMOVE_ADMIN_USER;
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
-        ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -153,6 +152,7 @@ sub add_user {
     my $is_admin = 0;
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
+
 
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
