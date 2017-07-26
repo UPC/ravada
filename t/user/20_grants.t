@@ -425,6 +425,44 @@ sub test_create_domain {
     ok($domain3);
     $domain3->remove();
 }
+
+sub test_grant_clone {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_c$$","bar");
+    is($user->can_clone,1) or return;
+
+    my $usera = create_user("admin_c$$","bar",1);
+    is($usera->can_clone,1);
+    my $domain = create_domain($vm_name, $usera);
+    $domain->prepare_base($usera);
+    ok($domain->is_base);
+    is($domain->is_public,0) or return;
+
+    my $clone_name = new_domain_name();
+    my $clone;
+    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    is($clone2,undef);
+
+    $domain->is_public(1);
+    is($domain->is_public,1) or return;
+    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
+    like($@,qr(.));
+    ok($clone,"Expecting $clone_name exists");
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting $clone_name exists");
+
+    $clone->remove($usera);
+    $clone->remove($usera);
+
+}
+
 ##########################################################
 
 test_defaults();
@@ -433,6 +471,8 @@ test_grant();
 
 test_operator();
 
+test_grant_clone('Void');
+
 test_shutdown_clone('Void');
 test_shutdown_all('Void');
 
@@ -440,10 +480,13 @@ test_remove('Void');
 test_remove_clone('Void');
 #test_remove_all('Void');
 
+<<<<<<< HEAD
 test_remove_clone_all('Void');
 
 test_prepare_base('Void');
 test_frontend('Void');
 test_create_domain('Void');
+=======
+>>>>>>> [#222] test grant clone
 
 done_testing();
