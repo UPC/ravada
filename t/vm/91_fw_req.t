@@ -19,11 +19,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 init($test->connector, $FILE_CONFIG);
 my $USER = create_user("foo","bar");
 
@@ -41,7 +36,8 @@ sub test_create_domain {
     my $name = new_domain_name();
 
     if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
+        die("VM $vm_name should be defined at \%ARG_CREATE_DOM "
+            .Dumper(\%ARG_CREATE_DOM));
         return;
     }
     my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};

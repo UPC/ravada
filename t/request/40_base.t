@@ -20,10 +20,6 @@ init($test->connector, 't/etc/ravada.conf');
 my $USER = create_user("foo","bar");
 
 my $ID_ISO = 1;
-my @ARG_CREATE_DOM = (
-        id_iso => $ID_ISO
-        ,id_owner => $USER->id
-);
 
 $Ravada::CAN_FORK = 1;
 
@@ -41,7 +37,8 @@ sub test_swap {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,vm => $vm_name
-        ,@ARG_CREATE_DOM
+        ,id_owner => $USER->id
+        ,@{$ARG_CREATE_DOM{$vm_name}}
         ,swap => 128*1024*1024
     );
     ok($req);
@@ -75,7 +72,9 @@ sub test_req_create_domain_iso {
 
     my $req = Ravada::Request->create_domain(
         name => $name
-        ,@ARG_CREATE_DOM
+        ,vm => $vm_name
+        ,id_owner => $USER->id
+        ,@{$ARG_CREATE_DOM{$vm_name}}
     );
     ok($req);
     ok($req->status);
@@ -141,7 +140,9 @@ sub test_req_create_domain {
 
     my $req = Ravada::Request->create_domain(
         name => $name
-        ,@ARG_CREATE_DOM
+        ,id_owner => $USER->id
+        ,vm => $vm_name
+        ,@{$ARG_CREATE_DOM{$vm_name}}
     );
     ok($req);
     ok($req->status);
@@ -413,7 +414,6 @@ for my $vm_name ( qw(KVM Void)) {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = 1 if $vm;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id );
 
         if ($vm_name eq 'KVM') {
             my $iso = $vm->_search_iso($ID_ISO);
