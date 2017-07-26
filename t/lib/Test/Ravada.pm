@@ -22,6 +22,7 @@ create_domain
     test_chain_prerouting
     search_id_iso
     flush_rules open_ipt
+    %ARG_CREATE_DOM
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -32,10 +33,7 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-      ,void => []
-);
+our %ARG_CREATE_DOM;
 
 sub user_admin {
     return $USER_ADMIN;
@@ -107,6 +105,7 @@ sub rvd_back {
                 , warn_error => 0
     );
     $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
+
     return $rvd;
 }
 
@@ -131,6 +130,11 @@ sub init {
     $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
+
+    %ARG_CREATE_DOM = (
+      KVM => [ id_iso => search_id_iso('debian') ]
+      ,Void => []
+    );
 }
 
 sub _remove_old_domains_vm {
@@ -368,6 +372,7 @@ sub clean {
 
 sub search_id_iso {
     my $name = shift;
+
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
