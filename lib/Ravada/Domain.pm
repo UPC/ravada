@@ -184,7 +184,40 @@ sub BUILD {
     my $self = shift;
     $self->_init_connector();
     $self->is_known();
+}
 
+=head2 open
+
+Open a domain
+
+Argument: id
+
+Returns: Domain object read only
+
+=cut
+
+sub open($class, $id) {
+
+    my $row;
+
+    if (ref($class)) {
+        $row = $class->_select_domain_db ( id => $id );
+    } else {
+        my $self = {};
+        bless $self,$class;
+        $row = $self->_select_domain_db ( id => $id );
+    }
+    confess "ERROR: Unknown domain id=$id"
+        if !$row || !$row->{id};
+
+    my $vm0 = {};
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm0, $vm_class;
+
+    my $vm = $vm0->new( readonly => 1);
+
+    return $vm->search_domain($row->{name});
+>>>>>>> Merge the two opens
 }
 
 sub _vm_connect {
