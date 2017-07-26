@@ -171,30 +171,35 @@ sub BUILD {
 
 =head2 open
 
-Open a Domain or Virtual Machine
+Open a domain
 
-Argument: id of the domain
-Returns: the domain object
+Argument: id
 
-    my $domain = Ravada::Domain->open($id);
+Returns: Domain object read only
 
 =cut
 
-sub open {
-    my $self = shift;
-    my $id = shift;
+sub open($class, $id) {
 
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,name,vm FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($id_db,$name, $vm_type) = $sth->fetchrow();
+    my $row;
 
-    confess "Unknown domain id=$id" if !$name || !$id_db;
+    if (ref($class)) {
+        $row = $class->_select_domain_db ( id => $id );
+    } else {
+        my $self = {};
+        bless $self,$class;
+        $row = $self->_select_domain_db ( id => $id );
+    }
+    confess "ERROR: Unknown domain id=$id"
+        if !$row || !$row->{id};
 
-    my $class_vm = "Ravada::VM::$vm_type";
-    my $vm = $class_vm->new( readonly => $self->readonly);
+    my $vm0 = {};
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm0, $vm_class;
 
-    return $vm->search_domain_by_id($id_db);
+    my $vm = $vm0->new( readonly => 1);
+
+    return $vm->search_domain($row->{name});
 }
 
 sub _vm_connect {
@@ -463,31 +468,6 @@ sub _data {
     confess "No field $field in domains"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
-}
-
-=head2 open
-
-Open a domain
-
-Argument: id
-
-Returns: Domain object read only
-
-=cut
-
-sub open($class, $id) {
-    my $self = {};
-    bless $self,$class;
-
-    my $row = $self->_select_domain_db ( id => $id );
-
-    my $vm0 = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm0, $vm_class;
-
-    my $vm = $vm0->new( readonly => 1);
-
-    return $vm->search_domain($row->{name});
 }
 
 =head2 is_known
