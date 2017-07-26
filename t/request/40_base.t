@@ -205,7 +205,7 @@ sub test_req_prepare_base {
     my $vm = rvd_front()->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
     ok($domain2->is_base, "Expecting domain base=1 , got: '".$domain2->is_base."'");# or exit;
-
+    $domain2->is_public(1);
     my @unread_messages = $USER->unread_messages;
     like($unread_messages[-1]->{subject}, qr/done$/i);
 

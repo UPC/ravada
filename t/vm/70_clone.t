@@ -69,6 +69,7 @@ sub test_clone {
 
                 my $name_clone = new_domain_name();
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
+                $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
@@ -123,6 +124,7 @@ sub test_description {
 
     my $domain = test_create_domain($vm_name);
     $domain->prepare_base($USER);
+    $domain->is_public(1);
     my $clone = $vm->create_domain(
              name => new_domain_name()
          ,id_base => $domain->id
@@ -131,6 +133,7 @@ sub test_description {
     is($clone->description, undef);
     $clone->prepare_base($USER);
     is($clone->description, $domain->description);
+    $clone->remove($USER);
 }
 
 ###############################################################################
