@@ -159,7 +159,7 @@ sub touch_mtime {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (@VMS) {
+for my $vm_name (sort keys %ARG_CREATE_DOM) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";

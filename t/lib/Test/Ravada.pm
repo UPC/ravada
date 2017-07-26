@@ -81,7 +81,12 @@ sub create_domain {
 
     my $name = new_domain_name();
 
-    my %arg_create = (id_iso => $id_iso);
+    ok($ARG_CREATE_DOM{$vm_name}) or do {
+        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
+        return;
+    };
+    my %arg_create = @{$ARG_CREATE_DOM{$vm_name}};
+    $arg_create{id_iso} = $id_iso if $id_iso;
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
@@ -159,6 +164,10 @@ sub init {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
+    %ARG_CREATE_DOM = (
+      KVM => [ id_iso => search_id_iso('debian') ]
+      ,Void => [ id_iso => search_id_iso('debian')]
+    );
 }
 
 sub _remove_old_domains_vm {
@@ -396,6 +405,8 @@ sub clean {
 
 sub search_id_iso {
     my $name = shift;
+
+    confess "No initialized"    if !$CONNECTOR;
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"

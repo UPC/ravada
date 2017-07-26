@@ -480,13 +480,10 @@ test_remove('Void');
 test_remove_clone('Void');
 #test_remove_all('Void');
 
-<<<<<<< HEAD
 test_remove_clone_all('Void');
 
 test_prepare_base('Void');
 test_frontend('Void');
 test_create_domain('Void');
-=======
->>>>>>> [#222] test grant clone
 
 done_testing();
