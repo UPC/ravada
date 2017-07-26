@@ -145,13 +145,15 @@ sub add_user {
     $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
     $sth->finish;
 
-    return if !$is_admin;
-
-    my $id_grant = _search_id_grant('grant');
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
     $sth->execute($name);
     my ($id_user) = $sth->fetchrow;
     $sth->finish;
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+
+    # temporary allow grant permissions
+    my $id_grant = _search_id_grant('grant');
 
     $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
@@ -161,8 +163,14 @@ sub add_user {
     $sth->execute($id_grant, $id_user);
     $sth->finish;
 
-    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    $user->grant_user_permissions($user);
+    if (!$is_admin) {
+        $user->grant_user_permissions($user);
+        $user->revoke($user,'grant');
+        return $user;
+    }
     $user->grant_admin_permissions($user);
+    return $user;
 }
 
 sub _search_id_grant {
@@ -339,7 +347,6 @@ sub is_operator {
         || $self->can_shutdown_clone()
 	|| $self->can_hibernate_clone
 	|| $self->can_change_settings_clones()
-	|| $self->can_shutdown_clone()
         || $self->can_remove_clone();
 }
 
