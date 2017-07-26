@@ -333,6 +333,48 @@ sub test_dont_remove_base_cloned {
 
 }
 
+sub test_private_base {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    $domain->prepare_base($USER);
+
+    my $clone_name = new_domain_name();
+
+    my $clone;
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+
+    # admin can clone
+    eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # when is public, any can clone
+    $domain->is_public(1);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # hide it again
+    $domain->is_public(0);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+}
 
 #######################################################################33
 
@@ -370,6 +412,8 @@ for my $vm_name (reverse sort @VMS) {
         test_prepare_base_active($vm_name);
         test_remove_base($vm_name);
         test_dont_remove_base_cloned($vm_name);
+
+        test_private_base($vm_name);
     }
 }
 
