@@ -641,7 +641,9 @@ sub grant($self,$user,$permission,$value=1) {
 
     return 0 if defined $value && !$value
              && defined $user->can_do($permission) && $user->can_do($permission) == 0;
-    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
+
+    my $value_sql = $user->can_do($permission);
+    return $value if defined $value_sql && $value_sql eq $value;
 
     my $id_grant = _search_id_grant($permission);
     if (! defined $user->can_do($permission)) {
