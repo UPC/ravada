@@ -778,7 +778,7 @@ sub _pre_remove_domain($self, $user=undef) {
 
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove($user);
+    $self->_allow_remove($user) if $self->is_known();
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
