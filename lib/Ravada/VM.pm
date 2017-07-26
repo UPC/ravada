@@ -349,7 +349,7 @@ sub _check_require_base {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
     die "ERROR: Base ".$base->name." is not public\n"
-        unless $user->is_admin || $base->is_public;
+        unless $user->can_clone_all || $base->is_public;
 }
 
 =head2 id
