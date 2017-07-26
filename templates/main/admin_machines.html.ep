@@ -3,7 +3,7 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div ng-controller="machinesPage">
+    <div ng-controller="machinesPage" ng-init="hide_clones=<%= $hide_clones %>">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
@@ -31,7 +31,7 @@
         <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
-                    <th class="lgMachName machine-button"
+                    <th ><div class="lgMachName machine-button" style="display:inline;float:down"
                      ng-click="orderMachineList('name','')">
                       <i class="fa fa-exchange fa-rotate-90"
                        ng-hide="orderParam[0] === 'name' || orderParam[0] === '-name'"></i>
@@ -39,13 +39,23 @@
                        ng-hide="orderParam[0] !== 'name'"></i>
                       <i class="fa fa-arrow-up" ng-cloak
                        ng-hide="orderParam[0] !== '-name'"></i>
-                      <%=l 'Machine Name' %></th>
+                      <%=l 'Machine Name' %></div>
+%                     if ($n_clones) {
+                        <div style="float:right">
+                            <a ng-show="hide_clones" ng-click="hideClones()"
+                              class="label label-primary"
+                              align="right">show clones</a>
+                            <a ng-show="!hide_clones" ng-click="hideClones()"
+                              class="label label-primary"
+                              align="right">hide clones</a>
+                        </div>
+%                     }
+                    </th>
                     <th class="lgMachToggle">
-                      <i class="fa machine-button"
-                       ng-class="{ 'fa-eye':!hide_clones, 'fa-eye-slash':hide_clones }"
+                      <span
                        ng-click="hideClones()"
-                       title="<%=l 'Show/Hide clones' %>"></i>
-                      <%=l 'Base' %></th>
+                       title="<%=l 'Show/Hide clones' %>">
+                       <%=l 'Base' %></span></th>
                     <th class="lgMachToggle"><%=l 'Public'%></th>
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">

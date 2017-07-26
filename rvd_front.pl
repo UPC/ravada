@@ -26,14 +26,14 @@ use POSIX qw(locale_h);
 my $help;
 
 my $FILE_CONFIG;
-for my $file ( "/etc/rvd_front.conf" , "$ENV{HOME}/rvd_front.conf") {
+for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
     warn "WARNING: Found config file at $_ and at $FILE_CONFIG\n"
         if -e $file && $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
 }
 
 my $FILE_CONFIG_RAVADA;
-for my $file ( "/etc/ravada.conf" , "$ENV{HOME}/ravada.conf") {
+for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
     warn "WARNING: Found config file at $file and at $FILE_CONFIG_RAVADA\n"
         if -e $file && $FILE_CONFIG_RAVADA;
     $FILE_CONFIG_RAVADA = $file if -e $file;
@@ -44,11 +44,14 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 pid_file => 'log/rvd_front.pid'
                                                 ,listen => ['http://*:8081']
                                                 }
-                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_bg_file => '/img/intro-bg.jpg'
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,admin => {
+                                                    hide_clones => 15
+                                              }
                                               ,config => $FILE_CONFIG_RAVADA
                                               }
                                       ,file => $FILE_CONFIG
@@ -883,6 +886,21 @@ sub admin {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
     }
+    if ($page eq 'machines') {
+        $c->stash(hide_clones => 0 );
+
+        my $list_domains = $RAVADA->list_domains();
+
+        $c->stash(hide_clones => 1 )
+            if scalar @$list_domains
+                        > $CONFIG_FRONT->{admin}->{hide_clones};
+
+        # count clones from list_domains grepping those that have id_base
+        $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
+
+        # if we find no clones do not hide them. They may be created later
+        $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
+    }
     $c->render(template => 'main/admin_'.$page);
 
 };
@@ -1088,6 +1106,12 @@ sub show_link {
     my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
+    my $description = $domain->description;
+    if (!$description && $domain->id_base) {
+        my $base = Ravada::Domain->open($domain->id_base);
+        $description = $base->description();
+    }
+    $c->stash(description => $description);
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1095,6 +1119,7 @@ sub show_link {
                 ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
+                ,description => $description
                 ,login => $c->session('login'));
 }
 
@@ -1280,6 +1305,18 @@ sub settings_machine {
             push @reqs,($req2);
         }
     }
+
+    $c->stash(description => '');
+    my $description = $domain->description;
+    $c->stash(description => $description);
+
+    if ( $c->param("description") ) {
+        $domain->description($c->param("description"));
+        $c->stash(message => 'Description applied!');
+        my $description = $domain->description;
+        $c->stash(description => $description);
+    }
+
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
     }
@@ -1469,29 +1506,26 @@ sub copy_machine {
     $disk = 0 if $disk && $disk !~ /^\d+(\.\d+)?$/;
     $disk = int($disk*1024*1024*1024)   if $disk;
 
-    my $rebase = $c->param('copy_rebase');
-
     my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
 
     my $base = $RAVADA->search_domain_by_id($id_base);
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    return create_domain($c, $id_base, $name, $ram, $disk)
-       if $base->is_base && !$rebase;
+    if (!$base->is_base) {
+        my $req = Ravada::Request->prepare_base(
+            id_domain => $id_base
+            ,uid => $USER->id
+        );
+        return $c->render("Problem preparing base for domain ".$base->name)
+            if !$req;
 
-    my $req = Ravada::Request->prepare_base(
-        id_domain => $id_base
-        ,uid => $USER->id
-    );
-    return $c->render("Problem preparing base for domain ".$base->name)
-        if $rebase && !$req;
+        sleep 1;
 
-    sleep 1;
-    # TODO fix requests for the same domain must queue
+    }
     my @create_args =( memory => $ram ) if $ram;
     push @create_args , ( disk => $disk ) if $disk;
-    $req = Ravada::Request->create_domain(
+    my $req2 = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
        , id_owner => $USER->id

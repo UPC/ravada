@@ -341,7 +341,6 @@ sub iso_file {
     return \@isos;
 }
 
-
 =head2 list_lxc_templates
 
 Returns a reference to a list of the LXC templates known by the system
