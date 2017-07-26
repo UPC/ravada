@@ -37,6 +37,7 @@ sub test_req_prepare_base {
     ok(scalar $domain->list_files_base," Domain $name should have files_base, got ".
         scalar $domain->list_files_base);
 
+    $domain->is_public(1);
 }
 
 sub test_remove_domain {

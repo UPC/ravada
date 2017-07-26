@@ -116,6 +116,7 @@ sub test_prepare_base {
     ok(!$@, $@);
     ok($domain->is_base);
     is($domain->is_active(),0);
+    $domain->is_public(1);
 
     my $front_domains = rvd_front->list_domains();
     my ($dom_front) = grep { $_->{name} eq $domain->name }
@@ -133,6 +134,7 @@ sub test_prepare_base {
         ."prepared and file haven't changed "
         .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
+    $domain->is_public(1);
 
     test_files_base($domain,1);
 
@@ -302,6 +304,7 @@ sub test_dont_remove_base_cloned {
 
     my $name_clone = new_domain_name();
 
+    $domain->is_public(1);
     my $clone = rvd_back()->create_domain( name => $name_clone
             ,id_owner => $USER->id
             ,id_base => $domain->id

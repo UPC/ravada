@@ -1276,6 +1276,7 @@ sub is_public {
                 ." WHERE id=?");
         $sth->execute($value, $self->id);
         $sth->finish;
+        $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
 }
