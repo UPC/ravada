@@ -396,6 +396,7 @@ sub clean {
 
 sub search_id_iso {
     my $name = shift;
+
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
