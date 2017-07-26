@@ -489,14 +489,14 @@ sub test_grant_clone {
     $domain->is_public(1);
     is($domain->is_public,1) or return;
     eval { $clone = $domain->clone(name => $clone_name, user => $user)};
-    like($@,qr(.));
+    is($@,'');
     ok($clone,"Expecting $clone_name exists");
 
     $clone2 = $vm->search_domain($clone_name);
     ok($clone2,"Expecting $clone_name exists");
 
     $clone->remove($usera);
-    $clone->remove($usera);
+    $domain->remove($usera);
 
 }
 
