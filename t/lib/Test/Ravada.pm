@@ -404,11 +404,8 @@ sub clean {
 sub search_id_iso {
     my $name = shift;
 
-<<<<<<< HEAD
     confess "No initialized"    if !$CONNECTOR;
 
-=======
->>>>>>> Make test defined args common from the test lib
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
