@@ -271,7 +271,7 @@ sub _allow_remove {
         if !$user->can_remove();
 
     $self->_check_has_clones() if $self->is_known();
-    if ($user->can_remove_clone() && $self->id_base) {
+    if ($self->is_known() && $user->can_remove_clone() && $self->id_base) {
         my $base = $self->open($self->id_base);
         return if $base->id_owner == $user->id;
     }
