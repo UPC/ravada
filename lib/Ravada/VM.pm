@@ -317,7 +317,6 @@ sub _check_create_domain {
     if (!$args{id_base}) {
         my $user = Ravada::Auth::SQL->search_by_id($id_owner);
         die "ERROR: Permission denied ".$user->name." can't create domain "
-            .Dumper(\%args)
             ."\n"
             if !$user->can_create_domain();
     }
