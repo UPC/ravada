@@ -405,10 +405,12 @@ sub test_create_domain {
     $usera->revoke('create_domain',$user);
     is($user->can_create_domain,0) or return;
 
+    my $id_iso = search_id_iso('debian');
+
     my $domain_name = new_domain_name();
     my $domain;
-    eval { $domain = $vm->create_domain($domain_name)};
-    like($@,qr'.');
+    eval { $domain = $vm->create_domain(name => $domain_name, id_iso => $id_iso)};
+    like($@,qr'permission'i);
 
     my $domain2 = $vm->search_domain($domain_name);
     ok(!$domain2);
@@ -418,7 +420,7 @@ sub test_create_domain {
     is($user->can_create_domain,1) or return;
 
     $domain_name = new_domain_name();
-    eval { $domain = $vm->create_domain($domain_name)};
+    eval { $domain = $vm->create_domain(name => $domain_name, id_iso => $id_iso)};
     is($@,'');
 
     my $domain3 = $vm->search_domain($domain_name);
