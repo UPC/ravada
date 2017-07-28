@@ -18,6 +18,7 @@ my $RVD_BACK = rvd_back($test->connector);
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
+user_admin->grant($USER,'create_domain');
 
 sub test_hybernate {
     my $vm_name = shift;

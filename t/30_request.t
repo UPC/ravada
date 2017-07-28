@@ -24,6 +24,7 @@ init($test->connector, 't/etc/ravada.conf');
 
 my $RVD_BACK = rvd_back();# $test->connector , 't/etc/ravada.conf');
 my $USER = create_user("foo","bar");
+user_admin->grant($USER,'create_domain');
 $RVD_BACK = undef;
 
 my @ARG_CREATE_DOM = (

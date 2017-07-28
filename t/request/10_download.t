@@ -35,7 +35,7 @@ for my $vm_name ('KVM') {
         ################################################
         #
         # Request for the 1st ISO
-        my $id_iso = search_is_iso('debian');
+        my $id_iso = search_id_iso('debian');
         my $iso = $vm->_search_iso($id_iso);
 
         if (!$iso->{device}) {

@@ -16,6 +16,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 init($test->connector , 't/etc/ravada.conf');
 
 my $USER = create_user('foo','bar');
+user_admin->grant($USER,'create_domain');
 my $RVD_BACK  = rvd_back( );
 my $RVD_FRONT = rvd_front();
 

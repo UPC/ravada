@@ -25,6 +25,8 @@ ok($RVD_BACK) or exit;
 my $USER = create_user("foo","bar");
 ok($USER);
 
+user_admin->grant($USER,'create_domain');
+
 ##########################################################
 
 sub test_vm_connect {
