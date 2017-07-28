@@ -117,6 +117,8 @@ sub test_remove_clone {
     my $user = create_user("oper_rm$$","bar");
     my $usera = create_user("admin_rm$$","bar",'is admin');
 
+    $usera->grant($user,'create_domain');
+
     my $domain = create_domain($vm_name, $user);
     $domain->prepare_base($usera);
     ok($domain->is_base) or return;
@@ -165,6 +167,7 @@ sub test_shutdown_clone {
     ok($usera->is_operator);
     ok($usera->is_admin);
 
+    $usera->grant($user,'create_domain');
 
     my $domain = create_domain($vm_name, $user);
     $domain->prepare_base($usera);
@@ -219,6 +222,7 @@ sub test_remove {
 
     is($user->can_remove,0) or return;
 
+    user_admin->grant($user,'create_domain');
     # user can't remove own domains
     my $domain = create_domain($vm_name, $user);
     eval { $domain->remove($user)};
@@ -231,7 +235,7 @@ sub test_remove {
 
     # user is granted remove
     user_admin()->grant($user,'remove');
-    eval { $domain->remove($user)};
+    eval { $domain->remove($user) if $domain};
     is($@,'');
 
     # but can't remove domains from others
@@ -397,35 +401,69 @@ sub test_frontend {
 sub test_create_domain {
     my $vm_name = shift;
 
+    diag("test create domain");
+
     my $vm = rvd_back->search_vm($vm_name);
 
     my $user = create_user("oper_c$$","bar");
     my $usera = create_user("admin_c$$","bar",1);
 
-    $usera->revoke('create_domain',$user);
-    is($user->can_create_domain,0) or return;
+    my $base = create_domain($vm_name);
 
-    my $id_iso = search_id_iso('debian');
+    $usera->revoke($user,'create_domain');
+    is($user->can_create_domain,0) or return;
+    is($user->can_clone,1) or return;
 
     my $domain_name = new_domain_name();
+
+    my %create_args = (
+            id_iso => search_id_iso('debian')
+            ,id_owner => $user->id
+            ,name => $domain_name
+   );
+
     my $domain;
-    eval { $domain = $vm->create_domain(name => $domain_name, id_iso => $id_iso)};
+    eval { $domain = $vm->create_domain(%create_args)};
     like($@,qr'permission'i);
 
     my $domain2 = $vm->search_domain($domain_name);
     ok(!$domain2);
-    $domain2->remove($usera)    if $domain2;
+    eval { $domain2->remove($usera)    if $domain2 };
+    is($@,'');
 
-    $usera->grant('create_domain',$user);
+    my $clone;
+    my $clone_name = new_domain_name();
+    eval { $clone = $base->clone(name => $clone_name, user => $usera) };
+    is($@,'');
+    ok($clone, "Expecting can clone, but not create");
+
+    eval { $clone->remove($usera)    if $clone };
+    is($@,'');
+
+    $usera->grant($user,'create_domain');
     is($user->can_create_domain,1) or return;
 
     $domain_name = new_domain_name();
-    eval { $domain = $vm->create_domain(name => $domain_name, id_iso => $id_iso)};
+    $create_args{name} = $domain_name;
+    eval { $domain = $vm->create_domain(%create_args)};
     is($@,'');
 
     my $domain3 = $vm->search_domain($domain_name);
     ok($domain3);
-    $domain3->remove();
+
+
+    eval { $domain3->remove($usera)  if $domain3 };
+    is($@,'');
+
+    eval { $domain->remove($usera)   if $domain };
+    is($@,'');
+
+    eval { $base->remove($usera)   if $domain };
+    is($@,'');
+
+    $user->remove();
+    $usera->remove();
+    diag("done  test create");
 }
 
 sub test_grant_clone {
@@ -490,16 +528,24 @@ sub test_grant_clone {
 
     $domain->is_public(1);
     is($domain->is_public,1) or return;
-    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
+
+    $clone_name = new_domain_name();
+    my $cloneb;
+    eval { $cloneb = $domain->clone(name => $clone_name, user => $user)};
     is($@,'');
-    ok($clone,"Expecting $clone_name exists");
+    ok($cloneb,"Expecting $clone_name exists");
 
     $clone2 = $vm->search_domain($clone_name);
     ok($clone2,"Expecting $clone_name exists");
 
-    $clone->remove($usera);
-    $domain->remove($usera);
+    $clone->remove($usera)  if $clone;
+    $cloneb->remove($usera) if $cloneb;
 
+    eval { $domain->remove($usera) };
+    is($@,'',"Remove base domain");
+
+    $user->remove();
+    $usera->remove();
 }
 
 ##########################################################

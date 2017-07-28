@@ -286,7 +286,6 @@ sub _allow_manage {
 }
 
 sub _allow_remove($self, $user) {
-
     confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
@@ -774,11 +773,18 @@ It is not expected to run by itself, the remove function calls it before proceed
 
 sub pre_remove { }
 
+<<<<<<< HEAD
 sub _pre_remove_domain($self, $user=undef) {
 
     eval { $self->id };
     $self->pre_remove();
     $self->_allow_remove($user) if $self->is_known();
+=======
+sub _pre_remove_domain($self,$user) {
+    eval { $self->id };
+    $self->pre_remove();
+    $self->_allow_remove($user)    if $self->{_data};
+>>>>>>> [#231] create_domain permission
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }

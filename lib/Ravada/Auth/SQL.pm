@@ -638,7 +638,8 @@ sub grant($self,$user,$permission,$value=1) {
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
             .Dumper(\@perms);
     }
-
+    confess "ERROR: user not object"
+        if !ref($user);
     return 0 if defined $value && !$value
              && defined $user->can_do($permission) && $user->can_do($permission) == 0;
 

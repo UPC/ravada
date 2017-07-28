@@ -310,8 +310,17 @@ sub _check_create_domain {
     my $self = shift;
 
     my %args = @_;
+    my $id_owner = delete $args{id_owner} or confess "Missing id_owner";
 
     $self->_check_readonly(@_);
+
+    if (!$args{id_base}) {
+        my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+        die "ERROR: Permission denied ".$user->name." can't create domain "
+            .Dumper(\%args)
+            ."\n"
+            if !$user->can_create_domain();
+    }
 
     $self->_check_require_base(@_);
     $self->_check_memory(@_);
