@@ -171,6 +171,9 @@ msgstr ""
 msgid "Error!"
 msgstr ""
 
+msgid "Error"
+msgstr ""
+
 msgid "Backend no available!"
 msgstr ""
 
@@ -302,6 +305,128 @@ msgid "Login with Intranet UPC's username."
 msgstr ""
 
 msgid "bits) in your computer."
+msgstr ""
+
+msgid "Permissions"
+msgstr ""
+
+msgid "can change the settings of owned virtual machines."
+msgstr ""
+
+msgid "can change the settings of any virtual machines."
+msgstr ""
+
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+
+msgid "can clone public virtual machines."
+msgstr ""
+
+msgid "can clone any virtual machine."
+msgstr ""
+
+msgid "can create bases."
+msgstr ""
+
+msgid "can create virtual machines."
+msgstr ""
+
+msgid "can grant permissions to other users"
+msgstr ""
+
+msgid "can hibernate any virtual machine."
+msgstr ""
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "can hibernate any clone."
+msgstr ""
+
+msgid "can remove any virtual machines owned by the user."
+msgstr ""
+
+msgid "can remove any virtual machine."
+msgstr ""
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "can remove any clone."
+msgstr ""
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+
+msgid "can take a screenshot of any virtual machine."
+msgstr ""
+
+msgid "can shutdown any virtual machine."
+msgstr ""
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "Submit Query"
+msgstr "" 
+
+msgid "From Template"
+msgstr ""
+
+msgid "From Machine"
+msgstr ""
+
+msgid "Backend"
+msgstr ""
+
+msgid "Select Template"
+msgstr ""
+
+msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
+msgstr ""
+
+msgid "Download now"
+msgstr ""
+
+msgid "Select ISO"
+msgstr ""
+
+msgid "Template"
+msgstr ""
+
+msgid "Disk Size: (GB)"
+msgstr ""
+
+msgid "Swap Size: (GB)"
+msgstr ""
+
+msgid "Ram: (GB)"
+msgstr ""
+
+msgid "Machine name is required."
+msgstr ""
+
+msgid "Machine name can't exceed 20 characters."
+msgstr ""
+
+msgid "Backend selection is required."
+msgstr ""
+
+msgid "ISO image selection is required."
+msgstr ""
+
+msgid "Template selection is required."
+msgstr ""
+
+msgid "A machine with that name already exists."
+msgstr ""
+
+msgid "The machine name must contain only alphabetic, numbers, dashes and points."
+msgstr ""
+
+msgid "Create"
 msgstr ""
 
 msgid "Permissions"

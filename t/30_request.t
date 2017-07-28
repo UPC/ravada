@@ -27,7 +27,7 @@ my $USER = create_user("foo","bar");
 $RVD_BACK = undef;
 
 my @ARG_CREATE_DOM = (
-        id_iso => 1
+        id_iso => search_id_iso('debian')
         ,id_owner => $USER->id
 );
 
@@ -234,7 +234,7 @@ for my $vm_name ( qw(Void KVM)) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id )       if $vm;
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('debian'), vm => $vm_name, id_owner => $USER->id )       if $vm;
     };
 
     SKIP: {

@@ -18,6 +18,8 @@ init($test->connector);
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
+##################################################################
+
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
     my $vm = $rvd_back->search_vm($vm_name);
@@ -33,7 +35,7 @@ for my $vm_name ('KVM') {
         ################################################
         #
         # Request for the 1st ISO
-        my $id_iso = 1;
+        my $id_iso = search_is_iso('debian');
         my $iso = $vm->_search_iso($id_iso);
 
         if (!$iso->{device}) {

@@ -17,11 +17,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my $RVD_BACK;
 
 eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
@@ -93,6 +88,18 @@ sub test_create_domain {
     }
 
     return $domain;
+}
+
+sub test_open {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+
+    is($domain2->id, $domain->id);
+    is($domain2->name, $domain->name);
+    is($domain2->description, $domain->description);
+    is($domain2->vm, $domain->vm);
 }
 
 sub test_manage_domain {
@@ -309,6 +316,18 @@ sub set_bogus_ip {
 
     $domain->domain->update_device($graphics[0]);
 }
+
+sub test_description {
+    my ($vm_name, $domain) = @_;
+
+    my $description = "Description bla bla bla $$";
+
+    $domain->description($description);
+    is($domain->description, $description);
+
+    my $domain2 = rvd_back->search_domain($domain->name);
+    is($domain2->description, $description) or exit;
+}
 #######################################################
 
 remove_old_domains();
@@ -319,7 +338,6 @@ for my $vm_name (qw( Void KVM )) {
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS) or next;
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -338,12 +356,17 @@ for my $vm_name (qw( Void KVM )) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok($CLASS) or next;
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
 
         my $domain = test_create_domain($vm_name);
+        test_open($vm_name, $domain);
+
+        test_description($vm_name, $domain);
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
+        $domain->is_public(1);
         my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);

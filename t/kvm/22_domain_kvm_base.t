@@ -14,7 +14,6 @@ use Test::Ravada;
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
-use_ok("Ravada::Domain::$BACKEND");
 
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
@@ -138,6 +137,11 @@ sub test_prepare_base {
     ok($row->{is_base});
     $sth->finish;
 
+    is($domain->is_base,1);
+    is($domain->is_public,0);
+    $domain->is_public(1);
+    is($domain->is_public,1);
+
     my @list2 = $RAVADA->list_bases();
     ok(scalar @list2 == scalar @list + 1 ,"Expecting ".(scalar(@list)+1)." bases"
             ." , got ".scalar(@list2));
@@ -149,17 +153,23 @@ sub test_prepare_base {
 sub test_new_domain_from_base {
     my $base = shift;
 
+    is($base->is_base,1) or return;
+    is($base->is_public,1) or return;
+
     my $name = $DOMAIN_NAME_SON;
     test_remove_domain($name);
 
     diag("Creating domain $name from ".$base->name);
-    my $domain = $RAVADA->create_domain(
+    my $domain;
+    eval { $domain = $RAVADA->create_domain(
                 name => $name
             ,id_base => $base->id
            ,id_owner => $USER->id
             ,vm => $BACKEND
     );
-    ok($domain,"Domain not created");
+    };
+    is($@,'');
+    ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
         if $domain;
@@ -275,6 +285,8 @@ SKIP: {
 
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
+
+    use_ok("Ravada::Domain::$BACKEND");
 
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);

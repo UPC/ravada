@@ -10,7 +10,6 @@ use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada');
-use_ok('Ravada::Domain::KVM');
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $VMM;
@@ -54,6 +53,7 @@ SKIP: {
     diag($msg)      if !$VMM;
     skip $msg,10    if !$VMM;
 
+    use_ok('Ravada::Domain::KVM');
 
 my $name = new_domain_name();
 

@@ -19,11 +19,6 @@ my $USER = create_user('foo','bar');
 my $RVD_BACK  = rvd_back( );
 my $RVD_FRONT = rvd_front();
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 # twice so it won't warn it is only used once
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");

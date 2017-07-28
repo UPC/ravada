@@ -18,6 +18,9 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada::Domain::Driver;
 use Ravada::Utils;
 
@@ -87,7 +90,7 @@ has 'readonly' => (
 );
 
 has 'storage' => (
-    is => 'ro',
+    is => 'ro'
     ,isa => 'Object'
     ,required => 0
 );
@@ -96,6 +99,19 @@ has '_vm' => (
     is => 'ro',
     ,isa => 'Object'
     ,required => 1
+);
+
+has 'tls' => (
+    is => 'rw'
+    ,isa => 'Int'
+    ,default => 0
+);
+
+has 'description' => (
+    is => 'rw'
+    ,isa => 'Str'
+    ,required => 0
+    ,trigger => \&_update_description
 );
 
 ##################################################################################3
@@ -142,34 +158,48 @@ before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
 
 after 'screenshot' => \&_post_screenshot;
+
+after '_select_domain_db' => \&_post_select_domain_db;
+
 ##################################################
+#
+
+sub BUILD {
+    my $self = shift;
+    $self->is_known();
+}
 
 =head2 open
 
-Open a Domain or Virtual Machine
+Open a domain
 
-Argument: id of the domain
-Returns: the domain object
+Argument: id
 
-    my $domain = Ravada::Domain->open($id);
+Returns: Domain object read only
 
 =cut
 
-sub open {
-    my $self = shift;
-    my $id = shift;
+sub open($class, $id) {
 
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,name,vm FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($id_db,$name, $vm_type) = $sth->fetchrow();
+    my $row;
 
-    confess "Unknown domain id=$id" if !$name || !$id_db;
+    if (ref($class)) {
+        $row = $class->_select_domain_db ( id => $id );
+    } else {
+        my $self = {};
+        bless $self,$class;
+        $row = $self->_select_domain_db ( id => $id );
+    }
+    confess "ERROR: Unknown domain id=$id"
+        if !$row || !$row->{id};
 
-    my $class_vm = "Ravada::VM::$vm_type";
-    my $vm = $class_vm->new( readonly => $self->readonly);
+    my $vm0 = {};
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm0, $vm_class;
 
-    return $vm->search_domain_by_id($id_db);
+    my $vm = $vm0->new( readonly => 1);
+
+    return $vm->search_domain($row->{name});
 }
 
 sub _vm_connect {
@@ -193,6 +223,21 @@ sub _start_preconditions{
     _check_free_memory();
     _check_used_memory(@_);
 
+}
+
+sub _update_description {
+    my $self = shift;
+
+    return if defined $self->description
+        && defined $self->_data('description')
+        && $self->description eq $self->_data('description');
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains SET description=? "
+        ." WHERE id=? ");
+    $sth->execute($self->description,$self->id);
+    $sth->finish;
+    $self->{_data}->{description} = $self->{description};
 }
 
 sub _allow_manage_args {
@@ -295,6 +340,11 @@ sub _post_prepare_base {
         $self->start($user) if !$self->is_active;
     }
     delete $self->{_was_active};
+
+    if ($self->id_base && !$self->description()) {
+        my $base = Ravada::Domain->open($self->id_base);
+        $self->description($base->description)  if $base->description();
+    }
 
     $self->_remove_id_base();
 };
@@ -420,19 +470,6 @@ sub _data {
     return $self->{_data}->{$field};
 }
 
-sub __open {
-    my $self = shift;
-
-    my %args = @_;
-
-    my $id = $args{id} or confess "Missing required argument id";
-    delete $args{id};
-
-    my $row = $self->_select_domain_db ( );
-    return $self->search_domain($row->{name});
-#    confess $row;
-}
-
 =head2 is_known
 
 Returns if the domain is known in Ravada.
@@ -468,8 +505,15 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
+
     return $row if $row->{id};
 }
+
+sub _post_select_domain_db {
+    my $self = shift;
+    $self->description($self->{_data}->{description})
+        if defined $self->{_data}->{description}
+};
 
 sub _prepare_base_db {
     my $self = shift;
@@ -525,6 +569,57 @@ sub spice_password {
     return $self->_data('spice_password');
 }
 
+=head2 display_file
+
+Returns a file with the display information. Defaults to spice.
+
+=cut
+
+sub display_file($self,$user) {
+    return $self->_display_file_spice($user);
+}
+
+# taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
+sub _display_file_spice($self,$user) {
+
+    my ($ip,$port) = $self->display($user) =~ m{spice://(\d+\.\d+\.\d+\.\d+):(\d+)};
+
+    die "I can't find ip port in ".$self->display   if !$ip ||!$port;
+
+    my $ret =
+        "[virt-viewer]\n"
+        ."type=spice\n"
+        ."host=$ip\n";
+    if ($self->tls) {
+        $ret .= "tls-port=%s\n";
+    } else {
+        $ret .= "port=$port\n";
+    }
+    $ret .="password=%s\n"  if $self->spice_password();
+
+    $ret .=
+        "fullscreen=1\n"
+        ."title=".$self->name." - Press SHIFT+F12 to exit\n"
+        ."enable-smartcard=0\n"
+        ."enable-usb-autoshare=1\n"
+        ."delete-this-file=1\n"
+        ."usb-filter=-1,-1,-1,-1,0\n";
+
+    $ret .=";" if !$self->tls;
+    $ret .= "tls-ciphers=DEFAULT\n"
+        .";host-subject=O=".$ip.",CN=?\n";
+
+    $ret .=";"  if !$self->tls;
+    $ret .="ca=CA\n"
+        ."toggle-fullscreen=shift+f11\n"
+        ."release-cursor=shift+f12\n"
+        ."secure-attention=ctrl+alt+end\n";
+    $ret .=";" if !$self->tls;
+    $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
+
+    return $ret;
+}
+
 sub _insert_db {
     my $self = shift;
     my %field = @_;
@@ -548,7 +643,7 @@ sub _insert_db {
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         #warn "$query\n".Dumper(\%field);
-        die $@;
+        confess $@;
     }
     $sth->finish;
 
@@ -570,7 +665,7 @@ sub _pre_remove_domain {
     my $self = shift;
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove(@_);
+    $self->_allow_remove(@_)    if $self->{_data};
     $self->pre_remove();
 }
 
@@ -841,7 +936,7 @@ sub _remove_base_db {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM file_base_images "
         ." WHERE id_domain=?");
 
-    $sth->execute($self->id);
+    $sth->execute($self->{_data}->{id});
     $sth->finish;
 
 }
@@ -875,13 +970,14 @@ sub clone {
 
     my $id_base = $self->id;
 
-    return $self->_vm->create_domain(
+    my $clone = $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
     );
+    return $clone;
 }
 
 sub _post_pause {
@@ -1128,7 +1224,7 @@ sub _log_iptable {
 
     my $user = $args{user};
     my $uid = $args{uid};
-    confess "Chyoose wehter uid or user "
+    confess "Chyoose wether uid or user "
         if $user && $uid;
     lock_hash(%args);
 
@@ -1211,6 +1307,7 @@ sub is_public {
                 ." WHERE id=?");
         $sth->execute($value, $self->id);
         $sth->finish;
+        $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
 }

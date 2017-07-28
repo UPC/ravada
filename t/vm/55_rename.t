@@ -17,11 +17,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user("foo","bar");
@@ -146,6 +141,7 @@ sub test_clone_domain {
     ok($domain,"[$vm_name] Expecting domain $domain_name") or exit;
 
     $domain->shutdown_now($USER);
+    $domain->is_public(1);
     my $clone = $domain->clone(name => $clone_name, user=>$USER);
     ok($clone) or return;
     return $clone_name;
@@ -202,7 +198,7 @@ for my $vm_name (qw( Void KVM )) {
 
     my $vm_ok;
     eval {
-        my $vm = rvd_front()->search_vm($vm_name);
+        my $vm = rvd_back()->search_vm($vm_name);
         $vm_ok = 1 if $vm;
     };
     diag($@) if $@;

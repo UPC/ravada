@@ -37,6 +37,7 @@ sub test_req_prepare_base {
     ok(scalar $domain->list_files_base," Domain $name should have files_base, got ".
         scalar $domain->list_files_base);
 
+    $domain->is_public(1);
 }
 
 sub test_remove_domain {
@@ -127,7 +128,7 @@ sub test_req_create_domain_iso {
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
             name => $name
-         ,id_iso => 1
+         ,id_iso => search_id_iso('debian')
        ,id_owner => $USER->id
              ,vm => $BACKEND
     );
@@ -157,7 +158,7 @@ sub test_force_kvm {
     my $name = new_domain_name();
     my $req = Ravada::Request->create_domain(
         name => $name
-        ,id_iso => 1
+        ,id_iso => search_id_iso('debian')
       ,id_owner => $USER->id
         ,vm => 'kvm'
     );

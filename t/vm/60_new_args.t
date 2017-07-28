@@ -18,11 +18,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my %TEST_DISK = (
     Void => \&test_disk_void
     ,KVM => \&test_disk_kvm
@@ -264,9 +259,6 @@ $Data::Dumper::Sortkeys = 1;
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $vm_ok;
     eval {
@@ -286,6 +278,8 @@ for my $vm_name (qw( Void KVM )) {
 
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
+
+        use_ok("Ravada::VM::$vm_name");
         test_args($vm_name);
         test_small($vm_name);
     };

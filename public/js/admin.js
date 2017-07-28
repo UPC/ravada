@@ -20,6 +20,12 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function newMachineCtrl($scope, $http) {
+      $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+      });
+      $http.get('/iso_file.json').then(function(response) {
+              $scope.isos = response.data;
+      });
       $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
       });
@@ -40,6 +46,13 @@ ravadaApp.directive("solShowMachine", swMach)
       };
       $scope.name_duplicated = false;
 
+      $scope.change_iso = function(device) {
+          if (device != null) {
+             return device;
+          }
+          else return "<NONE>";
+      };
+
       $scope.validate_new_name = function() {
           $http.get('/machine/exists/'+$scope.name)
                 .then(duplicated_callback, unique_callback);
@@ -55,8 +68,18 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
       $scope.ddsize=20;
-      $scope.swapsize=1;
+      $scope.swapsize={value:0};
       $scope.ramsize=1;
+      $scope.seeswap=0;
+      
+      $scope.show_swap = function() {
+        $scope.seeswap = !($scope.seeswap);
+        $scope.swapsize.value=0;
+      };
+    
+      $http.get('/list_machines.json').then(function(response) {
+              $scope.base = response.data;
+      });
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {

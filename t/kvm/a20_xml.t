@@ -17,9 +17,6 @@ use_ok('Ravada');
 my $RVD_BACK = rvd_back($test->connector);
 my $RVD_FRONT= rvd_front($test->connector);
 
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-);
 my @VMS = reverse keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
 
@@ -31,8 +28,9 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
+    ok($ARG_CREATE_DOM{$vm_name}) or do {
+        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM"
+            .Dumper(\%ARG_CREATE_DOM));
         return;
     };
     my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
@@ -59,7 +57,7 @@ sub test_create_domain {
 
 clean();
 
-my $vm_name = 'kvm';
+my $vm_name = 'KVM';
 my $vm = rvd_back->search_vm($vm_name);
 
 SKIP: {
@@ -73,6 +71,7 @@ SKIP: {
     skip($msg,10)   if !$vm;
 
     my $domain = test_create_domain($vm_name);
+    $domain->is_public(1);
     my $clone = $domain->clone(user => $USER, name => new_domain_name());
 
     ok($clone);

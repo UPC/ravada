@@ -13,9 +13,6 @@ use Test::Ravada;
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
 init($test->connector);
@@ -24,7 +21,7 @@ init($test->connector);
 
 sub test_defaults {
     my $user= create_user("foo","bar");
-    my $rvd_back = rvd_back();
+#    my $rvd_back = rvd_back();
 
     ok($user->can_clone);
     ok($user->can_change_settings);
@@ -314,6 +311,45 @@ sub test_create_domain {
     ok($domain3);
     $domain3->remove();
 }
+
+sub test_grant_clone {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_c$$","bar");
+
+    is($user->can_clone,1) or return;
+
+    my $usera = create_user("admin_c$$","bar",1);
+    is($usera->can_clone,1);
+    my $domain = create_domain($vm_name, $usera);
+    $domain->prepare_base($usera);
+    ok($domain->is_base);
+    is($domain->is_public,0) or return;
+
+    my $clone_name = new_domain_name();
+    my $clone;
+    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    is($clone2,undef);
+
+    $domain->is_public(1);
+    is($domain->is_public,1) or return;
+    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
+    is($@,'');
+    ok($clone,"Expecting $clone_name exists");
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting $clone_name exists");
+
+    $clone->remove($usera);
+    $domain->remove($usera);
+
+}
+
 ##########################################################
 
 test_defaults();
@@ -321,6 +357,8 @@ test_admin();
 test_grant();
 
 test_operator();
+
+test_grant_clone('Void');
 
 test_shutdown_clone('Void');
 test_shutdown_all('Void');

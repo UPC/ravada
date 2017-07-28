@@ -16,9 +16,6 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user('foo','bar');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 our $TIMEOUT_SHUTDOWN = 10;
 
 ################################################################
@@ -190,6 +187,7 @@ sub test_drivers_clone {
         is($domain->get_driver($type), $option->{value}) or next;
         $domain->remove_base($USER);
         $domain->prepare_base($USER);
+        $domain->is_public(1);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         is($domain->get_driver($type), $option->{value}) or next;
         is($clone->get_driver($type), $option->{value}) or next;
@@ -236,7 +234,10 @@ sub _domain_shutdown {
 sub test_settings {
     my $vm_name = shift;
 
-    for my $driver (Ravada::Domain::drivers(undef,undef,$vm_name) ) {
+    my $vm = rvd_back->search_vm($vm_name);
+    my @drivers = $vm->list_drivers();
+#    @drivers = $vm->list_drivers('image');
+    for my $driver ( @drivers ) {
         diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_type($vm_name, $driver->name);
         test_drivers_clone($vm_name, $driver->name);

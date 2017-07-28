@@ -21,6 +21,7 @@
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
             .controller("notifCrtl", notifCrtl)
+            .controller("run_domain",run_domain_ctrl)
 
 
 
@@ -225,6 +226,29 @@
 
     };
 
+    function run_domain_ctrl($scope, $http, request ) {
+        $http.get('/auto_start').then(function(response) {
+            $scope.auto_start = response.auto_start;
+        });
+        $scope.toggle_auto_start = function() {
+            $http.get('/auto_start/toggle').then(function(response) {
+                $scope.auto_start = response.auto_start;
+            });
+        };
+        $scope.copy_password= function() {
+                    $scope.view_password=1;
+                    var copyTextarea = document.querySelector('.js-copytextarea');
+                    copyTextarea.select();
+                    try {
+                        var successful = document.execCommand('copy');
+                        var msg = successful ? 'successful' : 'unsuccessful';
+                        console.log('Copying text command was ' + msg);
+                    } catch (err) {
+                        console.log('Oops, unable to copy');
+                    }
+        };
+
+    };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {
 

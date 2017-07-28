@@ -19,6 +19,9 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 requires 'connect';
 
 # global DB Connection
@@ -39,6 +42,7 @@ requires 'create_volume';
 
 requires 'connect';
 requires 'disconnect';
+requires 'import_domain';
 
 ############################################################
 
@@ -69,6 +73,7 @@ before 'search_domain' => \&_connect;
 
 before 'create_volume' => \&_connect;
 
+around 'import_domain' => \&_around_import_domain;
 #############################################################
 #
 # method modifiers
@@ -129,7 +134,23 @@ sub _around_create_domain {
 
     $self->_pre_create_domain(@_);
     my $domain = $self->$orig(@_);
+
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+
+    return $domain;
+}
+
+sub _around_import_domain {
+    my $orig = shift;
+    my $self = shift;
+    my ($name, $user) = @_;
+
+    my $domain = $self->$orig(@_);
+
+    $domain->_insert_db(name => $name, id_owner => $user->id);
+
+    warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
+    $domain->spinoff_volumes();
     return $domain;
 }
 
@@ -276,10 +297,16 @@ sub _check_require_base {
     my %args = @_;
     return if !$args{id_base};
 
+    my $id_owner = $args{id_owner} or confess "ERROR: id_owner required ";
+
     my $base = $self->search_domain_by_id($args{id_base});
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    die "ERROR: Base ".$base->name." is not public\n"
+        unless $user->can_clone_all || $base->is_public;
 }
 
 =head2 id
@@ -377,5 +404,21 @@ sub default_storage_pool_name {
     return $self->_data('default_storage');
 }
 
+=head2 list_drivers
+
+Lists the drivers available for this Virtual Machine Manager
+
+Arguments: Optional driver type
+
+Returns a list of strings with the nams of the drivers.
+
+    my @drivers = $vm->list_drivers();
+    my @drivers = $vm->list_drivers('image');
+
+=cut
+
+sub list_drivers($self, $name=undef) {
+    return Ravada::Domain::drivers(undef,$name,$self->type);
+}
 
 1;

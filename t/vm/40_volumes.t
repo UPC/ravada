@@ -20,11 +20,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = keys %ARG_CREATE_DOM;
@@ -131,6 +126,7 @@ sub test_clone {
 
     my $name_clone = new_domain_name();
 #    diag("[$vm_name] going to clone from ".$domain->name);
+    $domain->is_public(1);
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
@@ -181,9 +177,10 @@ sub test_files_base {
 
     $domain->stop if $domain->is_active;
     eval { $domain->start($USER) };
-    ok(!$@,"Expecting no error, got : '".($@ or '')."'");
+    ok(!$@,"Expecting no error, got : '".($@ or '')."'")
+        or confess "[$vm_name] Error starting ".$domain->name;
     ok($domain->is_active,"Expecting domain active");
-
+    $domain->shutdown_now($USER)    if $domain->is_active;
 }
 
 sub test_domain_2_volumes {
@@ -221,9 +218,12 @@ sub test_domain_n_volumes {
     my $vm = $RVD_BACK->search_vm($vm_name);
 
     my $domain = test_create_domain($vm_name);
+    diag("Creating domain ".$domain->name." with $n volumes");
+
     test_add_volume($vm, $domain, 'vdb',"swap");
     for ( reverse 3 .. $n) {
-        test_add_volume($vm, $domain, 'vd'.chr(ord('a')-1+$_));
+        my $vol_name = 'vd'.chr(ord('a')-1+$_);
+        test_add_volume($vm, $domain, $vol_name);
     }
 
     my @volumes = $domain->list_volumes;
@@ -305,6 +305,7 @@ sub test_domain_swap {
         ok(-e $file_base,
                 "Expecting file base created for $file_base");
     }
+    $domain->is_public(1);
     my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     # after clone, the qcow file should be there, swap shouldn't
@@ -378,9 +379,6 @@ remove_old_disks();
 for my $vm_name (reverse sort @VMS) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS);
 
     my $vm;
     eval { $vm = $RVD_BACK->search_vm($vm_name) } if $RVD_BACK;
@@ -394,6 +392,8 @@ for my $vm_name (reverse sort @VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok("Ravada::VM::$vm_name");
 
         test_domain_swap($vm_name);
         test_domain_create_with_swap($vm_name);

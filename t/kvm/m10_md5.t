@@ -15,9 +15,6 @@ use Test::Ravada;
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
 init($test->connector);
@@ -29,7 +26,7 @@ sub test_isos_vm {
     my $vm = shift;
 
     my $sth = $test->connector->dbh->prepare(
-        "SELECT * FROM iso_images"
+        "SELECT * FROM iso_images WHERE name NOT like 'win%'"
     );
     $sth->execute;
 
@@ -219,10 +216,12 @@ sub test_isos_localhost {
                 next if !$iso2->{$tag};
                 $iso2->{$tag} =~ s{(\w+://.*?)/(.*)}{http://localhost/iso/$2};
             }
-            my $device;
-            eval { $device = $vm->_iso_name($iso2) };
-            is($@,'');
-            ok($device,"Expecting a device , got ".($device or ''));
+            if ($iso2->{name} !~ /^win/i) {
+                my $device;
+                eval { $device = $vm->_iso_name($iso2) };
+                is($@,'');
+                ok($device,"Expecting a device , got ".($device or ''));
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+
 package Ravada::VM::KVM;
 
 use warnings;
@@ -190,6 +191,7 @@ list of all the volumes.
 =cut
 
 sub search_volume($self,$file,$refresh=0) {
+    confess "ERROR: undefined file" if !defined $file;
     return $self->search_volume_re(qr(^$file$),$refresh);
 }
 
@@ -257,6 +259,12 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     }
     return if !wantarray && !scalar@volume;
     return @volume;
+}
+
+sub _refresh_storage_pools($self) {
+    for my $pool ($self->vm->list_storage_pools) {
+        $pool->refresh();
+    }
 }
 
 =head2 search_volume_path_re
@@ -345,12 +353,17 @@ Creates a domain.
     $dom = $vm->create_domain(name => $name , id_iso => $id_iso);
     $dom = $vm->create_domain(name => $name , id_base => $id_base);
 
+Creates a domain and removes the CPU defined in the XML template:
+
+    $dom = $vm->create_domain(        name => $name 
+                                  , id_iso => $id_iso
+                              , remove_cpu => 1);
+
 =cut
 
 sub create_domain {
     my $self = shift;
     my %args = @_;
-
     $args{active} = 1 if !defined $args{active};
 
     croak "argument name required"       if !$args{name};
@@ -512,14 +525,14 @@ sub _volume_path {
 sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
-
     my %args2 = %args;
     for (qw(id_iso id_owner name)) {
         delete $args2{$_};
         croak "argument $_ required"
             if !$args{$_};
     }
-    for (qw(disk swap active request vm memory)) {
+    my $remove_cpu = delete $args2{remove_cpu};
+    for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
@@ -530,14 +543,30 @@ sub _domain_create_from_iso {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-
     my $iso = $self->_search_iso($args{id_iso});
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
+        
+    my $device_cdrom;
 
-    my $device_cdrom = $self->_iso_name($iso, $args{request});
+    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
+        if !$iso->{url} && !$args{iso_file};
 
+    if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
+      $device_cdrom = $args{iso_file};
+    }
+    else {
+      $device_cdrom = $self->_iso_name($iso, $args{request});
+    }
+    
+    #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
+    #    $device_cdrom = $self->_iso_name($iso, $args{request});
+    #}
+    #else {
+    #    $device_cdrom = $args{iso_file};
+    #}
+    
     my $disk_size;
     $disk_size = $args{disk} if $args{disk};
 
@@ -553,6 +582,7 @@ sub _domain_create_from_iso {
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
     _xml_modify_cdrom($xml, $device_cdrom);
+    _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
@@ -716,7 +746,6 @@ sub _domain_create_from_base {
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
-    $self->storage_pool->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
@@ -740,25 +769,34 @@ sub _fix_pci_slots {
 
         # skip IDE PCI, reserved before
         next if $dev->getAttribute('type')
-            && $dev->getAttribute('type') eq 'ide';
+            && $dev->getAttribute('type') =~ /^(ide)$/i;
 
 #        warn "finding address of type ".$dev->getAttribute('type')."\n";
 
         for my $child ($dev->findnodes('address')) {
             my $bus = $child->getAttribute('bus');
-            my $slot = $child->getAttribute('slot');
+            my $slot = ($child->getAttribute('slot') or '');
+            my $function = ($child->getAttribute('function') or '');
+            my $multifunction = $child->getAttribute('multifunction');
+
+            my $index = "$bus/$slot/$function";
+
             next if !defined $slot;
-            next if !$dupe{"$bus/$slot"}++;
+
+            if (!$dupe{$index} || ($multifunction && $multifunction eq 'on') ) {
+                $dupe{$index} = $dev->toString();
+                next;
+            }
 
             my $new_slot = $slot;
             for (;;) {
-                last if !$dupe{"$bus/$new_slot"};
+                last if !$dupe{"$bus/$new_slot/$function"};
                 my ($n) = $new_slot =~ m{x(\d+)};
                 $n++;
                 $n= "0$n" if length($n)<2;
                 $new_slot="0x$n";
             }
-            $dupe{"$bus/$new_slot"}++;
+            $dupe{"$bus/$new_slot/$function"}++;
             $child->setAttribute(slot => $new_slot);
         }
     }
@@ -788,6 +826,7 @@ sub _iso_name {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _download_file_external($iso->{url}, $device);
+        $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
 
@@ -935,7 +974,7 @@ sub _search_iso {
     $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
     $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
 
-    if ( !$row->{device}) {
+    if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume($row->{filename})) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
@@ -1000,6 +1039,7 @@ sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
@@ -1113,6 +1153,13 @@ sub _define_xml {
 
     return $doc;
 
+}
+
+sub _xml_remove_cpu {
+    my $doc = shift;
+    my ($domain) = $doc->findnodes('/domain') or confess "Missing node domain";
+    my ($cpu) = $domain->findnodes('cpu');
+    $domain->removeChild($cpu);
 }
 
 sub _xml_modify_video {
@@ -1491,8 +1538,10 @@ sub _xml_modify_disk {
             $child->setAttribute(type => 'qcow2');
         } elsif ($child->nodeName eq 'source') {
             my $new_device
-                    = $device->[$cont++] or confess "Missing device $cont "
+                    = $device->[$cont] or confess "Missing device $cont "
+                    .$child->toString."\n"
                     .Dumper($device);
+            $cont++;
             $child->setAttribute(file => $new_device);
         }
     }
@@ -1563,6 +1612,85 @@ sub _xml_modify_mac {
     die "I can't find a new unique mac" if !$new_mac;
 }
 
+
+=pod
+
+sub xml_add_graphics_image {
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/image');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"image");
+    }
+    $listen->setAttribute(compression => 'auto_glz');
+}
+
+=cut
+
+sub _xml_add_graphics_jpeg {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/jpeg');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"jpeg");
+    }
+    $listen->setAttribute(compression => 'auto');
+}
+
+sub _xml_add_graphics_zlib {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/zlib');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"zlib");
+    }
+    $listen->setAttribute(compression => 'auto');
+}
+
+sub _xml_add_graphics_playback {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/playback');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"playback");
+    }
+    $listen->setAttribute(compression => 'on');
+}
+
+sub _xml_add_graphics_streaming {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/streaming');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"streaming");
+    }
+    $listen->setAttribute(mode => 'filter');
+}
+
 =head2 list_networks
 
 Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
@@ -1615,8 +1743,6 @@ sub import_domain {
                   ,domain => $domain_kvm
                 , storage => $self->storage_pool
     );
-
-    $domain->_insert_db(name => $name, id_owner => $user->id);
 
     return $domain;
 }

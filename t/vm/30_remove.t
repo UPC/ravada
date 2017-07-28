@@ -16,14 +16,8 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = keys %ARG_CREATE_DOM;
 my $USER = create_user("foo","bar");
 
 #######################################################################33
@@ -88,6 +82,7 @@ sub test_dont_remove_father {
 
     my $domain = test_create_domain($vm_name);
     $domain->prepare_base($USER);
+    $domain->is_public(1);
 
     my $name_clone = new_domain_name();
 
@@ -169,12 +164,10 @@ sub touch_mtime {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (@VMS) {
+for my $vm_name (sort keys %ARG_CREATE_DOM) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS);
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -192,6 +185,8 @@ for my $vm_name (@VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok($CLASS);
 
         test_remove_domain($vm_name);
         test_remove_domain_base($vm_name);

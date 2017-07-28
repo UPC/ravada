@@ -18,11 +18,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $USER = create_user("foo","bar");
 
@@ -110,28 +105,6 @@ sub test_fw_domain_stored {
 }
 
 
-sub open_ipt {
-    my %opts = (
-    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
-	    'ipt_rules_file' => '',  # optional file path from
-	                             # which to read iptables rules
-	    'iptout'   => '/tmp/iptables.out',
-	    'ipterr'   => '/tmp/iptables.err',
-	    'debug'    => 0,
-	    'verbose'  => 0,
-
-	    ### advanced options
-	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
-	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
-	                                    ### 'system', or 'popen'.
-	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
-	                           ### iptables commands (default is 0).
-	);
-
-	my $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	or die "[*] Could not acquire IPTables::ChainMgr object";
-
-}
 
 sub test_chain {
     my $vm_name = shift;
@@ -151,10 +124,65 @@ sub test_chain {
 
 }
 
-sub flush_rules {
-    my $ipt = open_ipt();
-    $ipt->flush_chain('filter', $CHAIN);
-    $ipt->delete_chain('filter', 'INPUT', $CHAIN);
+sub test_fw_ssh {
+    my $vm_name = shift;
+    my $domain = shift;
+
+    my $port = 22;
+    my $remote_ip = '11.22.33.44';
+
+    $domain->add_nat($port);
+
+    $domain->shutdown_now($USER) if $domain->is_active;
+    $domain->start(user => $USER, remote_ip => $remote_ip);
+
+    ok($domain->is_active,"Domain ".$domain->name." should be active=1, got: "
+        .$domain->is_active) or return;
+
+    for my $n ( 1 .. 60 ) {
+        last if $domain->ip;
+        diag("Waiting for ".$domain->name." to have an ip") if !($n % 10);
+        sleep 1;
+    }
+    ok($domain->ip,"Expecting an IP for the domain ".$domain->name) or return;
+    eval { $domain->open_nat_ports( remote_ip => $remote_ip, user => $USER) };
+
+    my ($public_ip,$public_port)= $domain->public_address($port);
+
+    diag("Open in $public_ip / $public_port");
+    like(($public_ip or '')   ,qr{^\d+\.\d+\.\d+\.\d+$});
+    like(($public_port or '') ,qr{^\d+$});
+
+    #comprova que està obert a les iptables per aquest port desde la $remote_ip
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    my $local_ip = $vm->ip;
+
+    is($public_ip,$local_ip);
+    my $domain_ip = $domain->ip;
+    for ( 1 .. 10 ) {
+        $domain_ip = $domain->ip;
+        last if  $domain_ip;
+        sleep 1;
+    }
+    die "No domain ip for ".$domain->name   if !$domain_ip;
+
+    test_chain($vm_name, $local_ip, $public_port, $remote_ip,1);
+    test_chain_prerouting($vm_name, $local_ip, $port, $domain_ip, 1)
+        or exit;
+
+    eval { $domain->open_nat_ports( remote_ip => $remote_ip, user => $USER) };
+    test_chain_prerouting($vm_name, $local_ip, $port,$domain_ip,1) or exit;
+
+    $domain->shutdown_now($USER) if $domain->is_active;
+    {
+        my ($ip,$port)= $domain->public_address($port);
+
+        like($ip,qr{^$});
+        like($port,qr{^$});
+    }
+    test_chain($vm_name, $local_ip, $public_port, $remote_ip,0);
+    test_chain_prerouting($vm_name, $local_ip, $port, $domain_ip, 0);
+
 }
 #######################################################
 
@@ -168,9 +196,6 @@ remove_old_disks();
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $vm;
     eval { $vm = $RVD_BACK->search_vm($vm_name) };
@@ -186,6 +211,8 @@ for my $vm_name (qw( Void KVM )) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok("Ravada::VM::$vm_name");
+
         flush_rules();
 
         my $domain = test_create_domain($vm_name);
@@ -195,7 +222,7 @@ for my $vm_name (qw( Void KVM )) {
         test_fw_domain_stored($vm_name, $domain2->name);
     };
 }
-flush_rules();
+flush_rules() if !$>;
 remove_old_domains();
 remove_old_disks();
 

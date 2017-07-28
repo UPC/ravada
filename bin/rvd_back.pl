@@ -16,7 +16,9 @@ use Ravada::Auth::LDAP;
 my $help;
 
 my ($DEBUG, $ADD_USER );
+
 my $FILE_CONFIG = "/etc/ravada.conf";
+
 my $ADD_USER_LDAP;
 my $IMPORT_DOMAIN;
 my $CHANGE_PASSWORD;
@@ -25,17 +27,19 @@ my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
 
 my $USAGE = "$0 "
-        ." [--debug] [--file-config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
+        ." [--debug] [--config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
-        ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --make-admin : make user admin\n"
-        ." -X : start in foreground\n"
+        ." --config : config file, defaults to $FILE_CONFIG"
+        ."\n"
     ;
+
+$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 GetOptions (       help => \$help
                  ,debug => \$DEBUG
@@ -59,6 +63,11 @@ if ($help) {
 }
 
 die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
+die "ERROR: Missing file config $FILE_CONFIG\n"
+    if $FILE_CONFIG && ! -e $FILE_CONFIG;
+
+my %CONFIG;
+%CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
 $Ravada::DEBUG=1    if $DEBUG;
 $Ravada::CAN_FORK=0    if $NOFORK;
@@ -69,7 +78,7 @@ my $PID_LONGS;
 #
 
 sub do_start {
-    warn "Starting rvd_back v".$Ravada::VERSION."\n";
+    warn "Starting rvd_back v".Ravada::version."\n";
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
@@ -77,7 +86,7 @@ sub do_start {
 
     start_process_longs() if !$NOFORK;
 
-    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    my $ravada = Ravada->new( %CONFIG );
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
@@ -95,7 +104,7 @@ sub start_process_longs {
     }
     
     warn "Processing long requests in pid $$\n" if $DEBUG;
-    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    my $ravada = Ravada->new( %CONFIG );
     for (;;) {
         my $t0 = time;
         $ravada->process_long_requests();
@@ -104,13 +113,13 @@ sub start_process_longs {
 }
 
 sub clean_killed_requests {
-    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    my $ravada = Ravada->new( %CONFIG );
     $ravada->clean_killed_requests();
 }
 
 sub start {
     {
-        my $ravada = Ravada->new( config => $FILE_CONFIG );
+        my $ravada = Ravada->new( %CONFIG );
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
@@ -132,7 +141,8 @@ sub start {
 sub add_user {
     my $login = shift;
 
-    my $ravada = Ravada->new(config => $FILE_CONFIG);
+    my $ravada = Ravada->new( %CONFIG);
+
     print "$login password: ";
     my $password = <STDIN>;
     chomp $password;
@@ -165,7 +175,8 @@ sub change_password {
     chomp $login;
     return if !$login;
 
-    my $ravada = Ravada->new(config => $FILE_CONFIG);
+    my $ravada = Ravada->new( %CONFIG );
+    
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
@@ -178,7 +189,7 @@ sub change_password {
 sub make_admin {
     my $login = shift;
 
-    my $ravada = Ravada->new(config => $FILE_CONFIG);
+    my $ravada = Ravada->new( %CONFIG);
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
@@ -189,7 +200,7 @@ sub make_admin {
 sub remove_admin {
     my $login = shift;
 
-    my $ravada = Ravada->new(config => $FILE_CONFIG);
+    my $ravada = Ravada->new( %CONFIG);
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
@@ -201,10 +212,10 @@ sub remove_admin {
 sub import_domain {
     my $name = shift;
     print "Virtual Manager: KVM\n";
-    print "User name : ";
+    print "User name that will own the domain in Ravada : ";
     my $user = <STDIN>;
     chomp $user;
-    my $ravada = Ravada->new( config => $FILE_CONFIG );
+    my $ravada = Ravada->new( %CONFIG );
     $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
 }
 

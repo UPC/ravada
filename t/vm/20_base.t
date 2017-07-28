@@ -17,11 +17,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
@@ -110,16 +105,31 @@ sub test_prepare_base {
     my $domain = shift;
 
     test_files_base($domain,0);
+    $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( $USER) };
     ok(!$@, $@);
     ok($domain->is_base);
+    is($domain->is_active(),0);
+    $domain->is_public(1);
+
+    my $front_domains = rvd_front->list_domains();
+    my ($dom_front) = grep { $_->{name} eq $domain->name }
+        @$front_domains;
+
+    ok($dom_front,"Expecting the domain ".$domain->name
+                    ." in list domains");
+
+    if ($dom_front) {
+        ok($dom_front->{is_base});
+    }
 
     eval { $domain->prepare_base( $USER) };
     ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
         ."prepared and file haven't changed "
         .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
+    $domain->is_public(1);
 
     test_files_base($domain,1);
 
@@ -289,6 +299,7 @@ sub test_dont_remove_base_cloned {
 
     my $name_clone = new_domain_name();
 
+    $domain->is_public(1);
     my $clone = rvd_back()->create_domain( name => $name_clone
             ,id_owner => $USER->id
             ,id_base => $domain->id
@@ -317,6 +328,48 @@ sub test_dont_remove_base_cloned {
 
 }
 
+sub test_private_base {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    $domain->prepare_base($USER);
+
+    my $clone_name = new_domain_name();
+
+    my $clone;
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+
+    # admin can clone
+    eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # when is public, any can clone
+    $domain->is_public(1);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # hide it again
+    $domain->is_public(0);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+}
 
 #######################################################################33
 
@@ -329,7 +382,6 @@ for my $vm_name (reverse sort @VMS) {
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS);
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -348,11 +400,15 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok($CLASS);
+
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
         test_prepare_base_active($vm_name);
         test_remove_base($vm_name);
         test_dont_remove_base_cloned($vm_name);
+
+        test_private_base($vm_name);
     }
 }
 
