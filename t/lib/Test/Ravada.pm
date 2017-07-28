@@ -66,7 +66,7 @@ sub create_domain {
            );
     };
     is($@,'');
-
+    confess "Failed create_domain " if !$domain;
     return $domain;
 
 }

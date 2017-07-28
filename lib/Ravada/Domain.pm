@@ -265,9 +265,7 @@ sub _allow_manage {
 
 }
 
-sub _allow_remove {
-    my $self = shift;
-    my ($user) = @_;
+sub _allow_remove($self,$user) {
 
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
@@ -661,11 +659,10 @@ It is not expected to run by itself, the remove function calls it before proceed
 
 sub pre_remove { }
 
-sub _pre_remove_domain {
-    my $self = shift;
+sub _pre_remove_domain($self,$user) {
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove(@_)    if $self->{_data};
+    $self->_allow_remove($user)    if $self->{_data};
     $self->pre_remove();
 }
 
