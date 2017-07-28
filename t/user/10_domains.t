@@ -87,6 +87,8 @@ remove_old_domains();
 remove_old_disks();
 
 my $user_foo = test_create_user('foo');
+user_admin->grant($user_foo,'create_domain');
+
 my $user_bar = test_create_user('bar');
 my $domain = test_create_domain($user_foo);
 test_display($domain,$user_foo , $user_bar );
