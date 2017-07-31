@@ -7,6 +7,7 @@ use locale ':not_characters';
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
+use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 #use Mojolicious::Plugin::I18N;
@@ -117,6 +118,7 @@ hook before_routes => sub {
             ,_user => undef
             );
 
+  return handle_proxy($c)   if $url =~ m{^/proxy/};
   return access_denied($c)
     if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
@@ -130,6 +132,51 @@ hook before_routes => sub {
     _logged_in($c)  if $url =~ m{^/requirements};
 };
 
+sub handle_proxy {
+    my $c = shift;
+    my $url = $c->req->url->to_abs->path;
+
+    my %valid_domain = map { $_ => 1 } qw(
+        ajax.googleapis.com
+        cdnjs.cloudflare.com
+        img.shields.io
+        maxcdn.bootstrapcdn.com
+    );
+    my %valid_extension = map { $_ => 1 } qw(js css map svg woff woff2);
+
+    my ($ip,$path,$file, $extension)
+        = $url =~ m{^/proxy/([\w\.]+)(/.*)/(.*)\.(.*)};
+    return access_denied($c)    if !$ip || !$valid_domain{$ip};
+    return access_denied($c)    if !$path || $path =~ m{\?};
+    return access_denied($c)    if $path =~ m{\?};
+    return access_denied($c)    if !$file || $file =~ m{\?};
+    return access_denied($c)    if !$valid_extension{$extension}
+                                    && $extension !~ /woff2\?v/;
+
+    my $file_cached = "$ENV{HOME}/$url";
+    my %render_args = (
+        filepath => $file_cached
+        ,format => $extension
+        ,'content_disposition' => 'inline'
+    );
+    return $c->render_file(%render_args)
+        if -e $file_cached && -s $file_cached;
+    my $ua = Mojo::UserAgent->new();
+    my $url_req = "https://$ip$path/$file.$extension";
+    my $tx = $ua->get($url_req);
+    if ( my $res = $tx->success) {
+        my ($path_cache) = $file_cached =~ m{(.*)/};
+        make_path($path_cache) or warn "$! $path_cache"
+            if ! -e $path_cache;
+        open my $out,'>',$file_cached or warn "$! $file_cached";
+        print $out $res->body;
+        close $out;
+        return $c->render(data => $res->body);
+    } else {
+        warn $url_req." ".Dumper($tx->error);
+        return $c->render(data => "$url_req ".$tx->error);
+    }
+}
 
 ############################################################################3
 
