@@ -584,7 +584,7 @@ sub grant($self,$user,$permission,$value=1) {
     return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
 
     my $id_grant = _search_id_grant($permission);
-    if (! defined $value_sql ) {
+    if (! defined $user->can_do($permission)) {
         my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"
