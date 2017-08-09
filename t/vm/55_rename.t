@@ -202,7 +202,7 @@ for my $vm_name (qw( Void KVM )) {
 
     my $vm_ok;
     eval {
-        my $vm = rvd_front()->search_vm($vm_name);
+        my $vm = rvd_back()->search_vm($vm_name);
         $vm_ok = 1 if $vm;
     };
     diag($@) if $@;

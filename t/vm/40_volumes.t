@@ -183,7 +183,7 @@ sub test_files_base {
     eval { $domain->start($USER) };
     ok(!$@,"Expecting no error, got : '".($@ or '')."'");
     ok($domain->is_active,"Expecting domain active");
-
+    $domain->shutdown_now($USER)    if $domain->is_active;
 }
 
 sub test_domain_2_volumes {
@@ -378,9 +378,6 @@ remove_old_disks();
 for my $vm_name (reverse sort @VMS) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS);
 
     my $vm;
     eval { $vm = $RVD_BACK->search_vm($vm_name) } if $RVD_BACK;
@@ -394,6 +391,8 @@ for my $vm_name (reverse sort @VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok("Ravada::VM::$vm_name");
 
         test_domain_swap($vm_name);
         test_domain_create_with_swap($vm_name);

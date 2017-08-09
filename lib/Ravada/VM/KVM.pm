@@ -1,3 +1,4 @@
+
 package Ravada::VM::KVM;
 
 use warnings;
@@ -350,7 +351,6 @@ Creates a domain.
 sub create_domain {
     my $self = shift;
     my %args = @_;
-
     $args{active} = 1 if !defined $args{active};
 
     croak "argument name required"       if !$args{name};
@@ -512,14 +512,13 @@ sub _volume_path {
 sub _domain_create_from_iso {
     my $self = shift;
     my %args = @_;
-
     my %args2 = %args;
     for (qw(id_iso id_owner name)) {
         delete $args2{$_};
         croak "argument $_ required"
             if !$args{$_};
     }
-    for (qw(disk swap active request vm memory)) {
+    for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
@@ -530,14 +529,27 @@ sub _domain_create_from_iso {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-
     my $iso = $self->_search_iso($args{id_iso});
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
-
-    my $device_cdrom = $self->_iso_name($iso, $args{request});
-
+        
+    my $device_cdrom;
+    
+    if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
+      $device_cdrom = $args{iso_file};
+    }
+    else {
+      $device_cdrom = $self->_iso_name($iso, $args{request});
+    }
+    
+    #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
+    #    $device_cdrom = $self->_iso_name($iso, $args{request});
+    #}
+    #else {
+    #    $device_cdrom = $args{iso_file};
+    #}
+    
     my $disk_size;
     $disk_size = $args{disk} if $args{disk};
 
@@ -740,25 +752,34 @@ sub _fix_pci_slots {
 
         # skip IDE PCI, reserved before
         next if $dev->getAttribute('type')
-            && $dev->getAttribute('type') eq 'ide';
+            && $dev->getAttribute('type') =~ /^(ide)$/i;
 
 #        warn "finding address of type ".$dev->getAttribute('type')."\n";
 
         for my $child ($dev->findnodes('address')) {
             my $bus = $child->getAttribute('bus');
-            my $slot = $child->getAttribute('slot');
+            my $slot = ($child->getAttribute('slot') or '');
+            my $function = ($child->getAttribute('function') or '');
+            my $multifunction = $child->getAttribute('multifunction');
+
+            my $index = "$bus/$slot/$function";
+
             next if !defined $slot;
-            next if !$dupe{"$bus/$slot"}++;
+
+            if (!$dupe{$index} || ($multifunction && $multifunction eq 'on') ) {
+                $dupe{$index} = $dev->toString();
+                next;
+            }
 
             my $new_slot = $slot;
             for (;;) {
-                last if !$dupe{"$bus/$new_slot"};
+                last if !$dupe{"$bus/$new_slot/$function"};
                 my ($n) = $new_slot =~ m{x(\d+)};
                 $n++;
                 $n= "0$n" if length($n)<2;
                 $new_slot="0x$n";
             }
-            $dupe{"$bus/$new_slot"}++;
+            $dupe{"$bus/$new_slot/$function"}++;
             $child->setAttribute(slot => $new_slot);
         }
     }
@@ -1491,8 +1512,10 @@ sub _xml_modify_disk {
             $child->setAttribute(type => 'qcow2');
         } elsif ($child->nodeName eq 'source') {
             my $new_device
-                    = $device->[$cont++] or confess "Missing device $cont "
+                    = $device->[$cont] or confess "Missing device $cont "
+                    .$child->toString."\n"
                     .Dumper($device);
+            $cont++;
             $child->setAttribute(file => $new_device);
         }
     }
@@ -1563,6 +1586,85 @@ sub _xml_modify_mac {
     die "I can't find a new unique mac" if !$new_mac;
 }
 
+
+=pod
+
+sub xml_add_graphics_image {
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/image');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"image");
+    }
+    $listen->setAttribute(compression => 'auto_glz');
+}
+
+=cut
+
+sub _xml_add_graphics_jpeg {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/jpeg');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"jpeg");
+    }
+    $listen->setAttribute(compression => 'auto');
+}
+
+sub _xml_add_graphics_zlib {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/zlib');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"zlib");
+    }
+    $listen->setAttribute(compression => 'auto');
+}
+
+sub _xml_add_graphics_playback {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/playback');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"playback");
+    }
+    $listen->setAttribute(compression => 'on');
+}
+
+sub _xml_add_graphics_streaming {
+    my $self = shift;
+    my $doc = shift or confess "Missing XML doc";
+
+    my ($graph) = $doc->findnodes('/domain/devices/graphics')
+        or die "ERROR: I can't find graphic";
+
+    my ($listen) = $doc->findnodes('/domain/devices/graphics/streaming');
+
+    if (!$listen) {
+        $listen = $graph->addNewChild(undef,"streaming");
+    }
+    $listen->setAttribute(mode => 'filter');
+}
+
 =head2 list_networks
 
 Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
@@ -1615,8 +1717,6 @@ sub import_domain {
                   ,domain => $domain_kvm
                 , storage => $self->storage_pool
     );
-
-    $domain->_insert_db(name => $name, id_owner => $user->id);
 
     return $domain;
 }

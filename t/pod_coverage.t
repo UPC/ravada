@@ -13,7 +13,7 @@ SKIP: {
     for my $type ( qw(VM Domain ) ){
         Test::Pod::Coverage::pod_coverage_ok( "Ravada::$type"
                 , "Ravada::$type is covered" );
-        for my $backend (qw(KVM )) {
+        for my $backend (keys %Ravada::VALID_VM ) {
             Test::Pod::Coverage::pod_coverage_ok( "Ravada::$type::$backend"
                 , "Ravada::$type::$backend is covered" );
         }

@@ -23,6 +23,9 @@ WriteMakefile(
     ,'Test::Pod::Coverage' => 0
     ,'Locale::Maketext::Lexicon' => 0
     ,'Mojolicious::Plugin::I18N' => 0
+    ,'DBD::SQLite'      => 0
+    ,'IPTables::ChainMgr' => 0
+    ,'Net::DNS' => 0
   },
   BUILD_REQUIRES => {
     'Test::SQL::Data' => 0

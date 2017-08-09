@@ -381,3 +381,10 @@ ul.alert-dropdown {
   border-radius: 5px;
 
 }
+
+.nav--danger{
+    border-top:1px solid #d73a49;
+    border-bottom:1px solid #d73a49;
+    border-left:1px solid #d73a49;
+    border-right:1px solid #d73a49;
+}

@@ -1,6 +1,6 @@
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h2>New Machine</h2>
+        <h2><%=l 'New Machine' %></h2>
     </div>
     <div class="panel-body">
 %       if (scalar @$errors) {
@@ -12,22 +12,19 @@
             </div>
             </div>
 %       }
+       <ul class="nav nav-tabs" id="myTab">
+         <li class="nav active"><a href="#fromtemplate" data-toggle="tab"><%=l 'From Template' %></a></li>
+         <li class="nav" ng-show="base"><a href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
+       </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade in active" id="fromtemplate" >
         <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
-            <div class="form-group row">
-                <label for="name" class="col-lg-1 control-label">Name</label>
-                <div class="col-lg-11">
-                    <input class="form-control" ng-model="name" type="text"
-                        name="name" required=""
-                        ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
-                        ng-change="validate_new_name()"
-                    >
-                </div>
-            </div>
 
             <div class="form-group row">
-                <label for="backend" class="col-lg-1 control-label">Backend</label>
-                <div class="col-lg-11">
-                <select name="backend"
+                <label for="backend" class="col-lg-2 control-label"><%=l 'Backend' %></label>
+                <div class="col-lg-10">
+                <select class= "form-control"
+                        name="backend"
                         ng-model="backend"
                         ng-init="backend = 'KVM'"
                         ng-options="item for item in backends track by item "
@@ -37,28 +34,53 @@
                 </div>
             </div>
 
-            <div ng-if="backend == 'KVM'" class="from-group row">
-                <label for="id_iso" class="col-lg-2 control-label">ISO image</label>
+            <div ng-if="backend == 'KVM'" class="form-group">
+                <div class="from-group row">
+                <label for="id_iso" class="col-lg-2 control-label"><%=l 'Select Template' %></label>
                 <div class="col-lg-10">
-                <select name ="id_iso"
+                <select class="form-control"
+                        name ="id_iso"
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
+                        ng-change="iso_file = change_iso(id_iso.device)"
                         required=""
-                ></select>{{id_iso.description}}
-                <div ng-show="id_iso.name && !id_iso.device">
-                    <font color="#500000">This ISO image has not
-                    been already
-                    downloaded. This may take many minutes, even hours
-                    until the file is fetched from Internet.</font>
+                ></select>
+                <div ng-show="id_iso.name && !id_iso.device && iso_file == '<NONE>' ">
+                    <font color="#500000"><%=l 'This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet.' %></font>
                     <a type="button" class="btn btn-warning"
                         ng-click="iso_download(id_iso.id)"
-                    >Download now</a>
+                    > <%=l "Download now" %></a>
+                </div><br>
+              </div>
+                </div>
+                <div class="from-group row">
+                <div ng-show="id_iso.name">
+                  <label for="iso_file" class="col-lg-2 control-label"><%=l 'Select ISO' %></label>
+                  <div class="col-lg-10"  ng-init="iso_file = '<NONE>'" >
+                    <select class="form-control"
+                            name ="iso_file"
+                            ng-model="iso_file"
+                            ng-options="item for item in isos track by item"
+                            required=""
+                    ></select>
+                  </div>
                 </div>
                 </div>
             </div>
 
+            <div class="form-group row">
+                <label for="name" class="col-lg-2 control-label"><%=l 'Name' %></label>
+                <div class="col-lg-10">
+                    <input class="form-control" ng-model="name" type="text"
+                        name="name" required=""
+                        ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
+                        ng-change="validate_new_name()"
+                    >
+                </div>
+            </div>
+
             <div ng-if="backend == 'LXC'" class="from-group row">
-                <label for="id_template" class="col-lg-2 control-label">Template</label>
+                <label for="id_template" class="col-lg-2 control-label"><%=l 'Template' %></label>
                 <div class="col-lg-10">
                     <select name ="id_template"
                         ng-model="id_template"
@@ -69,15 +91,15 @@
             </div>
 
             <div class="form-group row" ng-if="backend == 'KVM'">
-                <label for="disk" class="col-lg-2 control-label">Disk Size: (GB)</label>
-                <div class="col-lg-10">
+                <label for="disk" class="col-lg-2 control-label"><%=l 'Disk Size: (GB)' %></label>
+                <div class="col-lg-2">
                     <input class="form-control" ng-model="ddsize" type="number" name="disk"
-                        min="1" max="40" required="">
+                        min="1" max="100" required="">
                 </div>
             </div>
             <div class="form-group row" ng-if="backend == 'KVM'">
-                <label for="swap" class="col-lg-2 control-label">Swap Size: (GB)</label>
-                <div class="col-lg-10">
+                <label for="swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
+                <div class="col-lg-2">
                     <input class="form-control" ng-model="swapsize" type="number" name="swap"
                         min="1" max="4">
                 </div>
@@ -85,54 +107,115 @@
 
           <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
-                <label for="memory"  class="col-lg-2 control-label">Ram: (GB)</label>
-                <div class="col-lg-10">
+                <label for="memory"  class="col-lg-2 control-label"><%=l 'Ram: (GB)' %></label>
+                <div class="col-lg-2">
                     <input class="form-control" ng-model="ramsize" type="number" name="memory"
                         min="1" max="4" required="">
                 </div>
             </div>
           </div>
-
           <div class="form-group row">
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                 <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
-                    <strong>Error</strong> Machine name is required.
+                    <strong><%=l "Error" %></strong> <%=l 'Machine name is required.' %>
                 </div>
                 <div ng-show="new_machineForm.name.$error.maxlength" class="alert alert-warning fade in">
-                    <strong>Error</strong> Machine name can't exceed 20 characters.
+                    <strong><%=l 'Error' %></strong> <%=l "Machine name can't exceed 20 characters." %>
                 </div>
             </div>
 
             <div ng-show="new_machineForm.$submitted || new_machineForm.backend.$touched">
                 <div ng-show="new_machineForm.backend.$error.required" class="alert alert-warning fade in">
-                    <strong>Error</strong> Backend selection is required.
+                    <strong><%=l 'Error' %></strong> <%=l 'Backend selection is required.' %>
                 </div>
             </div>
+          <!--  <div ng-show="new_machineForm.$submitted || new_machineForm.ddsize.$touched">
+                <div ng-show="new_machineForm.ddsize.$error" class="alert alert-warning fade in">
+                    <strong><%=l 'Error' %></strong> <%=l 'Disk size must be between 1 and 40 GB.' %>
+                </div>
+            </div>
+            <div ng-show="new_machineForm.$submitted || new_machineForm.swapsize.$touched">
+                <div ng-show="swapsize" class="alert alert-warning fade in">
+                    <strong><%=l 'Error' %></strong> <%=l 'Swap size must be between 1 and 4 GB.' %>
+                </div>
+            </div>
+            <div ng-show="new_machineForm.$submitted || new_machineForm.ramsize.$touched">
+                <div ng-show="ramsize" class="alert alert-warning fade in">
+                    <strong><%=l 'Error' %></strong> <%=l 'Ram size must be between 1 and 4 GB.' %>
+                </div>
+            </div> -->
 
             <div ng-show="new_machineForm.$submitted || new_machineForm.id_iso.$touched">
                 <div ng-show="new_machineForm.id_iso.$error.required" class="alert alert-warning fade in">
-                    <strong>Error</strong> ISO image selection is required
+                    <strong><%=l 'Error' %></strong> <%=l 'ISO image selection is required.' %>
                 </div>
             </div>
 
             <div ng-show="new_machineForm.$submitted || new_machineForm.id_template.$touched">
                 <div ng-show="new_machineForm.id_template.$error.required" class="alert alert-warning fade in">
-                    <strong>Error</strong> Template selection is required
+                    <strong><%=l 'Error' %></strong> <%=l 'Template selection is required' %>
                 </div>
             </div>
             <div ng-show="name_duplicated" class="alert alert-warning fade in">
-                    <strong>Error</strong> A machine with that name already exists.
+                    <strong><%=l 'Error' %></strong> <%=l 'A machine with that name already exists.' %>
             </div>
             <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
-                    <strong>Error</strong> The machine name must contain only alphabetic, numbers, dashes and points.
+                    <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, dashes and points.' %>
             </div>
 
 
           </div>
           <div class="form-group row">
-               <input type="submit" class="btn btn-default" name="submit" value="Create"
-                    ng-disabled="new_machineForm.$invalid || !new_machineForm.id_iso.$viewValue.device || name_duplicated">
+               <input type="submit" class="btn btn-default" name="submit" value="<%=l 'Create' %>"
+                    ng-disabled="new_machineForm.$invalid || (!new_machineForm.id_iso.$viewValue.device && (new_machineForm.iso_file.$modelValue == '<NONE>')) || name_duplicated">
           </div>
     </form>
+    </div>
+    
+    
+    <div class="tab-pane fade" id="frommachine" >
+      <form method="post" action="/machine/copy">
+        <div class="panel-body">
+            <div class="row">
+                <form class="form-inline" method="post" action="/machine/copy" ng-controller="new_machine">
+                      <div class="form-group row">
+                          <input class="form-control" type="hidden" name="id_base" value="{{list_machines.id}}">
+                          <label for="list_machines" class="col-lg-2 control-label"><%=l 'Select Machine' %></label>
+                          <div class="col-lg-10">
+                            <select class="form-control"
+                                    name ="list_machines"
+                                    ng-model="list_machines"
+                                    ng-options="item.name for item in base track by item.id"
+                                    required=""
+                            ></select>
+                          </div></br>
+                          
+                          <label class="col-lg-2" for="copy_name_{{list_machines.id}}"><%=l 'Name' %>:</label>
+                          <div class="col-lg-10">
+                                  <input class="form-control" name="copy_name_{{list_machines.id}}" type="text" size="40"
+                                  value="{{list_machines.name}}-copy">
+                                <!-- todo check unique name -->
+                          </div></br>
+                        
+                          <label class="col-lg-2" for="copy_ram">RAM (Gb):</label>
+                          <div class="col-lg-2">
+                          <input class="form-control" ng-model="ramsize" type="number" name="copy_ram"
+                                    min="1" max="4" required="">
+                          </div>
+                       </div>
+                       
+                       <div class="form-group row">
+                           <input type="submit" class="btn btn-default">
+                       </div>
+                </form>
+                <div class="col-md-6">
+                    <!-- Description -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+  </div>
   </div>
 </div>

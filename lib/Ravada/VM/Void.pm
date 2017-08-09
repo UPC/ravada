@@ -144,6 +144,10 @@ sub search_volume_path_re {
 
 }
 
+sub import_domain {
+    confess "Not implemented";
+}
+
 #########################################################################3
 
 1;

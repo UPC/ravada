@@ -105,6 +105,54 @@ sub test_import {
     ok($domain2, "Search domain in Ravada");
 }
 
+sub test_import_spinoff {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm('kvm');
+    my $domain = test_create_domain($vm_name,$vm);
+    my $clone = $domain->clone(name => new_domain_name(), user => $USER);
+    ok($clone);
+    ok($domain->is_base,"Expecting base") or return;
+
+    $clone->remove($USER);
+
+    for my $volume ( $domain->list_disks ) {
+        my $info = `qemu-img info $volume`;
+        my ($backing) = $info =~ m{(backing file.*)};
+        ok($backing,"Expecting volume with backing file") or return;
+    }
+
+    my $dom_name = $domain->name;
+
+    my $sth = $TEST_SQL->dbh->prepare("DELETE FROM domains WHERE id=?");
+    $sth->execute($domain->id);
+    $domain = undef;
+
+    $domain = $RVD_BACK->search_domain( vm => $vm, name => $dom_name );
+    ok(!$domain,"Expecting domain $dom_name removed") or return;
+
+    eval {
+        $domain = $RVD_BACK->import_domain(
+                                        vm => $vm_name
+                                     ,name => $dom_name
+                                     ,user => $USER->name
+        );
+    };
+    diag($@) if $@;
+    ok($domain,"Importing domain $dom_name");
+
+    my $domain2 = $RVD_BACK->search_domain($dom_name);
+    ok($domain2, "Search domain in Ravada");
+
+    for my $volume ( $domain2->list_disks ) {
+        my $info = `qemu-img info $volume`;
+        my ($backing) = $info =~ m{(backing file.*)};
+        ok(!$backing,"Expecting volume without backing file");
+    }
+
+
+}
+
 ############################################################################
 
 remove_old_domains();
@@ -121,6 +169,8 @@ for my $vm_name (@VMS) {
 
         my $domain = test_already_there($vm_name, $vm);
         test_import($vm_name, $vm, $domain) if $domain;
+
+        test_import_spinoff($vm_name);
     }
 }
 

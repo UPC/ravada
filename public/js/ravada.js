@@ -21,6 +21,7 @@
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
             .controller("notifCrtl", notifCrtl)
+            .controller("run_domain",run_domain_ctrl)
 
 
 
@@ -225,6 +226,16 @@
 
     };
 
+    function run_domain_ctrl($scope, $http, request ) {
+        $http.get('/auto_start').then(function(response) {
+            $scope.auto_start = response.auto_start;
+        });
+        $scope.toggle_auto_start = function() {
+            $http.get('/auto_start/toggle').then(function(response) {
+                $scope.auto_start = response.auto_start;
+            });
+        };
+    };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {
 

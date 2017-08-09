@@ -18,6 +18,9 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada::Domain::Driver;
 use Ravada::Utils;
 
@@ -87,7 +90,7 @@ has 'readonly' => (
 );
 
 has 'storage' => (
-    is => 'ro',
+    is => 'ro'
     ,isa => 'Object'
     ,required => 0
 );
@@ -96,6 +99,19 @@ has '_vm' => (
     is => 'ro',
     ,isa => 'Object'
     ,required => 1
+);
+
+has 'tls' => (
+    is => 'rw'
+    ,isa => 'Int'
+    ,default => 0
+);
+
+has 'description' => (
+    is => 'rw'
+    ,isa => 'Str'
+    ,required => 0
+    ,trigger => \&_update_description
 );
 
 ##################################################################################3
@@ -193,6 +209,16 @@ sub _start_preconditions{
     _check_free_memory();
     _check_used_memory(@_);
 
+}
+
+sub _update_description {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains SET description=? "
+        ." WHERE id=?");
+    $sth->execute($self->description,$self->id);
+    $sth->finish;
 }
 
 sub _allow_manage_args {
@@ -523,6 +549,57 @@ Returns the password defined for the spice viewers
 sub spice_password {
     my $self = shift;
     return $self->_data('spice_password');
+}
+
+=head2 display_file
+
+Returns a file with the display information. Defaults to spice.
+
+=cut
+
+sub display_file($self,$user) {
+    return $self->_display_file_spice($user);
+}
+
+# taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
+sub _display_file_spice($self,$user) {
+
+    my ($ip,$port) = $self->display($user) =~ m{spice://(\d+\.\d+\.\d+\.\d+):(\d+)};
+
+    die "I can't find ip port in ".$self->display   if !$ip ||!$port;
+
+    my $ret =
+        "[virt-viewer]\n"
+        ."type=spice\n"
+        ."host=$ip\n";
+    if ($self->tls) {
+        $ret .= "tls-port=%s\n";
+    } else {
+        $ret .= "port=$port\n";
+    }
+    $ret .="password=%s\n"  if $self->spice_password();
+
+    $ret .=
+        "fullscreen=1\n"
+        ."title=".$self->name." - Press SHIFT+F12 to exit\n"
+        ."enable-smartcard=0\n"
+        ."enable-usb-autoshare=1\n"
+        ."delete-this-file=1\n"
+        ."usb-filter=-1,-1,-1,-1,0\n";
+
+    $ret .=";" if !$self->tls;
+    $ret .= "tls-ciphers=DEFAULT\n"
+        .";host-subject=O=".$ip.",CN=?\n";
+
+    $ret .=";"  if !$self->tls;
+    $ret .="ca=CA\n"
+        ."toggle-fullscreen=shift+f11\n"
+        ."release-cursor=shift+f12\n"
+        ."secure-attention=ctrl+alt+end\n";
+    $ret .=";" if !$self->tls;
+    $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
+
+    return $ret;
 }
 
 sub _insert_db {
@@ -1128,7 +1205,7 @@ sub _log_iptable {
 
     my $user = $args{user};
     my $uid = $args{uid};
-    confess "Chyoose wehter uid or user "
+    confess "Chyoose wether uid or user "
         if $user && $uid;
     lock_hash(%args);
 
@@ -1344,6 +1421,19 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
+}
+
+sub get_description {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT description FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($self->name);
+    my ($description) = $sth->fetchrow();
+    $sth->finish;
+    return ($description or undef);
 }
 
 sub _dbh {

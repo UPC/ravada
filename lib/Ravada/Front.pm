@@ -24,7 +24,6 @@ use Data::Dumper;
 has 'config' => (
     is => 'ro'
     ,isa => 'Str'
-    ,default => $Ravada::FILE_CONFIG
 );
 has 'connector' => (
         is => 'rw'
@@ -60,7 +59,7 @@ sub BUILD {
     if ($self->connector) {
         $CONNECTOR = $self->connector;
     } else {
-        Ravada::_init_config($self->config());
+        Ravada::_init_config($self->config()) if $self->config;
         $CONNECTOR = Ravada::_connect_dbh();
     }
     $CONNECTOR->dbh();
@@ -326,6 +325,20 @@ sub list_iso_images {
     }
     $sth->finish;
     return \@iso;
+}
+
+=head2 iso_file
+
+Returns a reference to a list of the ISOs known by the system
+
+=cut
+
+sub iso_file {
+    my $self = shift;
+    my $vm = $self->search_vm('KVM');
+    my @isos = $vm->search_volume_path_re(qr(.*\.iso$)); 
+    #TODO remove path from device
+    return \@isos;
 }
 
 =head2 list_lxc_templates
