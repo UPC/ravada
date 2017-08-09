@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.9-alpha';
+our $VERSION = '0.2.9-beta';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -226,12 +226,19 @@ sub _update_isos {
             ,xml_volume => 'yakkety64-volume.xml'
         }
         ,debian_stretch => {
-            name =>'Debian Stretch 64 bits XFCE'
-            ,description => 'Debian 9.0 Stretch 64 bits'
+            name =>'Debian Stretch 64 bits'
+            ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.0.0-amd64-xfce-CD-1.iso'
             ,md5 => '9346436c0cf1862af71cb0a03d9a703c'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+        }
+        ,windows_7 => {
+          name => 'Windows 7'
+          ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
+            .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_7.xml'
+          ,xml_volume => 'windows10-volume.xml'
         }
     );
 
@@ -488,6 +495,24 @@ sub _upgrade_table {
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
     return 1;
+}
+
+sub _remove_field {
+    my $self = shift;
+    my ($table, $field ) = @_;
+
+    my $dbh = $CONNECTOR->dbh;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return if !$row;
+
+    warn "INFO: removing $field to $table\n"  if $0 !~ /\.t$/;
+    $dbh->do("alter table $table drop column $field");
+    return 1;
+
 }
 
 sub _create_table {

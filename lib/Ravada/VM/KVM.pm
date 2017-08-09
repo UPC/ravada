@@ -191,6 +191,7 @@ list of all the volumes.
 =cut
 
 sub search_volume($self,$file,$refresh=0) {
+    confess "ERROR: undefined file" if !defined $file;
     return $self->search_volume_re(qr(^$file$),$refresh);
 }
 
@@ -345,6 +346,12 @@ Creates a domain.
 
     $dom = $vm->create_domain(name => $name , id_iso => $id_iso);
     $dom = $vm->create_domain(name => $name , id_base => $id_base);
+
+Creates a domain and removes the CPU defined in the XML template:
+
+    $dom = $vm->create_domain(        name => $name 
+                                  , id_iso => $id_iso
+                              , remove_cpu => 1);
 
 =cut
 
@@ -518,6 +525,7 @@ sub _domain_create_from_iso {
         croak "argument $_ required"
             if !$args{$_};
     }
+    my $remove_cpu = delete $args2{remove_cpu};
     for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
@@ -535,7 +543,10 @@ sub _domain_create_from_iso {
         if !$iso->{xml_volume};
         
     my $device_cdrom;
-    
+
+    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
+        if !$iso->{url} && !$args{iso_file};
+
     if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
       $device_cdrom = $args{iso_file};
     }
@@ -565,6 +576,7 @@ sub _domain_create_from_iso {
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
     _xml_modify_cdrom($xml, $device_cdrom);
+    _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
@@ -956,7 +968,7 @@ sub _search_iso {
     $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
     $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
 
-    if ( !$row->{device}) {
+    if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume($row->{filename})) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
@@ -1021,6 +1033,7 @@ sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
@@ -1134,6 +1147,13 @@ sub _define_xml {
 
     return $doc;
 
+}
+
+sub _xml_remove_cpu {
+    my $doc = shift;
+    my ($domain) = $doc->findnodes('/domain') or confess "Missing node domain";
+    my ($cpu) = $domain->findnodes('cpu');
+    $domain->removeChild($cpu);
 }
 
 sub _xml_modify_video {

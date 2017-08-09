@@ -235,6 +235,19 @@
                 $scope.auto_start = response.auto_start;
             });
         };
+        $scope.copy_password= function() {
+                    $scope.view_password=1;
+                    var copyTextarea = document.querySelector('.js-copytextarea');
+                    copyTextarea.select();
+                    try {
+                        var successful = document.execCommand('copy');
+                        var msg = successful ? 'successful' : 'unsuccessful';
+                        console.log('Copying text command was ' + msg);
+                    } catch (err) {
+                        console.log('Oops, unable to copy');
+                    }
+        };
+
     };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {

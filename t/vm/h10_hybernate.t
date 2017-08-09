@@ -27,7 +27,7 @@ sub test_hybernate {
 
     my $domain = create_domain($vm_name, $USER) or next;
 
-    next if !$domain->can_hybernate();
+    return if !$domain->can_hybernate();
 
     $domain->start($USER)   if !$domain->is_active;
 

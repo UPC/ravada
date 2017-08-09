@@ -44,7 +44,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 pid_file => 'log/rvd_front.pid'
                                                 ,listen => ['http://*:8081']
                                                 }
-                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_bg_file => '/img/intro-bg.jpg'
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
@@ -1115,7 +1115,7 @@ sub show_link {
     my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
-    my $description = $domain->get_description;
+    my $description = $domain->description;
     $c->stash(description => $description);
     $c->render(template => 'main/run'
                 ,name => $domain->name
@@ -1124,7 +1124,7 @@ sub show_link {
                 ,url_display_file => $uri_file
                 ,display_ip => $display_ip
                 ,display_port => $display_port
-                ,description => $description
+                ,description => $domain->description
                 ,login => $c->session('login'));
 }
 
@@ -1323,13 +1323,13 @@ sub settings_machine {
     }
 
     $c->stash(description => '');
-    my $description = $domain->get_description;
+    my $description = $domain->description;
     $c->stash(description => $description);
 
     if ( $c->param("description") ) {
         $domain->description($c->param("description"));
         $c->stash(message => 'Description applied!');
-        my $description = $domain->get_description;
+        my $description = $domain->description;
         $c->stash(description => $description);
     }
 

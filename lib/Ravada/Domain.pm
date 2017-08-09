@@ -159,6 +159,12 @@ after 'rename' => \&_post_rename;
 
 after 'screenshot' => \&_post_screenshot;
 ##################################################
+#
+
+sub BUILD {
+    my $self = shift;
+    $self->is_known();
+}
 
 =head2 open
 
@@ -214,11 +220,16 @@ sub _start_preconditions{
 sub _update_description {
     my $self = shift;
 
+    return if defined $self->description
+        && defined $self->_data('description')
+        && $self->description eq $self->_data('description');
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains SET description=? "
-        ." WHERE id=?");
+        ." WHERE id=? ");
     $sth->execute($self->description,$self->id);
     $sth->finish;
+    $self->{_data}->{description} = $self->{description};
 }
 
 sub _allow_manage_args {
@@ -254,7 +265,7 @@ sub _allow_remove {
         if !$user->can_remove();
 
     $self->_check_has_clones() if $self->is_known();
-    if ($user->can_remove_clone() && $self->id_base) {
+    if ($self->is_known() && $user->can_remove_clone() && $self->id_base) {
         my $base = $self->open($self->id_base);
         return if $base->id_owner == $user->id;
     }
@@ -494,6 +505,7 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
+    $self->description($row->{description}) if defined $row->{description};
     return $row if $row->{id};
 }
 
@@ -625,7 +637,7 @@ sub _insert_db {
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         #warn "$query\n".Dumper(\%field);
-        die $@;
+        confess $@;
     }
     $sth->finish;
 
@@ -952,13 +964,15 @@ sub clone {
 
     my $id_base = $self->id;
 
-    return $self->_vm->create_domain(
+    my $clone = $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
     );
+    $clone->description($self->description) if defined $self->description;
+    return $clone;
 }
 
 sub _post_pause {
@@ -1421,19 +1435,6 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
-}
-
-sub get_description {
-    my $self = shift;
-
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT description FROM domains "
-        ." WHERE name=?"
-    );
-    $sth->execute($self->name);
-    my ($description) = $sth->fetchrow();
-    $sth->finish;
-    return ($description or undef);
 }
 
 sub _dbh {

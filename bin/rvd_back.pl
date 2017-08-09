@@ -29,7 +29,6 @@ my $REMOVE_ADMIN_USER;
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
-        ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -38,6 +37,7 @@ my $USAGE = "$0 "
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG"
         ." -X : start in foreground\n"
+        ."\n"
     ;
 
 $FILE_CONFIG = undef if ! -e $FILE_CONFIG;

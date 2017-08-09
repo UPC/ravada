@@ -45,16 +45,21 @@
                         ng-change="iso_file = change_iso(id_iso.device)"
                         required=""
                 ></select>
-                <div ng-show="id_iso.name && !id_iso.device && iso_file == '<NONE>' ">
+                <div ng-show="id_iso.description">
+                    <i ng-bind-html="id_iso.description">{{id_iso.description}}</i>
+                </div>
+                <div ng-show="id_iso.name && ( !id_iso.device && id_iso.url )
+                                && (iso_file == '<NONE>' || !iso_file) ">
                     <font color="#500000"><%=l 'This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet.' %></font>
                     <a type="button" class="btn btn-warning"
                         ng-click="iso_download(id_iso.id)"
                     > <%=l "Download now" %></a>
-                </div><br>
+                </div>
               </div>
                 </div>
                 <div class="from-group row">
                 <div ng-show="id_iso.name">
+                  <br/>
                   <label for="iso_file" class="col-lg-2 control-label"><%=l 'Select ISO' %></label>
                   <div class="col-lg-10"  ng-init="iso_file = '<NONE>'" >
                     <select class="form-control"
@@ -96,15 +101,22 @@
                     <input class="form-control" ng-model="ddsize" type="number" name="disk"
                         min="1" max="100" required="">
                 </div>
+                <a ng-show="!seeswap"
+                   ng-click="show_swap()"
+                   class="label label-primary"
+                   align="right">Add swap</a>
+                <a ng-show="seeswap"
+                   ng-click="show_swap()"
+                   class="label label-primary"
+                   align="right">Remove swap</a>
             </div>
             <div class="form-group row" ng-if="backend == 'KVM'">
-                <label for="swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
+                <label for="swap" ng-show="seeswap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="swapsize" type="number" name="swap"
-                        min="1" max="4">
-                </div>
+                    <input class="form-control" ng-show="seeswap" ng-model="swapsize.value" type="number" name="swap"
+                           min="0" max="4" >
+                </div> 
             </div>
-
           <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
                 <label for="memory"  class="col-lg-2 control-label"><%=l 'Ram: (GB)' %></label>
@@ -171,7 +183,7 @@
           </div>
     </form>
     </div>
-    
+  
     
     <div class="tab-pane fade" id="frommachine" >
       <form method="post" action="/machine/copy">
@@ -180,7 +192,7 @@
                 <form class="form-inline" method="post" action="/machine/copy" ng-controller="new_machine">
                       <div class="form-group row">
                           <input class="form-control" type="hidden" name="id_base" value="{{list_machines.id}}">
-                          <label for="list_machines" class="col-lg-2 control-label"><%=l 'Select Machine' %></label>
+                          <label for="list_machines" class="col-lg-2 control-label"><%=l 'Source Machine' %></label>
                           <div class="col-lg-10">
                             <select class="form-control"
                                     name ="list_machines"
@@ -189,24 +201,37 @@
                                     required=""
                             ></select>
                           </div></br>
-                          
+                       </div>
+                       <div ng_show="list_machines">
+                        <h4>Destination Machine</h4>
+                       <div class="form-group row">
                           <label class="col-lg-2" for="copy_name_{{list_machines.id}}"><%=l 'Name' %>:</label>
                           <div class="col-lg-10">
                                   <input class="form-control" name="copy_name_{{list_machines.id}}" type="text" size="40"
                                   value="{{list_machines.name}}-copy">
                                 <!-- todo check unique name -->
                           </div></br>
-                        
+                        </div>
+
+                       <div class="form-group row">
                           <label class="col-lg-2" for="copy_ram">RAM (Gb):</label>
                           <div class="col-lg-2">
                           <input class="form-control" ng-model="ramsize" type="number" name="copy_ram"
                                     min="1" max="4" required="">
                           </div>
+                        </div>
                        </div>
                        
-                       <div class="form-group row">
+                        <div class="form-group row alert alert-warning"
+                                ng-hide="list_machines.is_base">
+                            The source machine is not a base. It must be
+                            prepared before it can be copied. This
+                            process may take some minutes.
+                        </div>
+                        <div class="form-group row">
                            <input type="submit" class="btn btn-default">
                        </div>
+                        </div>
                 </form>
                 <div class="col-md-6">
                     <!-- Description -->

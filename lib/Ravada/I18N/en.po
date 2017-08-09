@@ -307,7 +307,6 @@ msgstr ""
 msgid "bits) in your computer."
 msgstr ""
 
-<<<<<<< HEAD
 msgid "Permissions"
 msgstr ""
 
@@ -317,9 +316,10 @@ msgstr ""
 msgid "can change the settings of any virtual machines."
 msgstr ""
 
-msgid ""
-"can change the settings of any virtual machines "
-"cloned from one base owned by the user."
+msgid "can change the settings of any virtual machines "
+msgstr ""
+
+msgid "cloned from one base owned by the user."
 msgstr ""
 
 msgid "can clone public virtual machines."
@@ -371,8 +371,8 @@ msgid "can shutdown clones from virtual machines owned by the user."
 msgstr ""
 
 msgid "Submit Query"
-msgstr "" 
-=======
+msgstr ""
+
 msgid "From Template"
 msgstr ""
 
@@ -429,4 +429,3 @@ msgstr ""
 
 msgid "Create"
 msgstr ""
->>>>>>> master
