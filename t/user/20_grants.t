@@ -293,6 +293,8 @@ sub test_create_domain {
     my $usera = create_user("admin_c$$","bar",1);
 
     my $base = create_domain($vm_name);
+    $base->prepare_base($usera);
+    $base->is_public(1);
 
     $usera->revoke($user,'create_domain');
     is($user->can_create_domain,0) or return;
@@ -317,7 +319,7 @@ sub test_create_domain {
 
     my $clone;
     my $clone_name = new_domain_name();
-    eval { $clone = $base->clone(name => $clone_name, user => $usera) };
+    eval { $clone = $base->clone(name => $clone_name, user => $user) };
     is($@,'');
     ok($clone, "Expecting can clone, but not create");
 
