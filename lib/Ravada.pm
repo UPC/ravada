@@ -645,30 +645,40 @@ sub _init_config {
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
+
+    _init_config_vm() if $CONFIG->{vm};
+
+}
+
+sub _init_config_vm {
+    %VALID_VM = ();
+    for my $vm ( @{$CONFIG->{vm}} ) {
+        eval { require "Ravada/VM/$vm.pm"; };
+        warn $@ if $@;
+        $VALID_VM{$vm}++    if !$@;
+    }
+    @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
 
 sub _create_vm_kvm {
     my $self = shift;
-    return (undef, "KVM not installed") if !$VALID_VM{KVM};
+    die "KVM not installed" if !$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
 
-    return(undef,"ERROR: Missing qemu-img") if !$cmd_qemu_img;
+    die "ERROR: Missing qemu-img" if !$cmd_qemu_img;
 
     my $vm_kvm;
 
-    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
-    my $err_kvm = $@;
+    $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR ));
 
     my ($internal_vm , $storage);
-    eval {
-        $storage = $vm_kvm->dir_img();
-        $internal_vm = $vm_kvm->vm;
-    };
-    $vm_kvm = undef if $@ || !$internal_vm || !$storage;
-    $err_kvm .= ($@ or '');
-    return ($vm_kvm,$err_kvm);
+    $storage = $vm_kvm->dir_img();
+    $internal_vm = $vm_kvm->vm;
+    $vm_kvm = undef if !$internal_vm || !$storage;
+
+    return $vm_kvm;
 }
 
 =head2 disconnect_vm
@@ -712,25 +722,39 @@ sub _connect_vm {
     }
 }
 
+sub _create_vm_lxc {
+    my $self = shift;
+
+    return Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR ));
+}
+
+sub _create_vm_void {
+    my $self = shift;
+
+    return Ravada::VM::Void->new( connector => ( $self->connector or $CONNECTOR ));
+}
+
 sub _create_vm {
     my $self = shift;
 
+    # TODO: add a _create_vm_default for VMs that just are created with ->new
+    #       like Void or LXC
+    my %create = (
+        'KVM' => \&_create_vm_kvm
+        ,'LXC' => \&_create_vm_lxc
+        ,'Void' => \&_create_vm_void
+    );
+
     my @vms = ();
+    my $err;
 
-    my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
-    warn $err_kvm if $err_kvm && $0 !~ /\.t$/;
-
-    my $err = $err_kvm;
-
-    push @vms,($vm_kvm) if $vm_kvm;
-
-    my $vm_lxc;
-    if ($CAN_LXC) {
-        eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
-        push @vms,($vm_lxc) if $vm_lxc;
-        my $err_lxc = $@;
-        $err .= "\n$err_lxc" if $err_lxc;
+    for my $vm_name (keys %VALID_VM) {
+        my $vm;
+        eval { $vm = $create{$vm_name}->($self) };
+        $err.= $@ if $@;
+        push @vms,($vm) if $vm;
     }
+
     if (!@vms) {
         warn "No VMs found: $err\n" if $self->warn_error;
     }
