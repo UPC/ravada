@@ -154,6 +154,8 @@
             if ($scope.new_name_duplicated) return;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            //   TODO check previous rename returned ok
+            window.location.href = "/admin/machines";
           };
 
           $scope.validate_new_name = function(old_name) {
