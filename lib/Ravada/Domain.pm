@@ -192,7 +192,7 @@ sub open {
     confess "Unknown domain id=$id" if !$name || !$id_db;
 
     my $class_vm = "Ravada::VM::$vm_type";
-    my $vm = $class_vm->new( readonly => $self->readonly);
+    my $vm = $class_vm->new( readonly => 1);
 
     return $vm->search_domain_by_id($id_db);
 }
