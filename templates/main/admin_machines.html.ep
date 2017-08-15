@@ -81,11 +81,13 @@
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked 
-                               ng-show="can_remove_base(machine)"
+                            ng-show="can_remove_base(machine)"
+                            ng-disabled="<%= !$_user->can_create_base %>"
                             ng-click="action('machine','remove_base',machine.id)"
                             title ="<%=l 'Remove base' %>" ng-cloak>
                         <input type="checkbox" 
-                               ng-show="can_prepare_base(machine)"
+                           ng-show="can_prepare_base(machine)"
+                           ng-disabled="<%= !$_user->can_create_base %>"
                             ng-click="action('machine','prepare',machine.id)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
                     </td>
