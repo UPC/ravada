@@ -9,14 +9,6 @@
         <div class="col-md-6">
             <div >
 
-%           my $driver = $domain->drivers("image");
-%           my ($first, $second) = $driver->get_options();
-                <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
-                    <strong>This machine has not Graphics parameters!</strong>
-                </div>
-
-%           if ($USER->is_admin) {
-%           }
 %                   for my $driver_name (qw(image jpeg zlib playback streaming)) {
 %                       my $driver = $domain->drivers($driver_name);
 
