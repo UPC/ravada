@@ -44,7 +44,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                 pid_file => 'log/rvd_front.pid'
                                                 ,listen => ['http://*:8081']
                                                 }
-                                              ,login_bg_file => '../img/intro-bg.jpg'
+                                              ,login_bg_file => '/img/intro-bg.jpg'
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
@@ -1105,7 +1105,11 @@ sub show_link {
     my $uri_file = "/machine/display/".$domain->id;
     $c->stash(url => $uri_file)  if $c->session('auto_start');
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
-    my $description = $domain->get_description;
+    my $description = $domain->description;
+    if (!$description && $domain->id_base) {
+        my $base = Ravada::Domain->open($domain->id_base);
+        $description = $base->description();
+    }
     $c->stash(description => $description);
     $c->render(template => 'main/run'
                 ,name => $domain->name
@@ -1302,13 +1306,13 @@ sub settings_machine {
     }
 
     $c->stash(description => '');
-    my $description = $domain->get_description;
+    my $description = $domain->description;
     $c->stash(description => $description);
 
     if ( $c->param("description") ) {
         $domain->description($c->param("description"));
         $c->stash(message => 'Description applied!');
-        my $description = $domain->get_description;
+        my $description = $domain->description;
         $c->stash(description => $description);
     }
 
@@ -1501,29 +1505,26 @@ sub copy_machine {
     $disk = 0 if $disk && $disk !~ /^\d+(\.\d+)?$/;
     $disk = int($disk*1024*1024*1024)   if $disk;
 
-    my $rebase = $c->param('copy_rebase');
-
     my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
 
     my $base = $RAVADA->search_domain_by_id($id_base);
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    return create_domain($c, $id_base, $name, $ram, $disk)
-       if $base->is_base && !$rebase;
+    if (!$base->is_base) {
+        my $req = Ravada::Request->prepare_base(
+            id_domain => $id_base
+            ,uid => $USER->id
+        );
+        return $c->render("Problem preparing base for domain ".$base->name)
+            if !$req;
 
-    my $req = Ravada::Request->prepare_base(
-        id_domain => $id_base
-        ,uid => $USER->id
-    );
-    return $c->render("Problem preparing base for domain ".$base->name)
-        if $rebase && !$req;
+        sleep 1;
 
-    sleep 1;
-    # TODO fix requests for the same domain must queue
+    }
     my @create_args =( memory => $ram ) if $ram;
     push @create_args , ( disk => $disk ) if $disk;
-    $req = Ravada::Request->create_domain(
+    my $req2 = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
        , id_owner => $USER->id

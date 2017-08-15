@@ -61,13 +61,20 @@ sub test_create_domain {
 }
 sub test_clone {
     my ($vm_name, $base) = @_;
+    my $description = "The description for base ".$base->name." text $$";
+    $base->description($description);
+    is($base->description,$description);
+
                 my $clone1;
+
                 my $name_clone = new_domain_name();
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
+                $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
 
+    is($clone1->description,undef);
                 $clone1->shutdown_now($USER) if $clone1->is_active();
                 eval { $clone1->start($USER) };
                 is($@,'');
@@ -77,6 +84,8 @@ sub test_clone {
                 ok($clone1b,"Expecting new cloned domain ".$name_clone);
                 $clone1->shutdown_now($USER) if $clone1->is_active;
                 ok(!$clone1->is_active);
+    is($clone1b->description,undef,"[$vm_name] description for "
+            .$clone1b->name);
     return $clone1;
 }
 
@@ -107,6 +116,26 @@ sub test_mess_with_bases {
 
     }
 }
+
+sub test_description {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name) or return;
+
+    my $domain = test_create_domain($vm_name);
+    $domain->prepare_base($USER);
+    $domain->is_public(1);
+    my $clone = $vm->create_domain(
+             name => new_domain_name()
+         ,id_base => $domain->id
+        ,id_owner => $USER->id
+    );
+    is($clone->description, undef);
+    $clone->prepare_base($USER);
+    is($clone->description, $domain->description);
+    $clone->remove($USER);
+}
+
 ###############################################################################
 remove_old_domains();
 remove_old_disks();
@@ -128,7 +157,10 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok("Ravada::VM::$vm_name");
+        test_description($vm_name);
+
         my $domain = test_create_domain($vm_name);
+
         eval { $domain->start($USER) if !$domain->is_active() };
         is($@,'');
         ok($domain->is_active);

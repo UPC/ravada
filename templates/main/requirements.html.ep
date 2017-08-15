@@ -15,7 +15,7 @@
                         <hr>
                             <h2 class="text-center"><%=l 'Requirements' %></h2>
 								                <i class="fa fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><br><p> <%=l 'For spice redirection you\'ll need to install' %><a target=_blank href="https://virt-manager.org/download/"> VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br>
-                                <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %> <i><b>sudo apt-get install virt-viewer.</b></i></p><br>
+                                <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %> <i><b>sudo apt-get install virt-viewer</b></i></p><br>
 
                                 <i class="fa fa-windows  fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><br><p> <%=l 'You\'ll need to install' %>
                                     <a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i> </a>

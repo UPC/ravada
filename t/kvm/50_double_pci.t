@@ -71,6 +71,7 @@ sub test_clone_domain {
     my $clone_name = new_domain_name();
     my $domain_clone;
     $domain->shutdown_now($USER)    if $domain->is_active;
+    $domain->is_public(1);
     eval {$domain_clone = $domain->clone(name => $clone_name, user => $USER) };
 
     ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
