@@ -26,14 +26,12 @@
                 <select class= "form-control"
                         name="backend"
                         ng-model="backend"
-                        ng-init="backend = 'KVM'"
                         ng-options="item for item in backends track by item "
                         required=""
-                        disabled
                 ></select>
                 </div>
             </div>
-
+%           if ($valid_vm->{'KVM'}) {
             <div ng-if="backend == 'KVM'" class="form-group">
                 <div class="from-group row">
                 <label for="id_iso" class="col-lg-2 control-label"><%=l 'Select Template' %></label>
@@ -72,7 +70,7 @@
                 </div>
                 </div>
             </div>
-
+%           }
             <div class="form-group row">
                 <label for="name" class="col-lg-2 control-label"><%=l 'Name' %></label>
                 <div class="col-lg-10">
@@ -84,6 +82,7 @@
                 </div>
             </div>
 
+%           if ($valid_vm->{'LXC'}) {
             <div ng-if="backend == 'LXC'" class="from-group row">
                 <label for="id_template" class="col-lg-2 control-label"><%=l 'Template' %></label>
                 <div class="col-lg-10">
@@ -94,7 +93,8 @@
                     </select>
                 </div>
             </div>
-
+            % }
+%           if ($valid_vm->{'KVM'}) {
             <div class="form-group row" ng-if="backend == 'KVM'">
                 <label for="disk" class="col-lg-2 control-label"><%=l 'Disk Size: (GB)' %></label>
                 <div class="col-lg-2">
@@ -117,6 +117,7 @@
                            min="0" max="4" >
                 </div> 
             </div>
+%           }
           <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
                 <label for="memory"  class="col-lg-2 control-label"><%=l 'Ram: (GB)' %></label>
