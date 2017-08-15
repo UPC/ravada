@@ -170,6 +170,8 @@
             $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            //   TODO check previous rename returned ok
+            window.location.href = "/admin/machines";
           };
             $scope.cancel_rename=function(old_name) {
                 $scope.new_name = old_name;
