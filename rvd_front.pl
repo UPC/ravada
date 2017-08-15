@@ -917,7 +917,6 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
-    my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -930,8 +929,10 @@ sub new_machine {
     }
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
+    my %valid_vm = map { $_ => 1 } @{$RAVADA->list_vm_types};
     $c->render(template => 'main/new_machine'
-        , name => $c->param('name'), vm => $vm
+        , name => $c->param('name')
+        , valid_vm => \%valid_vm
     );
 };
 
@@ -948,10 +949,10 @@ sub req_new_domain {
         ,iso_file => $c->param('iso_file')
         ,vm=> $vm
         ,id_owner => $USER->id
-        ,memory => int($c->param('memory')*1024*1024)
-        ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
+    $args{memory} = int($c->param('memory')*1024*1024)  if $args{memory};
+    $args{disk} = int($c->param('disk')*1024*1024*1024) if $args{disk};
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
