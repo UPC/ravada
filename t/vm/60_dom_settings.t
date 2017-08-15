@@ -18,6 +18,7 @@ init($test->connector, $FILE_CONFIG);
 my $USER = create_user('foo','bar');
 my %ARG_CREATE_DOM = (
       KVM => [ id_iso => 1 ]
+      ,Void => []
 );
 our $TIMEOUT_SHUTDOWN = 10;
 
@@ -67,7 +68,7 @@ sub test_drivers_type {
     my $driver_type = $domain->drivers($type);
 
     my $value = $driver_type->get_value();
-    ok($value);
+    ok($value,"[$vm_name] Expecting any value for driver $type, got : ".($value or 'UNDEF'));
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
@@ -192,7 +193,7 @@ sub test_drivers_clone {
         $domain->prepare_base($USER);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         is($domain->get_driver($type), $option->{value}) or next;
-        is($clone->get_driver($type), $option->{value}) or next;
+        is($clone->get_driver($type), $option->{value},$clone->name) or exit;
         {
             my $clone2 = $vm->search_domain($clone_name);
             is($clone2->get_driver($type), $option->{value}) or next;
@@ -252,7 +253,7 @@ sub test_settings {
 remove_old_domains();
 remove_old_disks();
 
-my $vm_name = 'KVM';
+for my $vm_name ('KVM','Void') {
 my $vm;
 eval { $vm =rvd_back->search_vm($vm_name) };
 SKIP: {
@@ -266,8 +267,10 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    diag("Testing drivers for $vm_name");
     test_settings($vm_name);
 };
+}
 remove_old_domains();
 remove_old_disks();
 done_testing();
