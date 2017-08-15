@@ -7,8 +7,8 @@
 %   if ($USER->can_change_settings && $domain->drivers) {
         <li class="nav"><a href="#drivers" data-toggle="tab">Drivers</a></li>
 %   }
-%   if (1) { # TODO check VM is KVM
-    <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
+%   if ($domain->type eq 'KVM') {
+        <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
 %   }
 %   if ($USER->can_clone_all){
         <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
