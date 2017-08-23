@@ -56,7 +56,24 @@
                         <p><a href="#" data-toggle="modal" data-target="#2fa-modal"><%=l 'Manage two-factor authentication' %></a> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true"></i></span></p>
 %                                       } else {
                         <p><a href="#" data-toggle="modal" data-target="#2fa-modal"><%=l 'Set up two-factor authentication' %></a> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i></span></p>
-                                
+                        <div class="modal fade 2fa-modal" id="2fa-modal">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                                        <h4 class="modal-title">Security</h4>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>It adds security. With this enabled, even if someone managed to get your password, they would also need your phone to log in to your account.</p>
+                                        <p>You set up your phone to generate verification codes. Then, we'll prompt your enter these codes when you try to log in on a new computer or devide.
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-primary">Get started</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
 %                                       }
                   </div>
                 </div>
