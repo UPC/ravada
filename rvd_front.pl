@@ -604,6 +604,7 @@ sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
+    my $two_fa;
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
@@ -633,7 +634,8 @@ sub user_settings {
           }
         }
     }
-    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
+    $two_fa = 0;
+    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, two_fa => $two_fa
       ,errors =>\@errors);
 };
 

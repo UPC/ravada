@@ -52,7 +52,12 @@
                         </form>
 %   }
                         <h3><%=l 'Security' %></h3>
-                        <p><a href="#" data-toggle="modal" data-target="#bannerformmodal"><%=l 'Manage two-factor authentication' %></a> OFF</p>
+%                            if ($two_fa) {
+                        <p><a href="#" data-toggle="modal" data-target="#2fa-modal"><%=l 'Manage two-factor authentication' %></a> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true"></i></span></p>
+%                                       } else {
+                        <p><a href="#" data-toggle="modal" data-target="#2fa-modal"><%=l 'Set up two-factor authentication' %></a> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i></span></p>
+                                
+%                                       }
                   </div>
                 </div>
             </div>
