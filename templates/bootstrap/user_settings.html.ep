@@ -40,6 +40,7 @@
                         </p>
 %   if (!$_user->is_external) {
                         <hr>
+                        <h3><%=l 'Password' %></h3>
                         <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
@@ -50,8 +51,10 @@
                             </p>
                         </form>
 %   }
+                        <h3><%=l 'Security' %></h3>
+                        <p><a href="#" data-toggle="modal" data-target="#bannerformmodal"><%=l 'Manage two-factor authentication' %></a> OFF</p>
                   </div>
-                  </div>
+                </div>
             </div>
         </div>
     </div>
