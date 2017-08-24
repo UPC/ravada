@@ -605,9 +605,12 @@ sub user_settings {
     my $changed_lang;
     my $changed_pass;
     my $two_fa;
+    my $change_2fa;
+    my $qrcode;
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
+        $qrcode = $c->param('code');
         _logged_in($c);
     }
     $c->param('tongue' => $USER->language);
@@ -634,8 +637,12 @@ sub user_settings {
           }
         }
     }
+    if ($c->param('qrcode_click')){
+            $change_2fa = 1;
+    }
     $two_fa = 0;
-    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, two_fa => $two_fa
+    $qrcode = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=150x150&chld=M|0&cht=qr&chl=otpauth://totp/RavadaVDI (username)%3Fsecret%3DEKCOX6FFK44OEX5V";
+    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa, two_fa => $two_fa, qrcode => $qrcode
       ,errors =>\@errors);
 };
 
