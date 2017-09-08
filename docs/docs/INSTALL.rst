@@ -147,6 +147,12 @@ Client
 The client must have a spice viewer such as virt-viewer. There is a
 package for linux and it can also be downloaded for windows.
 
+Run
+---
+
+The Ravada server is now installed, learn
+`how to run and use it <http://ravada.readthedocs.io/en/latest/docs/production.html>`__.
+
 Help
 ----
 
