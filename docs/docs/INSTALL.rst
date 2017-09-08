@@ -108,7 +108,7 @@ example.
 Ravada web user
 ---------------
 
-Add a new user for the ravada web. Use rvd\_back to create it.
+Add a new user for the ravada web. Use rvd\_back to create it. When asked if this user is admin answer *yes*.
 
 ::
 
