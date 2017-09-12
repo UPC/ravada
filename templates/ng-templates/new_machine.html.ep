@@ -19,7 +19,7 @@
         <div class="tab-content">
 %=          include 'ng-templates/new_machine_template'
 %=          include 'ng-templates/new_machine_other'
-    
+
         </div>
     </div>
 </div>

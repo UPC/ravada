@@ -66,6 +66,7 @@ sub test_create_domain {
 sub test_clone {
     my ($vm_name, $domain) = @_;
 
+    $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
     ok($clone);
 

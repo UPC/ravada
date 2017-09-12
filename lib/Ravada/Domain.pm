@@ -158,6 +158,9 @@ before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
 
 after 'screenshot' => \&_post_screenshot;
+
+after '_select_domain_db' => \&_post_select_domain_db;
+
 ##################################################
 #
 
@@ -281,6 +284,11 @@ sub _post_prepare_base {
         $self->start($user) if !$self->is_active;
     }
     delete $self->{_was_active};
+
+    if ($self->id_base && !$self->description()) {
+        my $base = Ravada::Domain->open($self->id_base);
+        $self->description($base->description)  if $base->description();
+    }
 
     $self->_remove_id_base();
 };
@@ -406,17 +414,29 @@ sub _data {
     return $self->{_data}->{$field};
 }
 
-sub __open {
-    my $self = shift;
+=head2 open
 
-    my %args = @_;
+Open a domain
 
-    my $id = $args{id} or confess "Missing required argument id";
-    delete $args{id};
+Argument: id
 
-    my $row = $self->_select_domain_db ( );
-    return $self->search_domain($row->{name});
-#    confess $row;
+Returns: Domain object read only
+
+=cut
+
+sub open($class, $id) {
+    my $self = {};
+    bless $self,$class;
+
+    my $row = $self->_select_domain_db ( id => $id );
+
+    my $vm0 = {};
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm0, $vm_class;
+
+    my $vm = $vm0->new( readonly => 1);
+
+    return $vm->search_domain($row->{name});
 }
 
 =head2 is_known
@@ -454,9 +474,15 @@ sub _select_domain_db {
     $sth->finish;
 
     $self->{_data} = $row;
-    $self->description($row->{description}) if defined $row->{description};
+
     return $row if $row->{id};
 }
+
+sub _post_select_domain_db {
+    my $self = shift;
+    $self->description($self->{_data}->{description})
+        if defined $self->{_data}->{description}
+};
 
 sub _prepare_base_db {
     my $self = shift;
@@ -879,7 +905,7 @@ sub _remove_base_db {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM file_base_images "
         ." WHERE id_domain=?");
 
-    $sth->execute($self->id);
+    $sth->execute($self->{_data}->{id});
     $sth->finish;
 
 }
@@ -920,7 +946,6 @@ sub clone {
         ,vm => $self->vm
         ,_vm => $self->_vm
     );
-    $clone->description($self->description) if defined $self->description;
     return $clone;
 }
 
@@ -1251,6 +1276,7 @@ sub is_public {
                 ." WHERE id=?");
         $sth->execute($value, $self->id);
         $sth->finish;
+        $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
 }

@@ -144,6 +144,7 @@ sub test_prepare_base {
 
     my $domain_clone;
 
+    $domain->is_public(1);
     eval { $domain_clone = $vm->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
