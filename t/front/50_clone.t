@@ -24,7 +24,7 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar',1);
 
 my %CREATE_ARGS = (
     Void => { id_iso => 1,       id_owner => $USER->id }
@@ -47,9 +47,9 @@ sub create_args {
 remove_old_domains();
 remove_old_disks();
 
-SKIP: {
 for my $vm_name (keys %CREATE_ARGS) {
 
+    diag("Testing $vm_name");
     my $vm = $RVD_BACK->search_vm($vm_name);
     my $msg = "Skipping VM $vm_name in this system";
     if ($vm && $vm_name =~ /kvm/i && $>) {
@@ -57,16 +57,18 @@ for my $vm_name (keys %CREATE_ARGS) {
         $vm = undef;
     }
 
+    SKIP: {
     if (!$vm) {
         diag($msg);
-        skip($msg,10);
+        skip($msg,2);
     }
     my $base = create_domain($vm_name);
     $base->prepare_base($USER);
     $base->is_public(1);
 
     my $clone_name = new_domain_name();
-    my $clone = $base->clone( user => $USER->id, name => $clone_name);
+    my $clone = $base->clone( user => $USER, name => $clone_name);
+    ok($clone,"[$vm_name] Expecting a clone from ".$base->name);
 
     my $cloneb = rvd_front->search_clone( id_base => $base->id, id_owner => $USER->id);
     is($cloneb->id, $clone->id);
@@ -74,8 +76,9 @@ for my $vm_name (keys %CREATE_ARGS) {
     $clone->prepare_base($USER);
     is($clone->is_base,1);
     my $clonec = rvd_front->search_clone( id_base => $base->id, id_owner => $USER->id);
-    is($clonec->id, $clone->id);
-}
+    ok($clonec,"Expecting clone from id_base=".$base->id.", id_owner=".$USER->id);
+    is($clonec->id, $clone->id) if $clonec;
+    } # of SKIP
 }
 
 remove_old_domains();

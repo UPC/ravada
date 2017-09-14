@@ -288,7 +288,7 @@ sub _post_prepare_base {
         $self->description($base->description)  if $base->description();
     }
 
-    $self->_remove_id_base();
+#    $self->_remove_id_base();
 };
 
 sub _check_has_clones {
