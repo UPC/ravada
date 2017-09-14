@@ -239,7 +239,35 @@ sub _update_isos {
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_10 => {
+          name => 'Windows 10'
+          ,description => 'Windows 10 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
+        }
+        ,windows_xp => {
+          name => 'Windows XP'
+          ,description => 'Windows XP 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_xp.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_12 => {
+          name => 'Windows 2012'
+          ,description => 'Windows 2012 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_12.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_8 => {
+          name => 'Windows 8.1'
+          ,description => 'Windows 8.1 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_8.xml'
+          ,xml_volume => 'wisuvolume.xml'
         }
     );
 
