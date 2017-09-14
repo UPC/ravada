@@ -182,9 +182,8 @@ sub test_files_base {
 
     $domain->stop if $domain->is_active;
     eval { $domain->start($USER) };
-    ok(!$@,"Expecting no error, got : '".($@ or '')."'")
-        or confess "[$vm_name] Error starting ".$domain->name;
-    ok($domain->is_active,"Expecting domain active");
+    ok($@,"Expecting error, got : '".($@ or '')."'");
+    ok(!$domain->is_active,"Expecting domain not active");
     $domain->shutdown_now($USER)    if $domain->is_active;
 }
 

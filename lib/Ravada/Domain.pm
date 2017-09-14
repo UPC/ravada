@@ -182,7 +182,7 @@ sub _vm_disconnect {
 sub _start_preconditions{
     my ($self) = @_;
 
-    die "Domain ".$self->name." is a base. Bases can't get started."
+    confess "Domain ".$self->name." is a base. Bases can't get started."
         if $self->is_base();
 
     if (scalar @_ %2 ) {
@@ -764,7 +764,7 @@ sub clones {
     _init_connector();
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
-            ." WHERE id_base = ?");
+            ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)");
     $sth->execute($self->id);
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {
