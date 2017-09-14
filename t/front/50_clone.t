@@ -71,13 +71,20 @@ for my $vm_name (keys %CREATE_ARGS) {
     ok($clone,"[$vm_name] Expecting a clone from ".$base->name);
 
     my $cloneb = rvd_front->search_clone( id_base => $base->id, id_owner => $USER->id);
-    is($cloneb->id, $clone->id);
+    ok($cloneb,"Expecting a clone id_base=".$base->id.", id_owner=".$USER->id);
+    is($cloneb->id, $clone->id) if $cloneb;
 
     $clone->prepare_base($USER);
     is($clone->is_base,1);
     my $clonec = rvd_front->search_clone( id_base => $base->id, id_owner => $USER->id);
-    ok($clonec,"Expecting clone from id_base=".$base->id.", id_owner=".$USER->id);
-    is($clonec->id, $clone->id) if $clonec;
+    ok(!$clonec,"Expecting no clone from id_base=".$base->id.", id_owner=".$USER->id);
+
+    my $clone2_name = new_domain_name();
+    my $clone2 = $base->clone(user => $USER, name => $clone2_name);
+
+    my $clone2b = rvd_front->search_clone( id_base => $base->id, id_owner => $USER->id);
+    ok($clone2b,"Expecting a clone id_base=".$base->id.", id_owner=".$USER->id);
+    is($clone2b->id,$clone2->id)    if $cloneb;
     } # of SKIP
 }
 
