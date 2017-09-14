@@ -255,7 +255,10 @@ for my $vm_name ( qw(Void KVM)) {
     
         my $domain_base = test_req_create_base($vm);
         if ($domain_base) {
-            test_req_start_domain($vm,$domain_base->name);
+            $domain_base->is_public(1);
+            my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
+            test_req_start_domain($vm,$domain_clone->name);
+            $domain_clone->remove($USER);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
     };
