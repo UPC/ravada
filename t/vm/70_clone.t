@@ -69,9 +69,10 @@ sub test_clone {
 
                 my $name_clone = new_domain_name();
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
+                $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
-                ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
+                ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
     is($clone1->description,undef);
                 $clone1->shutdown_now($USER) if $clone1->is_active();
@@ -97,10 +98,8 @@ sub test_mess_with_bases {
         $clone->prepare_base($USER);
     }
 
-    $base->remove_base($USER);
-    is($base->is_base,0);
-
     for my $clone (@$clones) {
+        next if $clone->is_base;
         eval { $clone->start($USER); };
         ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
 
@@ -123,6 +122,7 @@ sub test_description {
 
     my $domain = test_create_domain($vm_name);
     $domain->prepare_base($USER);
+    $domain->is_public(1);
     my $clone = $vm->create_domain(
              name => new_domain_name()
          ,id_base => $domain->id
@@ -131,6 +131,7 @@ sub test_description {
     is($clone->description, undef);
     $clone->prepare_base($USER);
     is($clone->description, $domain->description);
+    $clone->remove($USER);
 }
 
 ###############################################################################

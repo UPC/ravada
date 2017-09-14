@@ -1066,7 +1066,7 @@ sub _fetch_filename {
         next if !$found;
         $file=$found if $found;
     }
-    die "No ".qr($row->{file_re})." found on $row->{url}"   if !$file;
+    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>$content</pre>"   if !$file;
 
     $row->{filename} = $file;
     $row->{url} .= "/" if $row->{url} !~ m{/$};

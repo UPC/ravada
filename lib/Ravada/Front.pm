@@ -543,7 +543,7 @@ sub search_clone {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name FROM domains "
-        ." WHERE id_base=? AND id_owner=? "
+        ." WHERE id_base=? AND id_owner=? AND (is_base=0 OR is_base=NULL)"
     );
     $sth->execute($id_base, $id_owner);
 

@@ -110,6 +110,7 @@ sub test_import_spinoff {
 
     my $vm = rvd_back->search_vm('kvm');
     my $domain = test_create_domain($vm_name,$vm);
+    $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
     ok($clone);
     ok($domain->is_base,"Expecting base") or return;

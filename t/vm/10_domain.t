@@ -371,6 +371,7 @@ for my $vm_name (qw( Void KVM )) {
         test_description($vm_name, $domain);
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
+        $domain->is_public(1);
         my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
@@ -384,6 +385,11 @@ for my $vm_name (qw( Void KVM )) {
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_screenshot_file($vm_name, $domain);
+
+        test_remove_domain($vm_name, $clone1);
+        test_remove_domain($vm_name, $clone2);
+
+        $domain->remove_base($USER);
         test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
 
@@ -391,8 +397,6 @@ for my $vm_name (qw( Void KVM )) {
         test_pause_domain($vm_name, $domain);
         test_shutdown_paused_domain($vm_name, $domain);
 
-        test_remove_domain($vm_name, $clone1);
-        test_remove_domain($vm_name, $clone2);
         test_remove_domain($vm_name, $domain);
     };
 }

@@ -46,6 +46,7 @@ sub test_hybernate {
 sub test_hybernate_clone {
     my ($vm_name, $domain) = @_;
 
+    $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     eval {$clone->start($USER)  if !$clone->is_active };

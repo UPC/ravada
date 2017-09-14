@@ -146,6 +146,7 @@ sub test_clone_domain {
     ok($domain,"[$vm_name] Expecting domain $domain_name") or exit;
 
     $domain->shutdown_now($USER);
+    $domain->is_public(1);
     my $clone = $domain->clone(name => $clone_name, user=>$USER);
     ok($clone) or return;
     return $clone_name;
