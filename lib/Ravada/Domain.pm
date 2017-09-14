@@ -182,6 +182,9 @@ sub _vm_disconnect {
 sub _start_preconditions{
     my ($self) = @_;
 
+    confess "Domain ".$self->name." is a base. Bases can't get started."
+        if $self->is_base();
+
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
     } else {
@@ -256,7 +259,6 @@ sub _pre_prepare_base {
     $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
-        $self->{_was_active} = 1;
         for ( 1 .. $TIMEOUT_SHUTDOWN ) {
             last if !$self->is_active;
             sleep 1;
@@ -280,17 +282,13 @@ sub _post_prepare_base {
     my ($user) = @_;
 
     $self->is_base(1);
-    if ($self->{_was_active} ) {
-        $self->start($user) if !$self->is_active;
-    }
-    delete $self->{_was_active};
 
     if ($self->id_base && !$self->description()) {
         my $base = Ravada::Domain->open($self->id_base);
         $self->description($base->description)  if $base->description();
     }
 
-    $self->_remove_id_base();
+#    $self->_remove_id_base();
 };
 
 sub _check_has_clones {
@@ -766,7 +764,7 @@ sub clones {
     _init_connector();
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
-            ." WHERE id_base = ?");
+            ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)");
     $sth->execute($self->id);
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {

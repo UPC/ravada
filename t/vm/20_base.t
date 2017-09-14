@@ -129,10 +129,6 @@ sub test_prepare_base {
         ok($dom_front->{is_base});
     }
 
-    eval { $domain->prepare_base( $USER) };
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
     $domain->is_public(1);
 
@@ -194,9 +190,12 @@ sub test_prepare_base {
 
     touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
-
-    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
+    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
+
+    eval { $domain->start($USER)};
+    like($@,qr/bases.*started/i);
+    is($domain->is_active,0,"Expecting base domains can't be run");
 
     $domain->is_base(0);
     ok(!$domain->is_base,"[$vm_name] Expecting domain is_base=0 , got :".$domain->is_base);
@@ -223,9 +222,8 @@ sub test_prepare_base_active {
     eval{ $domain->prepare_base($USER) };
     ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
 
-    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
-    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name
-                            ." should not be paused after prepare base") or return;
+    ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
+            or return;
 }
 
 sub touch_mtime {

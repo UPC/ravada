@@ -385,6 +385,11 @@ for my $vm_name (qw( Void KVM )) {
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_screenshot_file($vm_name, $domain);
+
+        test_remove_domain($vm_name, $clone1);
+        test_remove_domain($vm_name, $clone2);
+
+        $domain->remove_base($USER);
         test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
 
@@ -392,8 +397,6 @@ for my $vm_name (qw( Void KVM )) {
         test_pause_domain($vm_name, $domain);
         test_shutdown_paused_domain($vm_name, $domain);
 
-        test_remove_domain($vm_name, $clone1);
-        test_remove_domain($vm_name, $clone2);
         test_remove_domain($vm_name, $domain);
     };
 }
