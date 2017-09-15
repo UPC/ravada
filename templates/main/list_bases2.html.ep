@@ -21,10 +21,12 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
+%           if ($user->is_admin)  {
             <a ng-click="toggle_only_public()" class="label label-primary"
               align="right" ng-show="!only_public">Show Public Machines Only</a>
             <a ng-click="toggle_only_public()" class="label label-primary"
               align="right" ng-show="only_public">Show All Machines</a
+%           }
         </div>
         <div class="panel-body">
 %       if (! $public_bases ) {
