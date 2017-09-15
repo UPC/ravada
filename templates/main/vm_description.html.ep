@@ -8,7 +8,8 @@
         <form class="form-inline" action="<%= $action %>" method="post">
             <div class="row">
                 <div class="col-md-6">
-                    <label>This information will be available to user</label>
+                    <label for="description">This information will be available to the users.</label>
+                    <br/>
                     <textarea name="description" class="col-md-12" rows="6" placeholder="Description"><%= $description %></textarea>
                 </div>
             </div>
