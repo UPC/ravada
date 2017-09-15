@@ -6,18 +6,21 @@
     %= include 'main/vm_rename'
 </div>
 
-% if ($domain->drivers) {
-    <div class="tab-pane fade" id="drivers">
+% if ($USER->can_change_settings ) {
+    <div class="tab-pane fade" id="options">
         %= include 'main/vm_options'
     </div>
 % }
-
-% if ($domain->type eq 'KVM') {
+% if ($USER->can_change_settings && $domain->drivers) {
+    <div class="tab-pane fade" id="drivers">
+        %= include 'main/vm_drivers'
+    </div>
+% }
+% if (1) { # TODO check VM is KVM
     <div class="tab-pane fade" id="graphics">
         %= include 'main/vm_graphics'
     </div>
 % }
-
 <div class="tab-pane fade" id="copy">
     %= include 'main/vm_copy'
 </div>
