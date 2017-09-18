@@ -30,6 +30,8 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
+
 _init_connector();
 
 requires 'name';
@@ -1079,8 +1081,17 @@ sub _post_resume {
 
 sub _post_start {
     my $self = shift;
+    my %arg = @_;
 
     $self->_add_iptable(@_);
+
+    if ($self->run_timeout) {
+        my $req = Ravada::Request->shutdown_domain(
+                 name => $self->name
+                , uid => $arg{user}->id
+                 , at => time+$self->run_timeout
+        );
+    }
 }
 
 sub _add_iptable {
@@ -1277,6 +1288,41 @@ sub is_public {
         $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
+}
+
+=head2 run_timeout
+
+Sets or get the domain run timeout. When it expires it is shut down.
+
+    $domain->set_timeout(60 * 60); # 60 minutes
+
+
+=cut
+
+sub run_timeout {
+    my $self = shift;
+
+    return $self->_set_data('run_timeout',@_);
+}
+
+sub _set_data($self, $field, $value=undef) {
+    if (defined $value) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
+                ." WHERE id=?");
+        $sth->execute($value, $self->id);
+        $sth->finish;
+        $self->{_data}->{$field} = $value;
+
+        $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
+    }
+    return $self->_data($field);
+}
+
+sub _propagate_data($self, $field, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
+                ." WHERE id_base=?");
+    $sth->execute($value, $self->id);
+    $sth->finish;
 }
 
 =head2 clean_swap_volumes
