@@ -1149,7 +1149,9 @@ sub _post_start {
                  name => $self->name
                 , uid => $arg{user}->id
                  , at => time+$self->run_timeout
+                 , timeout => 59
         );
+
     }
 }
 
