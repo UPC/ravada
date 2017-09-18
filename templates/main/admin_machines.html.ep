@@ -102,7 +102,7 @@
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
-                         ng-disabled="machine.is_active || machine.is_base"
+                         ng-disabled="machine.is_active"
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
                         </a>
