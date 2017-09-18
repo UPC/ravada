@@ -137,6 +137,11 @@ sub _around_create_domain {
 
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
 
+    if ($args{id_base}) {
+        my $base = $self->search_domain_by_id($args{id_base});
+        $domain->run_timeout($base->run_timeout)
+            if defined $base->run_timeout();
+    }
     return $domain;
 }
 
