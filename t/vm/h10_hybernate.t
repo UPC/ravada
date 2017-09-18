@@ -20,7 +20,7 @@ my %ARG_CREATE_DOM = (
 );
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar",1);
 
 sub test_hybernate {
     my $vm_name = shift;

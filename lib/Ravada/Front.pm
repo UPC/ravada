@@ -185,7 +185,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT * FROM domains";
+    my $query = "SELECT * FROM domains ORDER BY name";
 
     my $where = '';
     for my $field ( sort keys %args ) {
