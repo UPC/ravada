@@ -644,10 +644,18 @@ sub _connect_dbh {
     $data_source = "DBI:$driver:database=$db;host=$host"    
         if $host && $host ne 'localhost';
 
-    return DBIx::Connector->new($data_source
+    my $con;
+    for my $try ( 1 .. 10 ) {
+        eval { $con = DBIx::Connector->new($data_source
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
-
+            $con->dbh();
+        };
+        return $con if $con && !$@;
+        sleep 1;
+        warn "Try $try $@\n";
+    }
+    die ($@ or "Can't connect to $driver $db at $host");
 }
 
 =head2 display_ip
