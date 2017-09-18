@@ -106,14 +106,14 @@ ravadaApp.directive("solShowMachine", swMach)
         var mach;
         for (var i=0, iLength = response.data.length; i<iLength; i++){
           mach = response.data[i];
-          if (mach.is_base || !mach.id_base){
+          if (!mach.id_base){
             $scope.list_machines[mach.id] = mach;
             $scope.list_machines[mach.id].childs = [];
           }
         }
         for (var i=0, iLength = response.data.length; i<iLength; i++){
           mach = response.data[i];
-          if (!mach.is_base && mach.id_base){
+          if (mach.id_base){
             $scope.list_machines[mach.id_base].childs.push(mach);
           }
         }
