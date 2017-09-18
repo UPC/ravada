@@ -331,6 +331,51 @@ sub test_dont_remove_base_cloned {
 
 }
 
+sub test_spinned_off_base {
+    my $vm_name = shift;
+
+    my $base= test_create_domain($vm_name);
+    $base->prepare_base($USER);
+    ok($base->is_base,"[$vm_name] expecting domain is base, got "
+                        .$base->is_base);
+
+    my $name_clone = new_domain_name();
+
+    $base->is_public(1);
+    my $clone = rvd_back()->create_domain( name => $name_clone
+            ,id_owner => $USER->id
+            ,id_base => $base->id
+            ,vm => $vm_name
+    );
+
+    # Base can't started, it has clones
+    eval { $base->start(user => $USER) };
+    like($@,qr'.');
+    is($base->is_active,0);
+
+    $clone->prepare_base(user_admin);
+
+    $base->remove_base(user_admin());
+    # Base can get started now the clones are released
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $base->shutdown_now($USER);
+    is($base->is_active,0);
+
+    $clone->remove_base(user_admin);
+
+    # Base can get started now the clones are released even though they are not base
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $clone->remove($USER);
+    $base->remove($USER);
+}
+
+
 sub test_private_base {
     my $vm_name = shift;
 
@@ -412,6 +457,8 @@ for my $vm_name (reverse sort @VMS) {
         test_dont_remove_base_cloned($vm_name);
 
         test_private_base($vm_name);
+
+        test_spinned_off_base($vm_name);
     }
 }
 

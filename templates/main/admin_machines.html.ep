@@ -131,7 +131,7 @@
                        </a>
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">process</a></div>
-                      <div ng-show="machine.is_base && !machine.is_locked"
+                      <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak>This Machine is a base</div>
                     </td>
                 </tr>
