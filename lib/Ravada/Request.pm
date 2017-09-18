@@ -52,7 +52,7 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
+    ,shutdown_domain => { name => 1, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
@@ -308,7 +308,7 @@ sub shutdown_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'shutdown' , args => encode_json($args));
+    return $self->_new_request(command => 'shutdown' , args => $args);
 }
 
 =head2 prepare_base
