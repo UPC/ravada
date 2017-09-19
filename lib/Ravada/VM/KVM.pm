@@ -994,7 +994,7 @@ sub _search_iso {
 sub _download($self, $url) {
     confess "Wrong url '$url'" if $url =~ m{\*};
     my $cache;
-    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;
+    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
     my $ua = new LWP::UserAgent;
