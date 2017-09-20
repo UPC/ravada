@@ -3,22 +3,38 @@
 </div>
 
 <div class="tab-pane fade" id="rename">
+  % if ($domain->is_base) {
+    %= include 'main/vm_locked_is_base'
+  % } else {
     %= include 'main/vm_rename'
+  % }
 </div>
 
 % if ($USER->can_change_settings ) {
     <div class="tab-pane fade" id="options">
+      % if ($domain->is_base) {
+        %= include 'main/vm_locked_is_base'
+      % } else {
         %= include 'main/vm_options'
+      % }
     </div>
 % }
 % if ($USER->can_change_settings && $domain->drivers) {
     <div class="tab-pane fade" id="drivers">
+      % if ($domain->is_base) {
+        %= include 'main/vm_locked_is_base'
+      % } else {
         %= include 'main/vm_drivers'
+      % }
     </div>
 % }
 % if (1) { # TODO check VM is KVM
     <div class="tab-pane fade" id="graphics">
+      % if ($domain->is_base) {
+        %= include 'main/vm_locked_is_base'
+      % } else {
         %= include 'main/vm_graphics'
+      % }
     </div>
 % }
 <div class="tab-pane fade" id="copy">

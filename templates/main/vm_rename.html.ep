@@ -24,7 +24,7 @@
                              ng-change="validate_new_name(showmachine.name)"
                              ng-disabled="<%= $disable_rename %>"
                     >
-                    <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated"
+                    <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated || new_name_invalid"
                              ng-click="rename(showmachine.id, showmachine.name)">
                                 Rename
                     </button>
@@ -33,6 +33,11 @@
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">
                                This name is duplicated
+                              </label>
+                              <label ng-show="new_name_invalid"
+                               class="control-label" for="new_name">
+                               This name is invalid. It can only contain words and numbers 
+                               and must start by a letter.
                               </label>
                     </div>
                 </div>
