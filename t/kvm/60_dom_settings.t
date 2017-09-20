@@ -21,6 +21,8 @@ my %ARG_CREATE_DOM = (
 );
 our $TIMEOUT_SHUTDOWN = 10;
 
+my %HAS_NOT_VALUE = map { $_ => 1 } qw(image jpeg zlib playback streaming);
+
 ################################################################
 sub test_create_domain {
     my $vm_name = shift;
@@ -60,14 +62,13 @@ sub test_drivers_type {
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
-    my %has_not_value = map { $_ => 1 } qw(image jpeg zlib playback);
     my @drivers = $domain->drivers();
     ok(scalar @drivers,"Expecting defined drivers");
     isa_ok(\@drivers,'ARRAY');
 
     my $driver_type = $domain->drivers($type);
 
-    if (!$has_not_value{$type}) {
+    if (!$HAS_NOT_VALUE{$type}) {
         my $value = $driver_type->get_value();
         ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value");
     }
@@ -118,8 +119,10 @@ sub test_drivers_type_id {
 
     my $driver_type = $domain->drivers($type);
 
-    my $value = $driver_type->get_value();
-    ok($value);
+    if (!$HAS_NOT_VALUE{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value);
+    }
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
@@ -159,7 +162,6 @@ sub test_drivers_clone {
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
-    my %has_not_value = map { $_ => 1 } qw(image jpeg zlib playback);
 
     my @drivers = $domain->drivers();
     ok(scalar @drivers,"Expecting defined drivers") or return;
@@ -169,7 +171,7 @@ sub test_drivers_clone {
 
     isa_ok($driver_type,'Ravada::Domain::Driver') or return;
 
-    if (!$has_not_value{$type}) {
+    if (!$HAS_NOT_VALUE{$type}) {
         my $value = $driver_type->get_value();
         ok($value,"[$vm_name] Expecting value for driver type $type : $driver_type->get_value()");
     }
