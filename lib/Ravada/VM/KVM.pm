@@ -1002,7 +1002,7 @@ sub _download($self, $url) {
     my $req = HTTP::Request->new( GET => $url);
     my $res = $ua->request($req);
 
-    die $res->status_line." $url" if !$res->is_success;
+    confess $res->status_line." $url" if !$res->is_success;
 
     return $self->_cache_store($url,$res->content);
 }
@@ -1057,6 +1057,12 @@ sub _fetch_filename {
         $row->{file_re} = $file;
     }
     confess "No file_re" if !$row->{file_re};
+
+    if ($row->{device} && !$row->{filename}) {
+        my ( $file) = $row->{device} =~ m{.*/(.*)};
+        $row->{filename} = ($row->{rename_file} or $file);
+        return;
+    }
 
     my $content = $self->_download($row->{url});
     my $file;
