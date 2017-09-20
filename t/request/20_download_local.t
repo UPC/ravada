@@ -44,19 +44,7 @@ sub test_download {
 }
 
 sub local_urls {
-    my $sth = $test->dbh->prepare(
-        "SELECT id,url FROM iso_images "
-        ."WHERE url is NOT NULL"
-    );
-    my $sth_update = $test->dbh->prepare(
-        "UPDATE iso_images set url=? WHERE id=?"
-    );
-    $sth->execute();
-    while ( my ($id, $url) = $sth->fetchrow) {
-        $url =~ s{\w+://(.*?)/(.*)}{http://localhost/iso/$2};
-        $sth_update->execute($url, $id);
-    }
-    $sth->finish;
+    rvd_back->_set_url_isos('http://localhost/iso/');
 }
 
 sub search_id_isos {

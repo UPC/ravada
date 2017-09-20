@@ -514,6 +514,22 @@ sub _update_data {
     $self->_update_domain_drivers_options();
 }
 
+sub _set_url_isos($self, $url='http://localhost/iso/') {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,url FROM iso_images "
+        ."WHERE url is NOT NULL"
+    );
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE iso_images set url=? WHERE id=?"
+    );
+    $sth->execute();
+    while ( my ($id, $url) = $sth->fetchrow) {
+        $url =~ s{\w+://(.*?)/(.*)}{http://localhost/iso/$2};
+        $sth_update->execute($url, $id);
+    }
+    $sth->finish;
+
+}
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
