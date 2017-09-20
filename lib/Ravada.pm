@@ -198,8 +198,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
-            ,md5 => '6bd80e10bf223a04d3aafe0f997d046b'
+            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/MD5SUMS'
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot/mini.iso'
+            ,rename_file => 'xubuntu_zesty_mini.iso'
         }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
@@ -208,6 +209,7 @@ sub _update_isos {
            ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
+            ,rename_file => 'xubuntu_xenial_mini.iso'
         }
         ,lubuntu_zesty => {
             name => 'Lubuntu Zesty Zapus'
@@ -220,7 +222,8 @@ sub _update_isos {
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/lubuntu-16.04.2-desktop-amd64.iso'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/'
+            ,file_re => 'lubuntu-16.04.2-desktop-amd64.iso'
             ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
@@ -228,8 +231,9 @@ sub _update_isos {
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.0.0-amd64-xfce-CD-1.iso'
-            ,md5 => '9346436c0cf1862af71cb0a03d9a703c'
+            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -238,7 +242,35 @@ sub _update_isos {
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_10 => {
+          name => 'Windows 10'
+          ,description => 'Windows 10 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
+        }
+        ,windows_xp => {
+          name => 'Windows XP'
+          ,description => 'Windows XP 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_xp.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_12 => {
+          name => 'Windows 2012'
+          ,description => 'Windows 2012 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_12.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_8 => {
+          name => 'Windows 8.1'
+          ,description => 'Windows 8.1 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_8.xml'
+          ,xml_volume => 'wisuvolume.xml'
         }
     );
 
@@ -482,6 +514,23 @@ sub _update_data {
     $self->_update_domain_drivers_options();
 }
 
+sub _set_url_isos($self, $new_url='http://localhost/iso/') {
+    $new_url .= '/' if $new_url !~ m{/$};
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,url FROM iso_images "
+        ."WHERE url is NOT NULL"
+    );
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE iso_images set url=? WHERE id=?"
+    );
+    $sth->execute();
+    while ( my ($id, $url) = $sth->fetchrow) {
+        $url =~ s{\w+://(.*?)/(.*)}{$new_url$2};
+        $sth_update->execute($url, $id);
+    }
+    $sth->finish;
+
+}
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -571,6 +620,12 @@ sub _create_tables {
     closedir $ls;
 }
 
+sub _clean_iso_mini {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE device like ?");
+    $sth->execute('%/mini.iso');
+    $sth->finish;
+}
+
 sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
@@ -582,11 +637,13 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
+    $self->_clean_iso_mini();
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','sha256','varchar(255)');
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+    $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -615,10 +672,18 @@ sub _connect_dbh {
     $data_source = "DBI:$driver:database=$db;host=$host"    
         if $host && $host ne 'localhost';
 
-    return DBIx::Connector->new($data_source
+    my $con;
+    for my $try ( 1 .. 10 ) {
+        eval { $con = DBIx::Connector->new($data_source
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
-
+            $con->dbh();
+        };
+        return $con if $con && !$@;
+        sleep 1;
+        warn "Try $try $@\n";
+    }
+    die ($@ or "Can't connect to $driver $db at $host");
 }
 
 =head2 display_ip

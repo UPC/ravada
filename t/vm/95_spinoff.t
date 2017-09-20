@@ -66,6 +66,7 @@ sub test_create_domain {
 sub test_clone {
     my ($vm_name, $domain) = @_;
 
+    $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
     ok($clone);
 
@@ -102,7 +103,7 @@ sub test_prepare_base {
 
     test_files_base($domain,1);
 
-    is($domain->id_base,undef);
+#    is($domain->id_base,undef);
 }
 
 sub test_remove_base {
@@ -113,7 +114,9 @@ sub test_remove_base {
     my @files = $domain->list_files_base();
     ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
 
-    $domain->remove_base($USER);
+    eval { $domain->remove_base($USER) };
+    is($@,'');
+
     ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     for my $file (@files) {

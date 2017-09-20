@@ -83,7 +83,6 @@ plugin 'RenderFile';
 
 my %config;
 %config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
-
 our $RAVADA = Ravada::Front->new(%config);
 
 our $USER;
@@ -854,7 +853,7 @@ sub quick_start_domain {
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
 
     $domain = provision($c,  $id_base,  $domain_name)
-        if !$domain;
+        if !$domain || $domain->is_base;
 
     return show_failure($c, $domain_name) if !$domain;
 
@@ -1020,8 +1019,20 @@ sub provision {
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
 
-    my $domain = $RAVADA->search_domain(name => $name);
-    return $domain if $domain;
+    my $domain = $RAVADA->search_domain($name);
+    return $domain if $domain && !$domain->is_base;
+
+    if ($domain) {
+        my $count = 2;
+        my $name2;
+        while ($domain && $domain->is_base) {
+            $name2 = "$name-$count";
+            $domain = $RAVADA->search_domain($name2);
+            $count++;
+        }
+        return $domain if $domain;
+        $name = $name2;
+    }
 
     my @create_args = ( memory => $ram ) if $ram;
     push @create_args , ( disk => $disk) if $disk;

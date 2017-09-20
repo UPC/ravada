@@ -118,7 +118,11 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-
+            
+            $scope.only_public = false;
+            $scope.toggle_only_public=function() {
+              $scope.only_public = !$scope.only_public;
+            };
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
@@ -152,9 +156,13 @@
           };
           $scope.rename = function(machineId, old_name) {
             if ($scope.new_name_duplicated) return;
+            $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
           };
+            $scope.cancel_rename=function(old_name) {
+                $scope.new_name = old_name;
+            };
 
           $scope.validate_new_name = function(old_name) {
             if(old_name == $scope.new_name) {
