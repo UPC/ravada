@@ -1058,14 +1058,9 @@ sub _fetch_filename {
     }
     confess "No file_re" if !$row->{file_re};
 
-    if ($row->{device} && !$row->{filename}) {
-        my ( $file) = $row->{device} =~ m{.*/(.*)};
-        $row->{filename} = ($row->{rename_file} or $file);
-        return;
-    }
+    my $file;
 
     my $content = $self->_download($row->{url});
-    my $file;
     my $lines = '';
     for my $line (split/\n/,$content) {
         next if $line !~ /iso"/;
