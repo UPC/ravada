@@ -624,6 +624,10 @@ sub _clean_iso_mini {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE device like ?");
     $sth->execute('%/mini.iso');
     $sth->finish;
+
+    $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE url like ? AND rename_file = NULL");
+    $sth->execute('%/mini.iso');
+    $sth->finish;
 }
 
 sub _upgrade_tables {
@@ -637,13 +641,13 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
+    $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','sha256','varchar(255)');
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
-    $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
