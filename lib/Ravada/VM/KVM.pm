@@ -72,6 +72,7 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $WGET = `which wget`;
 chomp $WGET;
 
+our $CACHE_DOWNLOAD = 1;
 ##########################################################################
 
 
@@ -809,8 +810,12 @@ sub _iso_name {
     my $req = shift;
 
     my $iso_name;
-    ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
-    ($iso_name) = $iso->{device} if !$iso_name;
+    if ($iso->{rename_file}) {
+        $iso_name = $iso->{rename_file};
+    } else {
+        ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
+        ($iso_name) = $iso->{device} if !$iso_name;
+    }
 
     confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
 
@@ -988,7 +993,8 @@ sub _search_iso {
 
 sub _download($self, $url) {
     confess "Wrong url '$url'" if $url =~ m{\*};
-    my $cache = $self->_cache_get($url);
+    my $cache;
+    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
     my $ua = new LWP::UserAgent;
@@ -1005,7 +1011,7 @@ sub _cache_get($self, $url) {
     my $file = _cache_filename($url);
 
     my @stat = stat($file)  or return;
-    return if time-$stat[9] > 3600;
+    return if time-$stat[9] > 300;
     open my $in ,'<' , $file or return;
     return join("",<$in>);
 }
@@ -1043,16 +1049,12 @@ sub _fetch_filename {
     if (!$row->{file_re}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
-        ($file) = $row->{device} =~ m{.*/(.*)}  if !$file;
-        confess "No filename in $row->{url}" if !$file;
+        ($file) = $row->{device} =~ m{.*/(.*)}
+            if !$file && $row->{device};
+        confess "No filename in $row->{name} $row->{url}" if !$file;
 
-        if ($file =~ /\*/) {
-            $row->{url} = $new_url;
-            $row->{file_re} = $file;
-        } else {
-            $row->{filename} = $file;
-            return;
-        }
+        $row->{url} = $new_url;
+        $row->{file_re} = $file;
     }
     confess "No file_re" if !$row->{file_re};
 
@@ -1068,7 +1070,7 @@ sub _fetch_filename {
     }
     die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>$content</pre>"   if !$file;
 
-    $row->{filename} = $file;
+    $row->{filename} = ($row->{rename_file} or $file);
     $row->{url} .= "/" if $row->{url} !~ m{/$};
     $row->{url} .= $file;
 }

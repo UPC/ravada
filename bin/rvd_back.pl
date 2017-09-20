@@ -17,7 +17,8 @@ my $help;
 
 my ($DEBUG, $ADD_USER );
 
-my $FILE_CONFIG = "/etc/ravada.conf";
+my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
+my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
 my $IMPORT_DOMAIN;
@@ -25,9 +26,12 @@ my $CHANGE_PASSWORD;
 my $NOFORK;
 my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
+my $START = 1;
+
+my $URL_ISOS;
 
 my $USAGE = "$0 "
-        ." [--debug] [--config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
+        ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
         ." [-X] [start|stop|status]"
         ."\n"
@@ -36,23 +40,27 @@ my $USAGE = "$0 "
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --make-admin : make user admin\n"
-        ." --config : config file, defaults to $FILE_CONFIG"
+        ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
         ." -X : start in foreground\n"
+        ." --url-isos=(URL|default)\n"
     ;
 
-$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
+$START = 0 if scalar @ARGV && $ARGV[0] ne '&';
 
 GetOptions (       help => \$help
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
+           ,'url-isos=s'=> \$URL_ISOS
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
       ,'import-domain=s' => \$IMPORT_DOMAIN
 ) or exit;
+
+$START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
 
 #####################################################################
 #
@@ -219,6 +227,20 @@ sub import_domain {
     $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
 }
 
+sub set_url_isos {
+    my $url = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+    if ($url =~ /^default$/i) {
+        my $sth = $rvd_back->connector->dbh->prepare("DROP TABLE iso_images");
+        $sth->execute;
+        $sth->finish;
+        my $rvd_back2 = Ravada->new(%CONFIG);
+    } else {
+        $rvd_back->_set_url_isos($url);
+        print "ISO_IMAGES table URLs set from $url\n";
+    }
+}
+
 sub DESTROY {
     return if !$PID_LONGS;
     warn "Killing pid: $PID_LONGS";
@@ -231,25 +253,15 @@ sub DESTROY {
 }
 
 #################################################################
-if ($ADD_USER) {
-    add_user($ADD_USER);
-    exit;
-} elsif ($ADD_USER_LDAP) {
-    add_user($ADD_USER_LDAP);
-    exit;
-} elsif ($CHANGE_PASSWORD) {
-    change_password();
-    exit;
-} elsif ($IMPORT_DOMAIN) {
-    import_domain($IMPORT_DOMAIN);
-    exit;
-} elsif ($MAKE_ADMIN_USER) {
-    make_admin($MAKE_ADMIN_USER);
-    exit;
-} elsif ($REMOVE_ADMIN_USER) {
-    remove_admin($REMOVE_ADMIN_USER);
-    exit;
-} 
+add_user($ADD_USER)                 if $ADD_USER;
+add_user($ADD_USER_LDAP)            if $ADD_USER_LDAP;
+change_password()                   if $CHANGE_PASSWORD;
+import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
+make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
+remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
+set_url_isos($URL_ISOS)             if $URL_ISOS;
 
-die "Already started" if Proc::PID::File->running( name => 'rvd_back');
-start();
+if ($START) {
+    die "Already started" if Proc::PID::File->running( name => 'rvd_back');
+    start();
+}
