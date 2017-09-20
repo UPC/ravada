@@ -60,14 +60,17 @@ sub test_drivers_type {
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
+    my %has_not_value = map { $_ => 1 } qw(image jpeg zlib playback);
     my @drivers = $domain->drivers();
     ok(scalar @drivers,"Expecting defined drivers");
     isa_ok(\@drivers,'ARRAY');
 
     my $driver_type = $domain->drivers($type);
 
-    my $value = $driver_type->get_value();
-    ok($value);
+    if (!$has_not_value{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value");
+    }
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
@@ -156,6 +159,8 @@ sub test_drivers_clone {
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
+    my %has_not_value = map { $_ => 1 } qw(image jpeg zlib playback);
+
     my @drivers = $domain->drivers();
     ok(scalar @drivers,"Expecting defined drivers") or return;
     isa_ok(\@drivers,'ARRAY');
@@ -164,8 +169,10 @@ sub test_drivers_clone {
 
     isa_ok($driver_type,'Ravada::Domain::Driver') or return;
 
-    my $value = $driver_type->get_value();
-    ok($value);
+    if (!$has_not_value{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value,"[$vm_name] Expecting value for driver type $type : $driver_type->get_value()");
+    }
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
