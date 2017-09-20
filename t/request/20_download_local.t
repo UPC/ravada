@@ -39,7 +39,18 @@ sub test_download {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error, '');
+    is($req1->error, '') or return;
+
+    my $iso2;
+    eval { $iso2 = $vm->_search_iso($id_iso) };
+    is($@,'');
+    ok($iso2, "Expecting a iso for id = $id_iso , got ".($iso2 or '<UNDEF>'));
+    
+    my $device;
+    eval { $device = $vm->_iso_name($iso2) };
+    is($@,'');
+
+    ok($device,"Expecting a device name , got ".($device or '<UNDEF>'));
 
 }
 
