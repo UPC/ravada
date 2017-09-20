@@ -37,7 +37,7 @@ sub test_isos_vm {
         my $iso;
         $iso = $vm->_search_iso($row->{id});
 
-        ok($iso,"Expecting a ISO description");
+        ok($iso,"Expecting an ISO row for id=$row->{id}");
 
         like($iso->{url},qr{.iso}) or exit;
         like($iso->{url},qr($row->{file_re})) or exit   if $row->{file_re};
@@ -113,8 +113,14 @@ sub test_isos_already_there {
     ok($iso_mock,"Expecting an ISO for the 'mock' template");
     ok($iso_mock->{device},"Expecting device in ISO ".Dumper($iso_mock));
 
-    my $iso = $vm->_search_iso($id);
-    ok($iso->{device},"Expecting device in ISO ".Dumper($iso)) or return;
+    my $iso;
+    eval { $iso = $vm->_search_iso($id) };
+    if ($@ && $@ =~ /Can't connect to/i) {
+        diag("Skipped test $@");
+    } else {
+        is($@,'');
+        ok($iso->{device},"Expecting device in ISO ".Dumper($iso)) or return;
+    }
     _remove_iso($vm_name);
 }
 
