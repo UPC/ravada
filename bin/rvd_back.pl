@@ -17,7 +17,8 @@ my $help;
 
 my ($DEBUG, $ADD_USER );
 
-my $FILE_CONFIG = "/etc/ravada.conf";
+my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
+my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
 my $IMPORT_DOMAIN;
@@ -25,9 +26,9 @@ my $CHANGE_PASSWORD;
 my $NOFORK;
 my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
-
+my $START = 1;
 my $USAGE = "$0 "
-        ." [--debug] [--config=$FILE_CONFIG] [--add-user=name] [--add-user-ldap=name]"
+        ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
         ." [-X] [start|stop|status]"
         ."\n"
@@ -36,11 +37,12 @@ my $USAGE = "$0 "
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --make-admin : make user admin\n"
-        ." --config : config file, defaults to $FILE_CONFIG"
+        ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
         ." -X : start in foreground\n"
+        ."--set-url-isos=URL\n"
     ;
 
-$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
+$START = 0 if scalar @ARGV;
 
 GetOptions (       help => \$help
                  ,debug => \$DEBUG
@@ -53,6 +55,8 @@ GetOptions (       help => \$help
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
       ,'import-domain=s' => \$IMPORT_DOMAIN
 ) or exit;
+
+$START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
 
 #####################################################################
 #
@@ -231,25 +235,14 @@ sub DESTROY {
 }
 
 #################################################################
-if ($ADD_USER) {
-    add_user($ADD_USER);
-    exit;
-} elsif ($ADD_USER_LDAP) {
-    add_user($ADD_USER_LDAP);
-    exit;
-} elsif ($CHANGE_PASSWORD) {
-    change_password();
-    exit;
-} elsif ($IMPORT_DOMAIN) {
-    import_domain($IMPORT_DOMAIN);
-    exit;
-} elsif ($MAKE_ADMIN_USER) {
-    make_admin($MAKE_ADMIN_USER);
-    exit;
-} elsif ($REMOVE_ADMIN_USER) {
-    remove_admin($REMOVE_ADMIN_USER);
-    exit;
-} 
+add_user($ADD_USER)                 if $ADD_USER;
+add_user($ADD_USER_LDAP)            if $ADD_USER_LDAP;
+change_password()                   if $CHANGE_PASSWORD;
+import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
+make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
+remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 
-die "Already started" if Proc::PID::File->running( name => 'rvd_back');
-start();
+if ($START) {
+    die "Already started" if Proc::PID::File->running( name => 'rvd_back');
+    start();
+}
