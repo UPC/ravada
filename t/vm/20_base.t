@@ -129,10 +129,6 @@ sub test_prepare_base {
         ok($dom_front->{is_base});
     }
 
-    eval { $domain->prepare_base( $USER) };
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
     $domain->is_public(1);
 
@@ -194,9 +190,12 @@ sub test_prepare_base {
 
     touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
-
-    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
+    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
+
+    eval { $domain->start($USER)};
+    like($@,qr/bases.*started/i);
+    is($domain->is_active,0,"Expecting base domains can't be run");
 
     $domain->is_base(0);
     ok(!$domain->is_base,"[$vm_name] Expecting domain is_base=0 , got :".$domain->is_base);
@@ -223,9 +222,8 @@ sub test_prepare_base_active {
     eval{ $domain->prepare_base($USER) };
     ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
 
-    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
-    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name
-                            ." should not be paused after prepare base") or return;
+    ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
+            or return;
 }
 
 sub touch_mtime {
@@ -333,6 +331,51 @@ sub test_dont_remove_base_cloned {
 
 }
 
+sub test_spinned_off_base {
+    my $vm_name = shift;
+
+    my $base= test_create_domain($vm_name);
+    $base->prepare_base($USER);
+    ok($base->is_base,"[$vm_name] expecting domain is base, got "
+                        .$base->is_base);
+
+    my $name_clone = new_domain_name();
+
+    $base->is_public(1);
+    my $clone = rvd_back()->create_domain( name => $name_clone
+            ,id_owner => $USER->id
+            ,id_base => $base->id
+            ,vm => $vm_name
+    );
+
+    # Base can't started, it has clones
+    eval { $base->start(user => $USER) };
+    like($@,qr'.');
+    is($base->is_active,0);
+
+    $clone->prepare_base(user_admin);
+
+    $base->remove_base(user_admin());
+    # Base can get started now the clones are released
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $base->shutdown_now($USER);
+    is($base->is_active,0);
+
+    $clone->remove_base(user_admin);
+
+    # Base can get started now the clones are released even though they are not base
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $clone->remove($USER);
+    $base->remove($USER);
+}
+
+
 sub test_private_base {
     my $vm_name = shift;
 
@@ -414,6 +457,8 @@ for my $vm_name (reverse sort @VMS) {
         test_dont_remove_base_cloned($vm_name);
 
         test_private_base($vm_name);
+
+        test_spinned_off_base($vm_name);
     }
 }
 

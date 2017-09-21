@@ -34,6 +34,7 @@ our $CHAIN = 'RAVADA';
 
 my %ARG_CREATE_DOM = (
       kvm => [ id_iso => 1 ]
+      ,void => [ ]
 );
 
 sub user_admin {
@@ -45,10 +46,13 @@ sub create_domain {
     my $user = (shift or $USER_ADMIN);
     my $id_iso = shift;
 
-    $id_iso = search_id_iso($id_iso)
-        if $id_iso && $id_iso !~ /^\d+$/;
+    if ( $id_iso && $id_iso !~ /^\d+$/) {
+        my $iso_name = $id_iso;
+        $id_iso = search_id_iso($iso_name);
+        warn "I can't find iso $iso_name" if !defined $id_iso;
+    }
     my $vm = rvd_back()->search_vm($vm_name);
-    ok($vm,"I can't find VM $vm_name") or return;
+    ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
 
     my $name = new_domain_name();
 

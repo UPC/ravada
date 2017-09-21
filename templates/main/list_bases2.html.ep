@@ -30,7 +30,9 @@
                   align="right" ng-show="only_public">Show All</a>
 %           }
             </div>
+
         </div>
+%       }
         <div class="panel-body">
 %       if (! $public_bases ) {
             <div class="panel panel-warning">

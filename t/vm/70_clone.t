@@ -72,7 +72,7 @@ sub test_clone {
                 $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
                 ok(!$@,"Expecting error='', got='".($@ or '')."'");
-                ok($clone1,"Expecting new cloned domain from ".$base->name) or last;
+                ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
     is($clone1->description,undef);
                 $clone1->shutdown_now($USER) if $clone1->is_active();
@@ -98,10 +98,8 @@ sub test_mess_with_bases {
         $clone->prepare_base($USER);
     }
 
-    $base->remove_base($USER);
-    is($base->is_base,0);
-
     for my $clone (@$clones) {
+        next if $clone->is_base;
         eval { $clone->start($USER); };
         ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
 
