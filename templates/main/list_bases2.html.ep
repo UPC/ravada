@@ -23,7 +23,7 @@
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
 %           if ($user->is_admin) {
-            <div ng-show="has_public" ng-cloak>
+            <div ng-show="has_public and has_private" ng-cloak>
                 <a ng-click="toggle_only_public()" class="label label-primary"
                   align="right" ng-show="!only_public">Hide Private</a>
                 <a ng-click="toggle_only_public()" class="label label-primary"
@@ -49,7 +49,7 @@
 %       for my $machine (@$machines) {
 %           next if !$machine->{is_public} && !$user->is_admin;
             <div class="col-sm-4" 
-                <% if (!$machine->{is_public}) { %> ng-show="!only_public" <% } %>
+                <% if (!$machine->{is_public}) { %> ng-show="!only_public" ng-init="toggle_has_private()" <% } %>
                 <% if ($machine->{is_public}) { %> ng-init="toggle_has_public()" <% } %> >
             <div class="panel panel-success"> 
             <div class="panel-heading">
