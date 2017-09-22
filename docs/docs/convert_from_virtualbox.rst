@@ -57,7 +57,7 @@ DIRECTLY VDI TO QCOW2
 
 ::
 
-    $ qemu-img convert -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
+    $ qemu-img convert -p -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
 
 OR IN TWO STEPS
 ~~~~~~~~~~~~~~~
