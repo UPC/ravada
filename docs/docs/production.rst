@@ -51,7 +51,7 @@ Start
 
 Status
 ~~~~
-You should check if the daemons started right the very first time with the _status_ command. See troubleshooting frequently problems if it failed to start.
+You should check if the daemons started right the very first time with the status command. See troubleshooting frequently problems if it failed to start.
 
 ::
     
