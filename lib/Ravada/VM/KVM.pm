@@ -965,11 +965,17 @@ sub _download_file_external {
     print $out if $out;
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
-    if ($err =~ m{\[(\d+)/(\d+)\]}) {
-        die "ERROR: Expecting $1 , got $2.\n$err"
-            if $1 != $2;
+
+    return if !$err;
+
+    if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
+        if ( $1 != $2 ) {
+            unlink $device or die "$! $device" if -e $device;
+            die "ERROR: Expecting $1 , got $2.\n$err"
+        }
         return;
     }
+    unlink $device or die "$! $device" if -e $device;
     die $err;
 }
 
