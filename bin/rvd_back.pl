@@ -30,6 +30,7 @@ my $START = 1;
 
 my $URL_ISOS;
 
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
