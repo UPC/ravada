@@ -32,7 +32,6 @@
             </div>
 
         </div>
-%       }
         <div class="panel-body">
 %       if (! $public_bases ) {
             <div class="panel panel-warning">
