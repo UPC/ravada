@@ -842,10 +842,7 @@ sub _create_vm {
         $err.= $@ if $@;
         push @vms,($vm) if $vm;
     }
-
-    if (!@vms) {
-        warn "No VMs found: $err\n" if $self->warn_error;
-    }
+    die "No VMs found: $err\n" if $self->warn_error && !@vms;
     return \@vms;
 
 }
