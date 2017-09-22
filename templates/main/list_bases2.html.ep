@@ -12,20 +12,27 @@
 %   $public_bases = 1 if $machine->{is_public};
 % }
 
+
 <div id="page-wrapper">
 
     <!--MACHINES SELECTION-->
 <div class="page-header" ng-controller="bases">
     <div class="row">
     <div class="col-lg-12">
-    <div class="panel panel-default">
+    <div class="panel panel-default">    
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
-            <a ng-click="toggle_only_public()" class="label label-primary"
-              align="right" ng-show="!only_public">Show Public Machines Only</a>
-            <a ng-click="toggle_only_public()" class="label label-primary"
-              align="right" ng-show="only_public">Show All Machines</a
+%           if ($user->is_admin) {
+            <div ng-show="has_public and has_private" ng-cloak>
+                <a ng-click="toggle_only_public()" class="label label-primary"
+                  align="right" ng-show="!only_public">Hide Private</a>
+                <a ng-click="toggle_only_public()" class="label label-primary"
+                  align="right" ng-show="only_public">Show All</a>
+%           }
+            </div>
+
         </div>
+%       }
         <div class="panel-body">
 %       if (! $public_bases ) {
             <div class="panel panel-warning">
@@ -41,8 +48,10 @@
 %       }
 %       for my $machine (@$machines) {
 %           next if !$machine->{is_public} && !$user->is_admin;
-            <div class="col-sm-4" <% if (!$machine->{is_public}) { %> ng-show="!only_public" <% } %> >
-            <div class="panel panel-success">
+            <div class="col-sm-4" 
+                <% if (!$machine->{is_public}) { %> ng-show="!only_public" ng-init="toggle_has_private()" <% } %>
+                <% if ($machine->{is_public}) { %> ng-init="toggle_has_public()" <% } %> >
+            <div class="panel panel-success"> 
             <div class="panel-heading">
                 <h3 class="panel-title"><a
                    href="/machine/clone/<%= $machine->{id} %>.html"><%= $machine->{name} %></a>

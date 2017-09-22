@@ -102,7 +102,7 @@
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
-                         ng-disabled="machine.is_active || machine.is_base"
+                         ng-disabled="machine.is_active"
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
                         </a>
@@ -131,7 +131,7 @@
                        </a>
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">process</a></div>
-                      <div ng-show="machine.is_base && !machine.is_locked"
+                      <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak>This Machine is a base</div>
                     </td>
                 </tr>
