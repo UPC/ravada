@@ -49,6 +49,15 @@ Start
     $ sudo systemctl start rvd_back
     $ sudo systemctl start rvd_front
 
+Status
+~~~~
+You should check if the daemons started right the very first time with the _status_ command. See troubleshooting frequently problems if it failed to start.
+
+::
+    
+    $ sudo systemctl status rvd_back
+    $ sudo systemctl status rvd_front
+
 Stop
 ~~~~
 
@@ -56,6 +65,9 @@ Stop
 
     $ sudo systemctl stop rvd_back
     $ sudo systemctl stop rvd_front
+
+
+
 
 Apache
 ------
