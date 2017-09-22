@@ -248,10 +248,11 @@ sub import_vbox {
             chomp $storage_pool;
         }
         print "STORAGE POOL IS $storage_pool \n";
-        my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $storage_pool/$name.qcow2");
-        system(@cmd);
-
-
+        if ( $name && $file_vdi ) {
+            my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $storage_pool/$name.qcow2");
+            system(@cmd);
+        }
+        print "Warning: Missing args! \n";
         #new machine xml change source file
         #remove swap
         #remove cdrom
