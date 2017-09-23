@@ -51,6 +51,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :caption: User Documentation
    :maxdepth: 2
 
+Ravada VDI documentation
+------------------------
+
    docs/INSTALL
    docs/production
    docs/INSTALL_devel
