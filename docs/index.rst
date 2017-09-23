@@ -35,6 +35,9 @@ Our code uses the `AGPL`_ license and it is `available on GitHub`_.
 .. _Read the Docs: http://readthedocs.org/
 .. _available on GitHub: https://github.com/UPC/ravada
 
+Ravada VDI documentation
+------------------------
+
 The main documentation for the site is divided into three main sections:
 
 * :ref:`user-docs`
@@ -50,9 +53,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
 .. toctree::
    :caption: User Documentation
    :maxdepth: 2
-
-Ravada VDI documentation
-------------------------
 
    docs/INSTALL
    docs/production
