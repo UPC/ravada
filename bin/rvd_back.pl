@@ -233,6 +233,9 @@ sub import_domain {
 
 sub import_vbox {
     my $file_vdi = shift;
+    my $rvd = Ravada->new(%CONFIG);
+    my $kvm = $rvd->search_vm('KVM');
+    my $default_storage_pool = $kvm->storage_pool();
     if ($file_vdi =~ /\.vdi$/i) {
         print "Import VirtualBox image from vdi file\n";
         print "Name for the new domain : ";
@@ -244,10 +247,12 @@ sub import_vbox {
 
         if ( $default_pool_q =~ /y/i ) {
             print "Insert storage pool path : ";
-            my $storage_pool = <STDIN>;
+            $storage_pool = <STDIN>;
             chomp $storage_pool;
         }
         print "STORAGE POOL IS $storage_pool \n";
+        print "DEFAULT STORAGE POOL IS $default_storage_pool \n";
+
         if ( $name && $file_vdi ) {
             my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $storage_pool/$name.qcow2");
             system(@cmd);
