@@ -121,7 +121,7 @@
             
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
-                $scope.only_public = !$scope.only_public;
+                    $scope.only_public = !$scope.only_public;
             };
         };
 
