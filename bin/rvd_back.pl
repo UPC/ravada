@@ -241,16 +241,20 @@ sub import_vbox {
         print "Name for the new domain : ";
         my $name = <STDIN>;
         chomp $name;
+        my $id_iso;
+        #print "Is Linux or Windows : [LINUX/windows]";
+        #my $iso_q = <STDIN>;
+        $id_iso = 1;
+        #$id_iso = 2 if $iso_q =~ /w/i;
 
         my $pool = $vm->dir_img."/".$name.".qcow2";
 
         if ( $name && -e $file_vdi ) {
-            my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $pool");
-            system(@cmd);
+            ##my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $pool");
+            ##system(@cmd);
             print "Save image in default storage pool: $pool \n";
 
             #new machine xml change source file
-            my $id_iso = 1;
             my $id_owner = 1; #1 root or admin
             my $domain = $vm->create_domain(    name => $name
                                             , id_iso => $id_iso
