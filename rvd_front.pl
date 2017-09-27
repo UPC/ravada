@@ -54,6 +54,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                     hide_clones => 15
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
+                                              ,dir_cache => "$ENV{HOME}/cache"
                                               }
                                       ,file => $FILE_CONFIG
 };
@@ -153,7 +154,9 @@ sub handle_proxy {
     return access_denied($c)    if !$valid_extension{$extension}
                                     && $extension !~ /woff2\?v/;
 
-    my $file_cached = "$ENV{HOME}/$url";
+    my $file_cached = ($CONFIG_FRONT->{dir_cache} or "/var/tmp/");
+    $file_cached .= $url;
+
     my %render_args = (
         filepath => $file_cached
         ,format => $extension

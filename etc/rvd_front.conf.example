@@ -13,4 +13,6 @@
   ,login_custom => ''
   ,session_timeout => 5*60
   ,session_timeout_admin => 15*60
+
+  ,dir_cache => "/var/www/cache"
 };
