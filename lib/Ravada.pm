@@ -800,9 +800,7 @@ sub _create_vm {
         my $err_lxc = $@;
         $err .= "\n$err_lxc" if $err_lxc;
     }
-    if (!@vms) {
-        warn "No VMs found: $err\n" if $self->warn_error;
-    }
+    die "No VMs found: $err\n" if $self->warn_error && !@vms;
     return \@vms;
 
 }

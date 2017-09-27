@@ -119,19 +119,9 @@
 
             });
             
-            $scope.has_public = false;
-            $scope.toggle_has_public=function() {
-                $scope.has_public = true;
-            };
-            
-            $scope.has_private = false;
-            $scope.toggle_has_private =function() {
-                $scope.has_private = true;
-            };
-            
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
-                $scope.only_public = !$scope.only_public;
+                    $scope.only_public = !$scope.only_public;
             };
         };
 
