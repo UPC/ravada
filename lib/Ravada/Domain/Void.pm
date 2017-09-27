@@ -257,6 +257,8 @@ sub add_volume {
 
     return if -e $args{path};
 
+    return if -e $args{path};
+
     open my $out,'>>',$args{path} or die "$! $args{path}";
     print $out Dumper($data->{device}->{$args{name}});
     close $out;

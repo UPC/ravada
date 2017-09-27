@@ -314,6 +314,21 @@ sub _around_add_volume {
     return $self->$orig(%args);
 }
 
+sub _around_add_volume {
+    my $orig = shift;
+    my $self = shift;
+    my %args = @_;
+
+    my $path = $args{path};
+    if ( $path ) {
+        my $name = $args{name};
+        if (!$name) {
+            ($args{name}) = $path =~ m{.*/(.*)};
+        }
+    }
+    return $self->$orig(%args);
+}
+
 sub _pre_prepare_base {
     my $self = shift;
     my ($user, $request) = @_;
