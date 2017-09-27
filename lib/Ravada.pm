@@ -116,9 +116,9 @@ Internal constructor
 sub BUILD {
     my $self = shift;
     if ($self->config()) {
-        $self->_init_config($self->config);
+        _init_config($self->config);
     } else {
-        $self->_init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
+        _init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
     }
 
     if ( $self->connector ) {
@@ -714,8 +714,7 @@ sub display_ip {
 }
 
 sub _init_config {
-    my $self = shift;
-    my $file = shift;
+    my $file = shift or confess "ERROR: Missing config file";
 
     my $connector = shift;
     confess "Deprecated connector" if $connector;
@@ -727,18 +726,14 @@ sub _init_config {
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
-    $self->warn_error($CONFIG->{warn_error})
-        if defined $CONFIG->{warn_error};
-
-    $self->_init_config_vm();
+    _init_config_vm();
 }
 
 sub _init_config_vm {
-    my $self = shift;
 
     for my $vm ( @{$CONFIG->{vm}} ) {
         warn "$vm not available in this system.\n".($ERROR_VM{$vm})
-            if !$VALID_VM{$vm} && $self->warn_error();
+            if !$VALID_VM{$vm} && $0 !~ /\.t$/;
     }
 
     delete $VALID_VM{Void}
