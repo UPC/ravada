@@ -242,27 +242,25 @@ sub import_vbox {
         my $name = <STDIN>;
         chomp $name;
 
-        my $path = $vm->dir_img."/".$name.".qcow2";
+        my $pool = $vm->dir_img."/".$name.".qcow2";
 
         if ( $name && -e $file_vdi ) {
-            my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $path");
+            my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $pool");
             system(@cmd);
-            print "Save image in default storage pool: $path \n";
+            print "Save image in default storage pool: $pool \n";
 
             #new machine xml change source file
-            my $id_iso;
-            my $id_owner = 2;
-            my $id_base = "NULL";
+            my $id_iso = 1;
+            my $id_owner = 1; #1 root or admin
             my $domain = $vm->create_domain(    name => $name
                                             , id_iso => $id_iso
-                                            , file_iso => '<NONE>'
                                             , id_owner => $id_owner
-                                            , is_base => 0
-                                            , id_base => $id_base);
+                                            , iso_file => '<NONE>'
+                                            );
             #remove cdrom
             $domain->remove_disks();
             #add new path
-            $domain->add_volume( path => $path );
+            $domain->add_volume( path => $pool );
             exit;
         }
         print "Warning: Missing args or no such file! \n";
