@@ -248,6 +248,7 @@ sub import_vbox {
             my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $path");
             system(@cmd);
             print "Save image in default storage pool: $path \n";
+
             #new machine xml change source file
             my $id_iso;
             my $id_owner = 2;
@@ -256,7 +257,8 @@ sub import_vbox {
                                             , id_iso => $id_iso
                                             , file_iso => '<NONE>'
                                             , id_owner => $id_owner
-                                            , is_base => $is_base);
+                                            , is_base => 0
+                                            , id_base => $id_base);
             #remove cdrom
             $domain->remove_disks();
             #add new path
