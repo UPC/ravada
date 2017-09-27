@@ -125,6 +125,8 @@ has 'description' => (
 
 before 'display' => \&_allowed;
 
+around 'add_volume' => \&_around_add_volume;
+
 before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
@@ -242,6 +244,21 @@ sub _allow_remove {
     $self->_allowed($user);
     $self->_check_has_clones() if $self->is_known();
 
+}
+
+sub _around_add_volume {
+    my $orig = shift;
+    my $self = shift;
+    my %args = @_;
+
+    my $path = $args{path};
+    if ( $path ) {
+        my $name = $args{name};
+        if (!$name) {
+            ($args{name}) = $path =~ m{.*/(.*)};
+        }
+    }
+    return $self->$orig(%args);
 }
 
 sub _pre_prepare_base {
