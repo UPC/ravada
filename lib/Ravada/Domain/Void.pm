@@ -232,7 +232,6 @@ sub add_volume {
         if $args{path} !~ m{^/};
 
 
-    return if -e $args{path};
 
     my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap target));
 
@@ -255,6 +254,8 @@ sub add_volume {
     eval { DumpFile($self->_config_file, $data) };
     chomp $@;
     die "readonly=".$self->readonly." ".$@ if $@;
+
+    return if -e $args{path};
 
     open my $out,'>>',$args{path} or die "$! $args{path}";
     print $out Dumper($data->{device}->{$args{name}});
