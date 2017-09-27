@@ -54,10 +54,17 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                     hide_clones => 15
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
-                                              ,dir_cache => "$ENV{HOME}/cache"
                                               }
                                       ,file => $FILE_CONFIG
 };
+if (!$CONFIG_FRONT->{dir_cache}) {
+    if ($>) {
+        $CONFIG_FRONT->{dir_cache} = "$ENV{HOME}/cache";
+    } else {
+        $CONFIG_FRONT->{dir_cache} = "/var/www/cache";
+    }
+}
+
 #####
 #####
 #####
@@ -174,7 +181,9 @@ sub handle_proxy {
         open my $out,'>',$file_cached or warn "$! $file_cached";
         print $out $res->body;
         close $out;
-        return $c->render(data => $res->body);
+#        TODO: Why this doesn't work ? inline ?
+#        return $c->render(data => $res->body);
+        return $c->render_file(%render_args);
     } else {
         warn $url_req." ".Dumper($tx->error);
         return $c->render(data => "$url_req ".$tx->error);
