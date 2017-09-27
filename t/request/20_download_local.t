@@ -54,6 +54,23 @@ sub test_download {
 
 }
 
+sub test_download_fail {
+    my ($vm,$id_iso) = @_;
+    my $iso;
+    eval { $iso = $vm->_search_iso($id_iso) };
+    is($@,'') or return;
+    ok($iso->{url},"Expecting url ".Dumper($iso)) or return;
+    unlink($iso->{device}) or die "$! $iso->{device}"
+        if $iso->{device} && -e $iso->{device};
+    $iso->{url} =~ s{(.*)\.(.*)}{$1-failforced.$2};
+
+    my $device;
+    eval { $device = $vm->_iso_name($iso) };
+    like($@,qr/./);
+    ok(!$device);
+    ok(!-e $device, "Expecting $device missing") if $device;
+}
+
 sub local_urls {
     rvd_back->_set_url_isos('http://localhost/iso/');
 }
@@ -96,8 +113,10 @@ for my $vm_name ('KVM') {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
-
+        diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
+
+        test_download_fail($vm, 1);
 
         for my $id_iso (search_id_isos($vm)) {
             test_download($vm, $id_iso);

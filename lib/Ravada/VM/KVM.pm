@@ -956,14 +956,27 @@ sub _download_file_lwp {
 sub _download_file_external {
     my ($url,$device) = @_;
     confess "ERROR: wget missing"   if !$WGET;
-    my @cmd = ($WGET,'--quiet',$url,'-O',$device);
+    my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
+    warn "out=$out" if $out;
+    warn "err=$err" if $err;
     print $out if $out;
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
-    die $err if $err;
+
+    return if !$err;
+
+    if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
+        if ( $1 != $2 ) {
+            unlink $device or die "$! $device" if -e $device;
+            die "ERROR: Expecting $1 , got $2.\n$err"
+        }
+        return;
+    }
+    unlink $device or die "$! $device" if -e $device;
+    die $err;
 }
 
 sub _search_iso {
