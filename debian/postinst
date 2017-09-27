@@ -21,6 +21,12 @@ set -e
 case "$1" in
     configure)
         id ravada 2> /dev/null || useradd --system ravada
+        if [ ! -e /var/www/cache ]; then
+            mkdir /var/www/cache 
+        fi
+        chown ravada /var/www/cache
+        chgrp ravada /var/www/cache
+        chmod ug+rwx /var/www/cache
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
