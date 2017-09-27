@@ -169,6 +169,34 @@ sub BUILD {
     $self->is_known();
 }
 
+=head2 open
+
+Open a Domain or Virtual Machine
+
+Argument: id of the domain
+Returns: the domain object
+
+    my $domain = Ravada::Domain->open($id);
+
+=cut
+
+sub open {
+    my $self = shift;
+    my $id = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,name,vm FROM domains WHERE id=?");
+    $sth->execute($id);
+    my ($id_db,$name, $vm_type) = $sth->fetchrow();
+
+    confess "Unknown domain id=$id" if !$name || !$id_db;
+
+    my $class_vm = "Ravada::VM::$vm_type";
+    my $vm = $class_vm->new( readonly => 1);
+
+    return $vm->search_domain_by_id($id_db);
+}
+
 sub _vm_connect {
     my $self = shift;
     $self->_vm->connect();

@@ -348,6 +348,7 @@ any '/machine/remove/(:id).(:type)' => sub {
 
 any '/machine/remove_clones/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)	if !$USER ->can_remove_clone();
         return remove_clones($c);
 };
 
@@ -417,6 +418,7 @@ get '/machine/rename/#id/#value' => sub {
 any '/machine/copy' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER -> can_copy();
+#    return access_denied($c)    if !$USER -> can_clone_all();
     return copy_machine($c);
 };
 
@@ -1526,7 +1528,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    return access_denied($c)    if !$USER->is_admin();
+    
 
     my $id_base= $c->param('id_base');
 

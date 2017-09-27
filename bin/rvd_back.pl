@@ -34,7 +34,6 @@ my $URL_ISOS;
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
-        ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -44,6 +43,7 @@ my $USAGE = "$0 "
         ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
         ." -X : start in foreground\n"
         ." --url-isos=(URL|default)\n"
+        ."\n"
     ;
 
 $START = 0 if scalar @ARGV && $ARGV[0] ne '&';
@@ -163,6 +163,7 @@ sub add_user {
 
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
+
     Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);
@@ -185,7 +186,7 @@ sub change_password {
     return if !$login;
 
     my $ravada = Ravada->new( %CONFIG );
-    
+
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
