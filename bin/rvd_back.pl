@@ -233,36 +233,38 @@ sub import_domain {
 
 sub import_vbox {
     my $file_vdi = shift;
-    my $rvd = Ravada->new(%CONFIG);
-    my $kvm = $rvd->search_vm('KVM');
-    my $default_storage_pool = $kvm->storage_pool();
+    my $ravada = Ravada->new(%CONFIG);
+    my $vm = $ravada->open_vm('kvm');
+
     if ($file_vdi =~ /\.vdi$/i) {
         print "Import VirtualBox image from vdi file\n";
         print "Name for the new domain : ";
         my $name = <STDIN>;
         chomp $name;
-        print "Change default storage pool in /var/lib/libvirt/images/ [y/N]:";
-        my $default_pool_q = <STDIN>;
-        my $storage_pool = "/var/lib/libvirt/images";
 
-        if ( $default_pool_q =~ /y/i ) {
-            print "Insert storage pool path : ";
-            $storage_pool = <STDIN>;
-            chomp $storage_pool;
-        }
-        print "STORAGE POOL IS $storage_pool \n";
-        print "DEFAULT STORAGE POOL IS $default_storage_pool \n";
+        my $path = $vm->dir_img."/".$name.".qcow2";
 
-        if ( $name && $file_vdi ) {
-            my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $storage_pool/$name.qcow2");
+        if ( $name && -e $file_vdi ) {
+            my @cmd = ("qemu-img convert -p -f vdi -O qcow2 $file_vdi $path");
             system(@cmd);
+            print "Save image in default storage pool: $path \n";
+            #new machine xml change source file
+            my $id_iso;
+            my $id_owner = 2;
+            my $id_base = "NULL";
+            my $domain = $vm->create_domain(    name => $name
+                                            , id_iso => $id_iso
+                                            , file_iso => '<NONE>'
+                                            , id_owner => $id_owner
+                                            , is_base => $is_base);
+            #remove cdrom
+            $domain->remove_disks();
+            #add new path
+            $domain->add_volume( path => $path );
+            exit;
         }
-        print "Warning: Missing args! \n";
-        #new machine xml change source file
-        #remove swap
-        #remove cdrom
-
-        exit;
+        print "Warning: Missing args or no such file! \n";
+        exit
     }
     print "Warning: $file_vdi is not a vdi file \n";
     print "Check if the path has spaces, if so insert it in quotes \n";
