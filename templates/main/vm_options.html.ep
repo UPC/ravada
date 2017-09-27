@@ -20,7 +20,8 @@
                         <label class="control-label" for="timeout">Timeout</label>
                     </div>
                     <div class="col-md-2">
-                        <input type="text" value="" size="5">
+                        <input name="run_timeout" type="text"
+                            value="<%= $domain->run_timeout %>" size="5">
                     </div>
                     <div class="col-md-6">The machine will shutdown after these minutes</div>
         </div>

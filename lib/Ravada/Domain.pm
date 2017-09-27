@@ -1349,7 +1349,7 @@ sub is_public {
 
 Sets or get the domain run timeout. When it expires it is shut down.
 
-    $domain->set_timeout(60 * 60); # 60 minutes
+    $domain->run_timeout(60 * 60); # 60 minutes
 
 
 =cut
@@ -1515,6 +1515,17 @@ sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
     return $$CONNECTOR->dbh;
+}
+
+sub set_option($self, $option, $value) {
+    if ($option eq 'description') {
+        warn "$option -> $value\n";
+        $self->description($value);
+    } elsif ($option eq 'run_timeout') {
+        $self->run_timeout($value);
+    } else {
+        confess "ERROR: Unknown option '$option'";
+    }
 }
 
 1;

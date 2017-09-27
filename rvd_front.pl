@@ -1344,16 +1344,14 @@ sub settings_machine {
         }
     }
 
-    $c->stash(description => '');
-    my $description = $domain->description;
-    $c->stash(description => $description);
-
-    if ( $c->param("description") ) {
-        $domain->description($c->param("description"));
-        $c->stash(message => 'Description applied!');
-        my $description = $domain->description;
-        $c->stash(description => $description);
+    for my $option (qw(description run_timeout)) {
+        if ( defined $c->param($option) ) {
+            $domain->set_option($option, $c->param($option));
+            $c->stash(message => "\U$option changed!");
+        }
     }
+
+
 
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
