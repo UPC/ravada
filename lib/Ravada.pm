@@ -23,6 +23,7 @@ use Ravada::Request;
 use Ravada::VM::Void;
 
 our %VALID_VM;
+our %ERROR_VM;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -30,6 +31,15 @@ eval {
     };
     $VALID_VM{KVM} = 1;
 };
+$ERROR_VM{KVM} = $@;
+
+eval {
+    require Ravada::VM::Void and do {
+        Ravada::VM::Void->import;
+    };
+    $VALID_VM{Void} = 1;
+};
+$ERROR_VM{Void} = $@;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -106,9 +116,9 @@ Internal constructor
 sub BUILD {
     my $self = shift;
     if ($self->config()) {
-        _init_config($self->config);
+        $self->_init_config($self->config);
     } else {
-        _init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
+        $self->_init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
     }
 
     if ( $self->connector ) {
@@ -704,28 +714,36 @@ sub display_ip {
 }
 
 sub _init_config {
+    my $self = shift;
     my $file = shift;
 
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
     $CONFIG = YAML::LoadFile($file);
+    $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
-    _init_config_vm() if $CONFIG->{vm};
+    $self->warn_error($CONFIG->{warn_error})
+        if defined $CONFIG->{warn_error};
 
+    $self->_init_config_vm();
 }
 
 sub _init_config_vm {
-    %VALID_VM = ();
+    my $self = shift;
+
     for my $vm ( @{$CONFIG->{vm}} ) {
-        eval { require "Ravada/VM/$vm.pm"; };
-        warn $@ if $@;
-        $VALID_VM{$vm}++    if !$@;
+        warn "$vm not available in this system.\n".($ERROR_VM{$vm})
+            if !$VALID_VM{$vm} && $self->warn_error();
     }
+
+    delete $VALID_VM{Void}
+        if !grep /^Void$/,@{$CONFIG->{vm}};
+
     @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
 
