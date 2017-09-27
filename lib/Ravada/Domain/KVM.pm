@@ -678,13 +678,15 @@ Adds a new volume to the domain
     $domain->add_volume(name => $name, size => $size);
     $domain->add_volume(name => $name, size => $size, xml => 'definition.xml');
 
+    $domain->add_volume(path => "/var/lib/libvirt/images/path.img");
+
 =cut
 
 sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target path));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -698,13 +700,15 @@ sub add_volume {
         $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
     }
 
-    my $path = $args{vm}->create_volume(
+    my $path = delete $args{path};
+
+    $path = $args{vm}->create_volume(
         name => $args{name}
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
-        ,target => ( $args{target} or undef )
-    );
+        ,target => ( $args{target} or undef)
+    )   if !$path;
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
