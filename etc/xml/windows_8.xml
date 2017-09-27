@@ -9,7 +9,6 @@
   </resource>
   <os>
     <type arch='x86_64' machine='pc-i440fx-yakkety'>hvm</type>
-    <boot dev='hd'/>
   </os>
   <features>
     <acpi/>
@@ -45,6 +44,7 @@
       <target dev='hda' bus='ide'/>
       <alias name='ide0-0-0'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+      <boot order='1'/>
     </disk>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
@@ -54,6 +54,7 @@
       <readonly/>
       <alias name='ide0-0-1'/>
       <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+      <boot order='2'/>
     </disk>
     <controller type='usb' index='0' model='ich9-ehci1'>
       <alias name='usb'/>
@@ -153,4 +154,3 @@
     <imagelabel>+123:+131</imagelabel>
   </seclabel>
 </domain>
-
