@@ -252,6 +252,30 @@ sub test_domain_n_volumes {
     }
 }
 
+sub test_add_volume_path {
+    my $vm_name = shift;
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    my @volumes = $domain->list_volumes();
+
+    my $file_path = $vm->dir_img."/mock.img";
+
+    open my $out,'>',$file_path or die "$! $file_path";
+    print $out "hi\n";
+    close $out;
+
+    $domain->add_volume(path => $file_path);
+
+    my $domain2 = $vm->search_domain($domain->name);
+    my @volumes2 = $domain2->list_volumes();
+    is(scalar @volumes2,scalar @volumes + 1);# or exit;
+
+    $domain->remove(user_admin);
+    unlink $file_path or die "$! $file_path"
+        if -e $file_path;
+}
 
 sub test_domain_1_volume {
     my $vm_name = shift;
@@ -407,6 +431,8 @@ for my $vm_name (reverse sort @VMS) {
             test_domain_n_volumes($vm_name,$_);
         }
         test_search($vm_name);
+
+        test_add_volume_path($vm_name);
     }
 }
 
