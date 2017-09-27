@@ -425,7 +425,7 @@ sub test_private_base {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (reverse sort @VMS) {
+for my $vm_name ('Void','KVM') {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";

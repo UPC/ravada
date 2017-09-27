@@ -27,7 +27,7 @@ sub test_hybernate {
 
     my $domain = create_domain($vm_name, $USER) or next;
 
-    return if !$domain->can_hybernate();
+    return $domain if !$domain->can_hybernate();
 
     $domain->start($USER)   if !$domain->is_active;
 
@@ -104,13 +104,20 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
             $vm = undef;
         }
 
+        diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
 
         my $domain = test_hybernate($vm_name);
-        test_hybernate_clone($vm_name, $domain);
-        test_hybernate_clone_swap($vm_name, $domain);
 
-        test_remove_hybernated($vm_name,$domain);
+        if ( $domain->can_hybernate() ) {
+            test_hybernate_clone($vm_name, $domain);
+            test_hybernate_clone_swap($vm_name, $domain);
+
+            test_remove_hybernated($vm_name,$domain);
+        } else {
+            diag("Skipped because $vm_name domains can't hibernate");
+        }
+        $domain->remove(user_admin());
     }
 }
 
