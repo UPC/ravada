@@ -21,7 +21,7 @@
                     </div>
                     <div class="col-md-2">
                         <input name="run_timeout" type="text"
-                            value="<%= $domain->run_timeout %>" size="5">
+                            value="<%= int($domain->run_timeout / 60) %>" size="5">
                     </div>
                     <div class="col-md-6">The machine will shutdown after these minutes</div>
         </div>
