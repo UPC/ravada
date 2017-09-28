@@ -1139,6 +1139,7 @@ sub show_link {
         $description = $base->description();
     }
     $c->stash(description => $description);
+    $c->stash(domain => $domain );
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1346,7 +1347,9 @@ sub settings_machine {
 
     for my $option (qw(description run_timeout)) {
         if ( defined $c->param($option) ) {
-            $domain->set_option($option, $c->param($option));
+            my $value = $c->param($option);
+            $value *= 60 if $option eq 'run_timeout';
+            $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
         }
     }
