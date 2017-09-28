@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.9-beta';
+our $VERSION = '0.2.9-rc2';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -23,6 +23,7 @@ use Ravada::Request;
 use Ravada::VM::Void;
 
 our %VALID_VM;
+our %ERROR_VM;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -30,6 +31,15 @@ eval {
     };
     $VALID_VM{KVM} = 1;
 };
+$ERROR_VM{KVM} = $@;
+
+eval {
+    require Ravada::VM::Void and do {
+        Ravada::VM::Void->import;
+    };
+    $VALID_VM{Void} = 1;
+};
+$ERROR_VM{Void} = $@;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -198,8 +208,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
-            ,md5 => '6bd80e10bf223a04d3aafe0f997d046b'
+            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/MD5SUMS'
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot/mini.iso'
+            ,rename_file => 'xubuntu_zesty_mini.iso'
         }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
@@ -208,6 +219,7 @@ sub _update_isos {
            ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
+            ,rename_file => 'xubuntu_xenial_mini.iso'
         }
         ,lubuntu_zesty => {
             name => 'Lubuntu Zesty Zapus'
@@ -220,7 +232,8 @@ sub _update_isos {
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/lubuntu-16.04.2-desktop-amd64.iso'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/'
+            ,file_re => 'lubuntu-16.04.2-desktop-amd64.iso'
             ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
@@ -228,8 +241,9 @@ sub _update_isos {
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.0.0-amd64-xfce-CD-1.iso'
-            ,md5 => '9346436c0cf1862af71cb0a03d9a703c'
+            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -238,7 +252,35 @@ sub _update_isos {
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_10 => {
+          name => 'Windows 10'
+          ,description => 'Windows 10 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
+        }
+        ,windows_xp => {
+          name => 'Windows XP'
+          ,description => 'Windows XP 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_xp.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_12 => {
+          name => 'Windows 2012'
+          ,description => 'Windows 2012 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_12.xml'
+          ,xml_volume => 'wisuvolume.xml'
+        }
+        ,windows_8 => {
+          name => 'Windows 8.1'
+          ,description => 'Windows 8.1 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_8.xml'
+          ,xml_volume => 'wisuvolume.xml'
         }
     );
 
@@ -482,6 +524,23 @@ sub _update_data {
     $self->_update_domain_drivers_options();
 }
 
+sub _set_url_isos($self, $new_url='http://localhost/iso/') {
+    $new_url .= '/' if $new_url !~ m{/$};
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,url FROM iso_images "
+        ."WHERE url is NOT NULL"
+    );
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE iso_images set url=? WHERE id=?"
+    );
+    $sth->execute();
+    while ( my ($id, $url) = $sth->fetchrow) {
+        $url =~ s{\w+://(.*?)/(.*)}{$new_url$2};
+        $sth_update->execute($url, $id);
+    }
+    $sth->finish;
+
+}
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -571,6 +630,16 @@ sub _create_tables {
     closedir $ls;
 }
 
+sub _clean_iso_mini {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE device like ?");
+    $sth->execute('%/mini.iso');
+    $sth->finish;
+
+    $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE url like ? AND rename_file = NULL");
+    $sth->execute('%/mini.iso');
+    $sth->finish;
+}
+
 sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
@@ -582,6 +651,8 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
+    $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
+    $self->_clean_iso_mini();
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','sha256','varchar(255)');
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
@@ -601,6 +672,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
+    $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
 }
 
 
@@ -615,10 +687,18 @@ sub _connect_dbh {
     $data_source = "DBI:$driver:database=$db;host=$host"    
         if $host && $host ne 'localhost';
 
-    return DBIx::Connector->new($data_source
+    my $con;
+    for my $try ( 1 .. 10 ) {
+        eval { $con = DBIx::Connector->new($data_source
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
-
+            $con->dbh();
+        };
+        return $con if $con && !$@;
+        sleep 1;
+        warn "Try $try $@\n";
+    }
+    die ($@ or "Can't connect to $driver $db at $host");
 }
 
 =head2 display_ip
@@ -635,40 +715,53 @@ sub display_ip {
 }
 
 sub _init_config {
-    my $file = shift;
+    my $file = shift or confess "ERROR: Missing config file";
 
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
     $CONFIG = YAML::LoadFile($file);
+    $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
+
+    _init_config_vm();
+}
+
+sub _init_config_vm {
+
+    for my $vm ( @{$CONFIG->{vm}} ) {
+        warn "$vm not available in this system.\n".($ERROR_VM{$vm})
+            if !$VALID_VM{$vm} && $0 !~ /\.t$/;
+    }
+
+    delete $VALID_VM{Void}
+        if !grep /^Void$/,@{$CONFIG->{vm}};
+
+    @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
 
 sub _create_vm_kvm {
     my $self = shift;
-    return (undef, "KVM not installed") if !$VALID_VM{KVM};
+    die "KVM not installed" if !$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
 
-    return(undef,"ERROR: Missing qemu-img") if !$cmd_qemu_img;
+    die "ERROR: Missing qemu-img" if !$cmd_qemu_img;
 
     my $vm_kvm;
 
-    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
-    my $err_kvm = $@;
+    $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR ));
 
     my ($internal_vm , $storage);
-    eval {
-        $storage = $vm_kvm->dir_img();
-        $internal_vm = $vm_kvm->vm;
-    };
-    $vm_kvm = undef if $@ || !$internal_vm || !$storage;
-    $err_kvm .= ($@ or '');
-    return ($vm_kvm,$err_kvm);
+    $storage = $vm_kvm->dir_img();
+    $internal_vm = $vm_kvm->vm;
+    $vm_kvm = undef if !$internal_vm || !$storage;
+
+    return $vm_kvm;
 }
 
 =head2 disconnect_vm
@@ -712,28 +805,39 @@ sub _connect_vm {
     }
 }
 
+sub _create_vm_lxc {
+    my $self = shift;
+
+    return Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR ));
+}
+
+sub _create_vm_void {
+    my $self = shift;
+
+    return Ravada::VM::Void->new( connector => ( $self->connector or $CONNECTOR ));
+}
+
 sub _create_vm {
     my $self = shift;
 
+    # TODO: add a _create_vm_default for VMs that just are created with ->new
+    #       like Void or LXC
+    my %create = (
+        'KVM' => \&_create_vm_kvm
+        ,'LXC' => \&_create_vm_lxc
+        ,'Void' => \&_create_vm_void
+    );
+
     my @vms = ();
+    my $err;
 
-    my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
-    warn $err_kvm if $err_kvm && $0 !~ /\.t$/;
-
-    my $err = $err_kvm;
-
-    push @vms,($vm_kvm) if $vm_kvm;
-
-    my $vm_lxc;
-    if ($CAN_LXC) {
-        eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
-        push @vms,($vm_lxc) if $vm_lxc;
-        my $err_lxc = $@;
-        $err .= "\n$err_lxc" if $err_lxc;
+    for my $vm_name (keys %VALID_VM) {
+        my $vm;
+        eval { $vm = $create{$vm_name}->($self) };
+        $err.= $@ if $@;
+        push @vms,($vm) if $vm;
     }
-    if (!@vms) {
-        warn "No VMs found: $err\n" if $self->warn_error;
-    }
+    die "No VMs found: $err\n" if $self->warn_error && !@vms;
     return \@vms;
 
 }
@@ -1845,13 +1949,7 @@ Returns the version of the module
 =cut
 
 sub version {
-    my $version = $VERSION;
-    if ($version =~ /(alpha|beta)$/) {
-        my $rev_count = `git rev-list --count --all`;
-        chomp $rev_count;
-        $version .= $rev_count;
-    }
-    return $version;
+    return $VERSION;
 }
 
 

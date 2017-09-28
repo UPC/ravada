@@ -116,6 +116,7 @@ sub test_prepare_base {
     ok(!$@, $@);
     ok($domain->is_base);
     is($domain->is_active(),0);
+    $domain->is_public(1);
 
     my $front_domains = rvd_front->list_domains();
     my ($dom_front) = grep { $_->{name} eq $domain->name }
@@ -128,11 +129,8 @@ sub test_prepare_base {
         ok($dom_front->{is_base});
     }
 
-    eval { $domain->prepare_base( $USER) };
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
+    $domain->is_public(1);
 
     test_files_base($domain,1);
 
@@ -192,9 +190,12 @@ sub test_prepare_base {
 
     touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
-
-    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
+    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
+
+    eval { $domain->start($USER)};
+    like($@,qr/bases.*started/i);
+    is($domain->is_active,0,"Expecting base domains can't be run");
 
     $domain->is_base(0);
     ok(!$domain->is_base,"[$vm_name] Expecting domain is_base=0 , got :".$domain->is_base);
@@ -221,9 +222,8 @@ sub test_prepare_base_active {
     eval{ $domain->prepare_base($USER) };
     ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
 
-    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
-    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name
-                            ." should not be paused after prepare base") or return;
+    ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
+            or return;
 }
 
 sub touch_mtime {
@@ -302,6 +302,7 @@ sub test_dont_remove_base_cloned {
 
     my $name_clone = new_domain_name();
 
+    $domain->is_public(1);
     my $clone = rvd_back()->create_domain( name => $name_clone
             ,id_owner => $USER->id
             ,id_base => $domain->id
@@ -330,6 +331,93 @@ sub test_dont_remove_base_cloned {
 
 }
 
+sub test_spinned_off_base {
+    my $vm_name = shift;
+
+    my $base= test_create_domain($vm_name);
+    $base->prepare_base($USER);
+    ok($base->is_base,"[$vm_name] expecting domain is base, got "
+                        .$base->is_base);
+
+    my $name_clone = new_domain_name();
+
+    $base->is_public(1);
+    my $clone = rvd_back()->create_domain( name => $name_clone
+            ,id_owner => $USER->id
+            ,id_base => $base->id
+            ,vm => $vm_name
+    );
+
+    # Base can't started, it has clones
+    eval { $base->start(user => $USER) };
+    like($@,qr'.');
+    is($base->is_active,0);
+
+    $clone->prepare_base(user_admin);
+
+    $base->remove_base(user_admin());
+    # Base can get started now the clones are released
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $base->shutdown_now($USER);
+    is($base->is_active,0);
+
+    $clone->remove_base(user_admin);
+
+    # Base can get started now the clones are released even though they are not base
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $clone->remove($USER);
+    $base->remove($USER);
+}
+
+
+sub test_private_base {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    $domain->prepare_base($USER);
+
+    my $clone_name = new_domain_name();
+
+    my $clone;
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+
+    # admin can clone
+    eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # when is public, any can clone
+    $domain->is_public(1);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # hide it again
+    $domain->is_public(0);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+}
 
 #######################################################################33
 
@@ -337,7 +425,7 @@ sub test_dont_remove_base_cloned {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (reverse sort @VMS) {
+for my $vm_name ('Void','KVM') {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
@@ -367,6 +455,10 @@ for my $vm_name (reverse sort @VMS) {
         test_prepare_base_active($vm_name);
         test_remove_base($vm_name);
         test_dont_remove_base_cloned($vm_name);
+
+        test_private_base($vm_name);
+
+        test_spinned_off_base($vm_name);
     }
 }
 

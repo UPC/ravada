@@ -1,40 +1,30 @@
 
 <div class="panel-body">
-    <div class="row">
-        <form class="form-inline" method="post" action="/machine/copy">
-            <div class="col-md-6">
+
+<div class="form-group">
+    <form class="form-inline" method="post" action="/machine/copy">
+        <div class="row">
+            <div class="col-md-2">
                 <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
-                    <label class="col-lg-2" for="copy_name_{{showmachine.id}}"><%=l 'Name' %>:</label>
-                <div class="col-lg-10">
+                    <label class="control-label"
+                        for="copy_name_{{showmachine.id}}"><%=l 'Name' %></label>
+            </div>
+            <div class="col-md-10">
                     <input class="form-control" name="copy_name_{{showmachine.id}}" type="text" size="40"
                     value="{{showmachine.name}}-copy">
                     <!-- todo check unique name -->
-                </div>
-                    <br/>
-                    <label class="col-lg-2" for="copy_ram">RAM (Gb):</label>
-                <div class="col-lg-10">
-                    <input class="form-control" name="copy_ram" type="text" length="5" value="1">
-                </div>
-                    <br/>
-                    <div ng-show="0">
-                        <label class="col-lg-2" for="copy_disk"><del>Disk Size:</del></label>
-                        <input class="form-control" name="copy_disk_todo" type="text"
-                            value="{{showmachine.disk_size}}" disabled>
-                        <br/>
-                    </div>
-                    <div ng-show="{{showmachine.is_base}}">
-                        <label for="copy_rebase">Rebase First</label>
-                        <input class="form-control" name="copy_rebase" type="checkbox"
-                            ng-disabled="machine.has_clones">
-                            Toggle to make base from latest changes.
-                        <div ng-show="{{showmachine.has_clones}}">Remove clones to allow rebase.</div>
-                    </div>
-                    <br>
-              <input type="submit" class="btn btn-default">
-            </div>
-        </form>
-        <div class="col-md-6">
-            <!-- Description -->
+           </div>
         </div>
-    </div>
+        <div class="row">
+            <div class="col-md-2">
+                <label class="control-label" for="copy_ram">RAM (Gb)</label>
+            </div>
+            <div class="col-md-1">
+                <input class="form-control" name="copy_ram" type="text" size="3" value="1">
+            </div>
+        </div>
+        <input type="submit" class="btn btn-default">
+    </form>
+</div>
+
 </div>

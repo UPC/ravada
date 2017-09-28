@@ -131,6 +131,7 @@ sub test_clone {
 
     my $name_clone = new_domain_name();
 #    diag("[$vm_name] going to clone from ".$domain->name);
+    $domain->is_public(1);
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
@@ -181,9 +182,8 @@ sub test_files_base {
 
     $domain->stop if $domain->is_active;
     eval { $domain->start($USER) };
-    ok(!$@,"Expecting no error, got : '".($@ or '')."'")
-        or confess "[$vm_name] Error starting ".$domain->name;
-    ok($domain->is_active,"Expecting domain active");
+    ok($@,"Expecting error, got : '".($@ or '')."'");
+    ok(!$domain->is_active,"Expecting domain not active");
     $domain->shutdown_now($USER)    if $domain->is_active;
 }
 
@@ -252,6 +252,30 @@ sub test_domain_n_volumes {
     }
 }
 
+sub test_add_volume_path {
+    my $vm_name = shift;
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    my @volumes = $domain->list_volumes();
+
+    my $file_path = $vm->dir_img."/mock.img";
+
+    open my $out,'>',$file_path or die "$! $file_path";
+    print $out "hi\n";
+    close $out;
+
+    $domain->add_volume(path => $file_path);
+
+    my $domain2 = $vm->search_domain($domain->name);
+    my @volumes2 = $domain2->list_volumes();
+    is(scalar @volumes2,scalar @volumes + 1);# or exit;
+
+    $domain->remove(user_admin);
+    unlink $file_path or die "$! $file_path"
+        if -e $file_path;
+}
 
 sub test_domain_1_volume {
     my $vm_name = shift;
@@ -309,6 +333,7 @@ sub test_domain_swap {
         ok(-e $file_base,
                 "Expecting file base created for $file_base");
     }
+    $domain->is_public(1);
     my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     # after clone, the qcow file should be there, swap shouldn't
@@ -406,6 +431,8 @@ for my $vm_name (reverse sort @VMS) {
             test_domain_n_volumes($vm_name,$_);
         }
         test_search($vm_name);
+
+        test_add_volume_path($vm_name);
     }
 }
 

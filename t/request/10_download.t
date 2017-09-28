@@ -56,7 +56,7 @@ for my $vm_name ('KVM') {
 
         ################################################
         #
-        # Request for the 1st ISO
+        # Request for the 2nd ISO
         $id_iso = 2;
         my $iso2 = $vm->_search_iso($id_iso);
         if (!$iso2->{device} || ! -e $iso2->{device}) {

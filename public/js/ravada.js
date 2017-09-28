@@ -118,11 +118,16 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-
+            
+            $scope.only_public = false;
+            $scope.toggle_only_public=function() {
+                    $scope.only_public = !$scope.only_public;
+            };
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
           $scope.domain_remove = 0;
+          $scope.new_name_invalid = false;
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
@@ -151,16 +156,29 @@
             $http.get('/'+target+'/'+action+'/'+machineId+'.json');
           };
           $scope.rename = function(machineId, old_name) {
-            if ($scope.new_name_duplicated) return;
+            if ($scope.new_name_duplicated || $scope.new_name_invalid) return;
+            $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            //   TODO check previous rename returned ok
+            window.location.href = "/admin/machines";
           };
+            $scope.cancel_rename=function(old_name) {
+                $scope.new_name = old_name;
+            };
 
           $scope.validate_new_name = function(old_name) {
-            if(old_name == $scope.new_name) {
-              $scope.new_name_duplicated=false;
+            $scope.new_name_duplicated = false;
+            if(!$scope.new_name || old_name == $scope.new_name) {
+              $scope.new_name_invalid=true;
               return;
             }
+            var valid_domain_name = /^[a-zA-Z]\w+$/;
+            if ( !valid_domain_name.test($scope.new_name)) {
+                $scope.new_name_invalid = true;
+                return;
+            }
+            $scope.new_name_invalid = false;
             $http.get('/machine/exists/'+$scope.new_name)
             .then(duplicated_callback, unique_callback);
             function duplicated_callback(response) {

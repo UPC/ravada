@@ -273,7 +273,7 @@ sub test_requests_by_domain {
 }
 
 ################################################
-eval { $ravada = Ravada->new(connector => $test->connector) };
+eval { $ravada = rvd_back () };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
@@ -292,6 +292,7 @@ for my $vm_name ( qw(Void KVM)) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
+        diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
@@ -305,7 +306,10 @@ for my $vm_name ( qw(Void KVM)) {
     
         my $domain_base = test_req_create_base($vm);
         if ($domain_base) {
-            test_req_start_domain($vm,$domain_base->name);
+            $domain_base->is_public(1);
+            my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
+            test_req_start_domain($vm,$domain_clone->name);
+            $domain_clone->remove($USER);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
 

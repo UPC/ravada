@@ -333,6 +333,46 @@ sub test_description {
     my $domain2 = rvd_back->search_domain($domain->name);
     is($domain2->description, $description) or exit;
 }
+
+sub test_create_domain_nocd {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $name = new_domain_name();
+
+    my $id_iso = search_id_iso('Debian');
+    my $iso;
+    eval { $iso = $vm->_search_iso($id_iso,'<NONE>')};
+    return if $@ && $@ =~ /Can't locate object method/;
+    is($@,'');
+
+    ok(!$iso->{device},"Expecting no device. Got: "
+                        .($iso->{device} or '<UNDEF>')) or return;
+
+    my $domain;
+    eval { $domain = rvd_back->search_vm($vm_name)->create_domain(
+             name => $name
+          ,id_iso => $id_iso
+        ,id_owner => $USER->id
+        ,iso_file => '<NONE>'
+    );};
+    is($@,'');
+    ok($domain,"Expecting a domain");
+
+    my $iso2 = select_iso($id_iso);
+    is($iso->{id}, $iso2->{id}) or return;
+    ok(!$iso2->{device},"Expecting no device. Got: "
+                        .($iso2->{device} or '<UNDEF>'));
+}
+
+sub select_iso {
+    my $id = shift;
+    my $sth = $test->connector->dbh->prepare("SELECT * FROM iso_images"
+        ." WHERE id=?");
+    $sth->execute($id);
+    return $sth->fetchrow_hashref;
+}
+
 #######################################################
 
 remove_old_domains();
@@ -365,12 +405,15 @@ for my $vm_name (qw( Void KVM )) {
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
 
+        test_create_domain_nocd($vm_name);
+
         my $domain = test_create_domain($vm_name);
         test_open($vm_name, $domain);
 
         test_description($vm_name, $domain);
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
+        $domain->is_public(1);
         my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
@@ -384,6 +427,11 @@ for my $vm_name (qw( Void KVM )) {
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
         test_screenshot_file($vm_name, $domain);
+
+        test_remove_domain($vm_name, $clone1);
+        test_remove_domain($vm_name, $clone2);
+
+        $domain->remove_base($USER);
         test_manage_domain($vm_name, $domain);
         test_screenshot($vm_name, $domain);
 
@@ -391,9 +439,8 @@ for my $vm_name (qw( Void KVM )) {
         test_pause_domain($vm_name, $domain);
         test_shutdown_paused_domain($vm_name, $domain);
 
-        test_remove_domain($vm_name, $clone1);
-        test_remove_domain($vm_name, $clone2);
         test_remove_domain($vm_name, $domain);
+
     };
 }
 remove_old_domains();

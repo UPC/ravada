@@ -88,6 +88,7 @@ sub test_dont_remove_father {
 
     my $domain = test_create_domain($vm_name);
     $domain->prepare_base($USER);
+    $domain->is_public(1);
 
     my $name_clone = new_domain_name();
 

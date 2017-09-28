@@ -138,6 +138,11 @@ sub _around_create_domain {
 
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
 
+    if ($args{id_base}) {
+        my $base = $self->search_domain_by_id($args{id_base});
+        $domain->run_timeout($base->run_timeout)
+            if defined $base->run_timeout();
+    }
     return $domain;
 }
 
@@ -297,16 +302,22 @@ sub _check_require_base {
 
     my %args = @_;
     return if !$args{id_base};
-
+    
     my $base = Ravada::Domain->open($args{id_base});
     if ($base->list_requests) {
         die "ERROR: Domain ".$base->name." has ".$base->list_requests
             ." requests.\n";
     }
 
+    my $id_owner = $args{id_owner} or confess "ERROR: id_owner required ";
+
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    die "ERROR: Base ".$base->name." is not public\n"
+        unless $user->is_admin || $base->is_public;
 }
 
 =head2 id

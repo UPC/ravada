@@ -145,13 +145,15 @@ sub add_user {
     $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
     $sth->finish;
 
-    return if !$is_admin;
-
-    my $id_grant = _search_id_grant('grant');
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
     $sth->execute($name);
     my ($id_user) = $sth->fetchrow;
     $sth->finish;
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+
+    # temporary allow grant permissions
+    my $id_grant = _search_id_grant('grant');
 
     $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
@@ -161,8 +163,14 @@ sub add_user {
     $sth->execute($id_grant, $id_user);
     $sth->finish;
 
-    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    $user->grant_user_permissions($user);
+    if (!$is_admin) {
+        $user->grant_user_permissions($user);
+        $user->revoke($user,'grant');
+        return $user;
+    }
     $user->grant_admin_permissions($user);
+    return $user;
 }
 
 sub _search_id_grant {
@@ -288,6 +296,9 @@ sub make_admin($self, $id) {
     $sth->execute($id);
     $sth->finish;
 
+    my $user = $self->search_by_id($id);
+    $self->grant_admin_permissions($user);
+
 }
 
 =head2 remove_admin
@@ -322,6 +333,21 @@ Returns true if the user is admin.
 sub is_admin {
     my $self = shift;
     return $self->{_data}->{is_admin};
+}
+
+=head2 is_operator
+
+Returns true if the user is admin or has been granted special permissions
+
+=cut
+
+sub is_operator {
+    my $self = shift;
+    return $self->is_admin()
+        || $self->can_shutdown_clone()
+	|| $self->can_hibernate_clone
+	|| $self->can_change_settings_clones()
+        || $self->can_remove_clone();
 }
 
 =head2 is_external
@@ -566,7 +592,7 @@ sub grant($self,$user,$permission,$value=1) {
     return $value if defined $value_sql && $value_sql eq $value;
 
     my $id_grant = _search_id_grant($permission);
-    if (! defined $value_sql ) {
+    if (! defined $user->can_do($permission)) {
         my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"
