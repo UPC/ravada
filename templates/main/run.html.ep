@@ -10,10 +10,18 @@
                        href="<%= $url_display_file %>"><%= $name %></a></h2>
 
         <div class="panel-body">
-%               if ($description) {
+%               if ($description || $domain->run_timeout) {
                     <div class="panel-body">
                         <div class="alert alert-info">
                             <%= $description %>
+%                           if ($description && $domain->run_timeout) {
+                                <hr>
+%                           }
+%                           if ($domain->run_timeout ) {
+                                This machine will shut down in
+                                <%= int($domain->run_timeout / 60 ) %>
+                                minutes.
+%                           }
                         </div>
                     </div>
 %               }
