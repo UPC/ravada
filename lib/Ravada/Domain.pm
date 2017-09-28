@@ -1143,7 +1143,7 @@ sub _post_start {
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
-                 name => $self->name
+            id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$self->run_timeout
                  , timeout => 59
