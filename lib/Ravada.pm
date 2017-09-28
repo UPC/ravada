@@ -836,10 +836,7 @@ sub _create_vm {
         $err.= $@ if $@;
         push @vms,($vm) if $vm;
     }
-
-    if (!@vms) {
-        warn "No VMs found: $err\n" if $self->warn_error;
-    }
+    die "No VMs found: $err\n" if $self->warn_error && !@vms;
     return \@vms;
 
 }
@@ -1745,12 +1742,23 @@ sub _cmd_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $name = $request->defined_arg('name');
+    my $id_domain = $request->defined_arg('id_domain');
     my $timeout = ($request->args('timeout') or 60);
 
+    confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
+
     my $domain;
+    if ($name) {
     $domain = $self->search_domain($name);
     die "Unknown domain '$name'\n" if !$domain;
+    }
+    if ($id_domain) {
+        my $domain2 = $self->search_domain_by_id($id_domain);
+        die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
+            if $domain && $domain->name ne $domain2->name;
+        $domain = $domain2;
+    }
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 

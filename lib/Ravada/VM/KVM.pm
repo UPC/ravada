@@ -536,6 +536,8 @@ sub _domain_create_from_iso {
     for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
+
+    my $iso_file = delete $args{iso_file};
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
         if keys %args2;
 
@@ -544,7 +546,7 @@ sub _domain_create_from_iso {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-    my $iso = $self->_search_iso($args{id_iso});
+    my $iso = $self->_search_iso($args{id_iso} , $iso_file);
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
@@ -552,10 +554,12 @@ sub _domain_create_from_iso {
     my $device_cdrom;
 
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$args{iso_file};
+        if !$iso->{url} && !$iso_file;
 
-    if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
-      $device_cdrom = $args{iso_file};
+    if ($iso_file) {
+        if ( $iso_file ne "<NONE>") {
+            $device_cdrom = $iso_file;
+        }
     }
     else {
       $device_cdrom = $self->_iso_name($iso, $args{request});
@@ -582,7 +586,11 @@ sub _domain_create_from_iso {
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
-    _xml_modify_cdrom($xml, $device_cdrom);
+    if ($device_cdrom) {
+        _xml_modify_cdrom($xml, $device_cdrom);
+    } else {
+        _xml_remove_cdrom($xml);
+    }
     _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
@@ -956,24 +964,40 @@ sub _download_file_lwp {
 sub _download_file_external {
     my ($url,$device) = @_;
     confess "ERROR: wget missing"   if !$WGET;
-    my @cmd = ($WGET,'--quiet',$url,'-O',$device);
+    my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
+    warn "out=$out" if $out;
+    warn "err=$err" if $err;
     print $out if $out;
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
-    die $err if $err;
+
+    return if !$err;
+
+    if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
+        if ( $1 != $2 ) {
+            unlink $device or die "$! $device" if -e $device;
+            die "ERROR: Expecting $1 , got $2.\n$err"
+        }
+        return;
+    }
+    unlink $device or die "$! $device" if -e $device;
+    die $err;
 }
 
 sub _search_iso {
     my $self = shift;
     my $id_iso = shift or croak "Missing id_iso";
+    my $file_iso = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
+
+    return $row if $file_iso;
 
     $self->_fetch_filename($row);#    if $row->{file_re};
     $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
