@@ -395,6 +395,59 @@ sub test_req_remove_base {
     check_files_removed(@files_base);
 }
 
+sub test_shutdown_by_name {
+    my ($vm_name, $domain_name) = @_;
+
+    my $id_domain;
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_name);
+    $id_domain = $domain->id;
+    $domain->start($USER);
+
+    is($domain->is_active,1);
+
+    my $req;
+    eval { $req = Ravada::Request->shutdown_domain(
+        name => $domain_name
+        ,uid => $USER->id
+        );
+    };
+    is($@,'') or return;
+    ok($req);
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status(),'done');
+
+    my $domain2 = $vm->search_domain($domain_name);
+    is($domain2->is_active,0);
+}
+
+sub test_shutdown_by_id {
+    my ($vm_name, $domain_name) = @_;
+
+    my $id_domain;
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_name);
+    $id_domain = $domain->id;
+    $domain->start($USER);
+
+    is($domain->is_active,1);
+
+    my $req;
+    eval { $req = Ravada::Request->shutdown_domain(
+        id_domain => $id_domain
+        ,uid => $USER->id
+        );
+    };
+    is($@,'') or return;
+    ok($req);
+    rvd_back->_process_all_requests_dont_fork(1);
+    is($req->status(),'done');
+    is($req->error(),'');
+
+    my $domain2 = $vm->search_domain($domain_name);
+    is($domain2->is_active,0);
+}
+
 ################################################
 
 {
@@ -433,7 +486,9 @@ for my $vm_name ( qw(KVM Void)) {
         diag("Testing requests with $vm_name");
         test_swap($vm_name);
 
-        test_req_create_domain_iso($vm_name);
+        my $domain_name = test_req_create_domain_iso($vm_name);
+        test_shutdown_by_name($vm_name, $domain_name);
+        test_shutdown_by_id($vm_name, $domain_name);
 
         my $base_name = test_req_create_domain($vm_name) or next;
 
