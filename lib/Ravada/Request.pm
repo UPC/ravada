@@ -421,6 +421,8 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
+        $args{id_domain} = $args{args}->{id_domain}
+            if exists $args{args}->{id_domain} && ! $args{id_domain};
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
