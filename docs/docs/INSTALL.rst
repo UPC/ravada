@@ -35,8 +35,9 @@ Ubuntu
 ------
 
 We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__. Download and
-install them:
+repository <http://infoteleco.upc.edu/img/debian/>`__. There we have
+also development releases. Try them if you want to help us testing
+new features.
 
 ::
 
