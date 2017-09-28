@@ -34,14 +34,14 @@ our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
-              vm => 1
+              vm => 2
            ,name => 1
            ,swap => 2
-         ,id_iso => 1
+         ,id_iso => 2
          ,iso_file => 2
-        ,id_base => 1
+        ,id_base => 2
        ,id_owner => 1
-    ,id_template => 1
+    ,id_template => 2
          ,memory => 2
            ,disk => 2
         ,network => 2
@@ -140,19 +140,15 @@ sub create_domain {
 
     my %args = @_;
 
-    confess "Missing domain name "
-        if !$args{name};
+    my $args = _check_args('create_domain', @_ );
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
-    }
     my $self = {};
-    if ($args{network}) {
-        $args{network} = JSON::XS->new->convert_blessed->encode($args{network});
+    if ($args->{network}) {
+        $args->{network} = JSON::XS->new->convert_blessed->encode($args->{network});
     }
 
     bless($self,$class);
-    return $self->_new_request(command => 'create' , args => encode_json(\%args));
+    return $self->_new_request(command => 'create' , args => encode_json($args));
 }
 
 =head2 remove_domain

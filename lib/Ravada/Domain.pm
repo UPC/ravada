@@ -1511,6 +1511,27 @@ sub remote_ip {
 
 }
 
+=head2 list_requests
+
+Returns a list of pending requests from the domain
+
+=cut
+
+sub list_requests {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while ( my $req_data =  $sth->fetchrow_hashref ) {
+        push @list,($req_data);
+    }
+    $sth->finish;
+    return scalar @list if !wantarray;
+    return map { Ravada::Request->open($_->{id}) } @list;
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
