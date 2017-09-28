@@ -27,6 +27,8 @@ has '_ip' => (
 
 our $DIR_TMP = "/var/tmp/rvd_void";
 
+our $IMPORT = `which import`;
+chomp $IMPORT;
 #######################################3
 
 sub BUILD {
@@ -37,18 +39,22 @@ sub BUILD {
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
-    
-    return if $args->{id_base} || $args->{is_readonly};
-
     my ($file_img) = $self->disk_device;
     return if $file_img && -e $file_img;
+    return if $args->{readonly};
 
-    $self->add_volume(name => 'void-diska' , size => ( $args->{disk} or 1)
+    if ($args->{id_base}) {
+        my $base = Ravada::Domain->open($args->{id_base});
+        my $drivers = $base->_value('drivers');
+        $self->_store(drivers => $drivers );
+    } else {
+        $self->add_volume(name => 'void-diska' , size => ( $args->{disk} or 1)
                         , path => $file_img
                         , type => 'file'
                         , target => 'vda'
-    );
-
+        );
+        $self->_set_default_drivers();
+    }
     $self->_set_default_info();
     $self->set_memory($args->{memory}) if $args->{memory};
 }
@@ -107,7 +113,9 @@ sub _store {
 
     $data->{$var} = $value;
 
-    DumpFile($disk, $data);
+    eval { DumpFile($disk, $data) };
+    chomp $@;
+    confess $@ if $@;
 
 }
 
@@ -243,7 +251,9 @@ sub add_volume {
     $args{target} = _new_target($data);
 
     $data->{device}->{$args{name}} = \%args;
-    DumpFile($self->_config_file, $data);
+    eval { DumpFile($self->_config_file, $data) };
+    chomp $@;
+    die "readonly=".$self->readonly." ".$@ if $@;
 
     return if -e $args{path};
 
@@ -332,7 +342,24 @@ sub list_volumes_target {
 
 }
 
-sub screenshot {}
+sub screenshot {
+    my $self = shift;
+    my $file = (shift or $self->_file_screenshot);
+
+    my @cmd =($IMPORT,'-window','root'
+        ,'-resize','400x300'
+        ,$file
+    );
+    my ($in,$out,$err);
+    run3(\@cmd, \$in, \$out, \$err);
+}
+
+sub _file_screenshot {
+    my $self = shift;
+    return $DIR_TMP."/".$self->name.".png";
+}
+
+sub can_screenshot { return $IMPORT; }
 
 sub get_info {
     my $self = shift;
@@ -367,6 +394,29 @@ sub set_memory {
     my $value = shift;
     
     $self->_set_info(memory => $value );
+}
+
+sub get_driver {
+    my $self = shift;
+    my $name = shift;
+
+    my $drivers = $self->_value('drivers');
+    return $drivers->{$name};
+}
+
+sub set_driver {
+    my $self = shift;
+    my $name = shift;
+    my $value = shift or confess "Missing value for driver $name";
+
+    my $drivers = $self->_value('drivers');
+    $drivers->{$name}= $value;
+    $self->_store(drivers => $drivers);
+}
+
+sub _set_default_drivers {
+    my $self = shift;
+    $self->_store( drivers => { video => 'value=void'});
 }
 
 sub set_max_mem {
@@ -428,4 +478,6 @@ sub clean_swap_volumes {
 }
 
 sub hybernate { confess "Not supported"; }
+
+sub type { 'Void' }
 1;

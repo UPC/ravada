@@ -241,9 +241,32 @@ sub _allow_remove {
     my $self = shift;
     my ($user) = @_;
 
-    $self->_allowed($user);
-    $self->_check_has_clones() if $self->is_known();
+    die "ERROR: remove not allowed for user ".$user->name
+        if !$user->can_remove();
 
+    $self->_check_has_clones() if $self->is_known();
+    if ($self->is_known() && $user->can_remove_clone() && $self->id_base) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    }
+    $self->_allowed($user);
+
+}
+
+sub _allow_shutdown {
+    my $self = shift;
+    my %args = @_;
+
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    if ( $self->id_base() && $user->can_shutdown_clone()) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    } elsif($user->can_shutdown_all) {
+        return;
+    } else {
+        $self->_allowed($user);
+    }
 }
 
 sub _around_add_volume {
@@ -385,7 +408,7 @@ sub _allowed {
     eval { $id_owner = $self->id_owner };
     my $err = $@;
 
-    die "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
         ." owned by ".($id_owner or '<UNDEF>')."\n".Dumper($self)
             if (defined $id_owner && $id_owner != $user->id );
 
@@ -441,9 +464,17 @@ Returns: Domain object read only
 
 sub open($class, $id) {
     my $self = {};
-    bless $self,$class;
+
+    if (ref($class)) {
+        $self = $class;
+    } else {
+        bless $self,$class
+    }
 
     my $row = $self->_select_domain_db ( id => $id );
+
+    die "ERROR: Domain not found id=$id\n"
+        if !keys %$row;
 
     my $vm0 = {};
     my $vm_class = "Ravada::VM::".$row->{vm};
@@ -974,7 +1005,7 @@ sub _post_pause {
 sub _pre_shutdown {
     my $self = shift;
 
-    $self->_allow_manage_args(@_);
+    $self->_allow_shutdown(@_);
 
     $self->_pre_shutdown_domain();
 

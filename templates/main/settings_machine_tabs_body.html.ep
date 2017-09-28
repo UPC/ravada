@@ -28,7 +28,7 @@
       % }
     </div>
 % }
-% if (1) { # TODO check VM is KVM
+% if ($domain->type eq 'KVM') {
     <div class="tab-pane fade" id="graphics">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'

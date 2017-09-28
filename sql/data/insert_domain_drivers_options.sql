@@ -31,3 +31,5 @@ INSERT INTO `domain_drivers_options` VALUES (24,7,'off','compression="off"');
 INSERT INTO `domain_drivers_options` VALUES (25,8,'filter','mode="filter"');
 INSERT INTO `domain_drivers_options` VALUES (26,8,'all','mode="all"');
 INSERT INTO `domain_drivers_options` VALUES (27,8,'off','mode="off"');
+INSERT INTO `domain_drivers_options` VALUES (100,100,'QXL','value=qxl');
+INSERT INTO `domain_drivers_options` VALUES (101,100,'EGA','value=ega');
