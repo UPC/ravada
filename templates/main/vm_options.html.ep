@@ -9,9 +9,8 @@
                     <div class="input-group-addon"><b>Memory</b></div>
                     <input class="form-control" type="text" name="ram" size="5" disabled
                     value="<%= int($domain->get_info->{memory} / 1024) %>">
-                    <div class="input-group-addon"><b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
+                    <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
                                 MB available.
-                    </div>
                 </div>
             </div>
         </div>

@@ -101,9 +101,7 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
-  my $version = $RAVADA->version();
-  $version =~ s/-/_/g;
-  $c->stash(version => $version);
+  $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
@@ -208,16 +206,17 @@ any '/admin' => sub {
 any '/admin/(#type)' => sub {
   my $c = shift;
 
-  return access_denied($c)    if !$USER->is_admin;
+  return admin($c)  if $c->stash('type') eq 'machines'
+                        && $USER->is_operator;
+
+  return access_denied($c)    if !$USER->is_operator;
 
   return admin($c);
 };
 
 any '/new_machine' => sub {
     my $c = shift;
-
-    return access_denied($c)    if !$USER->is_admin;
-
+    return access_denied($c)    if !$USER->can_create_domain;
     return new_machine($c);
 };
 
@@ -304,7 +303,9 @@ get '/machine/info/(:id).(:type)' => sub {
 };
 
 any '/machine/settings/(:id).(:type)' => sub {
-    return settings_machine(@_);
+   	 my $c = shift;
+	 return access_denied($c)     if !$USER->can_change_settings();
+	 return settings_machine($c);
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
@@ -321,28 +322,33 @@ get '/machine/view/(:id).(:type)' => sub {
 };
 
 get '/machine/clone/(:id).(:type)' => sub {
-    my $c = shift;
+    my $c = shift;      
+    return access_denied($c)	     if !$USER->can_clone();
     return clone_machine($c);
 };
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)        if !$USER ->can_shutdown_all();
         return shutdown_machine($c);
 };
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)        if !$USER ->can_shutdown_all();
         return shutdown_machine($c);
 };
 
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)       if !$USER -> can_remove();
         return remove_machine($c);
 };
 
 any '/machine/remove_clones/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)	if !$USER ->can_remove_clone();
         return remove_clones($c);
 };
 
@@ -363,6 +369,7 @@ get '/machine/remove_base/(:id).(:type)' => sub {
 
 get '/machine/screenshot/(:id).(:type)' => sub {
         my $c = shift;
+        return access_denied($c)   if !$USER->can_screenshot();
         return screenshot_machine($c);
 };
 
@@ -373,6 +380,7 @@ get '/machine/pause/(:id).(:type)' => sub {
 
 get '/machine/hybernate/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)   if !$USER ->can_hibernate_all();
         return hybernate_machine($c);
 };
 
@@ -398,6 +406,7 @@ get '/machine/exists/#name' => sub {
 
 get '/machine/rename/#id' => sub {
     my $c = shift;
+    return access_denied($c)       if !$USER -> can_rename();
     return rename_machine($c);
 };
 
@@ -408,6 +417,8 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
+    return access_denied($c)    if !$USER -> can_copy();
+#    return access_denied($c)    if !$USER -> can_clone_all();
     return copy_machine($c);
 };
 
@@ -907,7 +918,6 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
-    my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -920,16 +930,18 @@ sub new_machine {
     }
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
+    my %valid_vm = map { $_ => 1 } @{$RAVADA->list_vm_types};
     $c->render(template => 'main/new_machine'
-        , name => $c->param('name'), vm => $vm
+        , name => $c->param('name')
+        , valid_vm => \%valid_vm
     );
 };
 
 sub req_new_domain {
     my $c = shift;
     my $name = $c->param('name');
-    my $vm = ( $c->param('backend') or 'KVM');
     my $swap = ($c->param('swap') or 0);
+    my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
     my %args = (
            name => $name
@@ -938,10 +950,10 @@ sub req_new_domain {
         ,iso_file => $c->param('iso_file')
         ,vm=> $vm
         ,id_owner => $USER->id
-        ,memory => int($c->param('memory')*1024*1024)
-        ,disk => int($c->param('disk')*1024*1024*1024)
         ,swap => $swap
     );
+    $args{memory} = int($c->param('memory')*1024*1024)  if $args{memory};
+    $args{disk} = int($c->param('disk')*1024*1024*1024) if $args{disk};
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
@@ -1192,19 +1204,21 @@ sub init {
 
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
-            return if -e $home->rel_dir("public");
+            return if -e $home->rel_file("public");
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
-            or $home->rel_dir("public"));
+            or $home->rel_file("public"));
     app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
-            or $home->rel_dir("templates"));
+            or $home->rel_file("templates"));
     app->renderer->paths->[1] =($CONFIG_FRONT->{dir}->{custom}
-            or $home->rel_dir("templates"));
+            or $home->rel_file("templates"));
 
 }
 
 sub _search_requested_machine {
     my $c = shift;
+    confess "Missing \$c" if !defined $c;
+
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
@@ -1238,23 +1252,32 @@ sub register {
     my $username = $c->param('username');
     my $password = $c->param('password');
    
-   if($username) {
-       my @list_users = Ravada::Auth::SQL::list_all_users();
-       warn join(", ", @list_users);
-      
-       if (grep {$_ eq $username} @list_users) {
-           push @error,("Username already exists, please choose another one"); 
-           $c->render(template => 'bootstrap/new_user',error => \@error);
-       }
-       else {
-           #username don't exists
-           Ravada::Auth::SQL::add_user(name => $username, password => $password);
-           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
-       }
+ #   if($c ->param('submit')) {
+ #       push @error,("Name is mandatory")   if !$c->param('username');
+ #       push @error,("Invalid username '".$c->param('username')."'"
+ #               .".It can only contain words and numbers.")
+ #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
+ #       if (!@error) {
+ #           Ravada::Auth::SQL::add_user($username, $password,0);
+ #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+ #       }
+
+#    }
+#    $c->stash(errors => \@error);
+#    push @{$c->stash->{js}}, '/js/admin.js';
+#    $c->render(template => 'bootstrap/new_user_control'
+#        , name => $c->param('username')
+#)    
+    
+   if ($username) {
+       Ravada::Auth::SQL::add_user(name => $username, password => $password);
+       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
    }
-   $c->render(template => 'bootstrap/new_user',error => \@error);
+   $c->render(template => 'bootstrap/new_user');
+
 
 }
+
 
 sub manage_machine {
     my $c = shift;
@@ -1505,7 +1528,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    return access_denied($c)    if !$USER->is_admin();
+    
 
     my $id_base= $c->param('id_base');
 

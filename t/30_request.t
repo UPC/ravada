@@ -224,7 +224,7 @@ sub test_unread_messages {
 
 
 ################################################
-eval { $ravada = Ravada->new(connector => $test->connector) };
+eval { $ravada = rvd_back () };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
@@ -238,11 +238,12 @@ for my $vm_name ( qw(Void KVM)) {
     };
 
     SKIP: {
-        my $msg = "SKIPPED: No virtual managers found";
+        my $msg = "SKIPPED: No $vm_name found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
+        diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));

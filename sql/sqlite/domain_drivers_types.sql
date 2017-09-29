@@ -3,5 +3,5 @@ CREATE TABLE `domain_drivers_types` (
 ,  `name` char(32) DEFAULT NULL
 ,  `description` varchar(200) DEFAULT NULL
 ,  `vm` char(32)
-,  UNIQUE (`name`)
+,  UNIQUE (`name`,`vm`)
 );
