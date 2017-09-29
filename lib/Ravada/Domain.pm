@@ -1464,4 +1464,10 @@ sub _dbh {
     return $$CONNECTOR->dbh;
 }
 
+sub type {
+    my $self = shift;
+    my ($type) = $self =~ m{.*::(.*)};
+    return $type;
+}
+
 1;
