@@ -1204,14 +1204,14 @@ sub init {
 
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
-            return if -e $home->rel_dir("public");
+            return if -e $home->rel_file("public");
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
-            or $home->rel_dir("public"));
+            or $home->rel_file("public"));
     app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
-            or $home->rel_dir("templates"));
+            or $home->rel_file("templates"));
     app->renderer->paths->[1] =($CONFIG_FRONT->{dir}->{custom}
-            or $home->rel_dir("templates"));
+            or $home->rel_file("templates"));
 
 }
 
