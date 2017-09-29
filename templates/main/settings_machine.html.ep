@@ -7,7 +7,7 @@
 <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-<div ng-controller="singleMachinePage">
+<div ng-controller="singleMachinePage" ng-init="one_check_only()">
     <div class="page-header">
         <div class="panel panel-default">
              <div class="panel-heading">
