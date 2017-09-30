@@ -8,5 +8,13 @@ New entries must be added in the ``en.po`` file.
 Because it is the basis of the other language files.
 The language files are stored `here <https://github.com/UPC/ravada/tree/master/lib/Ravada/I18N/>`_ in lib/Ravada/I18N.
 
+Before uploading the changes check if there are repeated msgid.
+The ``msguniq`` command should not display any output lines.
+::
+
+    $ msguniq --repeated en.po
+
+
+
 If you need to work directly in .po file, it's a good option use an application
 like `Poedit <https://poedit.net/>`__.
