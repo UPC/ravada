@@ -1464,6 +1464,12 @@ sub _dbh {
     return $$CONNECTOR->dbh;
 }
 
+=head2 type
+
+Returns the virtual machine type as a string.
+
+=cut
+
 sub type {
     my $self = shift;
     my ($type) = $self =~ m{.*::(.*)};
