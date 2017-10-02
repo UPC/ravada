@@ -1129,8 +1129,13 @@ sub _post_resume {
 
 sub _post_start {
     my $self = shift;
-    my %arg = @_;
+    my %arg;
 
+    if (scalar @_ % 2) {
+        $arg{user} = $_[0];
+    } else {
+        %arg = @_;
+    }
     $self->_add_iptable(@_);
 
     if ($self->run_timeout) {
