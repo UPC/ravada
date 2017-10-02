@@ -17,7 +17,7 @@ use_ok('Ravada');
 
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RAVADA = rvd_back( $test->connector , 't/etc/ravada_kvm.conf');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
@@ -26,7 +26,7 @@ $DOMAIN_NAME_SON =~ s/base_//;
 my $USER = create_user('foo','bar');
 
 sub test_vm_kvm {
-    my $vm = $RAVADA->vm->[0];
+    my $vm = $RAVADA->search_vm('KVM');
     ok($vm,"No vm found") or exit;
     ok(ref($vm) =~ /KVM$/,"vm is no kvm ".ref($vm)) or exit;
 
@@ -129,7 +129,8 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    $domain->prepare_base($USER);
+    eval { $domain->prepare_base($USER) };
+    is($@,'') or exit;
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);

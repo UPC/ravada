@@ -1139,6 +1139,11 @@ sub _post_start {
         %arg = @_;
     }
 
+    if (scalar @_ % 2) {
+        $arg{user} = $_[0];
+    } else {
+        %arg = @_;
+    }
     $self->_add_iptable(@_);
 
     if ($self->run_timeout) {
@@ -1354,7 +1359,6 @@ Sets or get the domain run timeout. When it expires it is shut down.
 
     $domain->run_timeout(60 * 60); # 60 minutes
 
-
 =cut
 
 sub run_timeout {
@@ -1550,6 +1554,18 @@ sub set_option($self, $option, $value) {
     } else {
         confess "ERROR: Unknown option '$option'";
     }
+}
+
+=head2 type
+
+Returns the virtual machine type as a string.
+
+=cut
+
+sub type {
+    my $self = shift;
+    my ($type) = $self =~ m{.*::(.*)};
+    return $type;
 }
 
 1;
