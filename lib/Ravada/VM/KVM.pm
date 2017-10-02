@@ -1186,7 +1186,7 @@ sub _xml_remove_cpu {
     my $doc = shift;
     my ($domain) = $doc->findnodes('/domain') or confess "Missing node domain";
     my ($cpu) = $domain->findnodes('cpu');
-    $domain->removeChild($cpu);
+    $domain->removeChild($cpu)  if $cpu;
 }
 
 sub _xml_modify_video {
