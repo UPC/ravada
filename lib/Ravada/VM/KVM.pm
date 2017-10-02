@@ -241,9 +241,10 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
         if !ref($pattern) || ref($pattern) ne 'Regexp';
 
+    $self->_refresh_storage_pools()    if $refresh;
+
     my @volume;
     for my $pool ($self->vm->list_storage_pools) {
-        $pool->refresh()    if $refresh;
         for my $vol ( $pool->list_all_volumes()) {
             my ($file) = $vol->get_path =~ m{.*/(.*)};
             next if $file !~ $pattern;
@@ -264,7 +265,10 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
-        $pool->refresh();
+        eval { $pool->refresh() };
+        last if !$@;
+        warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
+        sleep 1;
     }
 }
 
