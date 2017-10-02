@@ -25,12 +25,16 @@ use POSIX qw(locale_h);
 
 my $help;
 
-my $FILE_CONFIG;
+my $FILE_CONFIG = "/etc/rvd_front.conf";
+
+my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
-    warn "WARNING: Found config file at $_ and at $FILE_CONFIG\n"
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
         if -e $file && $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
+    $error_file_duplicated++;
 }
+warn "WARNING: using $FILE_CONFIG\n"    if$error_file_duplicated>2;
 
 my $FILE_CONFIG_RAVADA;
 for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
@@ -1135,6 +1139,7 @@ sub show_link {
         $description = $base->description();
     }
     $c->stash(description => $description);
+    $c->stash(domain => $domain );
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1340,16 +1345,16 @@ sub settings_machine {
         }
     }
 
-    $c->stash(description => '');
-    my $description = $domain->description;
-    $c->stash(description => $description);
-
-    if ( $c->param("description") ) {
-        $domain->description($c->param("description"));
-        $c->stash(message => 'Description applied!');
-        my $description = $domain->description;
-        $c->stash(description => $description);
+    for my $option (qw(description run_timeout)) {
+        if ( defined $c->param($option) ) {
+            my $value = $c->param($option);
+            $value *= 60 if $option eq 'run_timeout';
+            $domain->set_option($option, $value);
+            $c->stash(message => "\U$option changed!");
+        }
     }
+
+
 
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
@@ -1546,7 +1551,7 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    if (!$base->is_base) {
+    if (!$base->is_base || $base->is_locked) {
         my $req = Ravada::Request->prepare_base(
             id_domain => $id_base
             ,uid => $USER->id

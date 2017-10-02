@@ -9,7 +9,6 @@
                     ng-init="backend = 'KVM'"
                     ng-options="item for item in backends track by item "
                     required=""
-                    disabled
                 ></select>
             </div>
         </div>

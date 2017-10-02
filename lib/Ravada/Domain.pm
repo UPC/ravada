@@ -194,7 +194,7 @@ sub _start_preconditions{
     } else {
         _allow_manage(@_);
     }
-    _check_free_memory();
+    $self->_check_free_memory();
     _check_used_memory(@_);
 
 }
@@ -343,6 +343,9 @@ sub _check_has_clones {
 }
 
 sub _check_free_memory{
+    my $self = shift;
+    return if ref($self) =~ /Void/i;
+
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
     die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
@@ -1130,6 +1133,11 @@ sub _post_resume {
 sub _post_start {
     my $self = shift;
     my %arg;
+    if ( scalar @_ % 2 ==1 ) {
+        $arg{user} = $_[0];
+    } else {
+        %arg = @_;
+    }
 
     if (scalar @_ % 2) {
         $arg{user} = $_[0];
@@ -1140,7 +1148,7 @@ sub _post_start {
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
-                 name => $self->name
+            id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$self->run_timeout
                  , timeout => 59
@@ -1349,8 +1357,7 @@ sub is_public {
 
 Sets or get the domain run timeout. When it expires it is shut down.
 
-    $domain->set_timeout(60 * 60); # 60 minutes
-
+    $domain->run_timeout(60 * 60); # 60 minutes
 
 =cut
 
@@ -1511,10 +1518,42 @@ sub remote_ip {
 
 }
 
+=head2 list_requests
+
+Returns a list of pending requests from the domain
+
+=cut
+
+sub list_requests {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while ( my $req_data =  $sth->fetchrow_hashref ) {
+        push @list,($req_data);
+    }
+    $sth->finish;
+    return scalar @list if !wantarray;
+    return map { Ravada::Request->open($_->{id}) } @list;
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
     return $$CONNECTOR->dbh;
+}
+
+sub set_option($self, $option, $value) {
+    if ($option eq 'description') {
+        warn "$option -> $value\n";
+        $self->description($value);
+    } elsif ($option eq 'run_timeout') {
+        $self->run_timeout($value);
+    } else {
+        confess "ERROR: Unknown option '$option'";
+    }
 }
 
 =head2 type
