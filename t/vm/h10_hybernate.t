@@ -61,7 +61,7 @@ sub test_hybernate_clone {
     is($clone->is_active,1);
 
     $clone->shutdown_now($USER) if $clone->is_active;
-
+    $clone->remove($USER);
 }
 
 sub test_hybernate_clone_swap {
