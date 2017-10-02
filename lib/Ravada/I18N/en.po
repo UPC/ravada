@@ -430,9 +430,6 @@ msgstr ""
 msgid "Create"
 msgstr ""
 
-msgid "Permissions"
-msgstr ""
-
 msgid "can change the settings of owned virtual machines."
 msgstr ""
 
