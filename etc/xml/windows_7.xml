@@ -6,7 +6,6 @@
   <vcpu placement='static'>1</vcpu>
   <os>
     <type arch='x86_64' machine='pc-i440fx-yakkety'>hvm</type>
-    <boot dev='hd'/>
   </os>
   <features>
     <acpi/>
@@ -17,9 +16,6 @@
       <spinlocks state='on' retries='8191'/>
     </hyperv>
   </features>
-  <cpu mode='custom' match='exact'>
-    <model fallback='allow'>Penryn</model>
-  </cpu>
   <clock offset='localtime'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
@@ -40,6 +36,7 @@
       <source file='/var/lib/libvirt/images/win7-donotcrash.qcow2'/>
       <target dev='hda' bus='ide'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+      <boot order='1'/>
     </disk>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
@@ -47,6 +44,7 @@
       <target dev='hdb' bus='ide'/>
       <readonly/>
       <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+      <boot order='2'/>
     </disk>
     <controller type='usb' index='0' model='ich9-ehci1'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x7'/>
