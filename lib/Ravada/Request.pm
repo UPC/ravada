@@ -52,7 +52,7 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2 }
+    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
