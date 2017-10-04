@@ -34,7 +34,8 @@ my $URL_ISOS;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
-        ." [--change-password] [--make-admin=username]"
+        ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
+        ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"

@@ -228,7 +228,8 @@ sub _remove_old_disks_kvm {
     eval { $dir_img = $vm->dir_img() };
     return if !$dir_img;
 
-    eval { $vm->storage_pool->refresh() };
+    $vm->_refresh_storage_pools();
+
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
     opendir my $ls,$dir_img or return;

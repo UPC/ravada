@@ -222,6 +222,55 @@ sub test_unread_messages {
     $user->mark_all_messages_read();
 }
 
+sub test_requests_by_domain {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = create_domain($vm_name, user_admin);
+    ok($domain,"Expecting new domain created") or exit;
+
+    my $req1 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 1);
+
+    my $req2 = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 2);
+
+    my $clone_name = new_domain_name();
+    my $req_clone = Ravada::Request->create_domain (
+        name => $clone_name
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,vm => $vm_name
+    );
+
+    my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 3);
+
+    eval {
+            rvd_back->_process_all_requests_dont_fork();
+    };
+
+
+    is($req1->status , 'done');
+    is($req2->status , 'done');
+
+    is($@,'');
+    like($req_clone->error,qr(has \d req)) or exit;
+    is($req_clone->status , 'retry');
+
+    is($req4->status , 'done');
+    is($domain->is_base,1) or exit;
+
+    my $req4b = Ravada::Request->open($req4->id);
+    is($req4b->status , 'done') or exit;
+
+    rvd_back->_process_all_requests_dont_fork();
+    like($req_clone->status,qr(done)) or exit;
+    is($req_clone->error, '') or exit;
+
+    my $clone = $vm->search_domain($clone_name);
+    ok($clone,"Expecting domain $clone_name created") or exit;
+}
 
 ################################################
 eval { $ravada = rvd_back () };
@@ -248,6 +297,7 @@ for my $vm_name ( qw(Void KVM)) {
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
     
+        test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);
         test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;
     
@@ -262,6 +312,7 @@ for my $vm_name ( qw(Void KVM)) {
             $domain_clone->remove($USER);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
+
     };
 }
 

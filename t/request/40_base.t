@@ -410,12 +410,19 @@ sub test_shutdown_by_name {
     eval { $req = Ravada::Request->shutdown_domain(
         name => $domain_name
         ,uid => $USER->id
+        ,timeout => 1
         );
     };
     is($@,'') or return;
     ok($req);
     rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
+
+    for ( 1 .. 2 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        last if !$domain->is_active;
+        sleep 1;
+    }
 
     my $domain2 = $vm->search_domain($domain_name);
     is($domain2->is_active,0);
@@ -436,13 +443,20 @@ sub test_shutdown_by_id {
     eval { $req = Ravada::Request->shutdown_domain(
         id_domain => $id_domain
         ,uid => $USER->id
+        ,timeout => 1
         );
     };
     is($@,'') or return;
     ok($req);
-    rvd_back->_process_all_requests_dont_fork(1);
+    rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
     is($req->error(),'');
+
+    for ( 1 .. 2 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        last if !$domain->is_active;
+        sleep 1;
+    }
 
     my $domain2 = $vm->search_domain($domain_name);
     is($domain2->is_active,0);

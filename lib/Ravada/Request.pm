@@ -34,14 +34,14 @@ our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
-              vm => 1
+              vm => 2
            ,name => 1
            ,swap => 2
-         ,id_iso => 1
+         ,id_iso => 2
          ,iso_file => 2
-        ,id_base => 1
+        ,id_base => 2
        ,id_owner => 1
-    ,id_template => 1
+    ,id_template => 2
          ,memory => 2
            ,disk => 2
         ,network => 2
@@ -52,7 +52,7 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2 }
+    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
@@ -140,19 +140,15 @@ sub create_domain {
 
     my %args = @_;
 
-    confess "Missing domain name "
-        if !$args{name};
+    my $args = _check_args('create_domain', @_ );
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
-    }
     my $self = {};
-    if ($args{network}) {
-        $args{network} = JSON::XS->new->convert_blessed->encode($args{network});
+    if ($args->{network}) {
+        $args->{network} = JSON::XS->new->convert_blessed->encode($args->{network});
     }
 
     bless($self,$class);
-    return $self->_new_request(command => 'create' , args => encode_json(\%args));
+    return $self->_new_request(command => 'create' , args => encode_json($args));
 }
 
 =head2 remove_domain
@@ -425,6 +421,8 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
+        $args{id_domain} = $args{args}->{id_domain}
+            if exists $args{args}->{id_domain} && ! $args{id_domain};
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;

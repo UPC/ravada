@@ -672,6 +672,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
+    $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
 }
 
 
@@ -902,7 +903,14 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    return $vm->create_domain(@_);
+    my $domain;
+    eval { $domain = $vm->create_domain(@_) };
+    my $error = $@;
+    $request->error($error) if $error;
+    if ($error =~ /has \d+ requests/) {
+        $request->status('retry');
+    }
+    return $domain;
 }
 
 =head2 remove_domain
@@ -1074,7 +1082,7 @@ sub list_bases {
     for my $vm (@{$self->vm}) {
         for my $domain ($vm->list_domains) {
             eval { $domain->id };
-            warn $@ if $@;
+            confess $@ if $@;
             next    if $@;
             push @domains,($domain) if $domain->is_base;
         }
@@ -1226,7 +1234,7 @@ sub process_requests {
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
-        ."    ( status='requested' OR status like 'retry %' OR status='waiting')"
+        ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
         ." ORDER BY date_req"
     );
@@ -1263,6 +1271,8 @@ sub process_requests {
             if ( $n_retry < 3) {
                 warn $req->id." ".$req->command." to retry" if $DEBUG;
                 $req->status("retry ".++$n_retry)
+            } else {
+                $req->status("done");
             }
         }
         next if !$DEBUG && !$debug;
@@ -1375,12 +1385,14 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
+    $request->error('');
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
-        $request->error($err);
-        $request->status('done') if $request->status() ne 'done';
+        $request->error($err) if $err;
+        $request->status('done') if $request->status() ne 'done'
+                                    && $request->status !~ /retry/;
         return $err;
     }
 
@@ -1419,7 +1431,9 @@ sub _do_execute_command {
     };
     my $err = ( $@ or '');
     $request->error($err);
-    $request->status('done') if $request->status() ne 'done';
+    $request->status('done') 
+        if $request->status() ne 'done'
+            && $request->status() !~ /^retry/i;
     exit;
 
 }
@@ -1473,9 +1487,9 @@ sub _cmd_create{
             .$request->args('name')."</a>"
             ." created."
         ;
+        $request->status('done',$msg);
     }
 
-    $request->status('done',$msg);
 
 }
 
