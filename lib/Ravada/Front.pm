@@ -623,7 +623,8 @@ sub list_requests {
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
-                || $command eq 'hibernate';
+                || $command eq 'hibernate'
+                || $command eq 'ping_backend';
         my $args;
         $args = decode_json($j_args) if $j_args;
 
