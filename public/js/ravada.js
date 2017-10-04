@@ -128,7 +128,7 @@
         function singleMachinePageC($scope, $http, $interval, request, $location) {
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
-          $scope.machine_settings= false;
+          $scope.machine_settings= 1;
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
@@ -164,13 +164,9 @@
             //   TODO check previous rename returned ok
             window.location.href = "/admin/machines";
           };
-            $scope.cancel_rename=function(old_name) {
+          $scope.cancel_rename=function(old_name) {
                 $scope.new_name = old_name;
-            };
-            
-            $scope.one_check_only=function() {
-              $scope.machine_settings = true;
-            }
+          };
 
           $scope.validate_new_name = function(old_name) {
             $scope.new_name_duplicated = false;
@@ -196,13 +192,11 @@
           $scope.set_public = function(machineId, value) {
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-
+          
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.getSingleMachine();
-          if ($scope.machine_settings) {
-             $scope.updatePromise = $interval($scope.getSingleMachine,3000);
-          }
+          // $scope.updatePromise = $interval($scope.getSingleMachine,3000);
         };
 
     function swListMach() {
