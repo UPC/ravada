@@ -775,7 +775,6 @@ sub is_locked {
     my ($id, $at_time) = $sth->fetchrow;
     $sth->finish;
 
-    warn time - $at_time if $at_time;
     return 0 if $at_time && $at_time - time > 1;
     return ($id or 0);
 }
@@ -1534,6 +1533,7 @@ sub list_requests {
     $sth->execute($self->id);
     my @list;
     while ( my $req_data =  $sth->fetchrow_hashref ) {
+        next if $req_data->{at_time} && $req_data->{at_time} - time > 1;
         push @list,($req_data);
     }
     $sth->finish;
