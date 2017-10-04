@@ -769,12 +769,14 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
         ." WHERE id_domain=? AND status <> 'done'");
     $sth->execute($self->id);
-    my ($id) = $sth->fetchrow;
+    my ($id, $at_time) = $sth->fetchrow;
     $sth->finish;
 
+    warn time - $at_time if $at_time;
+    return 0 if $at_time && $at_time - time > 1;
     return ($id or 0);
 }
 
