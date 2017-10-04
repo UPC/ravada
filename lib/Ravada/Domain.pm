@@ -1545,6 +1545,23 @@ sub _dbh {
     return $$CONNECTOR->dbh;
 }
 
+=head2 set_option
+
+Sets a domain option:
+
+=over
+
+=item * description
+
+=item * run_timeout
+
+=back
+
+
+    $domain->set_option(description => 'Virtual Machine for ...');
+
+=cut
+
 sub set_option($self, $option, $value) {
     if ($option eq 'description') {
         warn "$option -> $value\n";
