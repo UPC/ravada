@@ -46,14 +46,14 @@ sub test_run_timeout {
     $clone->start(user => $USER);
 
     is($clone->is_active,1);
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
     is($clone->is_active,1);
     sleep($timeout);
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
     for ( 1 .. 60 ) {
         last if !$clone->is_active;
         sleep 1;
-        rvd_back->_process_requests_dont_fork(1);
+        rvd_back->_process_requests_dont_fork();
     }
     is($clone->is_active,0);
 
