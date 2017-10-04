@@ -295,19 +295,27 @@ sub hibernate {
     my $down = 0;
     my $found = 0;
     for my $domain ($rvd_back->list_domains) {
-        next if $domain_name && $domain_name ne 'ALL'
-            && $domain->name ne $domain_name;
-        if ($domain->name eq $domain_name) {
+        if ( ($domain_name eq 'ALL' && $domain->is_active)
+                || ($domain->name eq $domain_name)) {
             $found++;
             if (!$domain->is_active) {
                 warn "WARNING: Virtual machine ".$domain->name
-                    ." already down.\n";
+                    ." is already down.\n";
                 next;
             }
-            $domain->hibernate();
+            if ($domain->can_hibernate) {
+                $domain->hibernate();
+            } else {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." can't hibernate because it is not supported in ".$domain->type
+                    ." domains."
+                    ."\n";
+            }
         }
     }
     print "$down machines hibernated.\n";
+    warn "ERROR: Domain $domain_name not found.\n"
+        if $domain_name ne 'ALL' && !$found;
 }
 
 sub DESTROY {
