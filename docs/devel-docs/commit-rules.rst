@@ -83,3 +83,10 @@ If you want to run only one test:
 
 Proper testing requires the Perl Module Test::SQL::Data , available
 here: https://github.com/frankiejol/Test-SQL-Data
+
+Contribution Guide
+------------------
+
+Check our contribution guide for more information about this topic.
+
+https://github.com/UPC/ravada/blob/master/CONTRIBUTING.md
