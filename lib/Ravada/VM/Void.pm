@@ -75,20 +75,28 @@ sub dir_img {
 }
 
 sub list_domains {
+    my $self = shift;
+
     opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
-    my %domain;
+    my @domain;
     while (my $file = readdir $ls ) {
         next if $file !~ /\.yml$/;
         $file =~ s/\.\w+//;
         $file =~ s/(.*)\.qcow.*$/$1/;
         next if $file !~ /\w/;
-        $domain{$file}++;
+
+        my $domain = Ravada::Domain::Void->new(
+                    domain => $file
+                     , _vm => $self
+        );
+        next if !$domain->is_known;
+        push @domain , ($domain);
     }
 
     closedir $ls;
 
-    return keys %domain;
+    return @domain;
 }
 
 sub search_domain {
