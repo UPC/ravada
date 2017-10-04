@@ -1065,6 +1065,17 @@ Returns wether a domain supports hybernation
 
 sub can_hybernate { 0 };
 
+=head2 can_hibernate
+
+Returns wether a domain supports hibernation
+
+=cut
+
+sub can_hibernate {
+    my $self = shift;
+    return $self->can_hybernate();
+};
+
 =head2 add_volume_swap
 
 Adds a swap volume to the virtual machine
