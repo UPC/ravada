@@ -103,8 +103,8 @@ sub search_domain {
     my $self = shift;
     my $name = shift or confess "ERROR: Missing name";
 
-    for my $name_vm ( $self->list_domains ) {
-        next if $name_vm ne $name;
+    for my $domain_vm ( $self->list_domains ) {
+        next if $domain_vm->name ne $name;
 
         my $domain = Ravada::Domain::Void->new( 
             domain => $name
@@ -114,6 +114,7 @@ sub search_domain {
         my $id;
 
         eval { $id = $domain->id };
+        warn $@ if $@;
         return if !defined $id;#
         return $domain;
     }
