@@ -163,9 +163,9 @@
             //   TODO check previous rename returned ok
             window.location.href = "/admin/machines";
           };
-            $scope.cancel_rename=function(old_name) {
+          $scope.cancel_rename=function(old_name) {
                 $scope.new_name = old_name;
-            };
+          };
 
           $scope.validate_new_name = function(old_name) {
             $scope.new_name_duplicated = false;
@@ -191,11 +191,11 @@
           $scope.set_public = function(machineId, value) {
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-
+          
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.getSingleMachine();
-          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+          // $scope.updatePromise = $interval($scope.getSingleMachine,3000);
         };
 
     function swListMach() {
