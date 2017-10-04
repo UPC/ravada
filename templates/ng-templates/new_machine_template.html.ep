@@ -75,11 +75,11 @@
         </div>
 
         <div class="form-group row" ng-if="backend == 'KVM'">
-            <label for="disk" class="col-lg-2 control-label"><%=l 'Disk Size: (GB)' %></label>
+            <label for="disk" class="col-lg-2 control-label"><%=l 'Disk Size: (GB)' %></label>            
             <div class="col-lg-2">
-                <input class="form-control" ng-model="ddsize" type="number" name="disk"
-                    min="1" max="100" required="">
-            </div>
+                <input class="slider form-control" ng-model="ddsize" type="range" name="disk"
+                    min="1" max="100" value="20" required="">
+            </div>{{ddsize}}
             <a ng-show="!seeswap"
                 ng-click="show_swap()"
                 class="label label-primary"
@@ -89,20 +89,25 @@
                 class="label label-primary"
                 align="right">Remove swap</a>
         </div>
-        <div class="form-group row" ng-if="backend == 'KVM'">
-            <label for="swap" ng-show="seeswap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
+        <div class="form-group row" ng-show="seeswap" ng-if="backend == 'KVM'">
+            <label for="swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
             <div class="col-lg-2">
-                <input class="form-control" ng-show="seeswap" ng-model="swapsize.value" type="number" name="swap"
-                    min="0" max="4" >
-            </div> 
+                <input class="slider form-control" ng-model="swapsize.value" 
+                type="range" name="swap" min="0" max="4">
+            </div>{{swapsize.value}}
         </div>
         <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
                 <label for="memory"  class="col-lg-2 control-label"><%=l 'Ram: (GB)' %></label>
                 <div class="col-lg-2">
+                    <input class="slider form-control" ng-model="ramsize" type="range" 
+                    name="memory" min="1" max="4" required="">
+                </div>{{ramsize}}
+                <!-- <div class="col-lg-2">
                     <input class="form-control" ng-model="ramsize" type="number" name="memory"
                         min="1" max="4" required="">
-                </div>
+                </div> -->
+                
             </div>
         </div>
         <div class="form-group row">
