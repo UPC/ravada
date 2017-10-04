@@ -30,7 +30,7 @@ my $REMOVE_ADMIN_USER;
 my $START = 1;
 
 my $URL_ISOS;
-
+my $HIBERNATE;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
@@ -46,6 +46,7 @@ my $USAGE = "$0 "
         ." -X : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
+        ." --hibernate=machine|ALL\n"
         ."\n"
     ;
 
@@ -57,6 +58,7 @@ GetOptions (       help => \$help
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
+          ,'hibernate=s'=> \$HIBERNATE
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -85,6 +87,7 @@ my %CONFIG;
 
 $Ravada::DEBUG=1    if $DEBUG;
 $Ravada::CAN_FORK=0    if $NOFORK;
+
 ###################################################################
 
 my $PID_LONGS;
@@ -273,6 +276,7 @@ sub import_vbox {
 sub set_url_isos {
     my $url = shift;
     my $rvd_back = Ravada->new(%CONFIG);
+
     if ($url =~ /^default$/i) {
         my $sth = $rvd_back->connector->dbh->prepare("DROP TABLE iso_images");
         $sth->execute;
@@ -282,6 +286,28 @@ sub set_url_isos {
         $rvd_back->_set_url_isos($url);
         print "ISO_IMAGES table URLs set from $url\n";
     }
+}
+
+sub hibernate {
+    my $domain_name = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        next if $domain_name && $domain_name ne 'ALL'
+            && $domain->name ne $domain_name;
+        if ($domain->name eq $domain_name) {
+            $found++;
+            if (!$domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." already down.\n";
+                next;
+            }
+            $domain->hibernate();
+        }
+    }
+    print "$down machines hibernated.\n";
 }
 
 sub DESTROY {
@@ -296,6 +322,11 @@ sub DESTROY {
 }
 
 #################################################################
+
+{
+
+my $rvd_back = Ravada->new(%CONFIG);
+
 add_user($ADD_USER)                 if $ADD_USER;
 add_user($ADD_USER_LDAP)            if $ADD_USER_LDAP;
 change_password()                   if $CHANGE_PASSWORD;
@@ -304,6 +335,11 @@ import_vbox($IMPORT_VBOX)           if $IMPORT_VBOX;
 make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
+
+hibernate($HIBERNATE)               if $HIBERNATE;
+
+}
+
 
 if ($START) {
     die "Already started" if Proc::PID::File->running( name => 'rvd_back');
