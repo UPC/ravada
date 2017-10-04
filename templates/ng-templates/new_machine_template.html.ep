@@ -103,11 +103,6 @@
                     <input class="slider form-control" ng-model="ramsize" type="range" 
                     name="memory" min="1" max="4" required="">
                 </div>{{ramsize}}
-                <!-- <div class="col-lg-2">
-                    <input class="form-control" ng-model="ramsize" type="number" name="memory"
-                        min="1" max="4" required="">
-                </div> -->
-                
             </div>
         </div>
         <div class="form-group row">
