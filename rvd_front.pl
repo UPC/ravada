@@ -1538,6 +1538,8 @@ sub start_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
+    return $c->render(text => "Domain not found") if !$domain;
+
     my $req = Ravada::Request->start_domain( uid => $USER->id
                                            ,name => $domain->name
                                       ,remote_ip => _remote_ip($c)
