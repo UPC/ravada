@@ -85,7 +85,7 @@ but here's the suggested workflow:
 
 ```sh
 git checkout 325_boost_performance
-git pull --rebase upstream master
+git pull --rebase origin master
 git push --force-with-lease origin 325_boost_performance
 ```
 
