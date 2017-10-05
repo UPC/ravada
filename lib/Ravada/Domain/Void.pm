@@ -39,20 +39,11 @@ sub BUILD {
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
-    my ($file_img) = $self->disk_device;
-    return if $file_img && -e $file_img;
-    return if $args->{readonly};
-
     if ($args->{id_base}) {
         my $base = Ravada::Domain->open($args->{id_base});
         my $drivers = $base->_value('drivers');
         $self->_store(drivers => $drivers );
     } else {
-        $self->add_volume(name => 'void-diska' , size => ( $args->{disk} or 1)
-                        , path => $file_img
-                        , type => 'file'
-                        , target => 'vda'
-        );
         $self->_set_default_drivers();
     }
     $self->_set_default_info();
@@ -268,6 +259,7 @@ sub _new_target {
     return 'vda'    if !$data or !keys %$data;
     my %targets;
     for my $dev ( keys %{$data->{device}}) {
+        confess "Missing device ".Dumper($data) if !$dev;
         $targets{$data->{device}->{$dev}->{target}}++
     }
     return 'vda'    if !keys %targets;

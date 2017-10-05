@@ -47,6 +47,7 @@ sub create_domain {
                                            , domain => $args{name}
                                            , _vm => $self
     );
+
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
         , id_base => $args{id_base} );
 
@@ -62,6 +63,13 @@ sub create_domain {
                                 , path => "$dir/$new_name"
                                  ,type => 'file');
         }
+    } else {
+        my ($file_img) = $domain->disk_device();
+        $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
+                        , path => $file_img
+                        , type => 'file'
+                        , target => 'vda'
+        )
     }
 #    $domain->start();
     return $domain;
