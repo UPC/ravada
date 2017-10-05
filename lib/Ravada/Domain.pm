@@ -274,6 +274,8 @@ sub _allow_shutdown {
 sub _around_add_volume {
     my $orig = shift;
     my $self = shift;
+    confess "ERROR in args ".Dumper(\@_)
+        if scalar @_ % 2;
     my %args = @_;
 
     my $path = $args{path};
