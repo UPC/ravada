@@ -31,6 +31,8 @@ my $START = 1;
 
 my $URL_ISOS;
 my $HIBERNATE;
+my $ALL;
+my $LIST;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
@@ -53,12 +55,14 @@ my $USAGE = "$0 "
 $START = 0 if scalar @ARGV && $ARGV[0] ne '&';
 
 GetOptions (       help => \$help
+                   ,all => \$ALL
+                  ,list => \$LIST
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
-          ,'hibernate=s'=> \$HIBERNATE
+          ,'hibernate:s'=> \$HIBERNATE
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -68,6 +72,7 @@ GetOptions (       help => \$help
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
+
 
 #####################################################################
 #
@@ -288,14 +293,37 @@ sub set_url_isos {
     }
 }
 
+sub list {
+    my $all = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        next if !$all && !$domain->is_active;
+        $found++;
+        print $domain->name."\t";
+        if ($domain->is_active) {
+            print "active";
+        } elsif ($domain->is_hibernated) {
+            print "hibernated";
+        } else {
+            print "down";
+        }
+        print "\n";
+    }
+    print "$found machines found.\n";
+}
+
 sub hibernate {
     my $domain_name = shift;
+    my $all = shift;
+
     my $rvd_back = Ravada->new(%CONFIG);
 
     my $down = 0;
     my $found = 0;
     for my $domain ($rvd_back->list_domains) {
-        if ( ($domain_name eq 'ALL' && $domain->is_active)
+        if ( ($all && $domain->is_active)
                 || ($domain->name eq $domain_name)) {
             $found++;
             if (!$domain->is_active) {
@@ -305,6 +333,7 @@ sub hibernate {
             }
             if ($domain->can_hibernate) {
                 $domain->hibernate();
+                $down++;
             } else {
                 warn "WARNING: Virtual machine ".$domain->name
                     ." can't hibernate because it is not supported in ".$domain->type
@@ -315,7 +344,7 @@ sub hibernate {
     }
     print "$down machines hibernated.\n";
     warn "ERROR: Domain $domain_name not found.\n"
-        if $domain_name ne 'ALL' && !$found;
+        if !$all && !$found;
 }
 
 sub DESTROY {
@@ -344,7 +373,8 @@ make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
 
-hibernate($HIBERNATE)               if $HIBERNATE;
+list($ALL)                          if $LIST;
+hibernate($HIBERNATE , $ALL)        if $HIBERNATE;
 
 }
 
