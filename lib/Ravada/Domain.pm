@@ -274,6 +274,8 @@ sub _allow_shutdown {
 sub _around_add_volume {
     my $orig = shift;
     my $self = shift;
+    confess "ERROR in args ".Dumper(\@_)
+        if scalar @_ % 2;
     my %args = @_;
 
     my $path = $args{path};
@@ -1064,6 +1066,17 @@ Returns wether a domain supports hybernation
 =cut
 
 sub can_hybernate { 0 };
+
+=head2 can_hibernate
+
+Returns wether a domain supports hibernation
+
+=cut
+
+sub can_hibernate {
+    my $self = shift;
+    return $self->can_hybernate();
+};
 
 =head2 add_volume_swap
 

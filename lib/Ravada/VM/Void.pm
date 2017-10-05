@@ -47,6 +47,7 @@ sub create_domain {
                                            , domain => $args{name}
                                            , _vm => $self
     );
+
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
         , id_base => $args{id_base} );
 
@@ -62,6 +63,17 @@ sub create_domain {
                                 , path => "$dir/$new_name"
                                  ,type => 'file');
         }
+    } else {
+        my ($file_img) = $domain->disk_device();
+        $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
+                        , path => $file_img
+                        , type => 'file'
+                        , target => 'vda'
+        );
+        $domain->_set_default_drivers();
+        $domain->_set_default_info();
+        $domain->set_memory($args{memory}) if $args{memory};
+
     }
 #    $domain->start();
     return $domain;
@@ -75,28 +87,36 @@ sub dir_img {
 }
 
 sub list_domains {
+    my $self = shift;
+
     opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
-    my %domain;
+    my @domain;
     while (my $file = readdir $ls ) {
         next if $file !~ /\.yml$/;
         $file =~ s/\.\w+//;
         $file =~ s/(.*)\.qcow.*$/$1/;
         next if $file !~ /\w/;
-        $domain{$file}++;
+
+        my $domain = Ravada::Domain::Void->new(
+                    domain => $file
+                     , _vm => $self
+        );
+        next if !$domain->is_known;
+        push @domain , ($domain);
     }
 
     closedir $ls;
 
-    return keys %domain;
+    return @domain;
 }
 
 sub search_domain {
     my $self = shift;
     my $name = shift or confess "ERROR: Missing name";
 
-    for my $name_vm ( $self->list_domains ) {
-        next if $name_vm ne $name;
+    for my $domain_vm ( $self->list_domains ) {
+        next if $domain_vm->name ne $name;
 
         my $domain = Ravada::Domain::Void->new( 
             domain => $name
@@ -106,6 +126,7 @@ sub search_domain {
         my $id;
 
         eval { $id = $domain->id };
+        warn $@ if $@;
         return if !defined $id;#
         return $domain;
     }
