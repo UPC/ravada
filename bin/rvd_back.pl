@@ -33,6 +33,7 @@ my $URL_ISOS;
 my $HIBERNATE;
 my $ALL;
 my $LIST;
+my $START_DOMAIN;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
@@ -48,7 +49,13 @@ my $USAGE = "$0 "
         ." -X : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
-        ." --hibernate=machine|ALL\n"
+        ."\n"
+        ."Operations on Virtual Machines:\n"
+        ." --list\n"
+        ." --start\n"
+        ." --hibernate machine\n"
+        ." --all : execute on all virtual machines\n"
+        ."          For hibernate, it is executed on all the actives\n"
         ."\n"
     ;
 
@@ -59,6 +66,7 @@ GetOptions (       help => \$help
                   ,list => \$LIST
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
+              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
@@ -347,6 +355,31 @@ sub hibernate {
         if !$all && !$found;
 }
 
+sub start_domain {
+    my $domain_name = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $up= 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ($domain->name eq $domain_name) {
+            $found++;
+            if ($domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already up.\n";
+                next;
+            }
+            $domain->start(user => $Ravada::USER_DAEMON);
+            print $domain->name." started.\n"
+                if $domain->is_active;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$found;
+}
+
+
 sub DESTROY {
     return if !$PID_LONGS;
     warn "Killing pid: $PID_LONGS";
@@ -375,6 +408,7 @@ set_url_isos($URL_ISOS)             if $URL_ISOS;
 
 list($ALL)                          if $LIST;
 hibernate($HIBERNATE , $ALL)        if $HIBERNATE;
+start_domain($START_DOMAIN)         if $START_DOMAIN;
 
 }
 
