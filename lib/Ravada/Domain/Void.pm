@@ -43,11 +43,7 @@ sub BUILD {
         my $base = Ravada::Domain->open($args->{id_base});
         my $drivers = $base->_value('drivers');
         $self->_store(drivers => $drivers );
-    } else {
-        $self->_set_default_drivers();
     }
-    $self->_set_default_info();
-    $self->set_memory($args->{memory}) if $args->{memory};
 }
 
 sub name { 

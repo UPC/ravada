@@ -69,7 +69,11 @@ sub create_domain {
                         , path => $file_img
                         , type => 'file'
                         , target => 'vda'
-        )
+        );
+        $domain->_set_default_drivers();
+        $domain->_set_default_info();
+        $domain->set_memory($args{memory}) if $args{memory};
+
     }
 #    $domain->start();
     return $domain;
