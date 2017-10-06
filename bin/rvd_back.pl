@@ -30,10 +30,14 @@ my $REMOVE_ADMIN_USER;
 my $START = 1;
 
 my $URL_ISOS;
-my $HIBERNATE;
 my $ALL;
+my $HIBERNATED;
+
 my $LIST;
+
+my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
+my $SHUTDOWN_DOMAIN;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
@@ -54,8 +58,12 @@ my $USAGE = "$0 "
         ." --list\n"
         ." --start\n"
         ." --hibernate machine\n"
+        ." --shutdown machine\n"
+        ."\n"
+        ."Operations modifiers:\n"
         ." --all : execute on all virtual machines\n"
         ."          For hibernate, it is executed on all the actives\n"
+        ." --hibernated: execute on hibernated machines\n"
         ."\n"
     ;
 
@@ -66,11 +74,13 @@ GetOptions (       help => \$help
                   ,list => \$LIST
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
-              ,'start=s' => \$START_DOMAIN
+             ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
+           ,'hibernated'=> \$HIBERNATED
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
-          ,'hibernate:s'=> \$HIBERNATE
+           ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
+          ,'hibernate:s'=> \$HIBERNATE_DOMAIN
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -94,6 +104,12 @@ if ($help) {
 die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
 die "ERROR: Missing file config $FILE_CONFIG\n"
     if $FILE_CONFIG && ! -e $FILE_CONFIG;
+
+die "ERROR: Shutdown requires a domain name, or --all or --hibernated\n"
+    if defined $SHUTDOWN_DOMAIN && !$SHUTDOWN_DOMAIN && !$ALL && !$HIBERNATED;
+
+die "ERROR: Hibernate requires a domain name, or --all\n"
+    if defined $HIBERNATE_DOMAIN && !$HIBERNATE_DOMAIN && !$ALL;
 
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
@@ -307,7 +323,7 @@ sub list {
 
     my $found = 0;
     for my $domain ($rvd_back->list_domains) {
-        next if !$all && !$domain->is_active;
+        next if !$all && !$domain->is_active && !$domain->is_hibernated;
         $found++;
         print $domain->name."\t";
         if ($domain->is_active) {
@@ -332,7 +348,7 @@ sub hibernate {
     my $found = 0;
     for my $domain ($rvd_back->list_domains) {
         if ( ($all && $domain->is_active)
-                || ($domain->name eq $domain_name)) {
+                || ($domain_name && $domain->name eq $domain_name)) {
             $found++;
             if (!$domain->is_active) {
                 warn "WARNING: Virtual machine ".$domain->name
@@ -370,7 +386,11 @@ sub start_domain {
                     ." is already up.\n";
                 next;
             }
-            $domain->start(user => $Ravada::USER_DAEMON);
+            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            if ($@) {
+                warn $@;
+                next;
+            }
             print $domain->name." started.\n"
                 if $domain->is_active;
         }
@@ -379,6 +399,37 @@ sub start_domain {
         if !$found;
 }
 
+sub shutdown_domain {
+    my $domain_name = shift;
+    my ($all,$hibernated) = @_;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ((defined $domain_name && $domain->name eq $domain_name)
+            || ($hibernated && $domain->is_hibernated)
+            || $all ){
+            $found++;
+            if (!$domain->is_active && !$domain->is_hibernated) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n"
+                        if !$all;
+                next;
+            }
+            if ($domain->is_hibernated) {
+                $domain->start(user => $Ravada::USER_DAEMON);
+            }
+            $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 60);
+            print "Shutting down ".$domain->name.".\n";
+            $down++;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if $domain_name && !$found;
+    print "$down domains shut down.\n";
+}
 
 sub DESTROY {
     return if !$PID_LONGS;
@@ -407,8 +458,11 @@ remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
 
 list($ALL)                          if $LIST;
-hibernate($HIBERNATE , $ALL)        if $HIBERNATE;
+hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;
 start_domain($START_DOMAIN)         if $START_DOMAIN;
+
+shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
+                                    if defined $SHUTDOWN_DOMAIN;
 
 }
 

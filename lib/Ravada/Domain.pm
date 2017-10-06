@@ -186,7 +186,7 @@ sub _vm_disconnect {
 sub _start_preconditions{
     my ($self) = @_;
 
-    confess "Domain ".$self->name." is a base. Bases can't get started."
+    die "Domain ".$self->name." is a base. Bases can't get started.\n"
         if $self->is_base();
 
     if (scalar @_ %2 ) {
