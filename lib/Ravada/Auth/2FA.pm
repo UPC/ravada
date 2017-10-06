@@ -21,6 +21,7 @@ package Ravada::Auth::2FA;
 
 use strict;
 use warnings;
+use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
 
 =head1 NAME
 
@@ -51,13 +52,15 @@ sub generateBase32Secret {
 =head2 generateCurrentNumber
 
 Generate current number (Secret code)
-    
+
 	my $code = Ravada::Auth::2FA->generateCurrentNumber( $base32Secret );
 
 =cut
 
 sub generateCurrentNumber {
     my ($base32Secret) = @_;
+    my $TIME_STEP = 30;
+    srand(time() ^ $$);
 
     my $paddedTime = sprintf("%016x", int(time() / $TIME_STEP));
 
@@ -90,7 +93,7 @@ sub qrImageUrl {
 =head2 decodeBase32
 
 Decode Base32
-   
+
 	my $key = decodeBase32($base32Secret);
 
 =cut
