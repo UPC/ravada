@@ -75,17 +75,20 @@ the same one as the ravada package.
 
     $ sudo apt-get install mysql-server
 
-MySQL user
+MySQL database and user
 ~~~~~~~~~~
 
-Create a database named "ravada". in this stage the system wants you to
-identify a password for your sql.
+It is required a database for internal use. In this examples we call it *ravada*.
+We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
+In this stage the system wants you to set a password for the sql connection.
+
+Create the database:
 
 ::
 
     $ mysqladmin -u root -p create ravada
 
-Grant all permissions to your user:
+Grant all permissions on this database to the *rvd_user*:
 
 ::
 
