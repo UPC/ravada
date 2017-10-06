@@ -112,7 +112,9 @@ example.
 Ravada web user
 ---------------
 
-Add a new user for the ravada web. Use rvd\_back to create it. When asked if this user is admin answer *yes*.
+Add a new user for the ravada web. Use rvd\_back to create it. It will perform some initialization duties in the database the very first time this script is executed.
+
+When asked if this user is admin answer *yes*.
 
 ::
 
