@@ -21,6 +21,7 @@ use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Auth;
+use Ravada::Auth::2FA;
 use POSIX qw(locale_h);
 
 my $help;
@@ -606,11 +607,11 @@ sub user_settings {
     my $changed_pass;
     my $two_fa;
     my $change_2fa;
-    my $qrcode;
+    my $code;
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
-        $qrcode = $c->param('code');
+        $code = $c->param('code');
         _logged_in($c);
     }
     $c->param('tongue' => $USER->language);
@@ -640,8 +641,14 @@ sub user_settings {
     if ($c->param('qrcode_click')){
             $change_2fa = 1;
     }
-    $two_fa = 1;
-    $qrcode = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=150x150&chld=M|0&cht=qr&chl=otpauth://totp/RavadaVDI (username)%3Fsecret%3DEKCOX6FFK44OEX5V";
+    $two_fa = 0;
+	my $base32Secret = Ravada::Auth::2FA->generateBase32Secret();
+	my $key = decodeBase32($base32Secret);
+	my $keyId = "RavadaVDI (nom.cognom)";
+	my $qrcode = Ravada::Auth::2FA->qrImageUrl( $keyId, $base32Secret );
+	my $usr_code = generateCurrentNumber($base32Secret);
+#code = usr_code
+    #$qrcode = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=150x150&chld=M|0&cht=qr&chl=otpauth://totp/RavadaVDI (username)%3Fsecret%3DEKCOX6FFK44OEX5V";
     $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa, two_fa => $two_fa, qrcode => $qrcode
       ,errors =>\@errors);
 };
