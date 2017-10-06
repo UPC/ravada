@@ -342,7 +342,8 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $vm->create_storage_pool($xml);
+    my $pool = $vm->define_storage_pool($xml);
+    $pool->create();
     $pool->set_autostart(1);
 
 }
