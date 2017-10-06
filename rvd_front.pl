@@ -957,8 +957,8 @@ sub req_new_domain {
         ,id_owner => $USER->id
         ,swap => $swap
     );
-    $args{memory} = int($c->param('memory')*1024*1024)  if $args{memory};
-    $args{disk} = int($c->param('disk')*1024*1024*1024) if $args{disk};
+    $args{memory} = int($c->param('memory')*1024*1024)  if $c->param('memory');
+    $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
