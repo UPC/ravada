@@ -247,6 +247,39 @@ sub _allow_remove {
 
 }
 
+sub _allow_shutdown {
+    my $self = shift;
+    my %args = @_;
+
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    if ( $self->id_base() && $user->can_shutdown_clone()) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    } elsif($user->can_shutdown_all) {
+        return;
+    } else {
+        $self->_allow_manage_args(user => $user);
+    }
+}
+
+sub _around_add_volume {
+    my $orig = shift;
+    my $self = shift;
+    confess "ERROR in args ".Dumper(\@_)
+        if scalar @_ % 2;
+    my %args = @_;
+
+    my $path = $args{path};
+    if ( $path ) {
+        my $name = $args{name};
+        if (!$name) {
+            ($args{name}) = $path =~ m{.*/(.*)};
+        }
+    }
+    return $self->$orig(%args);
+}
+
 sub _pre_prepare_base {
     my $self = shift;
     my ($user, $request) = @_;
@@ -1018,7 +1051,7 @@ sub _post_pause {
 sub _pre_shutdown {
     my $self = shift;
 
-    $self->_allow_manage_args(@_);
+    $self->_allow_shutdown(@_);
 
     $self->_pre_shutdown_domain();
 
@@ -1488,23 +1521,37 @@ sub get_driver {}
 
 =head2 list_requests
 
-Returns a list of pending requests from the domain
+Returns a list of pending requests from the domain. It won't show those requests
+scheduled for later.
 
 =cut
 
 sub list_requests {
     my $self = shift;
+    my $all = shift;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM requests WHERE id_domain = ? AND status ne 'done'"
     );
     $sth->execute($self->id);
     my @list;
     while ( my $req_data =  $sth->fetchrow_hashref ) {
+        next if !$all && $req_data->{at_time} && $req_data->{at_time} - time > 1;
         push @list,($req_data);
     }
     $sth->finish;
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
+}
+
+=head2 list_all_requests
+
+Returns a list of pending requests from the domain including those scheduled for later
+
+=cut
+
+sub list_all_requests {
+    return list_requests(@_,'all');
 }
 
 sub _dbh {
