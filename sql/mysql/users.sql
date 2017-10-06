@@ -7,7 +7,7 @@ CREATE TABLE `users` (
   `is_temporary` integer DEFAULT 0,
   `is_external` integer DEFAULT 0,
   `language` char(3) DEFAULT NULL,
-  `two_fa` int(11) DEFAULT 0,
+  `two_fa` integer DEFAULT 0,
   `secret` char(20) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)

@@ -589,7 +589,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','device','varchar(255)');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
-    $self->_upgrade_table('users','two_fa','int(11) DEFAULT 0');
+    $self->_upgrade_table('users','two_fa','integer DEFAULT 0');
     $self->_upgrade_table('users','secret','char(20) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
         my $sth = $CONNECTOR->dbh->prepare(
