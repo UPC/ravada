@@ -386,7 +386,11 @@ sub start_domain {
                     ." is already up.\n";
                 next;
             }
-            $domain->start(user => $Ravada::USER_DAEMON);
+            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            if ($@) {
+                warn $@;
+                next;
+            }
             print $domain->name." started.\n"
                 if $domain->is_active;
         }
