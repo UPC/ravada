@@ -266,7 +266,7 @@ sub _allow_shutdown {
     } elsif($user->can_shutdown_all) {
         return;
     } else {
-        $self->_allowed($user);
+        $self->_allow_manage_args(user => $user);
     }
 }
 
@@ -1033,7 +1033,6 @@ sub _pre_shutdown {
         if keys %arg;
 
     $self->_allow_shutdown(@_);
-    $self->_allow_manage_args(user => $user);
 
     $self->_pre_shutdown_domain();
 
@@ -1554,24 +1553,37 @@ sub remote_ip {
 
 =head2 list_requests
 
-Returns a list of pending requests from the domain
+Returns a list of pending requests from the domain. It won't show those requests
+scheduled for later.
 
 =cut
 
 sub list_requests {
     my $self = shift;
+    my $all = shift;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
     );
     $sth->execute($self->id);
     my @list;
     while ( my $req_data =  $sth->fetchrow_hashref ) {
-        next if $req_data->{at_time} && $req_data->{at_time} - time > 1;
+        next if !$all && $req_data->{at_time} && $req_data->{at_time} - time > 1;
         push @list,($req_data);
     }
     $sth->finish;
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
+}
+
+=head2 list_all_requests
+
+Returns a list of pending requests from the domain including those scheduled for later
+
+=cut
+
+sub list_all_requests {
+    return list_requests(@_,'all');
 }
 
 sub _dbh {

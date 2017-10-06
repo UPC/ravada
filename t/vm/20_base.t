@@ -487,11 +487,11 @@ sub test_domain_limit_already_requested {
     rvd_back->enforce_limits(timeout => 2);
 
     if (!$domain->can_hybernate) {
-        @list_requests = $domain->list_requests;
+        @list_requests = $domain->list_all_requests();
         is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
         rvd_back->enforce_limits(timeout => 2);
 
-        @list_requests = $domain->list_requests;
+        @list_requests = $domain->list_all_requests();
         is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
 
         sleep 3;

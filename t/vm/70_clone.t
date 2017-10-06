@@ -71,7 +71,7 @@ sub test_clone {
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
                 $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
-                ok(!$@,"Expecting error='', got='".($@ or '')."'");
+                ok(!$@,"Expecting error='', got='".($@ or '')."'")
                         or die Dumper($base->list_requests);
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
