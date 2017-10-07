@@ -2,7 +2,7 @@ package Ravada::Auth::2FA;
 
 # The function below are thanks to Gray Watson
 # from https://github.com/j256/perl-two-factor-auth
-# 
+#
 # ISC License
 #
 # Copyright 2017, Gray Watson
@@ -30,6 +30,8 @@ Ravada::Auth:2FA - Second factor authentication library for Ravada
 =cut
 
 use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
+
+our $TIME_STEP = 30;
 
 =head2 generateBase32Secret
 
@@ -59,10 +61,10 @@ Generate current number (Secret code)
 
 sub generateCurrentNumber {
     my ($base32Secret) = @_;
-    my $TIME_STEP = 30;
+    my $time_step = $TIME_STEP;
     srand(time() ^ $$);
 
-    my $paddedTime = sprintf("%016x", int(time() / $TIME_STEP));
+    my $paddedTime = sprintf("%016x", int(time() / $time_step));
 
     my $data = pack('H*', $paddedTime);
     my $key = decodeBase32($base32Secret);
