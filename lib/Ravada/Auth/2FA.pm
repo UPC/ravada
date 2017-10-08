@@ -96,7 +96,7 @@ sub qrImageUrl {
 
 Decode Base32
 
-	my $key = decodeBase32($base32Secret);
+	my $key = decodeBase32( $base32Secret );
 
 =cut
 

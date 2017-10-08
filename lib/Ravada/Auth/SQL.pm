@@ -398,11 +398,11 @@ sub change_password {
 
 =head2 language
 
-  Updates or selects the language selected for an User
+Updates or selects the language selected for an User
 
     $user->language();
 
-  Arguments: lang
+Arguments: lang
 
 =cut
 
@@ -422,6 +422,22 @@ sub change_password {
     }
   }
 
+=head2 secret2db
+
+Store secret in database associated with user
+
+    secret2db( $user, $base32Secret );
+
+=cut
+
+sub secret2db {
+	my ($user, $base32Secret) = @_;
+    if (defined $base32Secret) {
+      my $sth= $$CON->dbh->prepare("UPDATE users set secret=?"
+          ." WHERE name=?");
+      $sth->execute($base32Secret, $user);
+    }
+}
 
 =head2 remove
 
