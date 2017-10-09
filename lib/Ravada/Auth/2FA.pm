@@ -30,6 +30,13 @@ Ravada::Auth:2FA - Second factor authentication library for Ravada
 =cut
 
 use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
+use vars qw(@ISA @EXPORT);
+
+require Exporter;
+
+@ISA = qw(Exporter);
+
+@EXPORT = qw(generateBase32Secret generateCurrentNumber qrImageUrl decodeBase32decodeBase32);
 
 our $TIME_STEP = 30;
 

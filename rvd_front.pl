@@ -621,13 +621,10 @@ sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
-    my $two_fa;
-    my $change_2fa;
-    my $usr_code;
+    my $change_2fa = 0;
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
-        $usr_code = $c->param('code');
         _logged_in($c);
     }
     $c->param('tongue' => $USER->language);
@@ -654,37 +651,60 @@ sub user_settings {
           }
         }
     }
-    if ($c->param('qrcode_click')){
-		#read_secret from db
-	    my $base32Secret = 1;
-		my $code = Ravada::Auth::2FA->generateCurrentNumber( $base32Secret );
-		if (($c->param('usr_code') eq "") || ($code eq "")) {
-            push @errors,("Code's fields are empty");
-        }
-        else {
-            if ($c->param('usr_code') eq $code) {
-                eval {
-                    #set user table change_2fa = 1;
-					$two_fa = 1;
-                    _logged_in($c);
-                };
-                if ($@ =~ /Code too small/) {
-                    push @errors,("Code too small")
-                }
-                else {
-                    #set user table change_2fa = 0;
-					$two_fa = 0;
-                };
-          }
-        }
+    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa
+         ,errors =>\@errors);
+};
+###################################################
+
+## 2FA_settings
+
+any '/two_factor' => sub {
+    my $c = shift;
+    two_factor($c);
+};
+
+sub two_factor {
+    my $c = shift;
+    my $usr_code;
+    my $qrcode;
+    my $change_2fa;
+
+    #Check 2FA is enable
+    my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
+    $sth->execute($USER->name);
+    my $row = $sth->fetchrow_hashref;
+    warn ("2FA $row->{two_fa}\n");
+    $change_2fa = 1 if ($row->{two_fa} == 1);
+    
+    if ($c->param('gencode_click')){
+        #$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
+        #$sth->execute($USER->name);
+        #$row = $sth->fetchrow_hashref;
+        #my $base32Secret = $row->{secret};
+    warn ("MOJO");
     }
-    #if ( two_fa from user db = 0) {
-		my $base32Secret = Ravada::Auth::2FA->generateBase32Secret();
-		my $keyId = "RavadaVDI (nom.cognom)";
-		my $qrcode = Ravada::Auth::2FA->qrImageUrl( $keyId, $base32Secret );
-	#}
-	$c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa, two_fa => $two_fa, qrcode => $qrcode
-      ,errors =>\@errors);
+    if ($c->param('qrcode_click')){
+    warn ("MOJO2");
+
+        my $base32Secret = generateBase32Secret();         
+        my $code = generateCurrentNumber( $base32Secret );
+        my $keyId = "RavadaVDI ($USER->name)";
+        my $qrcode = qrImageUrl( $keyId, $base32Secret );
+
+        if ($c->param('usr_code') == $code) {
+            warn "CODE $c->param('usr_code')\n";
+            eval {
+            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
+            $sth->execute('1', $USER->{name});
+            $change_2fa = 1;
+            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
+            $sth->execute($base32Secret, $row->{name});
+            _logged_in($c);
+            }
+        }
+    };
+warn "QRCODE $qrcode\n";
+    $c->render( template => 'bootstrap/two_factor', qrcode => $qrcode, change_2fa => $change_2fa);
 };
 
 get '/img/screenshots/:file' => sub {
