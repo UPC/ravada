@@ -30,6 +30,8 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
+
 _init_connector();
 
 requires 'name';
@@ -125,6 +127,8 @@ has 'description' => (
 
 before 'display' => \&_allowed;
 
+around 'add_volume' => \&_around_add_volume;
+
 before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
@@ -182,12 +186,15 @@ sub _vm_disconnect {
 sub _start_preconditions{
     my ($self) = @_;
 
+    die "Domain ".$self->name." is a base. Bases can't get started.\n"
+        if $self->is_base();
+
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
     } else {
         _allow_manage(@_);
     }
-    _check_free_memory();
+    $self->_check_free_memory();
     _check_used_memory(@_);
 
 }
@@ -236,9 +243,49 @@ sub _allow_remove {
     my $self = shift;
     my ($user) = @_;
 
-    $self->_allowed($user);
-    $self->_check_has_clones() if $self->is_known();
+    die "ERROR: remove not allowed for user ".$user->name
+        if !$user->can_remove();
 
+    $self->_check_has_clones() if $self->is_known();
+    if ($self->is_known() && $user->can_remove_clone() && $self->id_base) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    }
+    $self->_allowed($user);
+
+}
+
+sub _allow_shutdown {
+    my $self = shift;
+    my %args = @_;
+
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    if ( $self->id_base() && $user->can_shutdown_clone()) {
+        my $base = $self->open($self->id_base);
+        return if $base->id_owner == $user->id;
+    } elsif($user->can_shutdown_all) {
+        return;
+    } else {
+        $self->_allowed($user);
+    }
+}
+
+sub _around_add_volume {
+    my $orig = shift;
+    my $self = shift;
+    confess "ERROR in args ".Dumper(\@_)
+        if scalar @_ % 2;
+    my %args = @_;
+
+    my $path = $args{path};
+    if ( $path ) {
+        my $name = $args{name};
+        if (!$name) {
+            ($args{name}) = $path =~ m{.*/(.*)};
+        }
+    }
+    return $self->$orig(%args);
 }
 
 sub _pre_prepare_base {
@@ -256,7 +303,6 @@ sub _pre_prepare_base {
     $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
-        $self->{_was_active} = 1;
         for ( 1 .. $TIMEOUT_SHUTDOWN ) {
             last if !$self->is_active;
             sleep 1;
@@ -280,10 +326,6 @@ sub _post_prepare_base {
     my ($user) = @_;
 
     $self->is_base(1);
-    if ($self->{_was_active} ) {
-        $self->start($user) if !$self->is_active;
-    }
-    delete $self->{_was_active};
 
     if ($self->id_base && !$self->description()) {
         my $base = Ravada::Domain->open($self->id_base);
@@ -303,6 +345,9 @@ sub _check_has_clones {
 }
 
 sub _check_free_memory{
+    my $self = shift;
+    return if ref($self) =~ /Void/i;
+
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
     die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
@@ -370,7 +415,7 @@ sub _allowed {
     eval { $id_owner = $self->id_owner };
     my $err = $@;
 
-    die "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
         ." owned by ".($id_owner or '<UNDEF>')."\n".Dumper($self)
             if (defined $id_owner && $id_owner != $user->id );
 
@@ -426,9 +471,17 @@ Returns: Domain object read only
 
 sub open($class, $id) {
     my $self = {};
-    bless $self,$class;
+
+    if (ref($class)) {
+        $self = $class;
+    } else {
+        bless $self,$class
+    }
 
     my $row = $self->_select_domain_db ( id => $id );
+
+    die "ERROR: Domain not found id=$id\n"
+        if !keys %$row;
 
     my $vm0 = {};
     my $vm_class = "Ravada::VM::".$row->{vm};
@@ -718,12 +771,13 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
         ." WHERE id_domain=? AND status <> 'done'");
     $sth->execute($self->id);
-    my ($id) = $sth->fetchrow;
+    my ($id, $at_time) = $sth->fetchrow;
     $sth->finish;
 
+    return 0 if $at_time && $at_time - time > 1;
     return ($id or 0);
 }
 
@@ -766,7 +820,7 @@ sub clones {
     _init_connector();
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
-            ." WHERE id_base = ?");
+            ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)");
     $sth->execute($self->id);
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {
@@ -959,7 +1013,7 @@ sub _post_pause {
 sub _pre_shutdown {
     my $self = shift;
 
-    $self->_allow_manage_args(@_);
+    $self->_allow_shutdown(@_);
 
     $self->_pre_shutdown_domain();
 
@@ -1012,6 +1066,17 @@ Returns wether a domain supports hybernation
 =cut
 
 sub can_hybernate { 0 };
+
+=head2 can_hibernate
+
+Returns wether a domain supports hibernation
+
+=cut
+
+sub can_hibernate {
+    my $self = shift;
+    return $self->can_hybernate();
+};
 
 =head2 add_volume_swap
 
@@ -1081,8 +1146,29 @@ sub _post_resume {
 
 sub _post_start {
     my $self = shift;
+    my %arg;
+    if ( scalar @_ % 2 ==1 ) {
+        $arg{user} = $_[0];
+    } else {
+        %arg = @_;
+    }
 
+    if (scalar @_ % 2) {
+        $arg{user} = $_[0];
+    } else {
+        %arg = @_;
+    }
     $self->_add_iptable(@_);
+
+    if ($self->run_timeout) {
+        my $req = Ravada::Request->shutdown_domain(
+            id_domain => $self->id
+                , uid => $arg{user}->id
+                 , at => time+$self->run_timeout
+                 , timeout => 59
+        );
+
+    }
 }
 
 sub _add_iptable {
@@ -1281,6 +1367,40 @@ sub is_public {
     return $self->_data('is_public');
 }
 
+=head2 run_timeout
+
+Sets or get the domain run timeout. When it expires it is shut down.
+
+    $domain->run_timeout(60 * 60); # 60 minutes
+
+=cut
+
+sub run_timeout {
+    my $self = shift;
+
+    return $self->_set_data('run_timeout',@_);
+}
+
+sub _set_data($self, $field, $value=undef) {
+    if (defined $value) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
+                ." WHERE id=?");
+        $sth->execute($value, $self->id);
+        $sth->finish;
+        $self->{_data}->{$field} = $value;
+
+        $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
+    }
+    return $self->_data($field);
+}
+
+sub _propagate_data($self, $field, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
+                ." WHERE id_base=?");
+    $sth->execute($value, $self->id);
+    $sth->finish;
+}
+
 =head2 clean_swap_volumes
 
 Check if the domain has swap volumes defined, and clean them
@@ -1412,10 +1532,72 @@ sub remote_ip {
 
 }
 
+=head2 list_requests
+
+Returns a list of pending requests from the domain
+
+=cut
+
+sub list_requests {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while ( my $req_data =  $sth->fetchrow_hashref ) {
+        next if $req_data->{at_time} && $req_data->{at_time} - time > 1;
+        push @list,($req_data);
+    }
+    $sth->finish;
+    return scalar @list if !wantarray;
+    return map { Ravada::Request->open($_->{id}) } @list;
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
     return $$CONNECTOR->dbh;
+}
+
+=head2 set_option
+
+Sets a domain option:
+
+=over
+
+=item * description
+
+=item * run_timeout
+
+=back
+
+
+    $domain->set_option(description => 'Virtual Machine for ...');
+
+=cut
+
+sub set_option($self, $option, $value) {
+    if ($option eq 'description') {
+        warn "$option -> $value\n";
+        $self->description($value);
+    } elsif ($option eq 'run_timeout') {
+        $self->run_timeout($value);
+    } else {
+        confess "ERROR: Unknown option '$option'";
+    }
+}
+
+=head2 type
+
+Returns the virtual machine type as a string.
+
+=cut
+
+sub type {
+    my $self = shift;
+    my ($type) = $self =~ m{.*::(.*)};
+    return $type;
 }
 
 1;

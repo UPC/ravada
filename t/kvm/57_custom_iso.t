@@ -9,7 +9,7 @@ use Test::SQL::Data;
 use lib 't/lib';
 use Test::Ravada;
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
+my $FILE_CONFIG = 't/etc/ravada_kvm.conf';
 
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 

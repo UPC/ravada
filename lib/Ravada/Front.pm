@@ -185,7 +185,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT * FROM domains";
+    my $query = "SELECT * FROM domains ORDER BY name";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -543,7 +543,7 @@ sub search_clone {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name FROM domains "
-        ." WHERE id_base=? AND id_owner=? "
+        ." WHERE id_base=? AND id_owner=? AND (is_base=0 OR is_base=NULL)"
     );
     $sth->execute($id_base, $id_owner);
 
@@ -623,7 +623,8 @@ sub list_requests {
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
-                || $command eq 'hibernate';
+                || $command eq 'hibernate'
+                || $command eq 'ping_backend';
         my $args;
         $args = decode_json($j_args) if $j_args;
 

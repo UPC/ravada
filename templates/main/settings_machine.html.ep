@@ -17,38 +17,10 @@
                      Settings
                  </h2>
              </div> <!-- del panel heading-->
-             <ul class="nav nav-tabs" id="myTab">
-               <li class="nav active"><a href="#description" data-toggle="tab">Description</a></li>
-               <li class="nav"><a href="#drivers" data-toggle="tab">Drivers</a></li>
-               <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
-               % if ( $USER->is_admin ) {
-               <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
-               <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
-               <li class="nav"><a href="#remove" data-toggle="tab">Delete Machine</a></li>
-%   }
-             </ul>
             <div class="tab-content">
-% if ( $USER->is_admin ) {
-             <div class="tab-pane fade" id="remove" >
-    %= include 'main/vm_remove'
-             </div>
-             <div class="tab-pane fade" id="rename">
-    %= include 'main/vm_rename'
-             </div>
-             <div class="tab-pane fade" id="copy">
-    %= include 'main/vm_copy'
-             </div>
-% }          
-             <div class="tab-pane fade in active" id="description">
-    %= include 'main/vm_description'
-             </div>
-             <div class="tab-pane fade" id="drivers">
-    %= include 'main/vm_options'
-             </div>
-             <div class="tab-pane fade" id="graphics">
-    %= include 'main/vm_graphics'
-             </div>
-         </div>
+                %= include 'main/settings_machine_tabs_head'
+                %= include 'main/settings_machine_tabs_body'
+            </div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->
 </div><!-- del ng-controller -->

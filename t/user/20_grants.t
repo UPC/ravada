@@ -24,7 +24,7 @@ init($test->connector);
 
 sub test_defaults {
     my $user= create_user("foo","bar");
-    my $rvd_back = rvd_back();
+#    my $rvd_back = rvd_back();
 
     ok($user->can_clone);
     ok($user->can_change_settings);
@@ -92,10 +92,206 @@ sub test_grant {
 
 }
 
+sub test_operator {
+    my $usero = create_user("oper$$","bar");
+    ok(!$usero->is_operator);
+    ok(!$usero->is_admin);
+
+    my $usera = create_user("admin$$","bar",'is admin');
+    ok($usera->is_operator);
+    ok($usera->is_admin);
+
+    $usera->grant($usero,'shutdown_clone');
+    ok($usero->is_operator);
+    ok(!$usero->is_admin);
+
+    $usero->remove();
+    $usera->remove();
+}
+
+sub test_remove_clone {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_rm$$","bar");
+    my $usera = create_user("admin_rm$$","bar",'is admin');
+
+    my $domain = create_domain($vm_name, $user);
+    $domain->prepare_base($user);
+    ok($domain->is_base) or return;
+
+    my $clone = $domain->clone(user => $usera,name => new_domain_name());
+    eval { $clone->remove($user); };
+    like($@,qr(.));
+
+    my $clone2;
+    eval { $clone2 = rvd_back->search_domain($clone->name) };
+    ok($clone2, "Expecting ".$clone->name." not removed");
+
+    $usera->grant($user,'remove_clone');
+    eval { $clone->remove($user); };
+    is($@,'');
+
+    eval { $clone2 = rvd_back->search_domain($clone->name) };
+    ok(!$clone2, "Expecting ".$clone->name." removed");
+
+    # revoking remove clone permission
+
+    $clone = $domain->clone(user => $usera,name => new_domain_name());
+    $usera->revoke($user,'remove_clone');
+
+    eval { $clone->remove($user); };
+    like($@,qr(.));
+
+    eval { $clone2 = rvd_back->search_domain($clone->name) };
+    ok($clone2, "Expecting ".$clone->name." not removed");
+
+    $clone->remove($usera);
+    $domain->remove($usera);
+
+    $user->remove();
+    $usera->remove();
+}
+
+sub test_shutdown_clone {
+    my $vm_name = shift;
+
+    my $user = create_user("oper$$","bar");
+    ok(!$user->is_operator);
+    ok(!$user->is_admin);
+
+    my $usera = create_user("admin$$","bar",'is admin');
+    ok($usera->is_operator);
+    ok($usera->is_admin);
+
+
+    my $domain = create_domain($vm_name, $user);
+    $domain->prepare_base($user);
+    ok($domain->is_base) or return;
+
+    my $clone = $domain->clone(user => $usera,name => new_domain_name());
+    $clone->start($usera)   if !$clone->is_active;
+
+    is($clone->is_active,1) or return;
+
+    eval { $clone->shutdown_now($user); };
+    like($@,qr(.));
+    is($clone->is_active,1);
+
+    is($clone->is_active,1) or return;
+
+    $usera->grant($user,'shutdown_clone');
+
+    eval { $clone->shutdown_now($user); };
+    is($@,'');
+    is($clone->is_active,0);
+
+
+    $clone->start($usera)   if !$clone->is_active;
+    is($clone->is_active,1);
+
+    $usera->revoke($user,'shutdown_clone');
+    eval { $clone->shutdown_now($user); };
+    like($@,qr(.));
+    is($clone->is_active,1);
+
+    $clone->remove($usera);
+    $domain->remove($user);
+
+    my $domain2 = create_domain($vm_name, $user);
+    $domain2->start($user);
+    $domain2->shutdown_now($user);
+    $domain2->remove($user);
+
+    $user->remove();
+    $usera->remove();
+}
+
+sub test_remove {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_r$$","bar");
+    ok(!$user->is_operator);
+    ok(!$user->is_admin);
+
+    user_admin()->revoke($user,'remove');
+
+    is($user->can_remove,0) or return;
+
+    # user can't remove own domains
+    my $domain = create_domain($vm_name, $user);
+    eval { $domain->remove($user)};
+    like($@,qr'.');
+
+    # user can't remove domains from others
+    my $domain2 = create_domain($vm_name, user_admin());
+    eval { $domain2->remove($user)};
+    like($@,qr'.');
+
+    # user is granted remove
+    user_admin()->grant($user,'remove');
+    eval { $domain->remove($user)};
+    is($@,'');
+
+    # but can't remove domains from others
+    eval { $domain2->remove($user)};
+    like($@,qr'.');
+
+    # admin can remove the domain
+    eval { $domain2->remove(user_admin())};
+    is($@,'');
+
+}
+
+sub test_shutdown_all {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_sa$$","bar");
+    is($user->can_shutdown_all,undef) or return;
+
+    my $usera = create_user("admin_sa$$","bar",1);
+    is($usera->can_shutdown_all,1);
+
+    my $domain = create_domain($vm_name, $usera);
+    $domain->start($usera)      if !$domain->is_active;
+    is($domain->is_active,1)    or return;
+
+    eval { $domain->shutdown_now($user)};
+    like($@,qr'.');
+    is($domain->is_active,1)    or return;
+
+    $usera->grant($user,'shutdown_all');
+    is($user->can_shutdown_all,1) or return;
+
+    eval { $domain->shutdown_now($user)};
+    is($@,'');
+
+    is($domain->is_active,0);
+
+    # revoke the grant
+    $domain->start($usera)      if !$domain->is_active;
+    is($domain->is_active,1);
+
+    $usera->revoke($user,'shutdown_all');
+    eval { $domain->shutdown_now($user)};
+    like($@,qr'.');
+    is($domain->is_active,1);
+
+    $domain->remove($usera);
+}
+
 ##########################################################
 
 test_defaults();
 test_admin();
 test_grant();
+
+test_operator();
+
+test_shutdown_clone('Void');
+test_shutdown_all('Void');
+
+test_remove('Void');
+test_remove_clone('Void');
+#test_remove_all('Void');
 
 done_testing();

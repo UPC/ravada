@@ -15,6 +15,7 @@
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
+% 		if ($_user->can_create_domain){
                 <h2>
                     <a type="button" class="btn btn-success" href="/new_machine.html">
                         <b><%=l 'New Machine' %></b>
@@ -24,8 +25,10 @@
                         class="fa fa-check" aria-hidden="true"></i>
                     </a>
                 </h2>
+%		}		     
             </div>
         </div>
+            
 %=      include 'bootstrap/requests'
 
         <table class="table table-striped admin-cont-body" border="0">
@@ -78,11 +81,13 @@
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked 
-                               ng-show="can_remove_base(machine)"
+                            ng-show="can_remove_base(machine)"
+                            ng-disabled="<%= !$_user->can_create_base %>"
                             ng-click="action('machine','remove_base',machine.id)"
                             title ="<%=l 'Remove base' %>" ng-cloak>
                         <input type="checkbox" 
-                               ng-show="can_prepare_base(machine)"
+                           ng-show="can_prepare_base(machine)"
+                           ng-disabled="<%= !$_user->can_create_base %>"
                             ng-click="action('machine','prepare',machine.id)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
                     </td>
@@ -98,45 +103,54 @@
                         <br><span style="float:right;" ng-show="{{machine.is_active}}" class="label label-default">{{machine.remote_ip}}</span>
                     </td>
                     <td class="lgMachToggle">
-
-                      <div ng-hide="{{machine.is_locked}}">
+                      <div ng-hide="{{machine.is_locked||machine.is_base}}">
+%              if ($_user-> can_clone){
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
                          ng-disabled="machine.is_active"
                          title="<%=l 'Start' %>">
-                          <i class="fa fa-play"></i>
+                         <i class="fa fa-play"></i>
                         </a>
+%				}
+%		if ($_user-> can_hibernate_all){
                         <a type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hybernate',machine.id)"
                          ng-disabled="!machine.is_active"
                          title="<%=l 'Hybernate' %>">
                           <i class="fa fa-pause"></i>
                        </a>
+%				}
+%		if ($_user->can_shutdown_all){
                         <a type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
                          title="<%=l 'ShutDown' %>">    
                           <i class="fa fa-power-off"></i>
                        </a>
+%                        }
                         <a type="button" class="btn btn-primary btn-sm"
                          ng-href="/machine/view/{{machine.id}}.html"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                         </a>
+%			if ($_user->can_screenshot){
                         <a type="button" class="btn btn-primary btn-sm"
                          ng-click="action('machine','screenshot',machine.id)"
                          ng-disabled="!machine.is_active"
                          title="<%=l 'Screenshot' %>">
                          <i class="fa fa-camera" aria-hidden="true"></i>
                        </a>
+%			}
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">process</a></div>
+                      <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
+                          ng-cloak>This Machine is a base</div>
                     </td>
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
                           &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
-                              style="color:white"></i>
+                              style="color:white"></i>
                           <a align="right" href="/machine/settings/{{child.id}}.html"
                           title ="Machine settings"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>

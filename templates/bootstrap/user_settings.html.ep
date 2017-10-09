@@ -27,10 +27,11 @@
                         <p><form method='post' enctype="multipart/form-data">
                             <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
                                 <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
-                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
                                 <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
+                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
                                 <option <%= $c->param("tongue") eq 'gl' ? "selected" : "" %> value="gl" ><%=l 'Galician' %></option>
                                 <option <%= $c->param("tongue") eq 'fr' ? "selected" : "" %> value="fr" ><%=l 'French' %></option>
+                                <option <%= $c->param("tongue") eq 'id' ? "selected" : "" %> value="id" ><%=l 'Indonesian' %></option>
                                 <option <%= $c->param("tongue") eq 'fa' ? "selected" : "" %> value="fa" ><%=l 'Persian' %></option>
                              </select>
 %                            if ($changed_lang) {
