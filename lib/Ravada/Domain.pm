@@ -72,6 +72,8 @@ requires 'set_max_mem';
 
 requires 'hybernate';
 
+#remote methods
+requires 'migrate';
 ##########################################################
 
 has 'domain' => (
