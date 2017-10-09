@@ -22,19 +22,19 @@ init($test->connector);
 my $USER = create_user("foo","bar");
 
 
-my $IP = init_ip();
 
 clean();
 
-my $vm_name = 'KVM';
+for my $vm_name ('Void','KVM') {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
 SKIP: {
 
-    my $msg = "SKIPPED: No virtual managers found";
-    if (!defined $IP) {
-        my $msg = "skipped, missing the remote testing IP in the file "
+    my $msg = "SKIPPED: $vm_name virtual manager not found ".($@ or '');
+    my $REMOTE_CONFIG = remote_config($vm_name);
+    if (!keys %$REMOTE_CONFIG) {
+        my $msg = "skipped, missing the remote configuration in the file "
             .$Test::Ravada::FILE_CONFIG_REMOTE;
         diag($msg);
         skip($msg,10);
@@ -45,14 +45,23 @@ SKIP: {
         $vm = undef;
     }
 
+    diag($msg)      if !$vm;
     skip($msg,10)   if !$vm;
 
     my $node;
-    eval { $node = Ravada::VM::KVM->new(host => $IP) };
-    ok(!$@,"Expecting no error connecting to $vm_name at $IP, got :'".($@ or '')."'");
+    eval { $node = $vm->new(%{$REMOTE_CONFIG}) };
+    ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($REMOTE_CONFIG).", got :'".($@ or '')."'");
     ok($node) or next;
-    is($node->name ,qr($IP));
-    ok($node->vm);
+    is($node->host,$REMOTE_CONFIG->{host});
+    like($node->name ,qr($REMOTE_CONFIG->{host}));
+    ok($node->vm,"[$vm_name]");
+
+    my $domain = create_domain($vm_name);
+    is($domain->_vm->host, 'localhost');
+
+    $domain->migrate($node);
+    warn $domain->display(user_admin);
+}
 
 }
 
