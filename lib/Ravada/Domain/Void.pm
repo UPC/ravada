@@ -470,4 +470,9 @@ sub clean_swap_volumes {
 sub hybernate { confess "Not supported"; }
 
 sub type { 'Void' }
+
+sub migrate {
+    warn "migrating todo";
+}
+
 1;
