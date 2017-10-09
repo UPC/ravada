@@ -1254,6 +1254,15 @@ sub _xml_modify_uuid {
     }
 }
 
+sub _unique_uuid {
+    my ($self, $uuid, @uuids) = @_;
+    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+
+    my $new_last = int(rand(0x100000));
+    my $new_uuid = sprintf("%s%04d",$first,$new_last);
+
+}
+
 sub _xml_modify_cdrom {
     my ($doc, $iso) = @_;
 
