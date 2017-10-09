@@ -29,7 +29,7 @@ has 'type' => (
 );
 
 has 'vm' => (
-    is => 'ro'
+    is => 'rw'
     ,isa => 'Str'
     ,builder => 'connect'
 );
