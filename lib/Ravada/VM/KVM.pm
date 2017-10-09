@@ -1231,9 +1231,13 @@ sub _unique_uuid {
     my ($self, $uuid, @uuids) = @_;
     my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
 
-    my $new_last = int(rand(0x100000));
-    my $new_uuid = sprintf("%s%04d",$first,$new_last);
+    for (1..100) {
+        my $new_last = int(rand(0x100000));
+        my $new_uuid = sprintf("%s%06d",$first,$new_last);
 
+        return $new_uuid if !grep /^$new_uuid$/,@uuids;
+    }
+    confess "I can't find a new unique uuid";
 }
 
 sub _xml_modify_cdrom {
