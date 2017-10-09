@@ -149,7 +149,10 @@ sub remote_config {
     eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
     is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
 
-    my $remote_conf = $conf->{$vm_name};
+    my $remote_conf = $conf->{$vm_name} or do {
+        diag("SKIPPED: No $vm_name section in $FILE_CONFIG_REMOTE");
+        return ;
+    };
     for my $field ( qw(host user password security)) {
         delete $remote_conf->{$field};
     }
