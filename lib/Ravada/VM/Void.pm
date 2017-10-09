@@ -28,11 +28,25 @@ has 'type' => (
     ,default => 'Void'
 );
 
+has 'vm' => (
+    is => 'ro'
+    ,isa => 'Str'
+    ,builder => 'connect'
+);
+
 ##########################################################################
 #
 
-sub connect {}
-sub disconnect {}
+sub connect {
+    my $self = shift;
+    return 1;
+}
+
+sub disconnect {
+    my $self = shift;
+    $self->vm(0);
+}
+
 sub reconnect {}
 
 sub create_domain {
