@@ -241,9 +241,9 @@ sub _update_isos {
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/9.1.0/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
+            ,md5_url => 'http://cdimage.debian.org/cdimage/archive/9.1.0/amd64/iso-cd/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
