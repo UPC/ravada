@@ -1613,4 +1613,15 @@ sub _check_uuid($self, $doc, $node) {
 
 }
 
+sub migrate($self, $node) {
+    my $xml = $self->domain->get_xml_description();
+
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    $self->_check_uuid($doc, $node);
+
+
+    my $dom = $node->vm->define_domain($xml);
+    $dom->create();
+}
+
 1;
