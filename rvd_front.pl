@@ -655,15 +655,34 @@ sub user_settings {
         }
     }
     if ($c->param('qrcode_click')){
-            $change_2fa = 1;
+		#read_secret from db
+	    my $base32Secret = 1;
+		my $code = Ravada::Auth::2FA->generateCurrentNumber( $base32Secret );
+		if (($c->param('usr_code') eq "") || ($code eq "")) {
+            push @errors,("Code's fields are empty");
+        }
+        else {
+            if ($c->param('usr_code') eq $code) {
+                eval {
+                    #set user table change_2fa = 1;
+					$two_fa = 1;
+                    _logged_in($c);
+                };
+                if ($@ =~ /Code too small/) {
+                    push @errors,("Code too small")
+                }
+                else {
+                    #set user table change_2fa = 0;
+					$two_fa = 0;
+                };
+          }
+        }
     }
-    $two_fa = 0;
-	my $base32Secret = Ravada::Auth::2FA->generateBase32Secret();
-	my $key = Ravada::Auth::2FA->decodeBase32($base32Secret);
-	my $keyId = "RavadaVDI (nom.cognom)";
-	my $qrcode = Ravada::Auth::2FA->qrImageUrl( $keyId, $base32Secret );
-	my $code = Ravada::Auth::2FA->generateCurrentNumber($base32Secret);
-
+    #if ( two_fa from user db = 0) {
+		my $base32Secret = Ravada::Auth::2FA->generateBase32Secret();
+		my $keyId = "RavadaVDI (nom.cognom)";
+		my $qrcode = Ravada::Auth::2FA->qrImageUrl( $keyId, $base32Secret );
+	#}
 	$c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa, two_fa => $two_fa, qrcode => $qrcode
       ,errors =>\@errors);
 };
