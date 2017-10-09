@@ -1593,4 +1593,24 @@ sub pre_remove {
     $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
 }
 
+sub _check_uuid($self, $doc, $node) {
+
+    my ($uuid) = $doc->findnodes('/domain/uuid/text()');
+
+    $uuid = "1805fb4f-ca45-a946-efbf-94124e760418";
+    my @other_uuids;
+    for my $domain ($node->vm->list_all_domains, $self->_vm->vm->list_all_domains) {
+        push @other_uuids,($domain->get_uuid_string);
+    }
+    warn $uuid."\n".Dumper(\@other_uuids);
+    return if !(grep /^$uuid$/,@other_uuids);
+
+    my $new_uuid = $self->_vm->_unique_uuid($uuid
+            ,@other_uuids
+    );
+    my ($xml_uuid) = $doc->findnodes('/domain/uuid');
+    $xml_uuid->setData($new_uuid);
+
+}
+
 1;
