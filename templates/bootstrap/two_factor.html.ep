@@ -7,8 +7,15 @@
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-%   if ($change_2fa = 0 ) {
-        <div > <!--class="modal fade dis2fa-modal" id="dis2fa-modal" role="dialog" > -->
+        <div>
+            <div class="page-header">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2 class="text-center"><%=l '2FA Settings' %></h2>
+                    </div>
+                    <div>
+%   if ($change_2fa ) {
+        <div class="modal fade dis2fa-modal" id="dis2fa-modal" role="dialog" >
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -26,7 +33,7 @@
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
-%   } else {
+%} else {
         <div class="modal fade 2fa-modal" id="2fa-modal" role="dialog" >
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -72,8 +79,7 @@
                     </form>
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
-        %                                       }
-
+%}
     </div>
     </div>
 %= include 'bootstrap/scripts'

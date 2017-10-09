@@ -667,7 +667,7 @@ sub two_factor {
     my $c = shift;
     my $usr_code;
     my $qrcode;
-    my $change_2fa;
+    my $change_2fa = 0;
 
     #Check 2FA is enable
     my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
@@ -675,7 +675,7 @@ sub two_factor {
     my $row = $sth->fetchrow_hashref;
     warn ("2FA $row->{two_fa}\n");
     $change_2fa = 1 if ($row->{two_fa} == 1);
-    
+
     if ($c->param('gencode_click')){
         #$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
         #$sth->execute($USER->name);
@@ -686,7 +686,7 @@ sub two_factor {
     if ($c->param('qrcode_click')){
     warn ("MOJO2");
 
-        my $base32Secret = generateBase32Secret();         
+        my $base32Secret = generateBase32Secret();
         my $code = generateCurrentNumber( $base32Secret );
         my $keyId = "RavadaVDI ($USER->name)";
         my $qrcode = qrImageUrl( $keyId, $base32Secret );

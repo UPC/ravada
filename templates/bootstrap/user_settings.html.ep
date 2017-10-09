@@ -54,12 +54,12 @@
 %   }
                         <hr>
                         <h3><%=l 'Security' %></h3>
-%                            if ($change_2fa) {
-                        <p><a href="two_factor/#dis2fa-modal" ><%=l 'Manage two-factor authentication' %> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true">&nbsp; On</i></span></a></p>
-%                        }
-%                       else {
-                        <p><a href="two_factor/#2fa-modal" ><%=l 'Set up two-factor authentication' %> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i>&nbsp; Off</span></a></p>
-%                       }
+#%                            if ($change_2fa) {
+                        <p><a href="two_factor" ><%=l 'Manage two-factor authentication' %> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true">&nbsp; On</i></span></a></p>
+#%                        }
+#%                       else {
+                        <p><a href="two_factor" ><%=l 'Set up two-factor authentication' %> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i>&nbsp; Off</span></a></p>
+#%                       }
 <!--                        <hr>
                         <h3><%=l 'Login History' %></h3> -->
                   </div>
