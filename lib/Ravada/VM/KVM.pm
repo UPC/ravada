@@ -52,6 +52,21 @@ has type => (
     ,default => 'qemu'
 );
 
+has user => (
+    isa => 'Str'
+    ,is => 'ro',
+);
+
+has password => (
+    isa => 'Str'
+    ,is => 'ro',
+);
+
+has security => (
+    isa => 'Str'
+    ,is => 'ro'
+);
+
 #########################################################################3
 #
 
@@ -85,8 +100,27 @@ sub _connect {
     if ($self->host eq 'localhost') {
         $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
     } else {
-        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
-                              ,readonly => $self->readonly
+        die "ERROR: Security paramer required for remote connections.\n"
+            ."Examples: tcp, tls.\n"
+                if !$self->security;
+
+        $vm = Sys::Virt->new( address => $self->type."+".$self->security."://".$self->host
+                                            ."/system"
+                              ,auth => 1
+                              ,credlist => [
+                                  Sys::Virt::CRED_AUTHNAME,
+                                  Sys::Virt::CRED_PASSPHRASE,
+                              ]
+                              ,callback => sub {
+                                  my $creds = shift;
+                                  foreach my $cred (@{$creds}) {
+                                      $cred->{result} = $self->user
+                                          if $cred->{type} == Sys::Virt::CRED_AUTHNAME;
+                                      $cred->{result} = $self->password
+                                          if $cred->{type} == Sys::Virt::CRED_PASSPHRASE;
+                                  }
+                                  return 0;
+                              }
                           );
     }
     if ( ! $vm->list_storage_pools ) {
