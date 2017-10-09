@@ -141,21 +141,6 @@ sub init {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 }
 
-<<<<<<< HEAD
-sub init_ip {
-    return if !-e $FILE_CONFIG_REMOTE;
-
-    open my $in ,'<', $FILE_CONFIG_REMOTE;
-    $REMOTE_IP =<$in>;
-    chomp $REMOTE_IP;
-    close $in;
-
-    return $REMOTE_IP;
-}
-
-sub remote_ip {
-    return ($REMOTE_IP or undef);
-=======
 sub remote_config {
     my $vm_name = shift;
     return { } if !-e $FILE_CONFIG_REMOTE;
@@ -174,7 +159,6 @@ sub remote_config {
     $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
     lock_hash(%$remote_conf);
     return $remote_conf->{$vm_name};
->>>>>>> [#108] Store the IP of a remote testing server
 }
 
 sub _remove_old_domains_vm {
