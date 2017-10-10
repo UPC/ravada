@@ -35,7 +35,6 @@ our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
-our $REMOTE_IP;
 
 my %ARG_CREATE_DOM = (
       kvm => [ id_iso => 1 ]
@@ -170,32 +169,30 @@ sub _remove_old_domains_vm {
     my $domain;
 
     my $vm;
-    eval {
+
+    if (ref($vm_name)) {
+        $vm = $vm_name;
+    } else {
+        eval {
         my $rvd_back=rvd_back();
         return if !$rvd_back;
         $vm = $rvd_back->search_vm($vm_name);
-    };
-    diag($@) if $@;
+        };
+        diag($@) if $@;
 
-    return if !$vm;
-
+        return if !$vm;
+    }
     my $base_name = base_domain_name();
 
     my @domains;
     eval { @domains = $vm->list_domains() };
-
-    for my $dom_name ( sort { $b cmp $a }  @domains) {
-        next if $dom_name !~ /^$base_name/i;
-
-        my $domain;
-        eval {
-            $domain = $vm->search_domain($dom_name);
-        };
-        next if !$domain;
+    for my $domain ( sort { $b->name cmp $a->name }  @domains) {
+        next if $domain->name !~ /^$base_name/i;
 
         eval { $domain->shutdown_now($USER_ADMIN); };
         warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
 
+        warn "Removing ".$domain->name." in ".$vm->name."\n";
         eval {$domain->remove( $USER_ADMIN ) };
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
@@ -203,23 +200,20 @@ sub _remove_old_domains_vm {
 
     }
 
+    _remove_old_domains_kvm($vm)    if $vm->type =~ /qemu|kvm/i;
 }
 
 sub _remove_old_domains_kvm {
-    my $ip = shift;
+    my $vm = shift;
 
-    my $vm;
-    
-    eval {
-        if ($ip) {
-            $vm = Ravada::VM::KVM->new(host => $ip);
-        } else {
+    if (!$vm) {
+        eval {
             my $rvd_back = rvd_back();
             $vm = $rvd_back->search_vm('KVM');
-        }
-    };
-    diag($@) if $@;
-    return if !$vm;
+        };
+        diag($@) if $@;
+        return if !$vm;
+    }
 
     my $base_name = base_domain_name();
 
@@ -243,6 +237,7 @@ sub _remove_old_domains_kvm {
 
         eval { $domain->undefine };
         warn $@ if $@;
+        diag("[".$vm->name."] removed domain ".$domain->get_name);
     }
 }
 
@@ -250,7 +245,6 @@ sub remove_old_domains {
     _remove_old_domains_vm('KVM');
     _remove_old_domains_vm('Void');
     _remove_old_domains_kvm();
-    _remove_old_domains_kvm($REMOTE_IP) if $REMOTE_IP;
 }
 
 sub _remove_old_disks_kvm_local {
@@ -334,7 +328,6 @@ sub _remove_old_disks_void {
 sub remove_old_disks {
     _remove_old_disks_void();
     _remove_old_disks_kvm_remote();
-    _remove_old_disks_kvm_remote($REMOTE_IP)    if $REMOTE_IP;
 }
 
 sub create_user {
@@ -439,6 +432,27 @@ sub clean {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
+
+    _clean_remote();
+}
+
+sub _clean_remote {
+    return if ! -e $FILE_CONFIG_REMOTE;
+
+    my $conf;
+    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
+    return if !$conf;
+    for my $vm_name (keys %$conf) {
+        warn "cleaning remote $vm_name\n";
+        my $vm = rvd_back->search_vm($vm_name);
+        next if !$vm;
+
+        my $node;
+        eval { $node = $vm->new(%{$conf->{$vm_name}}) };
+        next if !$node;
+
+        _remove_old_domains_vm($node);
+    }
 }
 
 sub search_id_iso {
