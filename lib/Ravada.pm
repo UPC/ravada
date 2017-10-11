@@ -673,6 +673,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+
+    $self->_upgrade_table('vms','security','varchar(20) default NULL');
 }
 
 
@@ -834,12 +836,29 @@ sub _create_vm {
     for my $vm_name (keys %VALID_VM) {
         my $vm;
         eval { $vm = $create{$vm_name}->($self) };
+        warn $@ if $@;
         $err.= $@ if $@;
-        push @vms,($vm) if $vm;
+        push @vms,$vm if $vm;
     }
     die "No VMs found: $err\n" if $self->warn_error && !@vms;
-    return \@vms;
 
+    $self->_list_remote_vms();
+    return [@vms, $self->_list_remote_vms];
+
+}
+
+sub _list_remote_vms($self ) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM vms WHERE hostname <> 'localhost'");
+    $sth->execute;
+
+    my @vms;
+
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @vms,( Ravada::VM->open( $row->{id}));
+    }
+    $sth->finish;
+
+    return @vms;
 }
 
 sub _check_vms {
@@ -1902,13 +1921,14 @@ Searches for a VM of a given type
 sub search_vm {
     my $self = shift;
     my $type = shift;
+    my $host = (shift or 'localhost');
 
     confess "Missing VM type"   if !$type;
 
     my $class = 'Ravada::VM::'.uc($type);
 
     if ($type =~ /Void/i) {
-        return Ravada::VM::Void->new();
+        return Ravada::VM::Void->new(host => $host);
     }
 
     my @vms;
@@ -1917,7 +1937,7 @@ sub search_vm {
     die $@ if $@;
 
     for my $vm (@vms) {
-        return $vm if ref($vm) eq $class;
+        return $vm if ref($vm) eq $class && $vm->host eq $host;
     }
     return;
 }
