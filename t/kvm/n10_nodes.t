@@ -75,6 +75,14 @@ sub test_domain {
 
     my $ip = $node->ip;
     like($clone->display(user_admin),qr($ip));
+
+    if ($REMOTE_CONFIG->{public_ip}) {
+        my $public_ip = $REMOTE_CONFIG->{public_ip};
+        like($clone->display(user_admin),qr($public_ip));
+        isnt($vm->host, $public_ip);
+    } else {
+        diag("SKIPPED: Add public_ip to remote_vm.conf to test nodes with 2 IPs");
+    }
     return $clone;
 }
 clean();
@@ -88,7 +96,7 @@ SKIP: {
     my $msg = "SKIPPED: $vm_name virtual manager not found ".($@ or '');
     $REMOTE_CONFIG = remote_config($vm_name);
     if (!keys %$REMOTE_CONFIG) {
-        my $msg = "skipped, missing the remote configuration in the file "
+        my $msg = "skipped, missing the remote configuration for $vm_name in the file "
             .$Test::Ravada::FILE_CONFIG_REMOTE;
         diag($msg);
         skip($msg,10);

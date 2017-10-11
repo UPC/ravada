@@ -52,6 +52,11 @@ has 'host' => (
     , default => 'localhost'
 );
 
+has 'public_ip' => (
+        isa => 'Str'
+        , is => 'ro'
+);
+
 has 'default_dir_img' => (
       isa => 'String'
      , is => 'ro'
@@ -236,7 +241,8 @@ Returns the external IP this for this VM
 sub ip {
     my $self = shift;
 
-    my $name = $self->host() or confess "this vm has no host name";
+    my $name = ($self->public_ip or $self->host())
+        or confess "this vm has no host name";
     my $ip = inet_ntoa(inet_aton($name)) ;
 
     return $ip if $ip && $ip !~ /^127\./;
