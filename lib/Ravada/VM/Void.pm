@@ -183,6 +183,8 @@ sub import_domain {
     confess "Not implemented";
 }
 
+sub security {
+}
 #########################################################################3
 
 1;
