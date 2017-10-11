@@ -52,21 +52,6 @@ has type => (
     ,default => 'qemu'
 );
 
-has user => (
-    isa => 'Str'
-    ,is => 'ro',
-);
-
-has password => (
-    isa => 'Str'
-    ,is => 'ro',
-);
-
-has security => (
-    isa => 'Str'
-    ,is => 'ro'
-);
-
 #########################################################################3
 #
 
@@ -97,14 +82,18 @@ sub _connect {
     my $vm;
     confess "undefined host" if !defined $self->host;
 
+    my $con_type = $self->type;
+    $con_type = 'qemu' if $self->type eq 'KVM';
+
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
+        $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        die "ERROR: Security paramer required for remote connections.\n"
+        confess "ERROR: Security paramer required for remote connections.\n"
             ."Examples: tcp, tls.\n"
                 if !$self->security;
 
-        $vm = Sys::Virt->new( address => $self->type."+".$self->security."://".$self->host
+        $vm = Sys::Virt->new( address => $con_type."+".$self->security->{security}
+                                            ."://".$self->host
                                             ."/system"
                               ,auth => 1
                               ,credlist => [
@@ -114,9 +103,9 @@ sub _connect {
                               ,callback => sub {
                                   my $creds = shift;
                                   foreach my $cred (@{$creds}) {
-                                      $cred->{result} = $self->user
+                                      $cred->{result} = $self->security->{user}
                                           if $cred->{type} == Sys::Virt::CRED_AUTHNAME;
-                                      $cred->{result} = $self->password
+                                      $cred->{result} = $self->security->{password}
                                           if $cred->{type} == Sys::Virt::CRED_PASSPHRASE;
                                   }
                                   return 0;
@@ -1856,6 +1845,11 @@ sub import_domain {
     );
 
     return $domain;
+}
+
+sub security($self,$value=undef) {
+    $self->{_security} = $value if defined $value;
+    return $self->{_security};
 }
 
 1;
