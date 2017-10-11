@@ -34,26 +34,29 @@ ok($USER);
 
 sub test_vm_connect {
     my $vm_name = shift;
+    my $host = (shift or 'localhost');
 
     my $class = "Ravada::VM::$vm_name";
     my $obj = {};
 
     bless $obj,$class;
 
+    my %args;
+    $args{host} = $host if $host;
+
     my $vm = $obj->new();
     ok($vm);
-    ok($vm->host eq 'localhost');
+    is($vm->host, $host);
 }
 
 sub test_search_vm {
     my $vm_name = shift;
-
-    return if $vm_name eq 'Void';
+    my $host = shift;
 
     my $class = "Ravada::VM::$vm_name";
 
     my $ravada = Ravada->new(@ARG_RVD);
-    my $vm = $ravada->search_vm($vm_name);
+    my $vm = $ravada->search_vm($vm_name, $host);
     ok($vm,"I can't find a $vm virtual manager");
     ok(ref $vm eq $class,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
         ." it should be $class");
@@ -341,6 +344,13 @@ sub test_create_domain_nocd {
     my $name = new_domain_name();
 
     my $id_iso = search_id_iso('Debian');
+
+    my $sth = $test->dbh->prepare(
+        "UPDATE iso_images set device=NULL WHERE id=?"
+    );
+    $sth->execute($id_iso);
+    $sth->finish;
+
     my $iso;
     eval { $iso = $vm->_search_iso($id_iso,'<NONE>')};
     return if $@ && $@ =~ /Can't locate object method/;
@@ -378,9 +388,10 @@ sub select_iso {
 remove_old_domains();
 remove_old_disks();
 
+for my $host (undef,'localhost') {
 for my $vm_name (qw( Void KVM )) {
 
-    diag("Testing $vm_name VM");
+    diag("Testing VM $vm_name in host ".($host or '<UNDEF>'));
     my $CLASS= "Ravada::VM::$vm_name";
 
 
@@ -389,7 +400,7 @@ for my $vm_name (qw( Void KVM )) {
 
     my $vm;
 
-    eval { $vm = $RAVADA->search_vm($vm_name) } if $RAVADA;
+    eval { $vm = $RAVADA->search_vm($vm_name,$host) } if $RAVADA;
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
@@ -402,8 +413,8 @@ for my $vm_name (qw( Void KVM )) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS) or next;
-        test_vm_connect($vm_name);
-        test_search_vm($vm_name);
+        test_vm_connect($vm_name, $host);
+        test_search_vm($vm_name, $host);
 
         test_create_domain_nocd($vm_name);
 
@@ -442,6 +453,7 @@ for my $vm_name (qw( Void KVM )) {
         test_remove_domain($vm_name, $domain);
 
     };
+}
 }
 remove_old_domains();
 remove_old_disks();
