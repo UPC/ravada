@@ -110,6 +110,7 @@ Adds a new user in the SQL database. Returns nothing.
            , password => $pass
            , is_admin => 0
        , is_temporary => 0
+	         , two_fa => 0
     );
 
 =cut
@@ -124,8 +125,9 @@ sub add_user {
     my $is_admin = ($args{is_admin} or 0);
     my $is_temporary= ($args{is_temporary} or 0);
     my $is_external= ($args{is_external} or 0);
+    my $two_fa= ($args{two_fa} or 0);
 
-    delete @args{'name','password','is_admin','is_temporary','is_external'};
+    delete @args{'name','password','is_admin','is_temporary','is_external','two_fa'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
@@ -133,8 +135,8 @@ sub add_user {
 
     my $sth;
     eval { $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary, is_external)"
-            ." VALUES(?,?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, two_fa)"
+            ." VALUES(?,?,?,?,?,?)");
     };
     confess $@ if $@;
     if ($password) {
@@ -142,7 +144,7 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external,$two_fa);
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
@@ -422,11 +424,11 @@ sub change_password {
 
 =head2 language
 
-  Updates or selects the language selected for an User
+Updates or selects the language selected for an User
 
     $user->language();
 
-  Arguments: lang
+Arguments: lang
 
 =cut
 
@@ -446,6 +448,22 @@ sub change_password {
     }
   }
 
+=head2 secret2db
+
+Store secret in database associated with user
+
+    secret2db( $user, $base32Secret );
+
+=cut
+
+sub secret2db {
+	my ($user, $base32Secret) = @_;
+    if (defined $base32Secret) {
+      my $sth= $$CON->dbh->prepare("UPDATE users set secret=?"
+          ." WHERE name=?");
+      $sth->execute($base32Secret, $user);
+    }
+}
 
 =head2 remove
 

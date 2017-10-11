@@ -22,6 +22,7 @@ use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Auth;
+use Ravada::Auth::2FA;
 use POSIX qw(locale_h);
 
 my $help;
@@ -620,6 +621,7 @@ sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
+    my $change_2fa = 0;
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
@@ -630,11 +632,11 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
             if ($c->param('password') eq $c->param('conf_password')) {
-                eval { 
-                    $USER->change_password($c->param('password')); 
+                eval {
+                    $USER->change_password($c->param('password'));
                     _logged_in($c);
                 };
                 if ($@ =~ /Password too small/) {
@@ -649,8 +651,60 @@ sub user_settings {
           }
         }
     }
-    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
-      ,errors =>\@errors);
+    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa
+         ,errors =>\@errors);
+};
+###################################################
+
+## 2FA_settings
+
+any '/two_factor' => sub {
+    my $c = shift;
+    two_factor($c);
+};
+
+sub two_factor {
+    my $c = shift;
+    my $usr_code;
+    my $qrcode;
+    my $change_2fa = 0;
+
+    #Check 2FA is enable
+    my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
+    $sth->execute($USER->name);
+    my $row = $sth->fetchrow_hashref;
+    warn ("2FA $row->{two_fa}\n");
+    $change_2fa = 1 if ($row->{two_fa} == 1);
+
+    if ($c->param('gencode_click')){
+        #$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
+        #$sth->execute($USER->name);
+        #$row = $sth->fetchrow_hashref;
+        #my $base32Secret = $row->{secret};
+    warn ("MOJO");
+    }
+    if ($c->param('qrcode_click')){
+    warn ("MOJO2");
+
+        my $base32Secret = generateBase32Secret();
+        my $code = generateCurrentNumber( $base32Secret );
+        my $keyId = "RavadaVDI ($USER->name)";
+        my $qrcode = qrImageUrl( $keyId, $base32Secret );
+
+        if ($c->param('usr_code') == $code) {
+            warn "CODE $c->param('usr_code')\n";
+            eval {
+            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
+            $sth->execute('1', $USER->{name});
+            $change_2fa = 1;
+            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
+            $sth->execute($base32Secret, $row->{name});
+            _logged_in($c);
+            }
+        }
+    };
+warn "QRCODE $qrcode\n";
+    $c->render( template => 'bootstrap/two_factor', qrcode => $qrcode, change_2fa => $change_2fa);
 };
 
 get '/img/screenshots/:file' => sub {
@@ -1266,11 +1320,11 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
    
@@ -1294,6 +1348,7 @@ sub register {
    if ($username) {
        Ravada::Auth::SQL::add_user(name => $username, password => $password);
        return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+
    }
    $c->render(template => 'bootstrap/new_user');
 

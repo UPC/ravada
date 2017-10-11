@@ -41,23 +41,34 @@
                         </p>
 %   if (!$_user->is_external) {
                         <hr>
+                        <h3><%=l 'Password' %></h3>
                         <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
-                            <p><input type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Submit' %>'></input>
+                            <p><input type='submit' class="btn btn-primary" onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Submit' %>'></input>
 %                               if ($changed_pass) {
                                     <font color="green">   <%=l 'Your password has been changed successfully' %></font> 
 %                               }     
                             </p>
                         </form>
 %   }
+                        <hr>
+                        <h3><%=l 'Security' %></h3>
+#%                            if ($change_2fa) {
+                        <p><a href="two_factor" ><%=l 'Manage two-factor authentication' %> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true">&nbsp; On</i></span></a></p>
+#%                        }
+#%                       else {
+                        <p><a href="two_factor" ><%=l 'Set up two-factor authentication' %> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i>&nbsp; Off</span></a></p>
+#%                       }
+<!--                        <hr>
+                        <h3><%=l 'Login History' %></h3> -->
                   </div>
-                  </div>
+                </div>
             </div>
         </div>
     </div>
     </div>
-    %= include 'bootstrap/scripts'
-    %= include 'bootstrap/footer'
+%= include 'bootstrap/scripts'
+%= include 'bootstrap/footer'
 </body>
 </html>
