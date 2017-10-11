@@ -12,6 +12,7 @@ Ravada::VM - Virtual Managers library for Ravada
 use Carp qw( carp croak);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
+use JSON::XS;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
@@ -44,6 +45,7 @@ requires 'connect';
 requires 'disconnect';
 requires 'import_domain';
 
+requires 'security';
 ############################################################
 
 has 'host' => (
@@ -67,6 +69,7 @@ has 'readonly' => (
     , is => 'ro'
     ,default => 0
 );
+
 ############################################################
 #
 # Method Modifiers definition
@@ -96,6 +99,8 @@ Arguments: id of the VM
 
 sub open {
     my $proto = shift;
+    return _open_type($proto,@_) if !scalar @_ % 2;
+
     my $id = shift;
 
     my $class=ref($proto) || $proto;
@@ -111,13 +116,42 @@ sub open {
     $class .= "::$type";
     bless ($self,$class);
 
-    return $self->new(host => $row->{hostname});
+    my @args = ( host => $row->{hostname});
+
+    push @args,(security => decode_json($row->{security})) if $row->{security};
+
+    return $self->new(@args);
 
 }
 
 sub BUILD {
     my $self = shift;
+
+    my $args = $_[0];
+
+    $self->security($args->{security})  if $args->{security};
+
+    $self->id;
     $self->vm;
+}
+
+sub _open_type {
+    my $self = shift;
+    my %args = @_;
+
+    my $type = delete $args{type} or confess "ERROR: Missing VM type";
+    my $class = "Ravada::VM::$type";
+
+    my $proto = {};
+    bless $proto,$class;
+
+    my $vm = $proto->new(@_);
+    eval { $vm->vm };
+    warn $@ if $@;
+    return if $@;
+
+    return $vm;
+
 }
 
 sub _check_readonly {
@@ -390,13 +424,13 @@ sub _select_vm_db {
 sub _insert_vm_db {
     my $self = shift;
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO vms (name,vm_type,hostname) "
-        ." VALUES(?,?,?)"
+        "INSERT INTO vms (name, vm_type, hostname, security)"
+        ." VALUES(?, ?, ?, ?)"
     );
     my $name = $self->name;
-    $sth->execute($name,$self->type,$self->host);
+    my $security = ($self->security() or {});
+    $sth->execute($name,$self->type,$self->host, encode_json($security));
     $sth->finish;
-
 
     return $self->_do_select_vm_db( name => $name);
 }
