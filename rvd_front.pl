@@ -621,7 +621,7 @@ sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
-    my $change_2fa = 0;
+    my $change_2fa;
     my $usr_code;
     my $qrcode;
 
@@ -650,39 +650,42 @@ sub user_settings {
                 };
           }
           else {
-              push @errors,("Password fields aren't equal")
+              push @errors,("Password fieldpasswords aren't equal")
           }
         }
     }
     #Check 2FA is enable
     my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
-    $sth->execute($USER->name);
+    $sth->execute($USER->{name});
+
     my $row = $sth->fetchrow_hashref;
     warn ("2FA $row->{two_fa}\n");
     $change_2fa = 1 if ($row->{two_fa} == 1);
 
+    my $base32Secret = generateBase32Secret();
+    my $code = generateCurrentNumber( $base32Secret );
+    my $keyId = "RavadaVDI ($USER->{name})";
+    $qrcode = qrImageUrl( $keyId, $base32Secret );
 
-    if ($c->param('qrcode_click')){
-warn ("MOJO222222222222222222222222222222222222");
-
-        my $base32Secret = generateBase32Secret();
-        my $code = generateCurrentNumber( $base32Secret );
-        my $keyId = "RavadaVDI ($USER->name)";
-        my $qrcode = qrImageUrl( $keyId, $base32Secret );
-
-        if ($c->param('usr_code') == $code) {
-            warn "CODE $c->param('usr_code')\n";
-            eval {
+    if ($c->param('usr_code') == $code) {
+        warn "CODE $c->param('usr_code') \n";
+        eval {
             $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
             $sth->execute('1', $USER->{name});
             $change_2fa = 1;
             $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
             $sth->execute($base32Secret, $row->{name});
             _logged_in($c);
-            }
         }
     };
-    warn "QRCODE $qrcode\n";
+
+if ($c->param('dis_2faclick')){
+            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
+            $sth->execute('0', $USER->{name});
+            $change_2fa = 0;
+warn ("dis2faclick");
+}
+
 
     $c->render( template => 'bootstrap/user_settings',
                 changed_lang=> $changed_lang,
