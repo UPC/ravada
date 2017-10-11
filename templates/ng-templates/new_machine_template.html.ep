@@ -93,7 +93,7 @@
             <label for="swap" class="col-lg-2 control-label"><%=l 'Swap Size: (GB)' %></label>
             <div class="col-lg-2">
                 <input class="slider form-control" ng-model="swapsize.value" 
-                type="range" name="swap" min="0" max="4">
+                type="range" name="swap" min="1" max="4">
             </div>{{swapsize.value}}
         </div>
         <div class="form-group row">
