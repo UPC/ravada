@@ -152,13 +152,19 @@ sub remote_config {
         diag("SKIPPED: No $vm_name section in $FILE_CONFIG_REMOTE");
         return ;
     };
-    for my $field ( qw(host user password security)) {
+    for my $field ( qw(host user password security public_ip)) {
         delete $remote_conf->{$field};
     }
     die "Unknown fields in remote_conf $vm_name, valids are : host user password\n"
         .Dumper($remote_conf)   if keys %$remote_conf;
 
     $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
+    ok($remote_conf->{public_ip} ne $remote_conf->{host},
+            "Public IP must be different from host at $FILE_CONFIG_REMOTE")
+        if defined $remote_conf->{public_ip};
+
+    $remote_conf->{public_ip} = '' if !exists $remote_conf->{public_ip};
+
     lock_hash(%$remote_conf);
     return $remote_conf->{$vm_name};
 }
@@ -212,7 +218,6 @@ sub _remove_old_domains_vm {
         eval { $domain->shutdown_now($USER_ADMIN); };
         warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
 
-        warn "Removing ".$domain->name." in ".$vm->name."\n";
         eval {$domain->remove( $USER_ADMIN ) };
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
@@ -267,46 +272,14 @@ sub remove_old_domains {
     _remove_old_domains_kvm();
 }
 
-sub _remove_old_disks_kvm_local {
+sub _remove_old_disks_kvm {
+    my $vm = shift;
+    warn "Removing from ".$vm->name if $vm;
 
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
 
-#    my $rvd_back= rvd_back();
-    my $vm = rvd_back()->search_vm('kvm');
     if (!$vm) {
-        return;
-    }
-#    ok($vm,"I can't find a KVM virtual manager") or return;
-
-    my $dir_img;
-    eval { $dir_img = $vm->dir_img() };
-    return if !$dir_img;
-
-    $vm->_refresh_storage_pools();
-
-    opendir my $ls,$dir_img or return;
-    while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
-
-        $disk = "$dir_img/$disk";
-        next if ! -f $disk;
-
-        unlink $disk or next;#warn "I can't remove $disk";
-    }
-    $vm->storage_pool->refresh();
-}
-
-sub _remove_old_disks_kvm_remote {
-    my $ip = shift;
-
-    my $name = base_domain_name();
-    confess "Unknown base domain name " if !$name;
-
-    my $vm;
-    if ($ip) {
-        eval { $vm = Ravada::VM::KVM->new(host => $ip) };
-    } else {
         my $rvd_back = rvd_back();
         $vm = $rvd_back->search_vm('KVM');
     }
@@ -347,7 +320,7 @@ sub _remove_old_disks_void {
 
 sub remove_old_disks {
     _remove_old_disks_void();
-    _remove_old_disks_kvm_remote();
+    _remove_old_disks_kvm();
 }
 
 sub create_user {
@@ -472,6 +445,7 @@ sub _clean_remote {
         next if !$node;
 
         _remove_old_domains_vm($node);
+        _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
     }
 }
 
