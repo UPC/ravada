@@ -1600,7 +1600,6 @@ sub _check_uuid($self, $doc, $node) {
 
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    $uuid = "1805fb4f-ca45-a946-efbf-94124e760418";
     my @other_uuids;
     for my $domain ($node->vm->list_all_domains, $self->_vm->vm->list_all_domains) {
         push @other_uuids,($domain->get_uuid_string);
@@ -1610,8 +1609,7 @@ sub _check_uuid($self, $doc, $node) {
     my $new_uuid = $self->_vm->_unique_uuid($uuid
             ,@other_uuids
     );
-    my ($xml_uuid) = $doc->findnodes('/domain/uuid');
-    $xml_uuid->setData($new_uuid);
+    $uuid->setData($new_uuid);
 
 }
 
@@ -1620,7 +1618,6 @@ sub rsync($self, $node) {
     $ssh2->timeout(20000);
     $ssh2->connect($node->host) or $ssh2->die_with_error;
     $ssh2->check_hostkey()      or $ssh2->die_with_error;
-    warn $node->host;
     $ssh2->auth_publickey("root"
         ,"/root/.ssh/id_rsa.pub"
         ,"/root/.ssh/id_rsa")    or $ssh2->die_with_error;
@@ -1649,7 +1646,6 @@ sub rsync($self, $node) {
     }
     my $rsync = File::Rsync->new();
     for my $file ( $self->list_volumes(), @files_base) {
-        warn "rsync $file\n";
         $rsync->exec(src => $file, dest => $node->host.":".$file );
     }
     $node->_refresh_storage_pools();
