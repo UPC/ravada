@@ -13,7 +13,7 @@
                     <div class="panel-heading">
                         <h2 class="text-center"><%=l '2FA Settings' %></h2>
                     </div>
-                    <div>
+                <div>
 %   if ($change_2fa ) {
         <div class="modal fade dis2fa-modal" id="dis2fa-modal" role="dialog" >
             <div class="modal-dialog">

@@ -54,12 +54,73 @@
 %   }
                         <hr>
                         <h3><%=l 'Security' %></h3>
-#%                            if ($change_2fa) {
-                        <p><a href="two_factor" ><%=l 'Manage two-factor authentication' %> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true">&nbsp; On</i></span></a></p>
-#%                        }
-#%                       else {
-                        <p><a href="two_factor" ><%=l 'Set up two-factor authentication' %> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i>&nbsp; Off</span></a></p>
-#%                       }
+%                            if ($change_2fa) {
+                                <p><a href="#" data-toggle="modal" data-target="#dis2fa-modal"><%=l 'Manage two-factor authentication' %> <span class="label label-success"><i class="fa fa-lock" aria-hidden="true">&nbsp; On</i></span></a></p>
+                                <div class="modal fade dis2fa-modal" id="dis2fa-modal" role="dialog" >
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                                                <h4 class="modal-title">Security</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                <h4 class="list-item"><%=l 'Two-factor authentication' %><span class="label label-success"><i class="fa fa-lock" aria-hidden="true">&nbsp; On</i></span></h4>
+                                                <p class="list-item"><%=l 'You\'ve enabled two-factor authentication by your account and you\'re receiving code by mobile app.' %></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal"><%= l 'Close' %></button>
+                                                <a type="button" class="btn btn-danger" onclick='this.form.submit();' id='dis2fa_click' name='dis_2faclick'/><%=l 'Yes, disable' %></a>
+                                            </div>
+                                        </div><!-- /.modal-content -->
+                                    </div><!-- /.modal-dialog -->
+                                </div><!-- /.modal -->
+%                                       } else {
+                                <p><a href="#" data-toggle="modal" data-target="#2fa-modal"><%=l 'Set up two-factor authentication' %> <span class="label label-default"><i class="fa fa-unlock" aria-hidden="true"></i>&nbsp; Off</span></a></p>
+                                <div class="modal fade 2fa-modal" id="2fa-modal" role="dialog" >
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                                                <h4 class="modal-title">Security</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="list-item"><i class="fa fa-shield fa-fw fa-3x" aria-hidden="true"></i>&nbsp; <%=l 'It adds security. With this enabled, even if someone managed to get your password, they would also need your phone to log in to your account.' %></p>
+                                                <p class="list-item"><i class="fa fa-mobile fa-fw fa-3x" aria-hidden="true"></i>&nbsp; <%=l 'You set up your phone to generate verification codes. Then, we\'ll prompt your enter these codes when you try to log in on a new computer or devide.' %></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                <a type="button" class="btn btn-primary" data-toggle="modal" data-target="#2fa-modal2" onclick='this.form.submit();' ng-click=""><%=l 'Get started' %></a>
+                                            </div>
+                                            </div><!-- /.modal-content -->
+                                        </div><!-- /.modal-dialog -->
+                                    </div><!-- /.modal -->
+                                    <div class="modal fade 2fa-modal2" id="2fa-modal2">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                                                    <h4 class="modal-title">Security</h4>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <form id="2fa_code" method="post" class="form-horizontal">
+                                                        <p class="list-item"><%=l 'Authenthication apps (like Google Authenticator or Authy) generate verification codes.' %></p>
+                                                        <p class="list-item"><%=l '1. Open the app and scan the QR bardcode below.' %></p>
+                                                        <p class="list-item"><img src="<%= $qrcode %>"/></p>
+                                                        <p class="list-item"><%=l '2. Enter the verification code generated by the app.' %></p>
+                                                        <input type="text" class="form-control required" id="code" name="code" placeholder="<%=l 'Enter code' %>" required/>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Back</button>
+                                                    <input type='submit' class="btn btn-primary" onclick='this.form.submit();' id='qrcode_click' name='qrcode_click' value='<%=l 'Enable' %>'></input>
+            %                                       if ($change_2fa) {
+                                                        <font color="green">   <%=l 'Two-factor authentication has been enabled.' %></font>
+            %                                       }
+                                                </div>
+                                            </div><!-- /.modal-content -->
+                                                </form>
+                                        </div><!-- /.modal-dialog -->
+                                    </div><!-- /.modal -->
+%                                       }
 <!--                        <hr>
                         <h3><%=l 'Login History' %></h3> -->
                   </div>

@@ -622,6 +622,9 @@ sub user_settings {
     my $changed_lang;
     my $changed_pass;
     my $change_2fa = 0;
+    my $usr_code;
+    my $qrcode;
+
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
@@ -651,24 +654,6 @@ sub user_settings {
           }
         }
     }
-    $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass, change_2fa => $change_2fa
-         ,errors =>\@errors);
-};
-###################################################
-
-## 2FA_settings
-
-any '/two_factor' => sub {
-    my $c = shift;
-    two_factor($c);
-};
-
-sub two_factor {
-    my $c = shift;
-    my $usr_code;
-    my $qrcode;
-    my $change_2fa = 0;
-
     #Check 2FA is enable
     my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
     $sth->execute($USER->name);
@@ -676,15 +661,9 @@ sub two_factor {
     warn ("2FA $row->{two_fa}\n");
     $change_2fa = 1 if ($row->{two_fa} == 1);
 
-    if ($c->param('gencode_click')){
-        #$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
-        #$sth->execute($USER->name);
-        #$row = $sth->fetchrow_hashref;
-        #my $base32Secret = $row->{secret};
-    warn ("MOJO");
-    }
+
     if ($c->param('qrcode_click')){
-    warn ("MOJO2");
+warn ("MOJO222222222222222222222222222222222222");
 
         my $base32Secret = generateBase32Secret();
         my $code = generateCurrentNumber( $base32Secret );
@@ -703,9 +682,16 @@ sub two_factor {
             }
         }
     };
-warn "QRCODE $qrcode\n";
-    $c->render( template => 'bootstrap/two_factor', qrcode => $qrcode, change_2fa => $change_2fa);
+    warn "QRCODE $qrcode\n";
+
+    $c->render( template => 'bootstrap/user_settings',
+                changed_lang=> $changed_lang,
+                changed_pass => $changed_pass,
+                change_2fa => $change_2fa,
+                qrcode => $qrcode,
+                errors =>\@errors);
 };
+###################################################
 
 get '/img/screenshots/:file' => sub {
     my $c = shift;
