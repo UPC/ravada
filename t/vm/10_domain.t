@@ -344,8 +344,9 @@ sub test_description {
 
 sub test_create_domain_nocd {
     my $vm_name = shift;
+    my $host = (shift or 'localhost');
 
-    my $vm = rvd_back->search_vm($vm_name);
+    my $vm = rvd_back->search_vm($vm_name, $host);
     my $name = new_domain_name();
 
     my $id_iso = search_id_iso('Debian');
@@ -465,9 +466,9 @@ for my $vm_name (qw( Void KVM )) {
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);
 
-        test_create_domain_nocd($vm_name);
+        test_create_domain_nocd($vm_name, $host);
 
-        my $domain = test_create_domain($vm_name);
+        my $domain = test_create_domain($vm_name, $host);
         test_open($vm_name, $domain);
 
         test_description($vm_name, $domain);
