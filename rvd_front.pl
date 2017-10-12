@@ -626,6 +626,8 @@ sub user_settings {
     my $code;
     my $qrcode;
     my $base32Secret;
+	my $flag = 0;
+	my $sth;
 
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
@@ -656,45 +658,52 @@ sub user_settings {
           }
         }
     }
-    #Check 2FA is enable
-    my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
-    $sth->execute($USER->{name});
 
-    my $row = $sth->fetchrow_hashref;
-    $change_2fa = 1 if ($row->{two_fa} == 1);
+warn "FLAG $flag \n";
+	$flag = $c->param('flag');
+warn "FLAG1 $flag \n";
 
-    $base32Secret = generateBase32Secret();
-    $code = generateCurrentNumber( $base32Secret );
-    my $keyId = "RavadaVDI ($USER->{name})";
-    $qrcode = qrImageUrl( $keyId, $base32Secret );
-    warn ("CODE: $code\n");
+	if ($flag == 0){
+		#Check 2FA is enable
+		$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
+		$sth->execute($USER->{name});
 
-if ($c->param('qrcode_click')){
-    warn ("CODE: $code\n");
-    $form_code = $c->param('form_code');
-    warn ("FORM CODE: $form_code\n");
-    warn ("Secret: $base32Secret\n");
+		my $row = $sth->fetchrow_hashref;
+		$change_2fa = 1 if ($row->{two_fa} == 1);
 
-    if ($form_code == $code) {
-        warn "CODE = FORM_CODE $form_code \n";
-        eval {
-            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
-            $sth->execute('1', $USER->{name});
-            $change_2fa = 1;
-            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
-            $sth->execute($base32Secret, $USER->{name});
-            _logged_in($c);
-        }
-    }
-}
+		$base32Secret = generateBase32Secret();
+		$code = generateCurrentNumber( $base32Secret );
+		my $keyId = "RavadaVDI ($USER->{name})";
+		$qrcode = qrImageUrl( $keyId, $base32Secret );
+		warn ("CODE: $code\n");
+	}
 
-if ($c->param('dis_2faclick')){
-            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
-            $sth->execute('0', $USER->{name});
-            $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
-            $sth->execute('NULL', $USER->{name});
-            $change_2fa = 0;
-}
+	if ($c->param('qrcode_click')){
+		warn ("CODE: $code\n");
+		$form_code = $c->param('form_code');
+		warn ("FORM CODE: $form_code\n");
+		warn ("Secret: $base32Secret\n");
+
+		if ($form_code == $code) {
+			warn "CODE = FORM_CODE $form_code \n";
+			eval {
+				$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
+				$sth->execute('1', $USER->{name});
+				$change_2fa = 1;
+				$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
+				$sth->execute($base32Secret, $USER->{name});
+				_logged_in($c);
+			}
+		}
+	}
+
+	if ($c->param('dis_2faclick')){
+		$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
+		$sth->execute('0', $USER->{name});
+        $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
+        $sth->execute('NULL', $USER->{name});
+        $change_2fa = 0;
+	}
 
     $c->render( template => 'bootstrap/user_settings',
                 changed_lang=> $changed_lang,
@@ -702,6 +711,7 @@ if ($c->param('dis_2faclick')){
                 change_2fa => $change_2fa,
                 qrcode => $qrcode,
                 code => $code,
+				flag => $flag,
                 errors =>\@errors);
 };
 ###################################################
