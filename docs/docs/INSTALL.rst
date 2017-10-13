@@ -35,8 +35,9 @@ Ubuntu
 ------
 
 We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__. Download and
-install them:
+repository <http://infoteleco.upc.edu/img/debian/>`__. There we have
+also development releases. Try them if you want to help us testing
+new features.
 
 ::
 
@@ -74,17 +75,20 @@ the same one as the ravada package.
 
     $ sudo apt-get install mysql-server
 
-MySQL user
+MySQL database and user
 ~~~~~~~~~~
 
-Create a database named "ravada". in this stage the system wants you to
-identify a password for your sql.
+It is required a database for internal use. In this examples we call it *ravada*.
+We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
+In this stage the system wants you to set a password for the sql connection.
+
+Create the database:
 
 ::
 
     $ mysqladmin -u root -p create ravada
 
-Grant all permissions to your user:
+Grant all permissions on this database to the *rvd_user*:
 
 ::
 
@@ -108,7 +112,9 @@ example.
 Ravada web user
 ---------------
 
-Add a new user for the ravada web. Use rvd\_back to create it. When asked if this user is admin answer *yes*.
+Add a new user for the ravada web. Use rvd\_back to create it. It will perform some initialization duties in the database the very first time this script is executed.
+
+When asked if this user is admin answer *yes*.
 
 ::
 

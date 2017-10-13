@@ -57,7 +57,7 @@ DIRECTLY VDI TO QCOW2
 
 ::
 
-    $ qemu-img convert -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
+    $ qemu-img convert -p -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
 
 OR IN TWO STEPS
 ~~~~~~~~~~~~~~~
@@ -77,4 +77,4 @@ of the machine:
 
 ::
 
-    $ sudo qemu-img convert -f raw EXAMPLE.vdi -O qcow2 /var/lib/libvirt/images/EXAMPLE-vda-id8Q.img
+    $ sudo qemu-img convert -p -f raw EXAMPLE.vdi -O qcow2 /var/lib/libvirt/images/EXAMPLE-vda-id8Q.img
