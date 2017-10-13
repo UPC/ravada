@@ -7,7 +7,6 @@ use Test::SQL::Data;
 use YAML qw(LoadFile Dump);
 
 use_ok('Ravada');
-use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
 
