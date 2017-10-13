@@ -7,9 +7,11 @@ have a development release of Ravada.
 Install Modules
 ---------------
 
-$ sudo apt-get install libtest-spelling-perl
-$ sudo apt-get install cpanminus
-$ sudo cpanm Active::Directory
+::
+
+    $ sudo apt-get install libtest-spelling-perl
+    $ sudo apt-get install cpanminus
+    $ sudo cpanm Auth::ActiveDirectory
 
 Configure Ravada
 ----------------
@@ -19,6 +21,7 @@ at first level without indentations, the other tags must be space-indented. The
 port is optional.
 
 ::
+
     ActiveDirectory:
         host: thehost
         port: 389
