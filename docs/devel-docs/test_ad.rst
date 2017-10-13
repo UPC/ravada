@@ -24,6 +24,7 @@ Auth data
 It is required a valid user and password to test AD. Put them in the file t/etc/test_ad_data.conf
 
 ::
+
     name: theusername
     password: thepassword
 
@@ -33,6 +34,7 @@ Run the tests
 From the source root directory run:
 
 ::
+
     $ perl Makefile.PL
     $ make && prove -b t/67_user_ad.t
 
