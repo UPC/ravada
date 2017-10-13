@@ -9,6 +9,7 @@ Ravada::Auth::ActiveDirectory - AD library for Ravada
 
 =cut
 
+
 use Carp qw(carp);
 use Data::Dumper;
 use Digest::SHA qw(sha1_hex);
@@ -17,41 +18,17 @@ use Auth::ActiveDirectory;
 
 use Ravada::Auth::SQL;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 with 'Ravada::Auth::User';
 
 our $CONFIG = \$Ravada::CONFIG;
 
 ######################################################3
 
-has host => (
-           is => 'ro'
-         ,isa => 'Str'
-    ,required =>1
-);
-
-has port => (
-           is => 'ro'
-         ,isa => 'Str'
-    ,default => 389
-);
-
-has timeout => (
-            is => 'ro'
-         ,isa => 'Str'
-    ,default => 60
-);
-
-has domain => (
-           is => 'ro'
-         ,isa => 'Str'
-    ,required => 1
-);
-
-has principal => (
-           is => 'ro'
-         ,isa => 'Str'
-    ,required => 1
-);
+our ($HOST, $DOMAIN, $PRINCIPAL);
+our ($PORT, $TIMEOUT) = ( 389, 60 );
 
 #########################################################
 
@@ -73,15 +50,31 @@ sub BUILD {
     die "ERROR: Login failed ".$self->name  if !$self->login;
 }
 
-sub login {
-    my $self = shift;
+sub init($rvd_conf) {
+    my %config = %{$rvd_conf->{ActiveDirectory}};
+
+         $HOST = delete $config{host}     or die "ERROR: host required in ".Dumper($rvd_conf);
+       $DOMAIN = delete $config{domain}   or die "ERROR: domain required in ".Dumper($rvd_conf);
+    $PRINCIPAL = delete $config{principal}
+            or die "ERROR: principal required in ".Dumper($rvd_conf);
+
+    $TIMEOUT = delete $config{timeout}  if exists $config{timeout};
+       $PORT = delete $config{port}     if exists $config{port};
+
+    warn "WARNING: Unknown fields ".join(",", keys %config)
+        if keys %config;
+
+    return 1;
+}
+
+sub login($self) {
 
     my $ad = Auth::ActiveDirectory->new(
-       host      => $self->host,
-       port      => $self->port || 389,
-       timeout   => $self->timeout || 60,
-       domain    => $self->domain,
-       principal => $self->principal,
+       host      => $HOST,
+       port      => $PORT,
+       timeout   => $TIMEOUT,
+       domain    => $DOMAIN,
+       principal => $PRINCIPAL,
     );
 
     die $ad->error_message if $ad->error_message;
