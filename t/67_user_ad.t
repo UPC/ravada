@@ -48,9 +48,8 @@ sub test_user {
 
     my $user;
     eval { $user = Ravada::Auth::ActiveDirectory->new(%$data) };
-    is($@,'') or return;
-
-    ok($user,"Expecting an user object");
+    is($@,'');
+    ok($user,"Expecting an user object , got ".($user or '<UNDEF>'));
 
     my $user_login;
     eval { $user_login = Ravada::Auth::login($data->{name}, $data->{password}) };
