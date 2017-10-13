@@ -239,6 +239,7 @@ sub _remove_old_domains_kvm {
         diag($@) if $@;
         return if !$vm;
     }
+    return if !$vm->vm;
 
     my $base_name = base_domain_name();
 
@@ -284,7 +285,7 @@ sub _remove_old_disks_kvm {
         $vm = $rvd_back->search_vm('KVM');
     }
 
-    if (!$vm) {
+    if (!$vm || !$vm->vm) {
         return;
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
@@ -436,7 +437,6 @@ sub _clean_remote {
     eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
     return if !$conf;
     for my $vm_name (keys %$conf) {
-        warn "cleaning remote $vm_name\n";
         my $vm = rvd_back->search_vm($vm_name);
         next if !$vm;
 
