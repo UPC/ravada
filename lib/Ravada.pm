@@ -842,7 +842,6 @@ sub _create_vm {
     }
     die "No VMs found: $err\n" if $self->warn_error && !@vms;
 
-    $self->_list_remote_vms();
     return [@vms, $self->_list_remote_vms];
 
 }
@@ -854,7 +853,8 @@ sub _list_remote_vms($self ) {
     my @vms;
 
     while ( my $row = $sth->fetchrow_hashref) {
-        push @vms,( Ravada::VM->open( $row->{id}));
+        my $vm = Ravada::VM->open( $row->{id});
+        push @vms,( $vm )   if $vm && $vm->vm;
     }
     $sth->finish;
 
