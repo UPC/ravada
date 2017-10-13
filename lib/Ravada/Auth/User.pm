@@ -16,6 +16,7 @@ use Moose::Role;
 requires 'add_user';
 requires 'is_admin';
 requires 'is_external';
+requires 'login';
 
 has 'name' => (
            is => 'ro'
