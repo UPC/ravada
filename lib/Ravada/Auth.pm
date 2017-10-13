@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 our $LDAP;
+our $AD;
 
 use Ravada::Auth::SQL;
 
@@ -22,6 +23,15 @@ if ($@) {
 }
 warn "LDAP loaded=".($LDAP or '<UNDEF>')    if $Ravada::DEBUG;
 
+eval {
+    require Ravada::Auth::ActiveDirectory;
+};
+if ($@) {
+    warn $@;
+    $AD= 0;
+}
+warn "AD loaded=".($AD or '<UNDEF>')    if $Ravada::DEBUG;
+
 =head2 init
 
 Initializes the submodules
@@ -37,6 +47,14 @@ sub init {
         };
     } else {
         $LDAP = 0;
+    }
+    if ($config->{ActiveDirectory}) {
+        eval { 
+            Ravada::Auth::LDAP::init($config); 
+            $AD = 1;
+        };
+    } else {
+        $AD = 0;
     }
 #    Ravada::Auth::SQL::init($config, $db_con);
 }
@@ -64,7 +82,12 @@ sub login {
     if ($@ =~ /I can't connect/i) {
         $LDAP = 0 if !defined $LDAP;
     }
+
+    $login_ok = _login_ad($name, $pass);
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
+}
+
+sub _login_ad {
 }
 
 =head2 LDAP
