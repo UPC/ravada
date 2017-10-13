@@ -17,7 +17,6 @@ use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
-use Net::SFTP::Foreign;
 use Net::SSH2;
 use Sys::Virt::Stream;
 use XML::LibXML;
