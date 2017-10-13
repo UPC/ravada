@@ -83,11 +83,21 @@ sub login {
         $LDAP = 0 if !defined $LDAP;
     }
 
-    $login_ok = _login_ad($name, $pass);
+    $login_ok = _login_ad($name, $pass) if !defined $AD || $AD;
+    return $login_ok if $login_ok;
+
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
 sub _login_ad {
+    my ($name, $pass) = @_;
+    my $login_ok;
+    eval {
+        $login_ok = Ravada::Auth::ActiveDirectory->new(name => $name, password => $pass);
+    };
+    warn $@ if $@;
+
+    return $login_ok;
 }
 
 =head2 LDAP
