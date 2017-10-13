@@ -45,7 +45,8 @@ sub test_node {
 sub test_sync {
     my ($vm_name, $node, $clone) = @_;
 
-    $clone->rsync($node);
+    eval { $clone->rsync($node) };
+    is($@,'') or return;
     # TODO test synced files
 
 }
@@ -110,7 +111,7 @@ SKIP: {
     diag($msg)      if !$vm;
     skip($msg,10)   if !$vm;
 
-    my $node = test_node($vm_name);
+    my $node = test_node($vm_name)  or next;
     test_domain($vm_name, $node);
 
 }
