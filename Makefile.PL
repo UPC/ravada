@@ -26,6 +26,8 @@ WriteMakefile(
     ,'DBD::SQLite'      => 0
     ,'IPTables::ChainMgr' => 0
     ,'Net::DNS' => 0
+    ,'Net::SSH2' => 0
+    ,'File::Rsync' => 0
   },
   BUILD_REQUIRES => {
     'Test::SQL::Data' => 0
