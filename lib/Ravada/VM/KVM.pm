@@ -869,6 +869,7 @@ sub _iso_name {
         );
         $sth->execute($device,$iso->{id});
     }
+    $self->_refresh_storage_pools();
     return $device;
 }
 
