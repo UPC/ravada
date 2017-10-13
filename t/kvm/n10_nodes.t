@@ -112,7 +112,7 @@ SKIP: {
     skip($msg,10)   if !$vm;
 
     my $node = test_node($vm_name)  or next;
-    test_domain($vm_name, $node);
+    test_domain($vm_name, $node)    if $node->vm;
 
 }
 

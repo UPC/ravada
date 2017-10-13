@@ -92,7 +92,8 @@ sub _connect {
             ."Examples: tcp, tls.\n"
                 if !$self->security;
 
-        $vm = Sys::Virt->new( address => $con_type."+".$self->security->{security}
+        eval {
+            $vm = Sys::Virt->new( address => $con_type."+".$self->security->{security}
                                             ."://".$self->host
                                             ."/system"
                               ,auth => 1
@@ -111,6 +112,9 @@ sub _connect {
                                   return 0;
                               }
                           );
+         };
+         die $@ if $@ && $@ !~ /libvirt error code: 38/;
+         return if !$vm;
     }
     if ( ! $vm->list_storage_pools ) {
 	warn "WARNING: No storage pools creating default\n";
@@ -161,6 +165,8 @@ sub connect {
 
 sub _load_storage_pool {
     my $self = shift;
+
+    confess "no hi ha vm" if !$self->vm;
 
     my $vm_pool;
     my $available;
