@@ -6,6 +6,10 @@ use strict;
 our $LDAP;
 our $AD;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
+use Data::Dumper;
 use Ravada::Auth::SQL;
 
 =head1 NAME
@@ -38,8 +42,7 @@ Initializes the submodules
 
 =cut
 
-sub init {
-    my ($config, $db_con) = @_;
+sub init($config) {
     if ($config->{ldap}) {
         eval { 
             Ravada::Auth::LDAP::init($config); 
@@ -49,10 +52,8 @@ sub init {
         $LDAP = 0;
     }
     if ($config->{ActiveDirectory}) {
-        eval { 
-            Ravada::Auth::LDAP::init($config); 
-            $AD = 1;
-        };
+        Ravada::Auth::ActiveDirectory::init($config);
+        $AD = 1;
     } else {
         $AD = 0;
     }
@@ -93,7 +94,9 @@ sub _login_ad {
     my ($name, $pass) = @_;
     my $login_ok;
     eval {
-        $login_ok = Ravada::Auth::ActiveDirectory->new(name => $name, password => $pass);
+        $login_ok = Ravada::Auth::ActiveDirectory->new(
+            name => $name
+            , password => $pass);
     };
     warn $@ if $@;
 
