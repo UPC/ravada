@@ -1,5 +1,5 @@
 # Translators:
-# Kimia mirehbar	kimia@etsetb.upc.edu
+# Kimia mirehbar    kimia@etsetb.upc.edu
 # french
 msgid ""
 msgstr ""
@@ -22,7 +22,7 @@ msgid "Restore"
 msgstr "Restaurer"
 
 msgid "Machine Name"
-msgstr "Nom de Machine"
+msgstr "Nom du Machine"
 
 msgid "Tools"
 msgstr "Outils"
@@ -34,13 +34,13 @@ msgid "Users"
 msgstr "Utilisateurs"
 
 msgid "Choose a Machine to Start"
-msgstr "Choisir un Machine Pour Commencer"
+msgstr "Choisisez une Machine pour Débuter"
 
 msgid "Start"
 msgstr "Début"
 
 msgid "Stop"
-msgstr "Stop"
+msgstr "Arrêt"
 
 msgid "View"
 msgstr "Vue"
@@ -52,7 +52,7 @@ msgid "Clone"
 msgstr "Cloner"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "Ne Se Peux pas Preparer Base, Retirer ou Effacer la Base"
+msgstr "Ne peut pas preparer la base, retirez ou effacez la base"
 
 msgid "Clone/s"
 msgstr "Clones"
@@ -67,7 +67,7 @@ msgid "Name"
 msgstr "Nom"
 
 msgid "Log Out"
-msgstr "Sortir"
+msgstr "Déconnecter"
 
 msgid "Available Machines"
 msgstr "Machines Disponibles"
@@ -79,31 +79,31 @@ msgid "Requirements"
 msgstr "Exigences"
 
 msgid "About"
-msgstr "Sur"
+msgstr "À propos"
 
 msgid "Messages"
 msgstr "Messages"
 
 msgid "Mark all as Read"
-msgstr "Marquer Tout Comme Lu"
+msgstr "Marquer tout comme lus"
 
 msgid "Settings"
-msgstr "Réglages"
+msgstr "Paramètres"
 
 msgid "New Machine"
-msgstr "Machine Nouveau"
+msgstr "Nouvelle Machine"
 
 msgid "Paused"
 msgstr "En Pause"
 
 msgid "Prepare base"
-msgstr "Preparer Base"
+msgstr "Preparez Base"
 
 msgid "Machine locked by requested"
-msgstr "Machine Férme par demande"
+msgstr "Machine verrouillée par demande"
 
 msgid "process"
-msgstr "Procès"
+msgstr "Processus"
 
 msgid "Copy"
 msgstr "Copie"
@@ -112,7 +112,7 @@ msgid "Error!"
 msgstr "Erreur"
 
 msgid "Backend no available!"
-msgstr "Backend Indisponible"
+msgstr "Interne indisponible"
 
 msgid "Subject"
 msgstr "Sujet"
@@ -131,13 +131,13 @@ msgstr ""
 "Actiones"
 
 msgid "Mark as Read"
-msgstr "Marquer Comme Lu"
+msgstr "Marquer comme lu"
 
 msgid "Mark as UnRead"
-msgstr "Marquer Comme Non Lu"
+msgstr "Marquer comme non lu"
 
 msgid "No message to show!"
-msgstr "Pas de Messages à Lire"
+msgstr "Aucune Message à Lire"
 
 msgid "Admin"
 msgstr "Administrateur"
@@ -146,13 +146,13 @@ msgid "Show/Hide clones"
 msgstr "Afficher/Masquer des clones"
 
 msgid "I want to change my password"
-msgstr "je voudrais changer mon mot de passe"
+msgstr "Je veut changer mon mot de passe"
 
 msgid "I want to change my language"
-msgstr "je voudrais modifier ma langue"
+msgstr "Je veut modifier ma langue"
 
 msgid "Language:"
-msgstr "Langue"
+msgstr "Langue:"
 
 msgid "English"
 msgstr "Anglais"
@@ -164,34 +164,34 @@ msgid "Catalan"
 msgstr "Catalan"
 
 msgid "New Password:"
-msgstr "Mot de passe Nouveau"
+msgstr "Nouvelle mot de passe:"
 
 msgid "Confirm Password:"
-msgstr "confirmer mot de passe"
+msgstr "Confirmer mot de passe"
 
 msgid "Submit"
-msgstr "soumettre"
+msgstr "Soumettre"
 
 msgid "Your language has been changed successfully"
-msgstr "votre langue a été modifiée avec succès"
+msgstr "Votre langue a été modifiée avec succès"
 
 msgid "Your password has been changed successfully"
 msgstr "votre mot de passe a été modifiée avec succès"
 
 msgid "Password too small"
-msgstr "Mot de Passe petite"
+msgstr "Votre mot de passe est trop court"
 
 msgid "Password fields aren't equal"
-msgstr "les espaces du  mot de passe n'est pas egaleés"
+msgstr "Les mots de passe ne sont pas égales"
 
 msgid "Some of the password's fields are empty"
-msgstr "quelques espaces du mot de passe sont vides"
+msgstr "Quelques mots de passe sont vides"
 
 msgid "Public"
 msgstr "Public"
 
 msgid "Status"
-msgstr "Statut"
+msgstr "État"
 
 msgid "Machines"
 msgstr "Machines"
@@ -200,13 +200,13 @@ msgid "Down"
 msgstr "Arrêté"
 
 msgid "Running"
-msgstr "fonctionne"
+msgstr "Fonctionne"
 
 msgid "ShutDown"
 msgstr "Fermer"
 
 msgid "Screenshot"
-msgstr "capture d'écran"
+msgstr "Capture d'écran"
 
 msgid "Machine locked by"
 msgstr "Machine verrouillée par"
@@ -245,7 +245,7 @@ msgid "will remove all the contents of the machine"
 msgstr "supprimer tout les contenus de machine"
 
 msgid "Are you sure?"
-msgstr "vous etes certain?"
+msgstr "Vous êtes certain?"
 
 msgid "Yes"
 msgstr "Oui"
@@ -260,7 +260,7 @@ msgid "Machine settings"
 msgstr "Réglage de machine"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "clones Ne peut pas enlever la base, la machine a un clone"
+msgstr "Ne peut pas enlever la base, la machine a un clone"
 
 msgid "For spice redirection you'll need to install"
 msgstr "Pour Spice redirection vous necessitez installer"
@@ -272,7 +272,7 @@ msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Cherchez dans votre distro, par example dans Debian/Ubuntu avec"
 
 msgid "You'll need to install"
-msgstr "vous necessitez installer "
+msgstr "vous necessitez installer"
 
 msgid "e.g. VirtViewer v5.0-256 in your computer."
 msgstr "par example VirtViewer v5.0-256 dans votre ordinateur. "
@@ -281,8 +281,8 @@ msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "
 "necessary associate protocol with the app."
 msgstr ""
-"Faites attention quoi dans Windows, Spice redirection no est pas automatiquement."
-" il est necessaire associer le protocole avec l'app."
+"Faites attention quoi dans Windows, Spice redirection n'est pas automatiquement activée."
+"Il est necessaire d'associer le protocole avec l'application."
 
 msgid "To make this possible, download"
 msgstr "pour rendre cela possible, téléchargez"
@@ -291,18 +291,18 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"ou copiez les lingnes suivants dans un fichier et Enregistrez avec extension .reg"
+"ou copiez les lingnes suivantes dans un fichier et enregistrez avec extension .reg"
 "ensuit exécutez le fichier"
 
 
 msgid "Login"
-msgstr "S'identifier"
+msgstr "Connexion"
 
 msgid "Welcome"
 msgstr "Bienvenue"
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "C'est necessaire un logiciel de Viewer pour fonctionner les machines virtuelles."
+msgstr "Il necessite un logiciel visionneuse pour demarrer les machines virtuelles."
 
 msgid "Virtual Machines"
 msgstr "Machine Virtuelle"
@@ -317,71 +317,71 @@ msgid "Start session"
 msgstr "Commencer session"
 
 msgid "Login with Intranet UPC's username."
-msgstr "s'identifier avec Nom d'utilisateur de la UPC"
+msgstr "Connectez avec le Nom d'utilisateur de la UPC"
 
 msgid "Permissions"
 msgstr "Permissions"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "On peut échanger les reglages des machines virtuelle Sur leur possession"
+msgstr "Peut changer les reglages des machines virtuelles possédees"
 
 msgid "can change the settings of any virtual machines."
-msgstr "On peut échanger les reglages des quelques machines virtuelles"
+msgstr "Peut changer les reglages de n'importe quelle machine virtuelle"
 
 msgid ""
 "can change the settings of any virtual machines "
 "cloned from one base owned by the user."
 msgstr ""
-"On peut échanger les reglages des quelques machines virtuelle"
-"clonées d'une base sur la posession d'utilisateur"
+"Peut changer les reglages des n'importe quelle machine virtuelle"
+"clonées d'une base sous posession de l'utilisateur"
 
 msgid "can clone public virtual machines."
-msgstr "On peut cloner machines virtuelles publiques"
+msgstr "Peut cloner les machines virtuelles publiques"
 
 msgid "can clone any virtual machine."
-msgstr "On peut cloner quelques machines virtuelles"
+msgstr "Ppeut cloner n'importe quelle machine virtuelle"
 
 msgid "can create bases."
-msgstr "On Peut créer bases"
+msgstr "Peut créer des bases"
 
 msgid "can create virtual machines."
-msgstr "On peut créer machines virtuelles"
+msgstr "Peut créer des machines virtuelles"
 
 msgid "can grant permissions to other users"
-msgstr "On peut donner la permission á autres utilisateurs"
+msgstr "Peut donner des permissions á autres utilisateurs"
 
 msgid "can hibernate any virtual machine."
-msgstr "On peut hiberner quelques machines virtuelles"
+msgstr "Peut hiberner n'importe quelle machine virtuelle"
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "On peut hiberner clones des machines virtuelle Sur leur possession"
+msgstr "Peut hiberner des clones des machines virtuelles possédees"
 
 msgid "can hibernate any clone."
-msgstr "On peut hiberner quelques clones"
+msgstr "Peut hiberner n'importe quelle clones"
 
 msgid "can remove any virtual machines owned by the user."
-msgstr "On peut supprimer quelques machines virtuelles machines virtuelle Sur leur possession"
+msgstr "Peut supprimer n'importe quelle machine virtuelle possédée par l'utilizateur"
 
 msgid "can remove any virtual machine."
-msgstr "On peut supprimer quelques machine virtuelles"
+msgstr "Peut supprimer n'importe quelle machine virtuelle"
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "On peut supprimer clones de machines virtuelle Sur leur possession"
+msgstr "Peut supprimer des clones des machines virtuelles possédées par l'utilizateur"
 
 msgid "can remove any clone."
-msgstr "On peut supprimer quelques clones"
+msgstr "Peut supprimer n'importe quelle clones"
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr "On peut Prendre une capture d'écran de quelques machines virtuelle Sur leur possession"
+msgstr "Peut prendre une capture d'écran de n'importe quelle machine virtuelle possédée par l'utilizateur"
 
 msgid "can take a screenshot of any virtual machine."
-msgstr "On peut Prendre une capture d'écran de quelques machines virtuelles"
+msgstr "Peut prendre une capture d'écran de n'importe quelle machine virtuelle possédée"
 
 msgid "can shutdown any virtual machine."
-msgstr "On peut fermer quelques machines virtuelles"
+msgstr "Peut fermer n'importe quelle machine virtuelle"
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "On peut fermer les clone des machines virtuelle Sur leur possession"
+msgstr "Peut fermer les clones des machines virtuelles possédées par l'utilizateur"
 
 msgid "Submit Query"
-msgstr "Soumettre Question" 
+msgstr "Soumettre Requête"
