@@ -87,6 +87,13 @@ around 'import_domain' => \&_around_import_domain;
 # method modifiers
 #
 
+sub _init_connector {
+    return if $CONNECTOR && $$CONNECTOR;
+    $CONNECTOR = \$Ravada::CONNECTOR if $Ravada::CONNECTOR;
+    $CONNECTOR = \$Ravada::Front::CONNECTOR if !defined $$CONNECTOR
+                                                && defined $Ravada::Front::CONNECTOR;
+}
+
 =head1 Constructors
 
 =head2 open
@@ -334,6 +341,10 @@ sub _check_create_domain {
 
     my %args = @_;
 
+    die "ERROR: Domains can only be created at localhost"
+        unless     $self->host eq 'localhost'
+                || $self->host eq '127.0.0.1';
+
     $self->_check_readonly(@_);
 
     $self->_check_require_base(@_);
@@ -394,6 +405,8 @@ sub _data {
 sub _do_select_vm_db {
     my $self = shift;
     my %args = @_;
+
+    _init_connector();
 
     if (!keys %args) {
         my $id;
