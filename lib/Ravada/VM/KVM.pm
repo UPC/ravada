@@ -1272,24 +1272,25 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    random:while (1) {
-        my $new_uuid = _new_uuid($uuid);
-        next if $new_uuid eq $uuid;
-        for my $dom ($self->vm->list_all_domains) {
-            next random if $dom->get_uuid_string eq $new_uuid;
-        }
-        $uuid->setData($new_uuid);
-        last;
-    }
+    my $new_uuid = $self->_unique_uuid($uuid);
+    $uuid->setData($new_uuid);
 }
 
 sub _unique_uuid {
     my ($self, $uuid, @uuids) = @_;
     my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
 
+    for my $domain ($self->vm->list_all_domains) {
+        push @uuids,($domain->get_uuid_string);
+    }
+
     for (1..100) {
-        my $new_last = int(rand(0x100000));
+        my $new_last = substr(int(rand(0x1000000)),0,6);
         my $new_uuid = sprintf("%s%06d",$first,$new_last);
+        die "Wrong length ".length($new_uuid)
+            ."\n"
+            .$new_uuid
+        if length($new_uuid) != length($uuid);
 
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
