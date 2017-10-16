@@ -91,7 +91,13 @@ sub list_disks {
     my $self = shift;
     my @disks = ();
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my $doc = $self->{_doc};
+    if (!$doc) {
+        $doc = XML::LibXML->load_xml(string
+                             => $self->domain->get_xml_description);
+        $self->{_doc} = $doc;
+
+    }
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
@@ -126,15 +132,10 @@ sub remove_disks {
 
     $self->_vm->connect();
     for my $file ($self->list_disks) {
-        if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->domain->get_name."\n"
-                if $0 !~ /.t$/;
-            next;
-        }
         $self->_vol_remove($file);
-        if ( -e $file ) {
-            unlink $file or die "$! $file";
-        }
+#        if ( -e $file ) {
+#            unlink $file or die "$! $file";
+#        }
         $removed++;
 
     }
@@ -166,10 +167,16 @@ sub _vol_remove {
     my $name;
     ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
-    #TODO: do a remove_volume in the VM
-    my @vols = $self->_vm->storage_pool->list_volumes();
-    for my $vol ( @vols ) {
-        $vol->delete() if$vol->get_name eq $name;
+    my $removed = 0;
+    for my $pool ( $self->_vm->vm->list_storage_pools ) {
+        $pool->refresh;
+        my $vol = $pool->get_volume_by_name($name);
+        if (! $vol ) {
+            warn "VOLUME $name not found in $pool \n";
+            next;
+        }
+        $vol->delete();
+        $pool->refresh;
     }
     return 1;
 }
@@ -188,6 +195,10 @@ sub remove {
         $self->_do_force_shutdown();
     }
 
+    $self->list_disks();
+
+    $self->domain->undefine();
+
     $self->remove_disks();
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
@@ -197,7 +208,6 @@ sub remove {
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    $self->domain->undefine();
 }
 
 
