@@ -38,6 +38,7 @@ our $CHAIN = 'RAVADA';
 
 my %ARG_CREATE_DOM = (
       kvm => [ id_iso => 1 ]
+      ,qemu => [ id_iso => 1 ]
       ,void => []
 );
 
@@ -55,8 +56,14 @@ sub create_domain {
         $id_iso = search_id_iso($iso_name);
         warn "I can't find iso $iso_name" if !defined $id_iso;
     }
-    my $vm = rvd_back()->search_vm($vm_name);
-    ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
+    my $vm;
+    if (ref($vm_name)) {
+        $vm = $vm_name;
+        $vm_name = $vm->type;
+    } else {
+        $vm = rvd_back()->search_vm($vm_name);
+        ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
+    }
 
     my $name = new_domain_name();
 
@@ -437,12 +444,14 @@ sub _clean_remote {
     eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
     return if !$conf;
     for my $vm_name (keys %$conf) {
-        my $vm = rvd_back->search_vm($vm_name);
+        my $vm;
+        eval { $vm = rvd_back->search_vm($vm_name) };
+        warn $@ if $@;
         next if !$vm;
 
         my $node;
         eval { $node = $vm->new(%{$conf->{$vm_name}}) };
-        next if !$node;
+        next if !$node || !$node->vm;
 
         _remove_old_domains_vm($node);
         _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
