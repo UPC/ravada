@@ -155,7 +155,7 @@ msgid "ShutDown"
 msgstr "Atura"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Captura de pantalla"
 
 msgid "Paused"
 msgstr "Pausat"
@@ -171,6 +171,9 @@ msgstr "Còpia"
 
 msgid "Error!"
 msgstr "Error!"
+
+msgid "Error"
+msgstr "Error"
 
 msgid "Backend no available!"
 msgstr "Backend no disponible!"
@@ -203,7 +206,7 @@ msgid "messages"
 msgstr "missatges"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Eines d'administrador"
 
 msgid "Remove base"
 msgstr "Esborra base"
@@ -236,7 +239,7 @@ msgid "Yes"
 msgstr "Si"
 
 msgid "No"
-msgstr ""
+msgstr "No"
 
 msgid "Make public"
 msgstr "Fes públic"
@@ -297,6 +300,15 @@ msgstr "pot crear bases."
 msgid "Virtual Machines"
 msgstr "Màquines Virtuals"
 
+msgid "user"
+msgstr "usuari"
+
+msgid "password"
+msgstr "contrasenya"
+
+msgid "Permissions"
+msgstr "Permissos"
+
 msgid "User"
 msgstr "Usuari"
 
@@ -311,3 +323,130 @@ msgstr "Identifiqueu-vos amb el nom d'usuari de la Intranet UPC."
 
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
+
+msgid "can change the settings of owned virtual machines."
+msgstr "pot canviar les preferències de les seves màquines virtuals"
+
+msgid "can change the settings of any virtual machines."
+msgstr "pot canviar les preferències de qualsevol màquina virtual."
+
+msgid "can change the settings of any virtual machines "
+msgstr "pot canviar les preferències de qualsevol màquina virtual "
+
+msgid "cloned from one base owned by the user."
+msgstr "clonat des d'una base de l'usuari."
+
+msgid "can clone public virtual machines."
+msgstr "pot clonar màquines virtuals públiques."
+
+msgid "can clone any virtual machine."
+msgstr "pot clonar qualsevol màquina virtual."
+
+msgid "can create bases."
+msgstr "pot crear bases."
+
+msgid "can create virtual machines."
+msgstr "pot crear màquines virtuals."
+
+msgid "can grant permissions to other users"
+msgstr "pot donar permissos a altres usuaris"
+
+msgid "can hibernate any virtual machine."
+msgstr "pot hibernar qualsevol màquina virtual."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr "pot hibernar clons des de qualsevol màquina virtual propietat de l'usuari."
+
+msgid "can hibernate any clone."
+msgstr "pot hibernar qualsevol clon."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "pot borrar qualsevol màquina virtual propietat de l'usuari."
+
+msgid "can remove any virtual machine."
+msgstr "pot borrar qualsevol màquina virtual."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "pot borrar clons de màquines virtuals propietat de l'usuari."
+
+msgid "can remove any clone."
+msgstr "pot borrar qualsevol clon."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr "pot realitzar una captura de pantalla de qualsevol màquina virtual propietat de l'usuari."
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "pot realitzar una captura de pantalla de qualsevol màquina virtual."
+
+msgid "can shutdown any virtual machine."
+msgstr "pot apagar qualsevol màquina virtual."
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "pot apagar clons de màquines virtuals propietat de l'usuari."
+
+msgid "Submit Query"
+msgstr "Enviar Pregunta"
+
+msgid "From Template"
+msgstr "Des d'una plantilla"
+
+msgid "From Machine"
+msgstr "Des d'una màquina"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "Select Template"
+msgstr "Escull una plantilla"
+
+msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
+msgstr "Aquesta imatge ISO encara no ha estat descarregada. Pot trigar molts minuts, fins i tot hores, fins que l'arxiu hagi sigut extret de l'Internet."
+
+msgid "Download now"
+msgstr "Descarrega ara"
+
+msgid "Select ISO"
+msgstr "Escull ISO"
+
+msgid "Template"
+msgstr "Plantilla"
+
+msgid "Disk Size: (GB)"
+msgstr "Espai de disk: (GB)"
+
+msgid "Swap Size: (GB)"
+msgstr "Espai d'swap: (GB)"
+
+msgid "Ram: (GB)"
+msgstr "Ram: (GB)"
+
+msgid "Machine name is required."
+msgstr "Fa falta el nom de la màquina."
+
+msgid "Machine name can't exceed 20 characters."
+msgstr "El nom de la màquina no pot superar 20 caràcters."
+
+msgid "Backend selection is required."
+msgstr "Fa falta seleccionar el backend."
+
+msgid "ISO image selection is required."
+msgstr "Fa falta seleccionar una imatge ISO."
+
+msgid "Template selection is required."
+msgstr "Fa falta seleccionar una plantilla."
+
+msgid "A machine with that name already exists."
+msgstr "Una màquina amb aquest nom ja existeix."
+
+msgid "The machine name must contain only alphabetic, numbers, dashes and points."
+msgstr "El nom de la màquina ha de tindre nomès caràcters alfanumèrics, línies i punts."
+
+msgid "Create"
+msgstr "Crear"
+
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+"pot canviar les preferències de qualsevol màquina virtual "
+"clonat d'una base propietat de l'usuari."
