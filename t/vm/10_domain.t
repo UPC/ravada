@@ -428,11 +428,7 @@ for my $vm_name (qw( Void KVM )) {
   my $remote_conf = remote_config ($vm_name);
   my @conf = (undef, { host => 'localhost' });
 
-  my @conf2 = @conf;
-  if ($remote_conf){
-      @conf2 = ($remote_conf, @conf);
-  }
-  for my $conf ( @conf2 ) {
+  for my $conf ( @conf ) {
 
     lock_hash(%$conf);
 
