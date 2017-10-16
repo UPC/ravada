@@ -1180,6 +1180,7 @@ sub _post_start {
         %arg = @_;
     }
     $self->_add_iptable(@_);
+    $self->_update_id_vm();
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
@@ -1190,6 +1191,15 @@ sub _post_start {
         );
 
     }
+}
+
+sub _update_id_vm {
+    my $self = shift;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set id_vm=? where id = ?"
+    );
+    $sth->execute($self->_vm->id, $self->id);
+    $sth->finish;
 }
 
 sub _add_iptable {
@@ -1551,6 +1561,25 @@ sub remote_ip {
     $sth->finish;
     return ($remote_ip or undef);
 
+}
+
+=head2 last_vm
+
+Returns the last virtual machine manager on which this domain was
+launched.
+
+    my $vm = $domain->last_vm();
+
+=cut
+
+sub last_vm {
+    my $self = shift;
+
+    my $id_vm = $self->_data('id_vm');
+
+    return if !$id_vm;
+
+    return Ravada::VM->open($id_vm);
 }
 
 =head2 list_requests
