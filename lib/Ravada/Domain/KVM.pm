@@ -170,9 +170,11 @@ sub _vol_remove {
     my $removed = 0;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
         $pool->refresh;
-        my $vol = $pool->get_volume_by_name($name);
+        my $vol;
+        eval { $vol = $pool->get_volume_by_name($name) };
         if (! $vol ) {
-            warn "VOLUME $name not found in $pool \n";
+            warn "VOLUME $name not found in $pool \n".($@ or '')
+                if $@ !~ /Storage volume not found/i;
             next;
         }
         $vol->delete();
