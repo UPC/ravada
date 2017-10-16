@@ -695,6 +695,10 @@ sub _pre_remove_domain {
 
 sub _after_remove_domain {
     my $self = shift;
+    my ($user, $cascade) = @_;
+
+    $self->_remove_domain_cascade(@_)   if !$cascade;
+
     if ($self->is_base) {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
@@ -702,6 +706,21 @@ sub _after_remove_domain {
     return if !$self->{_data};
     $self->_remove_base_db();
     $self->_remove_domain_db();
+}
+
+sub _remove_domain_cascade($self,$user, $cascade = 1) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM vms");
+    my $id;
+    $sth->execute();
+    $sth->bind_columns(\($id));
+    while ($sth->fetchrow) {
+        next if $id == $self->_vm->id;
+        my $vm = Ravada::VM->open($id);
+        my $domain = $vm->search_domain($self->name) or next;
+
+        $domain->remove($user, $cascade);
+    }
 }
 
 sub _remove_domain_db {
