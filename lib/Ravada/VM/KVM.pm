@@ -89,11 +89,11 @@ sub _connect {
         $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
         confess "ERROR: Security paramer required for remote connections.\n"
-            ."Examples: tcp, tls.\n"
                 if !$self->security;
 
+        my $transport = ($self->security->{transport} or '');
         eval {
-            $vm = Sys::Virt->new( address => $con_type."+".$self->security->{security}
+            $vm = Sys::Virt->new( address => $con_type."+".$transport
                                             ."://".$self->host
                                             ."/system"
                               ,auth => 1
@@ -113,8 +113,8 @@ sub _connect {
                               }
                           );
          };
+         die $@ if $@;
          die $@ if $@ && $@ !~ /libvirt error code: 38/;
-         return if !$vm;
     }
     if ( ! $vm->list_storage_pools ) {
 	warn "WARNING: No storage pools creating default\n";
