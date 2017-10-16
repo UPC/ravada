@@ -42,6 +42,11 @@ sub test_node {
     like($node->name ,qr($REMOTE_CONFIG->{host}));
     ok($node->vm,"[$vm_name] Expecting a VM in node");
 
+    ok($node->id) or exit;
+
+    my $node2 = Ravada::VM->open($node->id);
+    is($node2->id, $node->id);
+    is($node2->name, $node->name);
     return $node;
 }
 
@@ -74,7 +79,7 @@ sub test_domain {
     $clone->migrate($node);
 
     eval { $clone->start(user_admin) };
-    ok(!$@,"[$vm_name] Expecting no error, got ".($@ or ''));
+    ok(!$@,$node->name." Expecting no error, got ".($@ or ''));
     is($clone->is_active,1) or return;
 
     my $ip = $node->ip;
@@ -107,6 +112,30 @@ sub test_domain_no_remote {
     $domain->remove(user_admin) if $domain;
 }
 
+sub test_remove_domain_from_local {
+    my ($vm_name, $node, $domain_orig) = @_;
+
+    warn "Removing domain ".$domain_orig->name." from local";
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_orig->name);
+
+    my @volumes = $domain->list_volumes();
+
+    eval {$domain->remove(user_admin); };
+    is($@,'');
+
+    my $domain2 = $vm->search_domain($domain->name);
+    ok(!$domain2,"Expecting no domain in local");
+
+    my $domain3 = $node->search_domain($domain->name);
+    ok(!$domain3,"Expecting no domain in node");
+
+    test_remove_domain_node($node, $domain, \@volumes);
+
+    test_remove_domain_node($vm, $domain, \@volumes);
+}
+
+
 sub test_remove_domain {
     my ($vm_name, $node, $domain) = @_;
 
@@ -121,7 +150,6 @@ sub test_remove_domain {
     isnt($vm->name, $node->name) or return;
 
     test_remove_domain_node($vm, $domain, \@volumes);
-    exit;
 }
 
 sub test_remove_domain_node {
@@ -138,7 +166,8 @@ sub test_remove_domain_node {
         }
     }
     for my $path (keys %found) {
-        ok(!$found{$path},$node->name." Expecting vol $path removed");
+        ok(!$found{$path},$node->name." Expecting vol $path removed")
+            or exit;
     }
 
 }
@@ -146,7 +175,7 @@ sub test_remove_domain_node {
 
 clean();
 
-for my $vm_name ('Void','KVM') {
+for my $vm_name ('KVM') {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -174,8 +203,13 @@ SKIP: {
     next if !$node || !$node->vm;
 
     test_domain_no_remote($vm_name, $node);
-    my $domain = test_domain($vm_name, $node);
-    test_remove_domain($vm_name, $node, $domain);
+
+    my $domain2 = test_domain($vm_name, $node);
+    test_remove_domain_from_local($vm_name, $node, $domain2)    if $domain2;
+
+    my $domain3 = test_domain($vm_name, $node);
+    test_remove_domain($vm_name, $node, $domain3)               if $domain3;
+
 
 }
 
