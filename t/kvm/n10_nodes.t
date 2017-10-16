@@ -122,7 +122,7 @@ sub test_remove_domain_from_local {
     my @volumes = $domain->list_volumes();
 
     eval {$domain->remove(user_admin); };
-    is($@,'');
+    is(''.$@,'');
 
     my $domain2 = $vm->search_domain($domain->name);
     ok(!$domain2,"Expecting no domain in local");
