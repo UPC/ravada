@@ -171,6 +171,18 @@ sub test_remove_domain_node {
     }
 
 }
+
+sub test_domain_starts_in_same_vm {
+    my ($vm_name, $node, $domain) = @_;
+
+    unlike($domain->_vm->host, qr/localhost/)   or return;
+    is($domain->_vm->host, $node->host)         or return;
+
+    my $domain2 = rvd_back->search_domain($domain->name);
+    ok($domain2,"Expecting a domain called ".$domain->name) or return;
+
+    is($domain2->_vm->host, $node->host);
+}
 #############################################################
 
 clean();
@@ -210,6 +222,8 @@ SKIP: {
     my $domain3 = test_domain($vm_name, $node);
     test_remove_domain($vm_name, $node, $domain3)               if $domain3;
 
+    my $domain4 = test_domain($vm_name, $node);
+    test_domain_starts_in_same_vm($vm_name, $node, $domain4)    if $domain4;
 
 }
 

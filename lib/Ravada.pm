@@ -720,6 +720,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','id_vm',"int default NULL");
 
     $self->_upgrade_table('vms','security','varchar(20) default NULL');
 }
@@ -1038,7 +1039,10 @@ sub search_domain {
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
         warn $@ if $@   && $DEBUG;
-        return $domain if $id || $import;
+        next if !$id && !$import;
+
+        $domain->_vm($domain->last_vm())    if $id && $domain->last_vm;
+        return $domain;
     }
 
 
