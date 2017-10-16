@@ -27,6 +27,9 @@ my $REMOTE_CONFIG;
 sub test_node {
     my $vm_name = shift;
 
+    die "Error: missing host in remote config\n ".Dumper($REMOTE_CONFIG)
+        if !$REMOTE_CONFIG->{host};
+
     my $vm = rvd_back->search_vm($vm_name);
 
     my $node;
@@ -37,7 +40,7 @@ sub test_node {
 
     is($node->host,$REMOTE_CONFIG->{host});
     like($node->name ,qr($REMOTE_CONFIG->{host}));
-    ok($node->vm,"[$vm_name]");
+    ok($node->vm,"[$vm_name] Expecting a VM in node");
 
     return $node;
 }
@@ -72,7 +75,7 @@ sub test_domain {
 
     eval { $clone->start(user_admin) };
     ok(!$@,"[$vm_name] Expecting no error, got ".($@ or ''));
-    is($clone->is_active,1);
+    is($clone->is_active,1) or return;
 
     my $ip = $node->ip;
     like($clone->display(user_admin),qr($ip));
@@ -86,6 +89,61 @@ sub test_domain {
     }
     return $clone;
 }
+
+
+sub test_domain_no_remote {
+    my ($vm_name, $node) = @_;
+
+    my $domain;
+    eval {
+        $domain = $node->create_domain(
+            name => new_domain_name
+            ,id_owner => user_admin->id
+            ,id_iso => 1
+        );
+    };
+    like($@,qr'.');
+
+    $domain->remove(user_admin) if $domain;
+}
+
+sub test_remove_domain {
+    my ($vm_name, $node, $domain) = @_;
+
+    my @volumes = $domain->list_volumes();
+
+    eval {$domain->remove(user_admin); };
+    is($@,'');
+
+    test_remove_domain_node($node, $domain, \@volumes);
+
+    my $vm = rvd_back->search_vm($vm_name);
+    isnt($vm->name, $node->name) or return;
+
+    test_remove_domain_node($vm, $domain, \@volumes);
+    exit;
+}
+
+sub test_remove_domain_node {
+    my ($node, $domain, $volumes) = @_;
+
+    diag("checking removed volumes from ".$node->name);
+    my %found = map { $_ => 0 } @$volumes;
+
+    $node->_refresh_storage_pools();
+    for my $pool ($node->vm->list_all_storage_pools()) {
+        for my $vol ($pool->list_all_volumes()) {
+            my $path = $vol->get_path();
+            $found{$path}++ if exists $found{$path};
+        }
+    }
+    for my $path (keys %found) {
+        ok(!$found{$path},$node->name." Expecting vol $path removed");
+    }
+
+}
+#############################################################
+
 clean();
 
 for my $vm_name ('Void','KVM') {
@@ -112,7 +170,12 @@ SKIP: {
     skip($msg,10)   if !$vm;
 
     my $node = test_node($vm_name)  or next;
-    test_domain($vm_name, $node)    if $node->vm;
+
+    next if !$node || !$node->vm;
+
+    test_domain_no_remote($vm_name, $node);
+    my $domain = test_domain($vm_name, $node);
+    test_remove_domain($vm_name, $node, $domain);
 
 }
 
