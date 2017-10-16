@@ -159,7 +159,7 @@ msgstr "Captura de pantalla"
 msgid "Paused"
 msgstr "Pausado"
 
-msgid "Machine locked by"
+msgid "Machine locked by requested"
 msgstr "Máquina bloqueada por"
 
 msgid "process"
