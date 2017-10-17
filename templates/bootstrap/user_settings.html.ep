@@ -44,6 +44,7 @@
                         <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
+                            <p><%=l 'Current Password:' %><input type='password' name='current_password' id='current_password'></p>
                             <p><input type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Submit' %>'></input>
 %                               if ($changed_pass) {
                                     <font color="green">   <%=l 'Your password has been changed successfully' %></font> 
