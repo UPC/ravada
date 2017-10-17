@@ -771,4 +771,21 @@ sub version {
     return Ravada::version();
 }
 
+sub list_twofa {
+    my $self = shift;
+    my $user = shift;
+warn ($user);
+    #Check 2FA is enable
+    my $sth = $CONNECTOR->dbh->prepare("SELECT two_fa, secret FROM users WHERE name=?");
+    $sth->execute($user);
+    my @twofa = ();
+    while ( my $row = $sth->fetchrow_hashref) {
+        next if defined $user !~ /$user/;;
+        push @twofa, ($row);
+    }
+    $sth->finish;
+
+    return \@twofa;
+}
+
 1;

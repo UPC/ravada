@@ -299,6 +299,13 @@ get '/pingbackend.json' => sub {
     $c->render(json => $RAVADA->ping_backend);
 };
 
+get '/two_fa.json' => sub {
+
+    my $c = shift;
+    $c->render(json => $RAVADA->list_twofa($USER));
+};
+
+
 # machine commands
 
 get '/machine/info/(:id).(:type)' => sub {
@@ -626,8 +633,7 @@ sub user_settings {
     my $code;
     my $qrcode;
     my $base32Secret;
-	my $flag = 0;
-	my $sth;
+    my $keyId = "RavadaVDI ($USER->{name})";
 
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
@@ -659,51 +665,52 @@ sub user_settings {
         }
     }
 
-warn "FLAG $flag \n";
-	$flag = $c->param('flag');
-warn "FLAG1 $flag \n";
+        #Check 2FA is enable
+        my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa, secret FROM users WHERE name=?");
+        $sth->execute($USER->{name});
+        my $row = $sth->fetchrow_hashref;
 
-	if ($flag == 0){
-		#Check 2FA is enable
-		$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
-		$sth->execute($USER->{name});
+        if ($row->{two_fa} == 1){$change_2fa = 1}else{$change_2fa = 0;}
 
-		my $row = $sth->fetchrow_hashref;
-		$change_2fa = 1 if ($row->{two_fa} == 1);
+    if ( !defined $row->{secret}){
+        $base32Secret = generateBase32Secret();
 
-		$base32Secret = generateBase32Secret();
-		$code = generateCurrentNumber( $base32Secret );
-		my $keyId = "RavadaVDI ($USER->{name})";
-		$qrcode = qrImageUrl( $keyId, $base32Secret );
-		warn ("CODE: $code\n");
-	}
+#No se actualiza la bbdd
+        my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
+        $sth->execute($base32Secret, $USER->{name});
+    } else {
+        $base32Secret = $row->{secret}; 
+    }
+    $qrcode = qrImageUrl( $keyId, $base32Secret );
+    $code = generateCurrentNumber( $base32Secret );    
+    warn ''.localtime(time);
+    warn "base32SECRET: $base32Secret\n";
+    warn "CODE : $code\n";
+    
+    warn "QR : $qrcode\n";
 
-	if ($c->param('qrcode_click')){
-		warn ("CODE: $code\n");
-		$form_code = $c->param('form_code');
-		warn ("FORM CODE: $form_code\n");
-		warn ("Secret: $base32Secret\n");
+    if ($c->param('qrcode_click')){
+        my $keyId = "RavadaVDI ($USER->{name})";
+        $form_code = $c->param('form_code');
+warn "CODE qrcode_click: $code\n";
+warn "FORM CODE: $form_code\n";
+        if ($form_code == $code) {
+                my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
+                $sth->execute('1', $USER->{name});
+                $change_2fa = 1;
+warn "SECRET qrcode_click: $base32Secret";
+                _logged_in($c);
+        }else{
+        my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
+        $sth->execute(undef, $USER->{name});
+        }
+    }
 
-		if ($form_code == $code) {
-			warn "CODE = FORM_CODE $form_code \n";
-			eval {
-				$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
-				$sth->execute('1', $USER->{name});
-				$change_2fa = 1;
-				$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
-				$sth->execute($base32Secret, $USER->{name});
-				_logged_in($c);
-			}
-		}
-	}
-
-	if ($c->param('dis_2faclick')){
-		$sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
-		$sth->execute('0', $USER->{name});
-        $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
-        $sth->execute('NULL', $USER->{name});
+    if ($c->param('dis_2faclick')){
+        my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=?, two_fa=? WHERE name=?");
+        $sth->execute(undef, '0', $USER->{name});
         $change_2fa = 0;
-	}
+    }
 
     $c->render( template => 'bootstrap/user_settings',
                 changed_lang=> $changed_lang,
@@ -711,10 +718,8 @@ warn "FLAG1 $flag \n";
                 change_2fa => $change_2fa,
                 qrcode => $qrcode,
                 code => $code,
-				flag => $flag,
                 errors =>\@errors);
 };
-###################################################
 
 get '/img/screenshots/:file' => sub {
     my $c = shift;

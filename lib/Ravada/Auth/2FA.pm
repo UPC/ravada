@@ -72,7 +72,7 @@ sub generateCurrentNumber {
     srand(time() ^ $$);
 
     my $paddedTime = sprintf("%016x", int(time() / $time_step));
-
+    warn $paddedTime;
     my $data = pack('H*', $paddedTime);
     my $key = decodeBase32($base32Secret);
 
