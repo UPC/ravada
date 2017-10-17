@@ -172,7 +172,24 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 sub BUILD {
     my $self = shift;
+
     $self->is_known();
+    $self->_set_last_vm();
+}
+
+sub _set_last_vm($self,$force=0) {
+    my $id_vm;
+    $id_vm = $self->_data('id_vm')  if $self->is_known();
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        my $domain;
+        eval { $domain = $vm->vm->get_domain_by_name($self->name) };
+        die $@ if $@ && $@ !~ /no domain with matching name/;
+        if ($domain && ($force || $domain->is_active)) {
+            $self->_vm($vm);
+            $self->domain($domain);
+        }
+    }
 }
 
 sub _vm_connect {
@@ -199,6 +216,7 @@ sub _start_preconditions{
     $self->_check_free_memory();
     _check_used_memory(@_);
 
+    $self->_set_last_vm(1);
 }
 
 sub _update_description {

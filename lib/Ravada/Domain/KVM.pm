@@ -133,6 +133,7 @@ sub remove_disks {
     $self->_vm->connect();
     for my $file ($self->list_disks) {
         $self->_vol_remove($file);
+        $self->_vol_remove($file);
 #        if ( -e $file ) {
 #            unlink $file or die "$! $file";
 #        }
