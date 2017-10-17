@@ -56,7 +56,7 @@ has 'host' => (
 
 has 'public_ip' => (
         isa => 'Str'
-        , is => 'ro'
+        , is => 'rw'
 );
 
 has 'default_dir_img' => (
@@ -140,6 +140,13 @@ sub BUILD {
 
     $self->id;
     $self->vm;
+
+    $self->public_ip($self->_data('public_ip'))
+        if defined $self->_data('public_ip')
+            && (!defined $self->public_ip
+                || $self->public_ip ne $self->_data('public_ip')
+            );
+
 }
 
 sub _open_type {
@@ -422,6 +429,9 @@ sub _do_select_vm_db {
     $sth->execute(map { $args{$_} } sort keys %args);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
+
+    return if !$row;
+
     return $row;
 }
 
@@ -437,12 +447,12 @@ sub _select_vm_db {
 sub _insert_vm_db {
     my $self = shift;
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO vms (name, vm_type, hostname, security)"
-        ." VALUES(?, ?, ?, ?)"
+        "INSERT INTO vms (name, vm_type, hostname, public_ip, security)"
+        ." VALUES(?, ?, ?, ?, ?)"
     );
     my $name = $self->name;
     my $security = ($self->security() or {});
-    $sth->execute($name,$self->type,$self->host, encode_json($security));
+    $sth->execute($name,$self->type,$self->host, $self->public_ip, encode_json($security));
     $sth->finish;
 
     return $self->_do_select_vm_db( name => $name);
