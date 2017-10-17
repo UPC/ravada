@@ -47,6 +47,7 @@ sub test_node {
     my $node2 = Ravada::VM->open($node->id);
     is($node2->id, $node->id);
     is($node2->name, $node->name);
+    is($node2->public_ip, $node->public_ip);
     return $node;
 }
 
