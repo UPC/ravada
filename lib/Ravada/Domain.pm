@@ -1170,11 +1170,6 @@ sub _post_resume {
 sub _post_start {
     my $self = shift;
     my %arg;
-    if ( scalar @_ % 2 ==1 ) {
-        $arg{user} = $_[0];
-    } else {
-        %arg = @_;
-    }
 
     if (scalar @_ % 2) {
         $arg{user} = $_[0];
