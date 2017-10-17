@@ -648,6 +648,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
+    $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
