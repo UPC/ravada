@@ -100,7 +100,7 @@ has 'storage' => (
 );
 
 has '_vm' => (
-    is => 'ro',
+    is => 'rw',
     ,isa => 'Object'
     ,required => 1
 );
@@ -174,7 +174,6 @@ sub BUILD {
     my $self = shift;
 
     $self->is_known();
-    $self->_set_last_vm();
 }
 
 sub _set_last_vm($self,$force=0) {
@@ -183,11 +182,11 @@ sub _set_last_vm($self,$force=0) {
     if ($id_vm) {
         my $vm = Ravada::VM->open($id_vm);
         my $domain;
-        eval { $domain = $vm->vm->get_domain_by_name($self->name) };
+        eval { $domain = $vm->search_domain($self->name) };
         die $@ if $@ && $@ !~ /no domain with matching name/;
         if ($domain && ($force || $domain->is_active)) {
             $self->_vm($vm);
-            $self->domain($domain);
+            $self->domain($domain->domain);
         }
     }
 }
