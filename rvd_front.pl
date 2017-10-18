@@ -268,6 +268,7 @@ get '/iso_file.json' => sub {
 get '/list_machines.json' => sub {
     my $c = shift;
 
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->render(json => $RAVADA->list_domains);
 };
 
@@ -280,6 +281,8 @@ get '/list_bases_anonymous.json' => sub {
 
 get '/list_users.json' => sub {
     my $c = shift;
+
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->render(json => $RAVADA->list_users);
 };
 
@@ -300,6 +303,8 @@ get '/machine/info/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     die "No id " if !$id;
+
+    #TODO check ownership
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
@@ -309,6 +314,7 @@ any '/machine/settings/(:id).(:type)' => sub {
 
 any '/machine/manage/(:id).(:type)' => sub {
     my $c = shift;
+    #TODO check ownership
     return manage_machine($c);
 };
 
@@ -317,6 +323,7 @@ get '/machine/view/(:id).(:type)' => sub {
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
+    #TODO check ownership
     return view_machine($c);
 };
 
