@@ -12,7 +12,6 @@
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
-    	    .service("listUsers", gtListUsers)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
 //            .controller("machines", machinesCrtl)
@@ -268,10 +267,6 @@
 // list users
     function usersCrtl($scope, $http, request, listUsers) {
 
-        $http.get('/list_users.json').then(function(response) {
-                $scope.list_users= response.data;
-        });
-
         $scope.make_admin = function(id) {
             $http.get('/users/make_admin/' + id + '.json')
             location.reload();
@@ -309,14 +304,6 @@
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
         };
-
-    };
-
-      function gtListUsers($resource){
-
-        return $resource('/list_users.json',{},{
-            get:{isArray:true}
-        });
 
     };
 

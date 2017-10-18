@@ -279,13 +279,6 @@ get '/list_bases_anonymous.json' => sub {
     $c->render(json => $RAVADA->list_bases_anonymous(_remote_ip($c)));
 };
 
-get '/list_users.json' => sub {
-    my $c = shift;
-
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
-    $c->render(json => $RAVADA->list_users);
-};
-
 get '/list_lxc_templates.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_lxc_templates);

@@ -172,17 +172,10 @@ ravadaApp.directive("solShowMachine", swMach)
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
     });
-    $scope.getUsers = function() {
-      $http.get('/list_users.json').then(function(response) {
-        $scope.list_users= response.data;
-      });
-    }
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
     //On load code
-    $scope.getUsers();
-    $scope.updatePromise = $interval($scope.getUsers,3000);
   };
 
   function messagesPageC($scope, $http, $interval, request) {
