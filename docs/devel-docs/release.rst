@@ -109,13 +109,18 @@ Upload the file to our repo and change the number at:
 
 ::
 
-    https://github.com/UPC/ravada/blob/master/docs/INSTALL.md
+    http://ravada.readthedocs.io/en/latest/docs/INSTALL.html
 
-    $ git checkout master
-    $ git merge v0.2.5
-    $ gvim docs/INSTALL.md
+    $ git checkout gh-pages
+    $ gvim docs/docs/INSTALL.md
     $ git commit -a
     $ git push
+
+Install it
+----------
+In a fresh machine, install it following the whole process:
+
+    http://ravada.readthedocs.io/en/latest/docs/INSTALL.html
 
 Publish
 -------
