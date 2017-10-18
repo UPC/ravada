@@ -377,6 +377,7 @@ sub list_users($self,$name=undef) {
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
+        delete $row->{password};
         push @users, ($row);
     }
     $sth->finish;
