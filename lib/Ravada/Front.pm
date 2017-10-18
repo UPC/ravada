@@ -84,6 +84,7 @@ sub list_bases {
         eval { $domain   = $self->search_domain($row->{name}) };
         next if !$domain;
         $row->{has_clones} = $domain->has_clones;
+        delete $row->{spice_password};
         push @bases, ($row);
     }
     $sth->finish;
