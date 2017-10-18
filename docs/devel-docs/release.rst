@@ -116,6 +116,12 @@ Upload the file to our repo and change the number at:
     $ git commit -a
     $ git push
 
+Install it
+----------
+In a fresh machine, install it following the whole process:
+
+    http://ravada.readthedocs.io/en/latest/docs/INSTALL.html
+
 Publish
 -------
 
