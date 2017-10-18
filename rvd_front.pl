@@ -1179,6 +1179,7 @@ sub show_link {
 
 sub _message_timeout {
     my $domain = shift;
+    return '' if !$domain->run_timeout;
     my $msg_timeout = "in ".int($domain->run_timeout / 60 )
         ." minutes.";
     for my $request ( $domain->list_requests ) {
