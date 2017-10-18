@@ -118,6 +118,10 @@ Upload the file to our repo and change the number at:
 
 Install it
 ----------
+In a test machine, upgrade ravada following:
+
+    http://ravada.readthedocs.io/en/latest/docs/update.html
+    
 In a fresh machine, install it following the whole process:
 
     http://ravada.readthedocs.io/en/latest/docs/INSTALL.html
