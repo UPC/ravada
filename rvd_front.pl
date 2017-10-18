@@ -640,7 +640,7 @@ sub user_settings {
                         _logged_in($c);
                     };
                     if ($@ =~ /Password too small/) {
-                        push @errors,("Password too small");
+                        push @errors,("New Password is too small");
                     }
                     else {
                         $changed_pass = 1;
@@ -651,7 +651,7 @@ sub user_settings {
                 }
             }
             else {
-                push @errors, ("Input the current password properly");
+                push @errors, ("Invalid Current Password");
             }
         }
     }
