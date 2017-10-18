@@ -14,6 +14,8 @@
 - Copy spice password to clipboard [\#300]
 - API for opening a Virtual Machine [\#306]
 - Disable running Base [\#327]
+- Add Indonesia translation [\#372]
+- Updated french translation [\#399]
 
 **Fixed bugs:**
 
@@ -24,4 +26,9 @@
 - Wait for prepare base before create vm [\#314]
 - rvd services start before mysql [\#321]
 - Download Debian stretch iso fails [\#326]
+- Warn of libvirt network missing [\#343]
 - Xubuntu ISO files conflict [\#335]
+- Fix duplicate msgid in en.po [\#367]
+- rvd_back fails the first time on fresh installs [\#383]
+- Error creating Windows machine [\#390]
+- Changing password doesn't work [\#395]
