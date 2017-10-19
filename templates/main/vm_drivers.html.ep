@@ -44,7 +44,7 @@
                 <div class="col-md-1">
 %                       if ($recommend{$driver_name}) {
                             <span class="label label-default">
-                                <%= $recommend{$driver_name} or '' %>
+                                <%= ($recommend{$driver_name} or '') %>
                             </span>
 %                       }
                 </div>
