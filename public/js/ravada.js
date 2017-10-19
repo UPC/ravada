@@ -171,7 +171,7 @@
               $scope.new_name_invalid=true;
               return;
             }
-            var valid_domain_name = /^[a-zA-Z]\w+$/;
+            var valid_domain_name = /^[a-zA-Z][\w_-]+$/;
             if ( !valid_domain_name.test($scope.new_name)) {
                 $scope.new_name_invalid = true;
                 return;
