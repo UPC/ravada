@@ -84,6 +84,7 @@ sub list_bases {
         eval { $domain   = $self->search_domain($row->{name}) };
         next if !$domain;
         $row->{has_clones} = $domain->has_clones;
+        delete $row->{spice_password};
         push @bases, ($row);
     }
     $sth->finish;
@@ -377,6 +378,7 @@ sub list_users($self,$name=undef) {
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
+        delete $row->{password};
         push @users, ($row);
     }
     $sth->finish;
