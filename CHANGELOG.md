@@ -12,9 +12,12 @@
 - Add Windows' definitions for new machines [\#289]
 - Give feedback on rename machine [\#291]
 - Copy spice password to clipboard [\#300]
+- Improve New Machine section [\#305]
 - API for opening a Virtual Machine [\#306]
 - Disable running Base [\#327]
+- Improve hide/show private bases button [\#328]
 - Add Indonesia translation [\#372]
+- Old ISO Debian files missing from cdimage [\#389]
 - Updated french translation [\#399]
 
 **Fixed bugs:**
