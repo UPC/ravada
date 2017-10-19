@@ -272,6 +272,7 @@ get '/iso_file.json' => sub {
 get '/list_machines.json' => sub {
     my $c = shift;
 
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
     $c->render(json => $RAVADA->list_domains);
 };
 
@@ -280,11 +281,6 @@ get '/list_bases_anonymous.json' => sub {
 
     # shouldn't this be "list_bases" ?
     $c->render(json => $RAVADA->list_bases_anonymous(_remote_ip($c)));
-};
-
-get '/list_users.json' => sub {
-    my $c = shift;
-    $c->render(json => $RAVADA->list_users);
 };
 
 get '/list_lxc_templates.json' => sub {
@@ -304,6 +300,8 @@ get '/machine/info/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     die "No id " if !$id;
+
+    #TODO check ownership
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
@@ -315,6 +313,7 @@ any '/machine/settings/(:id).(:type)' => sub {
 
 any '/machine/manage/(:id).(:type)' => sub {
     my $c = shift;
+    #TODO check ownership
     return manage_machine($c);
 };
 
@@ -323,6 +322,7 @@ get '/machine/view/(:id).(:type)' => sub {
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
+    #TODO check ownership
     return view_machine($c);
 };
 
@@ -628,25 +628,31 @@ sub user_settings {
     $c->param('tongue' => $USER->language);
     my @errors;
     if ($c->param('button_click')) {
-        if (($c->param('password') eq "") || ($c->param('conf_password') eq "")) {
+        if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
         } 
         else {
-            if ($c->param('password') eq $c->param('conf_password')) {
-                eval { 
-                    $USER->change_password($c->param('password')); 
-                    _logged_in($c);
-                };
-                if ($@ =~ /Password too small/) {
-                    push @errors,("Password too small")
+            my $comp_password = $USER->compare_password($c->param('current_password'));
+            if ($comp_password) {
+                if ($c->param('password') eq $c->param('conf_password')) {
+                    eval {
+                        $USER->change_password($c->param('password'));
+                        _logged_in($c);
+                    };
+                    if ($@ =~ /Password too small/) {
+                        push @errors,("New Password is too small");
+                    }
+                    else {
+                        $changed_pass = 1;
+                    };
                 }
                 else {
-                    $changed_pass = 1;
-                };
-          }
-          else {
-              push @errors,("Password fields aren't equal")
-          }
+                    push @errors,("Password fields aren't equal");
+                }
+            }
+            else {
+                push @errors, ("Invalid Current Password");
+            }
         }
     }
     $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
