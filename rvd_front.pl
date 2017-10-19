@@ -1332,6 +1332,13 @@ sub manage_machine {
 sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
+
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c)
+        unless $USER->is_admin
+        || $domain->id_owner == $USER->id;
+
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
