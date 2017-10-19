@@ -171,7 +171,17 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        zesty => {
+        artful => {
+                    name => 'Ubuntu Artful Aardvak'
+            ,description => 'Ubuntu 17.10 Artful Aardvak 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/17.10/'
+                ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => ,'http://releases.ubuntu.com/17.10/MD5SUMS'
+        }
+        ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
             ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
                    ,arch => 'amd64'
