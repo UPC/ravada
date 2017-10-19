@@ -7,6 +7,8 @@ use locale ':not_characters';
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
+use Digest::HMAC_SHA1 qw/ hmac_sha1_hex /;
+
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Time::Piece;
@@ -298,13 +300,6 @@ get '/pingbackend.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->ping_backend);
 };
-
-get '/two_fa.json' => sub {
-
-    my $c = shift;
-    $c->render(json => $RAVADA->list_twofa($USER));
-};
-
 
 # machine commands
 
@@ -675,26 +670,24 @@ sub user_settings {
     if ( !defined $row->{secret}){
         $base32Secret = generateBase32Secret();
 
-#No se actualiza la bbdd
         my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
         $sth->execute($base32Secret, $USER->{name});
     } else {
         $base32Secret = $row->{secret}; 
     }
     $qrcode = qrImageUrl( $keyId, $base32Secret );
-    $code = generateCurrentNumber( $base32Secret );    
     warn ''.localtime(time);
     warn "base32SECRET: $base32Secret\n";
-    warn "CODE : $code\n";
-    
     warn "QR : $qrcode\n";
+    $code = generateCurrentNumber( $base32Secret );    
+warn "CODE: $code\n";
 
     if ($c->param('qrcode_click')){
-        my $keyId = "RavadaVDI ($USER->{name})";
         $form_code = $c->param('form_code');
 warn "CODE qrcode_click: $code\n";
 warn "FORM CODE: $form_code\n";
         if ($form_code == $code) {
+
                 my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
                 $sth->execute('1', $USER->{name});
                 $change_2fa = 1;

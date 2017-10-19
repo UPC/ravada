@@ -7,7 +7,7 @@
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="user_settings">
+        <div ng-controller="userSettings">
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -20,7 +20,10 @@
 %                                       for (@$errors) {
                                             <%= $_ %>
 %                                       }
-                                    </div>
+                                    </div>    return $resource('/two_fa.json',{},{
+            get:{isArray:true}
+        });
+
                                 </div>
 %                         }
                         

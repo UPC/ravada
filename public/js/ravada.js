@@ -22,6 +22,7 @@
             .controller("singleMachinePage", singleMachinePageC)
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain",run_domain_ctrl)
+            .controller("userSettings",userSettingsCtrl)
 
 
 
@@ -365,4 +366,10 @@
           };
         }
       }
+    };
+
+    function userSettingsCtrl(){
+        //$('#2fa-modal2').on('show.bs.modal', function (event) {
+        //console.log("working2");
+        })
     };

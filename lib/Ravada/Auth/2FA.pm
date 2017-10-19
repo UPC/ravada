@@ -36,7 +36,7 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(generateBase32Secret generateCurrentNumber qrImageUrl decodeBase32decodeBase32);
+@EXPORT = qw(generateBase32Secret generateCurrentNumber qrImageUrl decodeBase32);
 
 our $TIME_STEP = 30;
 
