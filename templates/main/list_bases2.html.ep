@@ -53,7 +53,7 @@
 %       for my $machine (@$machines) {
 %           next if !$machine->{is_public} && !$user->is_admin;
             <div class="col-sm-4"
-                ng-hide="<%= !$machine->{is_public} %> && only_public">
+                ng-hide="!<%= $machine->{is_public} %> && only_public">
             <div class="panel panel-success"> 
             <div class="panel-heading">
                 <h3 class="panel-title"><a
