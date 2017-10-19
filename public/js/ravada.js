@@ -130,7 +130,7 @@
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
-          $scope.getSingleMachine = function(){
+/*          $scope.getSingleMachine = function(){
             $http.get("/list_machines.json").then(function(response) {
               for (var i=0, iLength=response.data.length; i<iLength; i++) {
                 if (response.data[i].id == $scope.showmachineId) {
@@ -144,6 +144,7 @@
               window.location.href = "/admin/machines";
             });
           };
+            */
           $scope.remove = function(machineId) {
             $http.get('/machine/remove/'+machineId+'.json');
           };
@@ -191,8 +192,8 @@
 
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.getSingleMachine();
-          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+//          $scope.getSingleMachine();
+//          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
         };
 
     function swListMach() {
