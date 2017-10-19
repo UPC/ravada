@@ -126,7 +126,7 @@ sub list_machines_user {
             ,id_base => $id
         );
         my %base = ( id => $id, name => $name
-            , is_public => $is_public
+            , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
             , id_clone => undef
@@ -212,6 +212,7 @@ sub list_domains {
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
         }
+        delete $row->{spice_password};
         push @domains, ($row);
     }
     $sth->finish;
@@ -743,6 +744,7 @@ sub list_bases_anonymous {
     my @bases = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if !$net->allowed_anonymous($row->{id});
+        delete $row->{spice_password};
         push @bases, ($row);
     }
     $sth->finish;
