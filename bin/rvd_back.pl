@@ -173,6 +173,10 @@ sub start {
         }
     }
     for (;;) {
+        if ($NOFORK ) {
+            do_start();
+            next;
+        }
         my $pid = fork();
         die "I can't fork $!" if !defined $pid;
         if ($pid == 0 ) {
