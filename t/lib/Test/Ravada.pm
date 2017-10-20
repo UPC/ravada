@@ -24,6 +24,7 @@ create_domain
     search_id_iso
     flush_rules open_ipt
     remote_config
+    remote_config_nodes
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -174,6 +175,26 @@ sub remote_config {
 
     lock_hash(%$remote_conf);
     return $remote_conf->{$vm_name};
+}
+
+sub remote_config_nodes {
+    my $file_config = shift;
+    confess "Missing file $file_config" if !-e $file_config;
+
+    my $conf;
+    eval { $conf = LoadFile($file_config) };
+    is($@,'',"Error in $file_config\n".($@ or ''))  or return;
+
+    lock_hash((%$conf));
+
+    for my $name (keys %$conf) {
+        if ( !$conf->{$name}->{host} ) {
+            warn "ERROR: Missing host section in ".Dumper($conf->{$name})
+                ."at $file_config\n";
+            next;
+        }
+    }
+    return $conf;
 }
 
 sub _remove_old_domains_vm {
@@ -410,11 +431,20 @@ sub remove_old_pools {
 }
 
 sub clean {
+    my $file_remote_config = shift;
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
 
-    _clean_remote();
+
+    if ($file_remote_config) {
+        my $config;
+        eval { $config = LoadFile($file_remote_config) };
+        warn $@ if $@;
+        _clean_remote_nodes($config)    if $config;
+    } else {
+        _clean_remote();
+    }
 }
 
 sub _clean_remote {
@@ -435,6 +465,21 @@ sub _clean_remote {
 
         _remove_old_domains_vm($node);
         _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
+    }
+}
+
+sub _clean_remote_nodes {
+    my $config = shift;
+    for my $name (keys %$config) {
+        diag("Cleaning $name");
+        my $node;
+        my $vm = rvd_back->search_vm($config->{$name}->{type});
+        eval { $node = $vm->new($config->{$name}) };
+        warn $@ if $@;
+        next if !$node || !$node->vm;
+        _remove_old_domains_vm($node);
+        _remove_old_disks_kvm($node);
+
     }
 }
 
