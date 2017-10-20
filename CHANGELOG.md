@@ -24,6 +24,7 @@
 
 - KVM domains start when creating base [\#271]
 - Swap volume should not be mandatory [\#278]
+- View settings goes to delete tab [\#280]
 - Allow dot, underscore and dash in the username [\#311]
 - Check for duplicate machine name on copy [\#313]
 - Wait for prepare base before create vm [\#314]
