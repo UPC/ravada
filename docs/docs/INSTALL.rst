@@ -7,7 +7,7 @@ Requirements
 OS
 --
 
-Ravada has been successfully tested only on `Ubuntu <https://www.ubuntu.com/download/>`_ 16.10 and 17.04. It should also work in
+Ravada has been successfully tested only on `Ubuntu <https://www.ubuntu.com/download/>`_ 16.10 and 17.04. It won't run on Ubuntu 17.10. The very next release, due in a november will work. It should also work in
 recent RedHat based systems. Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
 Hardware
