@@ -99,7 +99,7 @@ Make sure the target is the same as the branch, not the master. Close
 the release at:
 
 -  Close the Milestone
--  Close the Release
+-  Publish the Release
 
 Release binary
 --------------
