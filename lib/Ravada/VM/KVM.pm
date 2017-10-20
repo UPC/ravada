@@ -49,7 +49,7 @@ has vm => (
 has type => (
     isa => 'Str'
     ,is => 'ro'
-    ,default => 'qemu'
+    ,default => 'KVM'
 );
 
 #########################################################################3
@@ -476,6 +476,11 @@ Returns a list of the created domains
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
+
+    my $active = (delete $args{active} or 0);
+
+    confess "Arguments uknown ".Dumper(\%args)  if keys %args;
 
     confess "Missing vm" if !$self->vm;
     my @list;
@@ -488,6 +493,7 @@ sub list_domains {
                         ,_vm => $self
         );
         next if !$domain->is_known();
+        next if $active && !$domain->is_active;
         $id = $domain->id();
         warn $@ if $@ && $@ !~ /No DB info/i;
         push @list,($domain) if $domain && $id;
