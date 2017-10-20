@@ -48,6 +48,26 @@ sub test_node {
     return $node;
 }
 
+sub test_balance {
+    my $vm_name = shift;
+
+    my $base = create_domain($vm_name);
+
+    my @domains;
+    my %host;
+    for ( 1 .. 3 ) {
+        my $domain = $base->clone(
+            name => new_domain_name
+            ,user => user_admin
+        );
+        push @domains,($domain);
+        is($domain->_data('id_vm'),undef);
+        $domain->start(user => user_admin);
+        $host{$domain->_vm->host}++;
+    }
+    is(scalar keys %host,3, "Expecing 3 hosts, got ".Dumper(\%host));
+}
+
 #################################################################
 
 clean($file_remote_config);
@@ -86,6 +106,8 @@ for my $vm_name ('KVM') {
             $fail++ if !$node || !$node->vm;
         }
         skip("ERROR: $fail nodes failed",6) if $fail;
+
+        test_balance($vm_name);
     }
 }
 
