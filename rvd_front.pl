@@ -668,7 +668,8 @@ sub user_settings {
         if ($row->{two_fa} == 1){$change_2fa = 1}else{$change_2fa = 0;}
 
     if ( !defined $row->{secret}){
-        $base32Secret = generateBase32Secret();
+        #$base32Secret = generateBase32Secret();
+        $base32Secret = "NY4A5CPJZ46LXZCP";
 
         my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
         $sth->execute($base32Secret, $USER->{name});
@@ -676,24 +677,17 @@ sub user_settings {
         $base32Secret = $row->{secret}; 
     }
     $qrcode = qrImageUrl( $keyId, $base32Secret );
-    warn ''.localtime(time);
-    warn "base32SECRET: $base32Secret\n";
-    warn "QR : $qrcode\n";
-    $code = generateCurrentNumber( $base32Secret );    
-warn "CODE: $code\n";
 
     if ($c->param('qrcode_click')){
+        $code = generateCurrentNumber( $base32Secret );
         $form_code = $c->param('form_code');
-warn "CODE qrcode_click: $code\n";
-warn "FORM CODE: $form_code\n";
         if ($form_code == $code) {
-
                 my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET two_fa=? WHERE name=?");
                 $sth->execute('1', $USER->{name});
                 $change_2fa = 1;
-warn "SECRET qrcode_click: $base32Secret";
                 _logged_in($c);
         }else{
+        push @errors,("Somethings wrong! Repeat the operation, your insert code isn't correct");
         my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
         $sth->execute(undef, $USER->{name});
         }
@@ -710,7 +704,6 @@ warn "SECRET qrcode_click: $base32Secret";
                 changed_pass => $changed_pass,
                 change_2fa => $change_2fa,
                 qrcode => $qrcode,
-                code => $code,
                 errors =>\@errors);
 };
 
