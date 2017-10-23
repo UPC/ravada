@@ -172,7 +172,7 @@ sub _vol_remove {
         eval { $vol = $pool->get_volume_by_name($name) };
         if (! $vol ) {
             warn "VOLUME $name not found in $pool \n".($@ or '')
-                if $@ !~ /Storage volume not found/i;
+                if $@ !~ /libvirt error code: 50,/i;
             next;
         }
         $vol->delete();
