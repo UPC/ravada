@@ -70,7 +70,9 @@ sub test_balance {
 
 #################################################################
 
-clean($file_remote_config);
+my $file_found;
+$file_found = $file_remote_config   if -e $file_remote_config;
+clean($file_found);
 
 for my $vm_name ('KVM') {
     my $vm;
@@ -111,5 +113,6 @@ for my $vm_name ('KVM') {
     }
 }
 
-clean($file_remote_config);
+clean($file_found);
+
 done_testing();
