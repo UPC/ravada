@@ -54,7 +54,7 @@ sub test_node {
 sub test_sync {
     my ($vm_name, $node, $clone) = @_;
 
-    eval { $clone->rsync($node) };
+    eval { $clone->_rsync($node) };
     is($@,'') or return;
     # TODO test synced files
 
@@ -205,22 +205,34 @@ sub test_rsync_newer {
 
     my $vm = rvd_back->search_vm($vm_name);
 
+    my $capacity;
+    { # vols equal, then resize
     my $vol = $vm->search_volume($vol_name);
-    $vol->resize($vol->get_info->{capacity} *1.1 );
-    my $info = $vol->get_info;
-
     my $vol_remote = $node->search_volume($vol_name);
-    my $info_remote = $vol_remote->get_info;
+    is($vol_remote->get_info->{capacity}, $vol->get_info->{capacity});
 
-    isnt($info->{capacity}, $info_remote->{capacity});
+    $capacity = int ($vol->get_info->{capacity} *1.1 );
+    $vol->resize($capacity);
+    }
 
-    $domain->start(user => user_admin);
-
+    { # vols different
     my $vol2 = $vm->search_volume($vol_name);
     my $vol2_remote = $node->search_volume($vol_name);
 
-    is($vol2_remote->get_info->{capacity}, $vol2->get_info->{capacity});
-    exit;
+    is($vol2->get_info->{capacity}, $capacity);
+    isnt($vol2_remote->get_info->{capacity}, $capacity);
+    isnt($vol2_remote->get_info->{capacity}, $vol2->get_info->{capacity});
+    }
+
+    is($domain->_vm->host, $node->host);
+    $domain->start(user => user_admin);
+
+    { # syncs for start, so vols should be equal
+    my $vol3 = $vm->search_volume($vol_name);
+    my $vol3_remote = $node->search_volume($vol_name);
+    is($vol3_remote->get_info->{capacity}, $vol3->get_info->{capacity});
+    }
+
 
 }
 
