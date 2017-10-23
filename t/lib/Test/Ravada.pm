@@ -445,6 +445,22 @@ sub clean {
     } else {
         _clean_remote();
     }
+    _clean_db();
+}
+
+sub _clean_db {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "DELETE FROM vms "
+    );
+    $sth->execute;
+    $sth->finish;
+
+    $sth = $CONNECTOR->dbh->prepare(
+        "DELETE FROM domains"
+    );
+    $sth->execute;
+    $sth->finish;
+
 }
 
 sub _clean_remote {
