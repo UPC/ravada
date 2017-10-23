@@ -325,6 +325,12 @@ sub _update_domain_drivers_types($self) {
         }
     };
     $self->_update_table('domain_drivers_types','id',$data);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE domain_drivers_types SET vm='KVM' WHERE vm='qemu'"
+    );
+    $sth->execute;
+    $sth->finish;
 }
 
 sub _update_domain_drivers_options($self) {
