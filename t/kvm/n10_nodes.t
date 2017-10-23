@@ -54,7 +54,7 @@ sub test_node {
 sub test_sync {
     my ($vm_name, $node, $clone) = @_;
 
-    eval { $clone->_rsync($node) };
+    eval { $clone->rsync($node) };
     is($@,'') or return;
     # TODO test synced files
 
@@ -70,7 +70,7 @@ sub test_domain {
     is($base->_vm->host, 'localhost');
 
     $base->prepare_base(user_admin);
-
+    $base->rsync($node);
     my $clone = $base->clone(name => new_domain_name
         ,user => user_admin
     );

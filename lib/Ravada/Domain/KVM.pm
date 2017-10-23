@@ -1629,7 +1629,7 @@ sub migrate($self, $node) {
     my $doc = XML::LibXML->load_xml(string => $xml);
     $self->_check_uuid($doc, $node);
 
-    $self->_rsync($node);
+    $self->rsync($node);
 
     my $dom;
     eval { $dom = $node->vm->get_domain_by_name($self->name) };
