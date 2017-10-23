@@ -789,6 +789,7 @@ sub login {
     my $login = $c->param('login');
     my $password = $c->param('password');
     my $form_hash = $c->param('login_hash');
+    my $two_fa;
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
@@ -814,11 +815,16 @@ sub login {
         my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
+#            if ( $USER->two_fa ){
+#                push @error,("Access 2FA");
+
+#            }else{
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
 
             $c->session(expiration => $expiration);
+#        }
             return $c->redirect_to($url);
         } else {
             push @error,("Access denied");
@@ -838,6 +844,7 @@ sub login {
                         ,navbar_custom => 1
                       ,login => $login
                       ,login_hash => sha256_hex($login_hash1)
+                      ,two_fa => $two_fa
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
