@@ -348,7 +348,7 @@ sub _check_create_domain {
 
     my %args = @_;
 
-    die "ERROR: Domains can only be created at localhost"
+    die "ERROR: Domains can only be created at localhost got ".$self->host
         unless     $self->host eq 'localhost'
                 || $self->host eq '127.0.0.1';
 
