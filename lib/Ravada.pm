@@ -993,7 +993,10 @@ sub search_domain {
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
         warn $@ if $@   && $DEBUG;
-        return $domain if $id || $import;
+        next if !$id && !$import;
+
+        $domain->_vm($domain->last_vm())    if $id && $domain->last_vm;
+        return $domain;
     }
 
 
