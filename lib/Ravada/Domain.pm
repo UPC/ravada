@@ -1537,7 +1537,6 @@ sub drivers {
 
     _init_connector();
 
-    $type = 'qemu' if $type =~ /^KVM$/;
     my $query = "SELECT id from domain_drivers_types "
         ." WHERE vm=?";
     $query .= " AND name=?" if $name;
