@@ -133,6 +133,7 @@ sub remove_disks {
     $self->_vm->connect();
     for my $file ($self->list_disks) {
         $self->_vol_remove($file);
+        $self->_vol_remove($file);
 #        if ( -e $file ) {
 #            unlink $file or die "$! $file";
 #        }
@@ -1668,10 +1669,13 @@ sub migrate($self, $node) {
     my $doc = XML::LibXML->load_xml(string => $xml);
     $self->_check_uuid($doc, $node);
 
+    $self->rsync($node);
     my $dom = $node->vm->define_domain($doc->toString());
     $self->domain($dom);
     $self->_vm($node);
 
+    # TODO: update db instead set this value
+    $self->{_migrated} = 1;
 }
 
 1;

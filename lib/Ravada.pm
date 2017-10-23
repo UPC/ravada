@@ -648,6 +648,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
+    $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
@@ -673,9 +674,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
-    $self->_upgrade_table('domains','id_vm',"int default NULL");
+    $self->_upgrade_table('domains','id_vm','int DEFAULT NULL');
 
-    $self->_upgrade_table('vms','security','varchar(20) default NULL');
+    $self->_upgrade_table('vms','security','varchar(255) default NULL');
 }
 
 

@@ -100,7 +100,7 @@ has 'storage' => (
 );
 
 has '_vm' => (
-    is => 'ro',
+    is => 'rw',
     ,isa => 'Object'
     ,required => 1
 );
@@ -172,7 +172,25 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 sub BUILD {
     my $self = shift;
+
     $self->is_known();
+}
+
+sub _set_last_vm($self,$force=0) {
+    my $id_vm;
+    $id_vm = $self->_data('id_vm')  if $self->is_known();
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        my $domain;
+        eval { $domain = $vm->search_domain($self->name) };
+        die $@ if $@ && $@ !~ /no domain with matching name/;
+        if ($domain && ($force || $domain->is_active)) {
+            $self->_vm($vm);
+            $self->domain($domain->domain);
+        }
+        return $id_vm;
+    }
+    return;
 }
 
 sub _vm_connect {
@@ -199,6 +217,28 @@ sub _start_preconditions{
     $self->_check_free_memory();
     _check_used_memory(@_);
 
+    $self->_set_last_vm(1) or $self->_balance_vm();
+}
+
+sub _balance_vm($self) {
+    return if $self->{_migrated};
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms where vm_type=?"
+    );
+    $sth->execute($self->_vm->type);
+    my %vm_list;
+    while (my ($id) = $sth->fetchrow) {
+        my $vm = Ravada::VM->open($id);
+        $vm_list{$id} = scalar $vm->list_domains(active => 1);
+    }
+    my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
+
+    my ($id) = $sorted_vm[0];
+
+    return if $id == $self->_vm->id;
+    my $vm_free = Ravada::VM->open($id);
+
+    $self->migrate($vm_free);
 }
 
 sub _update_description {
@@ -1168,11 +1208,6 @@ sub _post_resume {
 sub _post_start {
     my $self = shift;
     my %arg;
-    if ( scalar @_ % 2 ==1 ) {
-        $arg{user} = $_[0];
-    } else {
-        %arg = @_;
-    }
 
     if (scalar @_ % 2) {
         $arg{user} = $_[0];

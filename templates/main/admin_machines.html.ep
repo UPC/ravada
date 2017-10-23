@@ -31,7 +31,7 @@
             
 %=      include 'bootstrap/requests'
 
-        <table class="table table-striped admin-cont-body" border="0">
+        <table class="table table-striped admin-cont-body" border="1">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"
@@ -60,6 +60,7 @@
                        title="<%=l 'Show/Hide clones' %>">
                        <%=l 'Base' %></span></th>
                     <th class="lgMachToggle"><%=l 'Public'%></th>
+                    <th class="lgMachToggle"><%=l 'Node' %></th>
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
                       <i class="fa fa-exchange fa-rotate-90"
@@ -95,6 +96,7 @@
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="<%=l 'Make private'%>">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
+                    <td class="lgMachToggle"></td>
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                         <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
@@ -172,6 +174,7 @@
                           <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="set_public(child.id,0)" title="Make private">
 
                            <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
+                      <td class="lgMachToggle">{{child.node}}</td>
                       <td class="lgMachActions">
                           <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
