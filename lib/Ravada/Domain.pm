@@ -169,6 +169,7 @@ after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
 
+before 'migrate' => \&_pre_migrate;
 ##################################################
 #
 
@@ -1726,14 +1727,7 @@ Argument: Ravada::VM
 =cut
 
 sub rsync($self, $node) {
-    my $ssh2 = Net::SSH2->new();
-    $ssh2->timeout(20000);
-    $ssh2->connect($node->host) or $ssh2->die_with_error;
-    $ssh2->check_hostkey()      or $ssh2->die_with_error;
-    $ssh2->auth_publickey("root"
-        ,"/root/.ssh/id_rsa.pub"
-        ,"/root/.ssh/id_rsa")    or $ssh2->die_with_error;
-
+    my $ssh = $self->_connect_ssh($node);
 #    This does nothing and doesn't fail
 #
 #    for my $file ( $self->list_volumes()) {
@@ -1760,6 +1754,35 @@ sub rsync($self, $node) {
         $rsync->exec(src => $file, dest => $node->host.":".$file );
     }
     $node->_refresh_storage_pools();
+}
+
+sub _connect_ssh($self, $node) {
+    my $ssh2 = Net::SSH2->new();
+    $ssh2->timeout(20000);
+    $ssh2->connect($node->host) or $ssh2->die_with_error;
+    $ssh2->check_hostkey()      or $ssh2->die_with_error;
+    $ssh2->auth_publickey("root"
+        ,"/root/.ssh/id_rsa.pub"
+        ,"/root/.ssh/id_rsa")    or $ssh2->die_with_error;
+    return $ssh2;
+}
+
+sub _pre_migrate($self, $node) {
+    return if !$self->id_base;
+
+
+    my $base = Ravada::Domain->open($self->id_base);
+    for my $file ( $base->list_files_base ) {
+
+        my ($name) = $file =~ m{.*/(.*)};
+
+        my $vol_path = $node->search_volume_path($name);
+        die "ERROR: $file not found in ".$node->host
+            if !$vol_path;
+
+        die "ERROR: $name found at $vol_path instead $file"
+            if $vol_path ne $file;
+    }
 }
 
 1;
