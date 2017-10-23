@@ -203,6 +203,7 @@ sub test_domain_starts_in_same_vm {
 sub test_sync_base {
     my ($vm_name, $node) = @_;
 
+    my $vm =rvd_back->search_vm($vm_name);
     my $base = create_domain($vm_name);
     my $clone = $base->clone(
         name => new_domain_name
@@ -212,12 +213,57 @@ sub test_sync_base {
     eval { $clone->migrate($node); };
     like($@, qr'.');
 
+    eval { $base->rsync($node); };
+    is(''.$@,'');
+
+    eval { $clone->migrate($node); };
+    is(''.$@,'');
+
+    is($clone->_vm->host, $node->host);
+    $clone->shutdown_now(user_admin);
+
+    my $clone2 = $vm->search_domain($clone->name);
+    is($clone2->_vm->host, $vm->host);
+
+    eval { $clone2->migrate($node); };
+    is(''.$@,'');
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+
+}
+
+sub test_start_twice {
+    my ($vm_name, $node) = @_;
+
+    my $vm =rvd_back->search_vm($vm_name);
+    my $base = create_domain($vm_name);
+    my $clone = $base->clone(
+        name => new_domain_name
+       ,user => user_admin
+    );
 
     eval { $base->rsync($node); };
     is(''.$@,'');
 
     eval { $clone->migrate($node); };
     is(''.$@,'');
+
+    is($clone->_vm->host, $node->host);
+
+    my $clone2 = $vm->search_domain($clone->name);
+    is($clone2->_vm->host, $vm->host);
+    $clone2->domain->create();
+    warn $clone2->display(user_admin);
+
+    eval { $clone->start(user => user_admin ) };
+    is($@,'');
+    is($clone->_vm->host, $vm->ip);
+    warn $clone->display;
+    is($clone->display(user_admin), $clone2->display(user_admin));
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 
 }
 
@@ -299,6 +345,7 @@ SKIP: {
     test_domain_no_remote($vm_name, $node);
 
     test_sync_base($vm_name, $node);
+    test_start_twice($vm_name, $node);
 
     my $domain2 = test_domain($vm_name, $node);
     test_remove_domain_from_local($vm_name, $node, $domain2)    if $domain2;
