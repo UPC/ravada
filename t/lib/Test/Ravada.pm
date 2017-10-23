@@ -66,6 +66,9 @@ sub create_domain {
         ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
     }
 
+    confess "ERROR: Domains can only be created at localhost"
+        if $vm->host ne 'localhost';
+
     my $name = new_domain_name();
 
     ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
