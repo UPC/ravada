@@ -52,17 +52,22 @@ sub test_node {
 }
 
 sub test_sync {
-    my ($vm_name, $node, $clone) = @_;
+    my ($vm_name, $node, $base, $clone) = @_;
 
     eval { $clone->rsync($node) };
     is($@,'') or return;
     # TODO test synced files
 
+    eval { $base->rsync($node) };
+    is($@,'') or return;
+
+    eval { $clone->rsync($node) };
+    is($@,'') or return;
 }
 
 sub test_domain {
     my $vm_name = shift;
-    my $node = shift;
+    my $node = shift or die "Missing node";
 
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -75,7 +80,7 @@ sub test_domain {
         ,user => user_admin
     );
 
-    test_sync($vm_name, $node, $clone);
+    test_sync($vm_name, $node, $base, $clone);
 
     $clone->migrate($node);
 
@@ -108,7 +113,7 @@ sub test_domain_no_remote {
             ,id_iso => 1
         );
     };
-    like($@,qr'.');
+    like($@,qr'.',"Expecting no domain in remote node by now");
 
     $domain->remove(user_admin) if $domain;
 }
@@ -123,7 +128,7 @@ sub test_remove_domain_from_local {
     my @volumes = $domain->list_volumes();
 
     eval {$domain->remove(user_admin); };
-    is(''.$@,'');
+    is(''.$@,'',"Expecting no errors removing domain ".$domain_orig->name);
 
     my $domain2 = $vm->search_domain($domain->name);
     ok(!$domain2,"Expecting no domain in local");
@@ -192,6 +197,27 @@ sub test_domain_starts_in_same_vm {
     is($domain2->display(user_admin), $display);
 
     $domain->remove(user_admin);
+}
+
+sub test_sync_base {
+    my ($vm_name, $node) = @_;
+
+    my $base = create_domain($vm_name);
+    my $clone = $base->clone(
+        name => new_domain_name
+       ,user => user_admin
+    );
+
+    eval { $clone->migrate($node); };
+    like($@, qr'.');
+
+
+    eval { $base->rsync($node); };
+    is(''.$@,'');
+
+    eval { $clone->migrate($node); };
+    is(''.$@,'');
+
 }
 
 sub test_rsync_newer {
@@ -270,6 +296,8 @@ SKIP: {
     test_rsync_newer($vm_name, $node);
 
     test_domain_no_remote($vm_name, $node);
+
+    test_sync_base($vm_name, $node);
 
     my $domain2 = test_domain($vm_name, $node);
     test_remove_domain_from_local($vm_name, $node, $domain2)    if $domain2;
