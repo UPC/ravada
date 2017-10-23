@@ -13,12 +13,9 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
 use File::Path qw(make_path);
-use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
-use Net::SSH2;
-use Sys::Virt::Stream;
 use XML::LibXML;
 
 no warnings "experimental::signatures";
@@ -1625,43 +1622,6 @@ sub _check_uuid($self, $doc, $node) {
 
 }
 
-sub rsync($self, $node) {
-    my $ssh2 = Net::SSH2->new();
-    $ssh2->timeout(20000);
-    $ssh2->connect($node->host) or $ssh2->die_with_error;
-    $ssh2->check_hostkey()      or $ssh2->die_with_error;
-    $ssh2->auth_publickey("root"
-        ,"/root/.ssh/id_rsa.pub"
-        ,"/root/.ssh/id_rsa")    or $ssh2->die_with_error;
-
-#    This does nothing and doesn't fail
-#
-#    for my $file ( $self->list_volumes()) {
-#        warn "sending $file\n";
-#        my $ret = $ssh2->scp_put($file, $file);
-#        warn Dumper($ret);
-#        die $ssh2->die_with_error   if !$ret;
-#        warn $ssh2->error   if $ssh2->error;
-#    }
-
-
-# TODO: waiting for latest SFTP Foreign in Ubuntu debian package
-#    my $sftp = Net::SFTP::Foreign->new(
-#        ssh2 => $ssh2,
-#        ,backend => 'Net_SSH2'
-#    );
-#    $sftp->die_on_error("Unable to establish SFTP connection");
-    my @files_base;
-    if ($self->id_base) {
-        my $base = Ravada::Domain->open($self->id_base);
-        push @files_base,($base->list_files_base);
-    }
-    my $rsync = File::Rsync->new();
-    for my $file ( $self->list_volumes(), @files_base) {
-        $rsync->exec(src => $file, dest => $node->host.":".$file );
-    }
-    $node->_refresh_storage_pools();
-}
 
 sub migrate($self, $node) {
     my $xml = $self->domain->get_xml_description();
@@ -1669,8 +1629,13 @@ sub migrate($self, $node) {
     my $doc = XML::LibXML->load_xml(string => $xml);
     $self->_check_uuid($doc, $node);
 
-    $self->rsync($node);
-    my $dom = $node->vm->define_domain($doc->toString());
+    $self->_rsync($node);
+
+    my $dom;
+    eval { $dom = $node->vm->get_domain_by_name($self->name) };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    $dom = $node->vm->define_domain($doc->toString())   if !$dom;
+
     $self->domain($dom);
     $self->_vm($node);
 
