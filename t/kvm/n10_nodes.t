@@ -182,7 +182,41 @@ sub test_domain_starts_in_same_vm {
     ok($domain2,"Expecting a domain called ".$domain->name) or return;
 
     is($domain2->_vm->host, $node->host);
+
+    $domain->remove(user_admin);
 }
+
+
+sub test_rsync_newer {
+    my ($vm_name, $node) = @_;
+
+    my $domain = test_domain($vm_name, $node);
+    $domain->shutdown_now(user_admin)   if $domain->is_active;
+
+    my ($volume) = $domain->list_volumes();
+    my ($vol_name) = $volume =~ m{.*/(.*)};
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $vol = $vm->search_volume($vol_name);
+    $vol->resize($vol->get_info->{capacity} *1.1 );
+    my $info = $vol->get_info;
+
+    my $vol_remote = $node->search_volume($vol_name);
+    my $info_remote = $vol_remote->get_info;
+
+    isnt($info->{capacity}, $info_remote->{capacity});
+
+    $domain->start(user => user_admin);
+
+    my $vol2 = $vm->search_volume($vol_name);
+    my $vol2_remote = $node->search_volume($vol_name);
+
+    is($vol2_remote->get_info->{capacity}, $vol2->get_info->{capacity});
+    exit;
+
+}
+
 #############################################################
 
 clean();
@@ -213,6 +247,8 @@ SKIP: {
     my $node = test_node($vm_name)  or next;
 
     next if !$node || !$node->vm;
+
+    test_rsync_newer($vm_name, $node);
 
     test_domain_no_remote($vm_name, $node);
 
