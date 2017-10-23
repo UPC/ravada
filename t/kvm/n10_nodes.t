@@ -82,7 +82,8 @@ sub test_domain {
 
     test_sync($vm_name, $node, $base, $clone);
 
-    $clone->migrate($node);
+    eval { $clone->migrate($node) };
+    is(''.$@ , '') or exit;
 
     eval { $clone->start(user_admin) };
     ok(!$@,$node->name." Expecting no error, got ".($@ or ''));
@@ -223,7 +224,7 @@ sub test_sync_base {
 sub test_rsync_newer {
     my ($vm_name, $node) = @_;
 
-    my $domain = test_domain($vm_name, $node);
+    my $domain = test_domain($vm_name, $node) or return;
     $domain->shutdown_now(user_admin)   if $domain->is_active;
 
     my ($volume) = $domain->list_volumes();
