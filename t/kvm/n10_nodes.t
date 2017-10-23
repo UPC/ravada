@@ -56,6 +56,7 @@ sub test_sync {
 
     eval { $clone->rsync($node) };
     like($@,'.') or return;
+    is($@,'') or return;
     # TODO test synced files
 
     eval { $base->rsync($node) };
@@ -75,7 +76,7 @@ sub test_domain {
     is($base->_vm->host, 'localhost');
 
     $base->prepare_base(user_admin);
-
+    $base->rsync($node);
     my $clone = $base->clone(name => new_domain_name
         ,user => user_admin
     );

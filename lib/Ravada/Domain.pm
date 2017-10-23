@@ -220,7 +220,7 @@ sub _start_preconditions{
     _check_used_memory(@_);
 
     $self->_set_last_vm(1) or $self->_balance_vm();
-    $self->_rsync($self->_vm)
+    $self->rsync($self->_vm)
         if $self->_vm->host ne 'localhost';
 }
 
@@ -1717,7 +1717,15 @@ sub type {
     return $type;
 }
 
-sub _rsync($self, $node) {
+=head2 rsync
+
+Synchronizes the volume data to a remote node.
+
+Argument: Ravada::VM
+
+=cut
+
+sub rsync($self, $node) {
     my $ssh2 = Net::SSH2->new();
     $ssh2->timeout(20000);
     $ssh2->connect($node->host) or $ssh2->die_with_error;
@@ -1744,9 +1752,8 @@ sub _rsync($self, $node) {
 #    );
 #    $sftp->die_on_error("Unable to establish SFTP connection");
     my @files_base;
-    if ($self->id_base) {
-        my $base = Ravada::Domain->open($self->id_base);
-        push @files_base,($base->list_files_base);
+    if ($self->is_base) {
+        push @files_base,($self->list_files_base);
     }
     my $rsync = File::Rsync->new();
     for my $file ( $self->list_volumes(), @files_base) {
