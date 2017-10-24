@@ -667,9 +667,8 @@ sub user_settings {
 
         if ($row->{two_fa} == 1){$change_2fa = 1}else{$change_2fa = 0;}
 
-    if ( !defined $row->{secret}){
-        #$base32Secret = generateBase32Secret();
-        $base32Secret = "NY4A5CPJZ46LXZCP";
+        if ( !defined $row->{secret} ){
+        $base32Secret = generateBase32Secret();
 
         my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
         $sth->execute($base32Secret, $USER->{name});
@@ -688,8 +687,6 @@ sub user_settings {
                 _logged_in($c);
         }else{
         push @errors,("Somethings wrong! Repeat the operation, your insert code isn't correct");
-        my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
-        $sth->execute(undef, $USER->{name});
         }
     }
 
