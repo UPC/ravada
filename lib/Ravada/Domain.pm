@@ -1692,7 +1692,7 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    my ($type) = $self =~ m{.*::(.*)};
+    my ($type) = ref $self =~ m{.*::(.*)};
     return $type;
 }
 
