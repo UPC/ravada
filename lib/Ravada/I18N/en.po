@@ -219,7 +219,7 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
-msgid "Hybernate"
+msgid "Hibernate"
 msgstr ""
 
 msgid "Shutdown"
