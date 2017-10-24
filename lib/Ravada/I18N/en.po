@@ -48,7 +48,7 @@ msgstr ""
 msgid "Clone"
 msgstr ""
 
-msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgid "Can't Prepare Base, Remove Base or Delete. Machine has"
 msgstr ""
 
 msgid "Clone/s"
@@ -123,7 +123,7 @@ msgstr ""
 msgid "Your password has been changed successfully"
 msgstr ""
 
-msgid "Password too small"
+msgid "Password too short"
 msgstr ""
 
 msgid "Password fields aren't equal"
@@ -159,7 +159,7 @@ msgstr ""
 msgid "Paused"
 msgstr ""
 
-msgid "Machine locked by requested"
+msgid "Machine locked by request"
 msgstr ""
 
 msgid "process"
@@ -174,7 +174,7 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-msgid "Backend no available!"
+msgid "Backend not available!"
 msgstr ""
 
 msgid "Subject"
@@ -186,7 +186,7 @@ msgstr ""
 msgid "Mark as Read"
 msgstr ""
 
-msgid "Mark as UnRead"
+msgid "Mark as Unread"
 msgstr ""
 
 msgid "No message to show!"
@@ -255,7 +255,7 @@ msgstr ""
 msgid "For spice redirection you'll need to install"
 msgstr ""
 
-msgid "in your computer."
+msgid "on your computer."
 msgstr ""
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
@@ -269,7 +269,7 @@ msgstr ""
 
 msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "
-"necessary associate protocol with the app."
+"necessary to associate protocol with the app."
 msgstr ""
 
 msgid "To make this possible, download"
@@ -286,7 +286,7 @@ msgstr ""
 msgid "Welcome"
 msgstr ""
 
-msgid "It is required a viewer to run the virtual machines."
+msgid "A viewer is required to run the virtual machines."
 msgstr ""
 
 msgid "Virtual Machines"
@@ -385,7 +385,7 @@ msgstr ""
 msgid "Select Template"
 msgstr ""
 
-msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
+msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
 msgstr ""
 
 msgid "Download now"
@@ -424,7 +424,7 @@ msgstr ""
 msgid "A machine with that name already exists."
 msgstr ""
 
-msgid "The machine name must contain only alphabetic, numbers, dashes and points."
+msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
 msgstr ""
 
 msgid "Create"
