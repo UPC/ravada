@@ -1397,13 +1397,12 @@ sub settings_machine {
     for my $option (qw(description run_timeout)) {
         if ( defined $c->param($option) ) {
             my $value = $c->param($option);
+            $value = 0 if !defined $value || !$value;
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
         }
     }
-
-
 
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
