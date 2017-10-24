@@ -18,7 +18,7 @@ msgstr ""
 msgid "Ravada broker"
 msgstr ""
 
-msgid "Machine Name"
+msgid "Name of the Machine"
 msgstr ""
 
 msgid "Tools"
@@ -93,7 +93,7 @@ msgstr ""
 msgid "I want to change my password"
 msgstr ""
 
-msgid "I want to change my language"
+msgid "I want to change my Language"
 msgstr ""
 
 msgid "Language:"
@@ -126,10 +126,10 @@ msgstr ""
 msgid "Password too short"
 msgstr ""
 
-msgid "Password fields aren't equal"
+msgid "Password fields are not matching!"
 msgstr ""
 
-msgid "Some of the password fields are empty"
+msgid "Some of the password fields are empty."
 msgstr ""
 
 msgid "Public"
@@ -195,13 +195,13 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-msgid "machines"
+msgid "Machines"
 msgstr ""
 
-msgid "users"
+msgid "Users"
 msgstr ""
 
-msgid "messages"
+msgid "Messages"
 msgstr ""
 
 msgid "Admin tools"
@@ -210,7 +210,7 @@ msgstr ""
 msgid "Remove base"
 msgstr ""
 
-msgid "public"
+msgid "Public"
 msgstr ""
 
 msgid "New Base"
@@ -225,10 +225,10 @@ msgstr ""
 msgid "Shutdown"
 msgstr ""
 
-msgid "action"
+msgid "Action"
 msgstr ""
 
-msgid "will remove all the contents of the machine"
+msgid "Will remove all the contents of the machine"
 msgstr ""
 
 msgid "Are you sure?"
@@ -292,10 +292,10 @@ msgstr ""
 msgid "Virtual Machines"
 msgstr ""
 
-msgid "user"
+msgid "User"
 msgstr ""
 
-msgid "password"
+msgid "Password"
 msgstr ""
 
 msgid "Start session"
