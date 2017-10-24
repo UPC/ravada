@@ -129,7 +129,7 @@ msgstr ""
 msgid "Password fields aren't equal"
 msgstr ""
 
-msgid "Some of the password's fields are empty"
+msgid "Some of the password fields are empty"
 msgstr ""
 
 msgid "Public"
@@ -150,7 +150,7 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-msgid "ShutDown"
+msgid "Shutdown"
 msgstr ""
 
 msgid "Screenshot"
@@ -268,7 +268,7 @@ msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatically. It's "
+"Be aware that in Windows, Spice redirection is not automatic. It's "
 "necessary to associate protocol with the app."
 msgstr ""
 
@@ -362,4 +362,9 @@ msgid "The machine name is only allowed to consist of alphabetic characters, num
 msgstr ""
 
 msgid "Create"
+msgstr ""
+
+msgid ""
+"can change the settings of all virtual machines "
+"cloned from one base owned by the user."
 msgstr ""
