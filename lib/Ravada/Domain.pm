@@ -212,7 +212,11 @@ sub _start_preconditions{
     die "Domain ".$self->name." is a base. Bases can't get started.\n"
         if $self->is_base();
 
+    my %args;
     if (scalar @_ %2 ) {
+        my @args = @_;
+        shift @args;
+        %args = @args;
         _allow_manage_args(@_);
     } else {
         _allow_manage(@_);
@@ -221,7 +225,7 @@ sub _start_preconditions{
     _check_used_memory(@_);
 
     $self->_set_last_vm(1) or $self->_balance_vm();
-    $self->rsync($self->_vm)
+    $self->rsync($self->_vm, $args{request})
         if $self->_vm->host ne 'localhost';
 }
 
@@ -1697,7 +1701,8 @@ Argument: Ravada::VM
 
 =cut
 
-sub rsync($self, $node) {
+sub rsync($self, $node, $request) {
+    $request->status("working") if $request;
     my $ssh = $self->_connect_ssh($node);
 #    This does nothing and doesn't fail
 #
@@ -1722,6 +1727,8 @@ sub rsync($self, $node) {
     }
     my $rsync = File::Rsync->new();
     for my $file ( $self->list_volumes(), @files_base) {
+        $request->status("syncing","Tranferring $file to ".$node->host)
+            if $request;
         $rsync->exec(src => $file, dest => $node->host.":".$file );
     }
     $node->_refresh_storage_pools();
