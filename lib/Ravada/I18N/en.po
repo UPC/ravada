@@ -252,7 +252,7 @@ msgstr ""
 msgid "Show/Hide clones"
 msgstr ""
 
-msgid "For spice redirection you'll need to install"
+msgid "For Spice redirection you'll need to install"
 msgstr ""
 
 msgid "on your computer."
@@ -268,7 +268,7 @@ msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, spice redirection is not automatically. It's "
+"Be aware that in Windows, Spice redirection is not automatically. It's "
 "necessary to associate protocol with the app."
 msgstr ""
 
