@@ -18,19 +18,19 @@ msgstr ""
 msgid "Ravada broker"
 msgstr ""
 
-msgid "Name of the Machine"
+msgid "Name of the machine"
 msgstr ""
 
 msgid "Tools"
 msgstr ""
 
-msgid "Machines List"
+msgid "Machines list"
 msgstr ""
 
 msgid "Users"
 msgstr ""
 
-msgid "Choose a Machine to Start"
+msgid "Choose a machine to start"
 msgstr ""
 
 msgid "Start"
@@ -48,13 +48,13 @@ msgstr ""
 msgid "Clone"
 msgstr ""
 
-msgid "Can't Prepare Base, Remove Base or Delete. Machine has"
+msgid "Can't prepare base, remove base or delete. Machine has"
 msgstr ""
 
 msgid "Clone/s"
 msgstr ""
 
-msgid "NEW"
+msgid "New"
 msgstr ""
 
 msgid "Users List"
@@ -66,7 +66,7 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-msgid "Available Machines"
+msgid "Available machines"
 msgstr ""
 
 msgid "Help"
@@ -81,13 +81,13 @@ msgstr ""
 msgid "Messages"
 msgstr ""
 
-msgid "Mark all as Read"
+msgid "Mark all as read"
 msgstr ""
 
 msgid "Settings"
 msgstr ""
 
-msgid "New Machine"
+msgid "New machine"
 msgstr ""
 
 msgid "I want to change my password"
@@ -117,19 +117,19 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-msgid "Your language has been changed successfully"
+msgid "Your language has been successfully changed"
 msgstr ""
 
-msgid "Your password has been changed successfully"
+msgid "Your password has been successfully changed"
 msgstr ""
 
-msgid "Password too short"
+msgid "Password is too short"
 msgstr ""
 
-msgid "Password fields are not matching!"
+msgid "Password fields are not matching"
 msgstr ""
 
-msgid "Some of the password fields are empty."
+msgid "Some of the password fields are empty"
 msgstr ""
 
 msgid "Public"
@@ -162,7 +162,7 @@ msgstr ""
 msgid "Machine locked by request"
 msgstr ""
 
-msgid "process"
+msgid "Process"
 msgstr ""
 
 msgid "Copy"
@@ -183,13 +183,13 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-msgid "Mark as Read"
+msgid "Mark as read"
 msgstr ""
 
-msgid "Mark as Unread"
+msgid "Mark as unread"
 msgstr ""
 
-msgid "No message to show!"
+msgid "No messages to show"
 msgstr ""
 
 msgid "Admin"
@@ -249,7 +249,7 @@ msgstr ""
 msgid "Cannot remove base, machine has clones"
 msgstr ""
 
-msgid "Show/Hide clones"
+msgid "Show/hide clones"
 msgstr ""
 
 msgid "For Spice redirection you'll need to install"
