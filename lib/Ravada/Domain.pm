@@ -224,9 +224,12 @@ sub _start_preconditions{
     $self->_check_free_memory();
     _check_used_memory(@_);
 
-    $self->_set_last_vm(1) or $self->_balance_vm();
-    $self->rsync($self->_vm, $args{request})
-        if $self->_vm->host ne 'localhost';
+    # if it is a clone ( it is not a base )
+    if (!$self->is_base) {
+        $self->_set_last_vm(1) or $self->_balance_vm();
+        $self->rsync($self->_vm, $args{request})
+            if $self->_vm->host ne 'localhost';
+    }
 }
 
 sub _balance_vm($self) {
@@ -1701,7 +1704,7 @@ Argument: Ravada::VM
 
 =cut
 
-sub rsync($self, $node, $request) {
+sub rsync($self, $node, $request=undef) {
     $request->status("working") if $request;
     my $ssh = $self->_connect_ssh($node);
 #    This does nothing and doesn't fail
