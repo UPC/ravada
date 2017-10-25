@@ -330,7 +330,7 @@ get '/machine/view/(:id).(:type)' => sub {
 };
 
 get '/machine/clone/(:id).(:type)' => sub {
-    my $c = shift;      
+    my $c = shift;
     return access_denied($c)	     if !$USER->can_clone();
     return clone_machine($c);
 };
@@ -673,7 +673,7 @@ sub user_settings {
         my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=? WHERE name=?");
         $sth->execute($base32Secret, $USER->{name});
     } else {
-        $base32Secret = $row->{secret}; 
+        $base32Secret = $row->{secret};
     }
     $qrcode = qrImageUrl( $keyId, $base32Secret );
 
@@ -694,6 +694,7 @@ sub user_settings {
         my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("UPDATE users SET secret=?, two_fa=? WHERE name=?");
         $sth->execute(undef, '0', $USER->{name});
         $change_2fa = 0;
+        $c->redirect_to('/logout');
     }
 
     $c->render( template => 'bootstrap/user_settings',
@@ -786,7 +787,6 @@ sub login {
     my $login = $c->param('login');
     my $password = $c->param('password');
     my $form_hash = $c->param('login_hash');
-    my $two_fa;
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
@@ -812,16 +812,13 @@ sub login {
         my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
-#            if ( $USER->two_fa ){
-#                push @error,("Access 2FA");
 
-#            }else{
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
 
             $c->session(expiration => $expiration);
-#        }
+
             return $c->redirect_to($url);
         } else {
             push @error,("Access denied");
@@ -841,7 +838,6 @@ sub login {
                         ,navbar_custom => 1
                       ,login => $login
                       ,login_hash => sha256_hex($login_hash1)
-                      ,two_fa => $two_fa
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
@@ -918,11 +914,6 @@ sub tfa {
     }
 }
 
-any '/code' => sub {
-    my $c = shift;
-    code($c);
-};
-
 sub code {
     my $c = shift;
     my $base32Secret;
@@ -932,19 +923,26 @@ sub code {
    my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
    $sth->execute($USER->{name});
    my $row = $sth->fetchrow_hashref;
-my @errors;
-warn "-CODE-";
+   my @error =();
+
 if ($c->param('login_code_click')){
         $code = generateCurrentNumber( $row->{secret} );
         $form_code = $c->param('form_code');
-warn "CODE $code";
-warn "FORM CODE $code";
+
         if ($form_code == $code) {
+            $c->stash(css=>['/css/sb-admin.css']
+                    ,js=>[
+                        '/js/ravada.js'
+                        ]
+                    ,csssnippets => []
+                    );
             return render_machines_user($c);
             _logged_in($c);
         }else{
-            return logout($c);
-            push @errors,("Somethings wrong! Repeat the operation, your insert code isn't correct");
+            push @error,("Access denied");
+            push @error,("Somethings wrong! Repeat the operation, your insert code isn't correct");
+            $c->redirect_to('/logout');
+            #return logout($c);
         }
     }
 
@@ -1390,7 +1388,7 @@ sub register {
 
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
+
  #   if($c ->param('submit')) {
  #       push @error,("Name is mandatory")   if !$c->param('username');
  #       push @error,("Invalid username '".$c->param('username')."'"
@@ -1406,8 +1404,8 @@ sub register {
 #    push @{$c->stash->{js}}, '/js/admin.js';
 #    $c->render(template => 'bootstrap/new_user_control'
 #        , name => $c->param('username')
-#)    
-    
+#)
+
    if ($username) {
        Ravada::Auth::SQL::add_user(name => $username, password => $password);
        return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
@@ -1670,7 +1668,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    
+
 
     my $id_base= $c->param('id_base');
 
