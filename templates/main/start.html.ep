@@ -19,15 +19,6 @@
                        value="<%= $login_hash %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
                <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
-                % if ($two_fa){
-                    <div class="alert alert-success">
-                        <strong>2FA ON</strong>
-                        <form class="form-singin" method="post">
-                        <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User">
-                        <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
-                        </form>
-                    </div>
-                %  }
                 % if (scalar @$error) {
 
                 %       for my $i (@$error) {

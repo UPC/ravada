@@ -832,7 +832,7 @@ sub login {
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
-    sleep 5 if scalar(@error);
+        sleep 5 if scalar(@error);
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -888,9 +888,68 @@ sub quick_start {
 
     }
 
-    return render_machines_user($c);
+    #return render_machines_user($c);
+    return tfa($c);
 
 }
+
+sub tfa {
+    my $c = shift;
+
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                ." url($CONFIG_FRONT->{login_bg_file})"
+                ." no-repeat bottom center scroll;\n\t}"];
+    my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT two_fa FROM users WHERE name=?");
+    $sth->execute($USER->{name});
+    my $row = $sth->fetchrow_hashref;
+
+    if ($row->{two_fa} == 1){
+        $c->render(
+            template => ($CONFIG_FRONT->{login_custom} or 'bootstrap/code')
+            ,css => ['/css/main.css']
+            ,csssnippets => @css_snippets
+            ,js => ['/js/main.js']
+            ,tfa => $USER->{two_fa}
+            ,user => $USER
+            );
+        return code($c);
+    }else{
+        return render_machines_user($c);
+    }
+}
+
+any '/code' => sub {
+    my $c = shift;
+    code($c);
+};
+
+sub code {
+    my $c = shift;
+    my $base32Secret;
+    my $code;
+    my $form_code;
+
+   my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
+   $sth->execute($USER->{name});
+   my $row = $sth->fetchrow_hashref;
+my @errors;
+warn "-CODE-";
+if ($c->param('login_code_click')){
+        $code = generateCurrentNumber( $row->{secret} );
+        $form_code = $c->param('form_code');
+warn "CODE $code";
+warn "FORM CODE $code";
+        if ($form_code == $code) {
+            return render_machines_user($c);
+            _logged_in($c);
+        }else{
+            return logout($c);
+            push @errors,("Somethings wrong! Repeat the operation, your insert code isn't correct");
+        }
+    }
+
+}
+
 
 sub render_machines_user {
     my $c = shift;
