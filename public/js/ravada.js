@@ -191,7 +191,12 @@
           $scope.set_public = function(machineId, value) {
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-          
+          $scope.toggle_base= function(vmId,machineId) {
+            $http.get("/machine/toggle_base_vm/" +vmId+ "/" +machineId+".json")
+              .then(function(response) {
+                  $scope.message=response.data.message;
+              });
+          };
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
