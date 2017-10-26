@@ -839,15 +839,14 @@ sub set_base_vm {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args('set_base_vm', @_ );
-    # TODO WHAT ?
-    $args->{value} = 1;
+    $args->{value} = 1 if !exists $args->{value};
 
     my $self = {};
     bless($self,$class);
 
     return $self->_new_request(
             command => 'set_base_vm'
-             , args => encode_json($args)
+             , args => $args
     );
 
 }
