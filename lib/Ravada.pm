@@ -1880,6 +1880,26 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
+sub _cmd_set_base_vm {
+    my $self = shift;
+    my $request = shift;
+
+    my $value = $request->args('value');
+    die "ERROR: Missing value"                  if !defined $value;
+
+    my $uid = $request->args('uid')             or die "ERROR: Missing uid";
+    my $id_vm = $request->args('id_vm')         or die "ERROR: Missing id_vm";
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "USER $uid not authorized to set base vm"
+        if !$user->is_admin;
+
+    $domain->set_base_vm(id_vm => $id_vm, value => $value, user => $user);
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -1898,6 +1918,7 @@ sub _req_method {
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
    ,remove_base => \&_cmd_remove_base
+   ,set_base_vm => \&_cmd_set_base_vm
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,rename_domain => \&_cmd_rename_domain
