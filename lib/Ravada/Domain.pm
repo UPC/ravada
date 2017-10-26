@@ -170,6 +170,7 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 before 'migrate' => \&_pre_migrate;
+after 'migrate' => \&_post_migrate;
 ##################################################
 #
 
@@ -182,18 +183,23 @@ sub BUILD {
 sub _set_last_vm($self,$force=0) {
     my $id_vm;
     $id_vm = $self->_data('id_vm')  if $self->is_known();
-    if ($id_vm) {
-        my $vm = Ravada::VM->open($id_vm);
-        my $domain;
-        eval { $domain = $vm->search_domain($self->name) };
-        die $@ if $@ && $@ !~ /no domain with matching name/;
-        if ($domain && ($force || $domain->is_active)) {
-            $self->_vm($vm);
-            $self->domain($domain->domain);
-        }
-        return $id_vm;
+    return $self->_set_vm($id_vm, $force)   if $id_vm;
+}
+
+sub _set_vm($self, $vm, $force=0) {
+    if (!ref($vm)) {
+        $vm = Ravada::VM->open($vm);
     }
-    return;
+
+    my $domain;
+    eval { $domain = $vm->search_domain($self->name) };
+    die $@ if $@ && $@ !~ /no domain with matching name/;
+    if ($domain && ($force || $domain->is_active)) {
+       $self->_vm($vm);
+       $self->domain($domain->domain);
+    }
+    return $vm->id;
+
 }
 
 sub _vm_connect {
@@ -387,6 +393,7 @@ sub _post_prepare_base {
     }
 
     $self->_remove_id_base();
+    $self->_set_base_vm_db($self->_vm->id,1);
 };
 
 sub _check_has_clones {
@@ -1722,6 +1729,10 @@ Returns the virtual machine type as a string.
 sub type {
     my $self = shift;
     my ($type) = ref $self =~ m{.*::(.*)};
+
+    if (!$type) {
+        ($type) = $self =~ m{.*::(.*?)=};
+    }
     return $type;
 }
 
@@ -1793,6 +1804,72 @@ sub _pre_migrate($self, $node) {
         die "ERROR: $name found at $vol_path instead $file"
             if $vol_path ne $file;
     }
+
+    $self->_set_base_vm_db($node->id,0);
+}
+
+sub _post_migrate($self, $node) {
+    $self->_set_base_vm_db($node->id,1);
+}
+
+sub _set_base_vm_db($self, $id_vm, $value) {
+    my $is_base = $self->base_in_vm($id_vm);
+    if (!defined $is_base) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "INSERT INTO bases_vm (id_domain, id_vm, enabled) "
+            ." VALUES(?, ?, ?)"
+        );
+        $sth->execute($self->id, $id_vm, $value);
+        $sth->finish;
+    } else {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE bases_vm SET enabled=?"
+            ." WHERE id_domain=? AND id_vm=?"
+        );
+        $sth->execute($value, $self->id, $id_vm);
+        $sth->finish;
+    }
+}
+
+sub set_base_vm($self, %args) {
+
+    my $id_vm = delete $args{id_vm};
+    my $value = delete $args{value};
+    my $user  = delete $args{user};
+    my $vm    = delete $args{vm};
+
+    confess "ERROR: Unknown arguments, valid are id_vm, value, user and vm "
+        .Dumper(\%args) if keys %args;
+
+    confess "ERROR: Supply either id_vm or vm argument"
+        if (!$id_vm && !$vm) || ($id_vm && $vm);
+
+    confess "ERROR: user required"  if !$user;
+
+    $vm = Ravada::VM->open($id_vm)  if !$vm;
+
+    if ($vm->host eq 'localhost') {
+        $self->_set_vm($vm,1);
+        if (!$value) {
+            $self->_set_base_vm_db($id_vm, $value);
+            $self->remove_base($user);
+        } else {
+            $self->prepare_base($user);
+        }
+    }
+    return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub base_in_vm($self,$id_vm) {
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT enabled FROM bases_vm "
+        ." WHERE id_domain = ? AND id_vm = ?"
+    );
+    $sth->execute($self->id, $id_vm);
+    my ( $enabled ) = $sth->fetchrow;
+    $sth->finish;
+    return $enabled;
 }
 
 1;
