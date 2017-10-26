@@ -61,6 +61,7 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
     ,refresh_storage => { id_vm => 2 }
+    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -820,11 +821,6 @@ sub refresh_storage {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args('refresh_storage', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
         command => 'refresh_storage'
         , args => $args
     );
@@ -832,6 +828,55 @@ sub refresh_storage {
 
 }
 
+=head2 set_base_vm
+
+Enables a base in a Virtual Manager
+
+=cut
+
+sub set_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    # TODO WHAT ?
+    $args->{value} = 1;
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => encode_json($args)
+    );
+
+}
+
+=head2 remove_base_vm
+
+Disables a base in a Virtual Manager
+
+=cut
+
+sub remove_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 0;
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => encode_json($args)
+    );
+
+}
+
+
+>>>>>>> [#202] request enable or disable base in VM
 sub AUTOLOAD {
     my $self = shift;
 
