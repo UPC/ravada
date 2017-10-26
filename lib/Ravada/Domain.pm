@@ -1837,6 +1837,7 @@ sub set_base_vm($self, %args) {
     my $value = delete $args{value};
     my $user  = delete $args{user};
     my $vm    = delete $args{vm};
+    my $request = delete $args{request};
 
     confess "ERROR: Unknown arguments, valid are id_vm, value, user and vm "
         .Dumper(\%args) if keys %args;
@@ -1846,15 +1847,20 @@ sub set_base_vm($self, %args) {
 
     confess "ERROR: user required"  if !$user;
 
+    $request->status("working");
     $vm = Ravada::VM->open($id_vm)  if !$vm;
+
+    $value = 1 if !defined $value;
 
     if ($vm->host eq 'localhost') {
         $self->_set_vm($vm,1);
         if (!$value) {
             $self->_set_base_vm_db($id_vm, $value);
+            $request->status("working","Removing base");
             $self->remove_base($user);
         } else {
             $self->prepare_base($user);
+            $request->status("working","Preparing base");
         }
     }
     return $self->_set_base_vm_db($vm->id, $value);
