@@ -204,6 +204,13 @@
           });
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+          $scope.getReqs= function() {
+            $http.get('/requests.json').then(function(response) {
+                $scope.requests=response.data;
+            });
+          };
+          $scope.getReqs();
+
         };
 
     function swListMach() {
@@ -338,7 +345,20 @@
       var toGet = '/messages/read/'+message[0].id+'.html';
       $http.get(toGet);
     };
-  }
+    $scope.getAlerts();
+  };
+
+/*
+  function requestsCrtlSingle($scope, $interval, $http, request){
+    $scope.getReqs= function() {
+      $http.get('/requests.json').then(function(response) {
+          $scope.requests=response.data;
+      });
+    };
+//    $interval($scope.getReqs,5000);
+    $scope.getReqs();
+  };
+*/
 
 	function nameAvail($timeout, $q) {
     return {
