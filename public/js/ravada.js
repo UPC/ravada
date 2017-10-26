@@ -139,7 +139,8 @@
                   if (!$scope.new_name) {
                     $scope.new_name =   $scope.showmachine.name;
                   }
-                return;
+                  $scope.domain = response.data[i];
+                  return;
                 }
               }
               window.location.href = "/admin/machines";
@@ -194,16 +195,16 @@
           $scope.toggle_base= function(vmId,machineId) {
             $http.get("/machine/toggle_base_vm/" +vmId+ "/" +machineId+".json")
               .then(function(response) {
-                  $scope.message=response.data.message;
+                    $scope.getReqs();
               });
           };
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.getSingleMachine();
           // $scope.updatePromise = $interval($scope.getSingleMachine,3000);
           $scope.getReqs= function() {
             $http.get('/requests.json').then(function(response) {
                 $scope.requests=response.data;
+                $scope.getSingleMachine();
             });
           };
           $interval($scope.getReqs,5000);
