@@ -78,7 +78,7 @@
                         <option value=""><%=l 'action'%></option>
 %                       if ($machine->{is_active}) {
                             <option value="shutdown.<%= $machine->{id_clone} %>"><%=l 'Shutdown' %></option>
-                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hybernate' %></option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hibernate' %></option>
 %                       }
 %                       if ($machine->{id_clone}) {
                             <option value="restore.<%= $machine->{id_clone} %>"><%=l 'Restore'%></option>
