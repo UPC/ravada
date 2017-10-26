@@ -1,0 +1,456 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-10-26 18:20+0200\n"
+"Language-Team: "
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.0.4\n"
+"Last-Translator: Marc Schwede <schwedenmut@googlemail.com>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: de\n"
+
+msgid "Ravada broker"
+msgstr "Ravada Broker"
+
+msgid "Machine Name"
+msgstr "Maschinennamen"
+
+msgid "Tools"
+msgstr "Werkzeuge"
+
+msgid "Machines List"
+msgstr "Maschinenliste"
+
+msgid "Users"
+msgstr "Benutzer"
+
+msgid "Choose a Machine to Start"
+msgstr "Wähle eine Maschine zum Starten"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Stop"
+msgstr "Stop"
+
+msgid "View"
+msgstr "Ansicht"
+
+msgid "Prepare base"
+msgstr "Basis vorbereiten"
+
+msgid "Clone"
+msgstr "Klonen"
+
+msgid "Can't Prepare Base, Remove Base or Delete. Machine has"
+msgstr "Kann Base nicht vorbereiten, entfernen oder löschen. Maschine hat"
+
+msgid "Clone/s"
+msgstr "Klon/e"
+
+msgid "NEW"
+msgstr "NEU"
+
+msgid "Users List"
+msgstr "Benutzerliste"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Log Out"
+msgstr "Ausloggen"
+
+msgid "Available Machines"
+msgstr "Verfügbare Maschinen"
+
+msgid "Help"
+msgstr "Hilfe"
+
+msgid "Requirements"
+msgstr "Anforderungen"
+
+msgid "About"
+msgstr "Über"
+
+msgid "Messages"
+msgstr "Nachrichten"
+
+msgid "Mark all as Read"
+msgstr "Alle als gelesen markieren"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "New Machine"
+msgstr "Neue Maschine"
+
+msgid "I want to change my password"
+msgstr "Ich möchte mein Passwort ändern"
+
+msgid "I want to change my language"
+msgstr "Ich möchte meine Sprache ändern"
+
+msgid "Language:"
+msgstr "Sprache:"
+
+msgid "English"
+msgstr "Englisch"
+
+msgid "Spanish"
+msgstr "Spanisch"
+
+msgid "Catalan"
+msgstr "Katalanisch"
+
+msgid "New Password:"
+msgstr "Neues Passwort:"
+
+msgid "Confirm Password:"
+msgstr "Passwort bestätigen:"
+
+msgid "Submit"
+msgstr "Senden"
+
+msgid "Your language has been changed successfully"
+msgstr "Deine Sprache wurde erfolgreich geändert"
+
+msgid "Your password has been changed successfully"
+msgstr "Dein Passwort wurde erfolgreich geändert"
+
+msgid "Password too short"
+msgstr "Passwort ist zu kurz"
+
+msgid "Password fields aren't equal"
+msgstr "Passwortfelder stimmen nicht überein"
+
+msgid "Some of the password's fields are empty"
+msgstr "Einige Passwortfelder sind leer"
+
+msgid "Public"
+msgstr "Öffentlich"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Actions"
+msgstr "Aktionen"
+
+msgid "Machines"
+msgstr "Maschinen"
+
+msgid "Down"
+msgstr "Ausgeschaltet"
+
+msgid "Running"
+msgstr "Gestartet"
+
+msgid "ShutDown"
+msgstr "Heruntergefahren"
+
+msgid "Screenshot"
+msgstr "Screenshot"
+
+msgid "Paused"
+msgstr "Angehalten"
+
+msgid "Machine locked by request"
+msgstr "Maschine auf Anfrage gesperrt"
+
+msgid "process"
+msgstr "Prozess"
+
+msgid "Copy"
+msgstr "Kopieren"
+
+msgid "Error!"
+msgstr "Fehler!"
+
+msgid "Error"
+msgstr "Fehler"
+
+msgid "Backend not available!"
+msgstr "Backend nicht verfügbar!"
+
+msgid "Subject"
+msgstr "Gegenstand"
+
+msgid "Date"
+msgstr "Datum"
+
+msgid "Mark as Read"
+msgstr "Als gelesen markieren"
+
+msgid "Mark as Unread"
+msgstr "Als ungelesen markieren"
+
+msgid "No message to show!"
+msgstr "Keine Nachricht zum Anzeigen!"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "machines"
+msgstr "Maschinen"
+
+msgid "users"
+msgstr "Benutzer"
+
+msgid "messages"
+msgstr "Nachrichten"
+
+msgid "Admin tools"
+msgstr "Admin-Tools"
+
+msgid "Remove base"
+msgstr "Basis entfernen"
+
+msgid "public"
+msgstr "Öffentlich"
+
+msgid "New Base"
+msgstr "Neue Basis"
+
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+msgid "Hibernate"
+msgstr "Ruhezustand"
+
+msgid "Shutdown"
+msgstr "Herunterfahren"
+
+msgid "action"
+msgstr "Aktion"
+
+msgid "will remove all the contents of the machine"
+msgstr "Entfernt den gesamten Inhalt der Maschine"
+
+msgid "Are you sure?"
+msgstr "Bist du sicher?"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nein"
+
+msgid "Make public"
+msgstr "Öffentlich machen"
+
+msgid "Machine settings"
+msgstr "Geräteeinstellungen"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "Base kann nicht entfernt werden, Maschine hat Klone"
+
+msgid "Show/Hide clones"
+msgstr "Klone ein-/ausblenden"
+
+msgid "For Spice redirection you'll need to install"
+msgstr "Für die Slice-Umleitung musst du installieren"
+
+msgid "on your computer."
+msgstr "auf deinem Computer."
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Suche nach deiner Distribution, z.B. Debian/Ubuntu mit"
+
+msgid "You'll need to install"
+msgstr "Du musst installieren"
+
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgstr "z.B. VirtViewer v5.0-256 und USB Treiber("
+
+msgid ""
+"Be aware that in Windows, Spice redirection is not automatically. It's "
+"necessary to associate protocol with the app."
+msgstr ""
+"Beachte, dass die Spice-Umleitung unter Windows nicht automatisch erfolgt. "
+"Des ist notwendig, um das Protokoll mit der App zu verknüpfen."
+
+msgid "To make this possible, download"
+msgstr "Um dies zu ermöglichen, lade"
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+"oder kopiere die folgenden Zeilen in eine ASCII-Datei und speicher diese "
+"mit der .req Erweiterung. Danach die Datei ausführen."
+
+msgid "Login"
+msgstr "Login"
+
+msgid "Welcome"
+msgstr "Willkommen"
+
+msgid "A viewer is required to run the virtual machines."
+msgstr "Ein Viewer ist zum Ausführen der virtuellen Maschine erforderlich."
+
+msgid "Virtual Machines"
+msgstr "Viertele Maschine"
+
+msgid "user"
+msgstr "Benutzer"
+
+msgid "password"
+msgstr "Passwort"
+
+msgid "Start session"
+msgstr "Sitzung starten"
+
+msgid "Login with Intranet UPC's username."
+msgstr "Mit dem UPS’s Benutzernamen einloggen."
+
+msgid "bits) in your computer."
+msgstr "bits) in deinem Computer."
+
+msgid "Permissions"
+msgstr "Berechtigungen"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "kann die Einstellungen der eigenen virtuellen Maschinen ändern."
+
+msgid "can change the settings of any virtual machines."
+msgstr "kann die Einstellungen der virtuellen Maschinen ändern."
+
+msgid "can change the settings of any virtual machines "
+msgstr "kann die Einstellungen der virtuellen Maschinen ändern "
+
+msgid "cloned from one base owned by the user."
+msgstr "von einer Basis geklont, die dem Benutzer gehört."
+
+msgid "can clone public virtual machines."
+msgstr "kann öffentliche virtuelle Maschinen klonen."
+
+msgid "can clone any virtual machine."
+msgstr "kann virtuelle Maschinen klonen."
+
+msgid "can create bases."
+msgstr "kann Basis erstellen."
+
+msgid "can create virtual machines."
+msgstr "kann virtuelle Maschinen erstellen."
+
+msgid "can grant permissions to other users"
+msgstr "kann anderen Benutzern Berechtigungen erteilen"
+
+msgid "can hibernate any virtual machine."
+msgstr "kann jede virtuelle Maschine in den Ruhezustand versetzen."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr ""
+"kann Klone aus virtuellen Maschinen, die der Benutzer besitzt, in den "
+"Ruhezustand versetzen."
+
+msgid "can hibernate any clone."
+msgstr "kann jeden Klon in den Ruhezustand versetzen."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "kann alle virtuellen Maschinen entfernen, die dem Benutzer gehören."
+
+msgid "can remove any virtual machine."
+msgstr "kann jede virtuelle Maschine entfernen."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr ""
+"kann Klone von virtuellen Maschinen entfernen, die dem Benutzer gehören."
+
+msgid "can remove any clone."
+msgstr "kann jeden Klon entfernen."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+"kann einen Screenshot einer virtuellen Maschine erstellen, die dem "
+"Benutzer gehört."
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "kann einen Screenshot von jeder virtuellen Maschine erstellen."
+
+msgid "can shutdown any virtual machine."
+msgstr "kann jede virtuelle Maschine herunterfahren."
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr ""
+"kann Klone von virtuellen Maschinen herunterfahren, die dem Benutzer "
+"gehören."
+
+msgid "Submit Query"
+msgstr "Abfrage senden"
+
+msgid "From Template"
+msgstr "Aus Vorlage"
+
+msgid "From Machine"
+msgstr "Von Maschine"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "Select Template"
+msgstr "Vorlage auswählen"
+
+msgid ""
+"This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is fetched from the Internet."
+msgstr ""
+"Dieses ISO - Image wurde noch nicht heruntergeladen. Es kann einige "
+"Minuten oder sogar Stunden dauern, bis die Datei aus dem Internet geladen "
+"wurde."
+
+msgid "Download now"
+msgstr "Jetzt herunterladen"
+
+msgid "Select ISO"
+msgstr "ISO wählen"
+
+msgid "Template"
+msgstr "Vorlage"
+
+msgid "Disk Size: (GB)"
+msgstr "Datenträgergröße: (GB)"
+
+msgid "Swap Size: (GB)"
+msgstr "Swap: (GB)"
+
+msgid "Ram: (GB)"
+msgstr "Ram: (GB)"
+
+msgid "Machine name is required."
+msgstr "Maschinenname benötigt."
+
+msgid "Machine name can't exceed 20 characters."
+msgstr "Maschinenname darf 20 Zeilen nicht überschreiten."
+
+msgid "Backend selection is required."
+msgstr "Auswahl des Backends erforderlich."
+
+msgid "ISO image selection is required."
+msgstr "Auswahl des ISO Images erforderlich."
+
+msgid "Template selection is required."
+msgstr "Auswahl des Template ist erforderlich."
+
+msgid "A machine with that name already exists."
+msgstr "Eine Maschine mit dem Namen existiert bereits."
+
+msgid ""
+"The machine name is only allowed to consist of alphabetic characters, "
+"numbers, dashes and points."
+msgstr ""
+"Der Maschinenname darf nur aus alphabetischen Zeichen, Zahlen, "
+"Bindestrichen und Punkten bestehen."
+
+msgid "Create"
+msgstr "Erstellen"
+
+msgid ""
+"can change the settings of any virtual machines cloned from one base owned "
+"by the user."
+msgstr ""
+"kann Einstellungen von jeder virtuellen Maschine, die von einer Basis von "
+"dem Benutzer geklont wurde, verändern."
