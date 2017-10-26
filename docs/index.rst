@@ -38,7 +38,7 @@ Our code uses the `AGPL`_ license and it is `available on GitHub`_.
 Ravada VDI documentation
 ------------------------
 
-The main documentation for the site is divided into three main sections:
+The main documentation for the site is divided into two main sections:
 
 * :ref:`user-docs`
 * :ref:`feature-docs`
