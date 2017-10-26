@@ -79,7 +79,7 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot set_base_vm ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -1897,7 +1897,12 @@ sub _cmd_set_base_vm {
     die "USER $uid not authorized to set base vm"
         if !$user->is_admin;
 
-    $domain->set_base_vm(id_vm => $id_vm, value => $value, user => $user);
+    $domain->set_base_vm(
+            id_vm => $id_vm
+            ,user => $user
+           ,value => $value
+         ,request => $request
+     );
 }
 
 sub _req_method {
