@@ -1522,10 +1522,11 @@ sub toggle_base_vm {
     if ($USER->id != $domain->id && !$USER->is_admin) {
         return $c->render(json => {message => 'access denied'});
     }
-    my $value = $domain->base_in_vm($id_vm);
+    my $new_value = 0;
+    $new_value = 1 if !$domain->base_in_vm($id_vm);
 
     my $req = Ravada::Request->set_base_vm(
-          value => !$value
+          value => $new_value
         , id_vm => $id_vm
         , id_domain => $domain->id
         , uid => $USER->id
