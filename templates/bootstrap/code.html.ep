@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body role="document">
+     <header id="page-top" class="intro">
+        <div class="intro-body">
+            <div class="container" ng-controller="">
+                <form class="form-singin" method="post">
+                    <div class="form-signin">
+                        <label class="col-form-label" for="formGroupExampleInput"><%=l 'Two factor authentication code' %></label>
+                        <input type="text" class="form-control required" name="form_code" placeholder="<%=l 'Enter your code' %>" required/>
+<br>
+                        <input type='submit' class="btn btn-lg btn-success btn-block" onclick='this.form.submit();' name='login_code_click' value='<%=l 'Verify' %>'></input>
+                        <div class="checkbox">
+                          <!--  <label><input type="checkbox" name="remember"> Let two-factor authentication remember your computer</label> -->
+                        </div>
+                    </div>
+            </div>
+                % if (scalar @$error) {
+                %       for my $i (@$error) {
+                            <div class="alert alert-danger">
+                                <strong>Error: </strong><%= $i %>
+                            </div>
+                %       }
+                % }
+                </form>
+        </div>
+    </header>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
+
+
+<input type='submit' class="btn btn-primary" onclick='this.form.submit();' name='qrcode_click' value='<%=l 'Enable' %>'></input>
