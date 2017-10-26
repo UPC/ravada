@@ -1,0 +1,34 @@
+<div class="panel-body">
+<div class="form-group">
+
+    <form class="form-inline" action="<%= $action %>" method="post">
+%   for my $node (@$nodes) {
+%       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
+        <div class="row">
+            <div class="col-md-1"><input type="checkbox"
+%           if ($domain->is_locked || ($local && $domain->has_clones) ) {
+                disabled
+%           }
+%           if ($domain->base_in_vm($node->{id})) {
+                checked
+%           }
+                ng-click="toggle_base(<%= $node->{id} %>, <%= $domain->id %>)"
+            ></div>
+
+            <div class="col-md-2">
+                <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
+            </div>
+            <div class="col-md-5">
+%           if ($local) {
+%               if ($domain->has_clones) {
+                    Base can't be removed because it has clones
+%               } else {
+                    Removing the base from local will remove it in all the nodes.
+%               }
+%           }
+            </div>
+        </div>
+%   }
+    </form>
+</div>
+</div>
