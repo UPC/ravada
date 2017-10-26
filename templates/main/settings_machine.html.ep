@@ -17,6 +17,7 @@
                      Settings
                  </h2>
              </div> <!-- del panel heading-->
+             <div ng-show="message">{{message}}</div>
             <div class="tab-content">
                 %= include 'main/settings_machine_tabs_head'
                 %= include 'main/settings_machine_tabs_body'
