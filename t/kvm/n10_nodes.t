@@ -263,6 +263,53 @@ sub test_rsync_newer {
 
 }
 
+sub test_bases_node {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    is($domain->base_in_vm($domain->_vm->id),undef);
+    is($domain->base_in_vm($node->id), undef);
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($domain->_vm->id), 1);
+    is($domain->base_in_vm($node->id), undef);
+
+    $domain->migrate($node);
+    is($domain->base_in_vm($node->id), 1);
+
+    $domain->set_base_vm(vm => $node, value => 0, user => user_admin);
+    is($domain->base_in_vm($node->id), 0);
+
+    $domain->set_base_vm(vm => $vm, value => 0, user => user_admin);
+    is($domain->is_base(),0);
+    is($domain->base_in_vm($vm->id), 0);
+    is($domain->base_in_vm($node->id), 0);
+
+    my $req = Ravada::Request->set_base_vm(
+                uid => user_admin->id
+             ,id_vm => $vm->id
+         ,id_domain => $domain->id
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req->status,'done');
+    is($req->error,'');
+    is($domain->base_in_vm($vm->id), 1);
+
+    $req = Ravada::Request->remove_base_vm(
+                uid => user_admin->id
+             ,id_vm => $vm->id
+         ,id_domain => $domain->id
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($domain->base_in_vm($vm->id), 0);
+
+
+    $domain->remove(user_admin);
+}
+
 #############################################################
 
 clean();
@@ -293,6 +340,8 @@ SKIP: {
     my $node = test_node($vm_name)  or next;
 
     next if !$node || !$node->vm;
+
+    test_bases_node($vm_name, $node);
 
     test_rsync_newer($vm_name, $node);
 
