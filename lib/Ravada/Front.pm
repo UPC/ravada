@@ -279,6 +279,44 @@ sub list_vm_types {
     return $result;
 }
 
+=head2 list_vms
+
+Returns a list of Virtual Managers
+
+=cut
+
+sub list_vms($self, $type) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,hostname FROM vms WHERE (vm_type=? or vm_type=?)");
+
+    my $type2 = $type;
+    $type2 = 'qemu' if $type eq 'KVM';
+    $sth->execute($type, $type2);
+
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $self->_list_bases_vm($row);
+        push @list,($row);
+    }
+    $sth->finish;
+    return @list;
+}
+
+sub _list_bases_vm($self, $node) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+    );
+    $sth->execute($node->{id});
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        $node->{"base_".$id_domain} =0;
+    }
+    $sth->finish;
+}
+
 =head2 list_iso_images
 
 Returns a reference to a list of the ISO images known by the system
