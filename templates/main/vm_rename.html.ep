@@ -28,7 +28,7 @@
                              ng-click="rename(showmachine.id, showmachine.name)">
                                 Rename
                     </button>
-                    <button type="button" ng-click="cancel_rename(showmachine.name)">cancel</button>
+                    <button type="reset" ng-click="cancel_rename(showmachine.name)">Cancel</button>
                     <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">
