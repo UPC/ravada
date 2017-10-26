@@ -23,7 +23,7 @@
                             >
                             <%=l 'Delete this machine' %>
                     </a>
-		    <input type="button" value="Cancel" onclick = "location='http://127.0.0.1:3000/admin/machines'"/>
+                    <input type="button" value="Cancel" onclick = "location='http://127.0.0.1:3000/admin/machines'"/>
             </div>
 
             <div ng-show="domain_remove">

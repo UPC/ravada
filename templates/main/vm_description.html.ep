@@ -16,7 +16,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <input type="submit">
-		    <button type="reset">Cancel</button>
+                    <button type="reset">Cancel</button>
                 </div>
             </div>
         </form>

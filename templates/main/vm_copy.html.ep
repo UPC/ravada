@@ -24,7 +24,7 @@
             </div>
         </div>
         <input type="submit">
-	<button type="reset">Cancel</button>
+        <button type="reset">Cancel</button>
     </form>
 </div>
 

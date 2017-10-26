@@ -28,7 +28,7 @@
                     <div class="col-md-6">The machine will shutdown after these minutes</div>
         </div>
         <input type="submit">
-	<button type="reset" >Cancel</button>
+        <button type="reset" >Cancel</button>
     </form>
 </div><!-- of form-group -->
 </div><!-- of panel-body -->

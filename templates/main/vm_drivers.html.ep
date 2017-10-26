@@ -42,7 +42,6 @@
 
                    </select>
 		     
-		   
                 </div>
 		
                 <div class="col-md-1">
@@ -54,13 +53,11 @@
                 </div>
 
              </div>
-
 	
 %        }
      <input type="submit">
      <input type="button" value="Cancel" onclick = "location='http://127.0.0.1:3000/admin/machines'"/>
-       
-    </form>
 
+    </form>
 </div><!-- del form-group -->
 </div><!-- del panel-body -->
