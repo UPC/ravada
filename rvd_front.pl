@@ -884,8 +884,8 @@ sub quick_start {
 
     }
 
-    #return render_machines_user($c);
-    return tfa($c);
+    return render_machines_user($c);
+    #return tfa($c);
 
 }
 
