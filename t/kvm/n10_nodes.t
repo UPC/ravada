@@ -298,8 +298,10 @@ sub test_rsync_newer {
     isnt($vol2_remote->get_info->{capacity}, $vol2->get_info->{capacity});
     }
 
+    # on starting it should sync
     is($domain->_vm->host, $node->host);
     $domain->start(user => user_admin);
+    is($domain->_vm->host, $node->host);
 
     { # syncs for start, so vols should be equal
     my $vol3 = $vm->search_volume($vol_name);
@@ -340,8 +342,8 @@ sub test_bases_node {
              ,id_vm => $vm->id
          ,id_domain => $domain->id
     );
-    rvd_back->_process_requests_dont_fork();
-    is($req->status,'done');
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status,'done') or die Dumper($req);
     is($req->error,'');
     is($domain->base_in_vm($vm->id), 1);
 
@@ -350,13 +352,55 @@ sub test_bases_node {
              ,id_vm => $vm->id
          ,id_domain => $domain->id
     );
-    rvd_back->_process_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork();
     is($domain->base_in_vm($vm->id), 0);
-
 
     $domain->remove(user_admin);
 }
 
+sub test_clone_not_in_node {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($node->id), 1);
+
+    {
+    my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone1->_vm->host, 'localhost');
+    eval { $clone1->start(user_admin) };
+    is(''.$@,'') or exit;
+    is($clone1->is_active,1);
+    is($clone1->_vm->host, 'localhost');
+
+    # search the domain in the underlying VM
+    my $virt_domain;
+    eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
+    is(''.$@,'');
+    ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
+
+    }
+
+    {
+    my $clone2 = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone2->_vm->host, 'localhost');
+    eval { $clone2->start(user_admin) };
+    is(''.$@,'') or exit;
+    is($clone2->is_active,1);
+    is($clone2->_vm->host, 'localhost');
+
+    # search the domain with underlying VM
+    my $virt_domain;
+    eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
+    is(''.$@,'');
+    ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
+    }
+}
 #############################################################
 
 clean();
@@ -389,6 +433,8 @@ SKIP: {
     next if !$node || !$node->vm;
 
     test_bases_node($vm_name, $node);
+
+    test_clone_not_in_node($vm_name, $node);
 
     test_rsync_newer($vm_name, $node);
 
