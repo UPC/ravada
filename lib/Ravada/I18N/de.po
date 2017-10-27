@@ -23,13 +23,13 @@ msgid "Tools"
 msgstr "Werkzeuge"
 
 msgid "Machines list"
-msgstr "Maschinen liste"
+msgstr "Maschinenliste"
 
 msgid "Users"
 msgstr "Benutzer"
 
 msgid "Choose a machine to start"
-msgstr "Wähle eine Maschine zum starten"
+msgstr "Wähle eine Maschine zum starten aus"
 
 msgid "Start"
 msgstr "Start"
@@ -44,10 +44,10 @@ msgid "Prepare base"
 msgstr "Basis Vorbereiten"
 
 msgid "Clone"
-msgstr "Klon"
+msgstr "Klonen"
 
 msgid "Can't prepare base, remove base or delete. Machine has"
-msgstr "Basis kann nicht vorbereitet werden, entferne oder loesche die Basis"
+msgstr "Basis kann nicht vorbereitet werden, entferne oder lösche die Basis"
 
 msgid "Clone/s"
 msgstr "Klone"
@@ -56,13 +56,13 @@ msgid "New"
 msgstr "Neu"
 
 msgid "Users List"
-msgstr "Benutzer Liste"
+msgstr "Benutzerliste"
 
 msgid "Name"
 msgstr "Name"
 
 msgid "Log Out"
-msgstr "Ausloggen"
+msgstr "Abmelden"
 
 msgid "Available machines"
 msgstr "Verfügbare Maschinen"
@@ -77,10 +77,10 @@ msgid "About"
 msgstr "Über"
 
 msgid "Messages"
-msgstr "Nachricht"
+msgstr "Nachrichten"
 
 msgid "Mark all as read"
-msgstr "Markiere alle als gelesen"
+msgstr "Alle als gelesen markieren"
 
 msgid "Settings"
 msgstr "Einstellungen"
@@ -89,10 +89,10 @@ msgid "New machine"
 msgstr "Neue Maschine"
 
 msgid "I want to change my password"
-msgstr "Ich möchte mein Passwort aendern"
+msgstr "Ich möchte mein Passwort ändern"
 
 msgid "I want to change my Language"
-msgstr "Ich will meine Sprache aendern"
+msgstr "Ich will meine Sprache ändern"
 
 msgid "Language:"
 msgstr "Sprache:"
@@ -107,31 +107,31 @@ msgid "Catalan"
 msgstr "Katalanisch"
 
 msgid "New Password:"
-msgstr "Neues Passwort"
+msgstr "Neues Passwort:"
 
 msgid "Confirm Password:"
-msgstr "Bestätige Passwort"
+msgstr "Bestätige Passwort:"
 
 msgid "Submit"
 msgstr "Einreichen"
 
 msgid "Your language has been successfully changed"
-msgstr "Deine Sprache wurde erfolgreich geaendert"
+msgstr "Deine Sprache wurde erfolgreich geändert"
 
 msgid "Your password has been successfully changed"
-msgstr "Dein Passwort wurde erfolgreich geaendert"
+msgstr "Dein Passwort wurde erfolgreich ge#ndert"
 
 msgid "Password is too short"
 msgstr "Passwort ist zu kurz"
 
 msgid "Password fields are not matching"
-msgstr "Die Passwoerter stimmen nicht ueberein"
+msgstr "Die Passwörter stimmen nicht überein"
 
 msgid "Some of the password fields are empty"
 msgstr "Einige der Passwortfelder sind leer"
 
 msgid "Public"
-msgstr "Oeffentlich"
+msgstr "Öffentlich"
 
 msgid "Status"
 msgstr "Status"
@@ -146,7 +146,7 @@ msgid "Down"
 msgstr "Runter"
 
 msgid "Running"
-msgstr "Laeuft"
+msgstr "Läuft"
 
 msgid "Shutdown"
 msgstr "Herunterfahren"
@@ -203,13 +203,13 @@ msgid "Messages"
 msgstr "Nachrichten"
 
 msgid "Admin tools"
-msgstr "Administrator Werkzeuge"
+msgstr "Administratorwerkzeuge"
 
 msgid "Remove base"
 msgstr "Entferne Basis"
 
 msgid "Public"
-msgstr "Oeffentlich"
+msgstr "Öffentlich"
 
 msgid "New Base"
 msgstr "Neue Basis"
@@ -230,7 +230,7 @@ msgid "Will remove all the contents of the machine"
 msgstr "Entfernt den gesamten Inhalt der Maschine"
 
 msgid "Are you sure?"
-msgstr "Bist du dir Sicher?"
+msgstr "Sind Sie sicher?"
 
 msgid "Yes"
 msgstr "Ja"
@@ -239,13 +239,13 @@ msgid "No"
 msgstr "Nein"
 
 msgid "Make public"
-msgstr "Oeffentlich machen"
+msgstr "Öffentlich machen"
 
 msgid "Machine settings"
-msgstr "Maschinen einstellungen"
+msgstr "Maschineneinstellungen"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "Base kann nicht entfernt werden, Maschine hat Klone"
+msgstr "Basis kann nicht entfernt werden, Maschine hat Klone"
 
 msgid "Show/hide clones"
 msgstr "Zeige/Verstecke Klone"
@@ -257,7 +257,7 @@ msgid "on your computer."
 msgstr "auf deinem Computer"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "Suche in deiner Distribution (Debian/Ubuntu)"
 
 msgid "You'll need to install"
 msgstr "Suchen Sie in Ihrer Distribution, z.B. in Debian / Ubuntu mit"
@@ -279,6 +279,8 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
+"oder kopieren Sie folgende zeilen in eine ASCII Datei und Speichern Sie diese mit"
+"der .reg Erweiterung"
 
 msgid "Login"
 msgstr "Login"
@@ -296,7 +298,7 @@ msgid "User"
 msgstr "Benutzer"
 
 msgid "Password"
-msgstr "Password"
+msgstr "Passwort"
 
 msgid "Start session"
 msgstr "Starte Sitzung"
@@ -377,7 +379,7 @@ msgid "From Machine"
 msgstr "Von Maschine"
 
 msgid "Backend"
-msgstr "Hintergrund"
+msgstr "Server"
 
 msgid "Select Template"
 msgstr "Vorlage auswählen"
@@ -404,7 +406,7 @@ msgid "Ram: (GB)"
 msgstr "Arbeitsspeicher: (GB)"
 
 msgid "Machine name is required."
-msgstr "Maschinen name is erforderlich"
+msgstr "Name der Maschinen ist erforderlich"
 
 msgid "Machine name can't exceed 20 characters."
 msgstr "Der Computername darf nicht länger als 20 Zeichen sein."
