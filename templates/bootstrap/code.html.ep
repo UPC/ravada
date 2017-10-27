@@ -8,12 +8,12 @@
                 <form class="form-singin" method="post">
                     <div class="form-signin">
                         <label class="col-form-label"><%=l 'Two factor authentication'  %></label>
-                        <input type="text" class="form-control required" name="form_code" placeholder="<%=l 'Enter your code' %>" required/>
+                        <input type="text" class="form-control" name="form_code" placeholder="<%=l 'Enter your code' %>" />
                         <div class="checkbox">
                             <label><input type="checkbox" name="remember"> Remember this computer</label>
                         </div>
-                        <input type='submit' class="btn btn-lg btn-success" onclick='this.form.submit();' name='login_code_click' value='<%=l 'Verify' %>'></input>
-                        <button id="submit" class="btn btn-lg btn-danger" href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></button>
+                        <input type='submit' class="btn btn-lg btn-success btn-block" onclick='this.form.submit();' name='login_code_click' value='<%=l 'Verify' %>'></input>
+                        <a href="/logout"><i class="fa fa-fw fa-power-off"></i></a>
                     </div>
                 % if (scalar @$error) {
                 %       for my $i (@$error) {
