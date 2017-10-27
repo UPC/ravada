@@ -6,7 +6,7 @@
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
-<div class="form-group" ng-hide="domain.has_clones">
+<div class="form-group">
 
 
     <form class="form-inline" action="<%= $action %>" method="post">
@@ -15,7 +15,7 @@
         <div class="row">
             <div class="col-md-1">
                 <input type="checkbox"
-                    ng-disabled="domain.is_locked || domain.has_clones"
+                    ng-disabled="domain.is_locked"
 %           if ($domain->base_in_vm($node->{id})) {
                 checked
 %           }
