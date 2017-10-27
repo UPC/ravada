@@ -370,8 +370,9 @@ sub test_clone_not_in_node {
 
     is($domain->base_in_vm($node->id), 1);
 
+    my $clone1;
     {
-    my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+    $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
     is($clone1->_vm->host, 'localhost');
     eval { $clone1->start(user_admin) };
     is(''.$@,'') or exit;
@@ -396,10 +397,60 @@ sub test_clone_not_in_node {
 
     # search the domain with underlying VM
     my $virt_domain;
-    eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
+    eval { $virt_domain = $clone2->_vm->vm->get_domain_by_name($clone2->name) };
     is(''.$@,'');
-    ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
+    ok($virt_domain,"Expecting ".$clone2->name." in ".$clone2->_vm->host);
+
     }
+
+    for my $clone_data ( $domain->clones) {
+        my $clone = rvd_back->search_domain($clone_data->{name});
+        $clone->remove(user_admin);
+    }
+    $domain->remove(user_admin);
+}
+
+sub test_domain_already_started {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($node->id), 1);
+
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone->_vm->host, 'localhost');
+
+    $clone->migrate($node);
+    is($clone->_vm->host, $node->host);
+
+    eval { $clone->start(user_admin) };
+    is(''.$@,'') or exit;
+    is($clone->is_active,1);
+    is($clone->_vm->host, $node->host);
+
+    {
+    my $clone2 = rvd_back->search_domain($clone->name);
+    is($clone2->id, $clone->id);
+    is($clone2->_vm->host , $clone->_vm->host);
+    }
+
+    my $sth = $test->connector->dbh->prepare("UPDATE domains set id_vm=NULL WHERE id=?");
+    $sth->execute($clone->id);
+    $sth->finish;
+
+    {
+    my $clone3 = rvd_back->search_domain($clone->name);
+    is($clone3->id, $clone->id);
+    is($clone3->_vm->host , $clone->_vm->host);
+    }
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 #############################################################
 
@@ -433,6 +484,8 @@ SKIP: {
     next if !$node || !$node->vm;
 
     test_bases_node($vm_name, $node);
+
+    test_domain_already_started($vm_name, $node);
 
     test_clone_not_in_node($vm_name, $node);
 
