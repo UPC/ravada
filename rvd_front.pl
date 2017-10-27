@@ -899,7 +899,10 @@ sub tfa {
     $sth->execute($USER->{name});
     my $row = $sth->fetchrow_hashref;
 
-    if ($row->{two_fa} == 1){
+    if ($row->{two_fa} == 1 && $c->session('ignore_2fa') != 1){
+        #if ($c->session('ignore_2fa')){
+        #    return render_machines_user($c);
+        #}else{
         $c->render(
             template => ($CONFIG_FRONT->{login_custom} or 'bootstrap/code')
             ,css => ['/css/main.css']
@@ -909,6 +912,7 @@ sub tfa {
             ,user => $USER
             );
         return code($c);
+        #}
     }else{
         return render_machines_user($c);
     }
@@ -920,32 +924,31 @@ sub code {
     my $code;
     my $form_code;
 
-   my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
-   $sth->execute($USER->{name});
-   my $row = $sth->fetchrow_hashref;
-   my @error =();
+    my $sth = $$Ravada::Auth::SQL::CON->dbh->prepare("SELECT secret FROM users WHERE name=?");
+    $sth->execute($USER->{name});
+    my $row = $sth->fetchrow_hashref;
+    my @error =();
 
 if ($c->param('login_code_click')){
         $code = generateCurrentNumber( $row->{secret} );
         $form_code = $c->param('form_code');
 
-        if ($form_code == $code) {
-            $c->stash(css=>['/css/sb-admin.css']
-                    ,js=>[
-                        '/js/ravada.js'
-                        ]
-                    ,csssnippets => []
-                    );
-            return render_machines_user($c);
-            _logged_in($c);
+        if ($form_code == $code && $form_code =~ m{^\d{6}$}) {
+                $c->session(ignore_2fa =>1) if $c->param('remember');
+                $c->stash(  css=>['/css/sb-admin.css']
+                            ,js=>['/js/ravada.js']
+                            );
+                return render_machines_user($c);
         }else{
-            push @error,("Access denied");
-            push @error,("Somethings wrong! Repeat the operation, your insert code isn't correct");
-            $c->redirect_to('/logout');
-            #return logout($c);
+            push @error,("Two-factor authentication failed.");
+            return $c->render(
+                    template => 'bootstrap/code'
+                    ,css => ['/css/main.css']
+                    ,js => ['/js/main.js']
+                    ,error =>\@error
+                    );
         }
     }
-
 }
 
 
