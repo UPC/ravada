@@ -1284,7 +1284,7 @@ sub process_requests {
             ||(!$long_commands && $LONG_COMMAND{$req->command})
         ) {
             warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
-                .$req->command  if $DEBUG;
+                .$req->command  if $debug || $DEBUG;
             next;
         }
         next if $req->command !~ /shutdown/i
