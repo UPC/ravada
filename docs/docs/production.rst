@@ -76,10 +76,6 @@ You can reach the Ravada frontend heading to
 http://your.server.ip:8081/. It is advised to run an Apache server or
 similar before the frontend.
 
-::
-
-    # apt-get install apache2
-
 In order to make ravada use apache, you must follow the steps explained
 on `here <apache.html>`__.
 
