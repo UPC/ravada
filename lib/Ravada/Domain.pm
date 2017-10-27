@@ -1827,12 +1827,15 @@ sub set_base_vm($self, %args) {
         $self->_set_vm($vm,1);
         if (!$value) {
             $self->_set_base_vm_db($id_vm, $value);
-            $request->status("working","Removing base");
+            $request->status("working","Removing base")     if $request;
             $self->remove_base($user);
         } else {
             $self->prepare_base($user);
-            $request->status("working","Preparing base");
+            $request->status("working","Preparing base")    if $request;
         }
+    } elsif ($value) {
+        $request->status("working", "Syncing base volumes to ".$vm->host);
+        $self->rsync($vm, $request);
     }
     return $self->_set_base_vm_db($vm->id, $value);
 }
