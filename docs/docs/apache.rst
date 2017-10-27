@@ -1,5 +1,12 @@
 Run Hypnotoad service and Apache as a proxy for it.
 
+Install Apache
+--------------
+
+::
+
+    # apt-get install apache2
+
 Enable apache modules
 ---------------------
 
