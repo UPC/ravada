@@ -233,8 +233,7 @@ sub _start_preconditions{
     # if it is a clone ( it is not a base )
     if (!$self->is_base) {
         $self->_set_last_vm(1) or $self->_balance_vm();
-        $self->rsync($self->_vm, $args{request})
-            if $self->_vm->host ne 'localhost';
+        $self->rsync()  if $self->_vm->host ne 'localhost';
     }
 }
 
@@ -251,12 +250,17 @@ sub _balance_vm($self) {
     }
     my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
 
-    my ($id) = $sorted_vm[0];
+    for my $id (@sorted_vm) {
+        if ( $self->base_in_vm($id) ) {
+            return if $id == $self->_vm->id;
 
-    return if $id == $self->_vm->id;
-    my $vm_free = Ravada::VM->open($id);
+            my $vm_free = Ravada::VM->open($id);
 
-    $self->migrate($vm_free);
+            $self->migrate($vm_free);
+            return $id;
+        }
+    }
+    return;
 }
 
 sub _update_description {
@@ -1715,7 +1719,7 @@ Argument: Ravada::VM
 
 =cut
 
-sub rsync($self, $node, $request=undef) {
+sub rsync($self, $node=$self->_vm, $request=undef) {
     $request->status("working") if $request;
     my $ssh = $self->_connect_ssh($node);
 #    This does nothing and doesn't fail
@@ -1818,7 +1822,7 @@ sub set_base_vm($self, %args) {
 
     confess "ERROR: user required"  if !$user;
 
-    $request->status("working");
+    $request->status("working") if $request;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
 
     $value = 1 if !defined $value;
@@ -1834,7 +1838,8 @@ sub set_base_vm($self, %args) {
             $request->status("working","Preparing base")    if $request;
         }
     } elsif ($value) {
-        $request->status("working", "Syncing base volumes to ".$vm->host);
+        $request->status("working", "Syncing base volumes to ".$vm->host)
+            if $request;
         $self->rsync($vm, $request);
     }
     return $self->_set_base_vm_db($vm->id, $value);
