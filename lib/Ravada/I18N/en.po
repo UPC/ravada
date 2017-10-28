@@ -27,9 +27,6 @@ msgstr ""
 msgid "Machines list"
 msgstr ""
 
-msgid "Users"
-msgstr ""
-
 msgid "Choose a machine to start"
 msgstr ""
 
