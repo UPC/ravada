@@ -114,7 +114,7 @@ msgid "Confirm Password:"
 msgstr "Confirmar Contrasinal"
 
 msgid "Submit"
-msgstr ""
+msgstr "Enviar"
 
 msgid "Your language has been changed successfully"
 msgstr "A vosa lingua foi cambiada con éxito"
