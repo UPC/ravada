@@ -6,4 +6,5 @@ create table vms (
 ,    `default_storage` varchar(64) DEFAULT 'default'
 ,    `security` varchar(20) default null
 ,    UNIQUE (`name`)
+,    UNIQUE (`hostname`,`vm_type`)
 );
