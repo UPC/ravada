@@ -536,6 +536,7 @@ Returns: Domain object read only
 =cut
 
 sub open($class, $id) {
+    confess "Undefined id"  if !defined $id;
     my $self = {};
 
     if (ref($class)) {
@@ -553,7 +554,7 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new( readonly => 1);
+    my $vm = $vm0->new();
 
     return $vm->search_domain($row->{name});
 }
@@ -1072,6 +1073,8 @@ sub clone {
 
     my $name = $args{name} or confess "ERROR: Missing domain cloned name";
     confess "ERROR: Missing request user" if !$args{user};
+    confess "ERROR: Clones can't be created in readonly mode"
+        if $self->_vm->readonly();
 
     my $uid = $args{user}->id;
 
