@@ -45,6 +45,10 @@ sub test_create_domain {
 my $id = 10;
 my $security = encode_json({ transport => 'tcp' });
 
+my $sth = $test->dbh->prepare("DELETE FROM vms");
+$sth->execute();
+$sth->finish;
+
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
     my $exp_class = "Ravada::VM::$vm_type";
