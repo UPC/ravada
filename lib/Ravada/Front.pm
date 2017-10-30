@@ -619,6 +619,10 @@ sub search_domain {
 
     return if !keys %$row;
 
+    if ($row->{id_vm}) {
+        my $vm = Ravada::VM->open($row->{id_vm});
+        return $vm->search_domain($name);
+    }
     my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
 
     my $vm = $self->open_vm($vm_name);
