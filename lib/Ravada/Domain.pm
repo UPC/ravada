@@ -170,6 +170,7 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 before 'migrate' => \&_pre_migrate;
+after 'migrate' => \&_post_migrate;
 ##################################################
 #
 
@@ -182,18 +183,23 @@ sub BUILD {
 sub _set_last_vm($self,$force=0) {
     my $id_vm;
     $id_vm = $self->_data('id_vm')  if $self->is_known();
-    if ($id_vm) {
-        my $vm = Ravada::VM->open($id_vm);
-        my $domain;
-        eval { $domain = $vm->search_domain($self->name) };
-        die $@ if $@ && $@ !~ /no domain with matching name/;
-        if ($domain && ($force || $domain->is_active)) {
-            $self->_vm($vm);
-            $self->domain($domain->domain);
-        }
-        return $id_vm;
+    return $self->_set_vm($id_vm, $force)   if $id_vm;
+}
+
+sub _set_vm($self, $vm, $force=0) {
+    if (!ref($vm)) {
+        $vm = Ravada::VM->open($vm);
     }
-    return;
+
+    my $domain;
+    eval { $domain = $vm->search_domain($self->name) };
+    die $@ if $@ && $@ !~ /no domain with matching name/;
+    if ($domain && ($force || $domain->is_active)) {
+       $self->_vm($vm);
+       $self->domain($domain->domain);
+    }
+    return $vm->id;
+
 }
 
 sub _vm_connect {
@@ -212,7 +218,11 @@ sub _start_preconditions{
     die "Domain ".$self->name." is a base. Bases can't get started.\n"
         if $self->is_base();
 
+    my %args;
     if (scalar @_ %2 ) {
+        my @args = @_;
+        shift @args;
+        %args = @args;
         _allow_manage_args(@_);
     } else {
         _allow_manage(@_);
@@ -220,9 +230,11 @@ sub _start_preconditions{
     $self->_check_free_memory();
     _check_used_memory(@_);
 
-    $self->_set_last_vm(1) or $self->_balance_vm();
-    $self->rsync($self->_vm)
-        if $self->_vm->host ne 'localhost';
+    # if it is a clone ( it is not a base )
+    if (!$self->is_base) {
+        $self->_set_last_vm(1) or $self->_balance_vm();
+        $self->rsync()  if $self->_vm->host ne 'localhost';
+    }
 }
 
 sub _balance_vm($self) {
@@ -238,12 +250,17 @@ sub _balance_vm($self) {
     }
     my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
 
-    my ($id) = $sorted_vm[0];
+    for my $id (@sorted_vm) {
+        if ( $self->base_in_vm($id) ) {
+            return if $id == $self->_vm->id;
 
-    return if $id == $self->_vm->id;
-    my $vm_free = Ravada::VM->open($id);
+            my $vm_free = Ravada::VM->open($id);
 
-    $self->migrate($vm_free);
+            $self->migrate($vm_free);
+            return $id;
+        }
+    }
+    return;
 }
 
 sub _update_description {
@@ -380,6 +397,7 @@ sub _post_prepare_base {
     }
 
     $self->_remove_id_base();
+    $self->_set_base_vm_db($self->_vm->id,1);
 };
 
 sub _check_has_clones {
@@ -517,6 +535,7 @@ Returns: Domain object read only
 =cut
 
 sub open($class, $id) {
+    confess "Undefined id"  if !defined $id;
     my $self = {};
 
     if (ref($class)) {
@@ -534,7 +553,7 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new( readonly => 1);
+    my $vm = $vm0->new();
 
     return $vm->search_domain($row->{name});
 }
@@ -1013,6 +1032,7 @@ sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
+    $self->_set_base_vm_db($self->_vm->id,1);
 }
 
 sub _pre_shutdown_domain {}
@@ -1052,6 +1072,8 @@ sub clone {
 
     my $name = $args{name} or confess "ERROR: Missing domain cloned name";
     confess "ERROR: Missing request user" if !$args{user};
+    confess "ERROR: Clones can't be created in readonly mode"
+        if $self->_vm->readonly();
 
     my $uid = $args{user}->id;
 
@@ -1685,7 +1707,11 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    my ($type) = $self =~ m{.*::(.*)};
+    my ($type) = ref $self =~ m{.*::(.*)};
+
+    if (!$type) {
+        ($type) = $self =~ m{.*::(.*?)=};
+    }
     return $type;
 }
 
@@ -1697,7 +1723,8 @@ Argument: Ravada::VM
 
 =cut
 
-sub rsync($self, $node) {
+sub rsync($self, $node=$self->_vm, $request=undef) {
+    $request->status("working") if $request;
     my $ssh = $self->_connect_ssh($node);
 #    This does nothing and doesn't fail
 #
@@ -1722,6 +1749,8 @@ sub rsync($self, $node) {
     }
     my $rsync = File::Rsync->new();
     for my $file ( $self->list_volumes(), @files_base) {
+        $request->status("syncing","Tranferring $file to ".$node->host)
+            if $request;
         $rsync->exec(src => $file, dest => $node->host.":".$file );
     }
     $node->_refresh_storage_pools();
@@ -1754,6 +1783,88 @@ sub _pre_migrate($self, $node) {
         die "ERROR: $name found at $vol_path instead $file"
             if $vol_path ne $file;
     }
+
+    $self->_set_base_vm_db($node->id,0);
+}
+
+sub _post_migrate($self, $node) {
+    $self->_set_base_vm_db($node->id,1);
+}
+
+sub _set_base_vm_db($self, $id_vm, $value) {
+    my $is_base = $self->is_base && $self->base_in_vm($id_vm);
+    if (!defined $is_base) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "INSERT INTO bases_vm (id_domain, id_vm, enabled) "
+            ." VALUES(?, ?, ?)"
+        );
+        $sth->execute($self->id, $id_vm, $value);
+        $sth->finish;
+    } else {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE bases_vm SET enabled=?"
+            ." WHERE id_domain=? AND id_vm=?"
+        );
+        $sth->execute($value, $self->id, $id_vm);
+        $sth->finish;
+    }
+}
+
+sub set_base_vm($self, %args) {
+
+    my $id_vm = delete $args{id_vm};
+    my $value = delete $args{value};
+    my $user  = delete $args{user};
+    my $vm    = delete $args{vm};
+    my $request = delete $args{request};
+
+    confess "ERROR: Unknown arguments, valid are id_vm, value, user and vm "
+        .Dumper(\%args) if keys %args;
+
+    confess "ERROR: Supply either id_vm or vm argument"
+        if (!$id_vm && !$vm) || ($id_vm && $vm);
+
+    confess "ERROR: user required"  if !$user;
+
+    $request->status("working") if $request;
+    $vm = Ravada::VM->open($id_vm)  if !$vm;
+
+    $value = 1 if !defined $value;
+
+    if ($vm->host eq 'localhost') {
+        $self->_set_vm($vm,1);
+        if (!$value) {
+            $self->_set_base_vm_db($vm->id, $value);
+            $request->status("working","Removing base")     if $request;
+            $self->remove_base($user);
+        } else {
+            $self->prepare_base($user);
+            $request->status("working","Preparing base")    if $request;
+        }
+    } elsif ($value) {
+        $request->status("working", "Syncing base volumes to ".$vm->host)
+            if $request;
+        $self->rsync($vm, $request);
+    }
+    return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub base_in_vm($self,$id_vm) {
+
+    confess "ERROR: Domain ".$self->name." is not a base"
+        if !$self->is_base;
+
+    confess "Undefined id_vm " if !defined $id_vm;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT enabled FROM bases_vm "
+        ." WHERE id_domain = ? AND id_vm = ?"
+    );
+    $sth->execute($self->id, $id_vm);
+    my ( $enabled ) = $sth->fetchrow;
+    $sth->finish;
+    return 1 if !defined $enabled
+        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
+    return $enabled;
 }
 
 1;

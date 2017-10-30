@@ -362,6 +362,11 @@ get '/machine/prepare/(:id).(:type)' => sub {
         return prepare_machine($c);
 };
 
+get '/machine/toggle_base_vm/(:id_vm)/(:id_domain).(:type)' => sub {
+    my $c = shift;
+    return toggle_base_vm($c);
+};
+
 get '/machine/remove_b/(:id).(:type)' => sub {
         my $c = shift;
         return remove_base($c);
@@ -1366,18 +1371,18 @@ sub settings_machine {
     for my $option (qw(description run_timeout)) {
         if ( defined $c->param($option) ) {
             my $value = $c->param($option);
+            $value = 0 if !defined $value || !$value;
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
         }
     }
 
-
-
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
     }
     return $c->render(template => 'main/settings_machine'
+        , nodes => [$RAVADA->list_vms($domain->type)]
         , action => $c->req->url->to_abs->path);
 }
 
@@ -1506,6 +1511,27 @@ sub screenshot_machine {
         ,filename => $file_screenshot
     );
     $c->render(json => { request => $req->id});
+}
+
+sub toggle_base_vm {
+    my $c = shift;
+
+    my $id_vm = $c->stash('id_vm');
+    my $domain = Ravada::Domain->open($c->stash('id_domain'));
+
+    if ($USER->id != $domain->id && !$USER->is_admin) {
+        return $c->render(json => {message => 'access denied'});
+    }
+    my $new_value = 0;
+    $new_value = 1 if !$domain->base_in_vm($id_vm);
+
+    my $req = Ravada::Request->set_base_vm(
+          value => $new_value
+        , id_vm => $id_vm
+        , id_domain => $domain->id
+        , uid => $USER->id
+    );
+    return $c->render(json => {message => 'processing request'});
 }
 
 sub prepare_machine {

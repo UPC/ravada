@@ -123,11 +123,14 @@ sub open {
     $class .= "::$type";
     bless ($self,$class);
 
-    my @args = ( host => $row->{hostname});
+    my %args = (
+        id => $id
+        ,host => $row->{hostname}
+    );
 
-    push @args,(security => decode_json($row->{security})) if $row->{security};
+    $args{security} = decode_json($row->{security}) if $row->{security};
 
-    return $self->new(@args);
+    return $self->new(%args);
 
 }
 
@@ -138,6 +141,15 @@ sub BUILD {
 
     $self->security($args->{security})  if $args->{security};
 
+    if ($args->{id}) {
+        $self->_select_vm_db(id => $args->{id})
+    } else {
+        my %query = (
+            hostname => ($args->{host} or 'localhost')
+            ,vm_type => $self->type
+        );
+        $self->_select_vm_db(%query);
+    }
     $self->id;
     $self->vm;
 
@@ -424,7 +436,7 @@ sub _do_select_vm_db {
     }
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM vms WHERE ".join(",",map { "$_=?" } sort keys %args )
+        "SELECT * FROM vms WHERE ".join(" AND ",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
     my $row = $sth->fetchrow_hashref;
@@ -452,7 +464,8 @@ sub _insert_vm_db {
     );
     my $name = $self->name;
     my $security = ($self->security() or {});
-    $sth->execute($name,$self->type,$self->host, $self->public_ip, encode_json($security));
+    eval { $sth->execute($name,$self->type,$self->host, $self->public_ip, encode_json($security)) };
+    confess $@ if $@;
     $sth->finish;
 
     return $self->_do_select_vm_db( name => $name);
@@ -501,3 +514,4 @@ sub list_drivers($self, $name=undef) {
 }
 
 1;
+

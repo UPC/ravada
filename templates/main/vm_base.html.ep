@@ -1,0 +1,39 @@
+<div class="panel-body">
+    <div class="alert alert-success" ng-show="domain.is_locked">
+        <%=l 'This machine is locked by process' %> <a href="/request/{{domain.is_locked}}.html">process</a>
+    </div>
+    <div class="alert alert-warning" ng-show="domain.has_clones">
+        <%=l 'This base can\'t be removed because the domain has clones.' %>
+    </div>
+
+<div class="form-group">
+
+
+    <form class="form-inline" action="<%= $action %>" method="post">
+%   for my $node (@$nodes) {
+%       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
+        <div class="row">
+            <div class="col-md-1">
+                <input type="checkbox"
+                    ng-disabled="domain.is_locked"
+%           if ($domain->base_in_vm($node->{id})) {
+                checked
+%           }
+                ng-click="toggle_base(<%= $node->{id} %>, <%= $domain->id %>)"
+            ></div>
+
+            <div class="col-md-2">
+                <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
+            </div>
+            <div class="col-md-5">
+%           if ($local) {
+%               if ($domain->has_clones) {
+                    Base can't be removed because it has clones
+%               }
+%           }
+            </div>
+        </div>
+%   }
+    </form>
+</div>
+</div>

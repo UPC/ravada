@@ -24,6 +24,32 @@ my $USER = create_user("foo","bar");
 my $REMOTE_CONFIG;
 ##########################################################
 
+sub test_node_renamed {
+    my $vm_name = shift;
+    my $node = shift;
+
+    my $name = $node->name;
+
+    my $name2 = "knope";
+
+    my $sth= $test->connector->dbh->prepare(
+        "UPDATE vms SET name=? WHERE name=?"
+    );
+    $sth->execute($name2, $name);
+    $sth->finish;
+
+    my $node2 = Ravada::VM->open($node->id);
+    ok($node2,"Expecting a node id=".$node->id) or exit;
+    is($node2->name, $name2)                    or exit;
+    is($node2->id, $node->id)                   or exit;
+
+    my $rvd_back2 = Ravada->new(
+        connector => $test->connector
+        ,config => "t/etc/ravada.conf"
+    );
+    is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm})) or exit;
+}
+
 sub test_node {
     my $vm_name = shift;
 
@@ -297,8 +323,10 @@ sub test_rsync_newer {
     isnt($vol2_remote->get_info->{capacity}, $vol2->get_info->{capacity});
     }
 
+    # on starting it should sync
     is($domain->_vm->host, $node->host);
     $domain->start(user => user_admin);
+    is($domain->_vm->host, $node->host);
 
     { # syncs for start, so vols should be equal
     my $vol3 = $vm->search_volume($vol_name);
@@ -309,6 +337,166 @@ sub test_rsync_newer {
 
 }
 
+sub test_bases_node {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    eval { $domain->base_in_vm($domain->_vm->id)};
+    like($@,qr'is not a base');
+
+#    is($domain->base_in_vm($domain->_vm->id),1);
+    eval { $domain->base_in_vm($node->id) };
+    like($@,qr'is not a base');
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($domain->_vm->id), 1);
+    is($domain->base_in_vm($node->id), undef);
+
+    $domain->migrate($node);
+    is($domain->base_in_vm($node->id), 1);
+
+    $domain->set_base_vm(vm => $node, value => 0, user => user_admin);
+    is($domain->base_in_vm($node->id), 0);
+
+    $domain->set_base_vm(vm => $vm, value => 0, user => user_admin);
+    is($domain->is_base(),0);
+    is($domain->base_in_vm($vm->id), 1);
+    is($domain->base_in_vm($node->id), 0);
+
+    my $req = Ravada::Request->set_base_vm(
+                uid => user_admin->id
+             ,id_vm => $vm->id
+         ,id_domain => $domain->id
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status,'done') or die Dumper($req);
+    is($req->error,'');
+    is($domain->base_in_vm($vm->id), 1);
+
+    $req = Ravada::Request->remove_base_vm(
+                uid => user_admin->id
+             ,id_vm => $vm->id
+         ,id_domain => $domain->id
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    is($domain->base_in_vm($vm->id), 0);
+
+    $domain->remove(user_admin);
+}
+
+sub test_clone_not_in_node {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($node->id), 1);
+
+    my $clone1;
+    {
+    $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone1->_vm->host, 'localhost');
+    eval { $clone1->start(user_admin) };
+    is(''.$@,'') or exit;
+    is($clone1->is_active,1);
+    is($clone1->_vm->host, 'localhost');
+
+    # search the domain in the underlying VM
+    my $virt_domain;
+    eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
+    is(''.$@,'');
+    ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
+
+    }
+
+    {
+    my $clone2 = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone2->_vm->host, 'localhost');
+    eval { $clone2->start(user_admin) };
+    is(''.$@,'') or exit;
+    is($clone2->is_active,1);
+    is($clone2->_vm->host, 'localhost');
+
+    # search the domain with underlying VM
+    my $virt_domain;
+    eval { $virt_domain = $clone2->_vm->vm->get_domain_by_name($clone2->name) };
+    is(''.$@,'');
+    ok($virt_domain,"Expecting ".$clone2->name." in ".$clone2->_vm->host);
+
+    }
+
+    for my $clone_data ( $domain->clones) {
+        my $clone = rvd_back->search_domain($clone_data->{name});
+        $clone->remove(user_admin);
+    }
+    $domain->remove(user_admin);
+}
+
+sub test_domain_already_started {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($node->id), 1);
+
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone->_vm->host, 'localhost');
+
+    $clone->migrate($node);
+    is($clone->_vm->host, $node->host);
+
+    eval { $clone->start(user_admin) };
+    is(''.$@,'') or exit;
+    is($clone->is_active,1);
+    is($clone->_vm->host, $node->host);
+
+    {
+    my $clone2 = rvd_back->search_domain($clone->name);
+    is($clone2->id, $clone->id);
+    is($clone2->_vm->host , $clone->_vm->host);
+    }
+
+    my $sth = $test->connector->dbh->prepare("UPDATE domains set id_vm=NULL WHERE id=?");
+    $sth->execute($clone->id);
+    $sth->finish;
+
+    {
+    my $clone3 = rvd_back->search_domain($clone->name);
+    is($clone3->id, $clone->id);
+    is($clone3->_vm->host , $clone->_vm->host);
+    }
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+}
+
+sub test_prepare_sets_vm {
+    my $vm_name = shift;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+    is($domain->base_in_vm($vm->id), undef);
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($vm->id),1);
+
+    $domain->remove_base(user_admin);
+    is($domain->base_in_vm($vm->id),0);
+
+    $domain->remove(user_admin);
+}
 #############################################################
 
 clean();
@@ -340,6 +528,14 @@ SKIP: {
 
     next if !$node || !$node->vm;
 
+    test_node_renamed($vm_name, $node);
+
+    test_bases_node($vm_name, $node);
+
+    test_domain_already_started($vm_name, $node);
+
+    test_clone_not_in_node($vm_name, $node);
+
     test_rsync_newer($vm_name, $node);
 
     test_domain_no_remote($vm_name, $node);
@@ -354,6 +550,7 @@ SKIP: {
     test_remove_domain($vm_name, $node, $domain3)               if $domain3;
 
         test_domain_starts_in_same_vm($vm_name, $node);
+        test_prepare_sets_vm($vm_name, $node);
 }
 
 }

@@ -16,5 +16,8 @@
 %   if ( $USER->can_remove ) {
         <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
 %   }
+%   if ($USER->is_admin) {
+        <li class="nav"><a href="#base" data-toggle="tab">Base</a></li>
+%   }
 </ul>
 

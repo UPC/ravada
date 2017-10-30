@@ -435,10 +435,11 @@ sub search_domain {
     eval { @all_domains = $self->vm->list_all_domains() };
     confess $@ if $@;
 
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
+    my $dom;
+    eval { $dom = $self->vm->get_domain_by_name($name); };
+    return if !$dom;
 
-        my $domain;
+    my $domain;
 
         eval {
             $domain = Ravada::Domain::KVM->new(
@@ -451,7 +452,7 @@ sub search_domain {
         if ($domain) {
             return $domain;
         }
-    }
+
     return;
 }
 

@@ -79,7 +79,7 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot set_base_vm ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -528,6 +528,15 @@ sub _update_data {
     $self->_update_user_grants();
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
+    $self->_update_old_qemus();
+}
+
+sub _update_old_qemus($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms SET vm_type='KVM'"
+        ." WHERE vm_type='qemu' AND name ='KVM_localhost'"
+    );
+    $sth->execute;
+
 }
 
 sub _set_url_isos($self, $new_url='http://localhost/iso/') {
@@ -764,7 +773,7 @@ sub _create_vm_kvm {
 
     my $vm_kvm;
 
-    $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR ));
+    $vm_kvm = Ravada::VM::KVM->new( );
 
     my ($internal_vm , $storage);
     $storage = $vm_kvm->dir_img();
@@ -974,7 +983,31 @@ sub remove_domain {
 
 =cut
 
-sub search_domain {
+sub search_domain($self, $name, $import = 0) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_vm "
+        ." FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id, $id_vm) = $sth->fetchrow();
+
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        return $vm->search_domain($name);
+    }
+    for my $vm (@{$self->vm}) {
+        my $domain = $vm->search_domain($name, $import);
+        next if !$domain;
+        next if !$domain->_select_domain_db && !$import;
+        my $id_domain;
+        eval { $id_domain = $domain->id };
+        next if !$id_domain && !$import;
+
+        return $domain if $domain->is_active;
+    }
+    return if !$id;
+    return Ravada::Domain->open($id);
+}
+
+sub _search_domain {
     my $self = shift;
     my $name = shift;
     my $import = shift;
@@ -1284,7 +1317,7 @@ sub process_requests {
             ||(!$long_commands && $LONG_COMMAND{$req->command})
         ) {
             warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
-                .$req->command  if $DEBUG;
+                .$req->command  if $debug || $DEBUG;
             next;
         }
         next if $req->command !~ /shutdown/i
@@ -1880,6 +1913,31 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
+sub _cmd_set_base_vm {
+    my $self = shift;
+    my $request = shift;
+
+    my $value = $request->args('value');
+    die "ERROR: Missing value"                  if !defined $value;
+
+    my $uid = $request->args('uid')             or die "ERROR: Missing uid";
+    my $id_vm = $request->args('id_vm')         or die "ERROR: Missing id_vm";
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "USER $uid not authorized to set base vm"
+        if !$user->is_admin;
+
+    $domain->set_base_vm(
+            id_vm => $id_vm
+            ,user => $user
+           ,value => $value
+         ,request => $request
+     );
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -1898,6 +1956,7 @@ sub _req_method {
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
    ,remove_base => \&_cmd_remove_base
+   ,set_base_vm => \&_cmd_set_base_vm
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,rename_domain => \&_cmd_rename_domain

@@ -101,7 +101,6 @@ for my $vm_name ('KVM') {
 
         my $fail = 0;
         for my $name (keys %$config) {
-            warn $name;
             my $node = test_node($vm_name, $config->{$name});
             ok($node,"Expecting node $name created");
             ok($node->vm,"Expecting node $name has vm") if $node;
