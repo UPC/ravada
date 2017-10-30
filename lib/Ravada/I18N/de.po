@@ -25,9 +25,6 @@ msgstr "Werkzeuge"
 msgid "Machines list"
 msgstr "Maschinenliste"
 
-msgid "Users"
-msgstr "Benutzer"
-
 msgid "Choose a machine to start"
 msgstr "Wähle eine Maschine zum starten aus"
 
@@ -139,17 +136,11 @@ msgstr "Status"
 msgid "Actions"
 msgstr "Aktion"
 
-msgid "Machines"
-msgstr "Maschine"
-
 msgid "Down"
 msgstr "Runter"
 
 msgid "Running"
 msgstr "Läuft"
-
-msgid "Shutdown"
-msgstr "Herunterfahren"
 
 msgid "Screenshot"
 msgstr "Bildschirmfoto"
@@ -199,17 +190,11 @@ msgstr "Maschinen"
 msgid "Users"
 msgstr "Benutzer"
 
-msgid "Messages"
-msgstr "Nachrichten"
-
 msgid "Admin tools"
 msgstr "Administratorwerkzeuge"
 
 msgid "Remove base"
 msgstr "Entferne Basis"
-
-msgid "Public"
-msgstr "Öffentlich"
 
 msgid "New Base"
 msgstr "Neue Basis"
@@ -434,4 +419,4 @@ msgid ""
 "cloned from one base owned by the user."
 msgstr ""
 "kann die Einstellungen aller virtuellen Maschinen ändern "
-"geklont von einer Basis, die dem Benutzer gehört.""
+"geklont von einer Basis, die dem Benutzer gehört."
