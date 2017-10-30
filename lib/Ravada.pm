@@ -974,7 +974,31 @@ sub remove_domain {
 
 =cut
 
-sub search_domain {
+sub search_domain($self, $name, $import = 0) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_vm "
+        ." FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id, $id_vm) = $sth->fetchrow();
+
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        return $vm->search_domain($name);
+    }
+    for my $vm (@{$self->vm}) {
+        my $domain = $vm->search_domain($name, $import);
+        next if !$domain;
+        next if !$domain->_select_domain_db && !$import;
+        my $id_domain;
+        eval { $id_domain = $domain->id };
+        next if !$id_domain && !$import;
+
+        return $domain if $domain->is_active;
+    }
+    return if !$id;
+    return Ravada::Domain->open($id);
+}
+
+sub _search_domain {
     my $self = shift;
     my $name = shift;
     my $import = shift;
