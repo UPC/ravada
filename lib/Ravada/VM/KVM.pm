@@ -88,10 +88,7 @@ sub _connect {
     if ($self->host eq 'localhost') {
         $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        confess "ERROR: Security paramer required for remote connections.\n"
-                if !$self->security;
-
-        my $transport = ($self->security->{transport} or '');
+        my $transport = ($self->security->{transport} or 'ssh');
         eval {
             $vm = Sys::Virt->new( address => $con_type."+".$transport
                                             ."://".$self->host
@@ -1832,6 +1829,12 @@ sub import_domain {
 sub security($self,$value=undef) {
     $self->{_security} = $value if defined $value;
     return $self->{_security};
+}
+
+sub free_memory($self) {
+    return 
+    $self->vm->get_node_memory_stats()->{free};
+    + $self->vm->get_node_memory_stats()->{cached};
 }
 
 1;
