@@ -1034,6 +1034,7 @@ sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
+    $self->_set_base_vm_db($self->_vm->id,1);
 }
 
 sub _pre_shutdown_domain {}
@@ -1820,7 +1821,7 @@ sub _post_migrate($self, $node) {
 }
 
 sub _set_base_vm_db($self, $id_vm, $value) {
-    my $is_base = $self->base_in_vm($id_vm);
+    my $is_base = $self->is_base && $self->base_in_vm($id_vm);
     if (!defined $is_base) {
         my $sth = $$CONNECTOR->dbh->prepare(
             "INSERT INTO bases_vm (id_domain, id_vm, enabled) "
@@ -1862,7 +1863,7 @@ sub set_base_vm($self, %args) {
     if ($vm->host eq 'localhost') {
         $self->_set_vm($vm,1);
         if (!$value) {
-            $self->_set_base_vm_db($id_vm, $value);
+            $self->_set_base_vm_db($vm->id, $value);
             $request->status("working","Removing base")     if $request;
             $self->remove_base($user);
         } else {
@@ -1879,6 +1880,10 @@ sub set_base_vm($self, %args) {
 
 sub base_in_vm($self,$id_vm) {
 
+    confess "ERROR: Domain ".$self->name." is not a base"
+        if !$self->is_base;
+
+    confess "Undefined id_vm " if !defined $id_vm;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT enabled FROM bases_vm "
         ." WHERE id_domain = ? AND id_vm = ?"
@@ -1886,6 +1891,8 @@ sub base_in_vm($self,$id_vm) {
     $sth->execute($self->id, $id_vm);
     my ( $enabled ) = $sth->fetchrow;
     $sth->finish;
+    return 1 if !defined $enabled
+        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
     return $enabled;
 }
 
