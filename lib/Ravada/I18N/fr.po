@@ -22,43 +22,43 @@ msgid "Restore"
 msgstr "Restaurer"
 
 msgid "Machine Name"
-msgstr "Nom du Machine"
+msgstr "Nom de la machine"
 
 msgid "Tools"
 msgstr "Outils"
 
 msgid "Machines List"
-msgstr "Liste de Machines"
+msgstr "Liste des machines"
 
 msgid "Users"
 msgstr "Utilisateurs"
 
 msgid "Choose a Machine to Start"
-msgstr "Choisisez une Machine pour Débuter"
+msgstr "Choisisez une machine pour commencer"
 
 msgid "Start"
-msgstr "Début"
+msgstr "Commencer"
 
 msgid "Stop"
-msgstr "Arrêt"
+msgstr "Arrêter"
 
 msgid "View"
-msgstr "Vue"
+msgstr "Voir"
 
 msgid "Prepare Base"
-msgstr "Preparer Base"
+msgstr "Preparer la base"
 
 msgid "Clone"
 msgstr "Cloner"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "Ne peut pas preparer la base, retirez ou effacez la base"
+msgstr "La base ne peut pas être preparée, supprimée ou effacée. La machine a"
 
 msgid "Clone/s"
-msgstr "Clones"
+msgstr "Clone(s)"
 
 msgid "NEW"
-msgstr "Nouveau"
+msgstr "NOUVEAU"
 
 msgid "Users List"
 msgstr "Liste d'utilisateurs"
@@ -67,16 +67,16 @@ msgid "Name"
 msgstr "Nom"
 
 msgid "Log Out"
-msgstr "Déconnecter"
+msgstr "Déconnexion"
 
 msgid "Available Machines"
-msgstr "Machines Disponibles"
+msgstr "Machines disponibles"
 
 msgid "Help"
 msgstr "Aide"
 
 msgid "Requirements"
-msgstr "Exigences"
+msgstr "Requis"
 
 msgid "About"
 msgstr "À propos"
@@ -91,16 +91,16 @@ msgid "Settings"
 msgstr "Paramètres"
 
 msgid "New Machine"
-msgstr "Nouvelle Machine"
+msgstr "Nouvelle machine"
 
 msgid "Paused"
-msgstr "En Pause"
+msgstr "En pause"
 
 msgid "Prepare base"
-msgstr "Preparez Base"
+msgstr "Preparer la base"
 
 msgid "Machine locked by requested"
-msgstr "Machine verrouillée par demande"
+msgstr "Machine verrouillée sur demande"
 
 msgid "process"
 msgstr "Processus"
@@ -109,10 +109,10 @@ msgid "Copy"
 msgstr "Copie"
 
 msgid "Error!"
-msgstr "Erreur"
+msgstr "Erreur !"
 
 msgid "Backend no available!"
-msgstr "Interne indisponible"
+msgstr "Système indisponible"
 
 msgid "Subject"
 msgstr "Sujet"
