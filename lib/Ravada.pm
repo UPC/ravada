@@ -528,6 +528,15 @@ sub _update_data {
     $self->_update_user_grants();
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
+    $self->_update_old_qemus();
+}
+
+sub _update_old_qemus($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms SET vm_type='KVM'"
+        ." WHERE vm_type='qemu' AND name ='KVM_localhost'"
+    );
+    $sth->execute;
+
 }
 
 sub _set_url_isos($self, $new_url='http://localhost/iso/') {
@@ -764,7 +773,7 @@ sub _create_vm_kvm {
 
     my $vm_kvm;
 
-    $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR ));
+    $vm_kvm = Ravada::VM::KVM->new( );
 
     my ($internal_vm , $storage);
     $storage = $vm_kvm->dir_img();
