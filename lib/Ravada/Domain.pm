@@ -588,10 +588,6 @@ sub open($class, $id , $readonly = 0) {
     return $vm->search_domain($row->{name});
 }
 
-sub open_ro {
-    return open(@_,1);
-}
-
 =head2 is_known
 
 Returns if the domain is known in Ravada.
