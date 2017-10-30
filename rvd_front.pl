@@ -1548,7 +1548,7 @@ sub toggle_base_vm {
     my $c = shift;
 
     my $id_vm = $c->stash('id_vm');
-    my $domain = Ravada::Domain->open_ro($c->stash('id_domain'));
+    my $domain = Ravada::Domain->open($c->stash('id_domain'),'readonly');
 
     if ($USER->id != $domain->id && !$USER->is_admin) {
         return $c->render(json => {message => 'access denied'});
