@@ -269,24 +269,26 @@ sub test_start_twice {
         name => new_domain_name
        ,user => user_admin
     );
+    $clone->shutdown_now(user_admin)    if $clone->is_active;
+    is($clone->is_active,0);
 
-    eval { $base->rsync($node); };
-    is(''.$@,'');
+    eval { $base->set_base_vm(vm => $node, user => user_admin); };
+    is(''.$@,'') or return;
 
     eval { $clone->migrate($node); };
-    is(''.$@,'');
+    is(''.$@,'')    or exit;
 
     is($clone->_vm->host, $node->host);
+    is($clone->is_active,0);
 
     my $clone2 = $vm->search_domain($clone->name);
     is($clone2->_vm->host, $vm->host);
+    is($clone2->is_active,0);
     $clone2->domain->create();
-    warn $clone2->display(user_admin);
 
     eval { $clone->start(user => user_admin ) };
-    is($@,'');
-    is($clone->_vm->host, $vm->ip);
-    warn $clone->display;
+    like(''.$@,qr'libvirt error code: 55,');
+    is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip) or exit;
     is($clone->display(user_admin), $clone2->display(user_admin));
 
     $clone->remove(user_admin);
@@ -364,8 +366,10 @@ sub test_bases_node {
 
     $domain->set_base_vm(vm => $vm, value => 0, user => user_admin);
     is($domain->is_base(),0);
-    is($domain->base_in_vm($vm->id), 1);
-    is($domain->base_in_vm($node->id), 0);
+    eval { is($domain->base_in_vm($vm->id), 0) };
+    like($@,qr'is not a base');
+    eval { is($domain->base_in_vm($node->id), 0) };
+    like($@,qr'is not a base');
 
     my $req = Ravada::Request->set_base_vm(
                 uid => user_admin->id
@@ -383,7 +387,8 @@ sub test_bases_node {
          ,id_domain => $domain->id
     );
     rvd_back->_process_all_requests_dont_fork();
-    is($domain->base_in_vm($vm->id), 0);
+    eval { $domain->base_in_vm($vm->id)};
+    like($@,qr'is not a base');
 
     $domain->remove(user_admin);
 }
@@ -400,14 +405,12 @@ sub test_clone_not_in_node {
 
     is($domain->base_in_vm($node->id), 1);
 
-    my $clone1;
     {
-    $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+    my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
     is($clone1->_vm->host, 'localhost');
     eval { $clone1->start(user_admin) };
-    is(''.$@,'') or exit;
+    is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or exit;
     is($clone1->is_active,1);
-    is($clone1->_vm->host, 'localhost');
 
     # search the domain in the underlying VM
     my $virt_domain;
@@ -432,10 +435,16 @@ sub test_clone_not_in_node {
     ok($virt_domain,"Expecting ".$clone2->name." in ".$clone2->_vm->host);
 
     }
+    my @clones;
 
     for my $clone_data ( $domain->clones) {
         my $clone = rvd_back->search_domain($clone_data->{name});
-        $clone->remove(user_admin);
+        push @clones,($clone);
+    }
+    isnt($clones[0]->_vm->host, $clones[1]->_vm->host,"[$vm_name] ".$clones[0]->name
+        ." - ".$clones[1]->name) or exit;
+    for (@clones) {
+        $_->remove(user_admin);
     }
     $domain->remove(user_admin);
 }
@@ -488,7 +497,8 @@ sub test_prepare_sets_vm {
     my $vm = rvd_back->search_vm($vm_name);
 
     my $domain = create_domain($vm_name);
-    is($domain->base_in_vm($vm->id), undef);
+    eval { $domain->base_in_vm($vm->id) };
+    like($@,'is not a base');
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id),1);
@@ -501,6 +511,8 @@ sub test_prepare_sets_vm {
 #############################################################
 
 clean();
+
+$Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
 for my $vm_name ('KVM') {
 my $vm;
@@ -529,6 +541,7 @@ SKIP: {
 
     next if !$node || !$node->vm;
 
+    test_start_twice($vm_name, $node);
     test_node_renamed($vm_name, $node);
 
     test_bases_node($vm_name, $node);
@@ -542,7 +555,6 @@ SKIP: {
     test_domain_no_remote($vm_name, $node);
 
     test_sync_base($vm_name, $node);
-    test_start_twice($vm_name, $node);
 
     my $domain2 = test_domain($vm_name, $node);
     test_remove_domain_from_local($vm_name, $node, $domain2)    if $domain2;
