@@ -227,18 +227,44 @@ sub _start_preconditions{
     } else {
         _allow_manage(@_);
     }
-    $self->_check_free_memory();
-    _check_used_memory(@_);
 
+    #TODO: remove them and make it more general now we have nodes
+    # $self->_check_free_memory();
+    # _check_used_memory(@_);
+
+    return if $self->_search_already_started();
     # if it is a clone ( it is not a base )
-    if (!$self->is_base) {
+    if ($self->id_base) {
         $self->_set_last_vm(1) or $self->_balance_vm();
-        $self->rsync()  if $self->_vm->host ne 'localhost';
+        $self->rsync()  if !$self->_vm->readonly && $self->_vm->host ne 'localhost';
     }
+}
+
+sub _search_already_started($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms where vm_type=?"
+    );
+    $sth->execute($self->_vm->type);
+    my %started;
+    while (my ($id) = $sth->fetchrow) {
+        my $vm = Ravada::VM->open($id);
+        my $domain = $vm->search_domain($self->name);
+        next if !$domain;
+        if ( $domain->is_active || $domain->is_hibernated ) {
+            $self->_set_vm($vm,'force');
+            $self->_update_id_vm();
+            $started{$vm->id}++;
+        }
+    }
+    confess "ERROR: Domain started in ".Dumper(\%started)
+        if keys %started > 1;
+    return keys %started;
 }
 
 sub _balance_vm($self) {
     return if $self->{_migrated};
+    return if !$self->id_base;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id FROM vms where vm_type=?"
     );
@@ -246,12 +272,15 @@ sub _balance_vm($self) {
     my %vm_list;
     while (my ($id) = $sth->fetchrow) {
         my $vm = Ravada::VM->open($id);
-        $vm_list{$id} = scalar $vm->list_domains(active => 1);
+        next if $vm->free_memory < $MIN_FREE_MEMORY;
+        $vm_list{$id} = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
     }
     my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
+    warn Dumper(\%vm_list,\@sorted_vm);
 
+    my $base = Ravada::Domain->open($self->id_base);
     for my $id (@sorted_vm) {
-        if ( $self->base_in_vm($id) ) {
+        if ( $base->base_in_vm($id) ) {
             return if $id == $self->_vm->id;
 
             my $vm_free = Ravada::VM->open($id);
@@ -534,7 +563,7 @@ Returns: Domain object read only
 
 =cut
 
-sub open($class, $id) {
+sub open($class, $id , $readonly = 0) {
     confess "Undefined id"  if !defined $id;
     my $self = {};
 
@@ -553,9 +582,14 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new();
+    $readonly = 1 if $readonly;
+    my $vm = $vm0->new( readonly => $readonly);
 
     return $vm->search_domain($row->{name});
+}
+
+sub open_ro {
+    return open(@_,1);
 }
 
 =head2 is_known
