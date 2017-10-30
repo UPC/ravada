@@ -83,6 +83,7 @@ sub create_domain {
                     , id_owner => $user->id
                     , %arg_create
                     , active => 0
+                    , memory => 256*1024
            );
     };
     is($@,'');
