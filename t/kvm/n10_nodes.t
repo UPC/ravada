@@ -254,6 +254,14 @@ sub test_sync_base {
     eval { $clone2->migrate($node); };
     is(''.$@,'');
 
+    is($clone2->_data('id_vm'),$node->id);
+
+    my $domains = rvd_front->list_domains();
+    my ($clone_f) = grep { $_->{name} eq $clone2->name } @$domains;
+    ok($clone_f);
+    is($clone_f->{id}, $clone2->id);
+    is($clone_f->{node}, $clone2->_vm->host);
+
     $clone->remove(user_admin);
     $base->remove(user_admin);
 
@@ -404,44 +412,27 @@ sub test_clone_not_in_node {
 
     is($domain->base_in_vm($node->id), 1);
 
-    {
-    my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
-    is($clone1->_vm->host, 'localhost');
-    eval { $clone1->start(user_admin) };
-    is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or exit;
-    is($clone1->is_active,1);
+    my @clones;
+    for ( 1 .. 4 ) {
+        my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+        push @clones,($clone1);
+        is($clone1->_vm->host, 'localhost');
+        eval { $clone1->start(user_admin) };
+        is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or exit;
+        is($clone1->is_active,1);
 
     # search the domain in the underlying VM
-    my $virt_domain;
-    eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
-    is(''.$@,'');
-    ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
-
+        my $virt_domain;
+        eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
+        is(''.$@,'');
+        ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
+        last if $clone1->_vm->host ne $clones[0]->_vm->host;
     }
 
-    {
-    my $clone2 = $domain->clone(name => new_domain_name, user => user_admin);
-    is($clone2->_vm->host, 'localhost');
-    eval { $clone2->start(user_admin) };
-    is(''.$@,'') or exit;
-    is($clone2->is_active,1);
-    is($clone2->_vm->host, 'localhost');
 
-    # search the domain with underlying VM
-    my $virt_domain;
-    eval { $virt_domain = $clone2->_vm->vm->get_domain_by_name($clone2->name) };
-    is(''.$@,'');
-    ok($virt_domain,"Expecting ".$clone2->name." in ".$clone2->_vm->host);
-
-    }
-    my @clones;
-
-    for my $clone_data ( $domain->clones) {
-        my $clone = rvd_back->search_domain($clone_data->{name});
-        push @clones,($clone);
-    }
-    isnt($clones[0]->_vm->host, $clones[1]->_vm->host,"[$vm_name] ".$clones[0]->name
-        ." - ".$clones[1]->name) or exit;
+    isnt($clones[-1]->_vm->host, $clones[0]->_vm->host,"[$vm_name] "
+        .$clones[-1]->name
+        ." - ".$clones[0]->name) ;
     for (@clones) {
         $_->remove(user_admin);
     }
@@ -497,13 +488,14 @@ sub test_prepare_sets_vm {
 
     my $domain = create_domain($vm_name);
     eval { $domain->base_in_vm($vm->id) };
-    like($@,'is not a base');
+    like($@,qr'is not a base');
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id),1);
 
     $domain->remove_base(user_admin);
-    is($domain->base_in_vm($vm->id),0);
+    eval { $domain->base_in_vm($vm->id) };
+    like($@,qr'is not a base');
 
     $domain->remove(user_admin);
 }
