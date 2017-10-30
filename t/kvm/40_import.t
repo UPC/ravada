@@ -88,7 +88,7 @@ sub test_import {
     $sth->execute($domain->id);
     $domain = undef;
 
-    $domain = $RVD_BACK->search_domain( vm => $vm, name => $dom_name );
+    $domain = $RVD_BACK->search_domain( $dom_name );
     ok(!$domain,"Expecting domain $dom_name removed") or return;
 
     eval {
@@ -129,7 +129,7 @@ sub test_import_spinoff {
     $sth->execute($domain->id);
     $domain = undef;
 
-    $domain = $RVD_BACK->search_domain( vm => $vm, name => $dom_name );
+    $domain = $RVD_BACK->search_domain( $dom_name );
     ok(!$domain,"Expecting domain $dom_name removed") or return;
 
     eval {

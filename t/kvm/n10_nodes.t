@@ -24,6 +24,32 @@ my $USER = create_user("foo","bar");
 my $REMOTE_CONFIG;
 ##########################################################
 
+sub test_node_renamed {
+    my $vm_name = shift;
+    my $node = shift;
+
+    my $name = $node->name;
+
+    my $name2 = "knope";
+
+    my $sth= $test->connector->dbh->prepare(
+        "UPDATE vms SET name=? WHERE name=?"
+    );
+    $sth->execute($name2, $name);
+    $sth->finish;
+
+    my $node2 = Ravada::VM->open($node->id);
+    ok($node2,"Expecting a node id=".$node->id) or exit;
+    is($node2->name, $name2)                    or exit;
+    is($node2->id, $node->id)                   or exit;
+
+    my $rvd_back2 = Ravada->new(
+        connector => $test->connector
+        ,config => "t/etc/ravada.conf"
+    );
+    is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm})) or exit;
+}
+
 sub test_node {
     my $vm_name = shift;
 
@@ -435,6 +461,8 @@ SKIP: {
     my $node = test_node($vm_name)  or next;
 
     next if !$node || !$node->vm;
+
+    test_node_renamed($vm_name, $node);
 
     test_bases_node($vm_name, $node);
 
