@@ -88,7 +88,9 @@ sub _connect {
     if ($self->host eq 'localhost') {
         $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        my $transport = ($self->security->{transport} or 'ssh');
+        my $transport = 'ssh';
+        $transport = $self->security->{transport}
+            if $self->security && $self->security->{transport};
         eval {
             $vm = Sys::Virt->new( address => $con_type."+".$transport
                                             ."://".$self->host
