@@ -298,8 +298,12 @@ sub test_bases_node {
 
     my $domain = create_domain($vm_name);
 
-    is($domain->base_in_vm($domain->_vm->id),undef);
-    is($domain->base_in_vm($node->id), undef);
+    eval { $domain->base_in_vm($domain->_vm->id)};
+    like($@,qr'is not a base');
+
+#    is($domain->base_in_vm($domain->_vm->id),1);
+    eval { $domain->base_in_vm($node->id) };
+    like($@,qr'is not a base');
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
@@ -313,7 +317,7 @@ sub test_bases_node {
 
     $domain->set_base_vm(vm => $vm, value => 0, user => user_admin);
     is($domain->is_base(),0);
-    is($domain->base_in_vm($vm->id), 0);
+    is($domain->base_in_vm($vm->id), 1);
     is($domain->base_in_vm($node->id), 0);
 
     my $req = Ravada::Request->set_base_vm(
@@ -431,6 +435,22 @@ sub test_domain_already_started {
     $clone->remove(user_admin);
     $domain->remove(user_admin);
 }
+
+sub test_prepare_sets_vm {
+    my $vm_name = shift;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+    is($domain->base_in_vm($vm->id), undef);
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($vm->id),1);
+
+    $domain->remove_base(user_admin);
+    is($domain->base_in_vm($vm->id),0);
+
+    $domain->remove(user_admin);
+}
 #############################################################
 
 clean();
@@ -483,6 +503,7 @@ SKIP: {
     test_remove_domain($vm_name, $node, $domain3)               if $domain3;
 
         test_domain_starts_in_same_vm($vm_name, $node);
+        test_prepare_sets_vm($vm_name, $node);
 }
 
 }
