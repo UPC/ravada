@@ -1,7 +1,8 @@
 <div class="tab-pane fade in active" id="fromtemplate" >
     <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
         <div class="form-group row">
-            <label for="backend" class="col-lg-3 control-label"><%=l 'Backend' %> <i class="fa fa-info-circle"></i></label>
+            <label for="backend" class="col-lg-3 control-label"><%=l 'Backend' %> <a 
+              title="Backend description"><i class="fa fa-info-circle"></i></a></label>
             <div class="col-lg-9">
                 <select class= "form-control"
                     name="backend"
@@ -15,7 +16,8 @@
 
         <div ng-if="backend == 'KVM'" class="form-group">
             <div class="from-group row">
-                <label for="id_iso" class="col-lg-3 control-label"><%=l 'Select Template' %> <i class="fa fa-info-circle"></i></label>
+                <label for="id_iso" class="col-lg-3 control-label"><%=l 'Select Template' %> <a 
+                  title="Select Template description"><i class="fa fa-info-circle"></i></a></label>
                 <div class="col-lg-9">
                     <select class="form-control"
                         name ="id_iso"
@@ -39,7 +41,8 @@
             <div class="from-group row">
                 <div ng-show="id_iso.name">
                     <br/>
-                    <label for="iso_file" class="col-lg-3 control-label"><%=l 'Select ISO' %> <i class="fa fa-info-circle"></i></label>
+                    <label for="iso_file" class="col-lg-3 control-label"><%=l 'Select ISO' %> <a 
+                      title="Select ISO description"><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                         <select class="form-control"
                             name ="iso_file"
