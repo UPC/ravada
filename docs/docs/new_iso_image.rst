@@ -8,9 +8,22 @@ first place it inside the KVM directory:
  
     /var/lib/libvirt/images
 
+Then you have to tell the storage engine that you changed a file manually.
+
+::
+
+    $ sudo virsh pool-list
+     Name                 State      Autostart
+     -------------------------------------------
+     default              active     yes
+     pool2                active     yes
+    $ sudo virsh pool-refresh default
+    $ sudo virsh pool-refresh pool2
+ 
+ 
 After that, Ravada is able to use the ISO when selecting it while creating a machine.
 Also, ISOs that were downloaded from Ravada can also be found in this directory.
 
-Ravada may also detect ISOs from ISO directories from your directory /home.
+
 
 If you want to include a KVM instead of an ISO, use this `guide <http://ravada.readthedocs.io/en/latest/docs/new_kvm_template.html>`_ instead.
