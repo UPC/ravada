@@ -75,9 +75,6 @@ msgstr ""
 msgid "About"
 msgstr ""
 
-msgid "Messages"
-msgstr ""
-
 msgid "Mark all as read"
 msgstr ""
 
@@ -129,16 +126,10 @@ msgstr ""
 msgid "Some of the password fields are empty"
 msgstr ""
 
-msgid "Public"
-msgstr ""
-
 msgid "Status"
 msgstr ""
 
 msgid "Actions"
-msgstr ""
-
-msgid "Machines"
 msgstr ""
 
 msgid "Down"
@@ -217,9 +208,6 @@ msgid "Restore"
 msgstr ""
 
 msgid "Hibernate"
-msgstr ""
-
-msgid "Shutdown"
 msgstr ""
 
 msgid "Action"
