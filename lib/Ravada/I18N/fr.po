@@ -34,7 +34,7 @@ msgid "Users"
 msgstr "Utilisateurs"
 
 msgid "Choose a Machine to Start"
-msgstr "Choisisez une machine pour commencer"
+msgstr "Choisissez une machine pour commencer"
 
 msgid "Start"
 msgstr "Commencer"
@@ -46,13 +46,13 @@ msgid "View"
 msgstr "Voir"
 
 msgid "Prepare Base"
-msgstr "Preparer la base"
+msgstr "Préparer la base"
 
 msgid "Clone"
 msgstr "Cloner"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "La base ne peut pas être preparée, supprimée ou effacée. La machine a"
+msgstr "La base ne peut pas être préparée, supprimée ou effacée. La machine a"
 
 msgid "Clone/s"
 msgstr "Clone(s)"
@@ -76,7 +76,7 @@ msgid "Help"
 msgstr "Aide"
 
 msgid "Requirements"
-msgstr "Requis"
+msgstr "Prérequis"
 
 msgid "About"
 msgstr "À propos"
@@ -97,7 +97,7 @@ msgid "Paused"
 msgstr "En pause"
 
 msgid "Prepare base"
-msgstr "Preparer la base"
+msgstr "Préparer la base"
 
 msgid "Machine locked by requested"
 msgstr "Machine verrouillée sur demande"
@@ -167,7 +167,7 @@ msgid "New Password:"
 msgstr "Nouveau mot de passe :"
 
 msgid "Confirm Password:"
-msgstr "Confirmer le mot de passe"
+msgstr "Confirmer le mot de passe :"
 
 msgid "Submit"
 msgstr "Soumettre"
@@ -176,7 +176,7 @@ msgid "Your language has been changed successfully"
 msgstr "Votre langue a été modifiée avec succès"
 
 msgid "Your password has been changed successfully"
-msgstr "votre mot de passe a été modifié avec succès"
+msgstr "Votre mot de passe a été modifié avec succès"
 
 msgid "Password too small"
 msgstr "Votre mot de passe est trop court"
@@ -212,13 +212,13 @@ msgid "Machine locked by"
 msgstr "Machine verrouillée par"
 
 msgid "machines"
-msgstr "Machines"
+msgstr "machines"
 
 msgid "users"
-msgstr "Utilisateurs"
+msgstr "utilisateurs"
 
 msgid "messages"
-msgstr "Messages"
+msgstr "messages"
 
 msgid "Admin tools"
 msgstr "Outils d'administration"
@@ -227,7 +227,7 @@ msgid "Remove base"
 msgstr "Supprimer la base"
 
 msgid "public"
-msgstr "Public"
+msgstr "public"
 
 msgid "Hybernate"
 msgstr "Hiberner"
@@ -242,7 +242,7 @@ msgid "New Base"
 msgstr "Nouvelle base"
 
 msgid "will remove all the contents of the machine"
-msgstr "supprimera tous les éléments de la machine"
+msgstr "supprimera tout le contenu de la machine"
 
 msgid "Are you sure?"
 msgstr "Êtes-vous certain ?"
