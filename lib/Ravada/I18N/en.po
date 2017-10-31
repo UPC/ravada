@@ -18,16 +18,13 @@ msgstr ""
 msgid "Ravada broker"
 msgstr ""
 
-msgid "Name of the machine"
+msgid "Machine name"
 msgstr ""
 
 msgid "Tools"
 msgstr ""
 
 msgid "Machines list"
-msgstr ""
-
-msgid "Users"
 msgstr ""
 
 msgid "Choose a machine to start"
@@ -93,7 +90,7 @@ msgstr ""
 msgid "I want to change my password"
 msgstr ""
 
-msgid "I want to change my Language"
+msgid "I want to change my language"
 msgstr ""
 
 msgid "Language:"
@@ -126,7 +123,7 @@ msgstr ""
 msgid "Password is too short"
 msgstr ""
 
-msgid "Password fields are not matching"
+msgid "Password fields do not match"
 msgstr ""
 
 msgid "Some of the password fields are empty"
