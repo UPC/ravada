@@ -26,4 +26,4 @@ Also, ISOs that were downloaded from Ravada can also be found in this directory.
 
 
 
-If you want to include a KVM instead of an ISO, use this `guide <http://ravada.readthedocs.io/en/latest/docs/new_kvm_template.html>`_ instead.
+If you want to include a KVM templated instead, use this `guide <http://ravada.readthedocs.io/en/latest/docs/new_kvm_template.html>`_ .
