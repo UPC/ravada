@@ -1,13 +1,14 @@
 # Translators:
 # Joel Alarcón <joelalju100@gmail.com>, 2017
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# Luca Bezerra <lucabezerra@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
 "PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Last-Translator: Luca Bezerra lucabezerra@gmail.com\n"
 "Language-Team: \n"
 "Language: ca\n"
 "MIME-Version: 1.0\n"
@@ -48,7 +49,7 @@ msgid "Clone"
 msgstr "Clonar"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "Não se pôde Preaparar ou Remover a Base. A Máquina tem"
+msgstr "Não é possível Preparar Base, Remover Base ou Deletar. A Máquina tem"
 
 msgid "Clone/s"
 msgstr "Clone/s"
@@ -81,7 +82,7 @@ msgid "Messages"
 msgstr "Mensagens"
 
 msgid "Mark all as Read"
-msgstr "Marcar Tudo como Lido"
+msgstr "Marcar tudo como Lido"
 
 msgid "Settings"
 msgstr "Configurações"
@@ -93,10 +94,10 @@ msgid "I want to change my password"
 msgstr "Eu quero mudar a minha senha"
 
 msgid "I want to change my language"
-msgstr "Eu quero alterar a minha linguagem"
+msgstr "Eu quero alterar o meu idioma"
 
 msgid "Language:"
-msgstr "Linguagem:"
+msgstr "Idioma:"
 
 msgid "English"
 msgstr "Inglês"
@@ -117,7 +118,7 @@ msgid "Submit"
 msgstr "Enviar"
 
 msgid "Your language has been changed successfully"
-msgstr "Sua linguagem foi alterada com sucesso"
+msgstr "Seu idioma foi alterado com sucesso"
 
 msgid "Your password has been changed successfully"
 msgstr "Sua senha foi alterada com sucesso"
@@ -150,7 +151,7 @@ msgid "Running"
 msgstr "Em execução"
 
 msgid "ShutDown"
-msgstr "Desligada"
+msgstr "Desligar"
 
 msgid "Screenshot"
 msgstr "Captura de Tela"
@@ -186,7 +187,7 @@ msgid "Mark as Read"
 msgstr "Marcar como Lido"
 
 msgid "Mark as UnRead"
-msgstr "Marcar como não Lido"
+msgstr "Marcar como Não Lido"
 
 msgid "No message to show!"
 msgstr "Nenhuma mensagem para mostrar!"
@@ -210,7 +211,7 @@ msgid "Remove base"
 msgstr "Remover base"
 
 msgid "public"
-msgstr "pública"
+msgstr "público"
 
 msgid "New Base"
 msgstr "Nova base"
@@ -228,7 +229,7 @@ msgid "action"
 msgstr "ação"
 
 msgid "will remove all the contents of the machine"
-msgstr "vai remover todos os conteúdos da máquina"
+msgstr "vai remover todo o conteúdo da máquina"
 
 msgid "Are you sure?"
 msgstr "Você tem certeza?"
@@ -271,7 +272,7 @@ msgid ""
 "necessary associate protocol with the app."
 msgstr ""
 "Note que no Windows o redirecionamento de spice não é automático. É "
-"necessário associar o protocol com a aplicação."
+"necessário associar o protocolo com a aplicação."
 
 msgid "To make this possible, download"
 msgstr "Para tornar isto possível, faça o download de"
@@ -280,8 +281,8 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"Ou copie as seguintes linhas em um arquivo ASCII e salve-o com uma extensão "
-".reg, então o execute"
+"ou copie as seguintes linhas em um arquivo ASCII e salve-o com uma extensão "
+".reg, então o execute."
 
 msgid "Login"
 msgstr "Entrar"
@@ -290,7 +291,7 @@ msgid "Welcome"
 msgstr "Bem vindo"
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "É necessário que um visualizador execute as máquinas virtuais"
+msgstr "É necessário um visualizador para execute as máquinas virtuais."
 
 msgid "Virtual Machines"
 msgstr "Máquinas Virtuais"
@@ -302,13 +303,13 @@ msgid "password"
 msgstr "senha"
 
 msgid "Start session"
-msgstr "Iniciar seção"
+msgstr "Iniciar sessão"
 
 msgid "Login with Intranet UPC's username."
-msgstr "Entrar com o usuário da Intranet UPC"
+msgstr "Entrar com o nome de usuário da Intranet UPC."
 
 msgid "bits) in your computer."
-msgstr "bits) em seu computador"
+msgstr "bits) em seu computador."
 
 msgid "Permissions"
 msgstr "Permissões"
@@ -317,13 +318,13 @@ msgid "can change the settings of owned virtual machines."
 msgstr "pode alterar configurações de máquinas virtuais que possuir."
 
 msgid "can change the settings of any virtual machines."
-msgstr "pode alterar as configurações de qualquer máquina virtual."
+msgstr "pode alterar as configurações de quaisquer máquinas virtuais."
 
 msgid "can change the settings of any virtual machines "
-msgstr "pode alterar as configurações de qualquer máquina virtual "
+msgstr "pode alterar as configurações de quaisquer máquinas virtuais "
 
 msgid "cloned from one base owned by the user."
-msgstr "clonada de uma das bases que o usuário possuir."
+msgstr "clonada de uma das bases que o usuário possui."
 
 msgid "can clone public virtual machines."
 msgstr "pode clinar máquinas virtuais públicas."
@@ -344,34 +345,34 @@ msgid "can hibernate any virtual machine."
 msgstr "pode hibernar qualquer máquina virtual."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "pode hibernar clones de qualquer máquina virtual que o usuário possuir."
+msgstr "pode hibernar clones de máquinas virtuais que o usuário possua."
 
 msgid "can hibernate any clone."
-msgstr "pode hibernar qualquer clone"
+msgstr "pode hibernar qualquer clone."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr "pode remover qualquer máquina virtuai que o usuário possuir."
+msgstr "pode remover quaisquer máquinas virtuais que o usuário possua."
 
 msgid "can remove any virtual machine."
 msgstr "pode remover qualquer máquina virtual."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "pode remover clones de qualquer máquina virtual que o usuário possuir."
+msgstr "pode remover clones de máquinas virtuais que o usuário possua."
 
 msgid "can remove any clone."
 msgstr "pode remover qualquer clone."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr "pode tirar capturas de tela de qualquer máquina virtual que o usuário possuir."
+msgstr "pode tirar uma captura de tela de qualquer máquina virtual que o usuário possua."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr "pode tirar capturas de tela de qualquer máquina virtual."
+msgstr "pode tirar uma captura de tela de qualquer máquina virtual."
 
 msgid "can shutdown any virtual machine."
 msgstr "pode desligar qualquer máquina virtual."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "pode desligar clones de máquinas virtuais que o usuário possuir."
+msgstr "pode desligar clones de máquinas virtuais que o usuário possua."
 
 msgid "Submit Query"
 msgstr "Submeter Consulta"
@@ -439,5 +440,5 @@ msgid ""
 "can change the settings of any virtual machines "
 "cloned from one base owned by the user."
 msgstr ""
-"pode alterar as configurações de qualquer máquina virtual "
-"clonada de uma base possuída pelo usuário."
+"pode alterar as configurações de quaisquer máquinas virtuais "
+"clonadas de uma base possuída pelo usuário."
