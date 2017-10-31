@@ -373,13 +373,12 @@ Returns a reference to a list of the users
 =cut
 
 sub list_users($self,$name=undef) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, password FROM users ");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
     
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
-        delete $row->{password};
         push @users, ($row);
     }
     $sth->finish;
@@ -574,8 +573,7 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, description,
-                                                spice_password FROM domains WHERE name=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, description FROM domains WHERE name=?");
     $sth->execute($name);
 
     my $row = $sth->fetchrow_hashref;
@@ -741,13 +739,12 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base, spice_password FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if !$net->allowed_anonymous($row->{id});
-        delete $row->{spice_password};
         push @bases, ($row);
     }
     $sth->finish;
