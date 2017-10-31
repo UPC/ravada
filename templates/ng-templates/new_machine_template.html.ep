@@ -2,7 +2,7 @@
     <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
         <div class="form-group row">
             <label for="backend" class="col-lg-3 control-label"><%=l 'Backend' %> <a 
-              title="Backend description"><i class="fa fa-info-circle"></i></a></label>
+              title="Choose the virtualization type of the Virtual Machine."><i class="fa fa-info-circle"></i></a></label>
             <div class="col-lg-9">
                 <select class= "form-control"
                     name="backend"
@@ -17,7 +17,7 @@
         <div ng-if="backend == 'KVM'" class="form-group">
             <div class="from-group row">
                 <label for="id_iso" class="col-lg-3 control-label"><%=l 'Select Template' %> <a 
-                  title="Select Template description"><i class="fa fa-info-circle"></i></a></label>
+                  title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
                 <div class="col-lg-9">
                     <select class="form-control"
                         name ="id_iso"
@@ -42,7 +42,7 @@
                 <div ng-show="id_iso.name">
                     <br/>
                     <label for="iso_file" class="col-lg-3 control-label"><%=l 'Select ISO' %> <a 
-                      title="Select ISO description"><i class="fa fa-info-circle"></i></a></label>
+                      title="Select the .iso file the machine will utilize when installing the OS."><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                         <select class="form-control"
                             name ="iso_file"
