@@ -45,6 +45,9 @@ In addition you need one package that it still may not be in Ubuntu repository, 
 Mysql Database
 --------------
 
+MySQL server is required to run ravada. You can use one from another server you already have or you can install it in the
+same host as Ravada.
+
 MySQL user
 ~~~~~~~~~~
 
