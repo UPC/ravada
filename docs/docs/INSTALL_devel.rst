@@ -28,8 +28,18 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 Ubuntu required packages
 ------------------------
 
-Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages
+Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages. You must install it running:
 
+::
+
+    $ sudo apt-get install package1 package2 ... packagen
+    
+In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the UPC and install it this way:
+
+::
+
+    $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
 
 
 Mysql Database
