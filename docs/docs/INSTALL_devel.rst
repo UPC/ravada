@@ -28,51 +28,9 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 Ubuntu required packages
 ------------------------
 
-These are the Ubuntu required packages. It is is only necessary for the
-development release.
+Check this (file)[https://github.com/UPC/ravada/blob/master/debian/control] at the line `depends` for a list of required packages
 
-::
 
-    $ sudo apt-get install libmojolicious-perl  mysql-server libauthen-passphrase-perl  libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl net-tools
-
--  libmojolicious-perl
--  mysql-server
--  libauthen-passphrase-perl
--  libdbd-mysql-perl
--  libdbi-perl
--  libdbix-connector-perl
--  libipc-run3-perl
--  libnet-ldap-perl
--  libproc-pid-file-perl
--  libvirt-bin
--  libsys-virt-perl
--  libxml-libxml-perl
--  libconfig-yaml-perl
--  libmoose-perl
--  libjson-xs-perl
--  qemu-utils
--  perlmagick
--  libmoosex-types-netaddr-ip-perl
--  libsys-statistics-linux-perl
--  libio-interface-perl
--  libiptables-chainmgr-perl
--  libnet-dns-perl
--  wget
--  liblocale-maketext-lexicon-perl
--  libmojolicious-plugin-i18n-perl
--  net-tools
-
-Config file
------------
-
-When developping Ravada, your username must be able to read the
-configuration file. Protect the config file from others and make it
-yours.
-
-::
-
-    $ sudo chmod o-rx /etc/ravada.conf
-    $ sudo chown your_username /etc/ravada.conf
 
 Mysql Database
 --------------
@@ -105,6 +63,16 @@ Create a config file at ``/etc/ravada.conf`` with the ``username`` and ``passwor
       user: rvd_user
       password: *****
 
+
+When developping Ravada, your username must be able to read the
+configuration file. Protect the config file from others and make it
+yours.
+
+::
+
+    $ sudo chmod o-rx /etc/ravada.conf
+    $ sudo chown your_username /etc/ravada.conf
+    
 Ravada web user
 ---------------
 
@@ -113,11 +81,11 @@ Add a new user for the ravada web. Use ``rvd_back`` to create it.
 ::
 
     $ cd ravada
-    $ sudo /usr/sbin/rvd_back --add-user user.name
+    $ sudo ./bin/rvd_back.pl --add-user user.name
 
 
-Firewall
---------
+Firewall(Optional)
+------------------
 
 The server must be able to send DHCP packets to its own virtual interface.
 
@@ -148,96 +116,12 @@ Ravada has two daemons that must run on the production server:
 - ``rvd_back`` : must run as root and manages the virtual machines
 - ``rvd_front`` : is the web frontend that sends requests to the backend
 
-Application directory
----------------------
 
-The ravada application should be installed in ``/var/www/ravada``
-
-Ravada system user
-------------------
-
-The frontend daemon must run as a non-privileged user.
-
-::
-
-    # useradd ravada
-
-Allow it to write to some diretories inside ``/var/www/ravada/``
-
-::
-
-    # mkdir /var/www/ravada/log
-    # chown ravada /var/www/ravada/log
-    # chgrp ravada /etc/ravada.conf
-    # chmod g+r /etc/ravada.conf
-    # mkdir -p /var/www/img/screenshots/
-    # chown ravada /var/www/img/screenshots
-
-Apache
-------
-
-It is advised to run an apache server or similar before the frontend.
-
-::
-
-    # apt-get install apache2
-    
-Systemd
--------
-
-Configuration for boot start
-
-First you have to copy the service scripts to the systemd directory:
-
-::
-
-    $ cd ravada/etc/systemd/
-    $ sudo cp *service /lib/systemd/system/
-
-Edit ``/lib/systemd/system/rvd_front.service`` and change ``User=****`` to the ``ravada`` user just created.
-
-
-Then enable the services to run at startup
+Run each one of these commands in a separate terminal
 
 :: 
 
-    $ sudo systemctl enable rvd_back
-    $ sudo systemctl enable rvd_front
-
-Start or stop
-~~~~~~~~~~~~~
-
-:: 
-
-    $ sudo systemctl stop rvd_back
-    $ sudo systemctl stop rvd_front
-
-Other systems
-~~~~~~~~~~~~~
-
-For production mode you must run the front end with a high perfomance server like hypnotoad:
-
-::
-
-    $ hypnotoad ./rvd_front.pl
-
-And the backend must run from root
-
-::
-
-    # ./bin/rvd_back.pl &
+    $ morbo ./rvd_front.pl
+    $ sudo ./bin/rvd_back.pl
 
 
-Firewall
---------
-
-Ravada uses `iptables` to restrict the access to the virtual machines. 
-Thes iptables rules grants acess to the admin workstation to all the domains and disables the access to everyone else.
-When the users access through the web broker they are allowed to the port of their virtual machines. Ravada uses its own iptables chain called 'ravada' to do so:
-
-::
-
-    -A INPUT -p tcp -m tcp -s ip.of.admin.workstation --dport 5900:7000 -j ACCEPT
-    -A INPUT -p tcp -m tcp --dport 5900:7000 -j DROP
-
-Read :ref:`dev-docs` to learn how to start it.
