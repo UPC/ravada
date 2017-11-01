@@ -62,7 +62,7 @@ Grant all permissions to your user:
 :: 
 
     $ mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'figure a password';
+    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'choose a password';
     exit
 
 Config file
