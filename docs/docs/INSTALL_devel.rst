@@ -28,7 +28,7 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 Ubuntu required packages
 ------------------------
 
-Check this (file)[https://github.com/UPC/ravada/blob/master/debian/control] at the line `depends` for a list of required packages
+Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages
 
 
 
@@ -124,4 +124,4 @@ Run each one of these commands in a separate terminal
     $ morbo ./rvd_front.pl
     $ sudo ./bin/rvd_back.pl
 
-
+Now you must be able to reach ravada at the location http://your.ip:3000/
