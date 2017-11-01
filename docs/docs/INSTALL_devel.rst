@@ -28,7 +28,7 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 Ubuntu required packages
 ------------------------
 
-Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control`_ at the line *depends* for a list of required packages
+Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages
 
 
 
