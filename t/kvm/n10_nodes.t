@@ -257,11 +257,16 @@ sub test_sync_base {
 
     is($clone2->_data('id_vm'),$node->id);
 
+    my $clone3 = $node->search_domain($clone2->name);
+    ok($clone3,"[$vm_name] expecting ".$clone2->name." found in "
+                .$node->host) or exit;
+
     my $domains = rvd_front->list_domains();
     my ($clone_f) = grep { $_->{name} eq $clone2->name } @$domains;
     ok($clone_f);
     is($clone_f->{id}, $clone2->id);
     is($clone_f->{node}, $clone2->_vm->host);
+    is($clone_f->{id_vm}, $node->id);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
