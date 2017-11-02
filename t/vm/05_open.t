@@ -54,7 +54,7 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     $sth->execute($vm_type);
     $sth->finish;
 
-    my $sth = $test->connector->dbh->prepare(
+    $sth = $test->connector->dbh->prepare(
         "INSERT INTO vms (id, name, vm_type, hostname, security) "
         ." VALUES(?,?,?,?,?)"
     );

@@ -106,6 +106,12 @@ sub test_shutdown_domain {
     ok($domain_b,"Domain $name should be in backend");
     ok(!$domain_b->readonly,"Domain $name should not be readonly");
 
+    my $vm2 = Ravada::VM->open( id => $vm->id);
+    ok($vm2,"[$vm_name] expecting a VM") or exit;
+
+    my $vm3 = Ravada::VM->open( id => $vm->id, readonly => 1);
+    ok($vm3,"[$vm_name] expecting a VM") or exit;
+
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
     ok($domain_f->readonly,"Domain $name should be readonly");
