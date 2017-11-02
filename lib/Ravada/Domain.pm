@@ -197,6 +197,7 @@ sub _set_vm($self, $vm, $force=0) {
     if ($domain && ($force || $domain->is_active)) {
        $self->_vm($vm);
        $self->domain($domain->domain);
+        $self->_update_id_vm();
     }
     return $vm->id;
 
@@ -276,7 +277,7 @@ sub _balance_vm($self) {
         $vm_list{$id} = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
     }
     my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
-    warn Dumper(\%vm_list,\@sorted_vm);
+#    warn Dumper(\%vm_list,\@sorted_vm);
 
     my $base = Ravada::Domain->open($self->id_base);
     for my $id (@sorted_vm) {
@@ -1818,7 +1819,8 @@ sub _pre_migrate($self, $node) {
 }
 
 sub _post_migrate($self, $node) {
-    $self->_set_base_vm_db($node->id,1);
+    $self->_set_base_vm_db($node->id,1) if $self->is_base;
+    $self->_update_id_vm($node);
 }
 
 sub _set_base_vm_db($self, $id_vm, $value) {

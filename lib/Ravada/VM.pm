@@ -106,28 +106,29 @@ Arguments: id of the VM
 
 sub open {
     my $proto = shift;
-    return _open_type($proto,@_) if !scalar @_ % 2;
-
-    my $id = shift;
-
+    my %args;
+    if (!scalar @_ % 2) {
+        %args = @_;
+        confess "ERROR: Don't set the id and the type "
+            if $args{id} && $args{type};
+        return _open_type($proto,@_) if $args{type};
+    } else {
+        $args{id} = shift;
+    }
     my $class=ref($proto) || $proto;
 
     my $self = {};
     bless($self, $class);
-    my $row = $self->_do_select_vm_db( id => $id);
+    my $row = $self->_do_select_vm_db( id => $args{id});
     lock_hash(%$row);
-    confess "ERROR: I can't find VM id=$id" if !$row || !keys %$row;
+    confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
     $class .= "::$type";
     bless ($self,$class);
 
-    my %args = (
-        id => $id
-        ,host => $row->{hostname}
-    );
-
+    $args{host} = $row->{hostname};
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     return $self->new(%args);

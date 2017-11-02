@@ -46,6 +46,7 @@ our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
+our %VM_ID;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
 =head2 BUILD
@@ -616,10 +617,20 @@ sub search_domain {
     my $row = $sth->fetchrow_hashref;
 
     return if !keys %$row;
+    lock_hash(%$row);
 
     if ($row->{id_vm}) {
-        my $vm = Ravada::VM->open($row->{id_vm});
-        return $vm->search_domain($name);
+        my $vm = $VM_ID{$row->{id_vm}};
+        if (!$vm ) {
+            warn "Opening VM $row->{id_vm}";
+            $vm = Ravada::VM->open(id => $row->{id_vm}, readonly => 1);
+            $VM_ID{$row->{id_vm}} = $vm if $vm;
+        }
+        confess "VM not found $row->{id_vm} not found"  if !$vm;
+        warn "search domain in vm $row->{id_vm} ".$vm->name;
+        my $domain = $vm->search_domain($name);#    if $vm;
+        warn "domain $name not found in ".$vm->name." at ".$vm->host;
+        return $domain;
     }
     my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
 
