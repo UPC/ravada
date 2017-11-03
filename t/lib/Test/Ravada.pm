@@ -134,6 +134,15 @@ sub init {
     $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
+
+    _init_local_urls();
+}
+
+sub _init_local_urls {
+    if ($ENV{TEST_DOWNLOAD_LOCAL}) {
+        diag("Setting local ISOs at http://localhost/iso/");
+        rvd_back->_set_url_isos('http://localhost/iso/');
+    }
 }
 
 sub _remove_old_domains_vm {
