@@ -1554,6 +1554,19 @@ sub list_requests {
     return map { Ravada::Request->open($_->{id}) } @list;
 }
 
+=head2 get_driver
+
+Returns the driver from a domain
+
+Argument: name of the device [ optional ]
+Returns all the drivers if not passwed
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver {}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
