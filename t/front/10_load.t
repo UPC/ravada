@@ -71,7 +71,7 @@ sub test_add_domain_db {
     ok(scalar @$bases == 1, "There should 1 base, got ".scalar(@$bases)) or exit;
     
     for my $base ( @$bases ) {
-        ok($base->{is_base} );
+        is($base->{is_base},1,Dumper($base) );
     }
 }
 

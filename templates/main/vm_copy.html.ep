@@ -11,7 +11,10 @@
             </div>
             <div class="col-md-10">
                     <input class="form-control" name="copy_name_{{showmachine.id}}" type="text" size="40"
-                    value="{{showmachine.name}}-copy">
+                    value="{{showmachine.name}}-copy"
+                    ng-model="new_name"
+                    ng-change="validate_new_name(showmachine.name)"
+                    >
                     <!-- todo check unique name -->
            </div>
         </div>
@@ -23,8 +26,22 @@
                 <input class="form-control" name="copy_ram" type="text" size="3" value="1">
             </div>
         </div>
-        <input type="submit" class="btn btn-default">
+        <input type="submit" class="btn btn-default"
+            ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
+        >
     </form>
+                        <div class="form-group has-error">
+                              <label ng-show="new_name_duplicated"
+                               class="control-label" for="new_name">
+                               This name is duplicated
+                              </label>
+                              <label ng-show="new_name_invalid"
+                               class="control-label" for="new_name">
+                               This name is invalid. It can only contain words and numbers
+                               and must start by a letter.
+                              </label>
+                    </div>
+
 </div>
 
 </div>

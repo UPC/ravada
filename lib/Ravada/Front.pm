@@ -75,7 +75,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id FROM domains where is_base=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id,is_base FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();
@@ -186,7 +186,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base FROM domains ORDER BY name";
+    my $query = "SELECT name, id, id_base, is_base FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -195,7 +195,7 @@ sub list_domains {
     }
     $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where");
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY name");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();

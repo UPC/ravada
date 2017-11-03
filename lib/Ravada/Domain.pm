@@ -1345,14 +1345,16 @@ sub drivers {
 
     _init_connector();
 
-    $type = 'qemu' if $type =~ /^KVM$/;
+    my $type2 = $type;
+    $type2 = 'KVM' if $type =~ /qemu/;
+    $type2 = 'qemu' if $type =~ /KVM;/;
     my $query = "SELECT id from domain_drivers_types "
-        ." WHERE vm=?";
+        ." WHERE (vm=? or vm=?)";
     $query .= " AND name=?" if $name;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 
-    my @sql_args = ($type);
+    my @sql_args = ($type,$type2);
     push @sql_args,($name)  if $name;
 
     $sth->execute(@sql_args);
@@ -1409,6 +1411,19 @@ sub remote_ip {
     return ($remote_ip or undef);
 
 }
+
+=head2 get_driver
+
+Returns the driver from a domain
+
+Argument: name of the device [ optional ]
+Returns all the drivers if not passwed
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver {}
 
 sub _dbh {
     my $self = shift;

@@ -1565,7 +1565,10 @@ sub _unique_mac {
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
-            return 0 if $mac eq lc($nic_mac);
+            if ( $mac eq lc($nic_mac) ) {
+                warn "mac clashes with domain ".$dom->get_name;
+                return 0;
+            }
         }
     }
     return 1;
@@ -1590,31 +1593,37 @@ sub _xml_modify_mac {
 
     my @macparts = split/:/,$mac;
 
+    my @old_macs;
+
+    for my $dom ($self->vm->list_all_domains) {
+        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+
+        for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
+            my $nic_mac = $nic->getAttribute('address');
+            push @old_macs,($nic_mac);
+        }
+    }
+
+
     my $new_mac;
 
-    my $n_part = scalar(@macparts) -2;
+    for my $cont ( 1 .. 1000 ) {
+        my $pos = int(rand(2))+4;
+        my $num =sprintf "%02X", rand(0xff);
+        die "Missing num " if !defined $num;
+        $macparts[$pos] = $num;
+        $new_mac = lc(join(":",@macparts));
+        my $n_part = scalar(@macparts) -2;
 
-    for (;;) {
-        for my $last ( 0 .. 254 ) {
-            $last = sprintf("%X", $last);
-            $last = "0$last" if length($last)<2;
-            $macparts[-1] = $last;
-            $new_mac = join(":",@macparts);
-            if ( $self->_unique_mac($new_mac) ) {
+        last if (! grep /^$new_mac$/i,@old_macs);
+    }
+
+    if ( $self->_unique_mac($new_mac) ) {
                 $if_mac->setAttribute(address => $new_mac);
                 return;
-            }
-            $new_mac = undef;
-        }
-        my $new_part = hex($macparts[$n_part])+1;
-        if ($new_part > 255) {
-            $n_part--;
-            $new_part = 0;
-            die "I can't find a new unique mac" if !$n_part<0;
-        }
-        $macparts[$n_part] = sprintf("%X", $new_part);
+    } else {
+        die "I can't find a new unique mac";
     }
-    die "I can't find a new unique mac" if !$new_mac;
 }
 
 
