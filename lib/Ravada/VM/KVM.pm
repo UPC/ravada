@@ -1216,15 +1216,27 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    random:while (1) {
-        my $new_uuid = _new_uuid($uuid);
-        next if $new_uuid eq $uuid;
-        for my $dom ($self->vm->list_all_domains) {
-            next random if $dom->get_uuid_string eq $new_uuid;
-        }
-        $uuid->setData($new_uuid);
-        last;
+    my @known_uuids;
+    for my $dom ($self->vm->list_all_domains) {
+        push @known_uuids,($dom->get_uuid_string);
     }
+    my $new_uuid = _unique_uuid($uuid,@known_uuids);
+    $uuid->setData($new_uuid);
+}
+
+sub _unique_uuid {
+    my ($self, $uuid, @uuids) = @_;
+    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+
+    for (1..1000) {
+        my $new_last = int(rand(0x100000));
+        my $new_uuid = sprintf("%s%06d",$first,substr($new_last,0,6));
+
+        confess "Wrong uuid size ".length($new_uuid)." <> ".length($uuid)
+            if length($new_uuid) != length($uuid);
+        return $new_uuid if !grep /^$new_uuid$/,@uuids;
+    }
+    confess "I can't find a new unique uuid";
 }
 
 sub _xml_modify_cdrom {

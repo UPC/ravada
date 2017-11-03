@@ -75,7 +75,8 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id,is_base FROM domains where is_base=1");
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, is_base FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();

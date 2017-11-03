@@ -95,11 +95,11 @@ sub test_prepare_base {
     ok(!$@, $@);
     ok($domain->is_base);
 
-    eval { $domain->prepare_base( $USER) };
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
-    ok($domain->is_base);
+#    eval { $domain->prepare_base( $USER) };
+#    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
+#        ."prepared and file haven't changed "
+#        .". Error: ".($@ or '<UNDEF>'));
+#    ok($domain->is_base);
 
     test_files_base($domain,1);
 
