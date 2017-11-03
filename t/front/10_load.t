@@ -73,7 +73,7 @@ sub test_add_domain_db {
     is($bases->[0]->{name}, $domain_name);
     
     for my $base ( @$bases ) {
-        ok($base->{is_base},"[$vm_name] Expecting base for ".Dumper($base) );
+        is($base->{is_base},1,Dumper($base) );
     }
 }
 

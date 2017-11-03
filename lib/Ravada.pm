@@ -285,32 +285,32 @@ sub _update_domain_drivers_types($self) {
             id => 4,
             ,name => 'image'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
         },
         jpeg => {
             id => 5,
             ,name => 'jpeg'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
         },
         zlib => {
             id => 6,
             ,name => 'zlib'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
         },
         playback => {
             id => 7,
             ,name => 'playback'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
 
         },
         streaming => {
             id => 8,
             ,name => 'streaming'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
 
         }
     };
