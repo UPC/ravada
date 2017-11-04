@@ -112,7 +112,7 @@ Create the *debian* package.
 ::
 
     $ fakeroot ./deb/debianize.pl
-    $ lintian ravaa_0.2.2_all.deb
+    $ lintian ravada_0.2.2_all.deb
 
 Upload the file to our repo and change the number at:
 
