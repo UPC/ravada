@@ -172,8 +172,8 @@ sub _update_isos {
     my $field = 'name';
     my %data = (
         artful => {
-                    name => 'Ubuntu Artful Aardvak'
-            ,description => 'Ubuntu 17.10 Artful Aardvak 64 bits'
+                    name => 'Ubuntu Artful Aardvark'
+            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
