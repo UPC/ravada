@@ -927,6 +927,9 @@ sub admin {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
     }
+    if ($page eq 'nodes') {
+        $c->stash(list_nodes => $RAVADA->list_nodes);
+    }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
 

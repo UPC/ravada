@@ -306,6 +306,20 @@ sub list_vms($self, $type) {
     return @list;
 }
 
+sub list_nodes($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM vms "
+    );
+    $sth->execute();
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    return \@list;
+}
+
 sub _list_bases_vm($self, $node) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id FROM domains d,bases_vm bv"
@@ -631,7 +645,8 @@ sub search_domain {
         confess "VM not found $row->{id_vm} not found"  if !$vm;
         warn "search domain in vm $row->{id_vm} ".$vm->name;
         my $domain = $vm->search_domain($name);#    if $vm;
-        warn "domain $name not found in ".$vm->name." at ".$vm->host;
+        warn "domain $name not found in ".$vm->name." at ".$vm->host
+            if !$domain;
         return $domain;
     }
     my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
