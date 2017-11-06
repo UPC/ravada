@@ -1224,8 +1224,13 @@ sub _xml_modify_uuid {
     $uuid->setData($new_uuid);
 }
 
-sub _unique_uuid {
-    my ($self, $uuid, @uuids) = @_;
+sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
+    my @uuids = @_;
+    if (!scalar @uuids) {
+        for my $dom ($self->vm->list_all_domains) {
+            push @uuids,($dom->get_uuid_string);
+        }
+    }
     my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
 
     for (1..1000) {
