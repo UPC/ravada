@@ -6,7 +6,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
   VERSION   => '0.01',
   PREREQ_PM => {
-          'Mojolicious' => '7.14'
+          'Mojolicious' => '7.01'
      ,'DBIx::Connector' => 0
   ,'Authen::Passphrase' => 0
 	      ,'IPC::Run3'  => 0
