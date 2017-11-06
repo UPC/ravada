@@ -75,7 +75,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();
@@ -127,7 +127,7 @@ sub list_machines_user {
             ,id_base => $id
         );
         my %base = ( id => $id, name => $name
-            , is_public => $is_public
+            , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
             , id_clone => undef
@@ -186,7 +186,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT * FROM domains ORDER BY name";
+    my $query = "SELECT name, id, id_base, is_base FROM domains ORDER BY name";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -213,6 +213,7 @@ sub list_domains {
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
         }
+        delete $row->{spice_password};
         push @domains, ($row);
     }
     $sth->finish;
@@ -372,13 +373,12 @@ Returns a reference to a list of the users
 =cut
 
 sub list_users($self,$name=undef) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
     
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
-        delete $row->{password};
         push @users, ($row);
     }
     $sth->finish;
@@ -573,7 +573,7 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, description FROM domains WHERE name=?");
     $sth->execute($name);
 
     my $row = $sth->fetchrow_hashref;
@@ -674,7 +674,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, id_base, is_base FROM domains WHERE id=?");
     $sth->execute($id);
 
     my $row = $sth->fetchrow_hashref;
@@ -739,7 +739,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();
