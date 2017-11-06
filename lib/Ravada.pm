@@ -192,6 +192,16 @@ sub _update_isos {
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
         }
+        ,xubuntu_artful => {
+            name => 'Xubuntu Artful Aardvark'
+            ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/mini.iso'
+            ,rename_file => 'xubuntu_artful.iso'
+        }
         ,xubuntu_zesty => {
             name => 'Xubuntu Zesty Zapus'
             ,description => 'Xubuntu 17.04 Zesty Zapus 64 bits'
