@@ -272,6 +272,16 @@ sub _refresh_storage_pools($self) {
     }
 }
 
+=head2 refresh_storage
+
+Refreshes all the storage pools
+
+=cut
+
+sub refresh_storage($self) {
+    $self->_refresh_storage_pools();
+}
+
 =head2 search_volume_path_re
 
 Searches for a volume in all the storage pools known to the Virtual Manager
