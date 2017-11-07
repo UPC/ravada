@@ -60,6 +60,7 @@ our %VALID_ARG = (
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
+    ,refresh_storage => { id_vm => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -804,6 +805,29 @@ sub download {
             command => 'download'
              , args => encode_json($args)
     );
+
+}
+
+=head2 refresh_storage
+
+Refreshes a storage pool
+
+=cut
+
+sub refresh_storage {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_storage', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+        command => 'refresh_storage'
+        , args => $args
+    );
+
 
 }
 

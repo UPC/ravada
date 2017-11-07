@@ -923,7 +923,6 @@ sub admin {
 sub new_machine {
     my $c = shift;
     my @error ;
-    my $vm = $RAVADA->open_vm('KVM');
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -933,11 +932,14 @@ sub new_machine {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
         }
+    } else {
+        my $req = Ravada::Request->refresh_storage();
+        # TODO handle possible errors
     }
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
     $c->render(template => 'main/new_machine'
-        , name => $c->param('name'), vm => $vm
+        , name => $c->param('name')
     );
 };
 
