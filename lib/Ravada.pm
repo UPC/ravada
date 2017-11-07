@@ -1816,6 +1816,17 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
+sub _cmd_refresh_storage($self, $request) {
+
+    my $vm;
+    if ($request->defined_arg('id_vm')) {
+        $vm = Ravada::VM->open($request->defined_arg('id_vm'));
+    } else {
+        $vm = $self->search_vm('KVM');
+    }
+    $vm->refresh_storage();
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -1840,6 +1851,7 @@ sub _req_method {
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
+,refresh_storage => \&_cmd_refresh_storage
 
     );
     return $methods{$cmd};
