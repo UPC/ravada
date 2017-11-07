@@ -18,6 +18,7 @@ use Moose;
 use Net::LDAP;
 use Net::LDAPS;
 use Net::LDAP::Entry;
+use Net::LDAP::Util qw(escape_filter_value);
 use Net::Domain qw(hostdomain);
 
 use Ravada::Auth::SQL;
@@ -64,6 +65,9 @@ sub add_user {
     my ($name, $password, $is_admin) = @_;
 
     _init_ldap_admin();
+
+    $name = escape_filter_value($name);
+    $password = escape_filter_value($password);
 
     confess "No dc base in config ".Dumper($$CONFIG->{ldap})
         if !_dc_base();
@@ -124,6 +128,8 @@ Search user by uid
 sub search_user {
     my $username = shift;
 
+    $username = escape_filter_value($username);
+
     _init_ldap();
 
     my $ldap = (shift or $LDAP_ADMIN);
@@ -171,6 +177,8 @@ Add a group to the LDAP
 sub add_group {
     my $name = shift;
     my $base = (shift or _dc_base());
+
+    $name = escape_filter_value($name);
 
     my $mesg = $LDAP_ADMIN->add(
         cn => $name
@@ -223,6 +231,8 @@ sub search_group {
     my $name = $args{name} or confess "Missing group name";
     my $base = ( $args{base} or "ou=groups,"._dc_base() );
     my $ldap = ( $args{ldap} or $LDAP );
+
+    $name = escape_filter_value($name);
 
     my $mesg = $ldap ->search (
         filter => "cn=$name"
