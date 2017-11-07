@@ -954,6 +954,9 @@ sub new_machine {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
         }
+    } else {
+        my $req = Ravada::Request->refresh_storage();
+        # TODO handle possible errors
     }
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
