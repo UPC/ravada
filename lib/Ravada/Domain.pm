@@ -910,7 +910,7 @@ sub _convert_png {
     my $self = shift;
     my ($file_in ,$file_out) = @_;
 
-    my $in = Image::Magick->new();
+    my $in = Image::Magick->new(size=>'250x188');
     my $err = $in->Read($file_in);
     confess $err if $err;
 
