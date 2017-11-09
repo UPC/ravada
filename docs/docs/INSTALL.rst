@@ -7,7 +7,7 @@ Requirements
 OS
 --
 
-Ravada has been successfully tested only on `Ubuntu <https://www.ubuntu.com/download/>`_ 16.10 and 17.04. It won't run on Ubuntu 17.10. The very next release, due in a november will work. It should also work in
+Ravada has been successfully tested only on `Ubuntu <https://www.ubuntu.com/download/>`_ 16.10 and 17.04. If you want it to run on Ubuntu 17.10 try the beta package. It should also work in
 recent RedHat based systems. Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
 Hardware
@@ -39,11 +39,24 @@ repository <http://infoteleco.upc.edu/img/debian/>`__. There we have
 also development releases. Try them if you want to help us testing
 new features.
 
+*libmojolicious-plugin-renderfile-perl* package is available only in recent Ubuntus. Try  this first:
+
+::
+
+    $ sudo apt-get install libmojolicious-plugin-renderfile-perl
+
+**Only if it fails** download our own package:
+
 ::
 
     $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.10_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+ 
+ Then install the ravada package, notice it show some errors, it is ok, keep reading.
+ 
+ ::
+ 
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.10_all.deb
     $ sudo dpkg -i ravada_0.2.10_all.deb
 
 The last command will show a warning about missing dependencies. Install
@@ -53,13 +66,6 @@ them running:
 
     $ sudo apt-get update
     $ sudo apt-get -f install
-
-Development Release
--------------------
-
-Read
-`Development Release <http://ravada.readthedocs.io/en/latest/docs/INSTALL_devel.html>`__
-if you want to develop Ravada or install a bleeding edge, non-packaged, release.
 
 Mysql Database
 --------------
@@ -92,7 +98,7 @@ Grant all permissions on this database to the *rvd_user*:
 
 ::
 
-    $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'CHOOSE A PASSWORD'"
+    $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
 
 Config file
 ~~~~~~~~~~~
