@@ -63,7 +63,7 @@
 %                   }
                 </h3>
 %               if ($machine->{screenshot} ) {
-                    <img src="<%= $machine->{screenshot} %>" width="260">
+                    <img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260">
 %               }
             </div>
             <div class="panel-body">
