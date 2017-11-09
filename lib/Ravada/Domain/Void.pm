@@ -27,6 +27,8 @@ has '_ip' => (
 
 our $DIR_TMP = "/var/tmp/rvd_void";
 
+our $CONVERT = `which convert`;
+chomp $CONVERT;
 #######################################3
 
 sub BUILD {
@@ -331,7 +333,23 @@ sub list_volumes_target {
 
 }
 
-sub screenshot {}
+sub screenshot {
+    my $self = shift;
+    my $file = (shift or $self->_file_screenshot);
+
+    my @cmd =($CONVERT,'-size', '400x300', 'xc:white'
+        ,$file
+    );
+    my ($in,$out,$err);
+    run3(\@cmd, \$in, \$out, \$err);
+}
+
+sub _file_screenshot {
+    my $self = shift;
+    return $DIR_TMP."/".$self->name.".png";
+}
+
+sub can_screenshot { return $CONVERT; }
 
 sub get_info {
     my $self = shift;

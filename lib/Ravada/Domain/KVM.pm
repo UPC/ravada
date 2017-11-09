@@ -830,6 +830,17 @@ Takes a screenshot, it stores it in file.
 
 =cut
 
+sub handler {
+    my ($stream, $data, $n) = @_;
+    my $file_tmp = "/var/tmp/$$.tmp";
+
+    open my $out ,'>>',$file_tmp;
+    print $out $data;
+    close $out;
+
+    return $n;
+}
+
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
@@ -841,24 +852,13 @@ sub screenshot {
     my $stream = $self->{_vm}->vm->new_stream();
 
     my $mimetype = $self->domain->screenshot($stream,0);
+    $stream->recv_all(\&handler);
 
-    my $file_tmp = "$file.tmp";
-    my $data;
-    my $bytes = 0;
-    open my $out, '>', $file_tmp or die "$! $file_tmp";
-    while ( my $rv =$stream->recv($data,1024)) {
-        $bytes += $rv;
-        last if $rv<=0;
-        print $out $data;
-    }
-    close $out;
+    my $file_tmp = "/var/tmp/$$.tmp";
+    $stream->finish;
 
     $self->_convert_png($file_tmp,$file);
     unlink $file_tmp or warn "$! removing $file_tmp";
-
-    $stream->finish;
-
-    return $bytes;
 }
 
 sub _file_screenshot {
