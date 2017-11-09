@@ -1616,4 +1616,8 @@ sub type {
     return $type;
 }
 
+sub file_screenshot($self){
+  return $self->_data('file_screenshot');
+}
+
 1;
