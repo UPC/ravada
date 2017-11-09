@@ -152,9 +152,15 @@
                 $http.get('/machine/remove_clones/'+machineId+'.json');
           };
 
+          $scope.reload_page_msg = false;
           $scope.action = function(target,action,machineId){
             $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+            $scope.reload_page_msg = true;
+            setTimeout(function () {
+                window.location.reload(false);
+            }, 5000);
           };
+
           $scope.rename = function(machineId, old_name) {
             if ($scope.new_name_duplicated || $scope.new_name_invalid) return;
             $scope.rename_requested=1;

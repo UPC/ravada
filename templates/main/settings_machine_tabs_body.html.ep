@@ -28,7 +28,12 @@
       % }
     </div>
 % }
-% if (1) { # TODO check VM is KVM
+% if ($USER->can_change_settings) {
+    <div class="tab-pane fade" id="screenshot">
+      %= include 'main/vm_screenshot'
+    </div>
+% }
+% if ($domain->type eq 'KVM') {
     <div class="tab-pane fade" id="graphics">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
@@ -46,4 +51,3 @@
         %= include 'main/vm_remove'
     </div>
 % }
-

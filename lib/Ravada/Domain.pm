@@ -1620,4 +1620,8 @@ sub _pre_clone($self,%args) {
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
 }
 
+sub file_screenshot($self){
+  return $self->_data('file_screenshot');
+}
+
 1;
