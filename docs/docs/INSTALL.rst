@@ -113,7 +113,7 @@ example.
     $ sudo vi /etc/ravada.conf
     db:
       user: rvd_user
-      password: THE PASSWORD CHOSEN BEFORE
+      password: changeme
 
 Ravada web user
 ---------------
