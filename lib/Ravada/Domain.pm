@@ -371,6 +371,7 @@ sub _check_used_memory {
         next if !$alive;
 
         my $info = $domain->get_info;
+        confess "No info memory ".Dumper($info) if !exists $info->{memory};
         $used_memory += $info->{memory};
     }
 

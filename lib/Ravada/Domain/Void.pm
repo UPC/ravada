@@ -352,6 +352,9 @@ sub can_screenshot { return $IMPORT; }
 sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
+    $self->_set_default_info()
+        if !$info->{memory};
+    $info = $self->_value('info');
     lock_keys(%$info);
     return $info;
 }
