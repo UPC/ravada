@@ -7,7 +7,7 @@
 %   if ($USER->can_change_settings && $domain->drivers) {
         <li class="nav"><a href="#drivers" data-toggle="tab">Drivers</a></li>
 %   }
-%   if ($domain->type eq 'KVM') {
+%   if ($domain->drivers) {
         <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
 %   }
 %   if ($USER->can_clone_all){
