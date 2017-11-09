@@ -438,8 +438,7 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER -> can_copy();
-#    return access_denied($c)    if !$USER -> can_clone_all();
+    return access_denied($c)    if !$USER -> can_clone_all();
     return copy_machine($c);
 };
 
