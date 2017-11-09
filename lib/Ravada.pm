@@ -515,9 +515,19 @@ sub _update_table($self, $table, $field, $data) {
     }
 }
 
+sub _remove_old_isos {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images "
+        ."    WHERE url like '%debian-9.0%iso'"
+   );
+   $sth->execute();
+   $sth->finish;
+}
+
 sub _update_data {
     my $self = shift;
 
+    $self->_remove_old_isos();
     $self->_update_isos();
     $self->_update_user_grants();
     $self->_update_domain_drivers_types();
