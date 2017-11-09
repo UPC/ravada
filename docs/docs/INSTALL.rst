@@ -52,7 +52,7 @@ new features.
     $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
  
- Then install the ravada package, notice it show some errors, it is ok, keep reading.
+Then install the ravada package, notice it show some errors, it is ok, keep reading.
  
  ::
  
