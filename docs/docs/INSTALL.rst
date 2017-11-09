@@ -67,13 +67,6 @@ them running:
     $ sudo apt-get update
     $ sudo apt-get -f install
 
-Development Release
--------------------
-
-Read
-`Development Release <http://ravada.readthedocs.io/en/latest/docs/INSTALL_devel.html>`__
-if you want to develop Ravada or install a bleeding edge, non-packaged, release.
-
 Mysql Database
 --------------
 
