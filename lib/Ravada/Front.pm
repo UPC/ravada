@@ -643,7 +643,6 @@ sub search_domain {
             $VM_ID{$row->{id_vm}} = $vm if $vm;
         }
         confess "VM not found $row->{id_vm} not found"  if !$vm;
-        warn "search domain in vm $row->{id_vm} ".$vm->name;
         my $domain = $vm->search_domain($name);#    if $vm;
         warn "domain $name not found in ".$vm->name." at ".$vm->host
             if !$domain;
