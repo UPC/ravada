@@ -63,8 +63,11 @@
 %                   }
                 </h3>
 %               if ($machine->{screenshot} ) {
-                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260">
+                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260"></a>
+%               }else{
+                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="img/default_screenshot.png" class="screenshot-default img-thumbnail" width="260"></a>
 %               }
+
             </div>
             <div class="panel-body">
 %		if ($_user->can_screenshot) {
