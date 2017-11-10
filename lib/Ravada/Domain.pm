@@ -1807,11 +1807,7 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
     if ($self->is_base) {
         push @files_base,($self->list_files_base);
     }
-<<<<<<< HEAD
     my $rsync = File::Rsync->new(update => 1);
-=======
-    my $rsync = File::Rsync->new();
->>>>>>> 5faefb7aa360e63559c6370258700acc7b3cd88f
     for my $file ( $self->list_volumes(), @files_base) {
         $request->status("syncing","Tranferring $file to ".$node->host)
             if $request;
