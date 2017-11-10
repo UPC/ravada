@@ -42,10 +42,10 @@
             <div class="panel panel-warning">
             <div class="panel-heading">
 %           if ($_user->is_admin) {
-                There are no public bases available in this system.
-                <a href="/admin/">Create one.</a>
+                <%=l 'There are no public bases available in this system.' %>
+                <a href="/admin/"><%=l 'Create one.' %></a>
 %           } else {
-                There are no machines available in this system.
+                <%=l 'There are no machines available in this system.' %>
 %           }
             </div>
             </div>
@@ -59,7 +59,7 @@
                 <h3 class="panel-title"><a
                    href="/machine/clone/<%= $machine->{id} %>.html"><%= $machine->{name} %></a>
 %                   if ( !$machine->{is_public} ) {
-                        <i>( not public )</i>
+                        <i>(<%=l 'not public' %>)</i>
 %                   }
                 </h3>
 %               if ($machine->{screenshot} ) {
