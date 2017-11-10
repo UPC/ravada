@@ -821,6 +821,11 @@ sub refresh_storage {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args('refresh_storage', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
         command => 'refresh_storage'
         , args => $args
     );
@@ -875,7 +880,6 @@ sub remove_base_vm {
 }
 
 
->>>>>>> [#202] request enable or disable base in VM
 sub AUTOLOAD {
     my $self = shift;
 
