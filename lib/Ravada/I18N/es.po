@@ -193,10 +193,10 @@ msgid "will remove all the contents of the machine"
 msgstr "borrará todo el contenido de la máquina"
 
 msgid "Are you sure?"
-msgstr "Estas seguro/a?"
+msgstr "Estás seguro/a?"
 
 msgid "Yes"
-msgstr "Si"
+msgstr "Sí"
 
 msgid "No"
 msgstr ""
@@ -212,3 +212,99 @@ msgstr "No se puede borrar la base, la máquina tiene clones"
 
 msgid "Show/Hide clones"
 msgstr "Ver/Esconde clones"
+
+msgid "User Settings"
+msgstr "Configuración de usuario"
+
+msgid "For spice redirection you'll need to install"
+msgstr "Para redirección a spice necesitarás instalar"
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Busca en tu distribución, p.e. Debian/Ubuntu con"
+
+msgid "You'll need to install"
+msgstr "Necesitarás instalar"
+
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgstr "p.e. VirtViewer v5.0-256, y USB drivers ("
+
+msgid "or"
+msgstr "o"
+
+msgid "bits) in your computer."
+msgstr "bits) en tu ordenador."
+
+msgid "Be aware that in Windows, spice redirection is not automatically. It\'s necessary associate protocol with the app."
+msgstr "Atención a que en Windows, la redirección spice no es automàtica. Es necesario asociar el protocolo con la app."
+
+msgid "To make this possible, download"
+msgstr "Para hacer esto posible, descarga"
+
+msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
+msgstr "o copia las linias siguientes en un documento ASCII y guárdalo con extensión .reg, después ejécutalo."
+
+msgid "For more information, check "
+msgstr "Para más información, revisa "
+
+msgid "the Windows Clients documentation"
+msgstr "la documentación de Windows Clients"
+
+msgid "in your computer."
+msgstr "en tu ordenador."
+
+msgid "Admin tools"
+msgstr "Herramientas de administración"
+
+msgid "machines"
+msgstr "máquinas"
+
+msgid "users"
+msgstr "usuarios"
+
+msgid "messages"
+msgstr "mensajes"
+
+msgid "Virtual Machines"
+msgstr "Máquinas Virtuales"
+
+msgid "hide clones"
+msgstr "esconder clones"
+
+msgid "This Machine is a base"
+msgstr "Esta Máquina es base"
+
+msgid "Machine locked by"
+msgstr "Máquina bloqueada por"
+
+msgid "Cloned"
+msgstr "Clonada"
+
+msgid "Search"
+msgstr "Buscar"
+
+msgid "Register"
+msgstr "Registrar"
+
+msgid "Subject"
+msgstr "Asunto"
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "There are no public bases available in this system."
+msgstr "No hay bases públicas disponibles en este sistema."
+
+msgid "There are no machines available in this system."
+msgstr "No hay máquinas disponibles en este sistema."
+
+msgid "not public"
+msgstr "no pública"
+
+msgid "Create one."
+msgstr "Crea una."
+
+msgid "Error!"
+msgstr "Error!"
+
+msgid "Backend no available!"
+msgstr " Backend no disponible!"

@@ -164,7 +164,7 @@ msgid "Machine locked by requested"
 msgstr "Màquina bloquejada per"
 
 msgid "process"
-msgstr "procés"
+msgstr " procés"
 
 msgid "Copy"
 msgstr "Còpia"
@@ -173,7 +173,7 @@ msgid "Error!"
 msgstr "Error!"
 
 msgid "Backend no available!"
-msgstr "Backend no disponible!"
+msgstr " Backend no disponible!"
 
 msgid "Subject"
 msgstr "Assumpte"
@@ -311,3 +311,75 @@ msgstr "Identifiqueu-vos amb el nom d'usuari de la Intranet UPC."
 
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
+
+msgid "For more information, check "
+msgstr "Per a més informació, reviseu "
+
+msgid "the Windows Clients documentation"
+msgstr "la documentació de Windows Clients"
+
+msgid "Version"
+msgstr "Versió"
+
+msgid "Authors"
+msgstr "Autors"
+
+msgid "Development"
+msgstr "Desenvolupament"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "A continuació hi ha la llista de tecnologies usades en aquest projecte:"
+
+msgid "The code is available on "
+msgstr "El codi està disponible a "
+
+msgid "The code is "
+msgstr "El codi està "
+
+msgid "License"
+msgstr "Licència"
+
+msgid "hide clones"
+msgstr "amaga els clons"
+
+msgid "Machine locked by"
+msgstr "Màquina bloquejada per"
+
+msgid "This Machine is a base"
+msgstr "Aquesta màquina és una base"
+
+msgid "Cloned"
+msgstr "Clonada"
+
+msgid "is admin"
+msgstr "és administrador"
+
+msgid "Add new user"
+msgstr "Afegeix nou usuari"
+
+msgid "Register"
+msgstr "Registrar"
+
+msgid "Search"
+msgstr "Cerca"
+
+msgid "Admin tools"
+msgstr "Eines d'administració"
+
+msgid "Admin tools"
+msgstr "Eines d'administració"
+
+msgid "There are no public bases available in this system."
+msgstr "No hi ha bases públiques disponibles en aquest sistema."
+
+msgid "There are no machines available in this system."
+msgstr "No hi ha màquines disponibles en aquest sistema."
+
+msgid "Create one."
+msgstr "Crea'n una."
+
+msgid "not public"
+msgstr "no pública"
+
+msgid "User Settings"
+msgstr "Configuració d'usuari"
