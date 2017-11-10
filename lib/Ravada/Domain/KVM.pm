@@ -1622,12 +1622,17 @@ sub _check_uuid($self, $doc, $node) {
 
 }
 
+sub _check_machine($self,$doc) {
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    $os_type->setAttribute( machine => 'pc');
+}
 
 sub migrate($self, $node) {
     my $xml = $self->domain->get_xml_description();
 
     my $doc = XML::LibXML->load_xml(string => $xml);
     $self->_check_uuid($doc, $node);
+    $self->_check_machine($doc);
 
     $self->rsync($node);
 
