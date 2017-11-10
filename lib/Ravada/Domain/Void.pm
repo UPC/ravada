@@ -227,6 +227,7 @@ sub add_volume {
             if !$valid_arg{$arg_name};
     }
     confess "Missing name " if !$args{name};
+    confess "Wrong target"  if !length($args{target});
 #    TODO
 #    confess "Missing size " if !$args{size};
 
@@ -235,7 +236,7 @@ sub add_volume {
 
     my $data = { };
     $data = LoadFile($self->_config_file) if -e $self->_config_file;
-    $args{target} = _new_target($data);
+    $args{target} = _new_target($data) if !$args{target};
 
     $data->{device}->{$args{name}} = \%args;
     eval { DumpFile($self->_config_file, $data) };
@@ -256,12 +257,18 @@ sub _new_target {
     my %targets;
     for my $dev ( keys %{$data->{device}}) {
         confess "Missing device ".Dumper($data) if !$dev;
-        $targets{$data->{device}->{$dev}->{target}}++
+
+        my $target = $data->{device}->{$dev}->{target};
+        confess "Missing target ".Dumper($data) if !$target || !length($target);
+
+        $targets{$target}++
     }
     return 'vda'    if !keys %targets;
 
     my @targets = sort keys %targets;
     my ($prefix,$a) = $targets[-1] =~ /(.*)(.)/;
+    confess "ERROR: Missing prefix ".Dumper($data)."\n"
+        .Dumper(\%targets) if !$prefix;
     return $prefix.chr(ord($a)+1);
 }
 

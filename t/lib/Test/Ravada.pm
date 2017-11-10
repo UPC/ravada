@@ -181,26 +181,6 @@ sub remote_config {
     return $remote_conf->{$vm_name};
 }
 
-sub remote_config {
-    my $vm_name = shift;
-    return { } if !-e $FILE_CONFIG_REMOTE;
-
-    my $conf;
-    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
-    is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
-
-    my $remote_conf = $conf->{$vm_name};
-    for my $field ( qw(host user password security)) {
-        delete $remote_conf->{$field};
-    }
-    die "Unknown fields in remote_conf $vm_name, valids are : host user password\n"
-        .Dumper($remote_conf)   if keys %$remote_conf;
-
-    $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
-    lock_hash(%$remote_conf);
-    return $remote_conf->{$vm_name};
-}
-
 sub remote_config_nodes {
     my $file_config = shift;
     confess "Missing file $file_config" if !-e $file_config;
