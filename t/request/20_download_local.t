@@ -6,6 +6,7 @@ use Data::Dumper;
 use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
+use Mojo::UserAgent;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -100,6 +101,14 @@ sub search_id_isos {
     }
     return @id_iso;
 }
+
+sub httpd_localhost {
+    my $ua  = Mojo::UserAgent->new;
+    eval { return $ua->get('http://localhost/iso')->result->is_success };
+    diag($@) if $@ !~ /Connection refused/;
+    return;
+}
+
 ##################################################################
 
 
@@ -112,6 +121,10 @@ for my $vm_name ('KVM') {
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
+        }
+        if (!httpd_localhost()) {
+            $vm = undef;
+            $msg = "SKIPPED: No http on localhost with /iso";
         }
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;

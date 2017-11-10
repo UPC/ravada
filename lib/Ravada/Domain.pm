@@ -371,6 +371,7 @@ sub _check_used_memory {
         next if !$alive;
 
         my $info = $domain->get_info;
+        confess "No info memory ".Dumper($info) if !exists $info->{memory};
         $used_memory += $info->{memory};
     }
 
@@ -913,6 +914,7 @@ sub _convert_png {
     my $err = $in->Read($file_in);
     confess $err if $err;
 
+    $in->Scale(width => 250, height => 188);
     $in->Write("png24:$file_out");
 
     chmod 0755,$file_out or die "$! chmod 0755 $file_out";
@@ -1463,19 +1465,32 @@ List the drivers available for a domain. It may filter for a given type.
 sub drivers {
     my $self = shift;
     my $name = shift;
-    my $type = (shift or $self->_vm->type);
+    my $type = shift;
+    $type = $self->_vm->type   if $self && !$type;
 
     _init_connector();
 
-    $type = 'qemu' if $type =~ /^KVM$/;
-    my $query = "SELECT id from domain_drivers_types "
-        ." WHERE vm=?";
-    $query .= " AND name=?" if $name;
+    my $query = "SELECT id from domain_drivers_types ";
 
+    my @sql_args = ();
+
+    my @where;
+    if ($name) {
+        push @where,("name=?");
+        push @sql_args,($name);
+    }
+    if ($type) {
+        my $type2 = $type;
+        if ($type =~ /qemu/) {
+            $type2 = 'KVM';
+        } elsif ($type =~ /KVM/) {
+            $type2 = 'qemu';
+        }
+        push @where, ("( vm=? OR vm=?)");
+        push @sql_args, ($type,$type2);
+    }
+    $query .= "WHERE ".join(" AND ",@where) if @where;
     my $sth = $$CONNECTOR->dbh->prepare($query);
-
-    my @sql_args = ($type);
-    push @sql_args,($name)  if $name;
 
     $sth->execute(@sql_args);
 
@@ -1553,6 +1568,19 @@ sub list_requests {
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
 }
+
+=head2 get_driver
+
+Returns the driver from a domain
+
+Argument: name of the device [ optional ]
+Returns all the drivers if not passwed
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver {}
 
 sub _dbh {
     my $self = shift;

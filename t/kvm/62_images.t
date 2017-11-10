@@ -72,6 +72,8 @@ sub test_drivers_type {
     isa_ok(\@drivers,'ARRAY');
 
     my $driver_type = $domain->drivers($type);
+    ok($driver_type,"[$vm_name] Expecting a driver type $type") or return;
+    isa_ok($driver_type, "Ravada::Domain::Driver") or return;
 
     my $value = $driver_type->get_value();
     is($value,undef,"Expecting no value for $type");

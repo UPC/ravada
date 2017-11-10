@@ -154,7 +154,7 @@ msgid "ShutDown"
 msgstr "Apagar"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Captura de pantalla"
 
 msgid "Paused"
 msgstr "Pausado"
@@ -168,8 +168,44 @@ msgstr "proceso"
 msgid "Copy"
 msgstr "Copia"
 
+msgid "Error!"
+msgstr "¡Error!"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Backend no available!"
+msgstr "¡Backend no disponible!"
+
+msgid "Subject"
+msgstr "Asunto"
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "Mark as Read"
+msgstr "Marcar como leído"
+
+msgid "Mark as UnRead"
+msgstr "Marcar como no leído"
+
+msgid "No message to show!"
+msgstr "¡No hay mensaje por mostrar!"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "machines"
+msgstr "máquinas"
+
+msgid "users"
+msgstr "usuarios"
+
+msgid "messages"
+msgstr "mensajes"
+
 msgid "Admin tools"
-msgstr ""
+msgstr "Herramientas de admin"
 
 msgid "Remove base"
 msgstr "Elimina base"
@@ -189,6 +225,9 @@ msgstr "Apagar"
 msgid "action"
 msgstr "acción"
 
+msgid "New Base"
+msgstr "Nueva Base"
+
 msgid "will remove all the contents of the machine"
 msgstr "borrará todo el contenido de la máquina"
 
@@ -199,7 +238,7 @@ msgid "Yes"
 msgstr "Sí"
 
 msgid "No"
-msgstr ""
+msgstr "No"
 
 msgid "Make public"
 msgstr "Haz público"
@@ -221,6 +260,16 @@ msgstr "Para redirección a spice necesitarás instalar"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Busca en tu distribución, p.e. Debian/Ubuntu con"
+
+msgid "For spice redirection you'll need to install"
+msgstr "Para la redirección de spice, necesitarás instalar"
+
+msgid "in your computer."
+msgstr "en tu computadora."
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Busca en tu distro, p.e. en Debian/Ubuntu con"
+
 
 msgid "You'll need to install"
 msgstr "Necesitarás instalar"
@@ -308,3 +357,178 @@ msgstr "Error!"
 
 msgid "Backend no available!"
 msgstr " Backend no disponible!"
+
+msgid ""
+"Be aware that in Windows, spice redirection is not automatically. It's "
+"necessary associate protocol with the app."
+msgstr ""
+"Se consciente que en Windows, redirección con spice no es automático. Es "
+"necesario asociar el protocolo con la app"
+
+msgid "To make this possible, download"
+msgstr "Para hacer esto posible, descarga"
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+"o copia las siguientes líneas en un archivo ASCII y guarda con la extensión .reg, "
+"luego ejecuta el archivo."
+
+msgid "Login"
+msgstr "Conéctate"
+
+msgid "Welcome"
+msgstr "Bienvenido"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Se requiere de un visor para arrancar la máquina virtual."
+
+msgid "Virtual Machines"
+msgstr "Máquinas Virtuales"
+
+msgid "user"
+msgstr "usuario"
+
+msgid "password"
+msgstr "contraseña"
+
+msgid "Start session"
+msgstr "Iniciar sesión"
+
+msgid "Login with Intranet UPC's username."
+msgstr "Conectarse con el usuario de la Intranet de la UPC"
+
+msgid "bits) in your computer."
+msgstr "bits) en tu computadora."
+
+msgid "Permissions"
+msgstr "Permisos"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "puede cambiar los ajustes de las máquinas virtuales en posesión."
+
+msgid "can change the settings of any virtual machines."
+msgstr "puede cambiar los ajustes de cualquier máquina virtual."
+
+msgid "can change the settings of any virtual machines "
+msgstr "puede cambiar los ajustes de cualquier máquina virtual "
+
+msgid "cloned from one base owned by the user."
+msgstr "clonado desde una base en posesión del usuario."
+
+msgid "can clone public virtual machines."
+msgstr "puede clonar máquinas virtuales públicas."
+
+msgid "can clone any virtual machine."
+msgstr "puede clonar cualquier máquina virtual."
+
+msgid "can create bases."
+msgstr "puede crear bases."
+
+msgid "can create virtual machines."
+msgstr "puede crear máquinas virtuales."
+
+msgid "can grant permissions to other users"
+msgstr "puede otorgar permisos a otros usuarios"
+
+msgid "can hibernate any virtual machine."
+msgstr "puede hibernar cualquier máquina virtual."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr "puede hibernar clones de máquinas virtuales en posesión del usuario."
+
+msgid "can hibernate any clone."
+msgstr "puede hibernar cualquier clon."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "puede quitar cualquier máquina virtual en posesión del usuario."
+
+msgid "can remove any virtual machine."
+msgstr "puede quitar cualquier máquina virtual."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "puede quitar clones de máquinas virtuales en posesión del usuario."
+
+msgid "can remove any clone."
+msgstr "puede quitar cualquier clon."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr "puede tomar una captura de pantalla de cualquier máquina virtual en posesión del usuario"
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "puede tomar una captura de pantalla de cualquier máquina virtual."
+
+msgid "can shutdown any virtual machine."
+msgstr "puede apagar cualquier máquina virtual."
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "puede apagar clones de máquinas virtuales en posesión del usuario."
+
+msgid "Submit Query"
+msgstr "Enviar Consulta"
+
+msgid "From Template"
+msgstr "Desde Plantilla"
+
+msgid "From Machine"
+msgstr "Desde Máquina"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "Select Template"
+msgstr "Selecciona Plantilla"
+
+msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
+msgstr "Esta imagen ISO no está ya descargada. Puede tardar bastantes minutos, incluso horas hasta que el archivo sea recuperado de Internet."
+
+msgid "Download now"
+msgstr "Descargar ahora"
+
+msgid "Select ISO"
+msgstr "Seleccionar ISO"
+
+msgid "Template"
+msgstr "Plantilla"
+
+msgid "Disk Size: (GB)"
+msgstr "Tamaño del Disco: (GB)"
+
+msgid "Swap Size: (GB)"
+msgstr "Tamaño de Swap: (GB)"
+
+msgid "Ram: (GB)"
+msgstr "Ram: (GB)"
+
+msgid "Machine name is required."
+msgstr "El nombre de la máquina es necesario."
+
+msgid "Machine name can't exceed 20 characters."
+msgstr "El nombre de la máquina no puede superar los 20 carácteres."
+
+msgid "Backend selection is required."
+msgstr "Hace falta seleccionar un backend."
+
+msgid "ISO image selection is required."
+msgstr "Hace falta seleccionar una imagen de ISO."
+
+msgid "Template selection is required."
+msgstr "Hace falta seleccionar una plantilla."
+
+msgid "A machine with that name already exists."
+msgstr "Una máquina con ese nombre ya existe."
+
+msgid "The machine name must contain only alphabetic, numbers, dashes and points."
+msgstr "El nombre de la máquina debe contener solo carácteres alfanuméricos, líneas y puntos."
+
+msgid "Create"
+msgstr "Crear"
+
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+"puede cambiar los ajustes de cualquier máquina virtual clonada de una base "
+"propiedad del usuario."
+

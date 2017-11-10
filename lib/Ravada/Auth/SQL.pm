@@ -420,6 +420,33 @@ sub change_password {
     $sth->execute(sha1_hex($password), $self->name);
 }
 
+=head2 compare_password
+
+Changes the input with the password of an User
+
+    $user->compare_password();
+
+Arguments: password
+
+=cut
+
+sub compare_password {
+    my $self = shift;
+    my $password = shift or die "ERROR: password required\n";
+    
+    _init_connector();
+    
+    my $sth= $$CON->dbh->prepare("SELECT password FROM users WHERE name=?");
+    $sth->execute($self->name);
+    my $hex_pass = $sth->fetchrow();
+    if ($hex_pass eq sha1_hex($password)) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 =head2 language
 
   Updates or selects the language selected for an User
