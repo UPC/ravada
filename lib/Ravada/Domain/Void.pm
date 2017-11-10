@@ -227,7 +227,6 @@ sub add_volume {
             if !$valid_arg{$arg_name};
     }
     confess "Missing name " if !$args{name};
-    confess "Wrong target"  if !length($args{target});
 #    TODO
 #    confess "Missing size " if !$args{size};
 
