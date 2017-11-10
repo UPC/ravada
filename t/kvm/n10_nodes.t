@@ -81,8 +81,7 @@ sub test_sync {
     my ($vm_name, $node, $base, $clone) = @_;
 
     eval { $clone->rsync($node) };
-    like($@,'.') or return;
-    is($@,'') or return;
+    is(''.$@,'') or return;
     # TODO test synced files
 
     eval { $base->rsync($node) };
@@ -464,7 +463,7 @@ sub test_domain_already_started {
     is($clone->_vm->host, $node->host);
 
     eval { $clone->start(user_admin) };
-    is(''.$@,'') or exit;
+    is(''.$@,'',$clone->name) or exit;
     is($clone->is_active,1);
     is($clone->_vm->host, $node->host);
 
