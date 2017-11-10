@@ -627,7 +627,7 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, description FROM domains WHERE name=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, id_vm, description FROM domains WHERE name=?");
     $sth->execute($name);
 
     my $row = $sth->fetchrow_hashref;
