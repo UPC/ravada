@@ -121,7 +121,7 @@ sub _list_domains_local($self, %args) {
     my @domain;
     while (my $file = readdir $ls ) {
         my $domain = $self->_is_a_domain($file) or next;
-        next if defined $active && $domain->is_active eq $active;
+        next if defined $active && $active && !$domain->is_active;
         push @domain , ($domain);
     }
 
@@ -182,8 +182,8 @@ sub _list_domains_remote($self, %args) {
             warn $err   if $err;
             for my $file (split /\n/,$out) {
                 if ( my $domain = $self->_is_a_domain($file)) {
-                    next if defined $active
-                        && $domain->is_active eq $active;
+                    next if defined $active && $active
+                        && !$domain->is_active;
                     push @domain,($domain);
                 }
             }
