@@ -1927,4 +1927,7 @@ sub base_in_vm($self,$id_vm) {
     return $enabled;
 }
 
+sub is_local($self) {
+    return $self->_vm->is_local();
+}
 1;
