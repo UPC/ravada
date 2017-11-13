@@ -9,12 +9,16 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use LWP::UserAgent;
 use Moose;
+use Net::SSH2;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 with 'Ravada::VM';
 
@@ -30,7 +34,7 @@ has 'type' => (
 
 has 'vm' => (
     is => 'rw'
-    ,isa => 'Str'
+    ,isa => 'Any'
     ,builder => 'connect'
 );
 
@@ -39,7 +43,14 @@ has 'vm' => (
 
 sub connect {
     my $self = shift;
-    return 1;
+    return 1 if ! $self->host || $self->host eq 'localhost'
+                || $self->host eq '127.0.0.1';
+
+    my $ssh = $self->_connect_ssh() or die "ERROR: I can't connect to ".$self->host;
+    my $chan = $ssh->channel();
+    $chan->exec("mkdir ".$self->dir_img);
+
+    return $ssh;
 }
 
 sub disconnect {
@@ -100,29 +111,70 @@ sub dir_img {
     return $Ravada::Domain::Void::DIR_TMP;
 }
 
-sub list_domains {
-    my $self = shift;
-
+sub _list_domains_local($self) {
     opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
     my @domain;
     while (my $file = readdir $ls ) {
-        next if $file !~ /\.yml$/;
-        $file =~ s/\.\w+//;
-        $file =~ s/(.*)\.qcow.*$/$1/;
-        next if $file !~ /\w/;
-
-        my $domain = Ravada::Domain::Void->new(
-                    domain => $file
-                     , _vm => $self
-        );
-        next if !$domain->is_known;
+        my $domain = $self->_is_a_domain($file) or next;
         push @domain , ($domain);
     }
 
     closedir $ls;
 
     return @domain;
+}
+
+sub _is_a_domain($self, $file) {
+
+    chomp $file;
+
+    return if $file !~ /\.yml$/;
+    $file =~ s/\.\w+//;
+    $file =~ s/(.*)\.qcow.*$/$1/;
+    return if $file !~ /\w/;
+
+    my $domain = Ravada::Domain::Void->new(
+                    domain => $file
+                     , _vm => $self
+    );
+    return if !$domain->is_known;
+    return $domain;
+}
+
+sub _list_domains_remote($self) {
+    my $ssh = $self->vm();
+    $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
+    my $chan = $ssh->channel()
+        or $self->vm->die_with_error;
+
+    $chan->blocking(1);
+    my $cmd = "ls ".$self->dir_img;
+    $chan->exec($cmd)
+        or $ssh->die_with_error;
+
+    $chan->send_eof();
+
+    my @domain;
+    while( !$chan->eof) {
+        if ( my ($file, $err) = $chan->read2) {
+            warn $err   if $err;
+            chomp $file;
+            if ( my $domain = $self->_is_a_domain($file)) {
+                push @domain,($domain);
+            }
+        } else {
+            $ssh->die_with_error;
+        }
+    }
+    $ssh->disconnect();
+
+    return @domain;
+}
+
+sub list_domains($self) {
+    return $self->_list_domains_local() if $self->host eq 'localhost';
+    return $self->_list_domains_remote();
 }
 
 sub search_domain {
@@ -186,6 +238,10 @@ sub import_domain {
 sub security {
 }
 sub free_memory { return 1024*1024 }
+
+sub refresh_storage_pools {
+
+}
 #########################################################################3
 
 1;
