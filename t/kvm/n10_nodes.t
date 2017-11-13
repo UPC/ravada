@@ -319,6 +319,10 @@ sub test_start_twice {
 sub test_rsync_newer {
     my ($vm_name, $node) = @_;
 
+    if ($vm_name ne 'KVM') {
+        diag("[$vm_name] TODO rsync_newer, volumes not implemented");
+        return;
+    }
     my $domain = test_domain($vm_name, $node) or return;
     $domain->shutdown_now(user_admin)   if $domain->is_active;
 
@@ -504,10 +508,10 @@ sub test_domain_already_started {
     $sth->execute($clone->id);
     $sth->finish;
 
-    {
+    { # clone is active, it should be found in node
     my $clone3 = rvd_back->search_domain($clone->name);
     is($clone3->id, $clone->id);
-    is($clone3->_vm->host , $vm->host) or exit;
+    is($clone3->_vm->host , $node->host) or exit;
     }
 
     $clone->remove(user_admin);
