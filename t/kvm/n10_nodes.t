@@ -191,7 +191,11 @@ sub test_remove_domain {
 sub test_remove_domain_node {
     my ($node, $domain, $volumes) = @_;
 
-    diag("checking removed volumes from ".$node->name);
+    if ($node->type ne 'KVM') {
+        diag("SKIPPING: test_remove_domain_node skipped on ".$node->type);
+        return;
+    }
+    diag("[".$node->type."] checking removed volumes from ".$node->name);
     my %found = map { $_ => 0 } @$volumes;
 
     $node->_refresh_storage_pools();
@@ -244,6 +248,9 @@ sub test_sync_base {
 
     eval { $base->rsync($node); };
     is(''.$@,'');
+
+    is($base->base_in_vm($node->id),1,"Expecting domain ".$base->id
+        ." base in node ".$node->id ) or exit;
 
     eval { $clone->migrate($node); };
     is(''.$@,'');
@@ -479,7 +486,8 @@ sub test_domain_already_started {
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
     is($clone->_vm->host, 'localhost');
 
-    $clone->migrate($node);
+    eval { $clone->migrate($node) };
+    is(''.$@,'')                        or exit;
     is($clone->_vm->host, $node->host);
     is($clone->_vm->id, $node->id) or exit;
 
