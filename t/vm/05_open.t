@@ -48,7 +48,12 @@ my $security = encode_json({ transport => 'tcp' });
 
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
+
+    my $vm = rvd_back->search_vm($vm_type);
     my $exp_class = "Ravada::VM::$vm_type";
+
+    SKIP: {
+        skip("Skipping $exp_class on this system",10)   if !$vm;
 
     my $sth = $test->dbh->prepare("DELETE FROM vms WHERE vm_type=?");
     $sth->execute($vm_type);
@@ -68,6 +73,7 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     test_create_domain($vm, $vm_type) if rvd_back->search_vm($vm_type);
 
     $id++;
+    };
 }
 
 done_testing();
