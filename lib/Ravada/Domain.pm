@@ -1812,9 +1812,10 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
     for my $file ( $self->list_volumes(), @files_base) {
         $request->status("syncing","Tranferring $file to ".$node->host)
             if $request;
-        $rsync->exec(src => $file, dest => $node->host.":".$file );
+        $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
     }
     $node->refresh_storage_pools();
+    $self->_set_base_vm_db($node->id,1) if $self->is_base;
 }
 
 sub _connect_ssh($self, $node) {
@@ -1824,8 +1825,11 @@ sub _connect_ssh($self, $node) {
 sub _pre_migrate($self, $node) {
     return if !$self->id_base;
 
-
     my $base = Ravada::Domain->open($self->id_base);
+
+    die "ERROR: Base ".$base->name." files not migrated to ".$node->name
+        if !$base->base_in_vm($node->id);
+
     for my $file ( $base->list_files_base ) {
 
         my ($name) = $file =~ m{.*/(.*)};
@@ -1910,6 +1914,9 @@ sub set_base_vm($self, %args) {
 }
 
 sub base_in_vm($self,$id_vm) {
+
+    confess "ERROR: id_vm must be a number, it is '$id_vm'"
+        if $id_vm !~ /^\d+$/;
 
     confess "ERROR: Domain ".$self->name." is not a base"
         if !$self->is_base;
