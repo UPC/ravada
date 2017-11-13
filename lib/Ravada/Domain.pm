@@ -1295,6 +1295,8 @@ sub _update_id_vm {
     );
     $sth->execute($self->_vm->id, $self->id);
     $sth->finish;
+
+    $self->{_data}->{id_vm} = $self->_vm->id;
 }
 
 sub _add_iptable {
@@ -1813,7 +1815,7 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
             if $request;
         $rsync->exec(src => $file, dest => $node->host.":".$file );
     }
-    $node->_refresh_storage_pools();
+    $node->refresh_storage_pools();
 }
 
 sub _connect_ssh($self, $node) {
@@ -1843,6 +1845,12 @@ sub _pre_migrate($self, $node) {
 sub _post_migrate($self, $node) {
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
     $self->_update_id_vm($node);
+
+    $self->_vm($node);
+
+    # TODO: update db instead set this value
+    $self->{_migrated} = 1;
+
 }
 
 sub _set_base_vm_db($self, $id_vm, $value) {
