@@ -175,16 +175,20 @@ sub _list_domains_remote($self, %args) {
 
     my @domain;
     while( !$chan->eof) {
-        if ( my ($file, $err) = $chan->read2) {
+        if ( my ($out, $err) = $chan->read2) {
             warn $err   if $err;
-            chomp $file;
-            if ( my $domain = $self->_is_a_domain($file)) {
-                push @domain,($domain);
+            for my $file (split /\n/,$out) {
+                if ( my $domain = $self->_is_a_domain($file)) {
+                    next if defined $active
+                        && $domain->is_active eq $active;
+                    push @domain,($domain);
+                }
             }
         } else {
             $ssh->die_with_error;
         }
     }
+
     $ssh->disconnect();
 
     return @domain;
