@@ -522,7 +522,7 @@ sub type { 'Void' }
 sub migrate($self, $node) {
     my $rsync = File::Rsync->new(update => 1);
     for my $file ( $self->_config_file) {
-        $rsync->exec(src => $file, dest => $node->host.":".$file );
+        $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
     }
 
 }
