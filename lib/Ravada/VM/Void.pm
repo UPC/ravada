@@ -111,12 +111,18 @@ sub dir_img {
     return $Ravada::Domain::Void::DIR_TMP;
 }
 
-sub _list_domains_local($self) {
+sub _list_domains_local($self, %args) {
+    my $active = delete $args{active};
+
+    confess "Wrong arguments ".Dumper(\%args)
+        if keys %args;
+
     opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
 
     my @domain;
     while (my $file = readdir $ls ) {
         my $domain = $self->_is_a_domain($file) or next;
+        next if defined $active && $domain->is_active eq $active;
         push @domain , ($domain);
     }
 
@@ -142,11 +148,23 @@ sub _is_a_domain($self, $file) {
     return $domain;
 }
 
-sub _list_domains_remote($self) {
+sub _list_domains_remote($self, %args) {
+
+    my $active = delete $args{active};
+
+    confess "Wrong arguments ".Dumper(\%args) if keys %args;
+
     my $ssh = $self->vm();
-    $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
-    my $chan = $ssh->channel()
-        or $self->vm->die_with_error;
+    $ssh = $self->_ssh_connect()    if !$ssh || !ref($ssh);
+    my $chan;
+    for ( 1 .. 5 ) {
+        $chan = $ssh->channel();
+        last if $chan;
+        warn "retry $_ channel";
+        $ssh = $self->_ssh_connect();
+    }
+    $self->vm->die_with_error   if !$chan;
+
 
     $chan->blocking(1);
     my $cmd = "ls ".$self->dir_img;
