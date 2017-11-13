@@ -10,7 +10,7 @@ use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
-use YAML qw(LoadFile DumpFile);
+use YAML qw(Load Dump  LoadFile DumpFile);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -99,17 +99,44 @@ sub _store {
 
     my ($var, $value) = @_;
 
+    my $data = $self->_load();
+    $data->{$var} = $value;
+
+    eval { DumpFile($self->_config_file(), $data) };
+    chomp $@;
+    confess $@ if $@;
+
+}
+
+sub _load($self) {
+    return $self->_load_remote()    if !$self->is_local();
     my $data = {};
 
     my $disk = $self->_config_file();
     $data = LoadFile($disk)   if -e $disk;
 
-    $data->{$var} = $value;
+    return $data;
+}
 
-    eval { DumpFile($disk, $data) };
-    chomp $@;
-    confess $@ if $@;
 
+sub _load_remote($self) {
+    my ($disk) = $self->_config_file();
+
+    my ($ssh, $chan) = $self->_vm->_ssh_channel();
+
+    $chan->blocking(1);
+
+    $chan->exec("cat $disk") or $ssh->die_with_error;
+    $chan->send_eof();
+
+    my $yaml = '';
+    while( !$chan->eof) {
+        my ($out, $err) = $chan->read2;
+        die $err if $err;
+        $yaml .= $out   if $out;
+    }
+    my $data = Load($yaml);
+    return $data;
 }
 
 sub _store_remote($self, $var, $value) {
