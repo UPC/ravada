@@ -155,7 +155,7 @@ sub _ssh_channel($self) {
         $chan = $ssh->channel();
         last if $chan;
         warn "retry $_ channel";
-        $ssh = $self->_ssh_connect();
+        $ssh = $self->_connect_ssh();
     }
     $self->vm->die_with_error   if !$chan;
     return ($ssh, $chan);
@@ -188,7 +188,7 @@ sub _list_domains_remote($self, %args) {
                 }
             }
         } else {
-            $ssh->die_with_error;
+#            $ssh->die_with_error;
         }
     }
 
