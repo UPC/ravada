@@ -1288,7 +1288,7 @@ sub _post_start {
     }
 }
 
-sub _update_id_vm {
+sub _update_id_vm($self) {
     my $self = shift;
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set id_vm=? where id = ?"
@@ -1844,9 +1844,8 @@ sub _pre_migrate($self, $node) {
 
 sub _post_migrate($self, $node) {
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
-    $self->_update_id_vm($node);
-
     $self->_vm($node);
+    $self->_update_id_vm();
 
     # TODO: update db instead set this value
     $self->{_migrated} = 1;
