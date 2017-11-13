@@ -46,8 +46,7 @@ sub connect {
     return 1 if ! $self->host || $self->host eq 'localhost'
                 || $self->host eq '127.0.0.1';
 
-    my $ssh = $self->_connect_ssh() or die "ERROR: I can't connect to ".$self->host;
-    my $chan = $ssh->channel();
+    my ($ssh,$chan) = $self->_ssh_channel();
     $chan->exec("mkdir ".$self->dir_img);
 
     return $ssh;
@@ -148,14 +147,9 @@ sub _is_a_domain($self, $file) {
     return $domain;
 }
 
-sub _list_domains_remote($self, %args) {
-
-    my $active = delete $args{active};
-
-    confess "Wrong arguments ".Dumper(\%args) if keys %args;
-
+sub _ssh_channel($self) {
     my $ssh = $self->vm();
-    $ssh = $self->_ssh_connect()    if !$ssh || !ref($ssh);
+    $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
     my $chan;
     for ( 1 .. 5 ) {
         $chan = $ssh->channel();
@@ -164,7 +158,16 @@ sub _list_domains_remote($self, %args) {
         $ssh = $self->_ssh_connect();
     }
     $self->vm->die_with_error   if !$chan;
+    return ($ssh, $chan);
+}
 
+sub _list_domains_remote($self, %args) {
+
+    my $active = delete $args{active};
+
+    confess "Wrong arguments ".Dumper(\%args) if keys %args;
+
+    my ($ssh, $chan) = $self->_ssh_channel();
 
     $chan->blocking(1);
     my $cmd = "ls ".$self->dir_img;
@@ -195,8 +198,8 @@ sub _list_domains_remote($self, %args) {
 }
 
 sub list_domains($self, %args) {
-    return $self->_list_domains_local() if $self->host eq 'localhost';
-    return $self->_list_domains_remote();
+    return $self->_list_domains_local(%args) if $self->host eq 'localhost';
+    return $self->_list_domains_remote(%args);
 }
 
 sub search_domain {
