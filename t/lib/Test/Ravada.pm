@@ -238,6 +238,32 @@ sub _remove_old_domains_vm {
     }
 
     _remove_old_domains_kvm($vm)    if $vm->type =~ /qemu|kvm/i;
+    _remove_old_domains_void($vm)    if $vm->type =~ /void/i;
+}
+
+sub _remove_old_domains_void {
+    my $vm = shift;
+    return _remove_old_domains_void_remote($vm) if !$vm->is_local;
+
+    opendir my $dir, $vm->dir_img or return;
+    while ( my $file = readdir($dir) ) {
+        my $path = $vm->dir_img."/".$file;
+        next if ! -f $path
+            || $path !~ m{\.(yml|qcow|img)$};
+        unlink $path or die "$! $path";
+    }
+    closedir $dir;
+}
+
+sub _remove_old_domains_void_remote {
+    my $vm = shift;
+    my ($ssh, $chan) = $vm->_ssh_channel();
+    $chan->exec("rm -f ".$vm->dir_img."/*yml "
+                    .$vm->dir_img."/*qcow "
+                    .$vm->dir_img."/*img"
+    );
+    my ($out, $err) = $chan->read2();
+    warn $err if $err;
 }
 
 sub _remove_old_domains_kvm {
