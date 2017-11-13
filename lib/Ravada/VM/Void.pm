@@ -47,7 +47,9 @@ sub connect {
                 || $self->host eq '127.0.0.1';
 
     my ($ssh,$chan) = $self->_ssh_channel();
-    $chan->exec("mkdir ".$self->dir_img);
+    $chan->exec("ls ".$self->dir_img." || mkdir ".$self->dir_img);
+    my ($out, $err) = $chan->read2();
+    die $err if $err;
 
     return $ssh;
 }
@@ -179,7 +181,7 @@ sub _list_domains_remote($self, %args) {
     my @domain;
     while( !$chan->eof) {
         if ( my ($out, $err) = $chan->read2) {
-            warn $err   if $err;
+            confess $err   if $err;
             for my $file (split /\n/,$out) {
                 if ( my $domain = $self->_is_a_domain($file)) {
                     next if defined $active && $active
