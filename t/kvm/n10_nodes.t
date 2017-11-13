@@ -275,6 +275,11 @@ sub test_sync_base {
 sub test_start_twice {
     my ($vm_name, $node) = @_;
 
+    if ($vm_name ne 'KVM') {
+        diag("SKIPPED: start_twice not available on $vm_name");
+        return;
+    }
+
     my $vm =rvd_back->search_vm($vm_name);
     my $base = create_domain($vm_name);
     my $clone = $base->clone(
@@ -510,7 +515,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('KVM') {
+for my $vm_name ('Void','KVM') {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
