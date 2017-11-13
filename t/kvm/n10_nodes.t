@@ -47,7 +47,7 @@ sub test_node_renamed {
         connector => $test->connector
         ,config => "t/etc/ravada.conf"
     );
-    is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm})) or exit;
+    is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm}),Dumper(rvd_back->vm)) or exit;
 }
 
 sub test_node {
@@ -70,10 +70,13 @@ sub test_node {
 
     ok($node->id) or exit;
 
+    ok(!$node->is_local,"[$vm_name] node remote");
+
     my $node2 = Ravada::VM->open($node->id);
     is($node2->id, $node->id);
     is($node2->name, $node->name);
     is($node2->public_ip, $node->public_ip);
+    ok(!$node2->is_local,"[$vm_name] node remote") or exit;
     return $node;
 }
 
@@ -430,12 +433,20 @@ sub test_clone_not_in_node {
         eval { $clone1->start(user_admin) };
         is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or exit;
         is($clone1->is_active,1);
+        ok($node->list_domains(active => 1)
+                            ,"[$vm_name] Expecting active domains")
+            or exit;
 
     # search the domain in the underlying VM
-        my $virt_domain;
-        eval { $virt_domain = $clone1->_vm->vm->get_domain_by_name($clone1->name) };
-        is(''.$@,'');
-        ok($virt_domain,"Expecting ".$clone1->name." in ".$clone1->_vm->host);
+        if ($vm_name eq 'KVM') {
+            my $virt_domain;
+            eval { $virt_domain = $clone1->_vm->vm
+                                ->get_domain_by_name($clone1->name) };
+            is(''.$@,'');
+            ok($virt_domain,"Expecting ".$clone1->name." in "
+                .$clone1->_vm->host);
+        }
+        warn "started on ".$clone1->_vm->host;
         last if $clone1->_vm->host ne $clones[0]->_vm->host;
     }
 
@@ -466,12 +477,22 @@ sub test_domain_already_started {
 
     $clone->migrate($node);
     is($clone->_vm->host, $node->host);
+    is($clone->_vm->id, $node->id) or exit;
+
+    is($clone->_data('id_vm'), $node->id) or exit;
+
+    {
+        my $clone_copy = $node->search_domain($clone->name);
+        ok($clone_copy,"[$vm_name] expecting domain ".$clone->name
+                        ." in node ".$node->host
+        ) or exit;
+    }
 
     eval { $clone->start(user_admin) };
     is(''.$@,'',$clone->name) or exit;
     is($clone->is_active,1);
+    is($clone->_vm->id, $node->id)  or exit;
     is($clone->_vm->host, $node->host)  or exit;
-    is($clone->_data('id_vm'), $vm->id) or exit;
 
     {
     my $clone2 = rvd_back->search_domain($clone->name);
@@ -486,7 +507,7 @@ sub test_domain_already_started {
     {
     my $clone3 = rvd_back->search_domain($clone->name);
     is($clone3->id, $clone->id);
-    is($clone3->_vm->host , $clone->_vm->host);
+    is($clone3->_vm->host , $vm->host) or exit;
     }
 
     $clone->remove(user_admin);
