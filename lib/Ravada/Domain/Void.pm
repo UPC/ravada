@@ -95,6 +95,8 @@ sub is_paused {
 sub _store {
     my $self = shift;
 
+    return $self->_store_remote(@_) if !$self->_vm->is_local;
+
     my ($var, $value) = @_;
 
     my $data = {};
@@ -110,8 +112,28 @@ sub _store {
 
 }
 
+sub _store_remote($self, $var, $value) {
+    my ($disk) = $self->_config_file();
+
+    my ($ssh, $chan) = $self->_vm->_ssh_channel();
+
+    $chan->blocking(1);
+
+    my $data = $self->_load_remote();
+    $data->{$var} = $value;
+    $chan->exec("cat > $disk") or $ssh->die_with_error;
+
+    print $chan Dump($data);
+    $chan->send_eof();
+
+    die $self->_config_file;
+    return $data->{$var};
+}
+
 sub _value{
     my $self = shift;
+
+    return $self->_value_remote(@_)  if !$self->_vm->is_local;
 
     my ($var) = @_;
 
@@ -122,6 +144,28 @@ sub _value{
     
     return $data->{$var};
 
+}
+
+sub _value_remote($self,@) {
+    my ($var) = @_;
+    my ($disk) = $self->_config_file();
+
+    my ($ssh, $chan) = $self->_vm->_ssh_channel();
+
+    $chan->blocking(1);
+
+    $chan->exec("cat $disk") or $ssh->die_with_error;
+    $chan->send_eof();
+
+    my $yaml = '';
+    while( !$chan->eof) {
+        my ($out, $err) = $chan->read2;
+        die $err if $err;
+        $yaml .= $out;
+    }
+    my $data = Load($yaml);
+
+    return $data->{$var};
 }
 
 
