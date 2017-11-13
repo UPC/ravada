@@ -291,6 +291,10 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub refresh_storage_pools($self) {
+    $self->_refresh_storage_pools();
+}
+
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
         eval { $pool->refresh() };
