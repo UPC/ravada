@@ -6,10 +6,14 @@ use strict;
 use Carp qw(cluck croak);
 use Data::Dumper;
 use File::Copy;
+use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(LoadFile DumpFile);
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 with 'Ravada::Domain';
 
@@ -477,8 +481,12 @@ sub hybernate { confess "Not supported"; }
 
 sub type { 'Void' }
 
-sub migrate {
-    warn "migrating todo";
+sub migrate($self, $node) {
+    my $rsync = File::Rsync->new(update => 1);
+    for my $file ( $self->_config_file) {
+        $rsync->exec(src => $file, dest => $node->host.":".$file );
+    }
+
 }
 
 1;
