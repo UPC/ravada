@@ -1642,10 +1642,6 @@ sub migrate($self, $node) {
     $dom = $node->vm->define_domain($doc->toString())   if !$dom;
 
     $self->domain($dom);
-    $self->_vm($node);
-
-    # TODO: update db instead set this value
-    $self->{_migrated} = 1;
 }
 
 1;
