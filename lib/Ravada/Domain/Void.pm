@@ -153,48 +153,15 @@ sub _store_remote($self, $var, $value) {
     print $chan Dump($data);
     $chan->send_eof();
 
-    die $self->_config_file;
     return $data->{$var};
 }
 
-sub _value{
-    my $self = shift;
+sub _value($self,$var){
 
-    return $self->_value_remote(@_)  if !$self->_vm->is_local;
-
-    my ($var) = @_;
-
-    my ($disk) = $self->_config_file();
-
-    my $data = {} ;
-    $data = LoadFile($disk) if -e $disk;
-    
+    my $data = $self->_load();
     return $data->{$var};
 
 }
-
-sub _value_remote($self,@) {
-    my ($var) = @_;
-    my ($disk) = $self->_config_file();
-
-    my ($ssh, $chan) = $self->_vm->_ssh_channel();
-
-    $chan->blocking(1);
-
-    $chan->exec("cat $disk") or $ssh->die_with_error;
-    $chan->send_eof();
-
-    my $yaml = '';
-    while( !$chan->eof) {
-        my ($out, $err) = $chan->read2;
-        die $err if $err;
-        $yaml .= $out;
-    }
-    my $data = Load($yaml);
-
-    return $data->{$var};
-}
-
 
 sub shutdown {
     my $self = shift;
@@ -283,6 +250,9 @@ Adds a new volume to the domain
 sub add_volume {
     my $self = shift;
     confess "Wrong arguments " if scalar@_ % 1;
+    confess "ERROR: add_volume on for local"
+        if !$self->is_local();
+
     my %args = @_;
 
     my $suffix = ".img";
@@ -308,8 +278,7 @@ sub add_volume {
     $args{type} = 'file' if !$args{type};
     delete $args{vm}   if defined $args{vm};
 
-    my $data = { };
-    $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data = $self->_load();
     $args{target} = _new_target($data) if !$args{target};
 
     $data->{device}->{$args{name}} = \%args;
@@ -379,8 +348,7 @@ sub disk_device {
 
 sub list_volumes {
     my $self = shift;
-    my $data;
-    $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data = $self->_load();
 
     return () if !exists $data->{device};
     my @vol;
@@ -394,8 +362,7 @@ sub list_volumes {
 
 sub list_volumes_target {
     my $self = shift;
-    my $data;
-    $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data = $self->_load();
 
     return () if !exists $data->{device};
     my @vol;
