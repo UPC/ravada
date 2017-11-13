@@ -514,6 +514,12 @@ sub list_drivers($self, $name=undef) {
     return Ravada::Domain::drivers(undef,$name,$self->type);
 }
 
+sub is_local($self) {
+    return $self->host eq 'localhost'
+        || $self->host eq '127.0.0,1'
+        || !$self->host;
+}
+
 sub _connect_ssh($self) {
     my $ssh2 = Net::SSH2->new();
     $ssh2->timeout(20000);
