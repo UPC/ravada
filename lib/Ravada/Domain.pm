@@ -1817,16 +1817,7 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
 }
 
 sub _connect_ssh($self, $node) {
-    my $ssh2 = Net::SSH2->new();
-    $ssh2->timeout(20000);
-    $ssh2->connect($node->host) or $ssh2->die_with_error;
-    $ssh2->check_hostkey()      or $ssh2->die_with_error;
-    my @pwd = getpwuid($>);
-    my $home = $pwd[7];
-    $ssh2->auth_publickey("root"
-        ,"$home/.ssh/id_rsa.pub"
-        ,"$home/.ssh/id_rsa")    or $ssh2->die_with_error;
-    return $ssh2;
+    return $node->_connect_ssh();
 }
 
 sub _pre_migrate($self, $node) {
