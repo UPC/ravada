@@ -470,7 +470,8 @@ sub test_domain_already_started {
     eval { $clone->start(user_admin) };
     is(''.$@,'',$clone->name) or exit;
     is($clone->is_active,1);
-    is($clone->_vm->host, $node->host);
+    is($clone->_vm->host, $node->host)  or exit;
+    is($clone->_data('id_vm'), $vm->id) or exit;
 
     {
     my $clone2 = rvd_back->search_domain($clone->name);
