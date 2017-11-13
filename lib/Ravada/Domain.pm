@@ -1821,9 +1821,11 @@ sub _connect_ssh($self, $node) {
     $ssh2->timeout(20000);
     $ssh2->connect($node->host) or $ssh2->die_with_error;
     $ssh2->check_hostkey()      or $ssh2->die_with_error;
+    my @pwd = getpwuid($>);
+    my $home = $pwd[7];
     $ssh2->auth_publickey("root"
-        ,"/root/.ssh/id_rsa.pub"
-        ,"/root/.ssh/id_rsa")    or $ssh2->die_with_error;
+        ,"$home/.ssh/id_rsa.pub"
+        ,"$home/.ssh/id_rsa")    or $ssh2->die_with_error;
     return $ssh2;
 }
 
