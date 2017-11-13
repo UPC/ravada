@@ -227,9 +227,9 @@ sub list_networks {
     return Ravada::NetInterface::Void->new();
 }
 
-sub search_volume {
-    my $self = shift;
-    my $pattern = shift;
+sub search_volume($self, $pattern) {
+
+    return $self->_search_volume_remote($pattern)   if !$self->is_local;
 
     opendir my $ls,$self->dir_img or die $!;
     while (my $file = readdir $ls) {
@@ -239,6 +239,32 @@ sub search_volume {
     return;
 }
 
+sub _search_volume_remote($self, $pattern) {
+
+    my ($ssh, $chan) = $self->_ssh_channel();
+
+    $chan->blocking(1);
+    my $cmd = "ls ".$self->dir_img;
+    $chan->exec($cmd)
+        or $ssh->die_with_error;
+
+    $chan->send_eof();
+
+    my $found;
+    while( !$chan->eof) {
+        if ( my ($out, $err) = $chan->read2) {
+            warn $err   if $err;
+            for my $file (split /\n/,$out) {
+                $found = $self->dir_img."/".$file if $file eq $pattern;
+                last if $found;
+            }
+        }
+    }
+
+    $ssh->disconnect();
+    return $found;
+}
+
 sub search_volume_path {
     return search_volume(@_);
 }
@@ -246,6 +272,8 @@ sub search_volume_path {
 sub search_volume_path_re {
     my $self = shift;
     my $pattern = shift;
+
+    die "TODO remote" if !self->is_local;
 
     opendir my $ls,$self->dir_img or die $!;
     while (my $file = readdir $ls) {
