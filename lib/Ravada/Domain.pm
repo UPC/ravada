@@ -1289,7 +1289,6 @@ sub _post_start {
 }
 
 sub _update_id_vm($self) {
-    my $self = shift;
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set id_vm=? where id = ?"
     );
