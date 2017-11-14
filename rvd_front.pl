@@ -1181,6 +1181,7 @@ sub _message_timeout {
     my $domain = shift;
     my $msg_timeout = "in ".int($domain->run_timeout / 60 )
         ." minutes.";
+
     for my $request ( $domain->list_requests ) {
         if ( $request->command eq 'shutdown' ) {
             my $t1 = Time::Piece->localtime($request->at_time);
@@ -1710,10 +1711,11 @@ sub list_bases_anonymous {
 
     return access_denied($c)    if !scalar @$bases_anonymous;
 
-    $c->render(template => 'main/list_bases'
+    $c->render(template => 'main/list_bases2'
         , _logged_in => undef
         , _anonymous => 1
-        , _user => undef
+        , machines => $bases_anonymous
+        , user => undef
         , url => undef
     );
 }
