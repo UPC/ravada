@@ -739,7 +739,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, id_base, is_public FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();
