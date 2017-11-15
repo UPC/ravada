@@ -1,8 +1,7 @@
-Update your Ravada
-==================
+Upgrade Ravada 
+==============
 
-In order to update your ravada, you have to do a few steps from the
-install and production documents that we will show here.
+In order to upgrade Ravada, you have to do a few steps:
 
 Steps for a clean update
 ------------------------
