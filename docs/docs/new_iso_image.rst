@@ -20,8 +20,9 @@ Then you have to tell the storage engine that you changed a file manually.
     $ sudo virsh pool-refresh default
     $ sudo virsh pool-refresh pool2
  
- 
-After that, Ravada is able to use the ISO when selecting it while creating a machine.
+Reload the *new machine* form so the file you just uploaded shows up in the ISO list.
+
+After that, Ravada is able to use he ISO when selecting it while creating a machine.
 Also, ISOs that were downloaded from Ravada can also be found in this directory.
 
 
