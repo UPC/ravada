@@ -35,9 +35,8 @@ Ubuntu
 ------
 
 We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__. There we have
-also development releases. Try them if you want to help us testing
-new features.
+repository <http://infoteleco.upc.edu/img/debian/>`__. We fixed some
+issues from the last release, we advice you install release 0.2.11-rc1.
 
 *libmojolicious-plugin-renderfile-perl* package is available only in recent Ubuntus. Try  this first:
 
@@ -56,8 +55,8 @@ Then install the ravada package, notice it show some errors, it is ok, keep read
  
 ::
  
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.10_all.deb
-    $ sudo dpkg -i ravada_0.2.10_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.11-rc1_all.deb
+    $ sudo dpkg -i ravada_0.2.11-rc1_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
