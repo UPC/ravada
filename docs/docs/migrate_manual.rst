@@ -1,0 +1,141 @@
+Virtual Machine Manual Migration
+================================
+
+If you have several Ravada servers you may want to copy a virtual
+machine from one to another.
+
+In this example we copy the base for a virtual machine called *Lubuntu-1704*.
+
+Temporary space in destination
+------------------------------
+
+At the destination server, create a temporary directory so you can store
+the volumes when you copy them. This directory must belong to a user that
+can do ssh from origin to destination:
+
+::
+
+    root@destination:~# mkdir /var/lib/libvirt/images/tmp
+    root@destination:~# chown frankie /var/lib/libvirt/images/tmp
+
+Import the Base
+---------------
+
+Copy the Base definition
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+First copy the base definition file from server origin to destination. You need an user
+in the destination machine and ssh connection from each other.
+
+::
+
+    root@origin:~# virsh dumpxml Lubuntu1704 > Lubuntu1704.xml
+    root@origin:~# scp Lubuntu1704.xml frankie@dst.domain:
+
+Copy the volumes
+~~~~~~~~~~~~~~~~
+
+The volumes have a backing file, you must find out what it is so you can copy
+to destination.
+
+::
+
+    root@origin:~# grep source Lubuntu1704.xml
+    <source file='/var/lib/libvirt/images/Lubuntu1704-vda-X18J.img'/>
+    root@origin:~# qemu-img info /var/lib/libvirt/images/base-vda-X18J.img | grep -i backing
+    backing file: /var/lib/libvirt/images/Lubuntu1704-vda-X18J.ro.qcow2
+    root@origin:~# rsync -av /var/lib/libvirt/images/base-vda-X18J.ro.qcow2 frankie@dst.domain:/var/lib/libvirt/images/tmp
+    root@origin:~# rsync -av /var/lib/libvirt/images/Lubuntu1704-vda-X18J.img frankie@dst.domain:/var/lib/libvirt/images/tmp
+
+
+Move the volumes on destination
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You just copied the data on a temporary directory available to the user. That must be copied
+to the actual storage pool as root. Make sure you don't have similar volumes there because
+that procedure will overwrite them:
+
+::
+
+    root@dst:/home/frankie# cd /var/lib/libvirt/images/tmp
+    root@dst:/var/lib/libvirt/images/tmp# mv Lubuntu1704-* ../
+    root@dst:/var/lib/libvirt/images/tmp# chown root ../ Lubuntu1704-*
+
+Define the base on destination
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Go to the destination server and define the virtual machine base with the XML
+config you copied before
+
+::
+
+    root@dst:~# cd ~frankie/
+    root@dst:/home/frankie# virsh define Lubuntu1704.xml
+    Domain base defined from Lubuntu1704.xml
+
+Import the base to Ravada on destination
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Run this command and you should see the base on the Ravada web admin page.
+
+::
+
+    root@dst:~# rvd_back --import-domain Lubuntu1704
+
+
+Importing clones
+----------------
+
+Now if you want to import a clone too, first you have to ask the clone owner to
+start the machine on destination. Then you have to copy the volumes from origin
+and overwrite what has just been created on destination.
+
+
+Create a clone
+~~~~~~~~~~~~~~
+
+The owner of the original clone must create a clone in destination using Ravada.
+That will create a basic virtual machine with the same name
+owned by the correct user. Stop the domain on destination:
+
+::
+
+    root@dst:~# virsh shutdown Lubuntu1704-juan-ramon
+
+Mke sure it is stopped
+
+::
+
+    root@dst:~# virsh dominfo Lubuntu1704-juan-ramon
+
+Copy the clone volumes
+~~~~~~~~~~~~~~~~~~~~~~
+
+Find out what are the clone volume files, and copy them to the temporary space
+in destination:
+
+::
+
+    root@origin:~# virsh dumpxml Lubuntu1704-juan-ramon | grep "source file" | grep -v ".ro."
+    <source file='/var/lib/libvirt/images/Lubuntu1704-juan-ramon-vda-kg.qcow2'/>
+    root@origin:~# rsync -av /var/lib/libvirt/images/Lubuntu1704-juan-ramon-vda-kg.qcow2 frankie@dst:/var/lib/libvirt/images/tmp/
+
+Start the clone on destination
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+First move the volumes to the right place, notice in destination the volumes
+have different names.
+
+
+
+::
+
+    root@dst:~# virsh dumpxml Lubuntu1704-juan-ramon | grep source
+    <source file='/var/lib/libvirt/images.2/Lubuntu1704-juan-ramon-vda-nz.qcow2'/>
+    root@dst:~# cd /var/lib/libvirt/images/tmp/
+    root@dst:/var/lib/libvirt/images/tmp# mv Lubuntu1704-juan-ramon-vda-jz.qcow2 ../Lubuntu1704-juan-ramon-vda-nz.qcow2
+    root@dst:~# chown root /var/lib/libvirt/images/Lubuntu1704-juan-ramon-*
+
+Hopefully then you can start the clone. It is a delicate procedure that must be
+followed carefully, please consider helping with this document if you have any
+suggestions.
