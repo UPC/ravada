@@ -21,6 +21,8 @@ my %ARG_CREATE_DOM = (
 );
 our $TIMEOUT_SHUTDOWN = 10;
 
+our %SKIP_DEFAULT_VALUE = map { $_ => 1 } qw(image jpeg playback streaming zlib);
+
 ################################################################
 sub test_create_domain {
     my $vm_name = shift;
@@ -66,8 +68,10 @@ sub test_drivers_id {
 
     my $driver_type = $domain->drivers($type);
 
-    my $value = $driver_type->get_value();
-    ok($value);
+    if (!$SKIP_DEFAULT_VALUE{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value,"[$vm_name] Expecting a value for driver $type");
+    }
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
@@ -121,7 +125,7 @@ sub test_settings {
     my $vm_name = shift;
 
     for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
-        next if $driver->name ne 'video';
+#        next if $driver->name ne 'video';
         diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_id($vm_name, $driver->name);
     }

@@ -171,7 +171,17 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        zesty => {
+        artful => {
+                    name => 'Ubuntu Artful Aardvak'
+            ,description => 'Ubuntu 17.10 Artful Aardvak 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/17.10/'
+                ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => ,'http://releases.ubuntu.com/17.10/MD5SUMS'
+        }
+        ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
             ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
                    ,arch => 'amd64'
@@ -202,6 +212,16 @@ sub _update_isos {
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
         }
+        ,xubuntu_artful => {
+            name => 'Xubuntu Artful Aardvark'
+            ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/mini.iso'
+            ,rename_file => 'xubuntu_artful.iso'
+        }
         ,xubuntu_zesty => {
             name => 'Xubuntu Zesty Zapus'
             ,description => 'Xubuntu 17.04 Zesty Zapus 64 bits'
@@ -220,6 +240,14 @@ sub _update_isos {
             ,xml_volume => 'yakkety64-volume.xml'
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
             ,rename_file => 'xubuntu_xenial_mini.iso'
+        }
+       ,lubuntu_aardvark => {
+            name => 'Lubuntu Artful Aardvark'
+            ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/lubuntu-17.10-desktop-amd64.iso'
+            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/MD5SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
         }
         ,lubuntu_zesty => {
             name => 'Lubuntu Zesty Zapus'
