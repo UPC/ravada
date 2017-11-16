@@ -84,6 +84,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
 
    docs/custom
    docs/custom_login
+   docs/advanced_settings
    docs/new_documentation
    docs/auth_ldap
    devel-docs/translations
