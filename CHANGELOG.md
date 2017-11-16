@@ -17,3 +17,4 @@
 - Out of unique uuids in KVM [\#439]
 - Fixed MAC generation [\#443]
 - Error at machine settings graphics [\#443]
+- Unsupported machine type [\#390]
