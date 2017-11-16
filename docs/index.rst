@@ -73,6 +73,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/windows_clients
    docs/change_windows_driver_to_virtio
    docs/config_console
+   docs/migrate_manual
 
 .. _feature-docs:
 
