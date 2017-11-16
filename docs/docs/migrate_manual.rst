@@ -59,7 +59,7 @@ that procedure will overwrite them:
 
     root@dst:/home/frankie# cd /var/lib/libvirt/images/tmp
     root@dst:/var/lib/libvirt/images/tmp# mv Lubuntu1704-* ../
-    root@dst:/var/lib/libvirt/images/tmp# chown root ../ Lubuntu1704-*
+    root@dst:/var/lib/libvirt/images/tmp# chown root ../Lubuntu1704-*
 
 Define the base on destination
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
