@@ -18,16 +18,13 @@ msgstr ""
 msgid "Ravada broker"
 msgstr ""
 
-msgid "Name of the machine"
+msgid "Machine name"
 msgstr ""
 
 msgid "Tools"
 msgstr ""
 
 msgid "Machines list"
-msgstr ""
-
-msgid "Users"
 msgstr ""
 
 msgid "Choose a machine to start"
@@ -78,9 +75,6 @@ msgstr ""
 msgid "About"
 msgstr ""
 
-msgid "Messages"
-msgstr ""
-
 msgid "Mark all as read"
 msgstr ""
 
@@ -93,7 +87,7 @@ msgstr ""
 msgid "I want to change my password"
 msgstr ""
 
-msgid "I want to change my Language"
+msgid "I want to change my language"
 msgstr ""
 
 msgid "Language:"
@@ -126,22 +120,16 @@ msgstr ""
 msgid "Password is too short"
 msgstr ""
 
-msgid "Password fields are not matching"
+msgid "Password fields do not match"
 msgstr ""
 
 msgid "Some of the password fields are empty"
-msgstr ""
-
-msgid "Public"
 msgstr ""
 
 msgid "Status"
 msgstr ""
 
 msgid "Actions"
-msgstr ""
-
-msgid "Machines"
 msgstr ""
 
 msgid "Down"
@@ -220,9 +208,6 @@ msgid "Restore"
 msgstr ""
 
 msgid "Hibernate"
-msgstr ""
-
-msgid "Shutdown"
 msgstr ""
 
 msgid "Action"

@@ -10,7 +10,7 @@
 <div class="panel-body">
     <div class="col-lg-12">
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
-        <strong>Error!</strong> Backend no available!
+        <strong><%=l 'Error!' %></strong><%=l 'Backend no available!' %>
       </div>
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
@@ -50,7 +50,7 @@
                               align="right">show clones</a>
                             <a ng-show="!hide_clones" ng-click="hideClones()"
                               class="label label-primary"
-                              align="right">hide clones</a>
+                              align="right"><%=l 'hide clones' %></a>
                         </div>
 %                     }
                     </th>
@@ -142,9 +142,9 @@
                        </a>
 %			}
                       </div>
-                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">process</a></div>
+                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
-                          ng-cloak>This Machine is a base</div>
+                          ng-cloak><%=l 'This Machine is a base' %></div>
                     </td>
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
@@ -154,7 +154,7 @@
                           <a align="right" href="/machine/settings/{{child.id}}.html"
                           title ="Machine settings"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
-                          <span style="color:gray">[ Cloned ]</span>
+                          <span style="color:gray">[ <%=l 'Cloned' %> ]</span>
                       </td>
                       <td class="lgMachToggle">
                           <i ng-show="{{child.has_clones}}" class="fa fa-check" aria-hidden="true"
@@ -212,7 +212,7 @@
                            <i class="fa fa-camera" aria-hidden="true"></i>
                          </a>
                         </div>
-                        <div ng-show="{{child.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{child.is_locked}}.html">process</a></div>
+                        <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine locked by' %><a href="/request/{{child.is_locked}}.html"> <%=l 'process' %></a></div>
                       </td>
                     </tr>
                     <tr ng-repeat-end ng-hide="true"></tr>

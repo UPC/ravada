@@ -5,11 +5,9 @@
         </div>
 %   }
 %   my $driver = $domain->drivers("image");
-%   my ($first, $second) = $driver->get_options();
     <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
                     <strong>This machine has not Graphics parameters!</strong>
     </div>
-
 % my %recomend = (
 %   image => 'auto_glz'
 %   ,jpeg => 'auto'
@@ -22,7 +20,7 @@
     </div>
     <form class="form-horizontal" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(image jpeg zlib playback streaming)) {
-%           my $driver = $domain->drivers($driver_name);
+%           my $driver = $domain->drivers($driver_name) or next;
 
                 <div class="row">
                     <div class="col-md-2">

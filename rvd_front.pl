@@ -301,7 +301,12 @@ get '/machine/info/(:id).(:type)' => sub {
     my $id = $c->stash('id');
     die "No id " if !$id;
 
-    #TODO check ownership
+    my ($domain) = _search_requested_machine($c);
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id;
+
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
@@ -313,7 +318,13 @@ any '/machine/settings/(:id).(:type)' => sub {
 
 any '/machine/manage/(:id).(:type)' => sub {
     my $c = shift;
-    #TODO check ownership
+
+    my ($domain) = _search_requested_machine($c);
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id;
+
     return manage_machine($c);
 };
 
@@ -322,7 +333,12 @@ get '/machine/view/(:id).(:type)' => sub {
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
-    #TODO check ownership
+    my ($domain) = _search_requested_machine($c);
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id;
+
     return view_machine($c);
 };
 
@@ -422,8 +438,7 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER -> can_copy();
-#    return access_denied($c)    if !$USER -> can_clone_all();
+    return access_denied($c)    if !$USER -> can_clone_all();
     return copy_machine($c);
 };
 
@@ -938,6 +953,9 @@ sub new_machine {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
         }
+    } else {
+        my $req = Ravada::Request->refresh_storage();
+        # TODO handle possible errors
     }
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
@@ -1338,6 +1356,13 @@ sub manage_machine {
 sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
+
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c)
+        unless $USER->is_admin
+        || $domain->id_owner == $USER->id;
+
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
