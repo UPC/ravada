@@ -33,6 +33,7 @@ no warnings "experimental::signatures";
 use Ravada::Domain::KVM;
 use Ravada::NetInterface::KVM;
 use Ravada::NetInterface::MacVTap;
+use Ravada::Utils;
 
 with 'Ravada::VM';
 
@@ -626,11 +627,12 @@ sub _domain_create_common {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "ERROR: User id $id_owner doesn't exist";
 
+    my $spice_password = Ravada::Utils::random_name(4);
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml);
+    $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
 
     my $dom;
@@ -661,7 +663,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
     );
-
+    $domain->_set_spice_password($spice_password);
     return $domain;
 }
 
@@ -1239,12 +1241,14 @@ sub _xml_modify_video {
 sub _xml_modify_spice_port {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
+    my $password = shift;
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $self->ip() );
+    $graph->setAttribute(passwd => $password)    if $password;
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
 
