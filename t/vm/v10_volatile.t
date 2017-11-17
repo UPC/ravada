@@ -85,13 +85,27 @@ sub test_volatile {
 
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
 
+    my $clone2 = rvd_back->search_domain($name);
+    is($clone2->is_volatile,1,"[$vm_name] Expecting is_volatile");
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $clone3 = $vm->search_domain($name);
+    is($clone3->is_volatile,1,"[$vm_name] Expecting is_volatile");
+
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
-    my $vm = rvd_back->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
-    ok(!$domain2,"[$vm_name] Expecting domain removed after shutdown");
+    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
 
+    my $domain_f = rvd_front->search_domain($name);
+    ok(!$domain_f,"[$vm_name] Expecting domain removed after shutdown");
+
+    my $domain_b = rvd_back->search_domain($name);
+    ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
+
+    my $domains_f = rvd_front->list_domains();
+    ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed");
 }
 ################################################################################
 

@@ -152,6 +152,7 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
+before 'shutdown_now' => \&_pre_shutdown_now;
 after 'shutdown_now' => \&_post_shutdown_now;
 
 before 'force_shutdown' => \&_pre_shutdown_now;
@@ -264,7 +265,7 @@ sub _allow_shutdown {
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
     if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = $self->open($self->id_base);
+        my $base = Ravada::Domain->open($self->id_base);
         return if $base->id_owner == $user->id;
     } elsif($user->can_shutdown_all) {
         return;
@@ -1126,12 +1127,12 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
+    return if !$self->is_volatile;
     my %args = @_;
     my $user = delete $args{user} or confess "ERROR: Missing user";
 
-    return if !$self->is_known();
-
     if ($self->is_volatile) {
+#        return $self->_after_remove_domain() if !$self->is_known();
         my $req= $args{request};
         $req->status(
             "removing"
@@ -1140,9 +1141,11 @@ sub _remove_temporary_machine {
             .$user->name." is temporary")
                 if $req;
 
-        my $domain_copy;
-        eval { $domain_copy = $self->_vm->search_domain($self->name) };
-        $self->remove($user)    if $domain_copy ;
+        if ($self->is_removed) {
+            $self->_after_remove_domain();
+        } else {
+            $self->remove($user);
+        }
     }
 }
 

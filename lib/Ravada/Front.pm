@@ -186,7 +186,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base FROM domains ";
+    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -202,6 +202,8 @@ sub list_domains {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
+        $row->{has_clones} = 0 if !exists $row->{has_clones};
+        $row->{is_locked} = 0 if !exists $row->{is_locked};
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
