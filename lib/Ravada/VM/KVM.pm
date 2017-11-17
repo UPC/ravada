@@ -622,6 +622,10 @@ sub _domain_create_common {
     my $xml = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
+
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
@@ -632,8 +636,12 @@ sub _domain_create_common {
     my $dom;
 
     eval {
-        $dom = $self->vm->define_domain($xml->toString());
-        $dom->create if $args{active};
+        if ($user->is_temporary) {
+            $dom = $self->vm->create_domain($xml->toString());
+        } else {
+            $dom = $self->vm->define_domain($xml->toString());
+            $dom->create if $args{active};
+        }
     };
     if ($@) {
         my $out;

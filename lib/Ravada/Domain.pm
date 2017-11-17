@@ -1031,9 +1031,9 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = $arg{timeout};
 
-    $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
     $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
+    $self->_remove_temporary_machine(@_);
 
     if (defined $timeout) {
         if ($timeout<2 && $self->is_active) {
@@ -1127,11 +1127,7 @@ sub _remove_temporary_machine {
 
     return if !$self->is_known();
 
-    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
-    return if !$user;
-
-    if ($user->is_temporary) {
-        $self->remove($user);
+    if ($self->is_volatile) {
         my $req= $args{request};
         $req->status(
             "removing"
@@ -1139,6 +1135,11 @@ sub _remove_temporary_machine {
             ." because user "
             .$user->name." is temporary")
                 if $req;
+
+        my $domain_copy;
+        eval { $domain_copy = $self->_vm->search_domain($self->name) };
+        warn "going to remove";sleep 1;
+        $self->remove($user)    if $domain_copy ;
     }
 }
 
@@ -1367,6 +1368,16 @@ sub is_public {
         $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
+}
+
+=head2 is_volatile
+
+Returns if the domain is volatile, so it will be removed on shutdown
+
+=cut
+
+sub is_volatile($self) {
+    return $self->_data('is_volatile');
 }
 
 =head2 run_timeout

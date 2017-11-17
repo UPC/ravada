@@ -69,6 +69,29 @@ sub allow_anonymous {
 }
 
 sub test_volatile {
+    my ($vm_name, $base) = @_;
+
+    my $name = new_domain_name();
+
+    my $user_name = new_domain_name();
+    my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
+
+    my $clone = $base->clone(
+          user => $user
+        , name => $name
+    );
+    is($clone->is_active,1,"[$vm_name] Expecting clone active");
+    $clone->start($user)                if !$clone->is_active;
+
+    is($clone->is_volatile,1);
+
+    eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
+    is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain2 = $vm->search_domain($name);
+    ok(!$domain2,"[$vm_name] Expecting domain removed after shutdown");
+
 }
 ################################################################################
 
@@ -87,15 +110,16 @@ for my $vm_name ('Void', 'KVM') {
         }
 
         skip($msg,10)   if !$vm;
-        diag("Testing timeout for $vm_name");
+        diag("Testing volatile for $vm_name");
 
         create_network();
 
         my $base= create_domain($vm_name);
         $base->prepare_base(user_admin());
+        $base->is_public(1);
         allow_anonymous($base);
 
-        test_volatile($vm_name);
+        test_volatile($vm_name, $base);
 
         delete_network();
     }

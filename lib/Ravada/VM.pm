@@ -143,6 +143,7 @@ sub _around_create_domain {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
     }
+    die "TODO if user->is_temporary domain->is_temporary(1)";
     return $domain;
 }
 
