@@ -128,3 +128,4 @@ for my $vm_name ('Void', 'KVM') {
 
 clean();
 
+done_testing();

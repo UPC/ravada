@@ -1593,4 +1593,12 @@ sub pre_remove {
     $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
 }
 
+sub is_removed($self) {
+    my $is_removed = 0;
+    eval { $self->domain->get_xml_description};
+    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+    die $@ if $@;
+    return 0;
+}
+
 1;

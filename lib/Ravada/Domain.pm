@@ -41,6 +41,8 @@ requires 'display';
 requires 'is_active';
 requires 'is_hibernated';
 requires 'is_paused';
+requires 'is_removed';
+
 requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
@@ -1032,13 +1034,15 @@ sub _post_shutdown {
     my $timeout = $arg{timeout};
 
     $self->_remove_iptables(@_);
-    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
+    if ($self->id_base()) {
+        $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
+    }
     $self->_remove_temporary_machine(@_);
 
-    if (defined $timeout) {
-        if ($timeout<2 && $self->is_active) {
+    if (defined $timeout && !$self->is_removed) {
+        if ($timeout<2 && !$self->is_removed && $self->is_active) {
             sleep $timeout;
-            return $self->_do_force_shutdown() if $self->is_active;
+            return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
         }
 
         my $req = Ravada::Request->force_shutdown_domain(

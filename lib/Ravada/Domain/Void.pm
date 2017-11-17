@@ -470,4 +470,9 @@ sub clean_swap_volumes {
 sub hybernate { confess "Not supported"; }
 
 sub type { 'Void' }
+
+sub is_removed {
+    my $self = shift;
+    return !-e $self->_config_file();
+}
 1;
