@@ -1,5 +1,5 @@
 Kiosk Mode
------------
+==========
 
 Kiosk ( or anonymous ) allows any user, not logged in, to create a volatile
 virtual machine. This mode can be defined for some bases in some networks.
