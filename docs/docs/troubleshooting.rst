@@ -101,3 +101,22 @@ This is likely to happen when running Ravad in a Nested Virtual environment.
       </ip>
       
  Then reboot the whole system.
+
+Copy & paste integration does not work
+--------------------------------------
+
+Make sure that the VM has a Spice communication channel (com.redhat.spice.0) and that the guest additions have been installed.
+
+The Spice channel can be added through virt-manager's Add Hardware wizard or editing the XML:
+::
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+      <address type='virtio-serial' controller='0' bus='0' port='1'/>
+    </channel>
+
+Linux guests must install the spice-vdagent package, while Windows guests require `this installer <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_ (`source <https://wiki.archlinux.org/index.php/QEMU#Copy_and_paste>`_)
+
+
+Resizing the viewer window does not change the guest display resolution
+-----------------------------------------------------------------------
+This feature requires the Spice communication channel and the guest additions. See above for instructions.
