@@ -74,6 +74,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/change_windows_driver_to_virtio
    docs/config_console
    docs/migrate_manual
+   docs/Kiosk_mode
 
 .. _feature-docs:
 
@@ -87,6 +88,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/advanced_settings
    docs/new_documentation
    docs/auth_ldap
+   docs/tuning
    devel-docs/translations
 
 .. _about-docs:
