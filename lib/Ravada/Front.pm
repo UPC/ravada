@@ -202,6 +202,7 @@ sub list_domains {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
+        next if $row->{is_volatile} && !$domain;
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
         if ( $domain ) {
