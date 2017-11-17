@@ -17,4 +17,7 @@
 - Out of unique uuids in KVM [\#439]
 - Fixed MAC generation [\#443]
 - Error at machine settings graphics [\#443]
+- Debian 9 ISO link is missing after upgrade [\#457]
 - Unsupported machine type [\#390]
+- Check and add graphics params in xml definition [\#473]
+- Public checkbox does nothing [\#472]
