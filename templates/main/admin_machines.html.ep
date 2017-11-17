@@ -150,11 +150,13 @@
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
                           &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
-                              style="color:white"></i>
+                              style="color:white"></i>
                           <a align="right" href="/machine/settings/{{child.id}}.html"
                           title ="Machine settings"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
-                          <span style="color:gray">[ <%=l 'Cloned' %> ]</span>
+                          <span style="color:gray">[ <%=l 'Cloned' %> </span>
+                          <span style="color:gray" ng_show="child.is_volatile">, <%=l 'Volatile' %></span>
+                          <span style="color:gray">]</span>
                       </td>
                       <td class="lgMachToggle">
                           <i ng-show="{{child.has_clones}}" class="fa fa-check" aria-hidden="true"
