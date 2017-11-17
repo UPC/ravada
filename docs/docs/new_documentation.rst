@@ -30,7 +30,9 @@ Procedure
 Sidebar
 -------
 
-The organization of the sidebar is configured in the ``index.rst``.
+The organization of the sidebar is configured in the ``index.rst``. If you create a new documentation page remember to include in the section more according to the content. 
+Add the ``directory`` and the name of ``rst file``, e.g.: 
+    ``new_documentation.rst`` in ``docs/`` will be ``docs/new_documentation`` somewhere in the ``index.rst``
 
 Convert POD files
 -----------------
