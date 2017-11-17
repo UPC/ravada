@@ -73,7 +73,7 @@ sub test_volatile {
 
     my $name = new_domain_name();
 
-    my $user_name = new_domain_name();
+    my $user_name = "user_".new_domain_name();
     my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
 
     my $clone = $base->clone(
@@ -83,7 +83,7 @@ sub test_volatile {
     is($clone->is_active,1,"[$vm_name] Expecting clone active");
     $clone->start($user)                if !$clone->is_active;
 
-    is($clone->is_volatile,1);
+    is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
 
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");

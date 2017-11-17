@@ -239,9 +239,9 @@ sub _allow_manage {
 
 }
 
-sub _allow_remove {
-    my $self = shift;
-    my ($user) = @_;
+sub _allow_remove($self, $user) {
+
+    confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
@@ -1123,7 +1123,7 @@ sub _remove_temporary_machine {
     my $self = shift;
 
     my %args = @_;
-    my $user;
+    my $user = delete $args{user} or confess "ERROR: Missing user";
 
     return if !$self->is_known();
 
@@ -1138,7 +1138,6 @@ sub _remove_temporary_machine {
 
         my $domain_copy;
         eval { $domain_copy = $self->_vm->search_domain($self->name) };
-        warn "going to remove";sleep 1;
         $self->remove($user)    if $domain_copy ;
     }
 }
@@ -1376,8 +1375,8 @@ Returns if the domain is volatile, so it will be removed on shutdown
 
 =cut
 
-sub is_volatile($self) {
-    return $self->_data('is_volatile');
+sub is_volatile($self, $value=undef) {
+    return $self->_set_data('is_volatile', $value);
 }
 
 =head2 run_timeout

@@ -132,6 +132,8 @@ sub _around_create_domain {
     my $self = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
+
     $self->_pre_create_domain(@_);
 
     my $domain = $self->$orig(@_);
@@ -143,7 +145,9 @@ sub _around_create_domain {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
     }
-    die "TODO if user->is_temporary domain->is_temporary(1)";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+    $domain->is_volatile(1)    if $user->is_temporary();
+
     return $domain;
 }
 
