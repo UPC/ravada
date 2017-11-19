@@ -102,8 +102,7 @@
       <alias name='serial0'/>
     </console>
     <channel type='spicevmc'>
-      <target type='virtio' name='com.redhat.spice.0' state='disconnected'/>
-      <alias name='channel0'/>
+      <target type='virtio' name='com.redhat.spice.0'/>
       <address type='virtio-serial' controller='0' bus='0' port='1'/>
     </channel>
     <input type='tablet' bus='usb'>
