@@ -166,14 +166,14 @@
                               ng-click="action('machine','remove_base',child.id)"
                               title ="Remove base" ng-cloak>
                           <input type="checkbox"
-                                 ng-show="!{{child.is_base}} && !{{child.is_locked}}"
+                                 ng-show="!{{child.is_base}} && !{{child.is_locked}} && !{{child.is_volatile}}"
                               ng-click="action('machine','prepare',child.id)"
                               title ="Prepare base" ng-cloak>
                       </td>
                       <td class="lgMachToggle">
                           <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="set_public(child.id,0)" title="Make private">
 
-                           <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
+                           <input type="checkbox" ng-hide="{{child.is_public}} || {{child.is_volatile}}" ng-click="set_public(child.id,1)" title="Make public"></td>
                       <td class="lgMachActions">
                           <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
