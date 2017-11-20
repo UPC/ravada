@@ -38,6 +38,8 @@ has 'vm' => (
     ,builder => 'connect'
 );
 
+our $SSH;
+
 ##########################################################################
 #
 
@@ -150,16 +152,22 @@ sub _is_a_domain($self, $file) {
 }
 
 sub _ssh_channel($self) {
-    my $ssh = $self->vm();
-    $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
+    my $ssh = $SSH;
+    if (!$ssh) {
+        $ssh = $self->vm();
+        $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
+        $SSH = $ssh;
+    }
     my $chan;
     for ( 1 .. 5 ) {
         $chan = $ssh->channel();
         last if $chan;
-        warn "retry $_ channel";
+        warn "retry $_ channel" if $_>1;
         $ssh = $self->_connect_ssh();
+        $self->vm($ssh);
+        $SSH = $ssh;
     }
-    $self->vm->die_with_error   if !$chan;
+    $ssh->die_with_error   if !$chan;
     return ($ssh, $chan);
 }
 
@@ -189,12 +197,8 @@ sub _list_domains_remote($self, %args) {
                     push @domain,($domain);
                 }
             }
-        } else {
-#            $ssh->die_with_error;
         }
     }
-
-    $ssh->disconnect();
 
     return @domain;
 }
@@ -263,7 +267,6 @@ sub _search_volume_remote($self, $pattern) {
         }
     }
 
-    $ssh->disconnect();
     return $found;
 }
 
