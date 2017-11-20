@@ -171,6 +171,8 @@ sub import_domain {
     confess "Not implemented";
 }
 
+sub refresh_storage {}
+
 #########################################################################3
 
 1;
