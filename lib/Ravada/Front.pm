@@ -312,6 +312,7 @@ sub list_iso_images {
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
 
+        delete $row->{device} if !-e $row->{device};
         next if $row->{device};
 
         my ($file);

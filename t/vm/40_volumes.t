@@ -381,6 +381,11 @@ sub test_search($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
     $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
 
+    my $file_old = $vm->search_volume_path("file.iso");
+    unlink $file_old if -e $file_old;
+
+    $vm->default_storage_pool_name('default');
+
     my $file_out = $vm->dir_img."/file.iso";
 
     open my $out,">",$file_out or do {

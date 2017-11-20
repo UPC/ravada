@@ -24,7 +24,7 @@
 <div class="page-header" ng-controller="bases">
     <div class="row">
     <div class="col-lg-12">
-    <div class="panel panel-default">    
+    <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
 %           if ($user && $user->is_admin && $public_bases && $private_bases) {
@@ -56,32 +56,35 @@
 %           $clone_link = "/anonymous/".$machine->{id}.".html";
             <div class="col-sm-4"
                 ng-hide="!<%= $machine->{is_public} %> && only_public">
-            <div class="panel panel-success"> 
+            <div class="panel panel-success">
             <div class="panel-heading">
-                <h3 class="panel-title"><a
-                   href="/machine/clone/<%= $machine->{id} %>.html"><%= $machine->{name} %></a>
+                <h3 class="panel-title"><a class="btn btn-link"
+                   href="/machine/clone/<%= $machine->{id} %>.html" role="button"><%= $machine->{name} %></a>
 %                   if ( !$machine->{is_public} ) {
                         <i>(<%=l 'not public' %>)</i>
 %                   }
                 </h3>
 %               if ($machine->{screenshot} ) {
-                    <img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260">
+                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260"></a>
+%               }else{
+                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="img/default_screenshot.png" class="screenshot-default img-thumbnail" width="260"></a>
 %               }
+
             </div>
             <div class="panel-body">
                 <a type="button" class="btn btn-success" href="<%= $clone_link %>"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
 %               if (!$machine->{is_locked}) {
 %                   if ( $machine->{id_clone} && $machine->{is_active} ) {
-                        <select ng-model="host_action"
+                        <select class="selectpicker" data-width="fit" ng-model="host_action"
                         ng-change="action(<%= $machine->{id_clone} %>)"
                         >
                         <option value=""><%=l 'action'%></option>
 %                       if ($machine->{is_active}) {
-                            <option value="shutdown.<%= $machine->{id_clone} %>"><%=l 'Shutdown' %></option>
-                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hibernate' %></option>
+                            <option value="shutdown.<%= $machine->{id_clone} %>" data-icon="glyphicon glyphicon-off"><%=l 'Shutdown' %></option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>" data-icon="glyphicon glyphicon-pause"><%=l 'Hibernate' %></option>
 %                       }
 %                       if ($machine->{id_clone}) {
-                            <option value="restore.<%= $machine->{id_clone} %>"><%=l 'Restore'%></option>
+                            <option value="restore.<%= $machine->{id_clone} %>" data-icon="glyphicon glyphicon-repeat"><%=l 'Restore'%></option>
 %                       }
                         </select>
 %                   } elsif ($machine->{id_clone}) {
