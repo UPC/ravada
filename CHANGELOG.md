@@ -9,6 +9,7 @@
 - Add Suport for Ubuntu 17.10 Artful Aardvark [\#408]
 - Improved Screenshots rendering [\#408]
 - Mojo::Home::rel_dir is DEPRECATED in favor of Mojo::Home::rel_file [\#229]
+- Add copy & paste integration [\#476]
 
 **Fixed bugs:**
 
