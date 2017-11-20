@@ -53,7 +53,7 @@
 %       for my $machine (@$machines) {
 %           next if !$machine->{is_public} && (!$user || !$user->is_admin);
 %           my $clone_link = "/machine/clone/".$machine->{id}.".html";
-%           $clone_link = "/anonymous/".$machine->{id}.".html";
+%           $clone_link = "/anonymous/".$machine->{id}.".html"  if $_anonymous;
             <div class="col-sm-4"
                 ng-hide="!<%= $machine->{is_public} %> && only_public">
             <div class="panel panel-success"> 
