@@ -186,16 +186,20 @@ sub remove {
         $self->_do_force_shutdown();
     }
 
-    $self->remove_disks();
+
+    eval { $self->remove_disks(); };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    $self->domain->undefine();
+    eval { $self->domain->undefine() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 
