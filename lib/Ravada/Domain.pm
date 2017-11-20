@@ -11,6 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
+use File::Copy;
 use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
@@ -992,6 +993,8 @@ sub clone {
     my $name = $args{name} or confess "ERROR: Missing domain cloned name";
     confess "ERROR: Missing request user" if !$args{user};
 
+    return $self->_copy_clone(@_)   if $self->id_base();
+
     my $uid = $args{user}->id;
 
     $self->prepare_base($args{user})  if !$self->is_base();
@@ -1006,6 +1009,26 @@ sub clone {
         ,_vm => $self->_vm
     );
     return $clone;
+}
+
+sub _copy_clone($self, %args) {
+    my $name = delete $args{name} or confess "ERROR: Missing name";
+    my $user = delete $args{user} or confess "ERROR: Missing user";
+
+    my $base = Ravada::Domain->open($self->id_base);
+
+    my $copy = $self->_vm->create_domain(
+        name => $name
+        ,id_base => $base->id
+        ,id_owner => $user->id
+        ,_vm => $self->_vm
+    );
+    my @volumes = $self->list_volumes;
+    my @copy_volumes = $copy->list_volumes;
+    for my $n (0 .. $#volumes) {
+        copy($volumes[$n],$copy_volumes[$n]) or die "$! $volumes[$n] $copy_volumes[$n]"
+    }
+    return $copy;
 }
 
 sub _post_pause {
