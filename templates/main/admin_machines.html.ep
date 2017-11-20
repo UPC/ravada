@@ -155,7 +155,7 @@
                           title ="Machine settings"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
                           <span style="color:gray">[ <%=l 'Cloned' %> </span>
-                          <span style="color:gray" ng_show="child.is_volatile">, <%=l 'Volatile' %></span>
+                          <span style="color:gray" ng-show="{{child.is_volatile}}">, <%=l 'Volatile' %></span>
                           <span style="color:gray">]</span>
                       </td>
                       <td class="lgMachToggle">
