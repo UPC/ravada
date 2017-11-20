@@ -41,6 +41,10 @@ sub BUILD {
 
     if ($args->{id_base}) {
         my $base = Ravada::Domain->open($args->{id_base});
+
+        confess "ERROR: Wrong base ".ref($base)." ".$base->type
+                ."for domain in vm ".$self->_vm->type
+            if $base->type ne $self->_vm->type;
         my $drivers = $base->_value('drivers');
         $self->_store(drivers => $drivers );
     }
