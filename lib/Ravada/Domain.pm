@@ -41,6 +41,8 @@ requires 'display';
 requires 'is_active';
 requires 'is_hibernated';
 requires 'is_paused';
+requires 'is_removed';
+
 requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
@@ -150,6 +152,7 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
+before 'shutdown_now' => \&_pre_shutdown_now;
 after 'shutdown_now' => \&_post_shutdown_now;
 
 before 'force_shutdown' => \&_pre_shutdown_now;
@@ -239,9 +242,9 @@ sub _allow_manage {
 
 }
 
-sub _allow_remove {
-    my $self = shift;
-    my ($user) = @_;
+sub _allow_remove($self, $user) {
+
+    confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
@@ -262,7 +265,7 @@ sub _allow_shutdown {
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
     if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = $self->open($self->id_base);
+        my $base = Ravada::Domain->open($self->id_base);
         return if $base->id_owner == $user->id;
     } elsif($user->can_shutdown_all) {
         return;
@@ -1031,14 +1034,16 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = $arg{timeout};
 
-    $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
-    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
+    if ($self->id_base()) {
+        $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
+    }
+    $self->_remove_temporary_machine(@_);
 
-    if (defined $timeout) {
-        if ($timeout<2 && $self->is_active) {
+    if (defined $timeout && !$self->is_removed) {
+        if ($timeout<2 && !$self->is_removed && $self->is_active) {
             sleep $timeout;
-            return $self->_do_force_shutdown() if $self->is_active;
+            return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
@@ -1122,16 +1127,12 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
+    return if !$self->is_volatile;
     my %args = @_;
-    my $user;
+    my $user = delete $args{user} or confess "ERROR: Missing user";
 
-    return if !$self->is_known();
-
-    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
-    return if !$user;
-
-    if ($user->is_temporary) {
-        $self->remove($user);
+    if ($self->is_volatile) {
+#        return $self->_after_remove_domain() if !$self->is_known();
         my $req= $args{request};
         $req->status(
             "removing"
@@ -1139,6 +1140,12 @@ sub _remove_temporary_machine {
             ." because user "
             .$user->name." is temporary")
                 if $req;
+
+        if ($self->is_removed) {
+            $self->_after_remove_domain();
+        } else {
+            $self->remove($user);
+        }
     }
 }
 
@@ -1367,6 +1374,16 @@ sub is_public {
         $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
+}
+
+=head2 is_volatile
+
+Returns if the domain is volatile, so it will be removed on shutdown
+
+=cut
+
+sub is_volatile($self, $value=undef) {
+    return $self->_set_data('is_volatile', $value);
 }
 
 =head2 run_timeout

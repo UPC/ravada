@@ -379,6 +379,7 @@ sub test_domain_swap {
 
 sub test_search($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
+    $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
 
     my $file_old = $vm->search_volume_path("file.iso");
     unlink $file_old if -e $file_old;
@@ -393,6 +394,8 @@ sub test_search($vm_name) {
     };
     print $out "foo.bar\n";
     close $out;
+
+    $vm->refresh_storage();
 
     my $file = $vm->search_volume_path("file.iso");
     is($file_out, $file);

@@ -27,7 +27,7 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
-%           if ($user->is_admin && $public_bases && $private_bases) {
+%           if ($user && $user->is_admin && $public_bases && $private_bases) {
             <div ng-cloak>
                 <a ng-click="toggle_only_public()" class="label label-primary"
                   align="right" ng-show="!only_public">Hide Private</a>
@@ -41,7 +41,7 @@
 %       if (! $public_bases ) {
             <div class="panel panel-warning">
             <div class="panel-heading">
-%           if ($_user->is_admin) {
+%           if ($user && $user->is_admin) {
                 <%=l 'There are no public bases available in this system.' %>
                 <a href="/admin/"><%=l 'Create one.' %></a>
 %           } else {
@@ -51,7 +51,9 @@
             </div>
 %       }
 %       for my $machine (@$machines) {
-%           next if !$machine->{is_public} && !$user->is_admin;
+%           next if !$machine->{is_public} && (!$user || !$user->is_admin);
+%           my $clone_link = "/machine/clone/".$machine->{id}.".html";
+%           $clone_link = "/anonymous/".$machine->{id}.".html";
             <div class="col-sm-4"
                 ng-hide="!<%= $machine->{is_public} %> && only_public">
             <div class="panel panel-success">
@@ -70,9 +72,7 @@
 
             </div>
             <div class="panel-body">
-%		if ($_user->can_screenshot) {
-                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
-%                }
+                <a type="button" class="btn btn-success" href="<%= $clone_link %>"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
 %               if (!$machine->{is_locked}) {
 %                   if ( $machine->{id_clone} && $machine->{is_active} ) {
                         <select class="selectpicker" data-width="fit" ng-model="host_action"
@@ -94,7 +94,7 @@
 
 %                   }
 %                   if ( $machine->{id_clone}) {
-%			if ($_user->can_change_settings){
+%			if ($user->can_change_settings){
                         <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
 %      							}
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">

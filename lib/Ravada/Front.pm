@@ -186,7 +186,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base, is_public FROM domains ";
+    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -202,6 +202,12 @@ sub list_domains {
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
+        if ( $row->{is_volatile} && !$domain ) {
+            $self->_remove_domain_db($row->{id});
+            next;
+        }
+        $row->{has_clones} = 0 if !exists $row->{has_clones};
+        $row->{is_locked} = 0 if !exists $row->{is_locked};
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
@@ -219,6 +225,12 @@ sub list_domains {
     $sth->finish;
 
     return \@domains;
+}
+
+sub _remove_domain_db($self, $id) {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+    $sth->execute($id);
+    $sth->finish;
 }
 
 =head2 domain_info
@@ -740,7 +752,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, id_base, is_public FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();
