@@ -83,7 +83,7 @@ sub test_volatile {
     is($clone->is_active,1,"[$vm_name] Expecting clone active");
     $clone->start($user)                if !$clone->is_active;
 
-    like($clone->spice_password,qr{..+});
+    like($clone->spice_password,qr{..+})    if $vm_name eq 'KVM';
 
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
 

@@ -612,8 +612,11 @@ sub _domain_create_from_iso {
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
-    my $domain = $self->_domain_create_common($xml,%args);
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    $domain->_set_spice_password($spice_password)
+        if $spice_password;
 
     return $domain;
 }
@@ -663,8 +666,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
     );
-    $domain->_set_spice_password($spice_password);
-    return $domain;
+    return ($domain, $spice_password);
 }
 
 sub _create_disk {
@@ -787,8 +789,10 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
-    my $domain = $self->_domain_create_common($xml,%args);
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    $domain->_set_spice_password($spice_password);
     return $domain;
 }
 
