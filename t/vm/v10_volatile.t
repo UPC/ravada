@@ -71,8 +71,10 @@ sub allow_anonymous {
 sub test_volatile {
     my ($vm_name, $base) = @_;
 
+    my $vm = rvd_back->search_vm($vm_name);
     my $name = new_domain_name();
 
+    {
     my $user_name = "user_".new_domain_name();
     my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
 
@@ -90,7 +92,6 @@ sub test_volatile {
     my $clone2 = rvd_back->search_domain($name);
     is($clone2->is_volatile,1,"[$vm_name] Expecting is_volatile");
 
-    my $vm = rvd_back->search_vm($vm_name);
     my $clone3 = $vm->search_domain($name);
     is($clone3->is_volatile,1,"[$vm_name] Expecting is_volatile");
 
@@ -108,6 +109,34 @@ sub test_volatile {
 
     my $domains_f = rvd_front->list_domains();
     ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed");
+
+    $name = undef;
+    }
+
+    # now a normal clone
+    my $name2 = new_domain_name();
+    my $clone_normal = $base->clone(
+        user => user_admin,
+        name => $name2
+    );
+
+    is($clone_normal->is_volatile,0,"[$vm_name] Expecting not volatile");
+
+    $clone_normal->shutdown_now(user_admin);
+
+    my $domain_n2 = $vm->search_domain($name2);
+    ok($domain_n2,"[$vm_name] Expecting domain $name2 there after shutdown") or exit;
+
+    my $domain_nf = rvd_front->search_domain($name2);
+    ok($domain_nf,"[$vm_name] Expecting domain there after shutdown");
+
+    my $domain_nb = rvd_back->search_domain($name2);
+    ok($domain_nb,"[$vm_name] Expecting domain there after shutdown");
+
+    my $domains_nf = rvd_front->list_domains();
+    ok(grep({ $_->{name} eq $name2 } @$domains_nf),"[$vm_name] Expecting $name2 listed");
+
+    $clone_normal->remove(user_admin);
 }
 
 # KVM volatiles get auto-removed
