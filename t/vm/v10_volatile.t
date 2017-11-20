@@ -129,7 +129,11 @@ sub test_volatile_auto_kvm {
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
+    my $spice_password = $clone->spice_password();
+    like($spice_password,qr(..+));
+
     $clone->domain->destroy();
+    $clone=undef;
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
@@ -143,6 +147,30 @@ sub test_volatile_auto_kvm {
 
     my $domains_f = rvd_front->list_domains();
     ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed");
+
+    my $clone2;
+    eval {
+        $clone2 = $base->clone(
+            user => $user
+            ,name => $name
+        );
+    };
+    is(''.$@,'',"[$vm_name] Expecting clone called $name created");
+    isnt($clone2->spice_password, $spice_password
+            ,"[$vm_name] Expecting spice password different")   if $clone2;
+
+    is($clone2->is_active,1,"[$vm_name] Expecting clone active");
+
+    my $clone3= $vm->search_domain($name);
+    ok($clone3,"[$vm_name] Expecting clone $name");
+
+    eval { $clone2->remove(user_admin) if $clone2 };
+    is(''.$@,'');
+
+    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    is(keys(%$row),0);
 }
 
 ################################################################################
