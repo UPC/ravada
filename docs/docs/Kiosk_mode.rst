@@ -39,10 +39,11 @@ Find the ids
 ------------
 
 You must find what is the id of the network and the virtual machine where kiosk mode is enabled.
+This domain must be a base and allowed public access.
 
 ::
 
-    mysql> select id,name from domains where name='blablabla';
+    mysql> select id,name from domains where name='blablabla' and is_base=1 and is_public=1;
     +----+-------------------+
     | id | name              |
     +----+-------------------+
