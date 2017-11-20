@@ -265,10 +265,12 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
-        eval { $pool->refresh() };
-        last if !$@;
-        warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
-        sleep 1;
+        for (;;) {
+            eval { $pool->refresh() };
+            last if !$@;
+            warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
+            sleep 1;
+        }
     }
 }
 
