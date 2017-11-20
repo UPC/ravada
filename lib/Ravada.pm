@@ -172,8 +172,8 @@ sub _update_isos {
     my $field = 'name';
     my %data = (
         artful => {
-                    name => 'Ubuntu Artful Aardvak'
-            ,description => 'Ubuntu 17.10 Artful Aardvak 64 bits'
+                    name => 'Ubuntu Artful Aardvark'
+            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
@@ -720,6 +720,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+
+    $self->_upgrade_table('domains_network','allowed','int not null default 1');
 }
 
 
@@ -941,7 +944,10 @@ sub create_domain {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    $vm = $self->vm->[0]               if !$vm;
+    if ($args{id_base}) {
+        my $base = Ravada::Domain->open($args{id_base});
+        $vm = Ravada::VM->open($base->_vm->id);
+    }
 
     confess "No vm found"   if !$vm;
 

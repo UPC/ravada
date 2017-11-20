@@ -42,7 +42,7 @@
                 <div ng-show="id_iso.name">
                     <br/>
                     <label for="iso_file" class="col-lg-3 control-label"><%=l 'Select ISO' %> <a 
-                      title="Select the .iso file the machine will utilize when installing the OS."><i class="fa fa-info-circle"></i></a></label>
+                      title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                         <select class="form-control"
                             name ="iso_file"

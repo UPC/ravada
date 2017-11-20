@@ -39,6 +39,8 @@ my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
 
+my $IMPORT_DOMAIN_OWNER;
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
@@ -48,6 +50,7 @@ my $USAGE = "$0 "
         ." --add-user-ldap : adds a new LDAP user\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
+        ." --import-domain-owner : owner of the domain to import\n"
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
         ." -X : start in foreground\n"
@@ -87,6 +90,7 @@ GetOptions (       help => \$help
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
+,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -258,9 +262,12 @@ sub remove_admin {
 sub import_domain {
     my $name = shift;
     print "Virtual Manager: KVM\n";
-    print "User name that will own the domain in Ravada : ";
-    my $user = <STDIN>;
-    chomp $user;
+    my $user = $IMPORT_DOMAIN_OWNER;
+    if (!$user) {
+        print "User name that will own the domain in Ravada : ";
+        $user = <STDIN>;
+        chomp $user;
+    }
     my $ravada = Ravada->new( %CONFIG );
     $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
 }
