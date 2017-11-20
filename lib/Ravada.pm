@@ -747,7 +747,12 @@ sub _init_config {
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
-    $CONFIG = YAML::LoadFile($file);
+    die "ERROR: Missing config file $file\n"
+        if !-e $file;
+
+    eval { $CONFIG = YAML::LoadFile($file) };
+
+    die "ERROR: Format error in config file $file\n$@"  if $@;
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;

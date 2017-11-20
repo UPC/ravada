@@ -16,4 +16,16 @@ ok($Ravada::CONNECTOR, "Now we should have a DB connector ");
 ok($Ravada::CONNECTOR,"No connector defined ");
 eval { ok($Ravada::CONNECTOR->dbh,"No dbh defined ") };
 
+eval {
+    my $config_err = "t/etc/ravada_miss.conf";
+    my $rvd_err = Ravada->new( connector => $test->connector, config => $config_err);
+};
+like($@,qr/Missing config file/);
+
+eval {
+    my $config_err = "t/etc/ravada_err.conf";
+    my $rvd_err = Ravada->new( connector => $test->connector, config => $config_err);
+};
+like($@,qr/Format error/);
+
 done_testing();
