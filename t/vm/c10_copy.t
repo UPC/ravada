@@ -17,7 +17,45 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 ##########################################################################3
 
-sub test_copy {
+sub test_copy_clone {
+    my $vm_name = shift;
+
+    my $base = create_domain($vm_name);
+
+    my $name_clone = new_domain_name();
+
+    my $clone = $base->clone(
+        name => $name_clone
+        ,user => user_admin
+    );
+
+    is($clone->is_base,0);
+    for ( $clone->list_volumes ) {
+        open my $out,'>',$_ or die $!;
+        print $out "hola\n";
+        close $out;
+    }
+
+    my $name_copy = new_domain_name();
+    my $copy = $clone->clone(
+        name => $name_copy
+        ,user => user_admin
+    );
+    is($clone->is_base,0);
+    is($copy->is_base,0);
+
+    is($copy->id_base, $base->id);
+
+    is(scalar($copy->list_volumes),scalar($clone->list_volumes));
+
+    my @copy_volumes = $copy->list_volumes();
+    my @clone_volumes = $clone->list_volumes();
+
+    for ( 0 .. $#copy_volumes ) {
+        isnt($copy_volumes[$_], $clone_volumes[$_]);
+        is(-s $copy_volumes[$_], -s $clone_volumes[$_],"[$vm_name] size of $copy_volumes[$_]");
+
+    }
 }
 
 ##########################################################################3
@@ -38,7 +76,7 @@ for my $vm_name ('Void', 'KVM') {
 
         skip($msg,10)   if !$vm;
 
-        test_copy($vm_name);
+        test_copy_clone($vm_name);
     }
 
 }
