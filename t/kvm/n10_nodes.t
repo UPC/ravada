@@ -311,10 +311,17 @@ sub test_start_twice {
     my $clone2 = $vm->search_domain($clone->name);
     is($clone2->_vm->host, $vm->host);
     is($clone2->is_active,0);
-    $clone2->domain->create();
+
+    if ($vm_name eq 'KVM') {
+        $clone2->domain->create();
+    } elsif ($vm_name eq 'Void') {
+        $clone2->_store(is_active => 1);
+    } else {
+        die "test_start_twice not available on $vm_name";
+    }
 
     eval { $clone->start(user => user_admin ) };
-    like(''.$@,qr'libvirt error code: 55,');
+    like(''.$@,qr'libvirt error code: 55,') if $vm_name eq 'KVM';
     is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip) or exit;
     is($clone->display(user_admin), $clone2->display(user_admin));
 
