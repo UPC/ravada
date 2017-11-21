@@ -2,7 +2,7 @@ Kiosk Mode
 ==========
 
 Kiosk ( or anonymous ) allows any user, not logged in, to create a volatile
-virtual machine. This mode can be defined for some bases in some networks.
+virtual machine. Once this machine is shut down, it is destroyed automatically.
 
 This feature is only available on Ravada 0.3. You can get it from here:
 
@@ -10,6 +10,9 @@ http://infoteleco.upc.edu/img/debian/
 
 Setting
 -------
+
+This *kiosk* mode must be defined for some bases in some networks.
+
 
 .. note ::
     Unfortunately kiosk mode configuration has not been added to the frontend.
