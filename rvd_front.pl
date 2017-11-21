@@ -1785,7 +1785,7 @@ sub _anonymous_user {
 
 sub _random_name {
     my $length = shift;
-    my $ret = 'O'.substr($$,3);
+    my $ret = substr($$,3);
     my $max = ord('z') - ord('a');
     for ( 0 .. $length ) {
         my $n = int rand($max + 1);
@@ -1804,7 +1804,7 @@ sub _new_anonymous_user {
 
     my $name;
     for my $n ( 4 .. 32 ) {
-        $name = substr($name_mojo,0,$n);
+        $name = "anon".substr($name_mojo,0,$n);
         my $user;
         eval {
             $user = Ravada::Auth::SQL->new( name => $name );
