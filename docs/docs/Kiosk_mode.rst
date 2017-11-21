@@ -20,8 +20,8 @@ If you want to have the data handy do it right now:
 
 ::
 
-    # mysqldump -u root -p ravada domains.sql > domains.sql
-    # mysqldump -u root -p ravada networks.sql > networks.sql
+    # mysqldump -u root -p ravada domains > domains.sql
+    # mysqldump -u root -p ravada networks > networks.sql
 
 Define a Network
 ----------------
