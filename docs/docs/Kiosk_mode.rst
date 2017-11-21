@@ -17,6 +17,7 @@ This *kiosk* mode must be defined for some bases in some networks.
 .. note ::
     Unfortunately kiosk mode configuration has not been added to the frontend.
     Anyway it can be set only from within the database. 
+    
 Follow these steps carefully.
 
 Backup the Database
