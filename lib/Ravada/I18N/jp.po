@@ -1,5 +1,6 @@
 # Translators:
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# Amparo Gombau <amparorvd@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
@@ -14,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Ravada broker"
-msgstr "ラヴダブローカー"
+msgstr "ラバダブローカー"
 
 msgid "Machine Name"
 msgstr "マシン名"
@@ -47,10 +48,10 @@ msgid "Clone"
 msgstr "クローン"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr ""
+msgstr "私はベースを準備することはできません。 ベースを消去するか、マシンを消去してください。"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "クローン"
 
 msgid "NEW"
 msgstr "新しい"
@@ -65,7 +66,7 @@ msgid "Log Out"
 msgstr "ログアウト"
 
 msgid "Available Machines"
-msgstr ""
+msgstr "利用可能なマシン"
 
 msgid "Help"
 msgstr "助けて"
@@ -80,7 +81,7 @@ msgid "Messages"
 msgstr "メッセージ"
 
 msgid "Mark all as Read"
-msgstr ""
+msgstr "既読にする] を選択します。"
 
 msgid "Settings"
 msgstr "設定"
