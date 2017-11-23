@@ -969,7 +969,6 @@ sub _copy_clone($self, %args) {
     my %volumes = map { $_->[1] => $_->[0] } @volumes;
     my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
     for my $target (keys %volumes) {
-        warn "$target:\n  $volumes{$target}\n  $copy_volumes{$target}\n";
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
