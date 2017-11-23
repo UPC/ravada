@@ -17,10 +17,21 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 ##########################################################################3
 
+sub add_volumes {
+    my ($base, $volumes) = @_;
+    $base->add_volume_swap(name => "vol_swap", size => 512 * 1024);
+    for my $n ( 1 .. $volumes ) {
+        $base->add_volume(name => "vol_$n", size => 512 * 1024);
+    }
+}
+
 sub test_copy_clone {
     my $vm_name = shift;
+    my $volumes = shift;
 
     my $base = create_domain($vm_name);
+
+    add_volumes($base, $volumes)  if $volumes;
 
     my $name_clone = new_domain_name();
 
@@ -32,7 +43,7 @@ sub test_copy_clone {
     is($clone->is_base,0);
     for ( $clone->list_volumes ) {
         open my $out,'>',$_ or die $!;
-        print $out "hola\n";
+        print $out "hola $_\n";
         close $out;
     }
 
@@ -51,9 +62,11 @@ sub test_copy_clone {
     my @copy_volumes = $copy->list_volumes();
     my @clone_volumes = $clone->list_volumes();
 
-    for ( 0 .. $#copy_volumes ) {
-        isnt($copy_volumes[$_], $clone_volumes[$_]);
-        is(-s $copy_volumes[$_], -s $clone_volumes[$_],"[$vm_name] size of $copy_volumes[$_]");
+    for my $n ( 0 .. $#copy_volumes ) {
+        isnt($copy_volumes[$n], $clone_volumes[$n]);
+        my @stat_copy = stat($copy_volumes[$n]);
+        my @stat_clone = stat($clone_volumes[$n]);
+        is($stat_copy[7],$stat_clone[7],"[$vm_name] size of $copy_volumes[$n] ".($stat_copy[7])) or exit;
 
     }
 }
@@ -77,6 +90,9 @@ for my $vm_name ('Void', 'KVM') {
         skip($msg,10)   if !$vm;
 
         test_copy_clone($vm_name);
+        test_copy_clone($vm_name,1);
+        test_copy_clone($vm_name,2);
+        test_copy_clone($vm_name,10);
     }
 
 }
