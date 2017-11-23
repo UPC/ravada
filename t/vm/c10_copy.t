@@ -74,6 +74,41 @@ sub test_copy_clone {
         ) or exit;
 
     }
+    $clone->remove(user_admin);
+    $copy->remove(user_admin);
+    $base->remove(user_admin);
+}
+
+sub test_copy_request {
+    my $vm_name = shift;
+
+    my $base = create_domain($vm_name);
+
+    my $name_clone = new_domain_name();
+
+    my $clone = $base->clone(
+        name => $name_clone
+        ,user => user_admin
+    );
+
+    my $name_copy = new_domain_name();
+    my $req;
+    eval { $req = Ravada::Request->copy(
+            id_domain => $clone->id
+               , name => $name_copy
+        );
+    };
+    is($@,'') or return;
+    is($req->status(),'requested');
+    rvd_back->_process_all_requests_dont_fork();
+
+    ok($req->status(),'done');
+
+    my $copy = rvd_back->search_domain($name_copy);
+    ok($copy,"[$vm_name] Expecting domain $name_copy");
+
+    my $clone2 = rvd_back->search_domain($name_clone);
+    is($clone2->is_base,0);
 }
 
 ##########################################################################3
@@ -98,6 +133,8 @@ for my $vm_name ('Void', 'KVM') {
         test_copy_clone($vm_name,1);
         test_copy_clone($vm_name,2);
         test_copy_clone($vm_name,10);
+
+        test_copy_request($vm_name);
     }
 
 }
