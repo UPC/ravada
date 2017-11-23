@@ -59,14 +59,19 @@ sub test_copy_clone {
 
     is(scalar($copy->list_volumes),scalar($clone->list_volumes));
 
-    my @copy_volumes = $copy->list_volumes();
-    my @clone_volumes = $clone->list_volumes();
+    my @copy_volumes = $copy->list_volumes_target();
+    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
+    my @clone_volumes = $clone->list_volumes_target();
+    my %clone_volumes = map { $_->[1] => $_->[0] } @clone_volumes;
 
-    for my $n ( 0 .. $#copy_volumes ) {
-        isnt($copy_volumes[$n], $clone_volumes[$n]);
-        my @stat_copy = stat($copy_volumes[$n]);
-        my @stat_clone = stat($clone_volumes[$n]);
-        is($stat_copy[7],$stat_clone[7],"[$vm_name] size of $copy_volumes[$n] ".($stat_copy[7])) or exit;
+    for my $target ( keys %copy_volumes ) {
+        isnt($copy_volumes{$target}, $clone_volumes{$target});
+        my @stat_copy = stat($copy_volumes{$target});
+        my @stat_clone = stat($clone_volumes{$target});
+        is($stat_copy[7],$stat_clone[7],"[$vm_name] size different "
+                ."\n$copy_volumes{$target} ".($stat_copy[7])
+                ."\n$clone_volumes{$target} ".($stat_clone[7])
+        ) or exit;
 
     }
 }
