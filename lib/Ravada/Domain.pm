@@ -1023,10 +1023,15 @@ sub _copy_clone($self, %args) {
         ,id_owner => $user->id
         ,_vm => $self->_vm
     );
-    my @volumes = $self->list_volumes;
-    my @copy_volumes = $copy->list_volumes;
-    for my $n (0 .. $#volumes) {
-        copy($volumes[$n],$copy_volumes[$n]) or die "$! $volumes[$n] $copy_volumes[$n]"
+    my @volumes = $self->list_volumes_target;
+    my @copy_volumes = $copy->list_volumes_target;
+
+    my %volumes = map { $_->[1] => $_->[0] } @volumes;
+    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
+    for my $target (keys %volumes) {
+        warn "$target:\n  $volumes{$target}\n  $copy_volumes{$target}\n";
+        copy($volumes{$target}, $copy_volumes{$target})
+            or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
     return $copy;
 }
