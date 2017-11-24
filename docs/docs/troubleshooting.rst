@@ -66,7 +66,7 @@ Upgrade your MySQL server or change:  ``datetime`` for ``timestamp``
 
 ::
 
-    date_send datetime default now(),  >>>>>>  date_send timestamp default now(),
+    date_send datetime default now(),
     
 More information `about <https://stackoverflow.com/questions/36882149/error-1067-42000-invalid-default-value-for-created-at>`_.
 
