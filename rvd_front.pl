@@ -1548,24 +1548,13 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    if (!$base->is_base) {
-        my $req = Ravada::Request->prepare_base(
-            id_domain => $id_base
-            ,uid => $USER->id
-        );
-        return $c->render("Problem preparing base for domain ".$base->name)
-            if !$req;
-
-        sleep 1;
-
-    }
     my @create_args =( memory => $ram ) if $ram;
     push @create_args , ( disk => $disk ) if $disk;
-    my $req2 = Ravada::Request->create_domain(
-             name => $name
-        , id_base => $id_base
-       , id_owner => $USER->id
-        ,@create_args
+    my $req2 = Ravada::Request->clone(
+              uid => $USER->id
+            ,name => $name
+       , id_domain => $base->id
+       ,@create_args
     );
     $c->redirect_to("/admin/machines");#    if !@error;
 }

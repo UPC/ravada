@@ -1923,7 +1923,8 @@ sub _req_method {
 
     my %methods = (
 
-          start => \&_cmd_start
+          clone => \&_cmd_clone
+         ,start => \&_cmd_start
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove

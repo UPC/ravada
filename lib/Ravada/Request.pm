@@ -251,6 +251,7 @@ sub resume_domain {
 
 sub _check_args {
     my $sub = shift;
+    confess "Odd number of elements ".Dumper(\@_)   if scalar(@_) % 2;
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
@@ -830,6 +831,32 @@ sub refresh_storage {
     );
 
 
+}
+
+=head2 clone
+
+Copies a virtual machine
+
+    my $req = Ravada::Request->clone(
+             ,uid => $user->id
+        id_domain => $domain->id
+    );
+
+=cut
+
+sub clone {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('clone', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return _new_request($self
+        , command => 'clone'
+        , args =>$args
+    );
 }
 
 sub AUTOLOAD {

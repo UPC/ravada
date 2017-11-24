@@ -474,7 +474,9 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new( readonly => 1);
+    my @ro = ();
+    @ro = (readonly => 1 ) if $>;
+    my $vm = $vm0->new( @ro );
 
     return $vm->search_domain($row->{name});
 }
