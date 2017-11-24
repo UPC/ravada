@@ -88,21 +88,23 @@ sub test_copy_request {
 
     my $clone = $base->clone(
         name => $name_clone
-        ,user => user_admin
+       ,user => user_admin
     );
 
     my $name_copy = new_domain_name();
     my $req;
-    eval { $req = Ravada::Request->copy(
+    eval { $req = Ravada::Request->clone(
             id_domain => $clone->id
                , name => $name_copy
+                , uid => user_admin->id
         );
     };
     is($@,'') or return;
     is($req->status(),'requested');
     rvd_back->_process_all_requests_dont_fork();
 
-    ok($req->status(),'done');
+    is($req->status(),'done');
+    is($req->error,'');
 
     my $copy = rvd_back->search_domain($name_copy);
     ok($copy,"[$vm_name] Expecting domain $name_copy");

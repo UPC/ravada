@@ -1713,6 +1713,16 @@ sub _cmd_open_iptables {
     );
 }
 
+sub _cmd_clone($self, $request) {
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+
+    $domain->clone(
+        name => $request->args('name')
+        ,user => Ravada::Auth::SQL->search_by_id($request->args('uid'))
+    );
+
+}
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -1925,7 +1935,8 @@ sub _req_method {
 
     my %methods = (
 
-          start => \&_cmd_start
+          clone => \&_cmd_clone
+         ,start => \&_cmd_start
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
