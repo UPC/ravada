@@ -61,6 +61,7 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
     ,refresh_storage => { id_vm => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

@@ -62,7 +62,19 @@ sub create_domain {
                                 , path => "$dir/$new_name"
                                  ,type => 'file');
         }
+        $domain->start(user => $owner)    if $owner->is_temporary;
+    } else {
+        my ($file_img) = $domain->disk_device();
+        $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
+                        , path => $file_img
+                        , type => 'file'
+                        , target => 'vda'
+        );
+        $domain->_set_default_drivers();
+        $domain->_set_default_info();
+
     }
+    $domain->set_memory($args{memory}) if $args{memory};
 #    $domain->start();
     return $domain;
 }
