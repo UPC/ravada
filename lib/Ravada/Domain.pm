@@ -165,6 +165,8 @@ after 'remove_base' => \&_post_remove_base;
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
 
+before 'clone' => \&_pre_clone;
+
 after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
@@ -1003,12 +1005,16 @@ sub clone {
 
     my $id_base = $self->id;
 
+    my @args_copy = ();
+    push @args_copy, ( memory => $args{memory} )  if $args{memory};
+
     my $clone = $self->_vm->create_domain(
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
+        ,@args_copy
     );
     return $clone;
 }
@@ -1016,14 +1022,20 @@ sub clone {
 sub _copy_clone($self, %args) {
     my $name = delete $args{name} or confess "ERROR: Missing name";
     my $user = delete $args{user} or confess "ERROR: Missing user";
+    my $memory = delete $args{memory};
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
 
     my $base = Ravada::Domain->open($self->id_base);
 
+    my @copy_arg = ( memory => $memory ) if $memory;
     my $copy = $self->_vm->create_domain(
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
         ,_vm => $self->_vm
+        ,@copy_arg
     );
     my @volumes = $self->list_volumes_target;
     my @copy_volumes = $copy->list_volumes_target;
@@ -1672,6 +1684,19 @@ sub type {
     my $self = shift;
     my ($type) = $self =~ m{.*::(.*)};
     return $type;
+}
+
+sub _pre_clone($self,%args) {
+    my $name = delete $args{name};
+    my $user = delete $args{user};
+    my $memory = delete $args{memory};
+
+    confess "ERROR: Missing clone name "    if !$name;
+    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z][a-z0-9_-]+$/;
+
+    confess "ERROR: Missing user owner of new domain"   if !$user;
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
 }
 
 1;

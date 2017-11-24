@@ -83,18 +83,27 @@ sub test_copy_request {
     my $vm_name = shift;
 
     my $base = create_domain($vm_name);
+    my $memory = $base->get_info->{memory};
 
     my $name_clone = new_domain_name();
+    my $mem_clone = int($memory * 1.5);
 
     my $clone = $base->clone(
         name => $name_clone
        ,user => user_admin
+       ,memory => $mem_clone
     );
 
+    is($clone->get_info->{memory}, $mem_clone,"[$vm_name] memory");
+
     my $name_copy = new_domain_name();
+    my $mem_copy = ($mem_clone * 1.5);
     my $req;
+
+    my $clone_mem = int ( $memory * 1.5);
     eval { $req = Ravada::Request->clone(
             id_domain => $clone->id
+              ,memory => $mem_copy
                , name => $name_copy
                 , uid => user_admin->id
         );
@@ -108,9 +117,43 @@ sub test_copy_request {
 
     my $copy = rvd_back->search_domain($name_copy);
     ok($copy,"[$vm_name] Expecting domain $name_copy");
+    is($copy->get_info->{memory}, $mem_copy);
 
     my $clone2 = rvd_back->search_domain($name_clone);
     is($clone2->is_base,0);
+
+    is($clone2->get_info->{memory}, $mem_clone);
+
+    isnt($clone2->get_info->{memory}, $base->get_info->{memory});
+    isnt($clone2->get_info->{memory}, $copy->get_info->{memory});
+}
+
+sub test_copy_change_ram {
+    my $vm_name = shift;
+
+    my $base = create_domain($vm_name);
+
+    my $name_clone = new_domain_name();
+
+    my $clone = $base->clone(
+        name => $name_clone
+       ,user => user_admin
+    );
+    my $clone_mem = $clone->get_info->{memory};
+
+    my $name_copy = new_domain_name();
+    my $copy = $clone->clone(
+        name => $name_copy
+        ,memory => int($clone_mem * 1.5)
+        ,user => user_admin
+    );
+    is($clone->is_base,0);
+    is($copy->is_base,0);
+
+    is ($copy->get_info->{memory},int($clone_mem * 1.5),"[$vm_name] Expecting memory");
+    $clone->remove(user_admin);
+    $copy->remove(user_admin);
+    $base->remove(user_admin);
 }
 
 ##########################################################################3
@@ -137,6 +180,8 @@ for my $vm_name ('Void', 'KVM') {
         test_copy_clone($vm_name,10);
 
         test_copy_request($vm_name);
+
+        test_copy_change_ram($vm_name);
     }
 
 }
