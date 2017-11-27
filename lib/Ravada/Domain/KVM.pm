@@ -186,16 +186,20 @@ sub remove {
         $self->_do_force_shutdown();
     }
 
-    $self->remove_disks();
+
+    eval { $self->remove_disks(); };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    $self->domain->undefine();
+    eval { $self->domain->undefine() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 
@@ -656,6 +660,14 @@ Returns true (1) for KVM domains
 
 sub can_hybernate { 1 };
 
+=head2 can_hybernate
+
+Returns true (1) for KVM domains
+
+=cut
+
+sub can_hibernate { 1 };
+
 =head2 hybernate
 
 Take a snapshot of the domain's state and save the information to a
@@ -668,8 +680,24 @@ this state when it is next started.
 
 sub hybernate {
     my $self = shift;
+    $self->hibernate();
+}
+
+=head2 hybernate
+
+Take a snapshot of the domain's state and save the information to a
+managed save location. The domain will be automatically restored with
+this state when it is next started.
+
+    $domain->hybernate();
+
+=cut
+
+sub hibernate {
+    my $self = shift;
     $self->domain->managed_save();
 }
+
 
 =head2 add_volume
 
@@ -678,13 +706,15 @@ Adds a new volume to the domain
     $domain->add_volume(name => $name, size => $size);
     $domain->add_volume(name => $name, size => $size, xml => 'definition.xml');
 
+    $domain->add_volume(path => "/var/lib/libvirt/images/path.img");
+
 =cut
 
 sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target path));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -698,13 +728,15 @@ sub add_volume {
         $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
     }
 
-    my $path = $args{vm}->create_volume(
+    my $path = delete $args{path};
+
+    $path = $args{vm}->create_volume(
         name => $args{name}
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
-        ,target => ( $args{target} or undef )
-    );
+        ,target => ( $args{target} or undef)
+    )   if !$path;
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
@@ -744,19 +776,24 @@ sub _new_target_dev {
 
     my %target;
 
+    my $dev;
+
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
+        next if $disk->getAttribute('device') ne 'disk'
+            && $disk->getAttribute('device') ne 'cdrom';
 
 
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'target') {
 #                die $child->toString();
-                $target{ $child->getAttribute('dev') }++;
+                my $cur_dev = $child->getAttribute('dev');
+                $target{$cur_dev}++;
+                if (!$dev && $disk->getAttribute('device') eq 'disk') {
+                    ($dev) = $cur_dev =~ /(.*).$/;
+                }
             }
         }
     }
-    my ($dev) = keys %target;
-    $dev =~ s/(.*).$/$1/;
     for ('b' .. 'z') {
         my $new = "$dev$_";
         return $new if !$target{$new};
@@ -825,6 +862,17 @@ Takes a screenshot, it stores it in file.
 
 =cut
 
+sub handler {
+    my ($stream, $data, $n) = @_;
+    my $file_tmp = "/var/tmp/$$.tmp";
+
+    open my $out ,'>>',$file_tmp;
+    print $out $data;
+    close $out;
+
+    return $n;
+}
+
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
@@ -836,24 +884,13 @@ sub screenshot {
     my $stream = $self->{_vm}->vm->new_stream();
 
     my $mimetype = $self->domain->screenshot($stream,0);
+    $stream->recv_all(\&handler);
 
-    my $file_tmp = "$file.tmp";
-    my $data;
-    my $bytes = 0;
-    open my $out, '>', $file_tmp or die "$! $file_tmp";
-    while ( my $rv =$stream->recv($data,1024)) {
-        $bytes += $rv;
-        last if $rv<=0;
-        print $out $data;
-    }
-    close $out;
+    my $file_tmp = "/var/tmp/$$.tmp";
+    $stream->finish;
 
     $self->_convert_png($file_tmp,$file);
     unlink $file_tmp or warn "$! removing $file_tmp";
-
-    $stream->finish;
-
-    return $bytes;
 }
 
 sub _file_screenshot {
@@ -1558,6 +1595,14 @@ In KVM it removes saved images.
 sub pre_remove {
     my $self = shift;
     $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
+}
+
+sub is_removed($self) {
+    my $is_removed = 0;
+    eval { $self->domain->get_xml_description};
+    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+    die $@ if $@;
+    return 0;
 }
 
 1;

@@ -51,7 +51,7 @@ ravadaApp.directive("solShowMachine", swMach)
              return device;
           }
           else return "<NONE>";
-      }
+      };
 
       $scope.validate_new_name = function() {
           $http.get('/machine/exists/'+$scope.name)
@@ -68,13 +68,19 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
       $scope.ddsize=20;
-      $scope.swapsize=1;
+      $scope.swapsize={value:0};
       $scope.ramsize=1;
+      $scope.seeswap=0;
       
+      $scope.show_swap = function() {
+        $scope.seeswap = !($scope.seeswap);
+        if ($scope.seeswap == 1) $scope.swapsize.value=1;
+        else $scope.swapsize.value = 0;
+      };
+    
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
       });
-      
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
@@ -167,17 +173,10 @@ ravadaApp.directive("solShowMachine", swMach)
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
     });
-    $scope.getUsers = function() {
-      $http.get('/list_users.json').then(function(response) {
-        $scope.list_users= response.data;
-      });
-    }
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
     //On load code
-    $scope.getUsers();
-    $scope.updatePromise = $interval($scope.getUsers,3000);
   };
 
   function messagesPageC($scope, $http, $interval, request) {

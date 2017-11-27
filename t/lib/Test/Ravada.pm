@@ -4,6 +4,8 @@ use warnings;
 
 use  Carp qw(carp confess);
 use  Data::Dumper;
+use Hash::Util qw(lock_hash);
+use IPC::Run3 qw(run3);
 use  Test::More;
 
 use Ravada;
@@ -17,6 +19,9 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name
 create_domain
+    test_chain_prerouting
+    search_id_iso
+    flush_rules open_ipt
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -25,9 +30,11 @@ our ($CONNECTOR, $CONFIG);
 our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
+our $CHAIN = 'RAVADA';
 
 my %ARG_CREATE_DOM = (
       kvm => [ id_iso => 1 ]
+      ,void => []
 );
 
 sub user_admin {
@@ -37,9 +44,15 @@ sub user_admin {
 sub create_domain {
     my $vm_name = shift;
     my $user = (shift or $USER_ADMIN);
+    my $id_iso = shift;
 
+    if ( $id_iso && $id_iso !~ /^\d+$/) {
+        my $iso_name = $id_iso;
+        $id_iso = search_id_iso($iso_name);
+        warn "I can't find iso $iso_name" if !defined $id_iso;
+    }
     my $vm = rvd_back()->search_vm($vm_name);
-    ok($vm,"I can't find VM $vm_name") or return;
+    ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
 
     my $name = new_domain_name();
 
@@ -47,12 +60,14 @@ sub create_domain {
         diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
         return;
     };
-    my @arg_create = @{$ARG_CREATE_DOM{lc($vm_name)}};
+    my %arg_create = @{$ARG_CREATE_DOM{lc($vm_name)}};
+    $arg_create{id_iso} = $id_iso if $id_iso;
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
-                    , @arg_create
+                    , %arg_create
+                    , active => 0
            );
     };
     is($@,'');
@@ -213,9 +228,8 @@ sub _remove_old_disks_kvm {
     eval { $dir_img = $vm->dir_img() };
     return if !$dir_img;
 
-    eval { $vm->storage_pool->refresh() };
-    ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
-        ." after refresh storage pool") or return;
+    $vm->_refresh_storage_pools();
+
     opendir my $ls,$dir_img or return;
     while (my $disk = readdir $ls) {
         next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
@@ -353,4 +367,51 @@ sub clean {
     remove_old_disks();
     remove_old_pools();
 }
+
+sub search_id_iso {
+    my $name = shift;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
+        ." WHERE name like ?"
+    );
+    $sth->execute("$name%");
+    my ($id) = $sth->fetchrow;
+    die "There is no iso called $name%" if !$id;
+    return $id;
+}
+
+sub flush_rules {
+    my $ipt = open_ipt();
+    $ipt->flush_chain('filter', $CHAIN);
+    $ipt->delete_chain('filter', 'INPUT', $CHAIN);
+
+    my @cmd = ('iptables','-t','nat','-F','PREROUTING');
+    my ($in,$out,$err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+}
+
+sub open_ipt {
+    my %opts = (
+    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
+	    'ipt_rules_file' => '',  # optional file path from
+	                             # which to read iptables rules
+	    'iptout'   => '/tmp/iptables.out',
+	    'ipterr'   => '/tmp/iptables.err',
+	    'debug'    => 0,
+	    'verbose'  => 0,
+
+	    ### advanced options
+	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
+	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
+	                                    ### 'system', or 'popen'.
+	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
+	                           ### iptables commands (default is 0).
+	);
+
+	my $ipt_obj = IPTables::ChainMgr->new(%opts)
+    	or die "[*] Could not acquire IPTables::ChainMgr object";
+
+}
+
+
 1;

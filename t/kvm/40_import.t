@@ -110,6 +110,7 @@ sub test_import_spinoff {
 
     my $vm = rvd_back->search_vm('kvm');
     my $domain = test_create_domain($vm_name,$vm);
+    $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
     ok($clone);
     ok($domain->is_base,"Expecting base") or return;
@@ -162,6 +163,10 @@ for my $vm_name (@VMS) {
     my $vm = $RVD_BACK->search_vm($vm_name);
     SKIP : {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm_name eq 'KVM') {
+            $msg = "SKIPPED test: $vm_name must be tested from root user";
+            $vm = undef;
+        }
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 

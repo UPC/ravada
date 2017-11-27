@@ -75,7 +75,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, is_base FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();
@@ -84,6 +84,7 @@ sub list_bases {
         eval { $domain   = $self->search_domain($row->{name}) };
         next if !$domain;
         $row->{has_clones} = $domain->has_clones;
+        delete $row->{spice_password};
         push @bases, ($row);
     }
     $sth->finish;
@@ -126,7 +127,7 @@ sub list_machines_user {
             ,id_base => $id
         );
         my %base = ( id => $id, name => $name
-            , is_public => $is_public
+            , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
             , id_clone => undef
@@ -185,7 +186,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT * FROM domains";
+    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -194,13 +195,19 @@ sub list_domains {
     }
     $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where");
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY name");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
+        if ( $row->{is_volatile} && !$domain ) {
+            $self->_remove_domain_db($row->{id});
+            next;
+        }
+        $row->{has_clones} = 0 if !exists $row->{has_clones};
+        $row->{is_locked} = 0 if !exists $row->{is_locked};
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
@@ -212,11 +219,18 @@ sub list_domains {
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
         }
+        delete $row->{spice_password};
         push @domains, ($row);
     }
     $sth->finish;
 
     return \@domains;
+}
+
+sub _remove_domain_db($self, $id) {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+    $sth->execute($id);
+    $sth->finish;
 }
 
 =head2 domain_info
@@ -298,6 +312,7 @@ sub list_iso_images {
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
 
+        delete $row->{device} if $row->{device} && !-e $row->{device};
         next if $row->{device};
 
         my ($file);
@@ -371,7 +386,7 @@ Returns a reference to a list of the users
 =cut
 
 sub list_users($self,$name=undef) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
     
     my @users = ();
@@ -543,7 +558,7 @@ sub search_clone {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name FROM domains "
-        ." WHERE id_base=? AND id_owner=? "
+        ." WHERE id_base=? AND id_owner=? AND (is_base=0 OR is_base=NULL)"
     );
     $sth->execute($id_base, $id_owner);
 
@@ -571,7 +586,7 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, description FROM domains WHERE name=?");
     $sth->execute($name);
 
     my $row = $sth->fetchrow_hashref;
@@ -623,7 +638,8 @@ sub list_requests {
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
-                || $command eq 'hibernate';
+                || $command eq 'hibernate'
+                || $command eq 'ping_backend';
         my $args;
         $args = decode_json($j_args) if $j_args;
 
@@ -671,7 +687,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, id_base, is_base FROM domains WHERE id=?");
     $sth->execute($id);
 
     my $row = $sth->fetchrow_hashref;
@@ -736,7 +752,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, id_base, is_public FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();

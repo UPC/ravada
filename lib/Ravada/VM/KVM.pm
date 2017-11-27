@@ -33,6 +33,7 @@ no warnings "experimental::signatures";
 use Ravada::Domain::KVM;
 use Ravada::NetInterface::KVM;
 use Ravada::NetInterface::MacVTap;
+use Ravada::Utils;
 
 with 'Ravada::VM';
 
@@ -72,6 +73,7 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $WGET = `which wget`;
 chomp $WGET;
 
+our $CACHE_DOWNLOAD = 1;
 ##########################################################################
 
 
@@ -191,6 +193,7 @@ list of all the volumes.
 =cut
 
 sub search_volume($self,$file,$refresh=0) {
+    confess "ERROR: undefined file" if !defined $file;
     return $self->search_volume_re(qr(^$file$),$refresh);
 }
 
@@ -239,9 +242,10 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
         if !ref($pattern) || ref($pattern) ne 'Regexp';
 
+    $self->_refresh_storage_pools()    if $refresh;
+
     my @volume;
     for my $pool ($self->vm->list_storage_pools) {
-        $pool->refresh()    if $refresh;
         for my $vol ( $pool->list_all_volumes()) {
             my ($file) = $vol->get_path =~ m{.*/(.*)};
             next if $file !~ $pattern;
@@ -258,6 +262,27 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     }
     return if !wantarray && !scalar@volume;
     return @volume;
+}
+
+sub _refresh_storage_pools($self) {
+    for my $pool ($self->vm->list_storage_pools) {
+        for (;;) {
+            eval { $pool->refresh() };
+            last if !$@;
+            warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
+            sleep 1;
+        }
+    }
+}
+
+=head2 refresh_storage
+
+Refreshes all the storage pools
+
+=cut
+
+sub refresh_storage($self) {
+    $self->_refresh_storage_pools();
 }
 
 =head2 search_volume_path_re
@@ -334,7 +359,8 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $vm->create_storage_pool($xml);
+    my $pool = $vm->define_storage_pool($xml);
+    $pool->create();
     $pool->set_autostart(1);
 
 }
@@ -345,6 +371,12 @@ Creates a domain.
 
     $dom = $vm->create_domain(name => $name , id_iso => $id_iso);
     $dom = $vm->create_domain(name => $name , id_base => $id_base);
+
+Creates a domain and removes the CPU defined in the XML template:
+
+    $dom = $vm->create_domain(        name => $name 
+                                  , id_iso => $id_iso
+                              , remove_cpu => 1);
 
 =cut
 
@@ -518,9 +550,12 @@ sub _domain_create_from_iso {
         croak "argument $_ required"
             if !$args{$_};
     }
+    my $remove_cpu = delete $args2{remove_cpu};
     for (qw(disk swap active request vm memory iso_file id_template)) {
         delete $args2{$_};
     }
+
+    my $iso_file = delete $args{iso_file};
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
         if keys %args2;
 
@@ -529,15 +564,20 @@ sub _domain_create_from_iso {
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
-    my $iso = $self->_search_iso($args{id_iso});
+    my $iso = $self->_search_iso($args{id_iso} , $iso_file);
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
         if !$iso->{xml_volume};
         
     my $device_cdrom;
-    
-    if (exists $args{iso_file} && !($args{iso_file} eq "<NONE>")){
-      $device_cdrom = $args{iso_file};
+
+    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
+        if !$iso->{url} && !$iso_file;
+
+    if ($iso_file) {
+        if ( $iso_file ne "<NONE>") {
+            $device_cdrom = $iso_file;
+        }
     }
     else {
       $device_cdrom = $self->_iso_name($iso, $args{request});
@@ -564,13 +604,21 @@ sub _domain_create_from_iso {
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
-    _xml_modify_cdrom($xml, $device_cdrom);
+    if ($device_cdrom) {
+        _xml_modify_cdrom($xml, $device_cdrom);
+    } else {
+        _xml_remove_cdrom($xml);
+    }
+    _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
-    my $domain = $self->_domain_create_common($xml,%args);
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    $domain->_set_spice_password($spice_password)
+        if $spice_password;
 
     return $domain;
 }
@@ -580,18 +628,27 @@ sub _domain_create_common {
     my $xml = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
+
+    my $spice_password = Ravada::Utils::random_name(4);
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml);
+    $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
 
     my $dom;
 
     eval {
-        $dom = $self->vm->define_domain($xml->toString());
-        $dom->create if $args{active};
+        if ($user->is_temporary) {
+            $dom = $self->vm->create_domain($xml->toString());
+        } else {
+            $dom = $self->vm->define_domain($xml->toString());
+            $dom->create if $args{active};
+        }
     };
     if ($@) {
         my $out;
@@ -611,8 +668,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
     );
-
-    return $domain;
+    return ($domain, $spice_password);
 }
 
 sub _create_disk {
@@ -728,7 +784,6 @@ sub _domain_create_from_base {
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
-    $self->storage_pool->refresh();
 #    _xml_modify_cdrom($xml);
     _xml_remove_cdrom($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
@@ -736,8 +791,10 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
-    my $domain = $self->_domain_create_common($xml,%args);
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    $domain->_set_spice_password($spice_password);
     return $domain;
 }
 
@@ -792,8 +849,12 @@ sub _iso_name {
     my $req = shift;
 
     my $iso_name;
-    ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
-    ($iso_name) = $iso->{device} if !$iso_name;
+    if ($iso->{rename_file}) {
+        $iso_name = $iso->{rename_file};
+    } else {
+        ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
+        ($iso_name) = $iso->{device} if !$iso_name;
+    }
 
     confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
 
@@ -809,6 +870,7 @@ sub _iso_name {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _download_file_external($iso->{url}, $device);
+        $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
 
@@ -833,6 +895,7 @@ sub _iso_name {
         );
         $sth->execute($device,$iso->{id});
     }
+    $self->_refresh_storage_pools();
     return $device;
 }
 
@@ -933,30 +996,46 @@ sub _download_file_lwp {
 sub _download_file_external {
     my ($url,$device) = @_;
     confess "ERROR: wget missing"   if !$WGET;
-    my @cmd = ($WGET,'--quiet',$url,'-O',$device);
+    my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n";
     run3(\@cmd,\$in,\$out,\$err);
+    warn "out=$out" if $out;
+    warn "err=$err" if $err;
     print $out if $out;
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
-    die $err if $err;
+
+    return if !$err;
+
+    if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
+        if ( $1 != $2 ) {
+            unlink $device or die "$! $device" if -e $device;
+            die "ERROR: Expecting $1 , got $2.\n$err"
+        }
+        return;
+    }
+    unlink $device or die "$! $device" if -e $device;
+    die $err;
 }
 
 sub _search_iso {
     my $self = shift;
     my $id_iso = shift or croak "Missing id_iso";
+    my $file_iso = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
+    return $row if $file_iso;
+
     $self->_fetch_filename($row);#    if $row->{file_re};
     $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
     $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
 
-    if ( !$row->{device}) {
+    if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume($row->{filename})) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
@@ -970,7 +1049,8 @@ sub _search_iso {
 
 sub _download($self, $url) {
     confess "Wrong url '$url'" if $url =~ m{\*};
-    my $cache = $self->_cache_get($url);
+    my $cache;
+    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
     my $ua = new LWP::UserAgent;
@@ -978,7 +1058,7 @@ sub _download($self, $url) {
     my $req = HTTP::Request->new( GET => $url);
     my $res = $ua->request($req);
 
-    die $res->status_line." $url" if !$res->is_success;
+    confess $res->status_line." $url" if !$res->is_success;
 
     return $self->_cache_store($url,$res->content);
 }
@@ -987,7 +1067,7 @@ sub _cache_get($self, $url) {
     my $file = _cache_filename($url);
 
     my @stat = stat($file)  or return;
-    return if time-$stat[9] > 3600;
+    return if time-$stat[9] > 300;
     open my $in ,'<' , $file or return;
     return join("",<$in>);
 }
@@ -1021,24 +1101,22 @@ sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
-        ($file) = $row->{device} =~ m{.*/(.*)}  if !$file;
-        confess "No filename in $row->{url}" if !$file;
+        ($file) = $row->{device} =~ m{.*/(.*)}
+            if !$file && $row->{device};
+        confess "No filename in $row->{name} $row->{url}" if !$file;
 
-        if ($file =~ /\*/) {
-            $row->{url} = $new_url;
-            $row->{file_re} = $file;
-        } else {
-            $row->{filename} = $file;
-            return;
-        }
+        $row->{url} = $new_url;
+        $row->{file_re} = $file;
     }
     confess "No file_re" if !$row->{file_re};
 
-    my $content = $self->_download($row->{url});
     my $file;
+
+    my $content = $self->_download($row->{url});
     my $lines = '';
     for my $line (split/\n/,$content) {
         next if $line !~ /iso"/;
@@ -1047,9 +1125,9 @@ sub _fetch_filename {
         next if !$found;
         $file=$found if $found;
     }
-    die "No ".qr($row->{file_re})." found on $row->{url}"   if !$file;
+    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>$content</pre>"   if !$file;
 
-    $row->{filename} = $file;
+    $row->{filename} = ($row->{rename_file} or $file);
     $row->{url} .= "/" if $row->{url} !~ m{/$};
     $row->{url} .= $file;
 }
@@ -1136,6 +1214,13 @@ sub _define_xml {
 
 }
 
+sub _xml_remove_cpu {
+    my $doc = shift;
+    my ($domain) = $doc->findnodes('/domain') or confess "Missing node domain";
+    my ($cpu) = $domain->findnodes('cpu');
+    $domain->removeChild($cpu)  if $cpu;
+}
+
 sub _xml_modify_video {
     my $doc = shift;
 
@@ -1162,12 +1247,14 @@ sub _xml_modify_video {
 sub _xml_modify_spice_port {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
+    my $password = shift;
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $self->ip() );
+    $graph->setAttribute(passwd => $password)    if $password;
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
 
@@ -1185,15 +1272,32 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    random:while (1) {
-        my $new_uuid = _new_uuid($uuid);
-        next if $new_uuid eq $uuid;
-        for my $dom ($self->vm->list_all_domains) {
-            next random if $dom->get_uuid_string eq $new_uuid;
-        }
-        $uuid->setData($new_uuid);
-        last;
+    my @known_uuids;
+    for my $dom ($self->vm->list_all_domains) {
+        push @known_uuids,($dom->get_uuid_string);
     }
+    my $new_uuid = _unique_uuid($uuid,@known_uuids);
+    $uuid->setData($new_uuid);
+}
+
+sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
+    my @uuids = @_;
+    if (!scalar @uuids) {
+        for my $dom ($self->vm->list_all_domains) {
+            push @uuids,($dom->get_uuid_string);
+        }
+    }
+    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+
+    for (1..1000) {
+        my $new_last = int(rand(0x100000));
+        my $new_uuid = sprintf("%s%06d",$first,substr($new_last,0,6));
+
+        confess "Wrong uuid size ".length($new_uuid)." <> ".length($uuid)
+            if length($new_uuid) != length($uuid);
+        return $new_uuid if !grep /^$new_uuid$/,@uuids;
+    }
+    confess "I can't find a new unique uuid";
 }
 
 sub _xml_modify_cdrom {
@@ -1534,7 +1638,10 @@ sub _unique_mac {
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
-            return 0 if $mac eq lc($nic_mac);
+            if ( $mac eq lc($nic_mac) ) {
+                warn "mac clashes with domain ".$dom->get_name;
+                return 0;
+            }
         }
     }
     return 1;
@@ -1559,31 +1666,37 @@ sub _xml_modify_mac {
 
     my @macparts = split/:/,$mac;
 
+    my @old_macs;
+
+    for my $dom ($self->vm->list_all_domains) {
+        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+
+        for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
+            my $nic_mac = $nic->getAttribute('address');
+            push @old_macs,($nic_mac);
+        }
+    }
+
+
     my $new_mac;
 
-    my $n_part = scalar(@macparts) -2;
+    for my $cont ( 1 .. 1000 ) {
+        my $pos = int(rand(2))+4;
+        my $num =sprintf "%02X", rand(0xff);
+        die "Missing num " if !defined $num;
+        $macparts[$pos] = $num;
+        $new_mac = lc(join(":",@macparts));
+        my $n_part = scalar(@macparts) -2;
 
-    for (;;) {
-        for my $last ( 0 .. 254 ) {
-            $last = sprintf("%X", $last);
-            $last = "0$last" if length($last)<2;
-            $macparts[-1] = $last;
-            $new_mac = join(":",@macparts);
-            if ( $self->_unique_mac($new_mac) ) {
+        last if (! grep /^$new_mac$/i,@old_macs);
+    }
+
+    if ( $self->_unique_mac($new_mac) ) {
                 $if_mac->setAttribute(address => $new_mac);
                 return;
-            }
-            $new_mac = undef;
-        }
-        my $new_part = hex($macparts[$n_part])+1;
-        if ($new_part > 255) {
-            $n_part--;
-            $new_part = 0;
-            die "I can't find a new unique mac" if !$n_part<0;
-        }
-        $macparts[$n_part] = sprintf("%X", $new_part);
+    } else {
+        die "I can't find a new unique mac";
     }
-    die "I can't find a new unique mac" if !$new_mac;
 }
 
 

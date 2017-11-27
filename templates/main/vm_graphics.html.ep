@@ -4,60 +4,55 @@
             <div class="panel-heading"><%= $message %></div>
         </div>
 %   }
-    <div class="row">
-    <form class="form-horizontal" action="<%= $action %>" method="post">
-        <div class="col-md-6">
-            <div >
-
-%           my $driver = $domain->drivers("image");
-%           my ($first, $second) = $driver->get_options();
-                <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
+%   my $driver = $domain->drivers("image");
+    <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
                     <strong>This machine has not Graphics parameters!</strong>
-                </div>
-
-%           if ($USER->is_admin) {
-%           }
-%                   for my $driver_name (qw(image jpeg zlib playback streaming)) {
-%                       my $driver = $domain->drivers($driver_name);
-
-            <div >
-                <span class="col-lg-2 control-label"><label for="driver_<%= $driver_name %>"><%= $driver_name %></label></span>
-%                                   if (!$driver) {
-                                        <b>I can't find <%= $driver_name %> driver</b><br>
-%                                        next;
-%                                   }
-                    <div class="col-lg-10">
-                                    <select class="selectpicker form-control input-lg" id="driver_<%= $driver_name %>" name="driver_<%= $driver_name %>">
-%                                  for my $option( $driver->get_options ) {
-%                                       my $selected ='';
-%                                       $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
-                                        <option <%= $selected %>
-                                        value="<%= $option->{id} %>"><%= $option->{name} %></option>
-%                                   }
-                                    </select>
-                    </div>
-            </div>
-%                              }
-        </table>
-         <input type="submit" class="btn btn-default">
-            </div>
-        </div>
-        <div class="col-md-6">
-                <div class="alert alert-info" role="alert">
-                    <strong>Recommended options:</strong><br>
-                    <span class="label label-default">image</span>:<span class="label label-success">auto_glz</span><br>
-                    <span class="label label-default">jpeg</span>:<span class="label label-success">auto</span><br>
-                    <span class="label label-default">zlib</span>:<span class="label label-success">auto</span><br>
-                    <span class="label label-default">playback</span>:<span class="label label-success">on</span><br>
-                    <span class="label label-default">streaming</span>:<span class="label label-success">filter</span><br>
-                </div>
-                    <button class="btn btn-primary pull-left" onclick="doSelect()">Set recommended options</button><br>
-                    <p id="info" ></p>
-	    </div>
-</form>
-
     </div>
-</div>
+% my %recomend = (
+%   image => 'auto_glz'
+%   ,jpeg => 'auto'
+%   ,zlib => 'auto'
+%   ,playback => 'on'
+%   ,streaming => 'filter'
+% );
+    <div class="row">
+        <div class="col-md-6"></div><div class="col-md-1"><i>recommended</i></div>
+    </div>
+    <form class="form-horizontal" action="<%= $action %>" method="post">
+%       for my $driver_name (qw(image jpeg zlib playback streaming)) {
+%           my $driver = $domain->drivers($driver_name) or next;
+
+                <div class="row">
+                    <div class="col-md-2">
+                        <label class="control-label"
+                        for="driver_<%= $driver_name %>"><%= $driver_name %></label>
+                    </div>
+                    <div class="col-md-4">
+                    <select class="selectpicker form-control input-lg"
+                        id="driver_<%= $driver_name %>" name="driver_<%= $driver_name %>">
+%                       for my $option( $driver->get_options ) {
+%                           my $selected ='';
+%                           $selected = 'selected'
+%                                if $domain->get_driver($driver_name)
+%                                   && $domain->get_driver($driver_name) eq $option->{value};
+                            <option <%= $selected %>
+                                  value="<%= $option->{id} %>"><%= $option->{name} %>
+                            </option>
+%                       }
+                    </select>
+                    </div>
+                    <div class="col-md-1">
+%                       if ($recomend{$driver_name}) {
+                            <span class="label label-default">
+                                <%= ($recomend{$driver_name} or '') %>
+                            </span>
+%                       }
+                    </div>
+                </div><!-- of row -->
+%           }
+         <input type="submit" class="btn btn-default">
+</form>
+</div> <!-- of panel-body -->
 
 <script type="text/javascript">
 function doSelect() {

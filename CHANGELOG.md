@@ -3,9 +3,8 @@
 
 **Implemented enhancements:**
 
-- Improve URL for viewing domains [\#200]
-- View Domains at fullscreen [\#30]
+- Review volatile desktops and Kiosk mode [\#320]
+- Manage user permissions [\#222]
 
 **Fixed bugs:**
 
-- Hibernated domains restart with new spice password [\#263]

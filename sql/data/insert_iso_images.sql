@@ -1,6 +1,6 @@
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,file_re,md5)
-VALUES('Debian Jessie 32 bits netinst'
+VALUES('Debian Jessie 32 bits'
     ,'Debian 8.5.0 Jessie 32 bits (netsinst)'
     ,'i386'
     ,'jessie-i386.xml'
@@ -66,7 +66,7 @@ VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
     );
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,file_re,md5_url)
-VALUES('Debian Jessie 64 bits netinst'
+VALUES('Debian Jessie 64 bits'
     ,'Debian 8.5.0 Jessie 64 bits (netsinst)'
     ,'amd64'
     ,'jessie-amd64.xml'

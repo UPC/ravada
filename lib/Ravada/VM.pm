@@ -132,9 +132,22 @@ sub _around_create_domain {
     my $self = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
+
     $self->_pre_create_domain(@_);
+
     my $domain = $self->$orig(@_);
+
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+
+    if ($args{id_base}) {
+        my $base = $self->search_domain_by_id($args{id_base});
+        $domain->run_timeout($base->run_timeout)
+            if defined $base->run_timeout();
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+    $domain->is_volatile(1)    if $user->is_temporary();
+
     return $domain;
 }
 
@@ -293,12 +306,33 @@ sub _check_require_base {
     my $self = shift;
 
     my %args = @_;
-    return if !$args{id_base};
 
-    my $base = $self->search_domain_by_id($args{id_base});
+    my $id_base = delete $args{id_base} or return;
+    my $request = delete $args{request};
+    my $id_owner = delete $args{id_owner}
+        or confess "ERROR: id_owner required ";
+
+    delete @args{'_vm','name','vm', 'memory','description'};
+
+    confess "ERROR: Unknown arguments ".join(",",keys %args)
+        if keys %args;
+
+    my $base = Ravada::Domain->open($id_base);
+    if (my @requests = $base->list_requests) {
+        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
+                            ." requests.\n"
+            unless scalar @requests == 1 && $request
+                && $requests[0]->id eq $request->id;
+    }
+
+
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    die "ERROR: Base ".$base->name." is not public\n"
+        unless $user->is_admin || $base->is_public;
 }
 
 =head2 id
