@@ -934,20 +934,32 @@ sub clone {
     my $self = shift;
     my %args = @_;
 
-    my $name = $args{name} or confess "ERROR: Missing domain cloned name";
-    confess "ERROR: Missing request user" if !$args{user};
+    my $name = delete $args{name}
+        or confess "ERROR: Missing domain cloned name";
+
+    my $user = delete $args{user}
+        or confess "ERROR: Missing request user";
 
     return $self->_copy_clone(@_)   if $self->id_base();
 
-    my $uid = $args{user}->id;
+    my $request = delete $args{request};
+    my $memory = delete $args{memory};
 
-    $self->prepare_base($args{user})  if !$self->is_base();
+    confess "ERROR: Unknown args ".join(",",sort keys %args)
+        if keys %args;
+
+    my $uid = $user->id;
+
+    if ( !$self->is_base() ) {
+        $request->status("working","Preparing base")    if $request;
+        $self->prepare_base($user)
+    }
 
     my $id_base = $self->id;
 
     my @args_copy = ();
-    push @args_copy, ( memory => $args{memory} )  if $args{memory};
-    push @args_copy, ( request => $args{request} )  if $args{request};
+    push @args_copy, ( memory => $memory )      if $memory;
+    push @args_copy, ( request => $request )    if $request;
 
     my $clone = $self->_vm->create_domain(
         name => $name
@@ -975,7 +987,8 @@ sub _copy_clone($self, %args) {
     push @copy_arg, ( memory => $memory ) if $memory;
 
     $request->status("working","Copying domain ".$self->name
-        ." to $name");
+        ." to $name")   if $request;
+
     my $copy = $self->_vm->create_domain(
         name => $name
         ,id_base => $base->id
