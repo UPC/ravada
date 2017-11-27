@@ -71,7 +71,8 @@ sub test_clone {
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
                 $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
-                ok(!$@,"Expecting error='', got='".($@ or '')."'");
+                ok(!$@,"Expecting error='', got='".($@ or '')."'")
+                        or die Dumper($base->list_requests);
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
     is($clone1->description,undef);
@@ -92,7 +93,7 @@ sub test_clone {
 sub test_mess_with_bases {
     my ($vm_name, $base, $clones) = @_;
     for my $clone (@$clones) {
-        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
+        $clone->force_shutdown($USER)   if $clone->is_active;
         ok($clone->id_base,"Expecting clone has id_base , got "
                 .($clone->id_base or '<UNDEF>'));
         $clone->prepare_base($USER);
@@ -104,14 +105,13 @@ sub test_mess_with_bases {
         ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
 
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
+        $clone->force_shutdown($USER)   if $clone->is_active;
 
         $clone->remove_base($USER);
         eval { $clone->start($USER); };
         ok(!$@,"[$vm_name] Expecting error: '' , got '".($@ or '')."'");
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1);
-
+        $clone->force_shutdown($USER);
     }
 }
 

@@ -269,9 +269,9 @@ sub _update_isos {
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'http://cdimage.debian.org/cdimage/archive/9.1.0/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => 'http://cdimage.debian.org/cdimage/archive/9.1.0/amd64/iso-cd/MD5SUMS'
+            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -720,9 +720,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','start_time','int DEFAULT 0');
     $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
+
 }
 
 
@@ -894,6 +896,7 @@ sub _create_vm {
         push @vms,($vm) if $vm;
     }
     die "No VMs found: $err\n" if $self->warn_error && !@vms;
+
     return \@vms;
 
 }
@@ -1071,13 +1074,36 @@ List all created domains
 
   my @list = $ravada->list_domains();
 
+This list can be filtered:
+
+  my @active = $ravada->list_domains(active => 1);
+  my @inactive = $ravada->list_domains(active => 0);
+
+  my @user_domains = $ravada->list_domains(user => $id_user);
+
+  my @user_active = $ravada->list_domains(user => $id_user, active => 1);
+
 =cut
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
+
+    my $active = delete $args{active};
+    my $user = delete $args{user};
+
+    die "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
     my @domains;
     for my $vm ($self->list_vms) {
         for my $domain ($vm->list_domains) {
+            next if defined $active &&
+                ( $domain->is_active && !$active
+                    || !$domain->is_active && $active );
+
+            next if $user && $domain->id_owner != $user->id;
+
             push @domains,($domain);
         }
     }
@@ -1449,9 +1475,9 @@ sub _execute {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
-        $request->error($err) if $err;
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
+        $request->error($err) if $err;
         return $err;
     }
 
@@ -1850,7 +1876,7 @@ sub _cmd_shutdown {
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    $domain->shutdown(timeout => $timeout, name => $name, user => $user
+    $domain->shutdown(timeout => $timeout, user => $user
                     , request => $request);
 
 }
@@ -1860,11 +1886,11 @@ sub _cmd_force_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $id_domain = $request->args('id_domain');
 
     my $domain;
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+    $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
@@ -2038,6 +2064,56 @@ sub import_domain {
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
     return $vm->import_domain($name, $user);
+}
+
+=head2 enforce_limits
+
+Check no user has passed the limits and take action.
+
+Some limits:
+
+- More than 1 domain running at a time ( older get shut down )
+
+
+=cut
+
+sub enforce_limits {
+    _enforce_limits_active(@_);
+}
+
+sub _enforce_limits_active {
+    my $self = shift;
+    my %args = @_;
+
+    my $timeout = (delete $args{timeout} or 10);
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my %domains;
+    for my $domain ($self->list_domains( active => 1 )) {
+        push @{$domains{$domain->id_owner}},$domain;
+    }
+    for my $id_user(keys %domains) {
+        next if scalar @{$domains{$id_user}}<2;
+
+        my @domains_user = sort { $a->start_time <=> $b->start_time }
+                        @{$domains{$id_user}};
+
+#        my @list = map { $_->name => $_->start_time } @domains_user;
+        my $last = pop @domains_user;
+        DOMAIN: for my $domain (@domains_user) {
+            #TODO check the domain shutdown has been already requested
+            for my $request ($domain->list_requests) {
+                next DOMAIN if $request->command =~ /shutdown/;
+            }
+            if ($domain->can_hybernate) {
+                $domain->hybernate($USER_DAEMON);
+            } else {
+                $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
+            }
+        }
+    }
 }
 
 =head2 version

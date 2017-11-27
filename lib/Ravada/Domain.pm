@@ -153,11 +153,9 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
-before 'shutdown_now' => \&_pre_shutdown_now;
-after 'shutdown_now' => \&_post_shutdown_now;
 
-before 'force_shutdown' => \&_pre_shutdown_now;
-after 'force_shutdown' => \&_post_shutdown_now;
+around 'shutdown_now' => \&_around_shutdown_now;
+around 'force_shutdown' => \&_around_shutdown_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -176,8 +174,12 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 sub BUILD {
     my $self = shift;
-    $self->_init_connector();
     $self->is_known();
+}
+
+sub BUILD {
+    my $self = shift;
+    $self->_init_connector();
 }
 
 sub _vm_connect {
@@ -274,7 +276,7 @@ sub _allow_shutdown {
     } elsif($user->can_shutdown_all) {
         return;
     } else {
-        $self->_allowed($user);
+        $self->_allow_manage_args(user => $user);
     }
 }
 
@@ -513,6 +515,18 @@ Returns if the domain is known in Ravada.
 sub is_known {
     my $self = shift;
     return $self->_select_domain_db(name => $self->name);
+}
+
+=head2 start_time
+
+Returns the last time (epoch format in seconds) the
+domain was started.
+
+=cut
+
+sub start_time {
+    my $self = shift;
+    return $self->_data('start_time');
 }
 
 sub _select_domain_db {
@@ -1080,14 +1094,21 @@ sub _post_pause {
 
 sub _pre_shutdown {
     my $self = shift;
+    my %arg = @_;
+
+    my $user = delete $arg{user};
+    delete $arg{timeout};
+    delete $arg{request};
+
+    confess "Unknown args ".join(",",sort keys %arg)
+        if keys %arg;
 
     $self->_allow_shutdown(@_);
 
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        my %args = @_;
-        $self->resume(user => $args{user});
+        $self->resume(user => $user);
     }
 }
 
@@ -1110,22 +1131,21 @@ sub _post_shutdown {
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
-                 name => $self->name
+            id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$timeout 
         );
     }
 }
 
-sub _pre_shutdown_now {
-    my $self = shift;
-    return if !$self->is_active;
-}
-
-sub _post_shutdown_now {
+sub _around_shutdown_now {
+    my $orig = shift;
     my $self = shift;
     my $user = shift;
 
+    if ($self->is_active) {
+        $self->$orig($user);
+    }
     $self->_post_shutdown(user => $user);
 }
 
@@ -1225,11 +1245,13 @@ sub _post_start {
         %arg = @_;
     }
 
-    if (scalar @_ % 2) {
-        $arg{user} = $_[0];
-    } else {
-        %arg = @_;
-    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set start_time=? "
+        ." WHERE id=?"
+    );
+    $sth->execute(time, $self->id);
+    $sth->finish;
+
     $self->_add_iptable(@_);
 
     if ($self->run_timeout) {
@@ -1629,24 +1651,37 @@ sub remote_ip {
 
 =head2 list_requests
 
-Returns a list of pending requests from the domain
+Returns a list of pending requests from the domain. It won't show those requests
+scheduled for later.
 
 =cut
 
 sub list_requests {
     my $self = shift;
+    my $all = shift;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
     );
     $sth->execute($self->id);
     my @list;
     while ( my $req_data =  $sth->fetchrow_hashref ) {
-        next if $req_data->{at_time} && $req_data->{at_time} - time > 1;
+        next if !$all && $req_data->{at_time} && $req_data->{at_time} - time > 1;
         push @list,($req_data);
     }
     $sth->finish;
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
+}
+
+=head2 list_all_requests
+
+Returns a list of pending requests from the domain including those scheduled for later
+
+=cut
+
+sub list_all_requests {
+    return list_requests(@_,'all');
 }
 
 =head2 get_driver

@@ -580,7 +580,7 @@ Shuts down uncleanly the domain
 
 sub force_shutdown{
     my $self = shift;
-    $self->_do_force_shutdown();
+    return $self->_do_force_shutdown() if $self->is_active;
 }
 
 sub _do_force_shutdown {

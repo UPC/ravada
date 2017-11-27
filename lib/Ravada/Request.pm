@@ -53,7 +53,7 @@ our %VALID_ARG = (
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
-    ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
+    ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -424,8 +424,13 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
-        $args{id_domain} = $args{args}->{id_domain}
-            if exists $args{args}->{id_domain} && ! $args{id_domain};
+        my $id_domain_args = $args{args}->{id_domain};
+
+        if ($id_domain_args) {
+            confess "ERROR: Different id_domain: ".Dumper(\%args)
+                if $args{id_domain} && $args{id_domain} ne $id_domain_args;
+            $args{id_domain} = $id_domain_args;
+        }
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
