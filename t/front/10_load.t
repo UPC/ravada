@@ -69,9 +69,11 @@ sub test_add_domain_db {
     $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 1, "There should 1 base, got ".scalar(@$bases)) or exit;
+
+    is($bases->[0]->{name}, $domain_name);
     
     for my $base ( @$bases ) {
-        ok($base->{is_base} );
+        ok($base->{is_base},"[$vm_name] Expecting base for ".Dumper($base) );
     }
 }
 

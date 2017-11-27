@@ -1,0 +1,223 @@
+use warnings;
+use strict;
+
+use Data::Dumper;
+use Test::More;
+use Test::SQL::Data;
+
+use lib 't/lib';
+use Test::Ravada;
+
+my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+init($test->connector);
+
+use_ok('Ravada');
+
+my $FILE_CONFIG = 't/etc/ravada.conf';
+
+##########################################################################3
+
+sub add_volumes {
+    my ($base, $volumes) = @_;
+    $base->add_volume_swap(name => "vol_swap", size => 512 * 1024);
+    for my $n ( 1 .. $volumes ) {
+        $base->add_volume(name => "vol_$n", size => 512 * 1024);
+    }
+}
+
+sub test_copy_clone {
+    my $vm_name = shift;
+    my $volumes = shift;
+
+    my $base = create_domain($vm_name);
+
+    add_volumes($base, $volumes)  if $volumes;
+
+    my $name_clone = new_domain_name();
+
+    my $clone = $base->clone(
+        name => $name_clone
+        ,user => user_admin
+    );
+
+    is($clone->is_base,0);
+    for ( $clone->list_volumes ) {
+        open my $out,'>',$_ or die $!;
+        print $out "hola $_\n";
+        close $out;
+    }
+
+    my $name_copy = new_domain_name();
+    my $copy = $clone->clone(
+        name => $name_copy
+        ,user => user_admin
+    );
+    is($clone->is_base,0);
+    is($copy->is_base,0);
+
+    is($copy->id_base, $base->id);
+
+    is(scalar($copy->list_volumes),scalar($clone->list_volumes));
+
+    my @copy_volumes = $copy->list_volumes_target();
+    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
+    my @clone_volumes = $clone->list_volumes_target();
+    my %clone_volumes = map { $_->[1] => $_->[0] } @clone_volumes;
+
+    for my $target ( keys %copy_volumes ) {
+        isnt($copy_volumes{$target}, $clone_volumes{$target});
+        my @stat_copy = stat($copy_volumes{$target});
+        my @stat_clone = stat($clone_volumes{$target});
+        is($stat_copy[7],$stat_clone[7],"[$vm_name] size different "
+                ."\n$copy_volumes{$target} ".($stat_copy[7])
+                ."\n$clone_volumes{$target} ".($stat_clone[7])
+        ) or exit;
+
+    }
+    $clone->remove(user_admin);
+    $copy->remove(user_admin);
+    $base->remove(user_admin);
+}
+
+sub test_copy_request {
+    my $vm_name = shift;
+
+    my $base = create_domain($vm_name);
+    my $memory = $base->get_info->{memory};
+
+    my $name_clone = new_domain_name();
+    my $mem_clone = int($memory * 1.5);
+
+    my $clone = $base->clone(
+        name => $name_clone
+       ,user => user_admin
+       ,memory => $mem_clone
+    );
+
+    is($clone->get_info->{memory}, $mem_clone,"[$vm_name] memory");
+
+    my $name_copy = new_domain_name();
+    my $mem_copy = ($mem_clone * 1.5);
+    my $req;
+
+    my $clone_mem = int ( $memory * 1.5);
+    eval { $req = Ravada::Request->clone(
+            id_domain => $clone->id
+              ,memory => $mem_copy
+               , name => $name_copy
+                , uid => user_admin->id
+        );
+    };
+    is($@,'') or return;
+    is($req->status(),'requested');
+    rvd_back->_process_all_requests_dont_fork();
+
+    is($req->status(),'done');
+    is($req->error,'');
+
+    my $copy = rvd_back->search_domain($name_copy);
+    ok($copy,"[$vm_name] Expecting domain $name_copy");
+    is($copy->get_info->{memory}, $mem_copy);
+
+    my $clone2 = rvd_back->search_domain($name_clone);
+    is($clone2->is_base,0);
+
+    is($clone2->get_info->{memory}, $mem_clone);
+
+    isnt($clone2->get_info->{memory}, $base->get_info->{memory});
+    isnt($clone2->get_info->{memory}, $copy->get_info->{memory});
+}
+
+sub test_copy_change_ram {
+    my $vm_name = shift;
+
+    my $base = create_domain($vm_name);
+
+    my $name_clone = new_domain_name();
+
+    my $clone = $base->clone(
+        name => $name_clone
+       ,user => user_admin
+    );
+    my $clone_mem = $clone->get_info->{memory};
+
+    my $name_copy = new_domain_name();
+    my $copy = $clone->clone(
+        name => $name_copy
+        ,memory => int($clone_mem * 1.5)
+        ,user => user_admin
+    );
+    is($clone->is_base,0);
+    is($copy->is_base,0);
+
+    is ($copy->get_info->{memory},int($clone_mem * 1.5),"[$vm_name] Expecting memory");
+    $clone->remove(user_admin);
+    $copy->remove(user_admin);
+    $base->remove(user_admin);
+}
+
+sub test_copy_req_nonbase {
+    my $vm_name = shift;
+    my $domain = create_domain($vm_name);
+
+    my $name_copy = new_domain_name();
+
+    my $req;
+    eval { $req = Ravada::Request->clone(
+            id_domain => $domain->id
+               , name => $name_copy
+                , uid => user_admin->id
+        );
+    };
+    is($@,'') or return;
+    is($req->status(),'requested');
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status(),'done');
+    is($req->error,'');
+
+    my $copy = rvd_back->search_domain($name_copy);
+    ok($copy,"[$vm_name] Expecting domain $name_copy");
+
+    is($domain->is_base,1);
+
+    $copy->remove(user_admin);
+    $domain->remove(user_admin);
+
+}
+
+##########################################################################3
+
+clean();
+
+
+for my $vm_name ('Void', 'KVM') {
+    my $vm = rvd_back->search_vm($vm_name);
+
+    SKIP: {
+
+        my $msg = "SKIPPED: No virtual managers found";
+        if ($vm && $vm_name =~ /kvm/i && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+
+        skip($msg,10)   if !$vm;
+
+        test_copy_clone($vm_name);
+        test_copy_clone($vm_name,1);
+        test_copy_clone($vm_name,2);
+        test_copy_clone($vm_name,10);
+
+        test_copy_request($vm_name);
+
+        test_copy_change_ram($vm_name);
+
+        test_copy_req_nonbase($vm_name);
+    }
+
+}
+
+clean();
+
+done_testing();
+

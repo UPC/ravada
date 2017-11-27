@@ -33,6 +33,7 @@ no warnings "experimental::signatures";
 use Ravada::Domain::KVM;
 use Ravada::NetInterface::KVM;
 use Ravada::NetInterface::MacVTap;
+use Ravada::Utils;
 
 with 'Ravada::VM';
 
@@ -265,11 +266,23 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
-        eval { $pool->refresh() };
-        last if !$@;
-        warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
-        sleep 1;
+        for (;;) {
+            eval { $pool->refresh() };
+            last if !$@;
+            warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
+            sleep 1;
+        }
     }
+}
+
+=head2 refresh_storage
+
+Refreshes all the storage pools
+
+=cut
+
+sub refresh_storage($self) {
+    $self->_refresh_storage_pools();
 }
 
 =head2 search_volume_path_re
@@ -601,8 +614,11 @@ sub _domain_create_from_iso {
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
-    my $domain = $self->_domain_create_common($xml,%args);
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    $domain->_set_spice_password($spice_password)
+        if $spice_password;
 
     return $domain;
 }
@@ -612,18 +628,27 @@ sub _domain_create_common {
     my $xml = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
+
+    my $spice_password = Ravada::Utils::random_name(4);
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml);
+    $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
 
     my $dom;
 
     eval {
-        $dom = $self->vm->define_domain($xml->toString());
-        $dom->create if $args{active};
+        if ($user->is_temporary) {
+            $dom = $self->vm->create_domain($xml->toString());
+        } else {
+            $dom = $self->vm->define_domain($xml->toString());
+            $dom->create if $args{active};
+        }
     };
     if ($@) {
         my $out;
@@ -643,8 +668,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
     );
-
-    return $domain;
+    return ($domain, $spice_password);
 }
 
 sub _create_disk {
@@ -767,8 +791,10 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
-    my $domain = $self->_domain_create_common($xml,%args);
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    $domain->_set_spice_password($spice_password);
     return $domain;
 }
 
@@ -869,6 +895,7 @@ sub _iso_name {
         );
         $sth->execute($device,$iso->{id});
     }
+    $self->_refresh_storage_pools();
     return $device;
 }
 
@@ -1220,12 +1247,14 @@ sub _xml_modify_video {
 sub _xml_modify_spice_port {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
+    my $password = shift;
 
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $self->ip() );
+    $graph->setAttribute(passwd => $password)    if $password;
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
 
@@ -1243,15 +1272,32 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    random:while (1) {
-        my $new_uuid = _new_uuid($uuid);
-        next if $new_uuid eq $uuid;
-        for my $dom ($self->vm->list_all_domains) {
-            next random if $dom->get_uuid_string eq $new_uuid;
-        }
-        $uuid->setData($new_uuid);
-        last;
+    my @known_uuids;
+    for my $dom ($self->vm->list_all_domains) {
+        push @known_uuids,($dom->get_uuid_string);
     }
+    my $new_uuid = _unique_uuid($uuid,@known_uuids);
+    $uuid->setData($new_uuid);
+}
+
+sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
+    my @uuids = @_;
+    if (!scalar @uuids) {
+        for my $dom ($self->vm->list_all_domains) {
+            push @uuids,($dom->get_uuid_string);
+        }
+    }
+    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+
+    for (1..1000) {
+        my $new_last = int(rand(0x100000));
+        my $new_uuid = sprintf("%s%06d",$first,substr($new_last,0,6));
+
+        confess "Wrong uuid size ".length($new_uuid)." <> ".length($uuid)
+            if length($new_uuid) != length($uuid);
+        return $new_uuid if !grep /^$new_uuid$/,@uuids;
+    }
+    confess "I can't find a new unique uuid";
 }
 
 sub _xml_modify_cdrom {
@@ -1592,7 +1638,10 @@ sub _unique_mac {
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
-            return 0 if $mac eq lc($nic_mac);
+            if ( $mac eq lc($nic_mac) ) {
+                warn "mac clashes with domain ".$dom->get_name;
+                return 0;
+            }
         }
     }
     return 1;
@@ -1617,31 +1666,37 @@ sub _xml_modify_mac {
 
     my @macparts = split/:/,$mac;
 
+    my @old_macs;
+
+    for my $dom ($self->vm->list_all_domains) {
+        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+
+        for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
+            my $nic_mac = $nic->getAttribute('address');
+            push @old_macs,($nic_mac);
+        }
+    }
+
+
     my $new_mac;
 
-    my $n_part = scalar(@macparts) -2;
+    for my $cont ( 1 .. 1000 ) {
+        my $pos = int(rand(2))+4;
+        my $num =sprintf "%02X", rand(0xff);
+        die "Missing num " if !defined $num;
+        $macparts[$pos] = $num;
+        $new_mac = lc(join(":",@macparts));
+        my $n_part = scalar(@macparts) -2;
 
-    for (;;) {
-        for my $last ( 0 .. 254 ) {
-            $last = sprintf("%X", $last);
-            $last = "0$last" if length($last)<2;
-            $macparts[-1] = $last;
-            $new_mac = join(":",@macparts);
-            if ( $self->_unique_mac($new_mac) ) {
+        last if (! grep /^$new_mac$/i,@old_macs);
+    }
+
+    if ( $self->_unique_mac($new_mac) ) {
                 $if_mac->setAttribute(address => $new_mac);
                 return;
-            }
-            $new_mac = undef;
-        }
-        my $new_part = hex($macparts[$n_part])+1;
-        if ($new_part > 255) {
-            $n_part--;
-            $new_part = 0;
-            die "I can't find a new unique mac" if !$n_part<0;
-        }
-        $macparts[$n_part] = sprintf("%X", $new_part);
+    } else {
+        die "I can't find a new unique mac";
     }
-    die "I can't find a new unique mac" if !$new_mac;
 }
 
 

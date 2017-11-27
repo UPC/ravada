@@ -40,7 +40,7 @@ sub test_create_domain {
     }
 }
 
-my $id = 1;
+my $id = 10;
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
     my $exp_class = "Ravada::VM::$vm_type";

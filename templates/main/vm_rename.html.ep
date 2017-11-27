@@ -4,7 +4,7 @@
 %   $message_rename = 'This VM is running and can\'t be renamed.';
 %   $disable_rename = 1;
 % }
-% if ( $domain->is_hibernated ) {
+% if ( $domain->is_hibernated) {
 %   $message_rename = 'This VM has a saved hybernated state and can\'t be renamed.';
 %   $disable_rename = 1;
 % }
@@ -23,12 +23,12 @@
                     <input class="form-control" type="text" name="new_name" ng-model="new_name"
                              ng-change="validate_new_name(showmachine.name)"
                              ng-disabled="<%= $disable_rename %>"
-                    >
-                    <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated || new_name_invalid"
+                >
+                <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated || new_name_invalid || message_rename"
                              ng-click="rename(showmachine.id, showmachine.name)">
                                 Rename
                     </button>
-                    <button type="button" ng-click="cancel_rename(showmachine.name)">cancel</button>
+                    <input type="reset" value="Cancel" onclick = "location='http://127.0.0.1:3000/admin/machines'"/>
                     <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">
@@ -46,6 +46,8 @@
                     Rename requested.
                     </div>
                 </div>
+                <div ng-show="message_rename"
+                    class="alert alert-warning">Renaming machine </div>
             </div>
             <div class="col-md-6">
 

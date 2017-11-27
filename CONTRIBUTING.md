@@ -50,6 +50,8 @@ everyone is a beginner at first :smile_cat:
 
 Follow this guide about running [Ravada in development mode](http://ravada.readthedocs.io/en/latest/devel-docs/run.html).
 
+If you change a translation or language file make sure you follow this small [guide](http://ravada.readthedocs.io/en/latest/devel-docs/translations.html?highlight=translate) and don't forget to add the issue number when committing.
+
 ### 6. Make a Pull Request
 
 At this point, you should switch back to your master branch and make sure it's
