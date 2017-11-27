@@ -11,6 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
+use File::Copy;
 use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
@@ -163,6 +164,8 @@ after 'remove_base' => \&_post_remove_base;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
+
+before 'clone' => \&_pre_clone;
 
 after 'screenshot' => \&_post_screenshot;
 
@@ -474,6 +477,8 @@ Returns: Domain object read only
 =cut
 
 sub open($class, $id) {
+    confess "Missing id"    if !defined $id;
+
     my $self = {};
 
     if (ref($class)) {
@@ -491,7 +496,9 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new( readonly => 1);
+    my @ro = ();
+    @ro = (readonly => 1 ) if $>;
+    my $vm = $vm0->new( @ro );
 
     return $vm->search_domain($row->{name});
 }
@@ -989,14 +996,32 @@ sub clone {
     my $self = shift;
     my %args = @_;
 
-    my $name = $args{name} or confess "ERROR: Missing domain cloned name";
-    confess "ERROR: Missing request user" if !$args{user};
+    my $name = delete $args{name}
+        or confess "ERROR: Missing domain cloned name";
 
-    my $uid = $args{user}->id;
+    my $user = delete $args{user}
+        or confess "ERROR: Missing request user";
 
-    $self->prepare_base($args{user})  if !$self->is_base();
+    return $self->_copy_clone(@_)   if $self->id_base();
+
+    my $request = delete $args{request};
+    my $memory = delete $args{memory};
+
+    confess "ERROR: Unknown args ".join(",",sort keys %args)
+        if keys %args;
+
+    my $uid = $user->id;
+
+    if ( !$self->is_base() ) {
+        $request->status("working","Preparing base")    if $request;
+        $self->prepare_base($user)
+    }
 
     my $id_base = $self->id;
+
+    my @args_copy = ();
+    push @args_copy, ( memory => $memory )      if $memory;
+    push @args_copy, ( request => $request )    if $request;
 
     my $clone = $self->_vm->create_domain(
         name => $name
@@ -1004,8 +1029,45 @@ sub clone {
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
+        ,@args_copy
     );
     return $clone;
+}
+
+sub _copy_clone($self, %args) {
+    my $name = delete $args{name} or confess "ERROR: Missing name";
+    my $user = delete $args{user} or confess "ERROR: Missing user";
+    my $memory = delete $args{memory};
+    my $request = delete $args{request};
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my $base = Ravada::Domain->open($self->id_base);
+
+    my @copy_arg;
+    push @copy_arg, ( memory => $memory ) if $memory;
+
+    $request->status("working","Copying domain ".$self->name
+        ." to $name")   if $request;
+
+    my $copy = $self->_vm->create_domain(
+        name => $name
+        ,id_base => $base->id
+        ,id_owner => $user->id
+        ,_vm => $self->_vm
+        ,@copy_arg
+    );
+    my @volumes = $self->list_volumes_target;
+    my @copy_volumes = $copy->list_volumes_target;
+
+    my %volumes = map { $_->[1] => $_->[0] } @volumes;
+    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
+    for my $target (keys %volumes) {
+        copy($volumes{$target}, $copy_volumes{$target})
+            or die "$! $volumes{$target}, $copy_volumes{$target}"
+    }
+    return $copy;
 }
 
 sub _post_pause {
@@ -1643,6 +1705,20 @@ sub type {
     my $self = shift;
     my ($type) = $self =~ m{.*::(.*)};
     return $type;
+}
+
+sub _pre_clone($self,%args) {
+    my $name = delete $args{name};
+    my $user = delete $args{user};
+    my $memory = delete $args{memory};
+    delete $args{request};
+
+    confess "ERROR: Missing clone name "    if !$name;
+    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
+
+    confess "ERROR: Missing user owner of new domain"   if !$user;
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
 }
 
 1;

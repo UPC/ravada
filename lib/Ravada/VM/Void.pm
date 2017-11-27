@@ -74,9 +74,9 @@ sub create_domain {
         );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
-        $domain->set_memory($args{memory}) if $args{memory};
 
     }
+    $domain->set_memory($args{memory}) if $args{memory};
 #    $domain->start();
     return $domain;
 }
