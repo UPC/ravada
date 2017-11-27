@@ -388,3 +388,8 @@ ul.alert-dropdown {
     border-left:1px solid #d73a49;
     border-right:1px solid #d73a49;
 }
+
+.screenshot-default{
+    opacity: 0.5;
+    filter: alpha(opacity=50); /* For IE8 and earlier */
+}

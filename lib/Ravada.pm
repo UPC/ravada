@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.10';
+our $VERSION = '0.3.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -172,8 +172,8 @@ sub _update_isos {
     my $field = 'name';
     my %data = (
         artful => {
-                    name => 'Ubuntu Artful Aardvak'
-            ,description => 'Ubuntu 17.10 Artful Aardvak 64 bits'
+                    name => 'Ubuntu Artful Aardvark'
+            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
@@ -323,32 +323,32 @@ sub _update_domain_drivers_types($self) {
             id => 4,
             ,name => 'image'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
         },
         jpeg => {
             id => 5,
             ,name => 'jpeg'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
         },
         zlib => {
             id => 6,
             ,name => 'zlib'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
         },
         playback => {
             id => 7,
             ,name => 'playback'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
 
         },
         streaming => {
             id => 8,
             ,name => 'streaming'
            ,description => 'Graphics Options'
-           ,vm => 'qemu'
+           ,vm => 'KVM'
 
         }
     };
@@ -543,13 +543,32 @@ sub _update_table($self, $table, $field, $data) {
     }
 }
 
+sub _remove_old_isos {
+    my $self = shift;
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images "
+        ."    WHERE url like '%debian-9.0%iso'"
+   );
+   $sth->execute();
+   $sth->finish;
+}
+
 sub _update_data {
     my $self = shift;
 
+    $self->_remove_old_isos();
     $self->_update_isos();
     $self->_update_user_grants();
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
+    $self->_update_old_qemus();
+}
+
+sub _update_old_qemus($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms SET vm_type='KVM'"
+        ." WHERE vm_type='qemu' AND name ='KVM_localhost'"
+    );
+    $sth->execute;
+
 }
 
 sub _set_url_isos($self, $new_url='http://localhost/iso/') {
@@ -701,6 +720,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+
+    $self->_upgrade_table('domains_network','allowed','int not null default 1');
 }
 
 
@@ -748,7 +770,13 @@ sub _init_config {
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
-    $CONFIG = YAML::LoadFile($file);
+    die "ERROR: Missing config file $file\n"
+        if !-e $file;
+
+    eval { $CONFIG = YAML::LoadFile($file) };
+
+    die "ERROR: Format error in config file $file\n$@"  if $@;
+
     $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
@@ -782,7 +810,7 @@ sub _create_vm_kvm {
 
     my $vm_kvm;
 
-    $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR ));
+    $vm_kvm = Ravada::VM::KVM->new( );
 
     my ($internal_vm , $storage);
     $storage = $vm_kvm->dir_img();
@@ -922,7 +950,10 @@ sub create_domain {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    $vm = $self->vm->[0]               if !$vm;
+    if ($args{id_base}) {
+        my $base = Ravada::Domain->open($args{id_base});
+        $vm = Ravada::VM->open($base->_vm->id);
+    }
 
     confess "No vm found"   if !$vm;
 
@@ -1682,6 +1713,21 @@ sub _cmd_open_iptables {
     );
 }
 
+sub _cmd_clone($self, $request) {
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+
+    my @args = ( request => $request);
+    push @args, ( memory => $request->args('memory'))
+        if $request->defined_arg('memory');
+
+    $domain->clone(
+        name => $request->args('name')
+        ,user => Ravada::Auth::SQL->search_by_id($request->args('uid'))
+        ,@args
+    );
+
+}
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -1877,13 +1923,25 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
+sub _cmd_refresh_storage($self, $request) {
+
+    my $vm;
+    if ($request->defined_arg('id_vm')) {
+        $vm = Ravada::VM->open($request->defined_arg('id_vm'));
+    } else {
+        $vm = $self->search_vm('KVM');
+    }
+    $vm->refresh_storage();
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
 
     my %methods = (
 
-          start => \&_cmd_start
+          clone => \&_cmd_clone
+         ,start => \&_cmd_start
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
@@ -1901,6 +1959,7 @@ sub _req_method {
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
+,refresh_storage => \&_cmd_refresh_storage
 
     );
     return $methods{$cmd};

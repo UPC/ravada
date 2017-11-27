@@ -41,6 +41,10 @@ sub BUILD {
 
     if ($args->{id_base}) {
         my $base = Ravada::Domain->open($args->{id_base});
+
+        confess "ERROR: Wrong base ".ref($base)." ".$base->type
+                ."for domain in vm ".$self->_vm->type
+            if $base->type ne $self->_vm->type;
         my $drivers = $base->_value('drivers');
         $self->_store(drivers => $drivers );
     }
@@ -351,6 +355,9 @@ sub can_screenshot { return $CONVERT; }
 sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
+    $self->_set_default_info()
+        if !$info->{memory};
+    $info = $self->_value('info');
     lock_keys(%$info);
     return $info;
 }
@@ -467,4 +474,9 @@ sub clean_swap_volumes {
 sub hybernate { confess "Not supported"; }
 
 sub type { 'Void' }
+
+sub is_removed {
+    my $self = shift;
+    return !-e $self->_config_file();
+}
 1;
