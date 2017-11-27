@@ -1716,7 +1716,7 @@ sub _cmd_open_iptables {
 sub _cmd_clone($self, $request) {
     my $domain = Ravada::Domain->open($request->args('id_domain'));
 
-    my @args = ();
+    my @args = ( request => $request);
     push @args, ( memory => $request->args('memory'))
         if $request->defined_arg('memory');
 
