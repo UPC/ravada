@@ -179,6 +179,11 @@ sub BUILD {
     $self->is_known();
 }
 
+sub BUILD {
+    my $self = shift;
+    $self->_init_connector();
+}
+
 sub _vm_connect {
     my $self = shift;
     $self->_vm->connect();

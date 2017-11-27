@@ -160,6 +160,7 @@
             $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            $scope.message_rename = 1;
             //   TODO check previous rename returned ok
             window.location.href = "/admin/machines";
           };
