@@ -176,12 +176,8 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 sub BUILD {
     my $self = shift;
-    $self->is_known();
-}
-
-sub BUILD {
-    my $self = shift;
     $self->_init_connector();
+    $self->is_known();
 }
 
 sub _vm_connect {
