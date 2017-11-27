@@ -154,6 +154,35 @@ sub test_copy_change_ram {
     $base->remove(user_admin);
 }
 
+sub test_copy_req_nonbase {
+    my $vm_name = shift;
+    my $domain = create_domain($vm_name);
+
+    my $name_copy = new_domain_name();
+
+    my $req;
+    eval { $req = Ravada::Request->clone(
+            id_domain => $domain->id
+               , name => $name_copy
+                , uid => user_admin->id
+        );
+    };
+    is($@,'') or return;
+    is($req->status(),'requested');
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status(),'done');
+    is($req->error,'');
+
+    my $copy = rvd_back->search_domain($name_copy);
+    ok($copy,"[$vm_name] Expecting domain $name_copy");
+
+    is($domain->is_base,1);
+
+    $copy->remove(user_admin);
+    $domain->remove(user_admin);
+
+}
+
 ##########################################################################3
 
 clean();
@@ -180,6 +209,8 @@ for my $vm_name ('Void', 'KVM') {
         test_copy_request($vm_name);
 
         test_copy_change_ram($vm_name);
+
+        test_copy_req_nonbase($vm_name);
     }
 
 }
