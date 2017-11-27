@@ -40,7 +40,7 @@ sub test_domain_with_swap {
         name => new_domain_name
         ,user => user_admin
     );
-    is($clone->is_base,1);
+    is($clone->is_base,0);
 
     $clone2->start(user_admin);
     $clone2->shutdown_now(user_admin);
