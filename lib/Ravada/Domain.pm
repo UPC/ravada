@@ -426,6 +426,8 @@ Returns: Domain object read only
 =cut
 
 sub open($class, $id) {
+    confess "Missing id"    if !defined $id;
+
     my $self = {};
     bless $self,$class;
 
@@ -945,6 +947,7 @@ sub clone {
 
     my @args_copy = ();
     push @args_copy, ( memory => $args{memory} )  if $args{memory};
+    push @args_copy, ( request => $args{request} )  if $args{request};
 
     my $clone = $self->_vm->create_domain(
         name => $name
@@ -961,13 +964,18 @@ sub _copy_clone($self, %args) {
     my $name = delete $args{name} or confess "ERROR: Missing name";
     my $user = delete $args{user} or confess "ERROR: Missing user";
     my $memory = delete $args{memory};
+    my $request = delete $args{request};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
 
     my $base = Ravada::Domain->open($self->id_base);
 
-    my @copy_arg = ( memory => $memory ) if $memory;
+    my @copy_arg;
+    push @copy_arg, ( memory => $memory ) if $memory;
+
+    $request->status("working","Copying domain ".$self->name
+        ." to $name");
     my $copy = $self->_vm->create_domain(
         name => $name
         ,id_base => $base->id
@@ -1515,9 +1523,10 @@ sub _pre_clone($self,%args) {
     my $name = delete $args{name};
     my $user = delete $args{user};
     my $memory = delete $args{memory};
+    delete $args{request};
 
     confess "ERROR: Missing clone name "    if !$name;
-    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z][a-z0-9_-]+$/;
+    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
