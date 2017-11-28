@@ -148,6 +148,10 @@ sub import_domain {
     confess "Not implemented";
 }
 
+sub refresh_storage {}
+
+sub ping { return 1 }
+
 #########################################################################3
 
 1;

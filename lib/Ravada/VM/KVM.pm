@@ -1793,4 +1793,11 @@ sub import_domain {
     return $domain;
 }
 
+sub ping($self) {
+    return 0 if !$self->vm;
+    eval { $self->vm->list_defined_networks };
+    return 1 if !$@;
+    return 0;
+}
+
 1;
