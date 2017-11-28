@@ -496,8 +496,13 @@ sub open_vm {
     my $type = shift or confess "I need vm type";
     my $class = "Ravada::VM::$type";
 
-    if ($VM{$type}) {
-        return $VM{$type} 
+    if (my $vm = $VM{$type}) {
+        if (!$vm->ping) {
+            $vm->disconnect();
+            $vm->connect();
+        } else {
+            return $vm;
+        }
     }
 
     my $proto = {};

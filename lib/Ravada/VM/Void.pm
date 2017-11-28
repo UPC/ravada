@@ -173,6 +173,8 @@ sub import_domain {
 
 sub refresh_storage {}
 
+sub ping { return 1 }
+
 #########################################################################3
 
 1;

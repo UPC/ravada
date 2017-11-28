@@ -44,6 +44,7 @@ requires 'connect';
 requires 'disconnect';
 requires 'import_domain';
 
+requires 'ping';
 ############################################################
 
 has 'host' => (
