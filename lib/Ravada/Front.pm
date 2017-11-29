@@ -306,6 +306,12 @@ sub list_vms($self, $type) {
     return @list;
 }
 
+=head2 list_nodes
+
+Lists the virtual manager nodes, including local
+
+=cut
+
 sub list_nodes($self) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT * FROM vms "

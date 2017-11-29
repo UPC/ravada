@@ -1874,6 +1874,20 @@ sub _set_base_vm_db($self, $id_vm, $value) {
     }
 }
 
+=head2 set_base_vm
+
+    Prepares or removes a base in a virtual manager.
+
+    $domain->set_base_vm(
+        id_vm => $id_vm         # you can pass the id_vm
+          ,vm => $vm            #    or the vm
+        ,user => $user
+       ,value => $value  # if it is 0, it removes the base
+     ,request => $req
+    );
+
+=cut
+
 sub set_base_vm($self, %args) {
 
     my $id_vm = delete $args{id_vm};
@@ -1913,6 +1927,14 @@ sub set_base_vm($self, %args) {
     return $self->_set_base_vm_db($vm->id, $value);
 }
 
+=head2 base_in_vm
+
+Returns if this domain has a base prepared in this virtual manager
+
+    if ($domain->base_in_vm($id_vm)) { ...
+
+=cut
+
 sub base_in_vm($self,$id_vm) {
 
     confess "ERROR: id_vm must be a number, it is '$id_vm'"
@@ -1933,6 +1955,12 @@ sub base_in_vm($self,$id_vm) {
         && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
     return $enabled;
 }
+
+=head2 is_local
+
+Returns wether this domain is in the local host
+
+=cut
 
 sub is_local($self) {
     return $self->_vm->is_local();

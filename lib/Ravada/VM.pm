@@ -514,6 +514,12 @@ sub list_drivers($self, $name=undef) {
     return Ravada::Domain::drivers(undef,$name,$self->type);
 }
 
+=head2 is_local
+
+Returns wether this virtual manager is in the local host
+
+=cut
+
 sub is_local($self) {
     return $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'

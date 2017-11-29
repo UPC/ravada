@@ -278,7 +278,7 @@ sub search_volume_path_re {
     my $self = shift;
     my $pattern = shift;
 
-    die "TODO remote" if !self->is_local;
+    die "TODO remote" if !$self->is_local;
 
     opendir my $ls,$self->dir_img or die $!;
     while (my $file = readdir $ls) {
