@@ -30,7 +30,7 @@ sub test_node_renamed {
 
     my $name = $node->name;
 
-    my $name2 = "knope";
+    my $name2 = "knope_".new_domain_name();
 
     my $sth= $test->connector->dbh->prepare(
         "UPDATE vms SET name=? WHERE name=?"
@@ -64,6 +64,8 @@ sub test_node {
         .($@ or '')."'");
     ok($node) or return;
 
+    is($node->type,$vm->type) or exit;
+
     is($node->host,$REMOTE_CONFIG->{host});
     like($node->name ,qr($REMOTE_CONFIG->{host}));
     ok($node->vm,"[$vm_name] Expecting a VM in node");
@@ -77,6 +79,9 @@ sub test_node {
     is($node2->name, $node->name);
     is($node2->public_ip, $node->public_ip);
     ok(!$node2->is_local,"[$vm_name] node remote") or exit;
+
+    my @nodes = $vm->list_nodes();
+    is(scalar @nodes, 2,"[$vm_name] Expecting nodes") or exit;
     return $node;
 }
 
@@ -348,7 +353,13 @@ sub test_rsync_newer {
     my $capacity;
     { # vols equal, then resize
     my $vol = $vm->search_volume($vol_name);
+    ok($vol,"[$vm_name] expecting volume $vol_name")    or exit;
+    ok($vol->get_info,"[$vm_name] No info for remote vol "
+        .Dumper($vol)) or exit;
+
     my $vol_remote = $node->search_volume($vol_name);
+    ok($vol_remote->get_info,"[$vm_name] No info for remote vol "
+        .Dumper($vol_remote)) or exit;
     is($vol_remote->get_info->{capacity}, $vol->get_info->{capacity});
 
     $capacity = int ($vol->get_info->{capacity} *1.1 );
@@ -444,6 +455,7 @@ sub test_clone_not_in_node {
     is($domain->base_in_vm($node->id), 1);
 
     my @clones;
+    warn "starting 4 clones\n";
     for ( 1 .. 4 ) {
         my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
         push @clones,($clone1);
@@ -451,9 +463,6 @@ sub test_clone_not_in_node {
         eval { $clone1->start(user_admin) };
         is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or exit;
         is($clone1->is_active,1);
-        ok($node->list_domains(active => 1)
-                            ,"[$vm_name] Expecting active domains")
-            or exit;
 
     # search the domain in the underlying VM
         if ($vm_name eq 'KVM') {
@@ -471,7 +480,7 @@ sub test_clone_not_in_node {
 
     isnt($clones[-1]->_vm->host, $clones[0]->_vm->host,"[$vm_name] "
         .$clones[-1]->name
-        ." - ".$clones[0]->name) ;
+        ." - ".$clones[0]->name) or exit;
     for (@clones) {
         $_->remove(user_admin);
     }

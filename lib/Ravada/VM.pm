@@ -538,5 +538,19 @@ sub _connect_ssh($self) {
         ,"$home/.ssh/id_rsa")    or $ssh2->die_with_error;
     return $ssh2;
 }
+
+sub list_nodes($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE vm_type=?"
+    );
+    my @nodes;
+    $sth->execute($self->type);
+
+    while (my ($id) = $sth->fetchrow) {
+        push @nodes,(Ravada::VM->open($id))
+    }
+
+    return @nodes;
+}
 1;
 
