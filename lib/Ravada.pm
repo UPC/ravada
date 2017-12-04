@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.11-rc6';
+our $VERSION = '0.2.12-beta1';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -299,6 +299,14 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
+        }
+        ,opensuse_leap => {
+            name => 'openSuse Leap 42.3'
+            , description => 'openSuse Leap 42.3 64 bits'
+            ,url => 'http://download.opensuse.org/distribution/openSUSE-stable/iso/openSUSE-Leap-42.3-NET-x86_64.iso'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,sha256_url => 'http://download.opensuse.org/distribution/openSUSE-stable/iso/openSUSE-Leap-42.3-NET-x86_64.iso.sha256'
         }
     );
 
