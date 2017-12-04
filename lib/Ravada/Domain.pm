@@ -271,13 +271,11 @@ sub _balance_vm($self) {
     );
     $sth->execute($self->_vm->type);
     my %vm_list;
-    while (my ($id) = $sth->fetchrow) {
-        my $vm = Ravada::VM->open($id);
+    for my $vm ($self->_vm->list_nodes) {
         next if $vm->free_memory < $MIN_FREE_MEMORY;
-        $vm_list{$id} = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
+        $vm_list{$vm->id} = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
     }
     my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
-#    warn Dumper(\%vm_list,\@sorted_vm);
 
     my $base = Ravada::Domain->open($self->id_base);
     for my $id (@sorted_vm) {
