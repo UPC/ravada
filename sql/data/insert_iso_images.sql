@@ -60,9 +60,9 @@ VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
     ,'amd64'
     ,'yakkety64-amd64.xml'
     ,'yakkety64-volume.xml'
-    ,'http://releases.ubuntu.com/16.10/'
+    ,'http://old-releases.ubuntu.com/releases/16.10/'
     ,'ubuntu-16.10.*desktop-amd64.iso'
-    ,'http://releases.ubuntu.com/16.10/MD5SUMS'
+    ,'http://old-releases.ubuntu.com/releases/16.10/MD5SUMS'
     );
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,file_re,md5_url)
