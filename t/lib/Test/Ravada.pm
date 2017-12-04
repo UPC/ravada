@@ -25,6 +25,7 @@ create_domain
     flush_rules open_ipt
     remote_config
     remote_config_nodes
+    clean_remote_node
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -164,10 +165,10 @@ sub remote_config {
         diag("SKIPPED: No $vm_name section in $FILE_CONFIG_REMOTE");
         return ;
     };
-    for my $field ( qw(host user password security public_ip)) {
+    for my $field ( qw(host user password security public_ip name)) {
         delete $remote_conf->{$field};
     }
-    die "Unknown fields in remote_conf $vm_name, valids are : host user password\n"
+    die "Unknown fields in remote_conf $vm_name, valids are : host user password name\n"
         .Dumper($remote_conf)   if keys %$remote_conf;
 
     $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
@@ -257,7 +258,11 @@ sub _remove_old_domains_void {
 
 sub _remove_old_domains_void_remote {
     my $vm = shift;
-    my ($ssh, $chan) = $vm->_ssh_channel();
+
+    my ($ssh, $chan);
+    eval { ($ssh, $chan) = $vm->_ssh_channel() };
+    die $@ if $@ && $@ !~ /Unable to connect to remote/i;
+
     $chan->exec("rm -f ".$vm->dir_img."/*yml "
                     .$vm->dir_img."/*qcow "
                     .$vm->dir_img."/*img"
@@ -328,7 +333,7 @@ sub _remove_old_disks_kvm {
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
-    eval { $vm->storage_pool->refresh() };
+    eval { $vm->refresh_storage_pools() };
     return if $@ && $@ =~ /Cannot recv data/;
 
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
@@ -507,7 +512,9 @@ sub _clean_remote {
 
         my $node;
         eval { $node = $vm->new(%{$conf->{$vm_name}}) };
-        next if !$node || !$node->vm;
+        next if !$node || !$node->is_active;
+
+        clean_remote_node($node);
 
         _remove_old_domains_vm($node);
         _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
@@ -522,11 +529,18 @@ sub _clean_remote_nodes {
         my $vm = rvd_back->search_vm($config->{$name}->{type});
         eval { $node = $vm->new($config->{$name}) };
         warn $@ if $@;
-        next if !$node || !$node->vm;
-        _remove_old_domains_vm($node);
-        _remove_old_disks_kvm($node);
+        next if !$node || !$node->is_active;
+
+        clean_remote_node($node);
 
     }
+}
+
+sub clean_remote_node {
+    my $node = shift;
+
+    _remove_old_domains_vm($node);
+    _remove_old_disks_kvm($node)    if $node->type eq 'KVM';
 }
 
 sub search_id_iso {
