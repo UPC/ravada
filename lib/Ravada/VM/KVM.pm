@@ -1858,9 +1858,11 @@ sub security($self,$value=undef) {
 }
 
 sub free_memory($self) {
-    return 
-    $self->vm->get_node_memory_stats()->{free};
+
+    return
+    $self->vm->get_node_memory_stats()->{free}
     + $self->vm->get_node_memory_stats()->{cached};
+    + $self->vm->get_node_memory_stats()->{buffers};
 }
 
 1;
