@@ -10,6 +10,9 @@ use Test::SQL::Data;
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
@@ -68,6 +71,9 @@ sub test_node {
 
     is($node->host,$REMOTE_CONFIG->{host});
     like($node->name ,qr($REMOTE_CONFIG->{host}));
+
+    _start_node($node);
+
     ok($node->vm,"[$vm_name] Expecting a VM in node");
 
     ok($node->id) or exit;
@@ -559,6 +565,71 @@ sub test_prepare_sets_vm {
 
     $domain->remove(user_admin);
 }
+
+sub test_node_inactive {
+    my ($vm_name, $node) = @_;
+
+    _shutdown_node($node);
+    is($node->is_active,0);
+
+    my $list_nodes = rvd_front->list_nodes;
+    my ($node2) = grep { $_->{name} eq $node->name} @$list_nodes;
+
+    is($node2->{is_active},0) or exit;
+
+    _start_node($node);
+
+    for ( 1 .. 10 ) {
+        last if $node->is_active;
+        sleep 1;
+        diag("[$vm_name] waiting for node ".$node->name);
+    }
+    is($node->is_active,1,"[$vm_name] node ".$node->name." active");
+
+}
+
+sub _shutdown_node($node) {
+
+    $node->disconnect;
+
+    my $cmd = "virsh shutdown ".$node->name;
+    warn $cmd;
+    print `$cmd`;
+    sleep 2;
+    for ( 1 .. 60 ) {
+        last if !$node->is_active;
+        sleep 1;
+    }
+}
+
+sub _start_node($node) {
+
+    confess "Undefined node " if!$node;
+
+    $node->disconnect;
+    if ( $node->is_active ) {
+        $node->connect;
+        return;
+    }
+
+    my @cmd = ('virsh','start',$node->name);
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+    sleep 2;
+    for ( 1 .. 10 ) {
+        $node->disconnect;
+        sleep 1;
+        $node->connect;
+    }
+
+    for ( 1 .. 60 ) {
+        last if $node->is_active;
+        sleep 1;
+        diag("Waiting for node ".$node->name);
+    }
+}
+
 #############################################################
 
 clean();
@@ -591,6 +662,9 @@ SKIP: {
     my $node = test_node($vm_name)  or next;
 
     next if !$node || !$node->vm;
+
+    test_node_inactive($vm_name, $node);
+
 
     test_start_twice($vm_name, $node);
     test_node_renamed($vm_name, $node);
