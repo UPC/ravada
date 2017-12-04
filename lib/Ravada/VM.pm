@@ -152,7 +152,6 @@ sub BUILD {
         $self->_select_vm_db(%query);
     }
     $self->id;
-    $self->vm;
 
     $self->public_ip($self->_data('public_ip'))
         if defined $self->_data('public_ip')
