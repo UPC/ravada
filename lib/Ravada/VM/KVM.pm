@@ -1127,6 +1127,7 @@ sub _fetch_this($self,$row,$type){
     my $content = $self->_download($row->{"${type}_url"});
 
     for my $line (split/\n/,$content) {
+        next if $line =~ /^#/;
         my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
         ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
         if ($value) {
@@ -1148,7 +1149,7 @@ sub _fetch_md5($self,$row) {
 
 sub _fetch_sha256($self,$row) {
     my $signature = $self->_fetch_this($row,'sha256');
-    die "ERROR: Wrong signature '$signature'"
+    confess "ERROR: Wrong signature '$signature'"
          if $signature !~ /^[0-9a-f]{9}/;
     return $signature;
 }
