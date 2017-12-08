@@ -202,6 +202,24 @@ sub _update_isos {
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
         }
+        ,fedora_26 => {
+            name => 'Fedora 26'
+            ,description => 'RedHat Fedora 26 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-26-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
+        }
+        ,fedora_27 => {
+            name => 'Fedora 27'
+            ,description => 'RedHat Fedora 27 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-27-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+        }
         ,xubuntu_artful => {
             name => 'Xubuntu Artful Aardvark'
             ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
