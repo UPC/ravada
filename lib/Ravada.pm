@@ -910,7 +910,7 @@ sub _list_remote_vms($self ) {
     while ( my $row = $sth->fetchrow_hashref) {
         my $vm;
         eval { $vm = Ravada::VM->open( $row->{id}) };
-        push @vms,( $vm )   if $vm && $vm->vm;
+        push @vms,( $vm )   if $vm;
     }
     $sth->finish;
 
