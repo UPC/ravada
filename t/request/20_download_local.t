@@ -104,14 +104,15 @@ sub search_id_isos {
 
 sub httpd_localhost {
     my $ua  = Mojo::UserAgent->new;
+    my $res;
     eval {  
-        my $res = $ua->get('http://localhost/iso')->res;
-        return 1 if $res->code == 200;
-        diag($res->message);
-        return 0;
+       $res = $ua->get('http://localhost/iso/')->res;
     };
+    diag($res->code." ".$res->message);
+    return 1 if $res && $res->code == 200;
     return if !$@;
     is($@,qr/Connection refused/);
+    return 0;
 }
 
 ##################################################################
