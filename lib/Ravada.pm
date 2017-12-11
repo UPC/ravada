@@ -274,12 +274,30 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
+        ,debian_jessie_32 => {
+            name =>'Debian Jessie 32 bits'
+            ,description => 'Debian 8 Jessie 32 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
+        ,debian_jessie_64 => {
+            name =>'Debian Jessie 64 bits'
+            ,description => 'Debian 8 Jessie 64 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'http://cdimage.debian.org/cdimage/archive/9.1.0/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => 'http://cdimage.debian.org/cdimage/archive/9.1.0/amd64/iso-cd/MD5SUMS'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -561,11 +579,17 @@ sub _update_table($self, $table, $field, $data) {
 
 sub _remove_old_isos {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images "
-        ."    WHERE url like '%debian-9.0%iso'"
-   );
-   $sth->execute();
-   $sth->finish;
+    for my $sql (
+        "DELETE FROM iso_images "
+            ."  WHERE url like '%debian-9.0%iso'"
+        ,"DELETE FROM iso_images"
+            ."  WHERE name like 'Debian%' "
+            ."      AND NOT url  like '%*%' "
+    ) {
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute();
+        $sth->finish;
+    }
 }
 
 sub _update_data {
