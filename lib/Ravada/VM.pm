@@ -558,5 +558,13 @@ sub list_nodes($self) {
 
     return @nodes;
 }
+
+sub is_active($self) {
+    return 1 if $self->is_local && $self->vm;
+    eval { $self->_connect_ssh };
+    return 1 if !$@;
+    warn $@ if $@ && $@ !~ /Unable to connect/;
+    return 0;
+}
 1;
 
