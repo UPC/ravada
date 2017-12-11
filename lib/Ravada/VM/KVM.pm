@@ -297,10 +297,12 @@ sub refresh_storage_pools($self) {
 
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
-        eval { $pool->refresh() };
-        last if !$@;
-        warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
-        sleep 1;
+        for ( 1 .. 10 ) {
+            eval { $pool->refresh() };
+            last if !$@;
+            warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
+            sleep 1;
+        }
     }
 }
 
