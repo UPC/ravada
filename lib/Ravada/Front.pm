@@ -662,6 +662,16 @@ sub search_domain {
     return $vm->search_domain($name);
 }
 
+sub _vm_id($self, $id) {
+    my $vm = $VM_ID{$id};
+    if (!$vm ) {
+        warn "Opening VM $id";
+        $vm = Ravada::VM->open(id => $id, readonly => 1);
+        $VM_ID{$id} = $vm if $vm;
+    }
+    return $vm;
+}
+
 =head2 list_requests
 
 Returns a list of ruquests : ( id , domain_name, status, error )
