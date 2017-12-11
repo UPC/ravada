@@ -149,6 +149,7 @@ sub BUILD {
             hostname => ($args->{host} or 'localhost')
             ,vm_type => $self->type
         );
+        $query{name} = $args->{name}  if $args->{name};
         $self->_select_vm_db(%query);
     }
     $self->id;
@@ -450,7 +451,7 @@ sub _do_select_vm_db {
 sub _select_vm_db {
     my $self = shift;
 
-    my ($row) = ($self->_do_select_vm_db(@_) or $self->_insert_vm_db());
+    my ($row) = ($self->_do_select_vm_db(@_) or $self->_insert_vm_db(@_));
 
     $self->{_data} = $row;
     return $row if $row->{id};
@@ -462,9 +463,15 @@ sub _insert_vm_db {
         "INSERT INTO vms (name, vm_type, hostname, public_ip, security)"
         ." VALUES(?, ?, ?, ?, ?)"
     );
-    my $name = $self->name;
+    my %args = @_;
+    my $name = ( delete $args{name} or $self->name);
+    my $host = ( delete $args{hostname} or $self->host );
+    delete $args{vm_type};
+
+    confess "Unknown args ".Dumper(\%args)  if keys %args;
+
     my $security = ($self->security() or {});
-    eval { $sth->execute($name,$self->type,$self->host, $self->public_ip, encode_json($security)) };
+    eval { $sth->execute($name,$self->type,$host, $self->public_ip, encode_json($security)) };
     confess $@ if $@;
     $sth->finish;
 
