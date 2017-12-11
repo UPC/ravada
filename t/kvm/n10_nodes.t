@@ -70,13 +70,14 @@ sub test_node {
     is($node->type,$vm->type) or exit;
 
     is($node->host,$REMOTE_CONFIG->{host});
-    like($node->name ,qr($REMOTE_CONFIG->{host}));
 
     _start_node($node);
 
-    ok($node->vm,"[$vm_name] Expecting a VM in node");
+    { $node->vm };
+    is($@,'')   or exit;
 
     ok($node->id) or exit;
+    is($node->is_active,1) or exit;
 
     ok(!$node->is_local,"[$vm_name] node remote");
 
@@ -630,6 +631,13 @@ sub _start_node($node) {
     }
 }
 
+sub remove_node($node) {
+    eval { $node->remove() };
+    is(''.$@,'');
+
+    my $node2 = Ravada::VM->open($node->id);
+    ok(!$node2, "Expecting no node ".$node->id);
+}
 #############################################################
 
 clean();
@@ -659,6 +667,7 @@ SKIP: {
     diag($msg)      if !$vm;
     skip($msg,10)   if !$vm;
 
+    diag("Testing remote node in $vm_name");
     my $node = test_node($vm_name)  or next;
 
     next if !$node || !$node->vm;
@@ -689,6 +698,8 @@ SKIP: {
 
         test_domain_starts_in_same_vm($vm_name, $node);
         test_prepare_sets_vm($vm_name, $node);
+
+    remove_node($node);
 }
 
 }
