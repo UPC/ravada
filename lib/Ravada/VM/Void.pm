@@ -1,6 +1,6 @@
 package Ravada::VM::Void;
 
-use Carp qw(croak);
+use Carp qw(carp croak);
 use Data::Dumper;
 use Encode;
 use Encode::Locale;
@@ -36,6 +36,7 @@ has 'vm' => (
     is => 'rw'
     ,isa => 'Any'
     ,builder => 'connect'
+    ,lazy => 1
 );
 
 our $SSH;
@@ -48,11 +49,16 @@ sub connect {
     return 1 if ! $self->host || $self->host eq 'localhost'
                 || $self->host eq '127.0.0.1';
 
+    return $SSH if $SSH;
+    confess "conncting" if $SSH;
     my ($ssh,$chan) = $self->_ssh_channel();
-    $chan->exec("ls ".$self->dir_img." || mkdir ".$self->dir_img);
+    $chan->exec("ls -l ".$self->dir_img." || mkdir ".$self->dir_img);
     my ($out, $err) = $chan->read2();
+    warn $err if $err;
     die $err if $err;
 
+    warn $out;
+    warn $ssh;
     return $ssh;
 }
 
