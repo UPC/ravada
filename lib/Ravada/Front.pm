@@ -201,8 +201,13 @@ sub list_domains {
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        for (qw(is_active is_locked is hibernated is_paused
+                has_clones )) {
+            $row->{$_} = 0;
+        }
         my $domain ;
         eval { $domain   = $self->search_domain($row->{name}) };
+        warn $@ if $@;
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
@@ -319,6 +324,8 @@ sub list_nodes($self) {
     $sth->execute();
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
+        my $vm = $self->_vm_id($row->{id});
+        $row->{is_active} = $vm->is_active;
         lock_hash(%$row);
         push @list,($row);
     }
@@ -642,12 +649,7 @@ sub search_domain {
     lock_hash(%$row);
 
     if ($row->{id_vm}) {
-        my $vm = $VM_ID{$row->{id_vm}};
-        if (!$vm ) {
-            warn "Opening VM $row->{id_vm}";
-            $vm = Ravada::VM->open(id => $row->{id_vm}, readonly => 1);
-            $VM_ID{$row->{id_vm}} = $vm if $vm;
-        }
+        my $vm = $self->_vm_id($row->{id_vm});
         confess "VM not found $row->{id_vm} not found"  if !$vm;
         my $domain = $vm->search_domain($name);#    if $vm;
         warn "domain $name not found in ".$vm->name." at ".$vm->host
