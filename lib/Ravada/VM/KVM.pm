@@ -22,6 +22,7 @@ use IPC::Run3 qw(run3);
 use IO::Interface::Simple;
 use JSON::XS;
 use LWP::UserAgent;
+use Mojo::UserAgent;
 use Moose;
 use Sys::Virt;
 use URI;
@@ -1009,10 +1010,11 @@ sub _search_iso {
 }
 
 sub _download($self, $url) {
-    confess "Wrong url '$url'" if $url =~ m{\*};
     my $cache;
     $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
     return $cache if $cache;
+
+    return $self->_match_url($url) if $url =~ m{\*};
 
     my $ua = new LWP::UserAgent;
     $ua->env_proxy;
@@ -1022,6 +1024,29 @@ sub _download($self, $url) {
     confess $res->status_line." $url" if !$res->is_success;
 
     return $self->_cache_store($url,$res->content);
+}
+
+sub _match_url($self,$url) {
+    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
+    $url2 = '' if !$url2;
+
+    my $ua = Mojo::UserAgent->new;
+    my $res = $ua->get(($url1 or '/'))->res;
+    die "ERROR ".$res->code." ".$res->message." : $url1"
+        unless $res->code == 200 || $res->code == 301;
+
+    my $links = $res->dom->find('a')->map( attr => 'href');
+    for my $link (@$links) {
+        next if $link !~ qr($match);
+        my $content;
+        my $new_url = $url1.$link.$url2;
+        eval { $content = $self->_download($new_url) };
+
+        next if !$content;
+        return $content if !wantarray;
+        return ($content, $new_url);
+    }
+    die "ERROR: $url not found";
 }
 
 sub _cache_get($self, $url) {
@@ -1077,7 +1102,9 @@ sub _fetch_filename {
 
     my $file;
 
-    my $content = $self->_download($row->{url});
+    my ($content, $new_url) = $self->_download($row->{url});
+    warn "NEW URL\n$row->{url}\n$new_url\n" if $new_url;
+    $row->{url} = $new_url if $new_url;
     my $lines = '';
     for my $line (split/\n/,$content) {
         next if $line !~ /iso"/;
@@ -1109,22 +1136,14 @@ sub _expand_url($self, $url, $file) {
 
 sub _fetch_this($self,$row,$type){
 
-    my ($file) = $row->{url} =~ m{.*/(.*)};
+    my ($url,$file) = $row->{url} =~ m{(.*/)(.*)};
     confess "No file for $row->{url}"   if !$file;
 
     my $url_orig = $row->{"${type}_url"};
 
-    if ($url_orig =~ m{\*}) {
-        my ($url,$file) = $url_orig =~ m{(\w+://.*)/(.*)};
-        my $url_expanded = $self->_expand_url($url, $file);
-        $row->{"${type}_url"} = $url_expanded;
-        my $sth = $$CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET ${type}_url =? WHERE id=?"
-        );
-        $sth->execute($url_expanded,$row->{id});
+    $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
 
-    }
-    my $content = $self->_download($row->{"${type}_url"});
+    my $content = $self->_download($url_orig);
 
     for my $line (split/\n/,$content) {
         next if $line =~ /^#/;
