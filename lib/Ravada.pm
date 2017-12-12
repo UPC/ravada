@@ -278,7 +278,7 @@ sub _update_isos {
             name =>'Debian Jessie 32 bits'
             ,description => 'Debian 8 Jessie 32 bits'
             ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
-            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
