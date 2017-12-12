@@ -21,6 +21,7 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use IO::Interface::Simple;
 use JSON::XS;
+use Mojo::DOM;
 use Mojo::UserAgent;
 use Moose;
 use Sys::Virt;
@@ -1056,33 +1057,17 @@ sub _fetch_filename {
 
     my ($content, $new_url) = $self->_download($row->{url});
     $row->{url} = $new_url if $new_url;
-    my $lines = '';
-    for my $line (split/\n/,$content) {
-        next if $line !~ /iso"/;
-        $lines .= "$line\n";
-        my ($found) = $line =~ qr/"($row->{file_re})"/;
-        next if !$found;
-        $file=$found if $found;
+
+    my $dom = Mojo::DOM->new($content);
+    for my $link (@{$dom->find('a')->map( attr => 'href')}) {
+        next if !defined $link || $link !~ qr($row->{file_re});
+        $file = $link;
     }
-    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>$content</pre>"   if !$file;
+    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>".$content."</pre>"   if !$file;
 
     $row->{filename} = ($row->{rename_file} or $file);
     $row->{url} .= "/" if $row->{url} !~ m{/$};
     $row->{url} .= $file;
-}
-
-sub _expand_url($self, $url, $file) {
-    my $ua = new LWP::UserAgent;
-    my $res = $ua->request(HTTP::Request->new(GET => $url));
-    return if !$res->is_success;
-
-    for my $line (split /\n/,$res->content ) {
-        my ($found) = $line =~ qr/<a href="($file)"/;
-        return "$url/$found" if $found;
-    }
-    die "$file not found in $url";
-    return;
-
 }
 
 sub _fetch_this($self,$row,$type){
