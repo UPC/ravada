@@ -1054,7 +1054,8 @@ sub _fetch_filename {
 
     my @found;
     for my $url ($self->_match_url($row->{url})) {
-        push @found, $self->_match_file($url, $row->{file_re});
+        push @found,
+        $self->_match_file($url, $row->{file_re});
     }
     die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     my @found2 = sort @found;
@@ -1080,6 +1081,7 @@ sub _web_user_agent($self) {
 
 sub _match_file($self, $url, $file_re) {
 
+    $url .= '/' if $url !~ m{/$};
     warn "searching for $file_re in $url\n";
 
     my $res;
@@ -1109,6 +1111,7 @@ sub _match_file($self, $url, $file_re) {
 sub _fetch_this($self,$row,$type){
 
     my ($url,$file) = $row->{url} =~ m{(.*/)(.*)};
+    my ($file2) = $row->{url} =~ m{.*/(.*/.*)};
     confess "No file for $row->{url}"   if !$file;
 
     my $url_orig = $row->{"${type}_url"};
@@ -1121,6 +1124,7 @@ sub _fetch_this($self,$row,$type){
         next if $line =~ /^#/;
         my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
         ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
+        ($value) = $line =~ m{$file2.* ([a-f0-9]+)}i if !$value;
         if ($value) {
             $row->{$type} = $value;
             return $value;
