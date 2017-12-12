@@ -969,14 +969,13 @@ sub _download($self, $url) {
 
     return $self->_match_url($url) if $url =~ m{\*};
 
-    my $ua = new LWP::UserAgent;
-    $ua->env_proxy;
-    my $req = HTTP::Request->new( GET => $url);
-    my $res = $ua->request($req);
+    my $ua = Mojo::UserAgent->new();
+    my $res = $ua->get($url)->res;
 
-    confess $res->status_line." $url" if !$res->is_success;
+    confess "ERROR ".$res->code." ".$res->message." : $url"
+        unless $res->code == 200 || $res->code == 301;
 
-    return $self->_cache_store($url,$res->content);
+    return $self->_cache_store($url,$res->body);
 }
 
 sub _match_url($self,$url) {
