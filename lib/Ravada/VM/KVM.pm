@@ -964,11 +964,11 @@ sub _search_iso {
 }
 
 sub _download($self, $url) {
+    confess "URL '$url' has a regexp" if $url =~ m{\*};
+
     my $cache;
     $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;# && $url !~ m{^http.?://localhost};
     return $cache if $cache;
-
-    return $self->_match_url($url) if $url =~ m{\*};
 
     my $ua = Mojo::UserAgent->new();
     my $res = $ua->get($url)->result;
@@ -980,6 +980,8 @@ sub _download($self, $url) {
 }
 
 sub _match_url($self,$url) {
+    return $url if $url !~ m{\*};
+
     my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
     $url2 = '' if !$url2;
 
@@ -988,18 +990,14 @@ sub _match_url($self,$url) {
     die "ERROR ".$res->code." ".$res->message." : $url1"
         unless $res->code == 200 || $res->code == 301;
 
+    my @found;
     my $links = $res->dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
         next if !defined $link || $link !~ qr($match);
-        my $content;
-        my $new_url = $url1.$link.$url2;
-        eval { $content = $self->_download($new_url) };
-
-        next if !$content;
-        return $content if !wantarray;
-        return ($content, $new_url);
+        my $new_url = "$url1$link$url2";
+        push @found,($self->_match_url($new_url));
     }
-    die "ERROR: $url not found";
+    return @found;
 }
 
 sub _cache_get($self, $url) {
@@ -1053,21 +1051,42 @@ sub _fetch_filename {
     }
     confess "No file_re" if !$row->{file_re};
 
-    my $file;
-
-    my ($content, $new_url) = $self->_download($row->{url});
-    $row->{url} = $new_url if $new_url;
-
-    my $dom = Mojo::DOM->new($content);
-    for my $link (@{$dom->find('a')->map( attr => 'href')}) {
-        next if !defined $link || $link !~ qr($row->{file_re});
-        $file = $link;
+    my @found;
+    for my $url ($self->_match_url($row->{url})) {
+        push @found, $self->_match_file($url, $row->{file_re});
     }
-    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>".$content."</pre>"   if !$file;
+    die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+    my @found2 = sort @found;
+    warn Dumper(\@found2);
+    my $url = $found2[-1];
+    my ($file) = $url =~ m{.*/(.*)};
 
+    $row->{url} = $url;
     $row->{filename} = ($row->{rename_file} or $file);
-    $row->{url} .= "/" if $row->{url} !~ m{/$};
-    $row->{url} .= $file;
+
+#    $row->{url} .= "/" if $row->{url} !~ m{/$};
+#    $row->{url} .= $file;
+}
+
+sub _match_file($self, $url, $file_re) {
+
+    warn "searching for $file_re in $url\n";
+
+    my $ua = Mojo::UserAgent->new();
+    my $res = $ua->get($url)->result;
+
+    return unless $res->code == 200 || $res->code == 301;
+
+    my $dom= $res->dom;
+
+    my @found;
+
+    for my $link (@{$dom->find('a')->map( attr => 'href')}) {
+        next if !defined $link || $link !~ qr($file_re);
+        push @found, ($url.$link);
+    }
+    warn Dumper(\@found);
+    return @found;
 }
 
 sub _fetch_this($self,$row,$type){
