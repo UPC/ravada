@@ -970,7 +970,7 @@ sub _download($self, $url) {
     $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;# && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
-    my $ua = Mojo::UserAgent->new();
+    my $ua = $self->_web_user_agent();
     my $res = $ua->get($url)->result;
 
     confess "ERROR ".$res->code." ".$res->message." : $url"
@@ -1050,6 +1050,7 @@ sub _fetch_filename {
         $row->{file_re} = $file;
     }
     confess "No file_re" if !$row->{file_re};
+    $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
     my @found;
     for my $url ($self->_match_url($row->{url})) {
@@ -1057,7 +1058,6 @@ sub _fetch_filename {
     }
     die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     my @found2 = sort @found;
-    warn Dumper(\@found2);
     my $url = $found2[-1];
     my ($file) = $url =~ m{.*/(.*)};
 
@@ -1068,12 +1068,27 @@ sub _fetch_filename {
 #    $row->{url} .= $file;
 }
 
+sub _web_user_agent($self) {
+
+    my $ua = Mojo::UserAgent->new();
+
+    $ua->max_redirects(3);
+    $ua->proxy->detect;
+
+    return $ua;
+}
+
 sub _match_file($self, $url, $file_re) {
 
     warn "searching for $file_re in $url\n";
 
-    my $ua = Mojo::UserAgent->new();
-    my $res = $ua->get($url)->result;
+    my $res;
+    for ( 1 .. 10 ) {
+        eval { $res = $self->_web_user_agent->get($url)->result(); };
+        last if !$@;
+        next if $@ && $@ =~ /timeout/i;
+        die $@;
+    }
 
     return unless $res->code == 200 || $res->code == 301;
 
@@ -1081,11 +1096,13 @@ sub _match_file($self, $url, $file_re) {
 
     my @found;
 
-    for my $link (@{$dom->find('a')->map( attr => 'href')}) {
+    my $links = $dom->find('a')->map( attr => 'href');
+    for my $link (@$links) {
         next if !defined $link || $link !~ qr($file_re);
         push @found, ($url.$link);
     }
-    warn Dumper(\@found);
+    warn Dumper($links) if !@found;
+    warn Dumper(\@found)    if @found;
     return @found;
 }
 
