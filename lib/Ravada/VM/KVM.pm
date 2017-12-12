@@ -1103,7 +1103,6 @@ sub _fetch_filename {
     my $file;
 
     my ($content, $new_url) = $self->_download($row->{url});
-    warn "NEW URL\n$row->{url}\n$new_url\n" if $new_url;
     $row->{url} = $new_url if $new_url;
     my $lines = '';
     for my $line (split/\n/,$content) {
