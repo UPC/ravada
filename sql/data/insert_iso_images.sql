@@ -16,8 +16,8 @@ VALUES('Ubuntu Trusty 64 bits','Ubuntu 14.04.1 LTS Trusty 64 bits'
     ,'trusty-amd64.xml'
     ,'trusty-amd64-volume.xml'
     ,'http://releases.ubuntu.com/16.04/'
-    ,'ubuntu-16.04.*-desktop-amd64.iso'
-    ,'http://releases.ubuntu.com/16.04/MD5SUMS'
+    ,'ubuntu-14.04.*-desktop-amd64.iso'
+    ,'http://releases.ubuntu.com/14.04/MD5SUMS'
 	);
 
 INSERT INTO iso_images
