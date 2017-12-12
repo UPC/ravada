@@ -1037,7 +1037,7 @@ sub _match_url($self,$url) {
 
     my $links = $res->dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
-        next if !defined $linke || $link !~ qr($match);
+        next if !defined $link || $link !~ qr($match);
         my $content;
         my $new_url = $url1.$link.$url2;
         eval { $content = $self->_download($new_url) };
