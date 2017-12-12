@@ -304,7 +304,7 @@ sub _update_isos {
         }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
-            ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
