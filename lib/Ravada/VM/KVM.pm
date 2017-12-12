@@ -965,13 +965,13 @@ sub _search_iso {
 
 sub _download($self, $url) {
     my $cache;
-    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
+    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;# && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
     return $self->_match_url($url) if $url =~ m{\*};
 
     my $ua = Mojo::UserAgent->new();
-    my $res = $ua->get($url)->res;
+    my $res = $ua->get($url)->result;
 
     confess "ERROR ".$res->code." ".$res->message." : $url"
         unless $res->code == 200 || $res->code == 301;
