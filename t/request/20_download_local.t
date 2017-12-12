@@ -39,7 +39,7 @@ sub test_download {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error, '') or return;
+    is($req1->error, '') or exit;
 
     my $iso2;
     eval { $iso2 = $vm->_search_iso($id_iso) };
@@ -62,6 +62,7 @@ sub search_id_isos {
     my $vm = shift;
     my $sth=$test->dbh->prepare(
         "SELECT * FROM iso_images"# where name like 'Xubuntu%'"
+        ." ORDER BY name,arch"
     );
     $sth->execute;
     my @id_iso;
@@ -76,6 +77,7 @@ sub search_id_isos {
 
         if (!$row->{filename}) {
             diag("skipped test $row->{name} $row->{url} $row->{file_re}");
+            exit;
             next;
         }
 
