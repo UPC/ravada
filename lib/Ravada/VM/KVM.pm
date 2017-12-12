@@ -21,7 +21,6 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use IO::Interface::Simple;
 use JSON::XS;
-use LWP::UserAgent;
 use Mojo::UserAgent;
 use Moose;
 use Sys::Virt;
@@ -946,52 +945,6 @@ sub _check_signature($file, $type, $expected) {
     return _check_md5($file,$expected) if $type =~ /md5/i;
     return _check_sha256($file,$expected) if $type =~ /sha256/i;
     die "Unknown signature type $type";
-}
-
-sub _download_file_lwp_progress {
-    my( $data, $response, $proto ) = @_;
-    print $DOWNLOAD_FH $data; # write data to file
-    $DOWNLOAD_TOTAL += length($data);
-    my $size = $response->header('Content-Length');
-    warn floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-}
-
-sub _download_file_lwp {
-    my ($url_req, $device) = @_;
-
-    unlink $device or die "$! $device" if -e $device;
-
-    $DOWNLOAD_FH = undef;
-    $DOWNLOAD_TOTAL = 0;
-    sysopen($DOWNLOAD_FH, $device, O_WRONLY|O_EXCL|O_CREAT) ||
-		      die "Can't open $device $!";
-
-    my $ua = LWP::UserAgent->new(keep_alive => 1);
-
-
-    my $url = URI->new(decode(locale => $url_req)) or die "Error decoding $url_req";
-    warn $url;
-
-    my $res = $ua->request(HTTP::Request->new(GET => $url)
-        ,sub {
-            my ($data, $response) = @_;
-
-            unless (fileno $DOWNLOAD_FH) {
-                open $DOWNLOAD_FH,">",$device || die "Can't open $device $!\n";
-            }
-            binmode($DOWNLOAD_FH);
-            print $DOWNLOAD_FH $data or die "Can't write to $device: $!\n";
-            $DOWNLOAD_TOTAL += length($data);
-            my $size = $response->header('Content-Length');
-            warn floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-        }
-    );
-    close $DOWNLOAD_FH or die "$! $device";
-
-    close $DOWNLOAD_FH if fileno($DOWNLOAD_FH);
-    $DOWNLOAD_FH = undef;
-
-    warn $res->status_line;
 }
 
 sub _download_file_external {
