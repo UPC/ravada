@@ -1,4 +1,4 @@
-Install Ravada 
+Install Ravada
 ==============
 
 Requirements
@@ -7,8 +7,9 @@ Requirements
 OS
 --
 
-Ravada has been successfully tested only on `Ubuntu <https://www.ubuntu.com/download/>`_ 16.10 and 17.04. If you want it to run on Ubuntu 17.10 try the beta package. It should also work in
-recent RedHat based systems. Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
+Ravada works in any Linux distribution but we only support the package for `Ubuntu <https://www.ubuntu.com/download/>`_ server.
+
+Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
 Hardware
 --------
@@ -35,8 +36,7 @@ Ubuntu
 ------
 
 We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__. We fixed some
-issues from the last release, we advice you install release 0.2.11-rc.
+repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 *libmojolicious-plugin-renderfile-perl* package is available only in recent Ubuntus. Try  this first:
 
@@ -55,8 +55,8 @@ Then install the ravada package, notice it show some errors, it is ok, keep read
  
 ::
  
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.11-rc6_all.deb
-    $ sudo dpkg -i ravada_0.2.11-rc6_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.11_all.deb
+    $ sudo dpkg -i ravada_0.2.11_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
