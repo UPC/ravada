@@ -1127,7 +1127,7 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         push @found,
         $self->_match_file($url, $file_re);
     }
-    return sort @found;
+    return (sort @found);
 }
 sub _web_user_agent($self) {
 
@@ -1142,7 +1142,6 @@ sub _web_user_agent($self) {
 sub _match_file($self, $url, $file_re) {
 
     $url .= '/' if $url !~ m{/$};
-    warn "searching for $file_re in $url\n";
 
     my $res;
     for ( 1 .. 10 ) {
