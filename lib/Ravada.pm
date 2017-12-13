@@ -200,7 +200,7 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
         }
         ,fedora_26 => {
             name => 'Fedora 26'
