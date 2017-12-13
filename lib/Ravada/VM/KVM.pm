@@ -964,15 +964,23 @@ sub _search_iso {
 }
 
 sub _download($self, $url) {
-    confess "URL '$url' has a regexp" if $url =~ m{\*};
+    if ($url =~ m{\*}) {
+        my @found = $self->_search_url_file($url);
+        confess "No match for $url" if !scalar @found;
+        $url = $found[-1];
+    }
 
     my $cache;
     $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;# && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
     my $ua = $self->_web_user_agent();
-    my $res = $ua->get($url)->result;
-
+    my $res;
+    for ( 1 .. 10 ) {
+        eval { $res = $ua->get($url)->result };
+        last if $res;
+    }
+    die $@ if $@;
     confess "ERROR ".$res->code." ".$res->message." : $url"
         unless $res->code == 200 || $res->code == 301;
 
@@ -1052,14 +1060,10 @@ sub _fetch_filename {
     confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
-    my @found;
-    for my $url ($self->_match_url($row->{url})) {
-        push @found,
-        $self->_match_file($url, $row->{file_re});
-    }
+    my @found = $self->_search_url_file($row->{url}, $row->{file_re});
     die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
-    my @found2 = sort @found;
-    my $url = $found2[-1];
+
+    my $url = $found[-1];
     my ($file) = $url =~ m{.*/(.*)};
 
     $row->{url} = $url;
@@ -1069,6 +1073,23 @@ sub _fetch_filename {
 #    $row->{url} .= $file;
 }
 
+sub _search_url_file($self, $url_re, $file_re=undef) {
+
+    if (!$file_re) {
+        my $old_url_re = $url_re;
+        ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
+        confess "ERROR: Missing file part in $old_url_re"
+            if !$file_re;
+    }
+
+    $file_re .= '$' if $file_re !~ m{\$$};
+    my @found;
+    for my $url ($self->_match_url($url_re)) {
+        push @found,
+        $self->_match_file($url, $file_re);
+    }
+    return sort @found;
+}
 sub _web_user_agent($self) {
 
     my $ua = Mojo::UserAgent->new();
@@ -1103,8 +1124,6 @@ sub _match_file($self, $url, $file_re) {
         next if !defined $link || $link !~ qr($file_re);
         push @found, ($url.$link);
     }
-    warn Dumper($links) if !@found;
-    warn Dumper(\@found)    if @found;
     return @found;
 }
 
