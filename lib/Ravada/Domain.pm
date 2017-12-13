@@ -301,7 +301,8 @@ sub _pre_prepare_base {
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them 
-    $self->_check_disk_modified() if $self->is_base();
+#    $self->_check_disk_modified(
+    die "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
 
     $self->is_base(0);
@@ -383,6 +384,8 @@ sub _check_used_memory {
     confess "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
+=pod
+
 sub _check_disk_modified {
     my $self = shift;
 
@@ -406,6 +409,8 @@ sub _check_disk_modified {
     die "Base already created and no disk images updated"
         if !$files_updated;
 }
+
+=cut
 
 sub _allowed {
     my $self = shift;
