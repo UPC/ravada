@@ -32,11 +32,6 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-      ,void => [ ]
-);
-
 sub user_admin {
     return $USER_ADMIN;
 }
@@ -44,24 +39,21 @@ sub user_admin {
 sub create_domain {
     my $vm_name = shift;
     my $user = (shift or $USER_ADMIN);
-    my $id_iso = shift;
+    my $id_iso = (shift or 'Alpine');
 
     if ( $id_iso && $id_iso !~ /^\d+$/) {
         my $iso_name = $id_iso;
         $id_iso = search_id_iso($iso_name);
         warn "I can't find iso $iso_name" if !defined $id_iso;
     }
+    confess "Missing id_iso" if !defined $id_iso;
+
     my $vm = rvd_back()->search_vm($vm_name);
     ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
 
     my $name = new_domain_name();
 
-    ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    };
-    my %arg_create = @{$ARG_CREATE_DOM{lc($vm_name)}};
-    $arg_create{id_iso} = $id_iso if $id_iso;
+    my %arg_create = (id_iso => $id_iso);
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
@@ -109,6 +101,7 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
+    $rvd->_update_isos();
     $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
     return $rvd;
 }
