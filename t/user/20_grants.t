@@ -20,6 +20,7 @@ my %ARG_CREATE_DOM = (
 my @VMS = reverse keys %ARG_CREATE_DOM;
 init($test->connector);
 
+rvd_back();
 #########################################################3
 
 sub test_defaults {
