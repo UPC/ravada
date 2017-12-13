@@ -29,6 +29,7 @@ sub test_download {
     is($@,'');
     unlink($iso->{device}) or die "$! $iso->{device}"
         if $iso->{device} && -e $iso->{device};
+    confess "Missing name in ".Dumper($iso) if !$iso->{name};
     diag("Testing download $iso->{name}");
     my $req1 = Ravada::Request->download(
              id_iso => $id_iso
@@ -61,7 +62,8 @@ sub local_urls {
 sub search_id_isos {
     my $vm = shift;
     my $sth=$test->dbh->prepare(
-        "SELECT * FROM iso_images"# where name like 'Xubuntu%'"
+        "SELECT * FROM iso_images"
+        #." where name like 'Xubuntu%'"
         ." ORDER BY name,arch"
     );
     $sth->execute;
