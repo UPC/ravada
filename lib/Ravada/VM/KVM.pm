@@ -1039,7 +1039,7 @@ sub _cache_filename($url) {
     $file =~ tr{a-zA-Z0-9_-}{_}c;
     $file =~ s/__+/_/g;
 
-    return "/var/tmp/ravada_cache/$USER/$file";
+    return "/var/tmp/ravada_cache/$ENV{USER}/$file";
 }
 
 sub _fetch_filename {
