@@ -163,6 +163,10 @@ for my $vm_name (@VMS) {
     my $vm = $RVD_BACK->search_vm($vm_name);
     SKIP : {
         my $msg = "SKIPPED test: No $vm_name VM found ";
+        if ($vm_name eq 'KVM' && $>) {
+            $msg = "SKIPPED test: it must be run as root";
+            $vm ='';
+        }
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
