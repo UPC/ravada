@@ -21,7 +21,8 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use IO::Interface::Simple;
 use JSON::XS;
-use LWP::UserAgent;
+use Mojo::DOM;
+use Mojo::UserAgent;
 use Moose;
 use Sys::Virt;
 use URI;
@@ -947,52 +948,6 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_lwp_progress {
-    my( $data, $response, $proto ) = @_;
-    print $DOWNLOAD_FH $data; # write data to file
-    $DOWNLOAD_TOTAL += length($data);
-    my $size = $response->header('Content-Length');
-    warn floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-}
-
-sub _download_file_lwp {
-    my ($url_req, $device) = @_;
-
-    unlink $device or die "$! $device" if -e $device;
-
-    $DOWNLOAD_FH = undef;
-    $DOWNLOAD_TOTAL = 0;
-    sysopen($DOWNLOAD_FH, $device, O_WRONLY|O_EXCL|O_CREAT) ||
-		      die "Can't open $device $!";
-
-    my $ua = LWP::UserAgent->new(keep_alive => 1);
-
-
-    my $url = URI->new(decode(locale => $url_req)) or die "Error decoding $url_req";
-    warn $url;
-
-    my $res = $ua->request(HTTP::Request->new(GET => $url)
-        ,sub {
-            my ($data, $response) = @_;
-
-            unless (fileno $DOWNLOAD_FH) {
-                open $DOWNLOAD_FH,">",$device || die "Can't open $device $!\n";
-            }
-            binmode($DOWNLOAD_FH);
-            print $DOWNLOAD_FH $data or die "Can't write to $device: $!\n";
-            $DOWNLOAD_TOTAL += length($data);
-            my $size = $response->header('Content-Length');
-            warn floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-        }
-    );
-    close $DOWNLOAD_FH or die "$! $device";
-
-    close $DOWNLOAD_FH if fileno($DOWNLOAD_FH);
-    $DOWNLOAD_FH = undef;
-
-    warn $res->status_line;
-}
-
 sub _download_file_external {
     my ($url,$device) = @_;
     confess "ERROR: wget missing"   if !$WGET;
@@ -1048,19 +1003,48 @@ sub _search_iso {
 }
 
 sub _download($self, $url) {
-    confess "Wrong url '$url'" if $url =~ m{\*};
+    if ($url =~ m{\*}) {
+        my @found = $self->_search_url_file($url);
+        confess "No match for $url" if !scalar @found;
+        $url = $found[-1];
+    }
+
     my $cache;
-    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
+    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;# && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
-    my $ua = new LWP::UserAgent;
-    $ua->env_proxy;
-    my $req = HTTP::Request->new( GET => $url);
-    my $res = $ua->request($req);
+    my $ua = $self->_web_user_agent();
+    my $res;
+    for ( 1 .. 10 ) {
+        eval { $res = $ua->get($url)->result };
+        last if $res;
+    }
+    die $@ if $@;
+    confess "ERROR ".$res->code." ".$res->message." : $url"
+        unless $res->code == 200 || $res->code == 301;
 
-    confess $res->status_line." $url" if !$res->is_success;
+    return $self->_cache_store($url,$res->body);
+}
 
-    return $self->_cache_store($url,$res->content);
+sub _match_url($self,$url) {
+    return $url if $url !~ m{\*};
+
+    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
+    $url2 = '' if !$url2;
+
+    my $ua = Mojo::UserAgent->new;
+    my $res = $ua->get(($url1 or '/'))->res;
+    die "ERROR ".$res->code." ".$res->message." : $url1"
+        unless $res->code == 200 || $res->code == 301;
+
+    my @found;
+    my $links = $res->dom->find('a')->map( attr => 'href');
+    for my $link (@$links) {
+        next if !defined $link || $link !~ qr($match);
+        my $new_url = "$url1$link$url2";
+        push @found,($self->_match_url($new_url));
+    }
+    return @found;
 }
 
 sub _cache_get($self, $url) {
@@ -1113,62 +1097,91 @@ sub _fetch_filename {
         $row->{file_re} = $file;
     }
     confess "No file_re" if !$row->{file_re};
+    $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
-    my $file;
+    my @found = $self->_search_url_file($row->{url}, $row->{file_re});
+    die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
 
-    my $content = $self->_download($row->{url});
-    my $lines = '';
-    for my $line (split/\n/,$content) {
-        next if $line !~ /iso"/;
-        $lines .= "$line\n";
-        my ($found) = $line =~ qr/"($row->{file_re})"/;
-        next if !$found;
-        $file=$found if $found;
-    }
-    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>$content</pre>"   if !$file;
+    my $url = $found[-1];
+    my ($file) = $url =~ m{.*/(.*)};
 
+    $row->{url} = $url;
     $row->{filename} = ($row->{rename_file} or $file);
-    $row->{url} .= "/" if $row->{url} !~ m{/$};
-    $row->{url} .= $file;
+
+#    $row->{url} .= "/" if $row->{url} !~ m{/$};
+#    $row->{url} .= $file;
 }
 
-sub _expand_url($self, $url, $file) {
-    my $ua = new LWP::UserAgent;
-    my $res = $ua->request(HTTP::Request->new(GET => $url));
-    return if !$res->is_success;
+sub _search_url_file($self, $url_re, $file_re=undef) {
 
-    for my $line (split /\n/,$res->content ) {
-        my ($found) = $line =~ qr/<a href="($file)"/;
-        return "$url/$found" if $found;
+    if (!$file_re) {
+        my $old_url_re = $url_re;
+        ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
+        confess "ERROR: Missing file part in $old_url_re"
+            if !$file_re;
     }
-    die "$file not found in $url";
-    return;
 
+    $file_re .= '$' if $file_re !~ m{\$$};
+    my @found;
+    for my $url ($self->_match_url($url_re)) {
+        push @found,
+        $self->_match_file($url, $file_re);
+    }
+    return (sort @found);
+}
+sub _web_user_agent($self) {
+
+    my $ua = Mojo::UserAgent->new();
+
+    $ua->max_redirects(3);
+    $ua->proxy->detect;
+
+    return $ua;
+}
+
+sub _match_file($self, $url, $file_re) {
+
+    $url .= '/' if $url !~ m{/$};
+
+    my $res;
+    for ( 1 .. 10 ) {
+        eval { $res = $self->_web_user_agent->get($url)->result(); };
+        last if !$@;
+        next if $@ && $@ =~ /timeout/i;
+        die $@;
+    }
+
+    return unless $res->code == 200 || $res->code == 301;
+
+    my $dom= $res->dom;
+
+    my @found;
+
+    my $links = $dom->find('a')->map( attr => 'href');
+    for my $link (@$links) {
+        next if !defined $link || $link !~ qr($file_re);
+        push @found, ($url.$link);
+    }
+    return @found;
 }
 
 sub _fetch_this($self,$row,$type){
 
-    my ($file) = $row->{url} =~ m{.*/(.*)};
+    my ($url,$file) = $row->{url} =~ m{(.*/)(.*)};
+    my ($file2) = $row->{url} =~ m{.*/(.*/.*)};
     confess "No file for $row->{url}"   if !$file;
 
     my $url_orig = $row->{"${type}_url"};
 
-    if ($url_orig =~ m{\*}) {
-        my ($url,$file) = $url_orig =~ m{(\w+://.*)/(.*)};
-        my $url_expanded = $self->_expand_url($url, $file);
-        $row->{"${type}_url"} = $url_expanded;
-        my $sth = $$CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET ${type}_url =? WHERE id=?"
-        );
-        $sth->execute($url_expanded,$row->{id});
+    $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
 
-    }
-    my $content = $self->_download($row->{"${type}_url"});
+    my $content = $self->_download($url_orig);
 
     for my $line (split/\n/,$content) {
         next if $line =~ /^#/;
         my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
         ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
+        ($value) = $line =~ m{$file2.* ([a-f0-9]+)}i if !$value;
         if ($value) {
             $row->{$type} = $value;
             return $value;

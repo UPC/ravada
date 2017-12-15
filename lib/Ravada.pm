@@ -171,7 +171,17 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        artful => {
+        alpine_37 => {
+                    name => 'Alpine 3.7'
+            ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
+                ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
+                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+        }
+        ,artful => {
                     name => 'Ubuntu Artful Aardvark'
             ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
                    ,arch => 'amd64'
@@ -210,7 +220,7 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
         }
         ,fedora_26 => {
             name => 'Fedora 26'
@@ -284,12 +294,30 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
+        ,debian_jessie_32 => {
+            name =>'Debian Jessie 32 bits'
+            ,description => 'Debian 8 Jessie 32 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
+        ,debian_jessie_64 => {
+            name =>'Debian Jessie 64 bits'
+            ,description => 'Debian 8 Jessie 64 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
-            ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -563,11 +591,17 @@ sub _update_table($self, $table, $field, $data) {
 
 sub _remove_old_isos {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images "
-        ."    WHERE url like '%debian-9.0%iso'"
-   );
-   $sth->execute();
-   $sth->finish;
+    for my $sql (
+        "DELETE FROM iso_images "
+            ."  WHERE url like '%debian-9.0%iso'"
+        ,"DELETE FROM iso_images"
+            ."  WHERE name like 'Debian%' "
+            ."      AND NOT url  like '%*%' "
+    ) {
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute();
+        $sth->finish;
+    }
 }
 
 sub _update_data {

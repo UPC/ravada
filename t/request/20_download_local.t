@@ -30,6 +30,7 @@ sub test_download {
     is($@,'');
     unlink($iso->{device}) or die "$! $iso->{device}"
         if $iso->{device} && -e $iso->{device};
+    confess "Missing name in ".Dumper($iso) if !$iso->{name};
     diag("Testing download $iso->{name}");
     my $req1 = Ravada::Request->download(
              id_iso => $id_iso
@@ -40,7 +41,7 @@ sub test_download {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error, '') or return;
+    is($req1->error, '') or exit;
 
     my $iso2;
     eval { $iso2 = $vm->_search_iso($id_iso) };
@@ -79,7 +80,9 @@ sub local_urls {
 sub search_id_isos {
     my $vm = shift;
     my $sth=$test->dbh->prepare(
-        "SELECT * FROM iso_images"# where name like 'Xubuntu%'"
+        "SELECT * FROM iso_images"
+        #." where name like 'Xubuntu%'"
+        ." ORDER BY name,arch"
     );
     $sth->execute;
     my @id_iso;
@@ -94,6 +97,7 @@ sub search_id_isos {
 
         if (!$row->{filename}) {
             diag("skipped test $row->{name} $row->{url} $row->{file_re}");
+            exit;
             next;
         }
 
@@ -104,14 +108,15 @@ sub search_id_isos {
 
 sub httpd_localhost {
     my $ua  = Mojo::UserAgent->new;
+    my $res;
     eval {  
-        my $res = $ua->get('http://localhost/iso')->res;
-        return 1 if $res->code == 200;
-        diag($res->message);
-        return 0;
+       $res = $ua->get('http://localhost/iso/')->res;
     };
+    diag($res->code." ".$res->message);
+    return 1 if $res && $res->code == 200;
     return if !$@;
     is($@,qr/Connection refused/);
+    return 0;
 }
 
 ##################################################################
