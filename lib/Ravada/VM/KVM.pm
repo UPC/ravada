@@ -15,6 +15,7 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
+use File::Path qw(make_path);
 use File::Temp qw(tempfile);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
@@ -1039,7 +1040,9 @@ sub _cache_filename($url) {
     $file =~ tr{a-zA-Z0-9_-}{_}c;
     $file =~ s/__+/_/g;
 
-    return "/var/tmp/ravada_cache/$ENV{USER}/$file";
+    my $dir = "/var/tmp/ravada_cache/$ENV{USER}";
+    make_path($dir)    if ! -e $dir;
+    return "$dir/$file";
 }
 
 sub _fetch_filename {
