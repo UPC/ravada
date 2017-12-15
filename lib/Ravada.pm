@@ -288,9 +288,9 @@ sub _update_isos {
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/'
-            ,file_re => 'lubuntu-16.04.2-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.*/release/'
+            ,file_re => 'lubuntu-16.04.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
