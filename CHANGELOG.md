@@ -8,3 +8,4 @@
 
 **Fixed bugs:**
 
+- Don't prepare base if already prepared [\#501]
