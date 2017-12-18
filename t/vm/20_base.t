@@ -18,7 +18,7 @@ my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
 my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
+      KVM => [ id_iso => search_id_iso('alpine') ]
     ,Void => [ ]
 );
 
@@ -137,12 +137,6 @@ sub test_prepare_base {
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER)    if $domain->is_active;
 
-    touch_mtime(@disk);
-
-    eval { $domain->prepare_base( $USER) };
-    is($@,'');
-    ok($domain->is_base);
-
     my $name_clone = new_domain_name();
 
     my $domain_clone;
@@ -180,15 +174,10 @@ sub test_prepare_base {
     }
 
 
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
-        ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
     $domain_clone->remove($USER);
 
-    touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
@@ -224,20 +213,6 @@ sub test_prepare_base_active {
 
     ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
             or return;
-}
-
-sub touch_mtime {
-    for my $disk (@_) {
-
-        my @stat0 = stat($disk);
-
-        sleep 2;
-        utime(undef, undef, $disk) or die "$! $disk";
-        my @stat1 = stat($disk);
-
-        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
-    }
-
 }
 
 sub test_devices_clone {
