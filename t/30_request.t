@@ -27,8 +27,7 @@ my $USER = create_user("foo","bar");
 $RVD_BACK = undef;
 
 my @ARG_CREATE_DOM = (
-        id_iso => 1
-        ,id_owner => $USER->id
+        id_owner => $USER->id
 );
 
 $Ravada::CAN_FORK = 0;
@@ -101,6 +100,7 @@ sub test_req_create_domain_iso {
     my $req;
     eval { $req = Ravada::Request->create_domain( 
         name => $name
+        ,id_iso => search_id_iso('Alpine')
         ,@ARG_CREATE_DOM
         );
     };
