@@ -18,7 +18,7 @@ Here is our image file:
 
 3. Use qemu-resize to increase the image size by 10GB:
 ::
-  qemu-img resize VirtualDiskImageName.img +10GB
+  qemu-img resize /path_to_img_file/VirtualDiskImageName.img +10G
 
 4. IMPORTANT. Do a backup before continue.
 ::
