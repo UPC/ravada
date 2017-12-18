@@ -19,12 +19,13 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
+init($test->connector, $FILE_CONFIG);
+
 my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
+      KVM => [ ]
     ,Void => [ ]
 );
 
-init($test->connector, $FILE_CONFIG);
 my $USER = create_user("foo","bar");
 
 my $CHAIN = 'RAVADA';
@@ -49,6 +50,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
+                    , id_iso => search_id_iso('alpine')
                     , @{$ARG_CREATE_DOM{$vm_name}}) 
     };
 
