@@ -394,6 +394,12 @@ get '/machine/screenshot/(:id).(:type)' => sub {
         return screenshot_machine($c);
 };
 
+get '/machine/copy_screenshot/(:id).(:type)' => sub {
+        my $c = shift;
+        return access_denied($c) if !$USER->is_admin();
+        return copy_screenshot($c);
+};
+
 get '/machine/pause/(:id).(:type)' => sub {
         my $c = shift;
         return pause_machine($c);
@@ -1378,6 +1384,13 @@ sub settings_machine {
             ) if $c->param('start') && !$domain->is_active;
 
     _enable_buttons($c, $domain);
+    
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    my $req3 = Ravada::Request->copy_screenshot (
+        id_domain => $domain->id
+        ,filename => $file_screenshot
+    ) if $c->param('copy_screenshot');
+    
 
     $c->stash(message => '');
     my @reqs = ();
@@ -1401,8 +1414,6 @@ sub settings_machine {
             $c->stash(message => "\U$option changed!");
         }
     }
-
-
 
     for my $req (@reqs) {
         $RAVADA->wait_request($req, 60)
@@ -1532,6 +1543,20 @@ sub screenshot_machine {
 
     my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
     my $req = Ravada::Request->screenshot_domain (
+        id_domain => $domain->id
+        ,filename => $file_screenshot
+    );
+    $c->render(json => { request => $req->id});
+}
+
+sub copy_screenshot {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    my $req = Ravada::Request->copy_screenshot (
         id_domain => $domain->id
         ,filename => $file_screenshot
     );

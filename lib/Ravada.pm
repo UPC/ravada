@@ -8,6 +8,7 @@ our $VERSION = '0.2.10';
 use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
+use File::Copy;
 use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
@@ -1487,6 +1488,28 @@ sub _cmd_screenshot {
     $request->error("No data received") if !$bytes;
 }
 
+sub _cmd_copy_screenshot {
+    my $self = shift;
+    my $request = shift;
+    
+    my $id_domain = $request->args('id_domain');  
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    my $id_base = $domain->id_base;
+    my $base = $self->search_domain_by_id($id_base);
+
+    if (!$domain->file_screenshot) {
+        die "I don't have the screenshot of the domain ".$domain->name;
+    } else {
+
+        my $base_screenshot = $domain->file_screenshot();
+    
+        $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
+        $base->_post_screenshot($base_screenshot);  
+
+        copy($domain->file_screenshot, $base_screenshot); 
+    }
+}
 
 sub _cmd_create{
     my $self = shift;
@@ -1896,6 +1919,7 @@ sub _req_method {
     ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
+    ,copy_screenshot => \&_cmd_copy_screenshot
    ,remove_base => \&_cmd_remove_base
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
