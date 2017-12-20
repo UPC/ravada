@@ -153,12 +153,38 @@
           };
 
           $scope.reload_page_msg = false;
-          $scope.action = function(target,action,machineId){
-            $http.get('/'+target+'/'+action+'/'+machineId+'.json');
-            $scope.reload_page_msg = true;
-            setTimeout(function () {
-                window.location.reload(false);
-            }, 5000);
+          $scope.fail_page_msg = false;
+          $scope.screenshot = function(target,action,machineId, isActive){
+              if (isActive) {
+                  $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+                  $scope.fail_page_msg = false;
+                  $scope.reload_page_msg = true;
+                  setTimeout(function () {
+                      window.location.reload(false);
+                  }, 5000);
+              }
+              else {
+                  $scope.reload_page_msg = false;
+                  $scope.fail_page_msg = true;
+              }
+          };
+          
+          $scope.reload_page_copy_msg = false;
+          $scope.fail_page_copy_msg = false;
+          $scope.copy_done = false;
+          $scope.copy_screenshot = function(target, action, machineId, fileScreenshot){
+              if (fileScreenshot != '') {
+                $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+                $scope.fail_page_copy_msg = false;
+                $scope.reload_page_copy_msg = true;
+                setTimeout(function () {
+                    $scope.reload_page_copy_msg = false;
+                }, 2000);
+              }
+              else {
+                  $scope.reload_page_copy_msg = false;
+                  $scope.fail_page_copy_msg = true;
+              }
           };
 
           $scope.rename = function(machineId, old_name) {
@@ -195,7 +221,7 @@
           $scope.set_public = function(machineId, value) {
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-
+          
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
