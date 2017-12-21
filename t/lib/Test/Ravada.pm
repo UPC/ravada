@@ -29,6 +29,7 @@ create_domain
     remote_config
     remote_config_nodes
     clean_remote_node
+    arg_create_dom
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -41,8 +42,17 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
+our %ARG_CREATE_DOM = ();
+
 sub user_admin {
     return $USER_ADMIN;
+}
+
+sub arg_create_dom {
+    my $vm_name = shift;
+    confess "Unknown vm $vm_name"
+        if !$ARG_CREATE_DOM{$vm_name};
+    return @{$ARG_CREATE_DOM{$vm_name}};
 }
 
 sub create_domain {
@@ -121,6 +131,9 @@ sub rvd_back {
     );
     $rvd->_update_isos();
     $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
+
+    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
+
     return $rvd;
 }
 
@@ -145,6 +158,7 @@ sub init {
     $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
+
 }
 
 sub remote_config {
