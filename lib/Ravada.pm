@@ -189,7 +189,7 @@ sub _update_isos {
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.10/'
                 ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.10/MD5SUMS'
+                ,md5_url => ,'$url/MD5SUMS'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
