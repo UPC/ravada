@@ -1835,9 +1835,7 @@ Imports a KVM domain in Ravada
 
 =cut
 
-sub import_domain {
-    my $self = shift;
-    my ($name, $user) = @_;
+sub import_domain($self, $name, $user) {
 
     my $domain_kvm = $self->vm->get_domain_by_name($name);
     confess "ERROR: unknown domain $name in KVM" if !$domain_kvm;
