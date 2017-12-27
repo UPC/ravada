@@ -2081,6 +2081,7 @@ Imports a domain in Ravada
                             vm => 'KVM'
                             ,name => $name
                             ,user => $user_name
+                            ,spinoff_disks => 1
     );
 
 =cut
@@ -2092,6 +2093,8 @@ sub import_domain {
     my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
     my $name = $args{name} or die "ERROR: mandatory argument domain name required";
     my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+    my $spinoff_disks = delete $args{spinoff_disks};
+    $spinoff_disks = 1 if !defined $spinoff_disks;
 
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -2101,7 +2104,7 @@ sub import_domain {
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
-    return $vm->import_domain($name, $user);
+    return $vm->import_domain($name, $user, $spinoff_disks);
 }
 
 =head2 version
