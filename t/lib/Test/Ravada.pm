@@ -9,6 +9,9 @@ use IPC::Run3 qw(run3);
 use  Test::More;
 use YAML qw(LoadFile);
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use Ravada;
 use Ravada::Auth::SQL;
 
@@ -335,8 +338,34 @@ sub _remove_old_disks_kvm {
     }
     $vm->storage_pool->refresh();
 }
+sub _remove_old_disks_void($node=undef){
+    if (! defined $node || $node->is_local) {
+       _remove_old_disks_void_local();
+    } else {
+       _remove_old_disks_void_remote($node);
+    }
+}
 
-sub _remove_old_disks_void {
+sub _remove_old_disks_void_remote($node) {
+    confess "Remote node must be defined"   if !defined $node;
+    my ($ssh, $chan) = $node->_ssh_channel();
+    $chan->blocking(1);
+    my $cmd = "rm -rfv ".$node->dir_img."/".base_domain_name().'_*';
+    warn $cmd;
+    $chan->exec($cmd)
+        or $ssh->die_with_error;
+
+    $chan->send_eof();
+
+    while (!$chan->eof) {
+        if ( my ($out, $err) = $chan->read2) {
+            confess $err   if $err;
+            warn $out;
+        }
+    }
+}
+
+sub _remove_old_disks_void_local {
     my $name = base_domain_name();
 
     my $dir_img =  $Ravada::Domain::Void::DIR_TMP ;
@@ -531,7 +560,18 @@ sub clean_remote_node {
     my $node = shift;
 
     _remove_old_domains_vm($node);
-    _remove_old_disks_kvm($node)    if $node->type eq 'KVM';
+    _remove_old_disks($node);
+}
+
+sub _remove_old_disks {
+    my $node = shift;
+    if ( $node->type eq 'KVM' ) {
+        _remove_old_disks_kvm($node);
+    }elsif ($node->type eq 'Void') {
+        _remove_old_disks_void($node);
+    }   else {
+        die "I don't know how to remove ".$node->type." disks";
+    }
 }
 
 sub search_id_iso {
