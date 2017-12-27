@@ -1,4 +1,16 @@
 INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url,file_re,sha256_url)
+VALUES('Alpine 3.7'
+        ,'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
+        ,'amd64'
+        ,'yakkety64-amd64.xml'
+        ,'yakkety64-volume.xml'
+        ,'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
+        ,'alpine-virt-3.7.\d+-x86_64.iso'
+        ,'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+   );
+
+INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,file_re,md5_url)
 VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
