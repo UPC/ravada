@@ -17,14 +17,9 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($TEST_SQL->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($TEST_SQL->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-#    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $TEST_SQL->connector);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = ('KVM');
 my $USER = create_user("foo","bar");
 
 #############################################################################
@@ -34,16 +29,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"Domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -163,7 +152,7 @@ for my $vm_name (@VMS) {
     my $vm = $RVD_BACK->search_vm($vm_name);
     SKIP : {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm_name eq 'KVM') {
+        if ($vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED test: $vm_name must be tested from root user";
             $vm = undef;
         }

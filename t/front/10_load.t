@@ -19,11 +19,6 @@ my $USER = create_user('foo','bar');
 my $RVD_BACK  = rvd_back( );
 my $RVD_FRONT = rvd_front();
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 # twice so it won't warn it is only used once
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
@@ -54,7 +49,7 @@ sub test_add_domain_db {
     my $domain = $vm->create_domain( 
         name => $domain_name 
         , id_owner => $USER->id
-        , @{$ARG_CREATE_DOM{$vm_name}}
+        , arg_create_dom($vm_name)
     );
 
     my $domain2 = $vm->search_domain($domain_name);

@@ -76,7 +76,8 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('Alpine'), active => $active
+    my $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('Alpine')
+        , active => $active
         , id_owner => $USER->id
         , vm => $BACKEND
     );

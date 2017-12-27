@@ -13,11 +13,8 @@ use Test::Ravada;
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 init($test->connector);
 my $USER = create_user("foo","bar");
 
@@ -28,7 +25,7 @@ sub test_spice {
 
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
-                , id_iso => 1 , id_owner => $USER->id);
+                , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start($USER);
 

@@ -186,7 +186,7 @@ remove_old_disks();
 
 my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name
-            , id_iso => 1 , id_owner => $USER->id);
+            , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
 $domain->prepare_base($USER);
 $domain->is_public(1);

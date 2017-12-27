@@ -18,11 +18,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my $RVD_BACK;
 
 eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
@@ -77,16 +72,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;

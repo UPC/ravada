@@ -18,11 +18,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my %TEST_DISK = (
     Void => \&test_disk_void
     ,KVM => \&test_disk_kvm
@@ -45,18 +40,12 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -81,18 +70,12 @@ sub test_create_fail {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
     ok($@,"Expecting error , got ''");
 
@@ -117,7 +100,7 @@ sub test_req_create_domain{
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , @{$ARG_CREATE_DOM{$vm_name}}
+                    , arg_create_dom($vm_name)
         );
    
     }
@@ -149,7 +132,7 @@ sub test_req_create_fail {
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , @{$ARG_CREATE_DOM{$vm_name}}
+                    , arg_create_dom($vm_name)
         );
    
         ok($req,"Expecting request to create_domain");
