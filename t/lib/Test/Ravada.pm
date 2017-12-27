@@ -23,6 +23,7 @@ create_domain
     search_id_iso
     flush_rules open_ipt
     arg_create_dom
+    vm_names
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -33,7 +34,10 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
-our %ARG_CREATE_DOM = ();
+our %ARG_CREATE_DOM = (
+    KVM => []
+    ,Void => []
+);
 
 sub user_admin {
     return $USER_ADMIN;
@@ -44,6 +48,10 @@ sub arg_create_dom {
     confess "Unknown vm $vm_name"
         if !$ARG_CREATE_DOM{$vm_name};
     return @{$ARG_CREATE_DOM{$vm_name}};
+}
+
+sub vm_names {
+    return sort keys %ARG_CREATE_DOM;
 }
 
 sub create_domain {
