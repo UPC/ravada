@@ -65,7 +65,7 @@ sub test_new_domain_from_iso {
     diag("Creating domain $name from iso");
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
-                                        , id_iso => 1
+                                        , id_iso => search_id_iso('alpine')
                                         ,vm => $BACKEND
                                         ,id_owner => $USER->id
             ) 

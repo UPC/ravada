@@ -17,11 +17,7 @@ use_ok('Ravada');
 my $RVD_BACK = rvd_back($test->connector);
 my $RVD_FRONT= rvd_front($test->connector);
 
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 #########################################################################
@@ -77,16 +73,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    };
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -147,8 +137,6 @@ sub test_base {
 sub test_volumes_in_two_pools {
     my $vm_name = shift;
 
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 
@@ -159,7 +147,7 @@ sub test_volumes_in_two_pools {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -208,7 +196,7 @@ sub test_default_pool {
 
 clean();
 
-my $vm_name = 'kvm';
+my $vm_name = 'KVM';
 my $vm = rvd_back->search_vm($vm_name);
 
 SKIP: {

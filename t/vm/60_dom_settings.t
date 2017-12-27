@@ -16,10 +16,6 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user('foo','bar');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-      ,Void => []
-);
 our $TIMEOUT_SHUTDOWN = 10;
 
 my %HAS_NOT_VALUE = map { $_ => 1 } qw(image jpeg zlib playback streaming);
@@ -33,16 +29,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
