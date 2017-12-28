@@ -249,6 +249,8 @@ sub _search_already_started($self) {
     my %started;
     while (my ($id) = $sth->fetchrow) {
         my $vm = Ravada::VM->open($id);
+        next if !$vm->is_active;
+
         my $domain = $vm->search_domain($self->name);
         next if !$domain;
         if ( $domain->is_active || $domain->is_hibernated ) {
