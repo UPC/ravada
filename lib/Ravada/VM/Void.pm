@@ -35,7 +35,7 @@ has 'type' => (
 has 'vm' => (
     is => 'rw'
     ,isa => 'Any'
-    ,builder => 'connect'
+    ,builder => '_connect'
     ,lazy => 1
 );
 
@@ -44,22 +44,24 @@ our $SSH;
 ##########################################################################
 #
 
-sub connect {
+sub _connect {
     my $self = shift;
     return 1 if ! $self->host || $self->host eq 'localhost'
                 || $self->host eq '127.0.0.1';
 
     return $SSH if $SSH;
-    confess "conncting" if $SSH;
     my ($ssh,$chan) = $self->_ssh_channel();
     $chan->exec("ls -l ".$self->dir_img." || mkdir ".$self->dir_img);
     my ($out, $err) = $chan->read2();
     warn $err if $err;
     die $err if $err;
 
-    warn $out;
-    warn $ssh;
     return $ssh;
+}
+
+sub connect($self) {
+    return if $self->vm;
+    $self->vm($self->_connect);
 }
 
 sub disconnect {
@@ -160,7 +162,6 @@ sub _is_a_domain($self, $file) {
 sub _ssh_channel($self) {
     my $ssh = $SSH;
     if (!$ssh) {
-        $ssh = $self->vm();
         $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
         $SSH = $ssh;
     }
@@ -170,7 +171,6 @@ sub _ssh_channel($self) {
         last if $chan;
         warn "retry $_ channel" if $_>1;
         $ssh = $self->_connect_ssh();
-        $self->vm($ssh);
         $SSH = $ssh;
     }
     $ssh->die_with_error   if !$chan;
