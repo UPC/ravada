@@ -585,5 +585,11 @@ sub is_active($self) {
     warn $@ if $@ && $@ !~ /Unable to connect/;
     return 0;
 }
+
+sub remove($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
+    $sth->execute($self->id);
+}
+
 1;
 
