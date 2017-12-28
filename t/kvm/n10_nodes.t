@@ -615,40 +615,25 @@ sub test_node_inactive {
 sub _shutdown_node($node) {
 
     for my $domain ($node->list_domains(active => 1)) {
-        diag("Shutting down ".$domain->name);
+        diag("Shutting down ".$domain->name." on node ".$node->name);
         $domain->shutdown_now(user_admin);
     }
     $node->disconnect;
 
-    my @cmd = ('virsh','shutdown',$node->name);
-    my ($in, $out, $err);
-#    run(\@cmd, \$in, \$out, \$err);
-    warn "@cmd : $?\n";
-    warn $err if $err;
-    my $cmd = join(" ",@cmd);
-    warn `$cmd`;
-
-    sleep 2;
+    my $domain_node = _domain_node($node);
+    eval {
+        $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
+    };
+    sleep 2 if !$node->ping;
     for ( 1 .. 10 ) {
         diag("Waiting for node ".$node->name." to be inactive $_");
         last if !$node->ping;
         sleep 1;
     }
+    is($node->ping,0);
 }
 
-sub _start_node($node) {
-
-    confess "Undefined node " if!$node;
-
-    warn "gonna start node ".$node->name;
-
-    $node->disconnect;
-    if ( $node->is_active ) {
-        warn "Node ".$node->name." active\n";
-        $node->connect && return;
-        warn "I can't connect";
-    }
-
+sub _domain_node($node) {
     my $vm = rvd_back->search_vm('KVM','localhost');
     my $domain = $vm->search_domain($node->name);
     $domain = rvd_back->import_domain(name => $node->name
@@ -658,8 +643,22 @@ sub _start_node($node) {
     )   if !$domain || !$domain->is_known;
 
     ok($domain->id,"Expecting an ID for domain ".Dumper($domain)) or exit;
-    diag("Starting domain/node ".$domain->name);
     $domain->_set_vm($vm, 'force');
+    return $domain;
+}
+sub _start_node($node) {
+
+    confess "Undefined node " if!$node;
+
+    $node->disconnect;
+    if ( $node->is_active ) {
+        warn "Node ".$node->name." active\n";
+        $node->connect && return;
+        warn "I can't connect";
+    }
+
+    my $domain = _domain_node($node);
+    diag("Starting domain/node ".$domain->name);
 
     ok($domain->_vm->host eq 'localhost');
 
@@ -669,7 +668,6 @@ sub _start_node($node) {
 
     $node->disconnect;
     sleep 1;
-    $node->connect;
 
     for ( 1 .. 10 ) {
         last if $node->is_active;
@@ -677,6 +675,7 @@ sub _start_node($node) {
         diag("Waiting for node ".$node->name." $_");
     }
     is($node->ping,1,"Expecting active node ".$node->name." can be pinged");
+    $node->connect;
 }
 
 sub remove_node($node) {
