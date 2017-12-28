@@ -3,7 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
-use IPC::Run3;
+use IPC::Run 'run';
 use Test::More;
 use Test::SQL::Data;
 
@@ -42,15 +42,27 @@ sub test_node_renamed {
     $sth->finish;
 
     my $node2 = Ravada::VM->open($node->id);
-    ok($node2,"Expecting a node id=".$node->id) or exit;
-    is($node2->name, $name2)                    or exit;
-    is($node2->id, $node->id)                   or exit;
+    ok($node2,"Expecting a node id=".$node->id) or return;
+    is($node2->name, $name2)                    or return;
+    is($node2->id, $node->id)                   or return;
 
     my $rvd_back2 = Ravada->new(
         connector => $test->connector
         ,config => "t/etc/ravada.conf"
     );
-    is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm}),Dumper(rvd_back->vm)) or exit;
+    is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm}),Dumper(rvd_back->vm)) or return;
+    my $list_nodes2 = rvd_front->list_nodes;
+
+    my ($node_f) = grep { $_->{name} eq $name2} @$list_nodes2;
+    ok($node_f,"[$vm_name] expecting node $name2 in frontend ".Dumper($list_nodes2));
+
+    $sth->execute($name,$name2);
+    $sth->finish;
+
+    $list_nodes2 = rvd_front->list_nodes;
+    ($node_f) = grep { $_->{name} eq $name} @$list_nodes2;
+    ok($node_f,"[$vm_name] expecting node $name in frontend ".Dumper($list_nodes2));
+
 }
 
 sub test_node {
@@ -61,23 +73,28 @@ sub test_node {
 
     my $vm = rvd_back->search_vm($vm_name);
 
+    my $list_nodes = rvd_front->list_nodes;
+
     my $node;
+    diag("Testing $vm_name $REMOTE_CONFIG->{name}");
     eval { $node = $vm->new(%{$REMOTE_CONFIG}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($REMOTE_CONFIG).", got :'"
-        .($@ or '')."'");
+        .($@ or '')."'") or return;
     ok($node) or return;
 
-    is($node->type,$vm->type) or exit;
+    is($node->type,$vm->type) or return;
 
     is($node->host,$REMOTE_CONFIG->{host});
 
     _start_node($node);
 
-    { $node->vm };
-    is($@,'')   or exit;
+    clean_remote_node($node);
 
-    ok($node->id) or exit;
-    is($node->is_active,1) or exit;
+    { $node->vm };
+    is($@,'')   or return;
+
+    ok($node->id) or return;
+    is($node->is_active,1) or return;
 
     ok(!$node->is_local,"[$vm_name] node remote");
 
@@ -85,10 +102,13 @@ sub test_node {
     is($node2->id, $node->id);
     is($node2->name, $node->name);
     is($node2->public_ip, $node->public_ip);
-    ok(!$node2->is_local,"[$vm_name] node remote") or exit;
+    ok(!$node2->is_local,"[$vm_name] node remote") or return;
 
     my @nodes = $vm->list_nodes();
-    is(scalar @nodes, 2,"[$vm_name] Expecting nodes") or exit;
+    is(scalar @nodes, 2,"[$vm_name] Expecting nodes") or return;
+
+    my $list_nodes2 = rvd_front->list_nodes;
+    is(scalar @$list_nodes2, (scalar @$list_nodes)+1,Dumper($list_nodes,$list_nodes2)) or return;
     return $node;
 }
 
@@ -124,7 +144,7 @@ sub test_domain {
     test_sync($vm_name, $node, $base, $clone);
 
     eval { $clone->migrate($node) };
-    is(''.$@ , '') or exit;
+    is(''.$@ , '') or return;
 
     eval { $clone->start(user_admin) };
     ok(!$@,$node->name." Expecting no error, got ".($@ or ''));
@@ -176,7 +196,7 @@ sub test_remove_domain_from_local {
     ok(!$domain2,"Expecting no domain in local");
 
     my $domain3 = $node->search_domain($domain->name);
-    ok(!$domain3,"Expecting no domain ".$domain->name." in node ".$node->name) or exit;
+    ok(!$domain3,"Expecting no domain ".$domain->name." in node ".$node->name) or return;
 
     test_remove_domain_node($node, $domain, \@volumes);
 
@@ -219,7 +239,7 @@ sub test_remove_domain_node {
     }
     for my $path (keys %found) {
         ok(!$found{$path},$node->name." Expecting vol $path removed")
-            or exit;
+            or return;
     }
 
 }
@@ -262,7 +282,7 @@ sub test_sync_base {
     is(''.$@,'');
 
     is($base->base_in_vm($node->id),1,"Expecting domain ".$base->id
-        ." base in node ".$node->id ) or exit;
+        ." base in node ".$node->id ) or return;
 
     eval { $clone->migrate($node); };
     is(''.$@,'');
@@ -280,7 +300,7 @@ sub test_sync_base {
 
     my $clone3 = $node->search_domain($clone2->name);
     ok($clone3,"[$vm_name] expecting ".$clone2->name." found in "
-                .$node->host) or exit;
+                .$node->host) or return;
 
     my $domains = rvd_front->list_domains();
     my ($clone_f) = grep { $_->{name} eq $clone2->name } @$domains;
@@ -315,7 +335,7 @@ sub test_start_twice {
     is(''.$@,'') or return;
 
     eval { $clone->migrate($node); };
-    is(''.$@,'')    or exit;
+    is(''.$@,'')    or return;
 
     is($clone->_vm->host, $node->host);
     is($clone->is_active,0);
@@ -334,7 +354,8 @@ sub test_start_twice {
 
     eval { $clone->start(user => user_admin ) };
     like(''.$@,qr'libvirt error code: 55,') if $vm_name eq 'KVM';
-    is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip) or exit;
+    is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip)
+        or return;
     is($clone->display(user_admin), $clone2->display(user_admin));
 
     $clone->remove(user_admin);
@@ -346,7 +367,7 @@ sub test_rsync_newer {
     my ($vm_name, $node) = @_;
 
     if ($vm_name ne 'KVM') {
-        diag("[$vm_name] TODO rsync_newer, volumes not implemented");
+        diag("Skipping: Volumes not implemented for $vm_name");
         return;
     }
     my $domain = test_domain($vm_name, $node) or return;
@@ -360,16 +381,16 @@ sub test_rsync_newer {
     my $capacity;
     { # vols equal, then resize
     my $vol = $vm->search_volume($vol_name);
-    ok($vol,"[$vm_name] expecting volume $vol_name")    or exit;
+    ok($vol,"[$vm_name] expecting volume $vol_name")    or return;
     ok($vol->get_info,"[$vm_name] No info for remote vol "
-        .Dumper($vol)) or exit;
+        .Dumper($vol)) or return;
 
     my $vol_remote = $node->search_volume($vol_name);
     ok($vol_remote->get_info,"[$vm_name] No info for remote vol "
-        .Dumper($vol_remote)) or exit;
+        .Dumper($vol_remote)) or return;
     is($vol_remote->get_info->{capacity}, $vol->get_info->{capacity});
 
-    $capacity = int ($vol->get_info->{capacity} *1.1 );
+    $capacity = int ($vol->get_info->{capacity} *1.5 );
     $vol->resize($capacity);
     }
 
@@ -468,7 +489,7 @@ sub test_clone_not_in_node {
         push @clones,($clone1);
         is($clone1->_vm->host, 'localhost');
         eval { $clone1->start(user_admin) };
-        is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or exit;
+        is(''.$@,'',"[$vm_name] Clone of ".$domain->name." failed ".$clone1->name) or return;
         is($clone1->is_active,1);
 
     # search the domain in the underlying VM
@@ -487,7 +508,7 @@ sub test_clone_not_in_node {
 
     isnt($clones[-1]->_vm->host, $clones[0]->_vm->host,"[$vm_name] "
         .$clones[-1]->name
-        ." - ".$clones[0]->name) or exit;
+        ." - ".$clones[0]->name) or return;
     for (@clones) {
         $_->remove(user_admin);
     }
@@ -510,24 +531,24 @@ sub test_domain_already_started {
     is($clone->_vm->host, 'localhost');
 
     eval { $clone->migrate($node) };
-    is(''.$@,'')                        or exit;
+    is(''.$@,'')                        or return;
     is($clone->_vm->host, $node->host);
-    is($clone->_vm->id, $node->id) or exit;
+    is($clone->_vm->id, $node->id) or return;
 
-    is($clone->_data('id_vm'), $node->id) or exit;
+    is($clone->_data('id_vm'), $node->id) or return;
 
     {
         my $clone_copy = $node->search_domain($clone->name);
         ok($clone_copy,"[$vm_name] expecting domain ".$clone->name
                         ." in node ".$node->host
-        ) or exit;
+        ) or return;
     }
 
     eval { $clone->start(user_admin) };
-    is(''.$@,'',$clone->name) or exit;
+    is(''.$@,'',$clone->name) or return;
     is($clone->is_active,1);
-    is($clone->_vm->id, $node->id)  or exit;
-    is($clone->_vm->host, $node->host)  or exit;
+    is($clone->_vm->id, $node->id)  or return;
+    is($clone->_vm->host, $node->host)  or return;
 
     {
     my $clone2 = rvd_back->search_domain($clone->name);
@@ -542,7 +563,7 @@ sub test_domain_already_started {
     { # clone is active, it should be found in node
     my $clone3 = rvd_back->search_domain($clone->name);
     is($clone3->id, $clone->id);
-    is($clone3->_vm->host , $node->host) or exit;
+    is($clone3->_vm->host , $node->host) or return;
     }
 
     $clone->remove(user_admin);
@@ -576,7 +597,9 @@ sub test_node_inactive {
     my $list_nodes = rvd_front->list_nodes;
     my ($node2) = grep { $_->{name} eq $node->name} @$list_nodes;
 
-    is($node2->{is_active},0) or exit;
+    ok($node2,"[$vm_name] Expecting node called ".$node->name." in frontend")
+        or return;
+    is($node2->{is_active},0,Dumper($node2)) or return;
 
     _start_node($node);
 
@@ -591,14 +614,24 @@ sub test_node_inactive {
 
 sub _shutdown_node($node) {
 
+    for my $domain ($node->list_domains(active => 1)) {
+        diag("Shutting down ".$domain->name);
+        $domain->shutdown_now(user_admin);
+    }
     $node->disconnect;
 
-    my $cmd = "virsh shutdown ".$node->name;
-    warn $cmd;
-    print `$cmd`;
+    my @cmd = ('virsh','shutdown',$node->name);
+    my ($in, $out, $err);
+#    run(\@cmd, \$in, \$out, \$err);
+    warn "@cmd : $?\n";
+    warn $err if $err;
+    my $cmd = join(" ",@cmd);
+    warn `$cmd`;
+
     sleep 2;
-    for ( 1 .. 60 ) {
-        last if !$node->is_active;
+    for ( 1 .. 10 ) {
+        diag("Waiting for node ".$node->name." to be inactive $_");
+        last if !$node->ping;
         sleep 1;
     }
 }
@@ -607,35 +640,52 @@ sub _start_node($node) {
 
     confess "Undefined node " if!$node;
 
+    warn "gonna start node ".$node->name;
+
     $node->disconnect;
     if ( $node->is_active ) {
-        $node->connect;
-        return;
+        warn "Node ".$node->name." active\n";
+        $node->connect && return;
+        warn "I can't connect";
     }
 
-    my @cmd = ('virsh','start',$node->name);
-    my ($in, $out, $err);
-    run3(\@cmd, \$in, \$out, \$err);
-    die $err if $err;
+    my $vm = rvd_back->search_vm('KVM','localhost');
+    my $domain = $vm->search_domain($node->name);
+    $domain = rvd_back->import_domain(name => $node->name
+            ,user => user_admin->name
+            ,vm => 'KVM'
+            ,spinoff_disks => 0
+    )   if !$domain || !$domain->is_known;
+
+    ok($domain->id,"Expecting an ID for domain ".Dumper($domain)) or exit;
+    diag("Starting domain/node ".$domain->name);
+    $domain->_set_vm($vm, 'force');
+
+    ok($domain->_vm->host eq 'localhost');
+
+    $domain->start(user_admin);
+
     sleep 2;
-    for ( 1 .. 10 ) {
-        $node->disconnect;
-        sleep 1;
-        $node->connect;
-    }
 
-    for ( 1 .. 60 ) {
+    $node->disconnect;
+    sleep 1;
+    $node->connect;
+
+    for ( 1 .. 10 ) {
         last if $node->is_active;
         sleep 1;
-        diag("Waiting for node ".$node->name);
+        diag("Waiting for node ".$node->name." $_");
     }
+    is($node->ping,1,"Expecting active node ".$node->name." can be pinged");
 }
 
 sub remove_node($node) {
     eval { $node->remove() };
     is(''.$@,'');
 
-    my $node2 = Ravada::VM->open($node->id);
+    my $node2;
+    eval { $node2 = Ravada::VM->open($node->id) };
+    like($@,qr"can't find VM");
     ok(!$node2, "Expecting no node ".$node->id);
 }
 #############################################################
@@ -644,7 +694,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('Void','KVM') {
+for my $vm_name ('KVM') {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -670,24 +720,19 @@ SKIP: {
     diag("Testing remote node in $vm_name");
     my $node = test_node($vm_name)  or next;
 
-    next if !$node || !$node->vm;
-
-    test_node_inactive($vm_name, $node);
-
+    ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
+        remove_node($node);
+        return;
+    };
 
     test_start_twice($vm_name, $node);
     test_node_renamed($vm_name, $node);
 
     test_bases_node($vm_name, $node);
-
     test_domain_already_started($vm_name, $node);
-
     test_clone_not_in_node($vm_name, $node);
-
     test_rsync_newer($vm_name, $node);
-
     test_domain_no_remote($vm_name, $node);
-
     test_sync_base($vm_name, $node);
 
     my $domain2 = test_domain($vm_name, $node);
@@ -699,11 +744,17 @@ SKIP: {
         test_domain_starts_in_same_vm($vm_name, $node);
         test_prepare_sets_vm($vm_name, $node);
 
-    remove_node($node);
+    test_node_inactive($vm_name, $node);
+
+#    _start_node($node);
+#    clean_remote_node($node);
+#    remove_node($node);
 }
 
 }
 
+warn "cleaning";
 clean();
+warn "done testing";
 
 done_testing();
