@@ -16,6 +16,7 @@ use JSON::XS;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
+use Net::Ping;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
@@ -537,8 +538,12 @@ sub is_local($self) {
 sub _connect_ssh($self) {
     my $ssh2 = Net::SSH2->new();
     $ssh2->timeout(20000);
-    $ssh2->connect($self->host) or $ssh2->die_with_error;
-    $ssh2->check_hostkey()      or $ssh2->die_with_error;
+
+    for ( 1 .. 10 ) {
+        last if $ssh2->connect($self->host);
+        sleep 1;
+    }
+#    $ssh2->check_hostkey()      or $ssh2->die_with_error;
     my @pwd = getpwuid($>);
     my $home = $pwd[7];
     $ssh2->auth_publickey("root"
@@ -559,6 +564,16 @@ sub list_nodes($self) {
     }
 
     return @nodes;
+}
+
+sub ping($self) {
+    my $p = Net::Ping->new('tcp',2);
+    return 1 if $p->ping($self->host);
+    $p->close();
+
+    $p= Net::Ping->new('icmp',2);
+    return $p->ping($self->host);
+
 }
 
 sub is_active($self) {
