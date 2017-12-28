@@ -21,11 +21,6 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 init($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ ]
-    ,Void => [ ]
-);
-
 my $USER = create_user("foo","bar");
 
 my $CHAIN = 'RAVADA';
@@ -41,17 +36,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , id_iso => search_id_iso('alpine')
-                    , @{$ARG_CREATE_DOM{$vm_name}}) 
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;

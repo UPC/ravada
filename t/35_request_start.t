@@ -18,7 +18,7 @@ init($test->connector, 't/etc/ravada.conf');
 my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
-my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => 1 );
+my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => search_id_iso('Alpine') );
 
 sub test_remove_domain {
     my $vm_name = shift;

@@ -17,14 +17,11 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = keys %ARG_CREATE_DOM;
+my @VMS = ('KVM','Void');
+
+my $TEST_LONG = ($ENV{TEST_LONG} or 0);
 
 #############################################################
 
@@ -65,12 +62,14 @@ for my $vm_name (reverse sort @VMS) {
             is(''.$@,'') or next;
             ok($clone,"Expecting a clone from ".$domain->name)  or next;
 
-            eval { $clone->start(user_admin) };
-            is(''.$@,'');
-            is($clone->is_active,1);
+            if ($TEST_LONG) {
+                eval { $clone->start(user_admin) };
+                is(''.$@,'');
+                is($clone->is_active,1);
+            }
 
             if ($clone0 ) {
-                eval { $clone0->shutdown_now(user_admin) };
+                eval { $clone0->shutdown_now(user_admin) if $clone0->is_active() };
                 is(''.$@,'');
                 is($clone0->is_active,0);
 
@@ -81,7 +80,7 @@ for my $vm_name (reverse sort @VMS) {
                 }
             }
             $clone0 = $clone;
-            if ($clone->can_hybernate) {
+            if ($TEST_LONG && $clone->can_hybernate) {
                 eval { $clone->hybernate(user_admin) };
                 is(''.$@,'');
                 is($clone->is_paused,1);

@@ -29,7 +29,7 @@ sub test_new_domain {
     my $freemem = _check_free_memory();
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
-                                        , id_iso => 1
+                                        , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
                                         ,memory => 1.5*1024*1024
