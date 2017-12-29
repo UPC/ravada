@@ -845,10 +845,7 @@ sub _fix_pci_slots {
 
 }
 
-sub _iso_name {
-    my $self = shift;
-    my $iso = shift;
-    my $req = shift;
+sub _iso_name($self, $iso, $req, $verbose=1) {
 
     my $iso_name;
     if ($iso->{rename_file}) {
@@ -871,7 +868,7 @@ sub _iso_name {
                 ,"Downloading ISO file for $iso_name "
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
-        _download_file_external($iso->{url}, $device);
+        _download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
@@ -949,15 +946,15 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_external {
-    my ($url,$device) = @_;
+sub _download_file_external($url, $device, $verbose=1) {
     confess "ERROR: wget missing"   if !$WGET;
+    confess "verbose" if $verbose;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
-    warn join(" ",@cmd)."\n";
+    warn join(" ",@cmd)."\n"    if $verbose;
     run3(\@cmd,\$in,\$out,\$err);
-    warn "out=$out" if $out;
-    warn "err=$err" if $err;
+    warn "out=$out" if $out && $verbose;
+    warn "err=$err" if $err && $verbose;
     print $out if $out;
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;

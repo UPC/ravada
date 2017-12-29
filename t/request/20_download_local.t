@@ -36,6 +36,7 @@ sub test_download {
              id_iso => $id_iso
             , id_vm => $vm->id
             , delay => 4
+            , verbose => 0
     );
     is($req1->status, 'requested');
 
@@ -49,7 +50,7 @@ sub test_download {
     ok($iso2, "Expecting a iso for id = $id_iso , got ".($iso2 or '<UNDEF>'));
     
     my $device;
-    eval { $device = $vm->_iso_name($iso2) };
+    eval { $device = $vm->_iso_name($iso2, undef, 0) };
     is($@,'');
 
     ok($device,"Expecting a device name , got ".($device or '<UNDEF>'));
@@ -67,7 +68,7 @@ sub test_download_fail {
     $iso->{url} =~ s{(.*)\.(.*)}{$1-failforced.$2};
 
     my $device;
-    eval { $device = $vm->_iso_name($iso) };
+    eval { $device = $vm->_iso_name($iso, undef, 0) };
     like($@,qr/./);
     ok(!$device);
     ok(!-e $device, "Expecting $device missing") if $device;
