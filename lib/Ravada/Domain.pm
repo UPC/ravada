@@ -154,6 +154,8 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
+
+before 'shutdown_now' => \&_pre_shutdown_now;
 after 'shutdown_now' => \&_post_shutdown_now;
 
 before 'force_shutdown' => \&_pre_shutdown_now;
@@ -178,6 +180,10 @@ sub BUILD {
     my $self = shift;
 
     $self->is_known();
+    if ( $self->is_known
+        && $self->_data('is_active') && !$self->is_active ) {
+        $self->_post_shutdown();
+    }
 }
 
 sub _set_last_vm($self,$force=0) {
@@ -1150,6 +1156,7 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = $arg{timeout};
 
+    $self->_set_data(is_active => 0);
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
     $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
@@ -1286,6 +1293,7 @@ sub _post_start {
         );
 
     }
+    $self->_set_data(is_active => 1);
 }
 
 sub _update_id_vm($self) {
