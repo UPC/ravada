@@ -13,11 +13,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 use_ok('Ravada');
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 init($test->connector);
 my $USER = create_user("foo","bar");
 my $DISPLAY_IP = '99.1.99.1';
@@ -34,16 +30,10 @@ sub test_create_domain {
     my $name = new_domain_name();
     diag("Test create domain $name");
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -65,20 +55,6 @@ sub test_files_base {
     ok(scalar @files == $n_expected,"Expecting $n_expected files base , got "
             .scalar @files);
     return;
-}
-
-sub touch_mtime {
-    for my $disk (@_) {
-
-        my @stat0 = stat($disk);
-
-        sleep 2;
-        utime(undef, undef, $disk) or die "$! $disk";
-        my @stat1 = stat($disk);
-
-        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
-    }
-
 }
 
 sub test_prepare_base_active {
@@ -115,29 +91,23 @@ sub test_prepare_base {
     $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( $USER) };
-    ok(!$@, $@);
+    is(''.$@, '', "[$vm_name] expecting no error preparing ".$domain->name);
     ok($domain->is_base);
     is($domain->is_active(),0);
 
-    eval { $domain->prepare_base( $USER) };
     my $description = "This is a description test";
     add_description($domain, $description);
 
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
+    eval { $domain->prepare_base( $USER) };
+    $@ = '' if !defined $@;
+    like($@, qr/already/i,"[$vm_name] Don't prepare if already base");
     ok($domain->is_base);
 
     test_files_base($domain,1);
 
     my @disk = $domain->disk_device();
-    $domain->shutdown(user => $USER)    if $domain->is_active;
-
-    touch_mtime(@disk);
-
-    eval { $domain->prepare_base( $USER) };
-    is($@,'');
-    ok($domain->is_base);
+    $domain->shutdown_now($USER)    if $domain->is_active;
+    is($domain->is_active,0,"[$vm_name] Expecting domain inactive");
 
     my $name_clone = new_domain_name();
 
@@ -176,15 +146,14 @@ sub test_prepare_base {
         );
     }
 
-    touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
+    ok($@ && $@ =~ /has \d+ clones|already a base/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
     $domain_clone->remove($USER);
 
-    touch_mtime(@disk);
+    $domain->remove_base($USER);
     eval { $domain->prepare_base($USER) };
 
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");

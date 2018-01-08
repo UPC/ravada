@@ -20,14 +20,9 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 #######################################################################33
 
@@ -41,11 +36,7 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = (@{$ARG_CREATE_DOM{$vm_name}}
+    my @arg_create = (arg_create_dom($vm_name)
         ,id_owner => $USER->id
         ,name => $name
     );
@@ -379,6 +370,12 @@ sub test_domain_swap {
 
 sub test_search($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
+    $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
+
+    my $file_old = $vm->search_volume_path("file.iso");
+    unlink $file_old if -e $file_old;
+
+    $vm->default_storage_pool_name('default');
 
     my $file_out = $vm->dir_img."/file.iso";
 
@@ -388,6 +385,8 @@ sub test_search($vm_name) {
     };
     print $out "foo.bar\n";
     close $out;
+
+    $vm->refresh_storage();
 
     my $file = $vm->search_volume_path("file.iso");
     is($file_out, $file);

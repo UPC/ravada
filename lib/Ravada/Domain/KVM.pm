@@ -186,16 +186,20 @@ sub remove {
         $self->_do_force_shutdown();
     }
 
-    $self->remove_disks();
+
+    eval { $self->remove_disks(); };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    $self->domain->undefine();
+    eval { $self->domain->undefine() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 
@@ -576,7 +580,7 @@ Shuts down uncleanly the domain
 
 sub force_shutdown{
     my $self = shift;
-    $self->_do_force_shutdown();
+    return $self->_do_force_shutdown() if $self->is_active;
 }
 
 sub _do_force_shutdown {
@@ -858,6 +862,17 @@ Takes a screenshot, it stores it in file.
 
 =cut
 
+sub handler {
+    my ($stream, $data, $n) = @_;
+    my $file_tmp = "/var/tmp/$$.tmp";
+
+    open my $out ,'>>',$file_tmp;
+    print $out $data;
+    close $out;
+
+    return $n;
+}
+
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
@@ -869,24 +884,13 @@ sub screenshot {
     my $stream = $self->{_vm}->vm->new_stream();
 
     my $mimetype = $self->domain->screenshot($stream,0);
+    $stream->recv_all(\&handler);
 
-    my $file_tmp = "$file.tmp";
-    my $data;
-    my $bytes = 0;
-    open my $out, '>', $file_tmp or die "$! $file_tmp";
-    while ( my $rv =$stream->recv($data,1024)) {
-        $bytes += $rv;
-        last if $rv<=0;
-        print $out $data;
-    }
-    close $out;
+    my $file_tmp = "/var/tmp/$$.tmp";
+    $stream->finish;
 
     $self->_convert_png($file_tmp,$file);
     unlink $file_tmp or warn "$! removing $file_tmp";
-
-    $stream->finish;
-
-    return $bytes;
 }
 
 sub _file_screenshot {
@@ -1591,6 +1595,14 @@ In KVM it removes saved images.
 sub pre_remove {
     my $self = shift;
     $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
+}
+
+sub is_removed($self) {
+    my $is_removed = 0;
+    eval { $self->domain->get_xml_description};
+    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+    die $@ if $@;
+    return 0;
 }
 
 1;

@@ -53,15 +53,16 @@ our %VALID_ARG = (
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
-    ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
+    ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2, verbose => 2}
     ,refresh_storage => { id_vm => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -247,6 +248,7 @@ sub resume_domain {
 
 sub _check_args {
     my $sub = shift;
+    confess "Odd number of elements ".Dumper(\@_)   if scalar(@_) % 2;
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
@@ -423,8 +425,13 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
-        $args{id_domain} = $args{args}->{id_domain}
-            if exists $args{args}->{id_domain} && ! $args{id_domain};
+        my $id_domain_args = $args{args}->{id_domain};
+
+        if ($id_domain_args) {
+            confess "ERROR: Different id_domain: ".Dumper(\%args)
+                if $args{id_domain} && $args{id_domain} ne $id_domain_args;
+            $args{id_domain} = $id_domain_args;
+        }
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
@@ -856,6 +863,32 @@ sub refresh_storage {
     );
 
 
+}
+
+=head2 clone
+
+Copies a virtual machine
+
+    my $req = Ravada::Request->clone(
+             ,uid => $user->id
+        id_domain => $domain->id
+    );
+
+=cut
+
+sub clone {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('clone', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return _new_request($self
+        , command => 'clone'
+        , args =>$args
+    );
 }
 
 sub AUTOLOAD {

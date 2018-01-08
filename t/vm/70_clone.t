@@ -17,14 +17,9 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 ###############################################################################
@@ -38,16 +33,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name));
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -71,7 +60,8 @@ sub test_clone {
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
                 $base->is_public(1);
                 eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
-                ok(!$@,"Expecting error='', got='".($@ or '')."'");
+                ok(!$@,"Expecting error='', got='".($@ or '')."'")
+                        or die Dumper($base->list_requests);
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
     is($clone1->description,undef);
@@ -92,7 +82,7 @@ sub test_clone {
 sub test_mess_with_bases {
     my ($vm_name, $base, $clones) = @_;
     for my $clone (@$clones) {
-        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
+        $clone->force_shutdown($USER)   if $clone->is_active;
         ok($clone->id_base,"Expecting clone has id_base , got "
                 .($clone->id_base or '<UNDEF>'));
         $clone->prepare_base($USER);
@@ -104,14 +94,13 @@ sub test_mess_with_bases {
         ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
 
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
+        $clone->force_shutdown($USER)   if $clone->is_active;
 
         $clone->remove_base($USER);
         eval { $clone->start($USER); };
         ok(!$@,"[$vm_name] Expecting error: '' , got '".($@ or '')."'");
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1);
-
+        $clone->force_shutdown($USER);
     }
 }
 

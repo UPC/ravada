@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.10';
+our $VERSION = '0.3.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -172,7 +172,27 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        zesty => {
+        alpine_37 => {
+                    name => 'Alpine 3.7'
+            ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
+                ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
+                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+        }
+        ,artful => {
+                    name => 'Ubuntu Artful Aardvark'
+            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/17.10/'
+                ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => ,'$url/MD5SUMS'
+        }
+        ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
             ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
                    ,arch => 'amd64'
@@ -201,7 +221,35 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+        }
+        ,fedora_26 => {
+            name => 'Fedora 26'
+            ,description => 'RedHat Fedora 26 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-26-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
+        }
+        ,fedora_27 => {
+            name => 'Fedora 27'
+            ,description => 'RedHat Fedora 27 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-27-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+        }
+        ,xubuntu_artful => {
+            name => 'Xubuntu Artful Aardvark'
+            ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/mini.iso'
+            ,rename_file => 'xubuntu_artful.iso'
         }
         ,xubuntu_zesty => {
             name => 'Xubuntu Zesty Zapus'
@@ -222,6 +270,14 @@ sub _update_isos {
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
             ,rename_file => 'xubuntu_xenial_mini.iso'
         }
+       ,lubuntu_aardvark => {
+            name => 'Lubuntu Artful Aardvark'
+            ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/lubuntu-17.10-desktop-amd64.iso'
+            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/MD5SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+        }
         ,lubuntu_zesty => {
             name => 'Lubuntu Zesty Zapus'
             ,description => 'Lubuntu 17.04 Zesty Zapus 64 bits'
@@ -233,18 +289,36 @@ sub _update_isos {
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/'
-            ,file_re => 'lubuntu-16.04.2-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.*/release/'
+            ,file_re => 'lubuntu-16.04.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
+        ,debian_jessie_32 => {
+            name =>'Debian Jessie 32 bits'
+            ,description => 'Debian 8 Jessie 32 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
+        ,debian_jessie_64 => {
+            name =>'Debian Jessie 64 bits'
+            ,description => 'Debian 8 Jessie 64 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
-            ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -518,11 +592,17 @@ sub _update_table($self, $table, $field, $data) {
 
 sub _remove_old_isos {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images "
-        ."    WHERE url like '%debian-9.0%iso'"
-   );
-   $sth->execute();
-   $sth->finish;
+    for my $sql (
+        "DELETE FROM iso_images "
+            ."  WHERE url like '%debian-9.0%iso'"
+        ,"DELETE FROM iso_images"
+            ."  WHERE name like 'Debian%' "
+            ."      AND NOT url  like '%*%' "
+    ) {
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute();
+        $sth->finish;
+    }
 }
 
 sub _update_data {
@@ -693,6 +773,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','start_time','int DEFAULT 0');
+    $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+
+    $self->_upgrade_table('domains_network','allowed','int not null default 1');
+
 }
 
 
@@ -740,7 +825,13 @@ sub _init_config {
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
-    $CONFIG = YAML::LoadFile($file);
+    die "ERROR: Missing config file $file\n"
+        if !-e $file;
+
+    eval { $CONFIG = YAML::LoadFile($file) };
+
+    die "ERROR: Format error in config file $file\n$@"  if $@;
+
     $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
@@ -858,6 +949,7 @@ sub _create_vm {
         push @vms,($vm) if $vm;
     }
     die "No VMs found: $err\n" if $self->warn_error && !@vms;
+
     return \@vms;
 
 }
@@ -914,7 +1006,10 @@ sub create_domain {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    $vm = $self->vm->[0]               if !$vm;
+    if ($args{id_base}) {
+        my $base = Ravada::Domain->open($args{id_base});
+        $vm = Ravada::VM->open($base->_vm->id);
+    }
 
     confess "No vm found"   if !$vm;
 
@@ -1032,13 +1127,36 @@ List all created domains
 
   my @list = $ravada->list_domains();
 
+This list can be filtered:
+
+  my @active = $ravada->list_domains(active => 1);
+  my @inactive = $ravada->list_domains(active => 0);
+
+  my @user_domains = $ravada->list_domains(user => $id_user);
+
+  my @user_active = $ravada->list_domains(user => $id_user, active => 1);
+
 =cut
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
+
+    my $active = delete $args{active};
+    my $user = delete $args{user};
+
+    die "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
     my @domains;
     for my $vm ($self->list_vms) {
         for my $domain ($vm->list_domains) {
+            next if defined $active &&
+                ( $domain->is_active && !$active
+                    || !$domain->is_active && $active );
+
+            next if $user && $domain->id_owner != $user->id;
+
             push @domains,($domain);
         }
     }
@@ -1410,9 +1528,9 @@ sub _execute {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
-        $request->error($err) if $err;
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
+        $request->error($err) if $err;
         return $err;
     }
 
@@ -1696,6 +1814,21 @@ sub _cmd_open_iptables {
     );
 }
 
+sub _cmd_clone($self, $request) {
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+
+    my @args = ( request => $request);
+    push @args, ( memory => $request->args('memory'))
+        if $request->defined_arg('memory');
+
+    $domain->clone(
+        name => $request->args('name')
+        ,user => Ravada::Auth::SQL->search_by_id($request->args('uid'))
+        ,@args
+    );
+
+}
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -1784,13 +1917,14 @@ sub _cmd_download {
 
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
+    my $verbose = $request->defined_arg('verbose');
 
     my $iso = $vm->_search_iso($id_iso);
     if ($iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
-    my $device_cdrom = $vm->_iso_name($iso, $request);
+    my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
 }
 
 sub _cmd_shutdown {
@@ -1818,7 +1952,7 @@ sub _cmd_shutdown {
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    $domain->shutdown(timeout => $timeout, name => $name, user => $user
+    $domain->shutdown(timeout => $timeout, user => $user
                     , request => $request);
 
 }
@@ -1828,11 +1962,11 @@ sub _cmd_force_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $id_domain = $request->args('id_domain');
 
     my $domain;
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+    $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
@@ -1908,7 +2042,8 @@ sub _req_method {
 
     my %methods = (
 
-          start => \&_cmd_start
+          clone => \&_cmd_clone
+         ,start => \&_cmd_start
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
@@ -1985,6 +2120,7 @@ Imports a domain in Ravada
                             vm => 'KVM'
                             ,name => $name
                             ,user => $user_name
+                            ,spinoff_disks => 1
     );
 
 =cut
@@ -1996,6 +2132,8 @@ sub import_domain {
     my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
     my $name = $args{name} or die "ERROR: mandatory argument domain name required";
     my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+    my $spinoff_disks = delete $args{spinoff_disks};
+    $spinoff_disks = 1 if !defined $spinoff_disks;
 
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -2005,7 +2143,57 @@ sub import_domain {
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
-    return $vm->import_domain($name, $user);
+    return $vm->import_domain($name, $user, $spinoff_disks);
+}
+
+=head2 enforce_limits
+
+Check no user has passed the limits and take action.
+
+Some limits:
+
+- More than 1 domain running at a time ( older get shut down )
+
+
+=cut
+
+sub enforce_limits {
+    _enforce_limits_active(@_);
+}
+
+sub _enforce_limits_active {
+    my $self = shift;
+    my %args = @_;
+
+    my $timeout = (delete $args{timeout} or 10);
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my %domains;
+    for my $domain ($self->list_domains( active => 1 )) {
+        push @{$domains{$domain->id_owner}},$domain;
+    }
+    for my $id_user(keys %domains) {
+        next if scalar @{$domains{$id_user}}<2;
+
+        my @domains_user = sort { $a->start_time <=> $b->start_time }
+                        @{$domains{$id_user}};
+
+#        my @list = map { $_->name => $_->start_time } @domains_user;
+        my $last = pop @domains_user;
+        DOMAIN: for my $domain (@domains_user) {
+            #TODO check the domain shutdown has been already requested
+            for my $request ($domain->list_requests) {
+                next DOMAIN if $request->command =~ /shutdown/;
+            }
+            if ($domain->can_hybernate) {
+                $domain->hybernate($USER_DAEMON);
+            } else {
+                $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
+            }
+        }
+    }
 }
 
 =head2 version

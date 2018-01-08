@@ -1,0 +1,304 @@
+# Translators:
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# Amparo Gombau <amparorvd@gmail.com>, 2017
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-05-02 16:20+0200\n"
+"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Language-Team: \n"
+"Language: jp\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Ravada broker"
+msgstr "ラバダブローカー"
+
+msgid "Machine Name"
+msgstr "マシン名"
+
+msgid "Tools"
+msgstr "ツール"
+
+msgid "Machines List"
+msgstr "マシンの一覧"
+
+msgid "Users"
+msgstr "ユーザー"
+
+msgid "Choose a Machine to Start"
+msgstr "開始するマシンを選択します。"
+
+msgid "Start"
+msgstr "スタート"
+
+msgid "Stop"
+msgstr "ストップ"
+
+msgid "View"
+msgstr "ビュー"
+
+msgid "Prepare base"
+msgstr "ベースを準備する"
+
+msgid "Clone"
+msgstr "クローン"
+
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr "私はベースを準備することはできません。 ベースを消去するか、マシンを消去してください。"
+
+msgid "Clone/s"
+msgstr "クローン"
+
+msgid "NEW"
+msgstr "新しい"
+
+msgid "Users List"
+msgstr "ユーザーリスト"
+
+msgid "Name"
+msgstr "名"
+
+msgid "Log Out"
+msgstr "ログアウト"
+
+msgid "Available Machines"
+msgstr "利用可能なマシン"
+
+msgid "Help"
+msgstr "助けて"
+
+msgid "Requirements"
+msgstr "要件"
+
+msgid "About"
+msgstr "約"
+
+msgid "Messages"
+msgstr "メッセージ"
+
+msgid "Mark all as Read"
+msgstr "既読にする] を選択します。"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "New Machine"
+msgstr "新しいマシン"
+
+msgid "I want to change my password"
+msgstr ""
+
+msgid "I want to change my language"
+msgstr ""
+
+msgid "Language:"
+msgstr "言語"
+
+msgid "English"
+msgstr "英語"
+
+msgid "Spanish"
+msgstr "スペイン語"
+
+msgid "Catalan"
+msgstr "カタロニア語"
+
+msgid "New Password:"
+msgstr "新しいパスワード："
+
+msgid "Confirm Password:"
+msgstr "新しいパスワード："
+
+msgid "Submit"
+msgstr "提出する"
+
+msgid "Your language has been changed successfully"
+msgstr "言語が変更されました"
+
+msgid "Your password has been changed successfully"
+msgstr "パスワードが正常に変更されました"
+
+msgid "Password too small"
+msgstr "パスワードが小さすぎます"
+
+msgid "Password fields aren't equal"
+msgstr ""
+
+msgid "Some of the password's fields are empty"
+msgstr ""
+
+msgid "Public"
+msgstr "パブリック"
+
+msgid "Status"
+msgstr "状態"
+
+msgid "Actions"
+msgstr "行動"
+
+msgid "Machines"
+msgstr "マシン"
+
+msgid "Down"
+msgstr "ダウン"
+
+msgid "Running"
+msgstr "ランニング"
+
+msgid "ShutDown"
+msgstr "シャットダウン"
+
+msgid "Screenshot"
+msgstr "スクリーンショット"
+
+msgid "Paused"
+msgstr "一時停止中"
+
+msgid "Machine locked by"
+msgstr ""
+
+msgid "process"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Error!"
+msgstr ""
+
+msgid "Backend no available!"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Mark as Read"
+msgstr ""
+
+msgid "Mark as UnRead"
+msgstr ""
+
+msgid "No message to show!"
+msgstr ""
+
+msgid "Admin"
+msgstr ""
+
+msgid "machines"
+msgstr "機械"
+
+msgid "users"
+msgstr "ユーザー"
+
+msgid "messages"
+msgstr "メッセージ"
+
+msgid "Admin tools"
+msgstr "管理ツール"
+
+msgid "Remove base"
+msgstr "ベースを取り外す"
+
+msgid "public"
+msgstr "パブリック"
+
+msgid "Restore"
+msgstr "リストア"
+
+msgid "Hybernate"
+msgstr "休止状態"
+
+msgid "Shutdown"
+msgstr "シャットダウン"
+
+msgid "action"
+msgstr "アクション"
+
+msgid "New Base"
+msgstr "新しい基地"
+
+msgid "will remove all the contents of the machine"
+msgstr ""
+
+msgid "Are you sure?"
+msgstr "本気ですか？"
+
+msgid "Yes"
+msgstr "はい"
+
+msgid "No"
+msgstr "いいえ"
+
+msgid "Make public"
+msgstr ""
+
+msgid "Machine settings"
+msgstr ""
+
+msgid "Cannot remove base, machine has clones"
+msgstr ""
+
+msgid "Show/Hide clones"
+msgstr ""
+
+msgid "For spice redirection you'll need to install"
+msgstr ""
+
+msgid "in your computer."
+msgstr ""
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+
+msgid "You'll need to install"
+msgstr ""
+
+msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgstr ""
+
+msgid ""
+"Be aware that in Windows, spice redirection is not automatically. It's "
+"necessary associate protocol with the app."
+msgstr ""
+
+msgid "To make this possible, download"
+msgstr ""
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+
+msgid "Login"
+msgstr ""
+
+msgid "Welcome"
+msgstr ""
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr ""
+
+msgid "Virtual Machines"
+msgstr "仮想マシン"
+
+msgid "user"
+msgstr "ユーザー"
+
+msgid "password"
+msgstr ""
+
+msgid "Start session"
+msgstr ""
+
+msgid "Login with Intranet UPC's username."
+msgstr ""
+
+msgid "bits) in your computer."
+msgstr ""

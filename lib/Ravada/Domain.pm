@@ -11,6 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
+use File::Copy;
 use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
@@ -41,6 +42,8 @@ requires 'display';
 requires 'is_active';
 requires 'is_hibernated';
 requires 'is_paused';
+requires 'is_removed';
+
 requires 'start';
 requires 'shutdown';
 requires 'shutdown_now';
@@ -150,16 +153,17 @@ before 'resume' => \&_allow_manage;
 
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
-after 'shutdown_now' => \&_post_shutdown_now;
 
-before 'force_shutdown' => \&_pre_shutdown_now;
-after 'force_shutdown' => \&_post_shutdown_now;
+around 'shutdown_now' => \&_around_shutdown_now;
+around 'force_shutdown' => \&_around_shutdown_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
+
+before 'clone' => \&_pre_clone;
 
 after 'screenshot' => \&_post_screenshot;
 
@@ -170,6 +174,7 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 sub BUILD {
     my $self = shift;
+    $self->_init_connector();
     $self->is_known();
 }
 
@@ -239,9 +244,9 @@ sub _allow_manage {
 
 }
 
-sub _allow_remove {
-    my $self = shift;
-    my ($user) = @_;
+sub _allow_remove($self, $user) {
+
+    confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
@@ -262,12 +267,12 @@ sub _allow_shutdown {
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
     if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = $self->open($self->id_base);
+        my $base = Ravada::Domain->open($self->id_base);
         return if $base->id_owner == $user->id;
     } elsif($user->can_shutdown_all) {
         return;
     } else {
-        $self->_allowed($user);
+        $self->_allow_manage_args(user => $user);
     }
 }
 
@@ -296,7 +301,8 @@ sub _pre_prepare_base {
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them 
-    $self->_check_disk_modified() if $self->is_base();
+#    $self->_check_disk_modified(
+    die "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
 
     $self->is_base(0);
@@ -378,6 +384,8 @@ sub _check_used_memory {
     confess "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
+=pod
+
 sub _check_disk_modified {
     my $self = shift;
 
@@ -401,6 +409,8 @@ sub _check_disk_modified {
     die "Base already created and no disk images updated"
         if !$files_updated;
 }
+
+=cut
 
 sub _allowed {
     my $self = shift;
@@ -471,6 +481,8 @@ Returns: Domain object read only
 =cut
 
 sub open($class, $id) {
+    confess "Missing id"    if !defined $id;
+
     my $self = {};
 
     if (ref($class)) {
@@ -488,7 +500,9 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new( readonly => 1);
+    my @ro = ();
+    @ro = (readonly => 1 ) if $>;
+    my $vm = $vm0->new( @ro );
 
     return $vm->search_domain($row->{name});
 }
@@ -502,6 +516,18 @@ Returns if the domain is known in Ravada.
 sub is_known {
     my $self = shift;
     return $self->_select_domain_db(name => $self->name);
+}
+
+=head2 start_time
+
+Returns the last time (epoch format in seconds) the
+domain was started.
+
+=cut
+
+sub start_time {
+    my $self = shift;
+    return $self->_data('start_time');
 }
 
 sub _select_domain_db {
@@ -914,6 +940,7 @@ sub _convert_png {
     my $err = $in->Read($file_in);
     confess $err if $err;
 
+    $in->Scale(width => 250, height => 188);
     $in->Write("png24:$file_out");
 
     chmod 0755,$file_out or die "$! chmod 0755 $file_out";
@@ -985,14 +1012,32 @@ sub clone {
     my $self = shift;
     my %args = @_;
 
-    my $name = $args{name} or confess "ERROR: Missing domain cloned name";
-    confess "ERROR: Missing request user" if !$args{user};
+    my $name = delete $args{name}
+        or confess "ERROR: Missing domain cloned name";
 
-    my $uid = $args{user}->id;
+    my $user = delete $args{user}
+        or confess "ERROR: Missing request user";
 
-    $self->prepare_base($args{user})  if !$self->is_base();
+    return $self->_copy_clone(@_)   if $self->id_base();
+
+    my $request = delete $args{request};
+    my $memory = delete $args{memory};
+
+    confess "ERROR: Unknown args ".join(",",sort keys %args)
+        if keys %args;
+
+    my $uid = $user->id;
+
+    if ( !$self->is_base() ) {
+        $request->status("working","Preparing base")    if $request;
+        $self->prepare_base($user)
+    }
 
     my $id_base = $self->id;
+
+    my @args_copy = ();
+    push @args_copy, ( memory => $memory )      if $memory;
+    push @args_copy, ( request => $request )    if $request;
 
     my $clone = $self->_vm->create_domain(
         name => $name
@@ -1000,8 +1045,45 @@ sub clone {
         ,id_owner => $uid
         ,vm => $self->vm
         ,_vm => $self->_vm
+        ,@args_copy
     );
     return $clone;
+}
+
+sub _copy_clone($self, %args) {
+    my $name = delete $args{name} or confess "ERROR: Missing name";
+    my $user = delete $args{user} or confess "ERROR: Missing user";
+    my $memory = delete $args{memory};
+    my $request = delete $args{request};
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my $base = Ravada::Domain->open($self->id_base);
+
+    my @copy_arg;
+    push @copy_arg, ( memory => $memory ) if $memory;
+
+    $request->status("working","Copying domain ".$self->name
+        ." to $name")   if $request;
+
+    my $copy = $self->_vm->create_domain(
+        name => $name
+        ,id_base => $base->id
+        ,id_owner => $user->id
+        ,_vm => $self->_vm
+        ,@copy_arg
+    );
+    my @volumes = $self->list_volumes_target;
+    my @copy_volumes = $copy->list_volumes_target;
+
+    my %volumes = map { $_->[1] => $_->[0] } @volumes;
+    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
+    for my $target (keys %volumes) {
+        copy($volumes{$target}, $copy_volumes{$target})
+            or die "$! $volumes{$target}, $copy_volumes{$target}"
+    }
+    return $copy;
 }
 
 sub _post_pause {
@@ -1013,14 +1095,21 @@ sub _post_pause {
 
 sub _pre_shutdown {
     my $self = shift;
+    my %arg = @_;
+
+    my $user = delete $arg{user};
+    delete $arg{timeout};
+    delete $arg{request};
+
+    confess "Unknown args ".join(",",sort keys %arg)
+        if keys %arg;
 
     $self->_allow_shutdown(@_);
 
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        my %args = @_;
-        $self->resume(user => $args{user});
+        $self->resume(user => $user);
     }
 }
 
@@ -1030,33 +1119,34 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = $arg{timeout};
 
-    $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
-    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
+    if ($self->id_base()) {
+        $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
+    }
+    $self->_remove_temporary_machine(@_);
 
-    if (defined $timeout) {
-        if ($timeout<2 && $self->is_active) {
+    if (defined $timeout && !$self->is_removed) {
+        if ($timeout<2 && !$self->is_removed && $self->is_active) {
             sleep $timeout;
-            return $self->_do_force_shutdown() if $self->is_active;
+            return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
-                 name => $self->name
+            id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$timeout 
         );
     }
 }
 
-sub _pre_shutdown_now {
-    my $self = shift;
-    return if !$self->is_active;
-}
-
-sub _post_shutdown_now {
+sub _around_shutdown_now {
+    my $orig = shift;
     my $self = shift;
     my $user = shift;
 
+    if ($self->is_active) {
+        $self->$orig($user);
+    }
     $self->_post_shutdown(user => $user);
 }
 
@@ -1121,16 +1211,12 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
+    return if !$self->is_volatile;
     my %args = @_;
-    my $user;
+    my $user = delete $args{user} or confess "ERROR: Missing user";
 
-    return if !$self->is_known();
-
-    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
-    return if !$user;
-
-    if ($user->is_temporary) {
-        $self->remove($user);
+    if ($self->is_volatile) {
+#        return $self->_after_remove_domain() if !$self->is_known();
         my $req= $args{request};
         $req->status(
             "removing"
@@ -1138,6 +1224,12 @@ sub _remove_temporary_machine {
             ." because user "
             .$user->name." is temporary")
                 if $req;
+
+        if ($self->is_removed) {
+            $self->_after_remove_domain();
+        } else {
+            $self->remove($user);
+        }
     }
 }
 
@@ -1154,11 +1246,13 @@ sub _post_start {
         %arg = @_;
     }
 
-    if (scalar @_ % 2) {
-        $arg{user} = $_[0];
-    } else {
-        %arg = @_;
-    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set start_time=? "
+        ." WHERE id=?"
+    );
+    $sth->execute(time, $self->id);
+    $sth->finish;
+
     $self->_add_iptable(@_);
 
     if ($self->run_timeout) {
@@ -1368,6 +1462,16 @@ sub is_public {
     return $self->_data('is_public');
 }
 
+=head2 is_volatile
+
+Returns if the domain is volatile, so it will be removed on shutdown
+
+=cut
+
+sub is_volatile($self, $value=undef) {
+    return $self->_set_data('is_volatile', $value);
+}
+
 =head2 run_timeout
 
 Sets or get the domain run timeout. When it expires it is shut down.
@@ -1464,21 +1568,32 @@ List the drivers available for a domain. It may filter for a given type.
 sub drivers {
     my $self = shift;
     my $name = shift;
-    my $type = (shift or $self->_vm->type);
+    my $type = shift;
+    $type = $self->_vm->type   if $self && !$type;
 
     _init_connector();
 
-    my $type2 = $type;
-    $type2 = 'KVM' if $type =~ /qemu/;
-    $type2 = 'qemu' if $type =~ /KVM;/;
-    my $query = "SELECT id from domain_drivers_types "
-        ." WHERE (vm=? or vm=?)";
-    $query .= " AND name=?" if $name;
+    my $query = "SELECT id from domain_drivers_types ";
 
+    my @sql_args = ();
+
+    my @where;
+    if ($name) {
+        push @where,("name=?");
+        push @sql_args,($name);
+    }
+    if ($type) {
+        my $type2 = $type;
+        if ($type =~ /qemu/) {
+            $type2 = 'KVM';
+        } elsif ($type =~ /KVM/) {
+            $type2 = 'qemu';
+        }
+        push @where, ("( vm=? OR vm=?)");
+        push @sql_args, ($type,$type2);
+    }
+    $query .= "WHERE ".join(" AND ",@where) if @where;
     my $sth = $$CONNECTOR->dbh->prepare($query);
-
-    my @sql_args = ($type,$type2);
-    push @sql_args,($name)  if $name;
 
     $sth->execute(@sql_args);
 
@@ -1537,24 +1652,37 @@ sub remote_ip {
 
 =head2 list_requests
 
-Returns a list of pending requests from the domain
+Returns a list of pending requests from the domain. It won't show those requests
+scheduled for later.
 
 =cut
 
 sub list_requests {
     my $self = shift;
+    my $all = shift;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
     );
     $sth->execute($self->id);
     my @list;
     while ( my $req_data =  $sth->fetchrow_hashref ) {
-        next if $req_data->{at_time} && $req_data->{at_time} - time > 1;
+        next if !$all && $req_data->{at_time} && $req_data->{at_time} - time > 1;
         push @list,($req_data);
     }
     $sth->finish;
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
+}
+
+=head2 list_all_requests
+
+Returns a list of pending requests from the domain including those scheduled for later
+
+=cut
+
+sub list_all_requests {
+    return list_requests(@_,'all');
 }
 
 =head2 get_driver
@@ -1616,8 +1744,22 @@ sub type {
     return $type;
 }
 
-sub file_screenshot($self){
-  return $self->_data('file_screenshot');
+sub file_screenshot($self) {
+    return $self->_data('file_screenshot');
+}
+
+sub _pre_clone($self,%args) {
+    my $name = delete $args{name};
+    my $user = delete $args{user};
+    my $memory = delete $args{memory};
+    delete $args{request};
+
+    confess "ERROR: Missing clone name "    if !$name;
+    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
+
+    confess "ERROR: Missing user owner of new domain"   if !$user;
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
 }
 
 1;
