@@ -128,7 +128,7 @@ Windows 10 perfomance issues
 * Windows10 Enterprise ISO image (Home/Professional/Enterprise) before April 2017: if you install Enterprise version, it does not arrive at the end of installation. Issue posted on 30/10/2017. The Professional version completes installation.  Recent Enterprise ISO image release can complete also Enterprise version installation.
 
 * Windows 10 tuning after installation: There are several web site where we can find informations and solutions to solve CPU, RAM, Disk overload on Windows 10. Here some links:
-  * https://www.drivethelife.com/windows-10/fix-high-ram-cpu-memory-usage-after-windows-10-update.html
-  * https://fossbytes.com/how-to-fix-high-ram-and-cpu-usage-of-windows-10-system-ntoskrnl-exe-process/
-  * https://youtu.be/iHzEp8a8w10
+  - https://www.drivethelife.com/windows-10/fix-high-ram-cpu-memory-usage-after-windows-10-update.html
+  - https://fossbytes.com/how-to-fix-high-ram-and-cpu-usage-of-windows-10-system-ntoskrnl-exe-process/
+  - https://youtu.be/iHzEp8a8w10
 
