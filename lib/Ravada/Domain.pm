@@ -181,7 +181,9 @@ sub BUILD {
 
     $self->is_known();
     if ( $self->is_known
-        && $self->_data('is_active') && !$self->is_active ) {
+        && !$self->readonly
+        && $self->_data('is_active')
+        && !$self->is_active ) {
         $self->_post_shutdown();
     }
 }
