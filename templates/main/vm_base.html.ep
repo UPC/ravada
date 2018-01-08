@@ -1,3 +1,4 @@
+% use Data::Dumper;
 <div class="panel-body">
     <div class="alert alert-success" ng-show="domain.is_locked">
         <%=l 'This machine is locked by process' %> <a href="/request/{{domain.is_locked}}.html">process</a>
@@ -14,8 +15,12 @@
 %       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
         <div class="row">
             <div class="col-md-1">
+%               my $node_disabled = $domain->is_locked 
+%                   || ($local && $domain->has_clones)
+%                   || !$node->{is_active}
+%                   || 0;
                 <input type="checkbox"
-                    ng-disabled="domain.is_locked || <%= $domain->has_clones %>"
+                    ng-disabled="<%= $node_disabled %>"
 %           if ($domain->base_in_vm($node->{id})) {
                 checked
 %           }
@@ -26,11 +31,12 @@
                 <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
             </div>
             <div class="col-md-5">
-%           if ($local) {
-%               if ($domain->has_clones) {
-                    Base can't be removed because it has clones
-%               }
+%           if ($local && $domain->has_clones) {
+                Base can't be removed because it has clones
+%           } elsif (!$node->{is_active}) {
+                Node inactive <%= $node->{is_active} %>
 %           }
+            <%= Dumper($node) %>
             </div>
         </div>
 %   }
