@@ -31,7 +31,6 @@ eval {
 our $REX_ERROR = $@;
 warn $REX_ERROR if $REX_ERROR;
 
-
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
@@ -54,6 +53,7 @@ create_domain
     clean_remote_node
     arg_create_dom
     vm_names
+    search_iptable_remote
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -322,6 +322,7 @@ sub _remove_old_domains_kvm {
         return if !$vm;
     }
     return if !$vm->vm;
+    _activate_storage_pools($vm);
 
     my $base_name = base_domain_name();
 
@@ -355,6 +356,13 @@ sub remove_old_domains {
     _remove_old_domains_kvm();
 }
 
+sub _activate_storage_pools($vm) {
+    for my $sp ($vm->vm->list_all_storage_pools()) {
+        next if $sp->is_active;
+        diag("Activating sp ".$sp->get_name." on ".$vm->name);
+        $sp->create();
+    }
+}
 sub _remove_old_disks_kvm {
     my $vm = shift;
     warn "Removing from ".$vm->name if $vm;
@@ -606,6 +614,7 @@ sub clean_remote_node {
 
     _remove_old_domains_vm($node);
     _remove_old_disks($node);
+    _flush_rules_remote($node);
 }
 
 sub _remove_old_disks {
@@ -628,6 +637,50 @@ sub search_id_iso {
     my ($id) = $sth->fetchrow;
     die "There is no iso called $name%" if !$id;
     return $id;
+}
+
+sub search_iptable_remote {
+    my %args = @_;
+    my $node = delete $args{node};
+    if ($REX_ERROR ) {
+        diag("Skipping search_iptable_remote , no Rex installed");
+        return;
+    }
+    $node->_connect_rex();
+    my $remote_ip = delete $args{remote_ip};
+    my $local_ip = delete $args{local_ip};
+    my $local_port= delete $args{local_port};
+    my $jump = (delete $args{jump} or 'ACCEPT');
+    my $iptables = iptables_list();
+
+    $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
+    $local_ip .= "/32"  if defined $local_ip && $local_ip !~ m{/};
+
+    my @found;
+
+    my $count = 0;
+    for my $line (@{$iptables->{filter}}) {
+        my %args = @$line;
+        next if $args{A} ne $CHAIN;
+        $count++;
+        if(exists $args{j} && defined $jump         && $args{j} eq $jump
+           && exists $args{s} && defined $remote_ip && $args{s} eq $remote_ip
+           && exists $args{d} && defined $local_ip  && $args{d} eq $local_ip
+           && exists $args{dport} && defined $local_port && $args{dport} eq $local_port) {
+
+            push @found,($count);
+            warn $count." -> ".Dumper($line);
+        }
+    }
+    return @found   if wantarray;
+    return if !scalar@found;
+    return $found[0];
+}
+
+sub _flush_rules_remote($node) {
+    $node->_connect_rex();
+    run("iptables -F $CHAIN");
+    run("iptables -X $CHAIN");
 }
 
 sub flush_rules {
