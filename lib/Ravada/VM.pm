@@ -155,14 +155,16 @@ sub _around_create_domain {
 sub _around_import_domain {
     my $orig = shift;
     my $self = shift;
-    my ($name, $user) = @_;
+    my ($name, $user, $spinoff) = @_;
 
-    my $domain = $self->$orig(@_);
+    my $domain = $self->$orig($name, $user);
 
     $domain->_insert_db(name => $name, id_owner => $user->id);
 
-    warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
-    $domain->spinoff_volumes();
+    if ($spinoff) {
+        warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
+        $domain->spinoff_volumes();
+    }
     return $domain;
 }
 

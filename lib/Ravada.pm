@@ -171,7 +171,17 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        artful => {
+        alpine_37 => {
+                    name => 'Alpine 3.7'
+            ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
+                ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
+                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+        }
+        ,artful => {
                     name => 'Ubuntu Artful Aardvark'
             ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
                    ,arch => 'amd64'
@@ -179,7 +189,7 @@ sub _update_isos {
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.10/'
                 ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.10/MD5SUMS'
+                ,md5_url => ,'$url/MD5SUMS'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
@@ -210,7 +220,25 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+        }
+        ,fedora_26 => {
+            name => 'Fedora 26'
+            ,description => 'RedHat Fedora 26 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-26-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
+        }
+        ,fedora_27 => {
+            name => 'Fedora 27'
+            ,description => 'RedHat Fedora 27 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-27-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
         }
         ,xubuntu_artful => {
             name => 'Xubuntu Artful Aardvark'
@@ -260,18 +288,36 @@ sub _update_isos {
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/'
-            ,file_re => 'lubuntu-16.04.2-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.*/release/'
+            ,file_re => 'lubuntu-16.04.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
+        ,debian_jessie_32 => {
+            name =>'Debian Jessie 32 bits'
+            ,description => 'Debian 8 Jessie 32 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
+        ,debian_jessie_64 => {
+            name =>'Debian Jessie 64 bits'
+            ,description => 'Debian 8 Jessie 64 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+        }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
-            ,description => 'Debian 9.0 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => 'https://cdimage.debian.org/debian-cd/9.1.0/amd64/iso-cd/MD5SUMS'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
         }
@@ -545,11 +591,17 @@ sub _update_table($self, $table, $field, $data) {
 
 sub _remove_old_isos {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images "
-        ."    WHERE url like '%debian-9.0%iso'"
-   );
-   $sth->execute();
-   $sth->finish;
+    for my $sql (
+        "DELETE FROM iso_images "
+            ."  WHERE url like '%debian-9.0%iso'"
+        ,"DELETE FROM iso_images"
+            ."  WHERE name like 'Debian%' "
+            ."      AND NOT url  like '%*%' "
+    ) {
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute();
+        $sth->finish;
+    }
 }
 
 sub _update_data {
@@ -1842,13 +1894,14 @@ sub _cmd_download {
 
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
+    my $verbose = $request->defined_arg('verbose');
 
     my $iso = $vm->_search_iso($id_iso);
     if ($iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
-    my $device_cdrom = $vm->_iso_name($iso, $request);
+    my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
 }
 
 sub _cmd_shutdown {
@@ -2043,6 +2096,7 @@ Imports a domain in Ravada
                             vm => 'KVM'
                             ,name => $name
                             ,user => $user_name
+                            ,spinoff_disks => 1
     );
 
 =cut
@@ -2054,6 +2108,8 @@ sub import_domain {
     my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
     my $name = $args{name} or die "ERROR: mandatory argument domain name required";
     my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+    my $spinoff_disks = delete $args{spinoff_disks};
+    $spinoff_disks = 1 if !defined $spinoff_disks;
 
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -2063,7 +2119,7 @@ sub import_domain {
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
-    return $vm->import_domain($name, $user);
+    return $vm->import_domain($name, $user, $spinoff_disks);
 }
 
 =head2 enforce_limits

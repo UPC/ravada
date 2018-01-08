@@ -17,14 +17,9 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 my $DISPLAY_IP = '99.1.99.1';
@@ -40,16 +35,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -137,12 +126,6 @@ sub test_prepare_base {
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER)    if $domain->is_active;
 
-    touch_mtime(@disk);
-
-    eval { $domain->prepare_base( $USER) };
-    is($@,'');
-    ok($domain->is_base);
-
     my $name_clone = new_domain_name();
 
     my $domain_clone;
@@ -180,15 +163,10 @@ sub test_prepare_base {
     }
 
 
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
-        ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
     $domain_clone->remove($USER);
 
-    touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
@@ -224,20 +202,6 @@ sub test_prepare_base_active {
 
     ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
             or return;
-}
-
-sub touch_mtime {
-    for my $disk (@_) {
-
-        my @stat0 = stat($disk);
-
-        sleep 2;
-        utime(undef, undef, $disk) or die "$! $disk";
-        my @stat1 = stat($disk);
-
-        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
-    }
-
 }
 
 sub test_devices_clone {
