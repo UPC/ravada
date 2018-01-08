@@ -738,6 +738,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int DEFAULT NULL');
+    $self->_upgrade_table('domains','is_active','int DEFAULT NULL');
 
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
 }
