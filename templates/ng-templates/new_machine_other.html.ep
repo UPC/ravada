@@ -2,7 +2,7 @@
     <form method="post" action="/machine/copy">
         <div class="panel-body">
             <div class="row">
-                <form class="form-inline" method="post" action="/machine/copy" ng-controller="new_machine">
+                <form class="form-inline" method="post" action="/machine/copy">
                     <div class="form-group row">
                         <input class="form-control" type="hidden" name="id_base" value="{{src_machine.id}}">
                         <label for="src_machine" class="col-lg-2 control-label"><%=l 'Source Machine' %></label>
