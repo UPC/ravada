@@ -1043,6 +1043,7 @@ sub search_domain($self, $name, $import = 0) {
         return $vm->search_domain($name);
     }
     for my $vm (@{$self->vm}) {
+        next if !$vm->is_active;
         my $domain = $vm->search_domain($name, $import);
         next if !$domain;
         next if !$domain->_select_domain_db && !$import;
