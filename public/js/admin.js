@@ -1,3 +1,5 @@
+(function() {
+
 ravadaApp.directive("solShowMachine", swMach)
         .directive("solShowNewmachine", swNewMach)
         .controller("new_machine", newMachineCtrl)
@@ -20,21 +22,25 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function newMachineCtrl($scope, $http) {
-      $http.get('/list_images.json').then(function(response) {
-              $scope.images = response.data;
-      });
+
+    $http.get('/list_vm_types.json').then(function(response) {
+            $scope.backends = response.data;
+            $scope.backend = response.data[0];
+            $scope.loadTemplates();
+    });
+      $scope.loadTemplates = function() {
+        $http.get('/list_images.json',{
+          params: {
+            backend: $scope.backend
+          }
+        }).then(function(response) {
+                $scope.images = response.data;
+        });
+      }
       $http.get('/iso_file.json').then(function(response) {
               $scope.isos = response.data;
       });
-      $http.get('/list_vm_types.json').then(function(response) {
-              $scope.backends = response.data;
-      });
 
-      //This may have to reload when changing backends
-      url_images = "/list_images.json?backend=KVM";
-      $http.get(url_images).then(function(response) {
-              $scope.images = response.data;
-      });
 
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
@@ -68,14 +74,14 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
       $scope.ddsize=20;
-      $scope.swapsize={value:0};
-      $scope.ramsize=1;
+      $scope.swapsize={value:1};
+      $scope.ramSize=1;
       $scope.seeswap=0;
-      
+      $scope.type = function(v) {
+        return typeof(v);
+      }
       $scope.show_swap = function() {
         $scope.seeswap = !($scope.seeswap);
-        if ($scope.seeswap == 1) $scope.swapsize.value=1;
-        else $scope.swapsize.value = 0;
       };
     
       $http.get('/list_machines.json').then(function(response) {
@@ -210,3 +216,5 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.getMessages();
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
+  
+}());
