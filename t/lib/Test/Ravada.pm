@@ -9,6 +9,29 @@ use IPC::Run3 qw(run3);
 use  Test::More;
 use YAML qw(LoadFile);
 
+eval {
+    require Rex;
+    Rex->import();
+
+#    require Rex::Commands;
+#    Rex::Commands->import;
+
+    require Rex::Commands::Run;
+    Rex::Commands::Run->import();
+
+    require Rex::Group::Entry::Server;
+    Rex::Group::Entry::Server->import();
+
+    require Rex::Commands::Iptables;
+    Rex::Commands::Iptables->import();
+
+    require Rex::Commands::Run;
+    Rex::Commands::Run->import();
+};
+our $REX_ERROR = $@;
+warn $REX_ERROR if $REX_ERROR;
+
+
 use feature qw(signatures);
 no warnings "experimental::signatures";
 

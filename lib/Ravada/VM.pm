@@ -21,6 +21,29 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+# Runtime Rex checking availability
+#
+
+eval {
+    require Rex;
+    Rex->import();
+
+    require Rex::Commands::Run;
+    Rex::Commands::Run->import();
+
+    require Rex::Group::Entry::Server;
+    Rex::Group::Entry::Server->import();
+
+    require Rex::Commands::Iptables;
+    Rex::Commands::Iptables->import();
+
+    require Rex::Commands::File;
+    Rex::Commands::File->import();
+};
+our $REX_ERROR = $@;
+warn $REX_ERROR if $REX_ERROR;
+
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
