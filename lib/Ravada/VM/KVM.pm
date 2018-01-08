@@ -73,6 +73,8 @@ our $WGET = `which wget`;
 chomp $WGET;
 
 our $CACHE_DOWNLOAD = 1;
+
+our $_CREATED_DEFAULT_STORAGE = 0;
 ##########################################################################
 
 
@@ -115,10 +117,11 @@ sub _connect {
          die $@ if $@;
          die $@ if $@ && $@ !~ /libvirt error code: 38/;
     }
-    if ( ! $vm->list_storage_pools ) {
+    if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE) {
 	warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
     }
+    $_CREATED_DEFAULT_STORAGE++;
     $self->_check_networks($vm);
     return $vm;
 }
@@ -186,7 +189,7 @@ sub _load_storage_pool {
         $available = $info->{available};
 
     }
-    die "I can't find /pool/target/path in the storage pools xml\n"
+    confess "I can't find /pool/target/path in the storage pools xml\n"
         if !$vm_pool;
 
     return $vm_pool;
@@ -1863,6 +1866,13 @@ sub free_memory($self) {
     $self->vm->get_node_memory_stats()->{free}
     + $self->vm->get_node_memory_stats()->{cached};
     + $self->vm->get_node_memory_stats()->{buffers};
+}
+
+sub list_storage_pools($self) {
+    return
+        map { $_->get_name }
+        grep { $_-> is_active }
+        $self->vm->list_storage_pools();
 }
 
 1;

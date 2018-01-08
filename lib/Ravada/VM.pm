@@ -64,6 +64,7 @@ requires 'list_domains';
 
 # storage volume
 requires 'create_volume';
+requires 'list_storage_pools';
 
 requires 'connect';
 requires 'disconnect';

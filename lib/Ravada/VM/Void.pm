@@ -306,6 +306,10 @@ sub free_memory { return 1024*1024 }
 sub refresh_storage_pools {
 
 }
+
+sub list_storage_pools {
+    return $Ravada::Domain::Void::DIR_TMP;
+}
 #########################################################################3
 
 1;
