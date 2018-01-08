@@ -19,7 +19,6 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
-
 # Runtime Rex checking availability
 #
 
@@ -196,6 +195,7 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 before 'migrate' => \&_pre_migrate;
 after 'migrate' => \&_post_migrate;
+
 ##################################################
 #
 
@@ -226,12 +226,31 @@ sub _set_vm($self, $vm, $force=0) {
     eval { $domain = $vm->search_domain($self->name) };
     die $@ if $@ && $@ !~ /no domain with matching name/;
     if ($domain && ($force || $domain->is_active)) {
+        $self->_pre_migrate($vm);
        $self->_vm($vm);
        $self->domain($domain->domain);
         $self->_update_id_vm();
     }
     return $vm->id;
 
+}
+
+sub _check_equal_storage_pools($self, $vm) {
+     confess "ERROR: ".$vm->name." and ".$self->_vm->name
+        ." have different storage pools "
+        .Dumper([$vm->list_storage_pools],[$self->_vm->list_storage_pools])
+            if !_equal_storage_pools($vm, $self->_vm);
+}
+
+sub _equal_storage_pools($vm1, $vm2) {
+    my @sp1 = sort $vm1->list_storage_pools();
+    my @sp2 = sort $vm2->list_storage_pools();
+    return 0 if scalar @sp1 != scalar @sp2;
+
+    for ( 0 .. $#sp1 ) {
+        return 0 if $sp1[$_] ne $sp2[$_];
+    }
+    return 1;
 }
 
 sub _vm_connect {
@@ -1940,8 +1959,10 @@ sub _connect_ssh($self, $node) {
 }
 
 sub _pre_migrate($self, $node) {
-    return if !$self->id_base;
 
+    $self->_check_equal_storage_pools($node);
+
+    return if !$self->id_base;
     my $base = Ravada::Domain->open($self->id_base);
 
     die "ERROR: Base ".$base->name." files not migrated to ".$node->name
