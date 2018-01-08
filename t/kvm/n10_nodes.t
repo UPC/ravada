@@ -51,17 +51,17 @@ sub test_node_renamed {
         ,config => "t/etc/ravada.conf"
     );
     is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm}),Dumper(rvd_back->vm)) or return;
-    my $list_nodes2 = rvd_front->list_nodes;
+    my @list_nodes2 = rvd_front->list_vms;
 
-    my ($node_f) = grep { $_->{name} eq $name2} @$list_nodes2;
-    ok($node_f,"[$vm_name] expecting node $name2 in frontend ".Dumper($list_nodes2));
+    my ($node_f) = grep { $_->{name} eq $name2} @list_nodes2;
+    ok($node_f,"[$vm_name] expecting node $name2 in frontend ".Dumper(\@list_nodes2));
 
     $sth->execute($name,$name2);
     $sth->finish;
 
-    $list_nodes2 = rvd_front->list_nodes;
-    ($node_f) = grep { $_->{name} eq $name} @$list_nodes2;
-    ok($node_f,"[$vm_name] expecting node $name in frontend ".Dumper($list_nodes2));
+    @list_nodes2 = rvd_front->list_vms;
+    ($node_f) = grep { $_->{name} eq $name} @list_nodes2;
+    ok($node_f,"[$vm_name] expecting node $name in frontend ".Dumper(\@list_nodes2));
 
 }
 
@@ -73,7 +73,7 @@ sub test_node {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $list_nodes = rvd_front->list_nodes;
+    my @list_nodes = rvd_front->list_vms;
 
     my $node;
     diag("Testing $vm_name $REMOTE_CONFIG->{name}");
@@ -107,8 +107,8 @@ sub test_node {
     my @nodes = $vm->list_nodes();
     is(scalar @nodes, 2,"[$vm_name] Expecting nodes") or return;
 
-    my $list_nodes2 = rvd_front->list_nodes;
-    is(scalar @$list_nodes2, (scalar @$list_nodes)+1,Dumper($list_nodes,$list_nodes2)) or return;
+    my @list_nodes2 = rvd_front->list_vms;
+    is(scalar @list_nodes2, (scalar @list_nodes)+1,Dumper(\@list_nodes,\@list_nodes2)) or return;
     return $node;
 }
 
@@ -126,9 +126,29 @@ sub test_sync {
     is($@,'') or return;
 }
 
+sub test_domain_ip($vm_name, $node) {
+    my $ip = '1.2.4.5';
+    diag("[$vm_name] test domain remote ip $ip");
+    my $domain_ip = test_domain($vm_name, $node, $ip);
+
+    my ($local_ip,$local_port)
+        = $domain_ip->display(user_admin) =~ m{(\d+.\d+\.\d+\.\d+):(\d+)};
+    $domain_ip->remove(user_admin);
+    my @line = search_iptable_remote(
+        node => $node
+        , remote_ip => $ip
+        , local_ip => $local_ip
+        , local_port => $local_port
+    );
+    ok(scalar @line == 0,$node->type." There should be no iptables found $ip -> $local_ip:$local_port ".Dumper(\@line));
+
+    exit;
+}
+
 sub test_domain {
     my $vm_name = shift;
     my $node = shift or die "Missing node";
+    my $remote_ip = shift;
 
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -146,23 +166,37 @@ sub test_domain {
     eval { $clone->migrate($node) };
     is(''.$@ , '') or return;
 
-    eval { $clone->start(user_admin) };
+    my @start_arg = ( user => user_admin );
+    push @start_arg , ( remote_ip => $remote_ip )   if $remote_ip;
+
+    eval { $clone->start(@start_arg) };
+
     ok(!$@,$node->name." Expecting no error, got ".($@ or ''));
     is($clone->is_active,1) or return;
 
-    my $ip = $node->ip;
-    like($clone->display(user_admin),qr($ip));
+    my $local_ip = $node->ip;
 
-    if ($REMOTE_CONFIG->{public_ip}) {
-        my $public_ip = $REMOTE_CONFIG->{public_ip};
-        like($clone->display(user_admin),qr($public_ip));
-        isnt($vm->host, $public_ip);
-    } else {
-        diag("SKIPPED: Add public_ip to remote_vm.conf to test nodes with 2 IPs");
-    }
+    $local_ip = $REMOTE_CONFIG->{public_ip}
+        if $REMOTE_CONFIG->{public_ip};
+    like($clone->display(user_admin),qr($local_ip));
+
+    diag("SKIPPED: Add public_ip to remote_vm.conf to test nodes with 2 IPs")
+        if !exists $REMOTE_CONFIG->{public_ip};
+    my ($local_port) = $clone->display(user_admin) =~ m{:(\d+)};
+    test_iptables($node, $remote_ip, $local_ip, $local_port)  if $remote_ip;
     return $clone;
 }
 
+sub test_iptables($node, $remote_ip, $local_ip, $local_port) {
+    my @line = search_iptable_remote(
+        node => $node
+        , remote_ip => $remote_ip
+        , local_ip => $local_ip
+        , local_port => $local_port
+    );
+    ok(scalar @line,$node->type." No iptables found $remote_ip -> $local_ip:$local_port");
+    ok(scalar @line == 1,$node->type." iptables should found only 1 found $remote_ip -> $local_ip:$local_port ".Dumper(\@line));
+}
 
 sub test_domain_no_remote {
     my ($vm_name, $node) = @_;
@@ -306,7 +340,7 @@ sub test_sync_base {
     my ($clone_f) = grep { $_->{name} eq $clone2->name } @$domains;
     ok($clone_f);
     is($clone_f->{id}, $clone2->id);
-    is($clone_f->{node}, $clone2->_vm->host);
+    is($clone_f->{node}, $clone2->_vm->name);
     is($clone_f->{id_vm}, $node->id);
 
     $clone->remove(user_admin);
@@ -470,6 +504,44 @@ sub test_bases_node {
     $domain->remove(user_admin);
 }
 
+sub _disable_storage_pools {
+    my $node = shift;
+    for my $sp ($node->vm->list_all_storage_pools()) {
+        $sp->destroy();
+    }
+}
+
+sub _enable_storage_pools {
+    my $node = shift;
+    for my $sp ($node->vm->list_all_storage_pools()) {
+        $sp->create();
+    }
+}
+
+sub test_bases_different_storage_pools {
+    my ($vm_name, $node) = @_;
+    return if $vm_name ne 'KVM';
+
+    _disable_storage_pools($node);
+    is(scalar($node->list_storage_pools),0);
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($domain->_vm->id), 1);
+    is($domain->base_in_vm($node->id), undef);
+
+    eval {$domain->migrate($node) };
+    like($@, qr'storage pools');
+    is($domain->base_in_vm($node->id), undef);
+
+    _enable_storage_pools($node);
+
+    $domain->remove(user_admin);
+}
+
 sub test_clone_not_in_node {
     my ($vm_name, $node) = @_;
 
@@ -594,8 +666,8 @@ sub test_node_inactive {
     _shutdown_node($node);
     is($node->is_active,0);
 
-    my $list_nodes = rvd_front->list_nodes;
-    my ($node2) = grep { $_->{name} eq $node->name} @$list_nodes;
+    my @list_nodes = rvd_front->list_vms;
+    my ($node2) = grep { $_->{name} eq $node->name} @list_nodes;
 
     ok($node2,"[$vm_name] Expecting node called ".$node->name." in frontend")
         or return;
@@ -721,13 +793,17 @@ SKIP: {
 
     ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
         remove_node($node);
-        return;
+        next;
     };
+
+    test_domain_ip($vm_name, $node);
 
     test_start_twice($vm_name, $node);
     test_node_renamed($vm_name, $node);
 
     test_bases_node($vm_name, $node);
+    test_bases_different_storage_pools($vm_name, $node);
+
     test_domain_already_started($vm_name, $node);
     test_clone_not_in_node($vm_name, $node);
     test_rsync_newer($vm_name, $node);
@@ -739,6 +815,7 @@ SKIP: {
 
     my $domain3 = test_domain($vm_name, $node);
     test_remove_domain($vm_name, $node, $domain3)               if $domain3;
+
 
         test_domain_starts_in_same_vm($vm_name, $node);
         test_prepare_sets_vm($vm_name, $node);
