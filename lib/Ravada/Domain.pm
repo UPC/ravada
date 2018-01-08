@@ -16,14 +16,13 @@ use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
-use Net::SSH2;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
 
-+# Runtime Rex checking availability
-+#
-+
+# Runtime Rex checking availability
+#
+
 eval {
     require Rex;
     Rex->import();
@@ -365,9 +364,7 @@ sub _allow_manage {
 
 }
 
-sub _allow_remove {
-    my $self = shift;
-    my ($user) = @_;
+sub _allow_remove($self,$user) {
 
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
@@ -813,11 +810,11 @@ It is not expected to run by itself, the remove function calls it before proceed
 
 sub pre_remove { }
 
-sub _pre_remove_domain {
-    my $self = shift;
+sub _pre_remove_domain($self, $user, @) {
+
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove(@_);
+    $self->_allow_remove($user);
     $self->pre_remove();
 }
 
@@ -825,6 +822,7 @@ sub _after_remove_domain {
     my $self = shift;
     my ($user, $cascade) = @_;
 
+    $self->_remove_iptables(user => $user)  if $self->is_known();
     $self->_remove_domain_cascade(@_)   if !$cascade;
 
     if ($self->is_base) {
@@ -1256,7 +1254,7 @@ sub _remove_iptables {
 
     my $args = {@_};
 
-    confess "Missing user=>\$user" if !$args->{user};
+#    confess "Missing user=>\$user" if !$args->{user};
 
     my $ipt_obj = _obj_iptables();
 
@@ -1264,10 +1262,23 @@ sub _remove_iptables {
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
     );
+
+    my %rule;
     for my $row ($self->_active_iptables($args->{user})) {
-        my ($id, $iptables) = @$row;
-        $ipt_obj->delete_ip_rule(@$iptables);
-        $sth->execute(Ravada::Utils::now(), $id);
+        my ($id, $id_vm, $iptables) = @$row;
+        push @{$rule{$id_vm}},[ $id, $iptables ];
+    }
+    for my $id_vm (keys %rule) {
+        my $vm = Ravada::VM->open($id_vm);
+        for my $entry (@ {$rule{$id_vm}}) {
+            my ($id, $iptables) = @$entry;
+            if ($vm->is_local) {
+                $ipt_obj->delete_ip_rule(@$iptables);
+            } else {
+                $self->_delete_ip_rule_remote($iptables, $vm);
+            }
+            $sth->execute(Ravada::Utils::now(), $id);
+        }
     }
 }
 
@@ -1345,26 +1356,86 @@ sub _add_iptable {
     my $display = $self->display($user);
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
 
-    my $ipt_obj = _obj_iptables();
-	# append rule at the end of the RAVADA chain in the filter table to
-	# allow all traffic from $local_ip to $remote_ip via port $local_port
-    #
+    $self->_open_port($user, $remote_ip, $local_ip, $local_port);
+    $self->_close_port($user, '0.0.0.0', $local_ip, $local_port);
+
+}
+
+sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
+    my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
+    lock_hash %$extra;
+
+    $s .= "/32" if defined $s && $s !~ m{/};
+    $d .= "/32" if defined $d && $d !~ m{/};
+
+    $vm->_connect_rex();
+    my $iptables_list = iptables_list();
+
+    my $count = 0;
+    for my $line (@{$iptables_list->{$filter}}) {
+        my %args = @$line;
+        next if $args{A} ne $chain;
+        $count++;
+        if(exists $args{j} && defined $jump         && $args{j} eq $jump
+           && exists $args{s} && defined $s && $args{s} eq $s
+           && exists $args{d} && defined $d && $args{d} eq $d
+           && exists $args{dport} && exists $extra->{d_port}
+           && $args{dport} eq $extra->{d_port}) {
+
+           run("iptables -t $filter -D $chain $count");
+           $count--;
+        }
+
+    }
+
+}
+sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
     my @iptables_arg = ($remote_ip
-                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    if ($self->is_local) {
+        my $ipt_obj = _obj_iptables();
+	    my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    } else {
+        if ($REX_ERROR) {
+            warn "ERROR: Missing Rex: $REX_ERROR\n";
+        } else {
+            $self->_vm->_connect_rex();
+            $self->_create_remote_chain();
+            my $out = iptables(
+                A => $IPTABLES_CHAIN
+                ,m => 'tcp'
+                ,p => 'tcp'
+                ,s => $remote_ip
+                ,d => $local_ip
+                ,dport => $local_port
+                ,j => $jump
+            );
+            warn $out if $out;
+        }
+    }
 
-    $self->_log_iptable(iptables => \@iptables_arg, @_);
+    $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
-    @iptables_arg = ( '0.0.0.0'
-                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
-                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-    
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    
-    $self->_log_iptable(iptables => \@iptables_arg, %args);
+}
 
+sub _create_remote_chain($self) {
+    $self->_vm->_connect_rex();
+
+    my $chain_exists;
+#    eval { $chain_exists = chain_exists('filter', $IPTABLES_CHAIN)};
+#    warn $@ if $@;
+#    if ($@) {
+        $chain_exists = run("iptables -L $IPTABLES_CHAIN");
+#    }
+    return if $chain_exists =~ /^Chain $IPTABLES_CHAIN/;
+
+    iptables(t => 'filter', N => $IPTABLES_CHAIN);
+}
+
+sub _close_port($self, $user, $remote_ip, $local_ip, $local_port) {
+    $self->_open_port($user, $remote_ip, $local_ip, $local_port,'DROP');
 }
 
 =head2 open_iptables
@@ -1436,47 +1507,54 @@ sub _log_iptable {
         return;
     }
     my %args = @_;
-    my $remote_ip = $args{remote_ip};#~ or return;
 
-    my $user = $args{user};
-    my $uid = $args{uid};
-    confess "Chyoose wether uid or user "
+    my $remote_ip = delete $args{remote_ip} or confess "ERROR: remote_ip required";
+    my $iptables  = delete $args{iptables}  or confess "ERROR: iptables required";
+    my $user = delete $args{user};
+    my $uid  = delete $args{uid};
+
+    confess "ERROR: Unexpected arguments ".Dumper(\%args) if keys %args;
+    confess "ERROR: Choose wether uid or user "
         if $user && $uid;
+    confess "ERROR: Supply user or uid" if !defined $user && !defined $uid;
+
     lock_hash(%args);
 
-    $uid = $args{user}->id if !$uid;
+    $uid = $user->id if !$uid;
 
-    my $iptables = $args{iptables};
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO iptables "
-        ."(id_domain, id_user, remote_ip, time_req, iptables)"
-        ."VALUES(?, ?, ?, ?, ?)"
+        ."(id_domain, id_user, remote_ip, time_req, iptables, id_vm)"
+        ."VALUES(?, ?, ?, ?, ?, ?)"
     );
     $sth->execute($self->id, $uid, $remote_ip, Ravada::Utils::now()
-        ,encode_json($iptables));
+        ,encode_json($iptables), $self->_vm->id);
     $sth->finish;
 
 }
 
-sub _active_iptables {
-    my $self = shift;
-    my $user = shift;
+sub _active_iptables($self, $user=undef) {
 
-    confess "Missing \$user" if !$user;
-
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,iptables FROM iptables "
+    my @sql_args = ($self->id);
+    my $sql
+        ="SELECT id, id_vm, iptables FROM iptables "
         ." WHERE "
-        ."    id_domain=?"
-        ."    AND id_user=? "
-        ."    AND time_deleted IS NULL"
-        ." ORDER BY time_req DESC "
-    );
-    $sth->execute($self->id, $user->id);
+        ."    id_domain=? ";
+    if ($user) {
+        $sql .= "    AND id_user=? ";
+        push @sql_args,($user->id);
+    }
+    $sql .=
+         "    AND time_deleted IS NULL"
+        ." ORDER BY time_req DESC ";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(@sql_args);
+
     my @iptables;
-    while (my ($id, $iptables) = $sth->fetchrow) {
-        push @iptables, [ $id, decode_json($iptables)];
+    while (my ( $id, $id_vm, $iptables ) = $sth->fetchrow) {
+        push @iptables, [ $id, $id_vm, decode_json($iptables)];
     }
     return @iptables;
 }
@@ -1693,16 +1771,21 @@ sub remote_ip {
     my $self = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT remote_ip FROM iptables "
+        "SELECT remote_ip, iptables FROM iptables "
         ." WHERE "
         ."    id_domain=?"
         ."    AND time_deleted IS NULL"
         ." ORDER BY time_req DESC "
     );
     $sth->execute($self->id);
-    my ($remote_ip) = $sth->fetchrow();
+    while ( my ($remote_ip, $iptables_json ) = $sth->fetchrow() ) {
+        my $iptables = decode_json($iptables_json);
+        next if $iptables->[4] ne 'ACCEPT';
+        # TODO check multiple IPs
+        return $remote_ip;
+    }
     $sth->finish;
-    return ($remote_ip or undef);
+    return;
 
 }
 
