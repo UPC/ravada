@@ -571,6 +571,7 @@ sub ping($self) {
     return 1 if $p->ping($self->host);
     $p->close();
 
+    return if $>; # icmp ping requires root privilege
     $p= Net::Ping->new('icmp',2);
     return $p->ping($self->host);
 
