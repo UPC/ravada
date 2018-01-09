@@ -223,6 +223,22 @@ sub _pre_create_domain {
     _connect(@_);
 }
 
+sub _connect_rex($self) {
+    my @pwd = getpwuid($>);
+    my $home = $pwd[7];
+
+    return if exists $self->{_rex_connection}
+        && $self->{_rex_connection}->{conn}->server eq $self->host;
+
+    my $connection = Rex::connect(
+        server    => $self->host,
+        user      => "root",
+        private_key => "$home/.ssh/id_rsa",
+        public_key => "$home/.ssh/id_rsa.pub"
+    );
+    $self->{_rex_connection} = $connection;
+}
+
 sub _around_create_domain {
     my $orig = shift;
     my $self = shift;
@@ -557,23 +573,6 @@ sub is_local($self) {
     return $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'
         || !$self->host;
-}
-
-sub _connect_ssh($self) {
-    my $ssh2 = Net::SSH2->new();
-    $ssh2->timeout(20000);
-
-    for ( 1 .. 10 ) {
-        last if $ssh2->connect($self->host);
-        sleep 1;
-    }
-#    $ssh2->check_hostkey()      or $ssh2->die_with_error;
-    my @pwd = getpwuid($>);
-    my $home = $pwd[7];
-    $ssh2->auth_publickey("root"
-        ,"$home/.ssh/id_rsa.pub"
-        ,"$home/.ssh/id_rsa")    or $ssh2->die_with_error;
-    return $ssh2;
 }
 
 sub list_nodes($self) {
