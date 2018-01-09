@@ -40,6 +40,7 @@ eval {
 
 };
 our $REX_ERROR = $@;
+$REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
 warn $REX_ERROR if $REX_ERROR;
 
 no warnings "experimental::signatures";
