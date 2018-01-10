@@ -224,19 +224,33 @@ sub _pre_create_domain {
 }
 
 sub _connect_rex($self) {
+    return if !$self->ping();
+
     my @pwd = getpwuid($>);
     my $home = $pwd[7];
 
-    return if exists $self->{_rex_connection}
+    return $self->{_rex_connection} if exists $self->{_rex_connection}
         && $self->{_rex_connection}->{conn}->server eq $self->host;
 
-    my $connection = Rex::connect(
-        server    => $self->host,
-        user      => "root",
-        private_key => "$home/.ssh/id_rsa",
-        public_key => "$home/.ssh/id_rsa.pub"
-    );
+    if ($REX_CONNECTION{$self->host}) {
+        $self->{_rex_connection} = $REX_CONNECTION{$self->host};
+        return $self->{_rex_connection};
+    }
+    warn "connecting to ".$self->host;
+    my $connection;
+    eval {
+        $connection = Rex::connect(
+            server    => $self->host,
+            user      => "root",
+            private_key => "$home/.ssh/id_rsa",
+            public_key => "$home/.ssh/id_rsa.pub"
+        );
+    };
+    warn $@ if $@;
+    return if !$connection;
     $self->{_rex_connection} = $connection;
+    $REX_CONNECTION{$self->host} = $connection;
+    return $connection;
 }
 
 sub _around_create_domain {
@@ -602,11 +616,11 @@ sub ping($self) {
 
 sub is_active($self) {
     return 1 if $self->is_local && $self->vm;
+    return 0 if $self->is_local && !$self->vm;
 
     return 0 if !$self->ping();
-    eval { $self->_connect_ssh };
-    return 1 if !$@;
-    warn $@ if $@ && $@ !~ /Unable to connect/;
+
+    return 1 if $self->_connect_rex;
     return 0;
 }
 
