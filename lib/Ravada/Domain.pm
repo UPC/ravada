@@ -1927,7 +1927,8 @@ Argument: Ravada::VM
 
 sub rsync($self, $node=$self->_vm, $request=undef) {
     $request->status("working") if $request;
-    my $ssh = $self->_connect_ssh($node);
+    my $rex = $node->_connect_rex();
+    die "No Connection to ".$node->host if !$rex;
 #    This does nothing and doesn't fail
 #
 #    for my $file ( $self->list_volumes()) {
