@@ -93,10 +93,12 @@ sub _connect {
         my $transport = 'ssh';
         $transport = $self->security->{transport}
             if $self->security && $self->security->{transport};
+        my $address = $con_type."+".$transport
+                                            ."://".'root@'.$self->host
+                                            ."/system";
         eval {
-            $vm = Sys::Virt->new( address => $con_type."+".$transport
-                                            ."://".$self->host
-                                            ."/system"
+            $vm = Sys::Virt->new(
+                                address => $address
                               ,auth => 1
                               ,credlist => [
                                   Sys::Virt::CRED_AUTHNAME,
@@ -114,8 +116,8 @@ sub _connect {
                               }
                           );
          };
-         die $@ if $@;
          die $@ if $@ && $@ !~ /libvirt error code: 38/;
+         return if !$vm;
     }
     if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE) {
 	warn "WARNING: No storage pools creating default\n";
@@ -449,6 +451,7 @@ sub search_domain {
     my $name = shift or confess "Missing name";
 
     $self->connect();
+    return if !$self->vm;
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
     confess $@ if $@;
@@ -486,6 +489,8 @@ Returns a list of the created domains
 sub list_domains {
     my $self = shift;
     my %args = @_;
+
+    return if !$self->vm;
 
     my $active = (delete $args{active} or 0);
 
@@ -1861,6 +1866,9 @@ sub security($self,$value=undef) {
 }
 
 sub free_memory($self) {
+
+    confess "ERROR: VM ".$self->name." inactive"
+        if !$self->is_active;
 
     return
     $self->vm->get_node_memory_stats()->{free}
