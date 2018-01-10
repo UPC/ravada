@@ -629,5 +629,17 @@ sub remove($self) {
     $sth->execute($self->id);
 }
 
+sub run_command($self, $command) {
+    $self->_connect_rex()
+        && return run($command);
+}
+
+sub write_file( $self, $file, $contents ) {
+    if ($self->_connect_rex) {
+        my $fh = file_write($file);
+        $fh->write($contents);
+        $fh->close;
+    }
+}
 1;
 
