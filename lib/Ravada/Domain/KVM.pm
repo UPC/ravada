@@ -593,7 +593,7 @@ sub force_shutdown{
 
 sub _do_force_shutdown {
     my $self = shift;
-    return $self->domain->destroy;
+    return $self->domain->destroy   if $self->domain->is_active;
 
 }
 
