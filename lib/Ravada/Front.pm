@@ -218,7 +218,7 @@ sub list_domains {
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
-            $row->{node} = $domain->_vm->host   if $domain->_vm;
+            $row->{node} = $domain->_vm->name if $domain->_vm;
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -293,44 +293,30 @@ Returns a list of Virtual Managers
 
 =cut
 
-sub list_vms($self, $type) {
+sub list_vms($self, $type=undef) {
 
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,hostname FROM vms WHERE (vm_type=? or vm_type=?)");
+    my $sql = "SELECT id,name,hostname FROM vms ";
 
-    my $type2 = $type;
-    $type2 = 'qemu' if $type eq 'KVM';
-    $sth->execute($type, $type2);
-
-    my @list;
-    while (my $row = $sth->fetchrow_hashref) {
-        $self->_list_bases_vm($row);
-        push @list,($row);
+    my @args = ();
+    if ($type) {
+        $sql .= "WHERE (vm_type=? or vm_type=?)";
+        my $type2 = $type;
+        $type2 = 'qemu' if $type eq 'KVM';
+        @args = ( $type, $type2);
     }
-    $sth->finish;
-    return @list;
-}
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute(@args);
 
-=head2 list_nodes
-
-Lists the virtual manager nodes, including local
-
-=cut
-
-sub list_nodes($self) {
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT * FROM vms "
-    );
-    $sth->execute();
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
         my $vm = $self->_vm_id($row->{id});
         $row->{is_active} = $vm->is_active;
+        $self->_list_bases_vm($row);
         lock_hash(%$row);
         push @list,($row);
     }
     $sth->finish;
-    return \@list;
+    return @list;
 }
 
 sub _list_bases_vm($self, $node) {
@@ -665,7 +651,6 @@ sub search_domain {
 sub _vm_id($self, $id) {
     my $vm = $VM_ID{$id};
     if (!$vm ) {
-        warn "Opening VM $id";
         $vm = Ravada::VM->open(id => $id, readonly => 1);
         $VM_ID{$id} = $vm if $vm;
     }

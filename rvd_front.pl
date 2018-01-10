@@ -928,7 +928,7 @@ sub admin {
         }
     }
     if ($page eq 'nodes') {
-        $c->stash(list_nodes => $RAVADA->list_nodes);
+        $c->stash(list_nodes => [$RAVADA->list_vms]);
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
