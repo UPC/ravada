@@ -122,37 +122,19 @@ sub _load($self) {
 sub _load_remote($self) {
     my ($disk) = $self->_config_file();
 
-    my ($ssh, $chan) = $self->_vm->_ssh_channel();
+    my @lines = $self->_vm->run_command("cat $disk");
 
-    $chan->blocking(1);
-
-    $chan->exec("cat $disk") or $ssh->die_with_error;
-    $chan->send_eof();
-
-    my $yaml = '';
-    while( !$chan->eof) {
-        my ($out, $err) = $chan->read2;
-        die $err if $err;
-        $yaml .= $out   if $out;
-    }
-    my $data = Load($yaml);
+    my $data = Load(join("\n",@lines));
     return $data;
 }
 
 sub _store_remote($self, $var, $value) {
     my ($disk) = $self->_config_file();
 
-    my ($ssh, $chan) = $self->_vm->_ssh_channel();
-
-    $chan->blocking(1);
-
     my $data = $self->_load_remote();
     $data->{$var} = $value;
-    $chan->exec("cat > $disk") or $ssh->die_with_error;
 
-    print $chan Dump($data);
-    $chan->send_eof();
-
+    $self->_vm->write_file($disk, Dump($data));
     return $data->{$var};
 }
 
