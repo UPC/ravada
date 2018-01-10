@@ -1744,6 +1744,10 @@ sub type {
     return $type;
 }
 
+sub file_screenshot($self) {
+    return $self->_data('file_screenshot');
+}
+
 sub _pre_clone($self,%args) {
     my $name = delete $args{name};
     my $user = delete $args{user};

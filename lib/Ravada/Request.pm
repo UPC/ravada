@@ -55,6 +55,7 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
+    ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
@@ -690,6 +691,31 @@ sub screenshot_domain {
     return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
         ,args => $args);
 
+}
+
+=head2 copy_screenshot
+
+Request to copy a screenshot from a domain to another
+
+=cut
+
+sub copy_screenshot {
+  my $proto = shift;
+  my $class=ref($proto) || $proto;
+
+  my $args = _check_args('copy_screenshot', @_ );
+
+  $args->{filename} = '' if !exists $args->{filename};
+
+  my $self = {};
+  bless($self,$class);
+
+  return $self->_new_request(
+       command => 'copy_screenshot'
+      ,id_domain => $args->{id_domain}
+      ,args => $args
+      );
+  
 }
 
 =head2 open_iptables

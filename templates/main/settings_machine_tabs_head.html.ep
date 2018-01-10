@@ -7,6 +7,9 @@
 %   if ($USER->can_change_settings && $domain->drivers) {
         <li class="nav"><a href="#drivers" data-toggle="tab">Drivers</a></li>
 %   }
+%   if ($USER->can_change_settings) {
+        <li class="nav"><a href="#screenshot" data-toggle="tab">Screenshot</a></li>
+%   }
 %   if ($domain->drivers) {
         <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
 %   }
@@ -17,4 +20,3 @@
         <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
 %   }
 </ul>
-
