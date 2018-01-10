@@ -43,7 +43,6 @@ eval {
 our $REX_ERROR = $@;
 warn $REX_ERROR if $REX_ERROR;
 
-
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -56,6 +55,7 @@ our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
 
+our %REX_CONNECTION;
 # domain
 requires 'create_domain';
 requires 'search_domain';

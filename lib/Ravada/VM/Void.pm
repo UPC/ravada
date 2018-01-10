@@ -9,7 +9,6 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use LWP::UserAgent;
 use Moose;
-use Net::SSH2;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
@@ -49,14 +48,9 @@ sub _connect {
     return 1 if ! $self->host || $self->host eq 'localhost'
                 || $self->host eq '127.0.0.1';
 
-    return $SSH if $SSH;
-    my ($ssh,$chan) = $self->_ssh_channel();
-    $chan->exec("ls -l ".$self->dir_img." || mkdir ".$self->dir_img);
-    my ($out, $err) = $chan->read2();
-    warn $err if $err;
-    die $err if $err;
+    my $out = $self->run_command("ls -l ".$self->dir_img." || mkdir ".$self->dir_img);
 
-    return $ssh;
+    return $self->{_rex_connection};
 }
 
 sub connect($self) {
@@ -159,50 +153,20 @@ sub _is_a_domain($self, $file) {
     return $domain;
 }
 
-sub _ssh_channel($self) {
-    my $ssh = $SSH;
-    if (!$ssh) {
-        $ssh = $self->_connect_ssh()    if !$ssh || !ref($ssh);
-        $SSH = $ssh;
-    }
-    my $chan;
-    for ( 1 .. 5 ) {
-        $chan = $ssh->channel();
-        last if $chan;
-        warn "retry $_ channel" if $_>1;
-        $ssh = $self->_connect_ssh();
-        $SSH = $ssh;
-    }
-    $ssh->die_with_error   if !$chan;
-    return ($ssh, $chan);
-}
-
 sub _list_domains_remote($self, %args) {
 
     my $active = delete $args{active};
 
     confess "Wrong arguments ".Dumper(\%args) if keys %args;
 
-    my ($ssh, $chan) = $self->_ssh_channel();
-
-    $chan->blocking(1);
-    my $cmd = "ls ".$self->dir_img;
-    $chan->exec($cmd)
-        or $ssh->die_with_error;
-
-    $chan->send_eof();
+    my @lines = "ls -1 ".$self->dir_img;
 
     my @domain;
-    while( !$chan->eof) {
-        if ( my ($out, $err) = $chan->read2) {
-            confess $err   if $err;
-            for my $file (split /\n/,$out) {
-                if ( my $domain = $self->_is_a_domain($file)) {
-                    next if defined $active && $active
+    for my $file (@lines) {
+        if ( my $domain = $self->_is_a_domain($file)) {
+            next if defined $active && $active
                         && !$domain->is_active;
-                    push @domain,($domain);
-                }
-            }
+            push @domain,($domain);
         }
     }
 
@@ -253,24 +217,11 @@ sub search_volume($self, $pattern) {
 
 sub _search_volume_remote($self, $pattern) {
 
-    my ($ssh, $chan) = $self->_ssh_channel();
-
-    $chan->blocking(1);
-    my $cmd = "ls ".$self->dir_img;
-    $chan->exec($cmd)
-        or $ssh->die_with_error;
-
-    $chan->send_eof();
+    my @lines = $self->run_command("ls -1 ".$self->dir_img);
 
     my $found;
-    while( !$chan->eof) {
-        if ( my ($out, $err) = $chan->read2) {
-            warn $err   if $err;
-            for my $file (split /\n/,$out) {
-                $found = $self->dir_img."/".$file if $file eq $pattern;
-                last if $found;
-            }
-        }
+    for my $file ( @lines ) {
+        $found = $self->dir_img."/".$file if $file eq $pattern;
     }
 
     return $found;
