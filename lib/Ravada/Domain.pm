@@ -1217,6 +1217,10 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+    my $request;
+    $request = $arg{request} if exists $arg{request};
+    $self->_rsync_volumes_back( $request ) if !$self->is_local && !$self->is_active;
+
 }
 
 sub _pre_shutdown_now {
