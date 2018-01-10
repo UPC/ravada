@@ -1403,13 +1403,6 @@ sub settings_machine {
             ) if $c->param('start') && !$domain->is_active;
 
     _enable_buttons($c, $domain);
-    
-    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    my $req3 = Ravada::Request->copy_screenshot (
-        id_domain => $domain->id
-        ,filename => $file_screenshot
-    ) if $c->param('copy_screenshot');
-    
 
     $c->stash(message => '');
     my @reqs = ();

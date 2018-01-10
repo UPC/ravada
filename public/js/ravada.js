@@ -154,9 +154,9 @@
 
           $scope.reload_page_msg = false;
           $scope.fail_page_msg = false;
-          $scope.screenshot = function(target,action,machineId, isActive){
+          $scope.screenshot = function(machineId, isActive){
               if (isActive) {
-                  $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+                  $http.get('/machine/screenshot/'+machineId+'.json');
                   $scope.fail_page_msg = false;
                   $scope.reload_page_msg = true;
                   setTimeout(function () {
@@ -172,9 +172,9 @@
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
-          $scope.copy_screenshot = function(target, action, machineId, fileScreenshot){
+          $scope.copy_screenshot = function(machineId, fileScreenshot){
               if (fileScreenshot != '') {
-                $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+                $http.get('/machine/copy_screenshot/'+machineId+'.json');
                 $scope.fail_page_copy_msg = false;
                 $scope.reload_page_copy_msg = true;
                 setTimeout(function () {
