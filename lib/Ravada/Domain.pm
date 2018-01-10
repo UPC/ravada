@@ -1956,6 +1956,9 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
             if $request;
         $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
     }
+    if ($rsync->err) {
+        $request->status("done",join(" ",@{$rsync->err}));
+    }
     $node->refresh_storage_pools();
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
 }
