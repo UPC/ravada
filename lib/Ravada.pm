@@ -758,6 +758,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+    $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
