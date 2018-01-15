@@ -1963,8 +1963,16 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
 }
 
-sub _connect_ssh($self, $node) {
-    return $node->_connect_ssh();
+sub _rsync_volumes_back($self, $request=undef) {
+    my $rsync = File::Rsync->new(update => 1);
+    for my $file ( $self->list_volumes() ) {
+        $rsync->exec(src => 'root@'.$self->_vm->host.":".$file ,dest => $file );
+        if ( $rsync->err ) {
+            $request->status("done",join(" ",@{$rsync->err}));
+            last;
+        }
+    }
+    $self->_vm->refresh_storage_pools();
 }
 
 sub _pre_migrate($self, $node) {
@@ -2059,8 +2067,12 @@ sub set_base_vm($self, %args) {
     if ($vm->host eq 'localhost') {
         $self->_set_vm($vm,1);
         if (!$value) {
-            $self->_set_base_vm_db($vm->id, $value);
             $request->status("working","Removing base")     if $request;
+            for my $vm_node ( $self->list_vms ) {
+                $self->set_base_vm(vm => $vm_node, user => $user, value => 0
+                    , request => $request);
+            }
+            $self->_set_base_vm_db($vm->id, $value);
             $self->remove_base($user);
         } else {
             $self->prepare_base($user);
@@ -2072,6 +2084,23 @@ sub set_base_vm($self, %args) {
         $self->rsync($vm, $request);
     }
     return $self->_set_base_vm_db($vm->id, $value);
+}
+
+=head2 remove_base_vm
+
+Removes a base in a Virtual Machine Manager node.
+
+  $domain->remove_base_vm($vm, $user);
+
+=cut
+
+sub remove_base_vm($self, %args) {
+    my $user = delete $args{user};
+    my $vm = delete $args{vm};
+    confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
+        if keys %args;
+
+    return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
 =head2 base_in_vm
