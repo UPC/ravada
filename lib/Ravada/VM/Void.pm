@@ -51,6 +51,7 @@ sub create_domain {
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {
+        my $owner = Ravada::Auth::SQL->search_by_id($args{id_owner});
         my $domain_base = $self->search_domain_by_id($args{id_base});
 
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
