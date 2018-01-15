@@ -73,10 +73,9 @@ sub test_node {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my @list_nodes = rvd_front->list_vms;
-
     my $node;
-    diag("Testing $vm_name $REMOTE_CONFIG->{name}");
+    my @list_nodes0 = rvd_front->list_vms;
+
     eval { $node = $vm->new(%{$REMOTE_CONFIG}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($REMOTE_CONFIG).", got :'"
         .($@ or '')."'") or return;
@@ -86,6 +85,7 @@ sub test_node {
 
     is($node->host,$REMOTE_CONFIG->{host});
 
+    _shutdown_node($node)   if $node->ping && !$node->_connect_rex();
     _start_node($node);
 
     clean_remote_node($node);
@@ -104,11 +104,12 @@ sub test_node {
     is($node2->public_ip, $node->public_ip);
     ok(!$node2->is_local,"[$vm_name] node remote") or return;
 
-    my @nodes = $vm->list_nodes();
-    is(scalar @nodes, 2,"[$vm_name] Expecting nodes") or return;
+    my @list_nodes = $vm->list_nodes();
+    is(scalar @list_nodes, 2,"[$vm_name] Expecting nodes") or return;
 
     my @list_nodes2 = rvd_front->list_vms;
-    is(scalar @list_nodes2, (scalar @list_nodes)+1,Dumper(\@list_nodes,\@list_nodes2)) or return;
+    is(scalar @list_nodes2, (scalar @list_nodes)+1,Dumper(\@list_nodes2,\@list_nodes)) or return;
+    is(scalar @list_nodes2, (scalar @list_nodes0)+1,Dumper(\@list_nodes2,\@list_nodes0)) or return;
     return $node;
 }
 
@@ -128,11 +129,12 @@ sub test_sync {
 
 sub test_domain_ip($vm_name, $node) {
     my $ip = '1.2.4.5';
-    diag("[$vm_name] test domain remote ip $ip");
     my $domain_ip = test_domain($vm_name, $node, $ip);
 
     my ($local_ip,$local_port)
         = $domain_ip->display(user_admin) =~ m{(\d+.\d+\.\d+\.\d+):(\d+)};
+
+    is($domain_ip->remote_ip, $ip);
     $domain_ip->remove(user_admin);
     my @line = search_iptable_remote(
         node => $node
@@ -142,7 +144,6 @@ sub test_domain_ip($vm_name, $node) {
     );
     ok(scalar @line == 0,$node->type." There should be no iptables found $ip -> $local_ip:$local_port ".Dumper(\@line));
 
-    exit;
 }
 
 sub test_domain {
@@ -261,7 +262,6 @@ sub test_remove_domain_node {
         diag("SKIPPING: test_remove_domain_node skipped on ".$node->type);
         return;
     }
-    diag("[".$node->type."] checking removed volumes from ".$node->name);
     my %found = map { $_ => 0 } @$volumes;
 
     $node->_refresh_storage_pools();
@@ -555,7 +555,6 @@ sub test_clone_not_in_node {
     is($domain->base_in_vm($node->id), 1);
 
     my @clones;
-    warn "starting 4 clones\n";
     for ( 1 .. 4 ) {
         my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
         push @clones,($clone1);
@@ -573,7 +572,6 @@ sub test_clone_not_in_node {
             ok($virt_domain,"Expecting ".$clone1->name." in "
                 .$clone1->_vm->host);
         }
-        warn "started on ".$clone1->_vm->host;
         last if $clone1->_vm->host ne $clones[0]->_vm->host;
     }
 
@@ -852,7 +850,6 @@ sub _domain_node($node) {
     $domain->_set_vm($vm, 'force');
     return $domain;
 }
-
 sub _start_node($node) {
 
     confess "Undefined node " if!$node;
@@ -902,8 +899,8 @@ sub remove_node($node) {
     ok(!$node2, "Expecting no node ".$node->id);
 }
 #############################################################
-
 clean();
+clean_remote();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
@@ -967,6 +964,7 @@ SKIP: {
         test_prepare_sets_vm($vm_name, $node);
 
     test_remove_base($node);
+
 
     test_node_inactive($vm_name, $node);
 
