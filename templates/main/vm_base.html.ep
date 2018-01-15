@@ -16,7 +16,7 @@
         <div class="row">
             <div class="col-md-1">
 %               my $node_disabled = $domain->is_locked 
-%                   || ($local && $domain->has_clones)
+%                   || $domain->has_clones
 %                   || !$node->{is_active}
 %                   || 0;
                 <input type="checkbox"
@@ -31,7 +31,7 @@
                 <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
             </div>
             <div class="col-md-5">
-%           if ($local && $domain->has_clones) {
+%           if ($domain->has_clones) {
                 Base can't be removed because it has clones
 %           } elsif (!$node->{is_active}) {
                 Node inactive <%= $node->{is_active} %>
