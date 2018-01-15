@@ -686,9 +686,11 @@ sub test_node_inactive {
 
 sub _shutdown_node($node) {
 
-    for my $domain ($node->list_domains(active => 1)) {
-        diag("Shutting down ".$domain->name." on node ".$node->name);
-        $domain->shutdown_now(user_admin);
+    if ($node->is_active) {
+        for my $domain ($node->list_domains(active => 1)) {
+            diag("Shutting down ".$domain->name." on node ".$node->name);
+            $domain->shutdown_now(user_admin);
+        }
     }
     $node->disconnect;
 
@@ -718,35 +720,43 @@ sub _domain_node($node) {
     $domain->_set_vm($vm, 'force');
     return $domain;
 }
+
 sub _start_node($node) {
 
     confess "Undefined node " if!$node;
 
     $node->disconnect;
     if ( $node->is_active ) {
-        warn "Node ".$node->name." active\n";
         $node->connect && return;
         warn "I can't connect";
     }
 
     my $domain = _domain_node($node);
-    diag("Starting domain/node ".$domain->name);
 
     ok($domain->_vm->host eq 'localhost');
 
-    $domain->start(user_admin);
+    $domain->start(user_admin)  if !$domain->is_active;
 
     sleep 2;
 
     $node->disconnect;
     sleep 1;
 
-    for ( 1 .. 10 ) {
+    for ( 1 .. 20 ) {
+        last if $node->ping ;
+        sleep 1;
+        diag("Waiting for ping node ".$node->name." $_");
+    }
+
+    is($node->ping,1,"Expecting ping node ".$node->name) or exit;
+
+    for ( 1 .. 20 ) {
         last if $node->is_active;
         sleep 1;
-        diag("Waiting for node ".$node->name." $_");
+        diag("Waiting for active node ".$node->name." $_");
     }
-    is($node->ping,1,"Expecting active node ".$node->name." can be pinged");
+
+    is($node->is_active,1,"Expecting active node ".$node->name) or exit;
     $node->connect;
 }
 
@@ -765,7 +775,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('KVM') {
+for my $vm_name ('Void','KVM') {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -831,6 +841,7 @@ SKIP: {
 
 warn "cleaning";
 clean();
+clean_remote();
 warn "done testing";
 
 done_testing();
