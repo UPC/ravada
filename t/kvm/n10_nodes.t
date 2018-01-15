@@ -780,6 +780,12 @@ sub _shutdown_nicely($clone) {
     $clone->shutdown_now(user_admin);
 }
 
+sub _write_in_volumes($clone) {
+    for my $file ($clone->list_volumes) {
+        $clone->_vm->run_command("echo hola > $file");
+    }
+}
+
 sub _shutdown_node($node) {
 
     if ($node->is_active) {
