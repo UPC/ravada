@@ -770,6 +770,16 @@ sub _md5($file, $vm) {
     }
 }
 
+sub _shutdown_nicely($clone) {
+    $clone->shutdown(user => user_admin);
+    for ( 1 .. 2 ) {
+        last if !$clone->is_active;
+        sleep 1;
+        diag("Waiting for ".$clone->name." shutdown")   if !$clone->is_active;
+    }
+    $clone->shutdown_now(user_admin);
+}
+
 sub _shutdown_node($node) {
 
     if ($node->is_active) {
