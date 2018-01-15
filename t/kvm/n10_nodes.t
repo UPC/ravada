@@ -3,7 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
-use IPC::Run 'run';
+use Digest::MD5;
 use Test::More;
 use Test::SQL::Data;
 
