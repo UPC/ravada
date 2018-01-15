@@ -462,7 +462,11 @@ sub open($class, $id) {
     confess "Missing id"    if !defined $id;
 
     my $self = {};
-    bless $self,$class;
+    if (ref($class)) {
+        $self = $class;
+    } else {
+        bless $self,$class
+    }
 
     my $row = $self->_select_domain_db ( id => $id );
 
@@ -1531,7 +1535,7 @@ sub list_requests {
     my $all = shift;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM requests WHERE id_domain = ? AND status ne 'done'"
+        "SELECT * FROM requests WHERE id_domain = ? AND status <> 'done'"
     );
     $sth->execute($self->id);
     my @list;
