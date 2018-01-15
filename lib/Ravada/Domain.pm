@@ -2103,6 +2103,18 @@ sub remove_base_vm($self, %args) {
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
+sub list_vms($self) {
+    confess "Domain is not base" if !$self->is_base;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=?");
+    $sth->execute($self->id);
+    my @vms;
+    while (my $id_vm = $sth->fetchrow) {
+        push @vms,(Ravada::VM->open($id_vm));
+    }
+    return @vms;
+}
+
 =head2 base_in_vm
 
 Returns if this domain has a base prepared in this virtual manager
