@@ -684,6 +684,29 @@ sub test_node_inactive {
 
 }
 
+sub test_sync_back($node) {
+    my $vm = rvd_back->search_vm($node->type, 'localhost');
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),1);
+
+    my $clone = $domain->clone( name => new_domain_name(), user => user_admin );
+    $clone->migrate($node);
+    $clone->start(user_admin);
+    _shutdown_nicely($clone);
+    _write_in_volumes($clone);
+    $clone->shutdown_now(user_admin)    if !$clone->is_active;
+    for my $file ($clone->list_volumes) {
+        my $md5 = _md5($file, $vm);
+        my $md5_remote = _md5($file, $node);
+        is($md5_remote, $md5);
+    }
+}
+
 sub _shutdown_node($node) {
 
     if ($node->is_active) {
@@ -805,6 +828,8 @@ SKIP: {
         remove_node($node);
         next;
     };
+
+    test_sync_back($node);
 
     test_domain_ip($vm_name, $node);
 
