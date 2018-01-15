@@ -54,6 +54,7 @@ create_domain
     arg_create_dom
     vm_names
     search_iptable_remote
+    clean_remote
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -295,19 +296,12 @@ sub _remove_old_domains_void {
     closedir $dir;
 }
 
-sub _remove_old_domains_void_remote {
-    my $vm = shift;
+sub _remove_old_domains_void_remote($vm) {
 
-    my ($ssh, $chan);
-    eval { ($ssh, $chan) = $vm->_ssh_channel() };
-    die $@ if $@ && $@ !~ /Unable to connect to remote/i;
-
-    $chan->exec("rm -f ".$vm->dir_img."/*yml "
+    $vm->run_command("rm -f ".$vm->dir_img."/*yml "
                     .$vm->dir_img."/*qcow "
                     .$vm->dir_img."/*img"
     );
-    my ($out, $err) = $chan->read2();
-    warn $err if $err;
 }
 
 sub _remove_old_domains_kvm {
@@ -346,7 +340,6 @@ sub _remove_old_domains_kvm {
 
         eval { $domain->undefine };
         warn $@ if $@;
-        diag("[".$vm->name."] removed domain ".$domain->get_name);
     }
 }
 
@@ -365,7 +358,6 @@ sub _activate_storage_pools($vm) {
 }
 sub _remove_old_disks_kvm {
     my $vm = shift;
-    warn "Removing from ".$vm->name if $vm;
 
     my $name = base_domain_name();
     confess "Unknown base domain name " if !$name;
@@ -401,21 +393,8 @@ sub _remove_old_disks_void($node=undef){
 
 sub _remove_old_disks_void_remote($node) {
     confess "Remote node must be defined"   if !defined $node;
-    my ($ssh, $chan) = $node->_ssh_channel();
-    $chan->blocking(1);
     my $cmd = "rm -rfv ".$node->dir_img."/".base_domain_name().'_*';
-    warn $cmd;
-    $chan->exec($cmd)
-        or $ssh->die_with_error;
-
-    $chan->send_eof();
-
-    while (!$chan->eof) {
-        if ( my ($out, $err) = $chan->read2) {
-            confess $err   if $err;
-            warn $out;
-        }
-    }
+    $node->run_command($cmd);
 }
 
 sub _remove_old_disks_void_local {
@@ -550,8 +529,6 @@ sub clean {
         eval { $config = LoadFile($file_remote_config) };
         warn $@ if $@;
         _clean_remote_nodes($config)    if $config;
-    } else {
-        _clean_remote();
     }
     _clean_db();
 }
@@ -571,7 +548,7 @@ sub _clean_db {
 
 }
 
-sub _clean_remote {
+sub clean_remote {
     return if ! -e $FILE_CONFIG_REMOTE;
 
     my $conf;
@@ -585,12 +562,15 @@ sub _clean_remote {
 
         my $node;
         eval { $node = $vm->new(%{$conf->{$vm_name}}) };
-        next if !$node || !$node->is_active;
+        if ( !$node || !$node->is_active ) {
+            $node->remove;
+            next;
+        }
 
         clean_remote_node($node);
-
         _remove_old_domains_vm($node);
         _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
+        $node->remove();
     }
 }
 
@@ -646,7 +626,7 @@ sub search_iptable_remote {
         diag("Skipping search_iptable_remote , no Rex installed");
         return;
     }
-    $node->_connect_rex();
+    return if ! $node->_connect_rex();
     my $remote_ip = delete $args{remote_ip};
     my $local_ip = delete $args{local_ip};
     my $local_port= delete $args{local_port};
@@ -678,9 +658,8 @@ sub search_iptable_remote {
 }
 
 sub _flush_rules_remote($node) {
-    $node->_connect_rex();
-    run("iptables -F $CHAIN");
-    run("iptables -X $CHAIN");
+    $node->run_command("iptables -F $CHAIN");
+    $node->run_command("iptables -X $CHAIN");
 }
 
 sub flush_rules {
