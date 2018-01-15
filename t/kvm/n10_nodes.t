@@ -755,6 +755,21 @@ sub test_shutdown($node) {
     $domain->remove(user_admin);
 }
 
+sub _md5($file, $vm) {
+    if ($vm->is_local) {
+        my  $ctx = Digest::MD5->new;
+        open my $in,'<',$file or die "$! $file";
+        $ctx->addfile($in);
+        return $ctx->hexdigest;
+    } else {
+        my @md5 = $vm->run_command("md5sum $file");
+        my $md5 = $md5[0];
+        chomp $md5;
+        $md5 =~ s/(.*?)\s+.*/$1/;
+        return $md5;
+    }
+}
+
 sub _shutdown_node($node) {
 
     if ($node->is_active) {
