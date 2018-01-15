@@ -12,7 +12,6 @@
             <tr>
             <th><%=l 'Name' %></th>
             <th><%=l 'Host' %></th>
-            <th><%=l 'Security' %></th>
             </tr>
         </thead>
         <tbody>
@@ -20,7 +19,6 @@
             <tr>
                 <td><%= $node->{name} %></td>
                 <td><%= $node->{hostname} %></td>
-                <td><%= $node->{security} %></td>
             </tr>
 %       }
         </tbody>
