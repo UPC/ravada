@@ -707,6 +707,54 @@ sub test_sync_back($node) {
     }
 }
 
+sub test_shutdown($node) {
+
+    my $vm = rvd_back->search_vm($node->type, 'localhost');
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),1);
+
+    my $clone = $domain->clone( name => new_domain_name(), user => user_admin );
+    $clone->migrate($node);
+    my $remote_ip = '1.2.4.5';
+    $clone->start(user => user_admin, remote_ip => $remote_ip);
+    my ($local_ip,$local_port)
+        = $clone->display(user_admin) =~ m{(\d+.\d+\.\d+\.\d+):(\d+)};
+
+    is($clone->remote_ip, $remote_ip);
+
+    if ($clone->type eq 'KVM') {
+        $clone->domain->destroy();
+    } elsif ($clone->type eq 'Void') {
+        $clone->_store(is_active => 0);
+    } else {
+        diag("SKIPPED: I can't test shutdown of ".$node->type." nodes");
+    }
+    is($clone->is_active,0,"[".$clone->type."] Expecting clone ".$clone->name." inactive") or return;
+
+    my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
+
+    for my $file ($clone->list_volumes) {
+        my $md5 = _md5($file, $vm);
+        my $md5_remote = _md5($file, $node);
+        is($md5_remote, $md5);
+    }
+    my @line = search_iptable_remote(
+        node => $node
+        , remote_ip => $remote_ip
+        , local_ip => $local_ip
+        , local_port => $local_port
+    );
+    ok(scalar @line == 0,$node->type." There should be no iptables found"
+        ." $remote_ip -> $local_ip:$local_port ".Dumper(\@line)) or exit;
+
+    $domain->remove(user_admin);
+}
+
 sub _shutdown_node($node) {
 
     if ($node->is_active) {
@@ -830,6 +878,8 @@ SKIP: {
     };
 
     test_sync_back($node);
+
+    test_shutdown($node);
 
     test_domain_ip($vm_name, $node);
 
