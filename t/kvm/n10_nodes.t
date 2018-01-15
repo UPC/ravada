@@ -660,6 +660,36 @@ sub test_prepare_sets_vm {
     $domain->remove(user_admin);
 }
 
+sub test_remove_base($node) {
+
+    my $vm = rvd_back->search_vm($node->type, 'localhost');
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),1);
+
+    $domain->remove_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),0);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+    is($domain->base_in_vm($node->id),1);
+
+    $domain->remove_base_vm(user => user_admin, vm => $vm);
+
+    is($domain->is_base,0);
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),0);
+
+    $domain->remove(user_admin);
+}
+
 sub test_node_inactive {
     my ($vm_name, $node) = @_;
 
@@ -935,6 +965,8 @@ SKIP: {
 
         test_domain_starts_in_same_vm($vm_name, $node);
         test_prepare_sets_vm($vm_name, $node);
+
+    test_remove_base($node);
 
     test_node_inactive($vm_name, $node);
 
