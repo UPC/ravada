@@ -316,7 +316,6 @@ sub _check_require_base {
     }
 
 
-    my $base = $self->search_domain_by_id($args{id_base});
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
