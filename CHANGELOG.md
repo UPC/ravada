@@ -3,24 +3,9 @@
 
 **Implemented enhancements:**
 
-- Show Help buttons for new machine [\#425]
-- New Hindi translation [\#418]
-- New German Translation [\#419]
-- Add Suport for Ubuntu 17.10 Artful Aardvark [\#408]
-- Improved Screenshots rendering [\#408]
-- Mojo::Home::rel_dir is DEPRECATED in favor of Mojo::Home::rel_file [\#229]
-- Add copy & paste integration [\#476]
+- Set a clone screenshot as base picture [\#404]
+- Don't make it base when coping a clone [\#441]
 
 **Fixed bugs:**
 
-- Check route access [\#405]
-- Bad encoding in description tab for VM [\#430]
-- Out of unique uuids in KVM [\#439]
-- Fixed MAC generation [\#443]
-- Error at machine settings graphics [\#443]
-- Debian 9 ISO link is missing after upgrade [\#457]
-- Unsupported machine type [\#390]
-- Check and add graphics params in xml definition [\#473]
-- Public checkbox does nothing [\#472]
-- libvirt error code: 1, message: internal error: client socket is closed [\#493]
-- Downloading ISOs fails Can't locate object method "result" via package Mojo::Transaction::HTTP [\#503]
+- Autostart does not work [\#512]
