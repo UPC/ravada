@@ -27,8 +27,8 @@ has '_ip' => (
 
 our $DIR_TMP = "/var/tmp/rvd_void";
 
-our $IMPORT = `which import`;
-chomp $IMPORT;
+our $CONVERT = `which convert`;
+chomp $CONVERT;
 #######################################3
 
 sub BUILD {
@@ -345,12 +345,12 @@ sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
 
-    my @cmd =($IMPORT,'-window','root'
-        ,'-resize','400x300'
+    my @cmd =($CONVERT,'-size', '400x300', 'xc:white'
         ,$file
     );
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
+    warn $err if $err;
 }
 
 sub _file_screenshot {
@@ -358,7 +358,7 @@ sub _file_screenshot {
     return $DIR_TMP."/".$self->name.".png";
 }
 
-sub can_screenshot { return $IMPORT; }
+sub can_screenshot { return $CONVERT; }
 
 sub get_info {
     my $self = shift;
