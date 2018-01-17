@@ -588,6 +588,12 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
             ."      AND NOT url  like '%*%' "
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Lubuntu Artful%'"
+            ."      AND url NOT LIKE '%*%' "
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Lubuntu Zesty%'"
+
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
