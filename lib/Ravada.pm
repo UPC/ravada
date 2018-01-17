@@ -278,14 +278,6 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
-        ,lubuntu_zesty => {
-            name => 'Lubuntu Zesty Zapus'
-            ,description => 'Lubuntu 17.04 Zesty Zapus 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/lubuntu-17.04-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/MD5SUMS'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-        }
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
