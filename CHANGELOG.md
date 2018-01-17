@@ -9,3 +9,4 @@
 **Fixed bugs:**
 
 - Autostart does not work [\#512]
+- No md5 for lubuntu-17.10 [\#515]
