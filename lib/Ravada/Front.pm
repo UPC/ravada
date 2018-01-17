@@ -118,7 +118,7 @@ sub list_machines_user {
     );
     my ($id, $name, $is_public, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
 
     my @list;
     while ( $sth->fetch ) {
@@ -187,7 +187,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base, id_vm FROM domains ";
+    my $query = "SELECT name, id, id_base, is_base, id_vm, is_active FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -201,15 +201,15 @@ sub list_domains {
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
-        for (qw(is_active is_locked is hibernated is_paused
+        for (qw(is_locked is hibernated is_paused
                 has_clones )) {
             $row->{$_} = 0;
         }
         my $domain ;
+        my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
         warn $@ if $@;
         if ( $domain ) {
-            $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = 1 if $domain->is_hibernated;
             $row->{is_paused} = 1 if $domain->is_paused;
@@ -217,10 +217,11 @@ sub list_domains {
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
             $row->{node} = $domain->_vm->name if $domain->_vm;
         }
         delete $row->{spice_password};
+        warn $row->{name}." ".(time - $t0)."\n"   if time - $t0>0;
         push @domains, ($row);
     }
     $sth->finish;
@@ -637,10 +638,12 @@ sub search_domain {
     if ($row->{id_vm}) {
         my $vm = $self->_vm_id($row->{id_vm});
         confess "VM not found $row->{id_vm} not found"  if !$vm;
-        my $domain = $vm->search_domain($name);#    if $vm;
-        warn "domain $name not found in ".$vm->name." at ".$vm->host
-            if !$domain;
-        return $domain;
+        if ($vm->is_active) {
+            my $domain = $vm->search_domain($name);#    if $vm;
+            warn "domain $name not found in ".$vm->name." at ".$vm->host
+                if !$domain;
+            return $domain;
+        }
     }
     my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
 

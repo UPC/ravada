@@ -467,6 +467,17 @@ sub id {
 sub _data {
     my $self = shift;
     my $field = shift or confess "Missing field name";
+    my $value = shift;
+    if (defined $value) {
+        $self->{_data}->{$field} = $value;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms set $field=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+        return $value;
+    }
 
 #    _init_connector();
 
@@ -618,10 +629,24 @@ sub is_active($self) {
     return 1 if $self->is_local && $self->vm;
     return 0 if $self->is_local && !$self->vm;
 
-    return 0 if !$self->ping();
+    return $self->_cached_active if time - $self->_cached_active_time < 5;
+    my $ret = 0;
+    if ( !$self->ping() ) {
+        $ret = 0;
+    } elsif ( $self->_connect_rex ) {
+        $ret = 1;
+    }
+    $self->_cached_active($ret);
+    $self->_cached_active_time(time);
+    return $ret;
+}
 
-    return 1 if $self->_connect_rex;
-    return 0;
+sub _cached_active($self, $value=undef) {
+    return $self->_data('cached_active', $value);
+}
+
+sub _cached_active_time($self, $value=undef) {
+    return $self->_data('cached_active_time', $value);
 }
 
 sub remove($self) {
