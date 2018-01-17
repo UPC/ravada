@@ -263,8 +263,8 @@ sub _update_isos {
        ,lubuntu_aardvark => {
             name => 'Lubuntu Artful Aardvark'
             ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/lubuntu-17.10-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
