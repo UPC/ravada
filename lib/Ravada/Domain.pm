@@ -204,11 +204,15 @@ sub BUILD {
     my $self = shift;
 
     $self->is_known();
+    $self->_check_clean_shutdown();
+}
+
+sub _check_clean_shutdown($self) {
     if ( $self->is_known
         && !$self->readonly
         && $self->_data('is_active')
         && !$self->is_active ) {
-        $self->_post_shutdown();
+            $self->_post_shutdown();
     }
 }
 
@@ -636,7 +640,9 @@ sub open($class, $id , $readonly = 0) {
     $readonly = 1 if $readonly;
     my $vm = $vm0->new( readonly => $readonly);
 
-    return $vm->search_domain($row->{name});
+    my $domain = $vm->search_domain($row->{name});
+    $domain->_check_clean_shutdown()  if $domain;
+    return $domain;
 }
 
 =head2 is_known
@@ -1957,7 +1963,7 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
         $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
     }
     if ($rsync->err) {
-        $request->status("done",join(" ",@{$rsync->err}));
+        $request->status("done",join(" ",@{$rsync->err}))   if $request;
     }
     $node->refresh_storage_pools();
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
@@ -1968,7 +1974,7 @@ sub _rsync_volumes_back($self, $request=undef) {
     for my $file ( $self->list_volumes() ) {
         $rsync->exec(src => 'root@'.$self->_vm->host.":".$file ,dest => $file );
         if ( $rsync->err ) {
-            $request->status("done",join(" ",@{$rsync->err}));
+            $request->status("done",join(" ",@{$rsync->err}))   if $request;
             last;
         }
     }
