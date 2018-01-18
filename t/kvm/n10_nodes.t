@@ -611,7 +611,7 @@ sub test_domain_already_started {
         my $clone_copy = $node->search_domain($clone->name);
         ok($clone_copy,"[$vm_name] expecting domain ".$clone->name
                         ." in node ".$node->host
-        ) or return;
+        ) or exit;
     }
 
     eval { $clone->start(user_admin) };
@@ -763,6 +763,7 @@ sub test_shutdown($node) {
         diag("SKIPPED: I can't test shutdown of ".$node->type." nodes");
     }
     is($clone->is_active,0,"[".$clone->type."] Expecting clone ".$clone->name." inactive") or return;
+    is($clone->_data('is_active'),1,"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
 
@@ -777,9 +778,10 @@ sub test_shutdown($node) {
         , local_ip => $local_ip
         , local_port => $local_port
     );
-    ok(scalar @line == 0,$node->type." There should be no iptables found"
-        ." $remote_ip -> $local_ip:$local_port ".Dumper(\@line)) or exit;
+    ok(scalar @line == 0,"[".$node->type."] There should be no iptables found"
+        ." $remote_ip -> $local_ip:$local_port ".Dumper(\@line)) ;
 
+    $clone->remove(user_admin);
     $domain->remove(user_admin);
 }
 
@@ -829,11 +831,19 @@ sub _shutdown_node($node) {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
     sleep 2 if !$node->ping;
-    for ( 1 .. 10 ) {
+    for ( 1 .. 20 ) {
         diag("Waiting for node ".$node->name." to be inactive $_");
         last if !$node->ping;
         sleep 1;
     }
+    return if !$node->ping;
+    $node->run_command("init 0");
+    for ( 1 .. 20 ) {
+        diag("Waiting for node ".$node->name." to be inactive $_");
+        last if !$node->ping;
+        sleep 1;
+    }
+
     is($node->ping,0);
 }
 
@@ -968,9 +978,10 @@ SKIP: {
 
     test_node_inactive($vm_name, $node);
 
-#    _start_node($node);
-#    clean_remote_node($node);
-#    remove_node($node);
+    _start_node($node);
+    clean_remote_node($node);
+    remove_node($node);
+    warn "done remove node";
 }
 
 }
