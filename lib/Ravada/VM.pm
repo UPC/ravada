@@ -9,7 +9,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 =cut
 
-use Carp qw( carp croak);
+use Carp qw( carp croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -107,6 +107,9 @@ before 'search_domain' => \&_connect;
 before 'create_volume' => \&_connect;
 
 around 'import_domain' => \&_around_import_domain;
+
+after 'disconnect' => \&_post_disconnect;
+
 #############################################################
 #
 # method modifiers
@@ -230,13 +233,15 @@ sub _connect_rex($self) {
     my $home = $pwd[7];
 
     return $self->{_rex_connection} if exists $self->{_rex_connection}
-        && $self->{_rex_connection}->{conn}->server eq $self->host;
+        && $self->{_rex_connection}->{conn}->server eq $self->host
+        && $self->{_rex_connection}->{conn}->{connected};
 
     if ($REX_CONNECTION{$self->host}) {
         $self->{_rex_connection} = $REX_CONNECTION{$self->host};
-        return $self->{_rex_connection};
+        return $self->{_rex_connection}
+            if $self->{_rex_connection}->{conn}->{connected}
     }
-    warn "connecting to ".$self->host;
+    cluck "connecting to ".$self->host;
     my $connection;
     eval {
         $connection = Rex::connect(
@@ -250,7 +255,20 @@ sub _connect_rex($self) {
     return if !$connection;
     $self->{_rex_connection} = $connection;
     $REX_CONNECTION{$self->host} = $connection;
+    warn "connected";
     return $connection;
+}
+
+sub _post_disconnect($self) {
+    if ($self->{_rex_connection} ) {
+        $self->{_rex_connection}->{conn}->disconnect;
+#        $self->{_rex_connection}->{conn}->disconnect();
+        delete $self->{_rex_connection};
+    }
+    if ( $REX_CONNECTION{$self->host} ) {
+        $REX_CONNECTION{$self->host}->{conn}->disconnect;
+        delete $REX_CONNECTION{$self->host};
+    }
 }
 
 sub _around_create_domain {
@@ -650,6 +668,7 @@ sub _cached_active_time($self, $value=undef) {
 }
 
 sub remove($self) {
+    $self->disconnect();
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($self->id);
 }
