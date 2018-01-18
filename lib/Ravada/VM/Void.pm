@@ -159,7 +159,7 @@ sub _list_domains_remote($self, %args) {
 
     confess "Wrong arguments ".Dumper(\%args) if keys %args;
 
-    my @lines = "ls -1 ".$self->dir_img;
+    my @lines = $self->run_command("ls -1 ".$self->dir_img);
 
     my @domain;
     for my $file (@lines) {
