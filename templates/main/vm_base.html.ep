@@ -31,12 +31,14 @@
                 <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
             </div>
             <div class="col-md-5">
-%           if ($domain->has_clones) {
+%           if ($domain->base_in_vm($node->{id}) && $domain->has_clones) {
                 Base can't be removed because it has clones
-%           } elsif (!$node->{is_active}) {
+%           }
+%           if (!$node->{is_active}) {
                 Node inactive <%= $node->{is_active} %>
 %           }
-            <%= Dumper($node) %>
+            <br/>
+            <pre><%= Dumper($node) %></pre>
             </div>
         </div>
 %   }
