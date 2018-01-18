@@ -562,7 +562,8 @@ sub clean_remote {
 
         my $node;
         eval { $node = $vm->new(%{$conf->{$vm_name}}) };
-        if ( !$node || !$node->is_active ) {
+        next if ! $node;
+        if ( !$node->is_active ) {
             $node->remove;
             next;
         }
@@ -649,7 +650,6 @@ sub search_iptable_remote {
            && exists $args{dport} && defined $local_port && $args{dport} eq $local_port) {
 
             push @found,($count);
-            warn $count." -> ".Dumper($line);
         }
     }
     return @found   if wantarray;
