@@ -227,6 +227,9 @@ sub _pre_create_domain {
 }
 
 sub _connect_rex($self) {
+    confess "Don't connect to local rex"
+        if $self->is_local;
+
     return if !$self->ping();
 
     my @pwd = getpwuid($>);
@@ -241,9 +244,10 @@ sub _connect_rex($self) {
         return $self->{_rex_connection}
             if $self->{_rex_connection}->{conn}->{connected}
     }
-    cluck "connecting to ".$self->host;
     my $connection;
     eval {
+        Rex::Commands::timeout(60);
+        Rex::Commands::max_connect_retries(3);
         $connection = Rex::connect(
             server    => $self->host,
             user      => "root",
@@ -644,8 +648,15 @@ sub ping($self) {
 }
 
 sub is_active($self) {
-    return 1 if $self->is_local && $self->vm;
-    return 0 if $self->is_local && !$self->vm;
+    if ($self->is_local) {
+        my $active = 0;
+        $active=1 if $self->vm;
+
+        # store it anyway for the frontend
+        $self->_cached_active($active);
+        $self->_cached_active_time(time);
+        return $active;
+    }
 
     return $self->_cached_active if time - $self->_cached_active_time < 5;
     my $ret = 0;

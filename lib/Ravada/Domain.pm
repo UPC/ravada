@@ -204,7 +204,8 @@ sub BUILD {
     my $self = shift;
 
     $self->is_known();
-    $self->_check_clean_shutdown();
+    eval { $self->_check_clean_shutdown() };
+#    warn $@ if $@;
 }
 
 sub _check_clean_shutdown($self) {
@@ -291,8 +292,9 @@ sub _start_preconditions{
     return if $self->_search_already_started();
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
-        $self->_set_last_vm(1) or $self->_balance_vm();
-        $self->rsync()  if !$self->_vm->readonly && $self->_vm->host ne 'localhost';
+#        $self->_set_last_vm(1)
+        $self->_balance_vm();
+        $self->rsync()  if !$self->_vm->readonly && !$self->_vm->is_local;
     }
 }
 
@@ -312,6 +314,7 @@ sub _search_already_started($self) {
             $self->_set_vm($vm,'force');
             $self->_update_id_vm();
             $started{$vm->id}++;
+            $domain->_data(is_active => 1 ) if $domain->is_active;
         }
     }
     confess "ERROR: Domain started in ".Dumper(\%started)
@@ -341,7 +344,7 @@ sub _balance_vm($self) {
 
             my $vm_free = Ravada::VM->open($id);
 
-            $self->migrate($vm_free);
+            $self->migrate($vm_free)    if !$vm_free->is_local;
             return $id;
         }
     }
@@ -1296,6 +1299,7 @@ sub _remove_iptables {
     my %rule;
     for my $row ($self->_active_iptables($args->{user})) {
         my ($id, $id_vm, $iptables) = @$row;
+        next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
     for my $id_vm (keys %rule) {
@@ -1348,6 +1352,7 @@ sub _post_start {
     } else {
         %arg = @_;
     }
+    $self->_set_data(is_active => 1);
     $self->_add_iptable(@_);
     $self->_update_id_vm();
 
@@ -1360,7 +1365,6 @@ sub _post_start {
         );
 
     }
-    $self->_set_data(is_active => 1);
 }
 
 sub _update_id_vm($self) {
@@ -1652,6 +1656,7 @@ sub run_timeout {
 
 sub _set_data($self, $field, $value=undef) {
     if (defined $value) {
+        warn $self->name." $field = $value\n";
         my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
                 ." WHERE id=?");
         $sth->execute($value, $self->id);

@@ -74,7 +74,7 @@ chomp $WGET;
 
 our $CACHE_DOWNLOAD = 1;
 
-our $_CREATED_DEFAULT_STORAGE = 0;
+our %_CREATED_DEFAULT_STORAGE = ();
 ##########################################################################
 
 
@@ -119,11 +119,11 @@ sub _connect {
          die $@ if $@ && $@ !~ /libvirt error code: 38/;
          return if !$vm;
     }
-    if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE) {
-	warn "WARNING: No storage pools creating default\n";
+    if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
     }
-    $_CREATED_DEFAULT_STORAGE++;
     $self->_check_networks($vm);
     return $vm;
 }
@@ -498,7 +498,12 @@ sub list_domains {
 
     confess "Missing vm" if !$self->vm;
     my @list;
-    my @domains = $self->vm->list_all_domains();
+    my @domains;
+    if ($active) {
+        @domains = $self->vm->list_domains();
+    } else {
+        @domains = $self->vm->list_all_domains();
+    }
     for my $name (@domains) {
         my $domain ;
         my $id;
@@ -507,9 +512,9 @@ sub list_domains {
                         ,_vm => $self
         );
         next if !$domain->is_known();
-        next if $active && !$domain->is_active;
+#        next if $active && !$domain->is_active;
         $id = $domain->id();
-        warn $@ if $@ && $@ !~ /No DB info/i;
+#        warn $@ if $@ && $@ !~ /No DB info/i;
         push @list,($domain) if $domain && $id;
     }
     return @list;

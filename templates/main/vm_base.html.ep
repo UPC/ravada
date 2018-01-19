@@ -9,16 +9,24 @@
 
 <div class="form-group">
 
-
+has clones = <%= $domain->has_clones %><br/>
     <form class="form-inline" action="<%= $action %>" method="post">
 %   for my $node (@$nodes) {
 %       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
         <div class="row">
             <div class="col-md-1">
-%               my $node_disabled = $domain->is_locked 
-%                   || $domain->has_clones
-%                   || !$node->{is_active}
-%                   || 0;
+%               my $node_disabled_msg = '';
+%               if ( $domain->is_locked) {
+%                   $node_disabled_msg = "Domain ".$domain->name." is locked";
+%               }
+%               if ($domain->has_clones && $local) {
+%                   $node_disabled_msg = "Domain has ".$domain->has_clones." clones in local node";
+%               }
+%               if ( !$node->{is_active} ) {
+%                   $node_disabled_msg = "Node inactive";
+%               }
+%               my $node_disabled = 0;
+%               $node_disabled = 1 if $node_disabled_msg;
                 <input type="checkbox"
                     ng-disabled="<%= $node_disabled %>"
 %           if ($domain->base_in_vm($node->{id})) {
@@ -31,12 +39,7 @@
                 <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
             </div>
             <div class="col-md-5">
-%           if ($domain->base_in_vm($node->{id}) && $domain->has_clones) {
-                Base can't be removed because it has clones
-%           }
-%           if (!$node->{is_active}) {
-                Node inactive <%= $node->{is_active} %>
-%           }
+            node disabled = <%= $node_disabled_msg %>
             <br/>
             <pre><%= Dumper($node) %></pre>
             </div>

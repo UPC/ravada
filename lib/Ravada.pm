@@ -717,6 +717,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','start_time','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -1044,7 +1046,12 @@ sub search_domain($self, $name, $import = 0) {
 
     if ($id_vm) {
         my $vm = Ravada::VM->open($id_vm);
-        return $vm->search_domain($name);
+        if (!$vm->is_active) {
+            warn "Don't search domain $name in inactive VM ".$vm->name;
+            $vm->disconnect();
+        } else {
+            return $vm->search_domain($name);
+        }
     }
     for my $vm (@{$self->vm}) {
         next if !$vm->is_active;
@@ -1349,6 +1356,7 @@ sub process_requests {
     my $short_commands = (shift or 0);
 
     $self->_wait_pids_nohang();
+    $self->_kill_stale_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -1371,7 +1379,8 @@ sub process_requests {
             ||(!$long_commands && $LONG_COMMAND{$req->command})
         ) {
             warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
-                .$req->command  if $debug || $DEBUG;
+                .$req->command
+                    if $debug || $DEBUG;
             next;
         }
         next if $req->command !~ /shutdown/i
@@ -1385,14 +1394,7 @@ sub process_requests {
         $n_retry = 0 if !$n_retry;
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
-        if ($err && $err =~ /libvirt error code: 38/) {
-            if ( $n_retry < 3) {
-                warn $req->id." ".$req->command." to retry" if $DEBUG;
-                $req->status("retry ".++$n_retry)
-            } else {
-                $req->status("done");
-            }
-        }
+        $req->status("done");
         next if !$DEBUG && !$debug;
 
         sleep 1;
@@ -1431,6 +1433,24 @@ sub process_all_requests {
 
     $self->process_requests($debug, $dont_fork,1,1);
 
+}
+
+
+sub _kill_stale_process($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT pid,command,start_time "
+        ." FROM requests "
+        ." WHERE start_time<? "
+        ." AND command = 'refresh_vms'"
+        ." AND status <> 'done' "
+        ." AND pid IS NOT NULL "
+    );
+    $sth->execute(time - 60 );
+    while (my ($pid, $command, $start_time) = $sth->fetchrow) {
+        warn "Killing $command stale for ".time - $start_time." seconds\n";
+        kill (15,$pid);
+    }
+    $sth->finish;
 }
 
 sub _domain_working {
@@ -1503,6 +1523,8 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
+    $request->pid($$);
+    $request->start_time(time);
     $request->error('');
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
@@ -1518,11 +1540,13 @@ sub _execute {
     return if $self->_wait_children($request);
 
     $request->status('working');
+    warn $request->command." forking";
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ( $pid == 0 ) {
-        $self->_do_execute_command($sub, $request) 
+        $self->_do_execute_command($sub, $request);
     } else {
+        $request->pid($pid);
         $self->_add_pid($pid, $request->id);
     }
 #    $self->_connect_vm_kvm();
@@ -1978,6 +2002,61 @@ sub _cmd_refresh_storage($self, $request) {
     $vm->refresh_storage();
 }
 
+sub _cmd_refresh_vms($self, $request) {
+
+    my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
+    $self->_refresh_down_domains($active_domain, $active_vm);
+}
+
+sub _refresh_active_domains($self, $request) {
+    my $id_domain = $request->defined_arg('id_domain');
+
+    my %active_domain;
+    my %active_vm;
+    for my $vm ($self->list_vms) {
+        warn $vm->name." ".$vm->host."\n";
+        if ( !$vm->is_active ) {
+            warn"\t down\n";
+            $active_vm{$vm->id} = 0;
+            $vm->disconnect();
+            next;
+        }
+        $active_vm{$vm->id} = 1;
+        if ($id_domain) {
+            my $domain = $vm->search_domain_by_id($id_domain) or next;
+            my $is_active = $domain->is_active();
+            $domain->_set_data(is_active => $is_active);
+            $active_domain{$domain->id} = $is_active;
+        } else {
+            for my $domain ($vm->list_domains(active => 1)) {
+                my $is_active = $domain->is_active;
+                $domain->_set_data(is_active => $is_active);
+                $active_domain{$domain->id} = $is_active;
+            }
+        }
+        warn "\t checked\n";
+    }
+    return \%active_domain, \%active_vm;
+}
+
+sub _refresh_down_domains($self, $active_domain, $active_vm) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, id_vm FROM domains WHERE is_active=1"
+    );
+    warn "refresh down domains\n";
+    $sth->execute();
+    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+        warn "checking if domain $name is still active\n";
+        next if exists $active_domain->{$id_domain};
+        my $domain = Ravada::Domain->open($id_domain);
+        if (!$active_vm->{$id_vm}) {
+            $domain->_set_data(is_active => 0);
+        } else {
+            $domain->_set_data(is_active => $domain->is_active);
+        }
+    }
+}
+
 sub _cmd_set_base_vm {
     my $self = shift;
     my $request = shift;
@@ -2029,6 +2108,7 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
+,refresh_vms => \&_cmd_refresh_vms
 
     );
     return $methods{$cmd};
