@@ -61,6 +61,7 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
     ,refresh_storage => { id_vm => 2 }
+    ,refresh_vms => { id_domain => 2 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
 );
 
@@ -827,6 +828,29 @@ sub refresh_storage {
 
     return $self->_new_request(
         command => 'refresh_storage'
+        , args => $args
+    );
+
+
+}
+
+=head2 refresh_vms
+
+Refreshes a storage pool
+
+=cut
+
+sub refresh_vms {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_vms', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+        command => 'refresh_vms'
         , args => $args
     );
 
