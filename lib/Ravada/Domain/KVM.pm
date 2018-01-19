@@ -1236,7 +1236,7 @@ sub _find_base {
     run3(\@cmd,\$in, \$out, \$err);
 
     my ($base) = $out =~ m{^backing file: (.*)}mi;
-    die "No base for $file in $out" if !$base;
+    confess "No base for $file in $out" if !$base;
 
     return $base;
 }
@@ -1249,8 +1249,10 @@ Clean swap volumes. It actually just creates an empty qcow file from the base
 
 sub clean_swap_volumes {
     my $self = shift;
+    return if !$self->is_local;
     for my $file ($self->list_volumes) {
         next if $file !~ /\.SWAP\.\w+/;
+        next if ! -e $file;
         my $base = $self->_find_base($file) or next;
 
     	my @cmd = ('qemu-img','create'
