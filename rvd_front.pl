@@ -931,6 +931,7 @@ sub admin {
         $c->stash(list_nodes => [$RAVADA->list_vms]);
     }
     if ($page eq 'machines') {
+        Ravada::Request->refresh_vms();
         $c->stash(hide_clones => 0 );
 
         my $list_domains = $RAVADA->list_domains();
@@ -1412,8 +1413,10 @@ sub settings_machine {
         }
     }
 
+    push @reqs,(Ravada::Request->refresh_vms( id_domain => $domain->id ));
+
     for my $req (@reqs) {
-        $RAVADA->wait_request($req, 60)
+        $RAVADA->wait_request($req, 10)
     }
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
