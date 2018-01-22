@@ -230,6 +230,10 @@ sub _connect_rex($self) {
     confess "Don't connect to local rex"
         if $self->is_local;
 
+    if ( $self->readonly ) {
+        warn $self->name." readonly, don't do rex";
+        return;
+    }
     return if !$self->ping();
 
     my @pwd = getpwuid($>);
