@@ -93,7 +93,9 @@ sub test_start_domain {
     eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
-    ok($domain_f->is_active);# && !$domain_f->is_active);
+
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,1);# && !$domain_f->is_active);
 
 }
 
@@ -135,7 +137,8 @@ sub test_shutdown_domain {
     eval { $domain_b->shutdown(user => $USER,force => 1) };
     ok(!$@,$@);
 
-    ok(!$domain_f->is_active);# && !$domain_f->is_active);
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,0);# && !$domain_f->is_active);
 
 }
 
