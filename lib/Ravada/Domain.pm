@@ -1233,7 +1233,11 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = $arg{timeout};
 
-    $self->_set_data(is_active => 0);
+    $self->_remove_iptables(@_);
+    $self->_data(status => 'shutdown')    if !$self->is_active && !$self->is_volatile;
+    if ($self->id_base()) {
+        $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
+    }
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
     $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
@@ -1241,7 +1245,8 @@ sub _post_shutdown {
     if (defined $timeout) {
         if ($timeout<2 && $self->is_active) {
             sleep $timeout;
-            return $self->_do_force_shutdown() if $self->is_active;
+            $self->_data(status => 'shutdown')    if !$self->is_active;
+            return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
@@ -1376,7 +1381,15 @@ sub _post_start {
     } else {
         %arg = @_;
     }
-    $self->_set_data(is_active => 1);
+
+    $self->_data('status','active') if $self->is_active();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set start_time=? "
+        ." WHERE id=?"
+    );
+    $sth->execute(time, $self->id);
+    $sth->finish;
+
     $self->_add_iptable(@_);
     $self->_update_id_vm();
 
