@@ -271,7 +271,7 @@ sub _remove_old_domains_vm {
         eval { $domain->shutdown_now($USER_ADMIN); };
         warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
 
-        $domain = $vm->search_domain($dom_name);
+        $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
