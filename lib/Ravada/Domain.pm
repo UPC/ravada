@@ -1144,6 +1144,7 @@ sub _post_shutdown {
     my $timeout = $arg{timeout};
 
     $self->_remove_iptables(@_);
+    $self->_data(status => 'shutdown')    if !$self->is_active && !$self->is_volatile;
     if ($self->id_base()) {
         $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
     }
@@ -1152,6 +1153,7 @@ sub _post_shutdown {
     if (defined $timeout && !$self->is_removed) {
         if ($timeout<2 && !$self->is_removed && $self->is_active) {
             sleep $timeout;
+            $self->_data(status => 'shutdown')    if !$self->is_active;
             return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
         }
 
@@ -1270,6 +1272,7 @@ sub _post_start {
         %arg = @_;
     }
 
+    $self->_data('status','active') if $self->is_active();
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set start_time=? "
         ." WHERE id=?"
