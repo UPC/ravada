@@ -2210,7 +2210,7 @@ sub is_local($self) {
     return $self->_vm->is_local();
 }
 
-sub is_volatile($self) {
-    return $self->_data('is_volatile');
+sub is_volatile($self, $value=undef) {
+    return $self->_data('is_volatile', $value);
 }
 1;
