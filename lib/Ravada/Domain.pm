@@ -103,7 +103,7 @@ has 'storage' => (
 has '_vm' => (
     is => 'ro',
     ,isa => 'Object'
-    ,required => 1
+    ,required => 0
 );
 
 has 'tls' => (
