@@ -11,7 +11,6 @@ use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
-
 use Mojo::Home;
 #####
 #my $self->plugin('I18N');
@@ -212,6 +211,7 @@ any '/admin' => sub {
   my $c = shift;
   $c->redirect_to("/admin/machines")
 };
+
 any '/admin/(#type)' => sub {
   my $c = shift;
 
