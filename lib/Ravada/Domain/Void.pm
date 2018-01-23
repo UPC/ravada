@@ -520,4 +520,9 @@ sub migrate($self, $node) {
 
 }
 
+sub is_removed {
+    my $self = shift;
+    return !-e $self->_config_file();
+}
+
 1;

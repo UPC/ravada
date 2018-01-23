@@ -1401,7 +1401,7 @@ sub process_requests {
         $n_retry = 0 if !$n_retry;
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
-        $req->status("done") if $req->status() !~ /retry/;
+#        $req->status("done") if $req->status() !~ /retry/;
         next if !$DEBUG && !$debug;
 
         sleep 1;

@@ -1646,4 +1646,12 @@ sub migrate($self, $node) {
     $self->domain($dom);
 }
 
+sub is_removed($self) {
+    my $is_removed = 0;
+    eval { $self->domain->get_xml_description};
+    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+    die $@ if $@;
+    return 0;
+}
+
 1;
