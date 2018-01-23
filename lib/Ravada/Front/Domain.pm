@@ -10,6 +10,7 @@ Ravada::Front::Domain - Frontent domain information for Ravada
 =cut
 
 use Carp qw(cluck confess croak);
+use JSON::XS;
 use Moose;
 
 no warnings "experimental::signatures";
@@ -45,7 +46,12 @@ sub display($self, $user) {
 }
 
 sub force_shutdown      { confess "TODO" }
-sub get_info            { confess "TODO" }
+
+sub get_info($self) {
+     my $info = $self->_data('info');
+     return {} if !$info;
+     return decode_json($info);
+}
 sub hybernate           { confess "TODO" }
 
 sub is_active($self) {

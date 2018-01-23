@@ -169,6 +169,8 @@ after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
 
+around 'get_info' => \&_around_get_info;
+
 ##################################################
 #
 
@@ -440,6 +442,15 @@ sub _around_display($orig,$self,$user) {
     $self->_data(display => $display);
     return $display;
 }
+
+sub _around_get_info($orig, $self) {
+    my $info = $self->$orig();
+    if (ref($self) =~ /^Ravada::Domain/) {
+        $self->_data(info => encode_json($info));
+    }
+    return $info;
+}
+
 ##################################################################################3
 
 sub _init_connector {
@@ -1291,6 +1302,7 @@ sub _post_start {
         );
 
     }
+    $self->get_info();
 }
 
 sub _add_iptable {
