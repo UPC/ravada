@@ -71,6 +71,7 @@ sub is_paused($self) {
 
 sub is_removed          { confess "TODO" }
 sub list_volumes        { confess "TODO" }
+sub migrate             { confess "TODO" }
 
 sub name($self) {
     return $self->_data('name') 
