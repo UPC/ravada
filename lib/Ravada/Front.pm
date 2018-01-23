@@ -14,6 +14,7 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
+use Ravada::Front::Domain;
 use Ravada::Network;
 
 use feature qw(signatures);
@@ -627,28 +628,8 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT vm, id_owner, id_base, id_vm, description FROM domains WHERE name=?");
-    $sth->execute($name);
+    return Ravada::Front::Domain->search_domain($name);
 
-    my $row = $sth->fetchrow_hashref;
-
-    return if !keys %$row;
-    lock_hash(%$row);
-
-    if ($row->{id_vm}) {
-        my $vm = $self->_vm_id($row->{id_vm});
-        confess "VM not found $row->{id_vm} not found"  if !$vm;
-        if ($vm->is_active) {
-            my $domain = $vm->search_domain($name);#    if $vm;
-            warn "domain $name not found in ".$vm->name." at ".$vm->host
-                if !$domain;
-            return $domain;
-        }
-    }
-    my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
-
-    my $vm = $self->open_vm($vm_name);
-    return $vm->search_domain($name);
 }
 
 sub _vm_id($self, $id) {
@@ -677,13 +658,13 @@ sub list_requests {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":00";
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT requests.id, command, args, date_changed, status"
+        "SELECT requests.id, command, args, date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
             ." ,date_changed "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
-        ."    status <> 'done' "
+        ."    requests.status <> 'done' "
         ."  OR ( command = 'download' AND date_changed >= ?) "
         ." ORDER BY date_changed DESC LIMIT 10"
     );
