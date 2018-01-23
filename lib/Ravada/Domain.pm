@@ -178,6 +178,7 @@ sub BUILD {
     my $self = shift;
     $self->_init_connector();
     $self->is_known();
+
 }
 
 sub _vm_connect {
@@ -1155,7 +1156,7 @@ sub _post_shutdown {
     my $timeout = $arg{timeout};
 
     $self->_remove_iptables(@_);
-    $self->_data(status => 'shutdown')    if !$self->is_active && !$self->is_volatile;
+    $self->_data(status => 'shutdown')    if !$self->is_volatile && !$self->is_active;
     if ($self->id_base()) {
         $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
     }
@@ -1252,7 +1253,6 @@ sub _remove_temporary_machine {
     my %args = @_;
     my $user = delete $args{user} or confess "ERROR: Missing user";
 
-    if ($self->is_volatile) {
 #        return $self->_after_remove_domain() if !$self->is_known();
         my $req= $args{request};
         $req->status(
@@ -1267,7 +1267,6 @@ sub _remove_temporary_machine {
         } else {
             $self->remove($user);
         }
-    }
 }
 
 sub _post_resume {
