@@ -2032,12 +2032,19 @@ sub _refresh_active_domains($self, $request) {
         if ($id_domain) {
             my $domain = $vm->search_domain_by_id($id_domain) or next;
             my $is_active = $domain->is_active();
-            $domain->_set_data(is_active => $is_active);
+
+            my $status = 'shutdown';
+            $status = 'active'      if $is_active;
+
+            $domain->_set_data(status => $status);
             $active_domain{$domain->id} = $is_active;
         } else {
             for my $domain ($vm->list_domains(active => 1)) {
                 my $is_active = $domain->is_active;
-                $domain->_set_data(is_active => $is_active);
+
+                my $status = 'shutdown';
+                $status = 'active'      if $is_active;
+                $domain->_set_data(status => $status);
                 $active_domain{$domain->id} = $is_active;
             }
         }
@@ -2057,9 +2064,9 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
         next if exists $active_domain->{$id_domain};
         my $domain = Ravada::Domain->open($id_domain);
         if (!$active_vm->{$id_vm}) {
-            $domain->_set_data(is_active => 0);
+            $domain->_set_data(status => 'shutdown');
         } else {
-            $domain->_set_data(is_active => $domain->is_active);
+            $domain->_set_data(status => 'active');
         }
     }
 }

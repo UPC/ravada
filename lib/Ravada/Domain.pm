@@ -213,7 +213,7 @@ sub BUILD {
 sub _check_clean_shutdown($self) {
     if ( $self->is_known
         && !$self->readonly
-        && $self->_data('is_active')
+        && $self->_data('status') eq 'active'
         && !$self->is_active ) {
             $self->_post_shutdown();
     }
