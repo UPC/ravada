@@ -1775,7 +1775,8 @@ sub drivers {
     my $self = shift;
     my $name = shift;
     my $type = shift;
-    $type = $self->_vm->type   if $self && !$type;
+    $type = $self->type         if $self && !$type;
+    $type = $self->_vm->type    if $self && !$type;
 
     _init_connector();
 
@@ -1957,12 +1958,7 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    my ($type) = ref $self =~ m{.*::(.*)};
-
-    if (!$type) {
-        ($type) = $self =~ m{.*::(.*?)=};
-    }
-    return $type;
+    return $self->_data('vm');
 }
 
 =head2 rsync
