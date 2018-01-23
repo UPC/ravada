@@ -83,7 +83,10 @@ sub remove {
     $self->remove_disks();
 }
 
-sub is_hibernated { return 0 }
+sub is_hibernated {
+    my $self = shift;
+    return $self->_value('is_hibernated');
+}
 
 sub is_paused {
     my $self = shift;
@@ -470,7 +473,15 @@ sub clean_swap_volumes {
     }
 }
 
-sub hybernate { confess "Not supported"; }
+sub hybernate {
+    my $self = shift;
+    $self->_store(is_hibernated => 1);
+}
+
+sub hibernate {
+    my $self= shift;
+    $self->hybernate( @_ );
+}
 
 sub type { 'Void' }
 
