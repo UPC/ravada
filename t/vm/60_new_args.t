@@ -215,7 +215,9 @@ sub test_args {
     {
         my $domain = test_req_create_domain($vm_name, $memory, $disk, "Request");
         test_memory($vm_name, $domain, $memory, "Request") if $domain;
-        test_disk($vm_name, $domain, $disk)     if $domain;
+
+        my $domain_backend = rvd_back->search_domain($domain->name);
+        test_disk($vm_name, $domain_backend, $disk)     if $domain_backend;
     }
 }
 
