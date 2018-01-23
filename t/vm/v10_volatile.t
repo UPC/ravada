@@ -101,8 +101,7 @@ sub test_volatile {
     my $domain2 = $vm->search_domain($name);
     ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
 
-    my $domain_f = rvd_front->search_domain($name);
-    ok(!$domain_f,"[$vm_name] Expecting domain removed after shutdown");
+    is(rvd_front->domain_exists($name),0,"[$vm_name] Expecting domain removed after shutdown");
 
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
