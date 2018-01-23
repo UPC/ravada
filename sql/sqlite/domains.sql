@@ -15,6 +15,9 @@ CREATE TABLE `domains` (
 ,  `spice_password` char(20) DEFAULT NULL
 ,  `description` text
 ,  `start_time` integer not null default 0
+,  `status` varchar(32) default 'shutdown'
+,  `display` varchar(128) default NULL
+,  `info` varchar(255) default NULL
 ,  UNIQUE (`id_base`,`name`)
 ,  UNIQUE (`name`)
 );

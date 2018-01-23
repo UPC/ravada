@@ -103,7 +103,7 @@ has 'storage' => (
 has '_vm' => (
     is => 'ro',
     ,isa => 'Object'
-    ,required => 1
+    ,required => 0
 );
 
 has 'tls' => (
@@ -128,7 +128,7 @@ has 'description' => (
 # Method Modifiers
 #
 
-before 'display' => \&_allowed;
+around 'display' => \&_around_display;
 
 around 'add_volume' => \&_around_add_volume;
 
@@ -146,7 +146,7 @@ before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
 
 before 'hybernate' => \&_allow_manage;
- after 'hybernate' => \&_post_pause;
+ after 'hybernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
@@ -168,6 +168,8 @@ before 'clone' => \&_pre_clone;
 after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
+
+around 'get_info' => \&_around_get_info;
 
 ##################################################
 #
@@ -433,6 +435,22 @@ sub _allowed {
     confess $err if $err;
 
 }
+
+sub _around_display($orig,$self,$user) {
+    $self->_allowed($user);
+    my $display = $self->$orig($user);
+    $self->_data(display => $display);
+    return $display;
+}
+
+sub _around_get_info($orig, $self) {
+    my $info = $self->$orig();
+    if (ref($self) =~ /^Ravada::Domain/) {
+        $self->_data(info => encode_json($info));
+    }
+    return $info;
+}
+
 ##################################################################################3
 
 sub _init_connector {
@@ -455,12 +473,23 @@ sub id {
 
 ##################################################################################
 
-sub _data {
-    my $self = shift;
-    my $field = shift or confess "Missing field name";
+sub _data($self, $field, $value=undef) {
 
     _init_connector();
 
+    if (defined $value) {
+        confess "Domain ".$self->name." is not in the DB"
+            if !$self->is_known();
+
+        confess "ERROR: Invalid field '$field'"
+            if $field !~ /^[a-z]+[a-z0-9]*$/;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE domains set $field=? WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+        $self->{_data}->{$field} = $value;
+    }
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
 
@@ -1090,6 +1119,12 @@ sub _post_pause {
     my $self = shift;
     my $user = shift;
 
+    $self->_data(status => 'paused');
+    $self->_remove_iptables(user => $user);
+}
+
+sub _post_hibernate($self, $user) {
+    $self->_data(status => 'hibernated');
     $self->_remove_iptables(user => $user);
 }
 
@@ -1120,6 +1155,7 @@ sub _post_shutdown {
     my $timeout = $arg{timeout};
 
     $self->_remove_iptables(@_);
+    $self->_data(status => 'shutdown')    if !$self->is_active && !$self->is_volatile;
     if ($self->id_base()) {
         $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
     }
@@ -1128,6 +1164,7 @@ sub _post_shutdown {
     if (defined $timeout && !$self->is_removed) {
         if ($timeout<2 && !$self->is_removed && $self->is_active) {
             sleep $timeout;
+            $self->_data(status => 'shutdown')    if !$self->is_active;
             return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
         }
 
@@ -1246,6 +1283,7 @@ sub _post_start {
         %arg = @_;
     }
 
+    $self->_data('status','active') if $self->is_active();
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set start_time=? "
         ." WHERE id=?"
@@ -1264,6 +1302,7 @@ sub _post_start {
         );
 
     }
+    $self->get_info();
 }
 
 sub _add_iptable {
@@ -1569,7 +1608,8 @@ sub drivers {
     my $self = shift;
     my $name = shift;
     my $type = shift;
-    $type = $self->_vm->type   if $self && !$type;
+    $type = $self->type         if $self && !$type;
+    $type = $self->_vm->type    if $self && !$type;
 
     _init_connector();
 
@@ -1740,8 +1780,7 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    my ($type) = $self =~ m{.*::(.*)};
-    return $type;
+    return $self->_data('vm');
 }
 
 sub file_screenshot($self) {

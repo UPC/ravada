@@ -149,6 +149,8 @@ sub _around_create_domain {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)    if $user->is_temporary();
 
+    $domain->get_info();
+
     return $domain;
 }
 

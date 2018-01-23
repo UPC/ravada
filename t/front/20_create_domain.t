@@ -133,6 +133,8 @@ for my $vm_name ('Void','KVM','LXC') {
     ok(!$req->error,"[$vm_name] Request start domain expecting no error, got '".$req->error
         ."'") or exit;
 
+    $domain  = $RVD_FRONT->search_domain($name);
+    is($domain->_data('status'),'active',$domain->name." status");
     ok($domain->is_active,"[$vm_name] Expecting domain $name active, got ".$domain->is_active)
         or exit;
 
