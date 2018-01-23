@@ -152,7 +152,7 @@ has 'description' => (
 # Method Modifiers
 #
 
-before 'display' => \&_allowed;
+around 'display' => \&_around_display;
 
 around 'add_volume' => \&_around_add_volume;
 
@@ -573,6 +573,13 @@ sub _allowed {
 
     confess $err if $err;
 
+}
+
+sub _around_display($orig,$self,$user) {
+    $self->_allowed($user);
+    my $display = $self->$orig($user);
+    $self->_data(display => $display);
+    return $display;
 }
 ##################################################################################3
 
