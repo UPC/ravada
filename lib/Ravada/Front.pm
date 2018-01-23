@@ -263,7 +263,10 @@ sub domain_exists {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM domains "
-        ." WHERE name=?"
+        ." WHERE name=? "
+        ."    AND ( is_volatile = 0 "
+        ."          OR is_volatile=1 AND status = 'active' "
+        ."         ) "
     );
     $sth->execute($name);
     my ($id) = $sth->fetchrow;
