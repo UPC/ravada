@@ -188,7 +188,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base, id_vm, is_active FROM domains ";
+    my $query = "SELECT name, id, id_base, is_base, id_vm, status FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -212,8 +212,9 @@ sub list_domains {
         warn $@ if $@;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = 1 if $domain->is_hibernated;
-            $row->{is_paused} = 1 if $domain->is_paused;
+            $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
+            $row->{is_paused} = 1 if $row->{status} eq 'paused';
+            $row->{is_active} = 1 if $row->{status} eq 'active';
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
@@ -297,7 +298,7 @@ Returns a list of Virtual Managers
 
 sub list_vms($self, $type=undef) {
 
-    my $sql = "SELECT id,name,hostname,cached_active FROM vms ";
+    my $sql = "SELECT id,name,hostname,status FROM vms ";
 
     my @args = ();
     if ($type) {
@@ -311,7 +312,8 @@ sub list_vms($self, $type=undef) {
 
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
-        $row->{is_active} = $row->{cached_active};
+        $row->{is_active} = 0;
+        $row->{is_active} = 1 if $row->{status} eq 'active';
         my $vm = $self->_vm_id($row->{id});
         $self->_list_bases_vm($row);
         lock_hash(%$row);
