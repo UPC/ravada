@@ -36,7 +36,7 @@
                             ng-click="domain_remove=0"
                         >No</a>
                         <a type="button" class="btn btn-warning"
-                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;"
+                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;" onclick = "location='http://127.0.0.1:3000/admin/machines'"
                             >Yes, remove {{showmachine.name}}</a>
            </div><!-- del domain remove -->
 

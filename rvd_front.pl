@@ -208,10 +208,6 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/admin' => sub {
-  my $c = shift;
-  $c->redirect_to("/admin/machines")
-};
 any '/admin/(#type)' => sub {
   my $c = shift;
 
