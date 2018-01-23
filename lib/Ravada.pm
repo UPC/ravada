@@ -715,6 +715,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','cached_active',"integer DEFAULT 0");
     $self->_upgrade_table('vms','cached_active_time',"integer DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
+    $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');

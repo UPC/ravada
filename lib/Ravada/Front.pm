@@ -298,7 +298,7 @@ Returns a list of Virtual Managers
 
 sub list_vms($self, $type=undef) {
 
-    my $sql = "SELECT id,name,hostname,status FROM vms ";
+    my $sql = "SELECT id,name,hostname,is_active FROM vms ";
 
     my @args = ();
     if ($type) {
@@ -312,8 +312,6 @@ sub list_vms($self, $type=undef) {
 
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
-        $row->{is_active} = 0;
-        $row->{is_active} = 1 if $row->{status} eq 'active';
         my $vm = $self->_vm_id($row->{id});
         $self->_list_bases_vm($row);
         lock_hash(%$row);

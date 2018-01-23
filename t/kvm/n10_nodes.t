@@ -763,7 +763,7 @@ sub test_shutdown($node) {
         diag("SKIPPED: I can't test shutdown of ".$node->type." nodes");
     }
     is($clone->is_active,0,"[".$clone->type."] Expecting clone ".$clone->name." inactive") or return;
-    is($clone->_data('is_active'),1,"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
+    is($clone->_data('status'),'active',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
 
