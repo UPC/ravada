@@ -316,7 +316,10 @@ sub _search_already_started($self) {
             $self->_set_vm($vm,'force');
             $self->_update_id_vm();
             $started{$vm->id}++;
-            $domain->_data(is_active => 1 ) if $domain->is_active;
+
+            my $status = 'shutdown';
+            $status = 'active'  if $domain->is_active;
+            $domain->_data(status => $status);
         }
     }
     confess "ERROR: Domain started in ".Dumper(\%started)
@@ -2205,8 +2208,8 @@ sub base_in_vm($self,$id_vm) {
     $sth->execute($self->id, $id_vm);
     my ( $enabled ) = $sth->fetchrow;
     $sth->finish;
-    return 1 if !defined $enabled
-        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
+#    return 1 if !defined $enabled
+#        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
     return $enabled;
 }
 
