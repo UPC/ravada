@@ -284,6 +284,7 @@ sub _around_create_domain {
     my $self = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
     $self->_pre_create_domain(@_);
 
     my $domain = $self->$orig(@_);
