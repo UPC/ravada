@@ -2209,4 +2209,8 @@ Returns wether this domain is in the local host
 sub is_local($self) {
     return $self->_vm->is_local();
 }
+
+sub is_volatile($self) {
+    return $self->_data('is_volatile');
+}
 1;
