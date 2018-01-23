@@ -603,12 +603,23 @@ sub id {
 
 ##################################################################################
 
-sub _data {
-    my $self = shift;
-    my $field = shift or confess "Missing field name";
+sub _data($self, $field, $value=undef) {
 
     _init_connector();
 
+    if (defined $value) {
+        confess "Domain ".$self->name." is not in the DB"
+            if !$self->is_known();
+
+        confess "ERROR: Invalid field '$field'"
+            if $field !~ /^[a-z]+[a-z0-9]*$/;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE domains set $field=? WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+        $self->{_data}->{$field} = $value;
+    }
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
 
