@@ -170,7 +170,7 @@ before 'pause' => \&_allow_manage;
  after 'pause' => \&_post_pause;
 
 before 'hybernate' => \&_allow_manage;
- after 'hybernate' => \&_post_pause;
+ after 'hybernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
@@ -1205,6 +1205,12 @@ sub _post_pause {
     my $self = shift;
     my $user = shift;
 
+    $self->_data(status => 'paused');
+    $self->_remove_iptables(user => $user);
+}
+
+sub _post_hibernate($self, $user) {
+    $self->_data(status => 'hibernated');
     $self->_remove_iptables(user => $user);
 }
 
