@@ -127,7 +127,7 @@ has 'storage' => (
 has '_vm' => (
     is => 'rw',
     ,isa => 'Object'
-    ,required => 1
+    ,required => 0
 );
 
 has 'tls' => (
