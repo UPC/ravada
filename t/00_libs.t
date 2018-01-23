@@ -8,6 +8,7 @@ use_ok('Ravada::Auth::LDAP');
 use_ok('Ravada::Auth::SQL');
 use_ok('Ravada::VM');
 use_ok('Ravada::Domain');
+use_ok('Ravada::Front::Domain');
 
 my @vms = 'Void';
 
