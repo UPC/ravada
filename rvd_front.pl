@@ -1069,7 +1069,8 @@ sub provision {
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
 
-    my $domain = $RAVADA->search_domain($name);
+    my $domain;
+    $domain = $RAVADA->search_domain($name) if $RAVADA->domain_exists($name);
     return $domain if $domain && !$domain->is_base;
 
     if ($domain) {
