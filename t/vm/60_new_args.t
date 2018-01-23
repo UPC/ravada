@@ -81,8 +81,7 @@ sub test_create_fail {
 
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
-    my $domain2 = rvd_front()->search_domain($name);
-    ok(!$domain,"Expecting doesn't exists domain '$name'");
+    is(rvd_front->domain_exists,0,"Expecting doesn't exists domain '$name'");
 
 }
 
