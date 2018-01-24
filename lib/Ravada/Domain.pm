@@ -1289,7 +1289,7 @@ sub _post_shutdown_now {
     my $self = shift;
     my $user = shift;
 
-    $self->_post_shutdown(user => $user);
+    $self->_post_shutdown(user => $user)    if $self->is_known();
 }
 
 =head2 can_hybernate
@@ -1389,7 +1389,6 @@ sub _remove_temporary_machine {
         } else {
             $self->remove($user);
         }
-    $self->remove($user) if $user->is_temporary;
 }
 
 sub _post_resume {
