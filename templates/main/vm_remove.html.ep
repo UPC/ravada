@@ -40,7 +40,7 @@
                             >Yes, remove {{showmachine.name}}</a>
            </div><!-- del domain remove -->
 
-            <div ng-show="domain_remove_clones">
+           <div ng-show="domain_remove_clones">
                         <b>Danger</b>.
                         This will remove all the {{showmachine.has_clones}} clones of the
                         machine <i><%= $domain->name %></i>.
