@@ -626,7 +626,7 @@ sub _data($self, $field, $value=undef) {
             if !$self->is_known();
 
         confess "ERROR: Invalid field '$field'"
-            if $field !~ /^[a-z]+[a-z0-9]*$/;
+            if $field !~ /^[a-z]+[a-z0-9_]*$/;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains set $field=? WHERE id=?"
         );
