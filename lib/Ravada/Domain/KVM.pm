@@ -511,9 +511,10 @@ sub start {
         %arg = @_;
     }
 
-    my $set_password=0;
+    my $set_password=1;
     my $remote_ip = $arg{remote_ip};
     if ($remote_ip) {
+        $remote_ip = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
     }
