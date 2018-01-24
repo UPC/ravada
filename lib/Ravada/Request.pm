@@ -11,6 +11,7 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
+use Date::Calc qw(Today_and_Now);
 use JSON::XS;
 use Hash::Util;
 use Ravada;
@@ -849,6 +850,18 @@ sub refresh_vms {
     my $self = {};
     bless($self,$class);
 
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id, date_changed FROM requests WHERE command = 'refresh_vms' "
+        ." AND date_changed > ? "
+    );
+
+    my @now = Today_and_Now();
+    $now[4]-- if $now[4] >1 ;
+    my $before = "$now[0]-$now[1]-$now[2] $now[3]:$now[4]:$now[5]";
+    $sth->execute($before);
+    my ($id, $date) = $sth->fetchrow;
+    return if $id;
     return $self->_new_request(
         command => 'refresh_vms'
         , args => $args
