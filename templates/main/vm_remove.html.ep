@@ -50,7 +50,7 @@
                             ng-click="domain_remove_clones=0"
                         >No</a>
                         <a type="button" class="btn btn-warning"
-                            ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='http://127.0.0.1:3000/admin'"
+                            ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/admin'"
                             >Yes, remove all the clones</a>
            </div><!-- del domain remove clones-->
 
