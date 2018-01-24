@@ -169,7 +169,7 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm;
+            $vm->vm if $vm->ping;
         }
     }
     for (;;) {
