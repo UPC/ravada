@@ -32,7 +32,10 @@ our $CONNECTOR = \$Ravada::Front::CONNECTOR;
 
 sub BUILD($self, $arg) {
     my $id = $arg->{id} or confess "ERROR: id required";
-    return $self->_select_domain_db( id => $id);
+    my $ret = $self->_select_domain_db( id => $id);
+
+    die "ERROR: Domain '".$self->name." not found "
+        if $self->is_volatile && ! $self->is_active;
 }
 
 sub _do_force_shutdown  { confess "TODO" }
