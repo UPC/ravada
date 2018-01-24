@@ -1,13 +1,13 @@
 
         <div class="panel-body nav--danger">
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
-
                 <div class="panel-heading">
                     This virtual machine can't be removed because it
                     has {{showmachine.has_clones}} clones.
                 </div>
             </div>
-            <div ng-show="!domain_remove_done">       
+
+            <div ng-show="!domain_remove_done">          
                 <h2 class="Subhead-heading">
                 Danger Zone
                 </h2>
@@ -49,8 +49,7 @@
                         <a type="button" class="btn btn-danger"
                             ng-click="domain_remove_clones=0"
                         >No</a>
-                        <a type="button" class="btn btn-warning"
-                            ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/admin'"
+                        <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/admin'"
                             >Yes, remove all the clones</a>
            </div><!-- del domain remove clones-->
 

@@ -28,6 +28,7 @@
         </div>
         <input type="submit" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
         >
+		
         <button type="reset">Cancel</button>
     </form>
                         <div class="form-group has-error">
