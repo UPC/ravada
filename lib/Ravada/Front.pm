@@ -196,11 +196,11 @@ sub list_domains {
     my $where = '';
     for my $field ( sort keys %args ) {
         $where .= " AND " if $where;
-        $where .= " $field=?"
+        $where .= " d.$field=?"
     }
     $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY name");
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.name");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
