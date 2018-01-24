@@ -7,8 +7,7 @@
                     has {{showmachine.has_clones}} clones.
                 </div>
             </div>
-            <div ng-show="!domain_remove_done">
-                
+            <div ng-show="!domain_remove_done">       
                 <h2 class="Subhead-heading">
                 Danger Zone
                 </h2>
