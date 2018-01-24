@@ -188,7 +188,10 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base, id_vm, status FROM domains ";
+    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status "
+        ."      ,vms.name as node "
+        ." FROM domains d LEFT JOIN vms "
+        ."  ON d.id_vm = vms.id ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
