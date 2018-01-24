@@ -268,6 +268,12 @@ sub _connect_rex($self) {
 }
 
 sub _post_disconnect($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set status='down' WHERE id_vm=? AND status='active'"
+    );
+    $sth->execute($self->id);
+    $sth->finish;
+
     if ($self->{_rex_connection} ) {
         $self->{_rex_connection}->{conn}->disconnect;
 #        $self->{_rex_connection}->{conn}->disconnect();
@@ -681,7 +687,7 @@ sub is_active($self) {
 }
 
 sub _cached_active($self, $value=undef) {
-    return $self->_data('cached_active', $value);
+    return $self->_data('is_active', $value);
 }
 
 sub _cached_active_time($self, $value=undef) {
