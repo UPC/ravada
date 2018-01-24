@@ -273,6 +273,7 @@ get '/list_machines.json' => sub {
     my $c = shift;
 
     return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
+    my $req = Ravada::Request->refresh_vms();
     $c->render(json => $RAVADA->list_domains);
 };
 
