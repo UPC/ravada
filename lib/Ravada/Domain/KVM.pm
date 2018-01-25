@@ -469,8 +469,7 @@ Returns the display URI
 
 =cut
 
-sub display {
-    my $self = shift;
+sub display($self, $user) {
 
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics')
@@ -480,8 +479,9 @@ sub display {
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
 
-    die "Unable to get port for domain ".$self->name." ".$graph->toString
-        if !$port;
+    if ( !$port ) {
+        $port = '';
+    }
 
     return "$type://$address:$port";
 }
@@ -510,17 +510,25 @@ sub start {
     if (!(scalar(@_) % 2))  {
         %arg = @_;
     }
+    my $remote_ip = delete $arg{remote_ip};
+
+    $self->_set_spice_settings($remote_ip);
+#    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
+    $self->domain->create();
+}
+
+sub _set_spice_settings($self, $remote_ip=undef) {
+
+    # there is no point to set the password if already active
+    return if $self->is_active();
 
     my $set_password=1;
-    my $remote_ip = $arg{remote_ip};
     if ($remote_ip) {
-        $remote_ip = 0;
+        $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
-#    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
-    $self->domain->create();
 }
 
 sub _pre_shutdown_domain {
@@ -1182,15 +1190,13 @@ sub spinoff_volumes {
 }
 
 
-sub _set_spice_ip {
-    my $self = shift;
-    my $set_password = shift;
+sub _set_spice_ip($self, $set_password, $ip=undef) {
 
     my $doc = XML::LibXML->load_xml(string
-                            => $self->domain->get_xml_description) ;
+                            => $self->domain->get_xml_description);
     my @graphics = $doc->findnodes('/domain/devices/graphics');
 
-    my $ip = $self->_vm->ip();
+    $ip = $self->_vm->ip()  if !defined $ip;
 
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
@@ -1631,20 +1637,27 @@ sub _check_machine($self,$doc) {
 }
 
 sub migrate($self, $node) {
-    my $xml = $self->domain->get_xml_description();
-
-    my $doc = XML::LibXML->load_xml(string => $xml);
-    $self->_check_uuid($doc, $node);
-    $self->_check_machine($doc);
-
-    $self->rsync($node);
-
     my $dom;
     eval { $dom = $node->vm->get_domain_by_name($self->name) };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
-    $dom = $node->vm->define_domain($doc->toString())   if !$dom;
 
-    $self->domain($dom);
+    if ($dom) {
+        #dom already in remote node
+        $self->domain($dom);
+    } else {
+        my $xml = $self->domain->get_xml_description();
+
+        my $doc = XML::LibXML->load_xml(string => $xml);
+        $self->_check_uuid($doc, $node);
+        $self->_check_machine($doc);
+        $dom = $node->vm->define_domain($doc->toString());
+        $self->domain($dom);
+    }
+    $self->_set_spice_ip(1,$node->ip);
+
+    $self->rsync($node);
+
+
 }
 
 sub is_removed($self) {
