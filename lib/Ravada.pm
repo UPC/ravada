@@ -711,8 +711,6 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
-    $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
-    $self->_upgrade_table('vms','cached_active',"integer DEFAULT 0");
     $self->_upgrade_table('vms','cached_active_time',"integer DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
@@ -2031,7 +2029,7 @@ sub _refresh_active_domains($self, $request) {
         }
         $active_vm{$vm->id} = 1;
         if ($id_domain) {
-            my $domain = $vm->search_domain_by_id($id_domain) or next;
+            my $domain = $vm->search_domain_by_id($id_domain);
             my $is_active = $domain->is_active();
 
             my $status = 'shutdown';
@@ -2040,7 +2038,7 @@ sub _refresh_active_domains($self, $request) {
             $domain->_set_data(status => $status);
             $active_domain{$domain->id} = $is_active;
         } else {
-            for my $domain ($vm->list_domains(active => 1)) {
+            for my $domain ($vm->list_domains()) {
                 my $is_active = $domain->is_active;
 
                 my $status = 'shutdown';
@@ -2049,7 +2047,6 @@ sub _refresh_active_domains($self, $request) {
                 $active_domain{$domain->id} = $is_active;
             }
         }
-        warn "\t checked\n";
     }
     return \%active_domain, \%active_vm;
 }
@@ -2061,13 +2058,18 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     warn "refresh down domains\n";
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
-        warn "checking if domain $name is still active\n";
+        warn "checking if domain $name [$id_domain, $id_vm] is still active "
+            ."\n\tactive_do = ".($active_domain->{$id_domain} or '<UNDEF>')
+            ."\n\tactive_vm = ".($active_vm->{$id_vm} or '<UNDEF>')
+            ."\n";
         next if exists $active_domain->{$id_domain};
         my $domain = Ravada::Domain->open($id_domain);
         if (!$active_vm->{$id_vm}) {
             $domain->_set_data(status => 'shutdown');
         } else {
-            $domain->_set_data(status => 'active');
+            my $status = 'down';
+            $status = 'active' if $domain->is_active;
+            $domain->_set_data(status => $status);
         }
     }
 }
