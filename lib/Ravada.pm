@@ -1422,7 +1422,6 @@ sub process_long_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    $self->_disconnect_vm();
     return $self->process_requests($debug, $dont_fork, 1);
 }
 

@@ -153,8 +153,8 @@ sub test_volatile_auto_kvm {
           user => $user
         , name => $name
     );
-    is($clone->is_active,1,"[$vm_name] Expecting clone active");
     $clone->start($user)                if !$clone->is_active;
+    is($clone->is_active,1,"[$vm_name] Expecting clone active");
 
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
@@ -164,10 +164,14 @@ sub test_volatile_auto_kvm {
 
     $clone->domain->destroy();
     $clone=undef;
-
     my $vm = rvd_back->search_vm($vm_name);
-    my $domain2 = $vm->search_domain($name);
-    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
+    my $domain2;
+    for ( 1 .. 10 ) {
+        $domain2 = $vm->search_domain($name);
+        last if !$domain2;
+        sleep 1;
+    }
+    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown");
 
     my $domain_f;
     $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
@@ -190,6 +194,7 @@ sub test_volatile_auto_kvm {
     isnt($clone2->spice_password, $spice_password
             ,"[$vm_name] Expecting spice password different")   if $clone2;
 
+    $clone2->start(user_admin)  if !$clone2->is_active;
     is($clone2->is_active,1,"[$vm_name] Expecting clone active");
 
     my $clone3= $vm->search_domain($name);

@@ -1253,12 +1253,11 @@ sub _post_shutdown {
         && !$self->is_volatile
         && !$self->is_active;
 
-    if ($self->id_base()) {
-        $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
+    if ($self->id_base() && !$self->is_removed && !$self->is_volatile && !$self->is_active ) {
+        $self->clean_swap_volumes(@_)
     }
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
-    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
 
     if (defined $timeout) {
         if ($timeout<2 && $self->is_active) {
@@ -1275,7 +1274,8 @@ sub _post_shutdown {
     }
     my $request;
     $request = $arg{request} if exists $arg{request};
-    $self->_rsync_volumes_back( $request ) if !$self->is_local && !$self->is_active;
+    $self->_rsync_volumes_back( $request )
+        if !$self->is_local && !$self->is_active && !$self->is_volatile;
 
 }
 

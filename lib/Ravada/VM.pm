@@ -277,7 +277,6 @@ sub _post_disconnect($self) {
     $sth->finish;
 
     if ( my $con = Rex::Commands::connection() ) {
-        warn "disconnecting ".$con->server;
         Rex::Commands::connection->disconnect();
     }
     if ($self->{_rex_connection} ) {
