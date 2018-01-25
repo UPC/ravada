@@ -39,6 +39,8 @@ eval {
 
     require Rex::Commands::File;
     Rex::Commands::File->import();
+
+    require Rex::Commands;
 };
 our $REX_ERROR = $@;
 warn $REX_ERROR if $REX_ERROR;
@@ -263,17 +265,21 @@ sub _connect_rex($self) {
     return if !$connection;
     $self->{_rex_connection} = $connection;
     $REX_CONNECTION{$self->host} = $connection;
-    warn "connected";
     return $connection;
 }
 
 sub _post_disconnect($self) {
+    return if $self->is_local;
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set status='down' WHERE id_vm=? AND status='active'"
     );
     $sth->execute($self->id);
     $sth->finish;
 
+    if ( my $con = Rex::Commands::connection() ) {
+        warn "disconnecting ".$con->server;
+        Rex::Commands::connection->disconnect();
+    }
     if ($self->{_rex_connection} ) {
         $self->{_rex_connection}->{conn}->disconnect;
 #        $self->{_rex_connection}->{conn}->disconnect();

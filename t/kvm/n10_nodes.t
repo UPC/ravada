@@ -394,7 +394,6 @@ sub test_start_twice {
         die "test_start_twice not available on $vm_name";
     }
 
-    warn "going to start ".$clone->name." in ".$clone->_vm->name;
     eval { $clone->start(user => user_admin ) };
     like(''.$@,qr'libvirt error code: 55,',$clone->name) or exit
         if $vm_name eq 'KVM';
@@ -831,7 +830,7 @@ sub _write_in_volumes($clone) {
 sub _shutdown_node($node) {
 
     if ($node->is_active) {
-        for my $domain ($node->list_domains(active => 1)) {
+        for my $domain ($node->list_domains()) {
             diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
@@ -843,14 +842,14 @@ sub _shutdown_node($node) {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
     sleep 2 if !$node->ping;
-    for ( 1 .. 20 ) {
+    for ( 1 .. 30 ) {
         diag("Waiting for node ".$node->name." to be inactive $_");
         last if !$node->ping;
         sleep 1;
     }
     return if !$node->ping;
     $node->run_command("init 0");
-    for ( 1 .. 20 ) {
+    for ( 1 .. 30 ) {
         diag("Waiting for node ".$node->name." to be inactive $_");
         last if !$node->ping;
         sleep 1;
@@ -886,7 +885,7 @@ sub _start_node($node) {
 
     ok($domain->_vm->host eq 'localhost');
 
-    $domain->start(user_admin)  if !$domain->is_active;
+    $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
     sleep 2;
 
@@ -912,6 +911,7 @@ sub _start_node($node) {
 }
 
 sub remove_node($node) {
+    _shutdown_node($node);
     eval { $node->remove() };
     is(''.$@,'');
 
@@ -994,7 +994,7 @@ SKIP: {
     _start_node($node);
     clean_remote_node($node);
     remove_node($node);
-    warn "done remove node";
+    warn "[$vm_name] done remove node ".$node->name;
 }
 
 }
