@@ -314,7 +314,6 @@ sub _search_already_started($self) {
         next if !$domain;
         if ( $domain->is_active || $domain->is_hibernated ) {
             $self->_set_vm($vm,'force');
-            $self->_update_id_vm();
             $started{$vm->id}++;
 
             my $status = 'shutdown';
@@ -2132,13 +2131,13 @@ sub set_base_vm($self, %args) {
 
     $value = 1 if !defined $value;
 
-    if ($vm->host eq 'localhost') {
+    if ($vm->is_local) {
         $self->_set_vm($vm,1);
         if (!$value) {
             $request->status("working","Removing base")     if $request;
             for my $vm_node ( $self->list_vms ) {
                 $self->set_base_vm(vm => $vm_node, user => $user, value => 0
-                    , request => $request);
+                    , request => $request) if !$vm_node->is_local;
             }
             $self->_set_base_vm_db($vm->id, $value);
             $self->remove_base($user);
