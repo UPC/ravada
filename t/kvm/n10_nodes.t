@@ -351,7 +351,7 @@ sub test_sync_base {
 sub test_start_twice {
     my ($vm_name, $node) = @_;
 
-    if ($vm_name ne 'KVM') {
+    if ($vm_name ne 'KVM' && $vm_name ne 'Void') {
         diag("SKIPPED: start_twice not available on $vm_name");
         return;
     }
@@ -368,26 +368,36 @@ sub test_start_twice {
     eval { $base->set_base_vm(vm => $node, user => user_admin); };
     is(''.$@,'') or return;
 
+    my $display0 = $clone->display(user_admin);
+
     eval { $clone->migrate($node); };
     is(''.$@,'')    or return;
 
-    is($clone->_vm->host, $node->host);
+    is($clone->_vm->host, $node->host) or exit;
+    isnt($clone->display(user_admin), $display0, $clone->name) or exit;
+
     is($clone->is_active,0);
 
+    # clone should be inactive in local node
     my $clone2 = $vm->search_domain($clone->name);
     is($clone2->_vm->host, $vm->host);
     is($clone2->is_active,0);
 
+    # start the clone on local node internally
     if ($vm_name eq 'KVM') {
-        $clone2->domain->create();
+        eval { $clone2->domain->create() };
+        is(''.$@ ,'' , "[$vm_name] Starting ".$clone2->name." from libvirt")
+            or exit;
     } elsif ($vm_name eq 'Void') {
         $clone2->_store(is_active => 1);
     } else {
         die "test_start_twice not available on $vm_name";
     }
 
+    warn "going to start ".$clone->name." in ".$clone->_vm->name;
     eval { $clone->start(user => user_admin ) };
-    like(''.$@,qr'libvirt error code: 55,') if $vm_name eq 'KVM';
+    like(''.$@,qr'libvirt error code: 55,',$clone->name) or exit
+        if $vm_name eq 'KVM';
     is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip)
         or return;
     is($clone->display(user_admin), $clone2->display(user_admin));
@@ -457,6 +467,7 @@ sub test_bases_node {
     my $vm = rvd_back->search_vm($vm_name);
 
     my $domain = create_domain($vm_name);
+    my $local_display = $domain->display(user_admin);
 
     eval { $domain->base_in_vm($domain->_vm->id)};
     like($@,qr'is not a base');
@@ -470,6 +481,7 @@ sub test_bases_node {
     is($domain->base_in_vm($node->id), undef);
 
     $domain->migrate($node);
+    isnt($domain->display(user_admin), $local_display) or exit;
     is($domain->base_in_vm($node->id), 1);
 
     $domain->set_base_vm(vm => $node, value => 0, user => user_admin);
@@ -914,7 +926,7 @@ clean_remote();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('Void','KVM') {
+for my $vm_name ('KVM' , 'Void' ) {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -945,13 +957,14 @@ SKIP: {
         next;
     };
 
+    test_start_twice($vm_name, $node);
+
     test_sync_back($node);
 
     test_shutdown($node);
 
     test_domain_ip($vm_name, $node);
 
-    test_start_twice($vm_name, $node);
     test_node_renamed($vm_name, $node);
 
     test_bases_node($vm_name, $node);
