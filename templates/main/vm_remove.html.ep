@@ -36,7 +36,7 @@
                             ng-click="domain_remove=0"
                         >No</a>
                         <a type="button" class="btn btn-warning"
-                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;" onclick = "location='/admin/machines'"
+                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;" onclick = "location='/'"
                             >Yes, remove {{showmachine.name}}</a>
            </div><!-- del domain remove -->
 
@@ -49,7 +49,7 @@
                         <a type="button" class="btn btn-danger"
                             ng-click="domain_remove_clones=0"
                         >No</a>
-                        <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/admin'"
+                        <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
                             >Yes, remove all the clones</a>
            </div><!-- del domain remove clones-->
 
