@@ -23,6 +23,12 @@ create_domain
     find_ip_rule
     search_id_iso
     flush_rules open_ipt
+    arg_create_dom
+    vm_names
+    search_iptable_remote
+    clean_remote
+    start_node shutdown_node
+    start_domain_internal   shutdown_domain_internal
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -487,6 +493,26 @@ sub find_ip_rule {
     return if !scalar@found || !defined $found[0];
     return @found   if wantarray;
     return $found[0];
+}
+
+sub shutdown_domain_internal($domain) {
+    if ($domain->type eq 'KVM') {
+        $domain->domain->destroy();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_active => 0 );
+    } else {
+        confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+sub start_domain_internal($domain) {
+    if ($domain->type eq 'KVM') {
+        $domain->domain->create();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_active => 1 );
+    } else {
+        confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
 }
 
 1;
