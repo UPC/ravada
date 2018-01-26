@@ -636,6 +636,7 @@ sub _data($self, $field, $value=undef) {
         $sth->execute($value, $self->id);
         $sth->finish;
         $self->{_data}->{$field} = $value;
+        $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
     }
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     $self->{_data} = $self->_select_domain_db( name => $self->name);
@@ -1715,21 +1716,24 @@ Sets or get the domain run timeout. When it expires it is shut down.
 sub run_timeout {
     my $self = shift;
 
-    return $self->_set_data('run_timeout',@_);
+    return $self->_data('run_timeout',@_);
 }
 
-sub _set_data($self, $field, $value=undef) {
-    if (defined $value) {
-        warn $self->name." $field = $value\n";
-        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
-                ." WHERE id=?");
-        $sth->execute($value, $self->id);
-        $sth->finish;
-        $self->{_data}->{$field} = $value;
-
-        $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
-    }
-    return $self->_data($field);
+#sub _set_data($self, $field, $value=undef) {
+#    if (defined $value) {
+#        warn "\t".$self->id." ".$self->name." $field = $value\n";
+#        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set $field=?"
+#                ." WHERE id=?");
+#        $sth->execute($value, $self->id);
+#        $sth->finish;
+#        $self->{_data}->{$field} = $value;
+#
+#        $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
+#    }
+#    return $self->_data($field);
+#}
+sub _set_data($self, $field, $value) {
+    return $self->_data($field, $value);
 }
 
 sub _propagate_data($self, $field, $value) {
@@ -1998,6 +2002,7 @@ Argument: Ravada::VM
 
 sub rsync($self, $node=$self->_vm, $request=undef) {
     $request->status("working") if $request;
+    # TODO check if domain is running on remote , then return
     my $rex = $node->_connect_rex();
     die "No Connection to ".$node->host if !$rex;
 #    This does nothing and doesn't fail
