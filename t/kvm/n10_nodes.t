@@ -912,16 +912,6 @@ sub _start_node($node) {
     $node->connect;
 }
 
-sub remove_node($node) {
-    _shutdown_node($node);
-    eval { $node->remove() };
-    is(''.$@,'');
-
-    my $node2;
-    eval { $node2 = Ravada::VM->open($node->id) };
-    like($@,qr"can't find VM");
-    ok(!$node2, "Expecting no node ".$node->id);
-}
 #############################################################
 clean();
 clean_remote();

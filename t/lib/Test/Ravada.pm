@@ -55,7 +55,7 @@ create_domain
     vm_names
     search_iptable_remote
     clean_remote
-    start_node shutdown_node
+    start_node shutdown_node remove_node
     start_domain_internal   shutdown_domain_internal
 );
 
@@ -699,6 +699,20 @@ sub open_ipt {
 
 }
 
+sub _domain_node($node) {
+    my $vm = rvd_back->search_vm('KVM','localhost');
+    my $domain = $vm->search_domain($node->name);
+    $domain = rvd_back->import_domain(name => $node->name
+            ,user => user_admin->name
+            ,vm => 'KVM'
+            ,spinoff_disks => 0
+    )   if !$domain || !$domain->is_known;
+
+    ok($domain->id,"Expecting an ID for domain ".Dumper($domain)) or exit;
+    $domain->_set_vm($vm, 'force');
+    return $domain;
+}
+
 sub shutdown_node($node) {
 
     if ($node->is_active) {
@@ -714,15 +728,17 @@ sub shutdown_node($node) {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
     sleep 2 if !$node->ping;
-    for ( 1 .. 30 ) {
-        diag("Waiting for node ".$node->name." to be inactive $_");
+
+    my $max_wait = 30;
+    for ( 1 .. $max_wait ) {
+        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
         last if !$node->ping;
         sleep 1;
     }
     return if !$node->ping;
     $node->run_command("init 0");
-    for ( 1 .. 30 ) {
-        diag("Waiting for node ".$node->name." to be inactive $_");
+    for ( 1 .. $max_wait ) {
+        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
         last if !$node->ping;
         sleep 1;
     }
@@ -754,7 +770,7 @@ sub start_node($node) {
     for ( 1 .. 20 ) {
         last if $node->ping ;
         sleep 1;
-        diag("Waiting for ping node ".$node->name." $_");
+        diag("Waiting for ping node ".$node->name." $_") if !($_ % 10);
     }
 
     is($node->ping,1,"Expecting ping node ".$node->name) or exit;
@@ -762,11 +778,22 @@ sub start_node($node) {
     for ( 1 .. 20 ) {
         last if $node->is_active;
         sleep 1;
-        diag("Waiting for active node ".$node->name." $_");
+        diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
     }
 
     is($node->is_active,1,"Expecting active node ".$node->name) or exit;
     $node->connect;
+}
+
+sub remove_node($node) {
+    shutdown_node($node);
+    eval { $node->remove() };
+    is(''.$@,'');
+
+    my $node2;
+    eval { $node2 = Ravada::VM->open($node->id) };
+    like($@,qr"can't find VM");
+    ok(!$node2, "Expecting no node ".$node->id);
 }
 
 sub shutdown_domain_internal($domain) {
