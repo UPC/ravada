@@ -646,7 +646,7 @@ sub _create_table {
     $sth->finish;
     return if keys %$info;
 
-    warn "INFO: creating table $table\n";
+    warn "INFO: creating table $table\n"    if $0 !~ /\.t$/;
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
     my $sql = join " ",<$in>;
@@ -2020,9 +2020,7 @@ sub _refresh_active_domains($self, $request=undef) {
     my %active_domain;
     my %active_vm;
     for my $vm ($self->list_vms) {
-        warn $vm->name." ".$vm->host."\n";
         if ( !$vm->is_active ) {
-            warn"\t down\n";
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
             next;
@@ -2030,38 +2028,36 @@ sub _refresh_active_domains($self, $request=undef) {
         $active_vm{$vm->id} = 1;
         if ($id_domain) {
             my $domain = $vm->search_domain_by_id($id_domain);
-            my $is_active = $domain->is_active();
-
-            my $status = 'shutdown';
-            $status = 'active'      if $is_active;
-
-            $domain->_set_data(status => $status);
-            $active_domain{$domain->id} = $is_active;
-        } else {
-            for my $domain ($vm->list_domains()) {
-                my $is_active = $domain->is_active;
-
-                my $status = 'shutdown';
-                $status = 'active'      if $is_active;
-                $domain->_set_data(status => $status);
-                $active_domain{$domain->id} = $is_active;
+            $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
+         } else {
+            for my $domain ($vm->list_domains( active => 1)) {
+                next if $active_domain{$domain->id};
+                $self->_refresh_active_domain($vm, $domain, \%active_domain);
             }
         }
     }
     return \%active_domain, \%active_vm;
 }
 
+sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
+    my $is_active = $domain->is_active();
+
+    my $status = 'shutdown';
+    if ( $is_active ) {
+        $status = 'active';
+        $domain->_data(id_vm => $vm->id)    if $domain->_data('id_vm') != $vm->id;
+    }
+    $domain->_set_data(status => $status);
+    $active_domain->{$domain->id} = $is_active;
+
+}
+
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, name, id_vm FROM domains WHERE status='active'"
     );
-    warn "refresh down domains\n";
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
-        warn "checking if domain $name [$id_domain, $id_vm] is still active "
-            ."\n\tactive_do = ".($active_domain->{$id_domain} or '<UNDEF>')
-            ."\n\tactive_vm = ".($active_vm->{$id_vm} or '<UNDEF>')
-            ."\n";
         next if exists $active_domain->{$id_domain};
         my $domain = Ravada::Domain->open($id_domain);
         if (defined $id_vm && !$active_vm->{$id_vm}) {
