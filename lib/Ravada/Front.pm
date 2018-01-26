@@ -200,7 +200,7 @@ sub list_domains {
     }
     $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.name");
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
