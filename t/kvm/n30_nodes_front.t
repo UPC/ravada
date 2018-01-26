@@ -89,16 +89,16 @@ sub test_list_vms_refresh($vm_name) {
 
     start_domain_internal($domain);
     my $list_domains = rvd_front->list_domains();
-    is($list_domains->[0]->is_active,0);
+    is($list_domains->[0]->{is_active},0);
 
     rvd_back->_cmd_refresh_vms();
-    is(rvd_front->list_domains()->[0]->is_active,1);
+    is(rvd_front->list_domains()->[0]->{is_active},1);
 
     shutdown_domain_internal($domain);
-    is(rvd_front->list_domains()->[0]->is_active,1);
+    is(rvd_front->list_domains()->[0]->{is_active},1);
 
     rvd_back->_cmd_refresh_vms();
-    is(rvd_front->list_domains()->[0]->is_active,0);
+    is(rvd_front->list_domains()->[0]->{is_active},0);
 
     $domain->remove(user_admin());
 }
@@ -130,7 +130,7 @@ for my $vm_name ('KVM' , 'Void' ) {
         diag("Testing remote node in $vm_name");
 #        my $node = create_node($vm_name);
         test_list_vms($vm_name);
-        test_list_vms_refrsh($vm_name);
+        test_list_vms_refresh($vm_name);
 #        remove_node($node);
     }
 }

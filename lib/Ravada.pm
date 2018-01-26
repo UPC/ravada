@@ -2007,14 +2007,15 @@ sub _cmd_refresh_storage($self, $request) {
     $vm->refresh_storage();
 }
 
-sub _cmd_refresh_vms($self, $request) {
+sub _cmd_refresh_vms($self, $request=undef) {
 
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 }
 
-sub _refresh_active_domains($self, $request) {
-    my $id_domain = $request->defined_arg('id_domain');
+sub _refresh_active_domains($self, $request=undef) {
+    my $id_domain;
+    $id_domain = $request->defined_arg('id_domain')  if $request;
 
     my %active_domain;
     my %active_vm;
@@ -2052,7 +2053,7 @@ sub _refresh_active_domains($self, $request) {
 
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm FROM domains WHERE is_active=1"
+        "SELECT id, name, id_vm FROM domains WHERE status='active'"
     );
     warn "refresh down domains\n";
     $sth->execute();
@@ -2063,7 +2064,7 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
             ."\n";
         next if exists $active_domain->{$id_domain};
         my $domain = Ravada::Domain->open($id_domain);
-        if (!$active_vm->{$id_vm}) {
+        if (defined $id_vm && !$active_vm->{$id_vm}) {
             $domain->_set_data(status => 'shutdown');
         } else {
             my $status = 'down';
