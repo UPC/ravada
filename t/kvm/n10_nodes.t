@@ -457,7 +457,7 @@ sub test_rsync_newer {
     is($vol3_remote->get_info->{capacity}, $vol3->get_info->{capacity});
     }
 
-
+    $domain->remove(user_admin);
 }
 
 sub test_bases_node {
@@ -744,6 +744,8 @@ sub test_sync_back($node) {
         my $md5_remote = _md5($file, $node);
         is($md5_remote, $md5);
     }
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 
 sub test_shutdown($node) {
@@ -926,7 +928,7 @@ clean_remote();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('KVM' , 'Void' ) {
+for my $vm_name ('Void' , 'KVM' ) {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -993,15 +995,18 @@ SKIP: {
 
     _start_node($node);
     clean_remote_node($node);
+    clean_remote_node($vm);
     remove_node($node);
     warn "[$vm_name] done remove node ".$node->name;
 }
 
 }
 
+END: {
 warn "cleaning";
 clean();
 clean_remote();
 warn "done testing";
 
 done_testing();
+}
