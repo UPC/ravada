@@ -2179,6 +2179,12 @@ sub remove_base_vm($self, %args) {
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
+=head2 list_vms
+
+Returns a list for virtual machine managers where this domain is base
+
+=cut
+
 sub list_vms($self) {
     confess "Domain is not base" if !$self->is_base;
 
@@ -2229,6 +2235,12 @@ Returns wether this domain is in the local host
 sub is_local($self) {
     return $self->_vm->is_local();
 }
+
+=head2 is_volatile
+
+Returns if the domain is volatile, so it will disappear on shutdown
+
+=cut
 
 sub is_volatile($self, $value=undef) {
     return $self->_data('is_volatile', $value);

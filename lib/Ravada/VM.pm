@@ -643,6 +643,15 @@ sub is_local($self) {
         || !$self->host;
 }
 
+
+=head2 list_nodes
+
+Returns a list of virtual machine manager nodes of the same type as this.
+
+    my @nodes = $self->list_nodes();
+
+=cut
+
 sub list_nodes($self) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id FROM vms WHERE vm_type=?"
@@ -657,7 +666,14 @@ sub list_nodes($self) {
     return @nodes;
 }
 
+=head2 ping
+
+Returns if the virtual manager connection is available
+
+=cut
+
 sub ping($self) {
+    #TODO local ? return 1
     my $p = Net::Ping->new('tcp',2);
     return 1 if $p->ping($self->host);
     $p->close();
@@ -667,6 +683,12 @@ sub ping($self) {
     return $p->ping($self->host);
 
 }
+
+=head2 is_active
+
+Returns if the domain is active.
+
+=cut
 
 sub is_active($self) {
     if ($self->is_local) {
@@ -699,18 +721,44 @@ sub _cached_active_time($self, $value=undef) {
     return $self->_data('cached_active_time', $value);
 }
 
+=head2 remove
+
+Remove the virtual machine manager.
+
+=cut
+
 sub remove($self) {
+    #TODO stop the active domains
+    #
     $self->disconnect();
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($self->id);
 }
 
+=head2 run_command
+
+Run a command on the node
+
+    my @ls = $self->run_command("ls");
+
+=cut
+
 sub run_command($self, $command) {
+    # TODO local VMs what ?
     $self->_connect_rex()
         && return run($command);
 }
 
+=head2 write_file
+
+Writes a file to the node
+
+    $self->write_file("filename.extension", $contents);
+
+=cut
+
 sub write_file( $self, $file, $contents ) {
+    # TODO local VMs what ?
     if ($self->_connect_rex) {
         my $fh = file_write($file);
         $fh->write($contents);
