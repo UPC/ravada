@@ -87,8 +87,8 @@
     </channel>
     <input type='mouse' bus='ps2'/>
     <input type='keyboard' bus='ps2'/>
-    <graphics type='spice' autoport='yes' listen='147.83.68.31'>
-      <listen type='address' address='147.83.68.31'/>
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
       <image compression='auto_glz'/>
       <jpeg compression='auto'/>
       <zlib compression='auto'/>
@@ -113,4 +113,3 @@
     </memballoon>
   </devices>
 </domain>
-

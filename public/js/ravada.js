@@ -153,14 +153,47 @@
                 $http.get('/machine/remove_clones/'+machineId+'.json');
           };
 
-          $scope.action = function(target,action,machineId){
-            $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+          $scope.reload_page_msg = false;
+          $scope.fail_page_msg = false;
+          $scope.screenshot = function(machineId, isActive){
+              if (isActive) {
+                  $http.get('/machine/screenshot/'+machineId+'.json');
+                  $scope.fail_page_msg = false;
+                  $scope.reload_page_msg = true;
+                  setTimeout(function () {
+                      window.location.reload(false);
+                  }, 5000);
+              }
+              else {
+                  $scope.reload_page_msg = false;
+                  $scope.fail_page_msg = true;
+              }
           };
+          
+          $scope.reload_page_copy_msg = false;
+          $scope.fail_page_copy_msg = false;
+          $scope.copy_done = false;
+          $scope.copy_screenshot = function(machineId, fileScreenshot){
+              if (fileScreenshot != '') {
+                $http.get('/machine/copy_screenshot/'+machineId+'.json');
+                $scope.fail_page_copy_msg = false;
+                $scope.reload_page_copy_msg = true;
+                setTimeout(function () {
+                    $scope.reload_page_copy_msg = false;
+                }, 2000);
+              }
+              else {
+                  $scope.reload_page_copy_msg = false;
+                  $scope.fail_page_copy_msg = true;
+              }
+          };
+
           $scope.rename = function(machineId, old_name) {
             if ($scope.new_name_duplicated || $scope.new_name_invalid) return;
             $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            $scope.message_rename = 1;
             //   TODO check previous rename returned ok
             window.location.href = "/admin/machines";
           };
@@ -262,12 +295,12 @@
     };
 
     function run_domain_ctrl($scope, $http, request ) {
-        $http.get('/auto_start').then(function(response) {
-            $scope.auto_start = response.auto_start;
+        $http.get('/auto_view').then(function(response) {
+            $scope.auto_view = response.auto_view;
         });
-        $scope.toggle_auto_start = function() {
-            $http.get('/auto_start/toggle').then(function(response) {
-                $scope.auto_start = response.auto_start;
+        $scope.toggle_auto_view = function() {
+            $http.get('/auto_view/toggle').then(function(response) {
+                $scope.auto_view = response.auto_view;
             });
         };
         $scope.copy_password= function() {

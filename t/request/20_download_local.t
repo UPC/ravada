@@ -6,6 +6,7 @@ use Data::Dumper;
 use IPC::Run3;
 use Test::More;
 use Test::SQL::Data;
+use Mojo::UserAgent;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -29,17 +30,19 @@ sub test_download {
     is($@,'');
     unlink($iso->{device}) or die "$! $iso->{device}"
         if $iso->{device} && -e $iso->{device};
+    confess "Missing name in ".Dumper($iso) if !$iso->{name};
     diag("Testing download $iso->{name}");
     my $req1 = Ravada::Request->download(
              id_iso => $id_iso
             , id_vm => $vm->id
             , delay => 4
+            , verbose => 0
     );
     is($req1->status, 'requested');
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error, '') or return;
+    is($req1->error, '') or exit;
 
     my $iso2;
     eval { $iso2 = $vm->_search_iso($id_iso) };
@@ -47,7 +50,7 @@ sub test_download {
     ok($iso2, "Expecting a iso for id = $id_iso , got ".($iso2 or '<UNDEF>'));
     
     my $device;
-    eval { $device = $vm->_iso_name($iso2) };
+    eval { $device = $vm->_iso_name($iso2, undef, 0) };
     is($@,'');
 
     ok($device,"Expecting a device name , got ".($device or '<UNDEF>'));
@@ -65,7 +68,7 @@ sub test_download_fail {
     $iso->{url} =~ s{(.*)\.(.*)}{$1-failforced.$2};
 
     my $device;
-    eval { $device = $vm->_iso_name($iso) };
+    eval { $device = $vm->_iso_name($iso, undef, 0) };
     like($@,qr/./);
     ok(!$device);
     ok(!-e $device, "Expecting $device missing") if $device;
@@ -78,7 +81,9 @@ sub local_urls {
 sub search_id_isos {
     my $vm = shift;
     my $sth=$test->dbh->prepare(
-        "SELECT * FROM iso_images"# where name like 'Xubuntu%'"
+        "SELECT * FROM iso_images"
+        #." where name like 'Xubuntu%'"
+        ." ORDER BY name,arch"
     );
     $sth->execute;
     my @id_iso;
@@ -93,6 +98,7 @@ sub search_id_isos {
 
         if (!$row->{filename}) {
             diag("skipped test $row->{name} $row->{url} $row->{file_re}");
+            exit;
             next;
         }
 
@@ -100,6 +106,20 @@ sub search_id_isos {
     }
     return @id_iso;
 }
+
+sub httpd_localhost {
+    my $ua  = Mojo::UserAgent->new;
+    my $res;
+    eval {  
+       $res = $ua->get('http://localhost/iso/')->res;
+    };
+    diag($res->code." ".$res->message);
+    return 1 if $res && $res->code == 200;
+    return if !$@;
+    is($@,qr/Connection refused/);
+    return 0;
+}
+
 ##################################################################
 
 
@@ -112,6 +132,10 @@ for my $vm_name ('KVM') {
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
+        }
+        if (!httpd_localhost()) {
+            $vm = undef;
+            $msg = "SKIPPED: No http on localhost with /iso";
         }
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;

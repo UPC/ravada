@@ -73,6 +73,7 @@ requires 'disconnect';
 requires 'import_domain';
 
 requires 'security';
+requires 'ping';
 ############################################################
 
 has 'host' => (
@@ -296,6 +297,7 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
+
     $self->_pre_create_domain(@_);
 
     my $domain = $self->$orig(@_);
@@ -477,15 +479,25 @@ sub _check_require_base {
     my $self = shift;
 
     my %args = @_;
-    return if !$args{id_base};
-    
-    my $base = Ravada::Domain->open($args{id_base});
-    if ($base->list_requests) {
-        die "ERROR: Domain ".$base->name." has ".$base->list_requests
-            ." requests.\n";
+
+    my $id_base = delete $args{id_base} or return;
+    my $request = delete $args{request};
+    my $id_owner = delete $args{id_owner}
+        or confess "ERROR: id_owner required ";
+
+    delete @args{'_vm','name','vm', 'memory','description'};
+
+    confess "ERROR: Unknown arguments ".join(",",keys %args)
+        if keys %args;
+
+    my $base = Ravada::Domain->open($id_base);
+    if (my @requests = $base->list_requests) {
+        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
+                            ." requests.\n"
+            unless scalar @requests == 1 && $request
+                && $requests[0]->id eq $request->id;
     }
 
-    my $id_owner = $args{id_owner} or confess "ERROR: id_owner required ";
 
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();

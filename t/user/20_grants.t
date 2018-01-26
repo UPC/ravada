@@ -17,6 +17,7 @@ use_ok('Ravada');
 my @VMS = vm_names();
 init($test->connector);
 
+rvd_back();
 #########################################################3
 
 sub test_defaults {

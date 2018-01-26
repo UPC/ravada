@@ -18,10 +18,10 @@
                         <input type="submit" name="shutdown" value="shutdown" <%= $_shutdown_disabled %>>
                         <input type="submit" name="pause" value="pause" <%= $_pause_disabled %>>
                         <input type="submit" name="resume" value="resume" <%= $_resume_disabled %>>
-                        <a href="/machine/view/<%= $domain->id %>.html">View</a>
-                        <a href="/machine/prepare/<%= $domain->id %>.html">PrepareBase</a>
-                        <a href="/machine/remove/<%= $domain->id %>.html">Remove</a>
-                        <a href="/machine/screenshot/<%= $domain->id %>.html">Screenshot</a>
+                        <a href="/machine/view/<%= $domain->id %>.html"><%=l View %></a>
+                        <a href="/machine/prepare/<%= $domain->id %>.html"><%=l PrepareBase %></a>
+                        <a href="/machine/remove/<%= $domain->id %>.html"><%=l Remove %></a>
+                        <a href="/machine/screenshot/<%= $domain->id %>.html"><%=l Screenshot %></a>
                     </form>
                     <img src="/img/screenshots/<%= $domain->id %>.png" width=400>
                     

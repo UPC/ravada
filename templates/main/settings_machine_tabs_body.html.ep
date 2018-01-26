@@ -24,6 +24,11 @@
       % }
     </div>
 % }
+% if ($USER->can_change_settings) {
+    <div class="tab-pane fade" id="screenshot">
+      %= include 'main/vm_screenshot'
+    </div>
+% }
 % if ($domain->type eq 'KVM') {
     <div class="tab-pane fade" id="graphics">
       % if ($domain->is_base) {

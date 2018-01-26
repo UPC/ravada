@@ -82,6 +82,7 @@ sub create_domain {
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {
+        my $owner = Ravada::Auth::SQL->search_by_id($args{id_owner});
         my $domain_base = $self->search_domain_by_id($args{id_base});
 
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
@@ -93,6 +94,7 @@ sub create_domain {
                                 , path => "$dir/$new_name"
                                  ,type => 'file');
         }
+        $domain->start(user => $owner)    if $owner->is_temporary;
     } else {
         my ($file_img) = $domain->disk_device();
         $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
@@ -102,9 +104,9 @@ sub create_domain {
         );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
-        $domain->set_memory($args{memory}) if $args{memory};
 
     }
+    $domain->set_memory($args{memory}) if $args{memory};
 #    $domain->start();
     return $domain;
 }
@@ -261,6 +263,11 @@ sub refresh_storage_pools {
 sub list_storage_pools {
     return $Ravada::Domain::Void::DIR_TMP;
 }
+
+sub refresh_storage {}
+
+sub ping { return 1 }
+
 #########################################################################3
 
 1;

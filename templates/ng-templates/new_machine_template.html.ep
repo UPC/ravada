@@ -1,13 +1,13 @@
 <div class="tab-pane fade in active" id="fromtemplate" >
-    <form name="new_machineForm" role="form" method="post" action="/new_machine" ng-controller="new_machine" novalidate>
+    <form name="new_machineForm" role="form" method="post" action="/new_machine" novalidate>
         <div class="form-group row">
             <label for="backend" class="col-lg-3 control-label"><%=l 'Backend' %> <a 
               title="Choose the virtualization type of the Virtual Machine."><i class="fa fa-info-circle"></i></a></label>
             <div class="col-lg-9">
                 <select class= "form-control"
+                    ng-change="loadTemplate()"
                     name="backend"
                     ng-model="backend"
-                    ng-init="backend = 'KVM'"
                     ng-options="item for item in backends track by item "
                     required=""
                 ></select>
@@ -42,7 +42,7 @@
                 <div ng-show="id_iso.name">
                     <br/>
                     <label for="iso_file" class="col-lg-3 control-label"><%=l 'Select ISO' %> <a 
-                      title="Select the .iso file the machine will utilize when installing the OS."><i class="fa fa-info-circle"></i></a></label>
+                      title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                         <select class="form-control"
                             name ="iso_file"
@@ -96,16 +96,16 @@
             <label for="swap" class="col-lg-3 control-label"><%=l 'Swap Size: (GB)' %></label>
             <div class="col-lg-2">
                 <input class="slider form-control" ng-model="swapsize.value" 
-                type="range" name="swap" min="1" max="4">
+                type="range" name="swap" id="swap" min="1" max="4" ng-disabled="!seeswap">
             </div>{{swapsize.value}}
         </div>
         <div class="form-group row">
             <div ng-show="backend == 'KVM' || backend == 'LXC'">
                 <label for="memory"  class="col-lg-3 control-label"><%=l 'Ram: (GB)' %></label>
                 <div class="col-lg-2">
-                    <input class="slider form-control" ng-model="ramsize" type="range" 
-                    name="memory" min="1" max="4" required="">
-                </div>{{ramsize}}
+                    <input class="slider form-control" ng-model="ramSize" type="range" 
+                    name="memory" min="1" max="4" required>
+                </div>{{ramSize}}
             </div>
         </div>
         <div class="form-group row">

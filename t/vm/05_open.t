@@ -45,7 +45,6 @@ sub test_create_domain {
 my $id = 10;
 my $security = encode_json({ transport => 'tcp' });
 
-
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
 

@@ -200,14 +200,20 @@ sub remove {
     $self->domain->undefine();
 
     $self->remove_disks();
+
+    eval { $self->remove_disks(); };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
+    eval { $self->domain->undefine() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 
@@ -597,7 +603,7 @@ Shuts down uncleanly the domain
 
 sub force_shutdown{
     my $self = shift;
-    $self->_do_force_shutdown();
+    return $self->_do_force_shutdown() if $self->is_active;
 }
 
 sub _do_force_shutdown {

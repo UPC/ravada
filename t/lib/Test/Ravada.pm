@@ -57,6 +57,8 @@ create_domain
     clean_remote
     start_node shutdown_node remove_node
     start_domain_internal   shutdown_domain_internal
+    arg_create_dom
+    vm_names
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -193,6 +195,7 @@ sub init {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
+<<<<<<< HEAD
 }
 
 sub remote_config {
@@ -242,6 +245,8 @@ sub remote_config_nodes {
         }
     }
     return $conf;
+=======
+>>>>>>> master
 }
 
 sub _remove_old_domains_vm {
@@ -273,7 +278,11 @@ sub _remove_old_domains_vm {
         eval { $domain->shutdown_now($USER_ADMIN); };
         warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
 
+<<<<<<< HEAD
         $domain = $vm->search_domain($domain->name);
+=======
+        $domain = $vm->search_domain($dom_name);
+>>>>>>> master
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };

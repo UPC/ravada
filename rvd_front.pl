@@ -124,9 +124,13 @@ hook before_routes => sub {
     if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
 
+  if ($url =~ m{^/machine/display/} && !_logged_in($c)) {
+      $USER = _get_anonymous_user($c);
+      return if $USER->is_temporary;
+  }
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
+        $url !~ m{^/(anonymous|login|logout|requirements|request|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
@@ -400,6 +404,12 @@ get '/machine/screenshot/(:id).(:type)' => sub {
         return screenshot_machine($c);
 };
 
+get '/machine/copy_screenshot/(:id).(:type)' => sub {
+        my $c = shift;
+        return access_denied($c) if !$USER->is_admin();
+        return copy_screenshot($c);
+};
+
 get '/machine/pause/(:id).(:type)' => sub {
         my $c = shift;
         return pause_machine($c);
@@ -533,6 +543,15 @@ get '/request/(:id).(:type)' => sub {
     return _show_request($c,$id);
 };
 
+get '/anonymous/request/(:id).(:type)' => sub {
+    my $c = shift;
+    my $id = $c->stash('id');
+
+    $USER = _anonymous_user($c);
+
+    return _show_request($c,$id);
+};
+
 get '/requests.json' => sub {
     my $c = shift;
     return list_requests($c);
@@ -608,24 +627,24 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
-any '/auto_start/(#value)/' => sub {
+any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
     if ($value =~ /toggle/i) {
-        $value = $c->session('auto_start');
+        $value = $c->session('auto_view');
         if ($value) {
             $value = 0;
         } else {
             $value = 1;
         }
     }
-    $c->session('auto_start' => $value);
-    return $c->render(json => {auto_start => $c->session('auto_start') });
+    $c->session('auto_view' => $value);
+    return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
-get '/auto_start' => sub {
+get '/auto_view' => sub {
     my $c = shift;
-    return $c->render(json => {auto_start => $c->session('auto_start') });
+    return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
 ###################################################
@@ -1101,7 +1120,10 @@ sub provision {
         $c->stash(error =>
             "Domain provisioning request not finished, status='".$req->status."'.");
 
-        $c->stash(link => "/request/".$req->id.".html");
+        my $req_link = "/request/".$req->id.".html";
+        $req_link = "/anonymous$req_link"   if $USER->is_temporary;
+
+        $c->stash(link => $req_link);
         $c->stash(link_msg => '');
         return;
     }
@@ -1139,7 +1161,9 @@ sub show_link {
                 && $req->error !~ /already running/i
                 && $req->status ne 'waiting';
 
-        return $c->redirect_to("/request/".$req->id.".html");
+        my $req_link = "/request/".$req->id.".html";
+        $req_link = "/anonymous$req_link"   if $USER->is_temporary;
+        return $c->redirect_to($req_link);
 #            if !$req->status eq 'done';
     }
     if ( $domain->is_paused) {
@@ -1167,7 +1191,7 @@ sub show_link {
     _open_iptables($c,$domain)
         if !$req;
     my $uri_file = "/machine/display/".$domain->id;
-    $c->stash(url => $uri_file)  if $c->session('auto_start');
+    $c->stash(url => $uri_file)  if $c->session('auto_view') && ! $domain->spice_password;
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     my $description = $domain->description;
     if (!$description && $domain->id_base) {
@@ -1193,6 +1217,7 @@ sub _message_timeout {
     return '' if !$domain->run_timeout;
     my $msg_timeout = "in ".int($domain->run_timeout / 60 )
         ." minutes.";
+
     for my $request ( $domain->list_requests ) {
         if ( $request->command eq 'shutdown' ) {
             my $t1 = Time::Piece->localtime($request->at_time);
@@ -1348,7 +1373,7 @@ sub manage_machine {
     return access_denied($c)    if $domain->id_owner != $USER->id
         && !$USER->is_admin;
 
-    Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)   if $c->param('shutdown');
+    Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)   if $c->param('shutdown');
     Ravada::Request->start_domain( uid => $USER->id
                                  ,name => $domain->name
                            , remote_ip => _remote_ip($c)
@@ -1380,7 +1405,7 @@ sub settings_machine {
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
 
-    my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id)
+    my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
 
     $req = Ravada::Request->start_domain(
@@ -1453,10 +1478,11 @@ sub view_machine {
     my $c = shift;
     my $domain = shift;
 
-    return login($c) if !_logged_in($c);
+    return login($c) unless ( defined $USER && $USER->is_temporary) || _logged_in($c);
 
     $domain =  _search_requested_machine($c) if !$domain;
     return $c->render(template => 'main/fail') if !$domain;
+
     return show_link($c, $domain);
 }
 
@@ -1478,7 +1504,7 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain(name => $domain->name, uid => $USER->id);
+    my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id);
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
@@ -1552,6 +1578,7 @@ sub screenshot_machine {
     $c->render(json => { request => $req->id});
 }
 
+<<<<<<< HEAD
 sub toggle_base_vm {
     my $c = shift;
 
@@ -1571,6 +1598,20 @@ sub toggle_base_vm {
         , uid => $USER->id
     );
     return $c->render(json => {message => 'processing request'});
+=======
+sub copy_screenshot {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    my $req = Ravada::Request->copy_screenshot (
+        id_domain => $domain->id
+        ,filename => $file_screenshot
+    );
+    $c->render(json => { request => $req->id});
+>>>>>>> master
 }
 
 sub prepare_machine {
@@ -1636,24 +1677,13 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    if (!$base->is_base || $base->is_locked) {
-        my $req = Ravada::Request->prepare_base(
-            id_domain => $id_base
-            ,uid => $USER->id
-        );
-        return $c->render("Problem preparing base for domain ".$base->name)
-            if !$req;
-
-        sleep 1;
-
-    }
     my @create_args =( memory => $ram ) if $ram;
     push @create_args , ( disk => $disk ) if $disk;
-    my $req2 = Ravada::Request->create_domain(
-             name => $name
-        , id_base => $id_base
-       , id_owner => $USER->id
-        ,@create_args
+    my $req2 = Ravada::Request->clone(
+              uid => $USER->id
+            ,name => $name
+       , id_domain => $base->id
+       ,@create_args
     );
     $c->redirect_to("/admin/machines");#    if !@error;
 }
@@ -1745,10 +1775,11 @@ sub list_bases_anonymous {
 
     return access_denied($c)    if !scalar @$bases_anonymous;
 
-    $c->render(template => 'main/list_bases'
+    $c->render(template => 'main/list_bases2'
         , _logged_in => undef
         , _anonymous => 1
-        , _user => undef
+        , machines => $bases_anonymous
+        , user => undef
         , url => undef
     );
 }
@@ -1764,6 +1795,21 @@ sub _remote_ip {
     );
 }
 
+sub _get_anonymous_user {
+    my $c = shift;
+
+    $c->stash(_user => undef);
+    my $name = $c->session('anonymous_user');
+
+    my $user= Ravada::Auth::SQL->new( name => $name );
+
+    confess "user ".$user->name." has no id, may not be in table users"
+        if !$user->id;
+
+    return $user;
+}
+
+# get or create a new anonymous user
 sub _anonymous_user {
     my $c = shift;
 
@@ -1784,7 +1830,7 @@ sub _anonymous_user {
 
 sub _random_name {
     my $length = shift;
-    my $ret = 'O'.substr($$,3);
+    my $ret = substr($$,3);
     my $max = ord('z') - ord('a');
     for ( 0 .. $length ) {
         my $n = int rand($max + 1);
@@ -1803,7 +1849,7 @@ sub _new_anonymous_user {
 
     my $name;
     for my $n ( 4 .. 32 ) {
-        $name = substr($name_mojo,0,$n);
+        $name = "anon".substr($name_mojo,0,$n);
         my $user;
         eval {
             $user = Ravada::Auth::SQL->new( name => $name );

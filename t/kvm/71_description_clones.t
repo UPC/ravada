@@ -57,20 +57,6 @@ sub test_files_base {
     return;
 }
 
-sub touch_mtime {
-    for my $disk (@_) {
-
-        my @stat0 = stat($disk);
-
-        sleep 2;
-        utime(undef, undef, $disk) or die "$! $disk";
-        my @stat1 = stat($disk);
-
-        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
-    }
-
-}
-
 sub test_prepare_base_active {
     my $vm_name = shift;
     diag("Test prepare base active $vm_name");
@@ -105,29 +91,23 @@ sub test_prepare_base {
     $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( $USER) };
-    ok(!$@, $@);
+    is(''.$@, '', "[$vm_name] expecting no error preparing ".$domain->name);
     ok($domain->is_base);
     is($domain->is_active(),0);
 
-    eval { $domain->prepare_base( $USER) };
     my $description = "This is a description test";
     add_description($domain, $description);
 
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
+    eval { $domain->prepare_base( $USER) };
+    $@ = '' if !defined $@;
+    like($@, qr/already/i,"[$vm_name] Don't prepare if already base");
     ok($domain->is_base);
 
     test_files_base($domain,1);
 
     my @disk = $domain->disk_device();
-    $domain->shutdown(user => $USER)    if $domain->is_active;
-
-    touch_mtime(@disk);
-
-    eval { $domain->prepare_base( $USER) };
-    is($@,'');
-    ok($domain->is_base);
+    $domain->shutdown_now($USER)    if $domain->is_active;
+    is($domain->is_active,0,"[$vm_name] Expecting domain inactive");
 
     my $name_clone = new_domain_name();
 
@@ -166,15 +146,14 @@ sub test_prepare_base {
         );
     }
 
-    touch_mtime(@disk);
     eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
+    ok($@ && $@ =~ /has \d+ clones|already a base/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
     $domain_clone->remove($USER);
 
-    touch_mtime(@disk);
+    $domain->remove_base($USER);
     eval { $domain->prepare_base($USER) };
 
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");

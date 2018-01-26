@@ -123,7 +123,7 @@ sub test_shutdown_domain {
 
     ok($domain_f->is_active);
 
-    eval { $domain_f->shutdown( force => 1) };
+    eval { $domain_f->shutdown( force => 1, user => user_admin) };
     ok($@,"[$vm_name] Shutdown should be denied from front ");
     ok($domain_f->is_active,"[$vm_name] Domain should be active");
 
@@ -134,8 +134,8 @@ sub test_shutdown_domain {
         ok($@,"[$vm_name] Shutdown should be denied from front ");
     }
 
-    eval { $domain_b->shutdown(user => $USER,force => 1) };
-    ok(!$@,$@);
+    eval { $domain_b->force_shutdown($USER) };
+    is($@,'');
 
     $domain_f = $RVD_FRONT->search_domain($name);
     is($domain_f->is_active,0);# && !$domain_f->is_active);

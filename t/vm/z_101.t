@@ -75,7 +75,8 @@ for my $vm_name (reverse sort @VMS) {
 
                 if (time - $t0 > 5 ) {
                     $t0 = time;
-                    diag("[$vm_name] testing clone $count of $n_clones ".$clone0->name);
+                    diag("[$vm_name] testing clone $count of $n_clones ".$clone0->name)
+                        if $ENV{TEST_VERBOSE};
                 }
             }
             $clone0 = $clone;

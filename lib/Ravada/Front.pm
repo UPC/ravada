@@ -189,7 +189,7 @@ sub list_domains {
     my %args = @_;
 
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status "
-        ."      ,vms.name as node "
+        ."      ,vms.name as node , is_volatile "
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -215,6 +215,12 @@ sub list_domains {
         warn $@ if $@;
         $row->{is_active} = 0;
         $row->{remote_ip} = undef;
+        if ( $row->{is_volatile} && !$domain ) {
+            $self->_remove_domain_db($row->{id});
+            next;
+        }
+        $row->{has_clones} = 0 if !exists $row->{has_clones};
+        $row->{is_locked} = 0 if !exists $row->{is_locked};
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
@@ -235,6 +241,12 @@ sub list_domains {
     $sth->finish;
 
     return \@domains;
+}
+
+sub _remove_domain_db($self, $id) {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+    $sth->execute($id);
+    $sth->finish;
 }
 
 =head2 domain_info
@@ -364,6 +376,7 @@ sub list_iso_images {
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
 
+        delete $row->{device} if $row->{device} && !-e $row->{device};
         next if $row->{device};
 
         my ($file);
@@ -547,8 +560,13 @@ sub open_vm {
     my $type = shift or confess "I need vm type";
     my $class = "Ravada::VM::$type";
 
-    if ($VM{$type}) {
-        return $VM{$type} 
+    if (my $vm = $VM{$type}) {
+        if (!$vm->ping) {
+            $vm->disconnect();
+            $vm->connect();
+        } else {
+            return $vm;
+        }
     }
 
     my $proto = {};
@@ -639,15 +657,6 @@ sub search_domain {
 
     return Ravada::Front::Domain->search_domain($name);
 
-}
-
-sub _vm_id($self, $id) {
-    my $vm = $VM_ID{$id};
-    if (!$vm ) {
-        $vm = Ravada::VM->open(id => $id, readonly => 1);
-        $VM_ID{$id} = $vm if $vm;
-    }
-    return $vm;
 }
 
 =head2 list_requests
@@ -804,7 +813,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, id_base, is_public FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();
