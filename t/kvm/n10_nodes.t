@@ -987,16 +987,13 @@ SKIP: {
     clean_remote_node($node);
     clean_remote_node($vm);
     remove_node($node);
-    warn "[$vm_name] done remove node ".$node->name;
 }
 
 }
 
 END: {
-warn "cleaning";
 clean();
 clean_remote();
-warn "done testing";
 
 done_testing();
 }
