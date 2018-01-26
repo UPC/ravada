@@ -55,6 +55,7 @@ create_domain
     vm_names
     search_iptable_remote
     clean_remote
+    start_node shutdown_node
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -596,7 +597,7 @@ sub clean_remote_node {
 
     _remove_old_domains_vm($node);
     _remove_old_disks($node);
-    _flush_rules_remote($node);
+    _flush_rules_remote($node)  if !$node->is_local();
 }
 
 sub _remove_old_disks {
@@ -695,6 +696,76 @@ sub open_ipt {
 	my $ipt_obj = IPTables::ChainMgr->new(%opts)
     	or die "[*] Could not acquire IPTables::ChainMgr object";
 
+}
+
+sub shutdown_node($node) {
+
+    if ($node->is_active) {
+        for my $domain ($node->list_domains()) {
+            diag("Shutting down ".$domain->name." on node ".$node->name);
+            $domain->shutdown_now(user_admin);
+        }
+    }
+    $node->disconnect;
+
+    my $domain_node = _domain_node($node);
+    eval {
+        $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
+    };
+    sleep 2 if !$node->ping;
+    for ( 1 .. 30 ) {
+        diag("Waiting for node ".$node->name." to be inactive $_");
+        last if !$node->ping;
+        sleep 1;
+    }
+    return if !$node->ping;
+    $node->run_command("init 0");
+    for ( 1 .. 30 ) {
+        diag("Waiting for node ".$node->name." to be inactive $_");
+        last if !$node->ping;
+        sleep 1;
+    }
+
+    is($node->ping,0);
+}
+
+sub start_node($node) {
+
+    confess "Undefined node " if!$node;
+
+    $node->disconnect;
+    if ( $node->is_active ) {
+        $node->connect && return;
+        warn "I can't connect";
+    }
+
+    my $domain = _domain_node($node);
+
+    ok($domain->_vm->host eq 'localhost');
+
+    $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
+
+    sleep 2;
+
+    $node->disconnect;
+    sleep 1;
+
+    for ( 1 .. 20 ) {
+        last if $node->ping ;
+        sleep 1;
+        diag("Waiting for ping node ".$node->name." $_");
+    }
+
+    is($node->ping,1,"Expecting ping node ".$node->name) or exit;
+
+    for ( 1 .. 20 ) {
+        last if $node->is_active;
+        sleep 1;
+        diag("Waiting for active node ".$node->name." $_");
+    }
+
+    is($node->is_active,1,"Expecting active node ".$node->name) or exit;
+    $node->connect;
 }
 
 
