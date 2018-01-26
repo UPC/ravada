@@ -282,6 +282,10 @@ sub _start_preconditions{
         my @args = @_;
         shift @args;
         %args = @args;
+        my $user = delete $args{user};
+        my $remote_ip = delete $args{remote_ip};
+        confess "ERROR: Unknown argument ".join("," , sort keys %args)
+            ."\n\tknown: remote_ip, user"   if keys %args;
         _allow_manage_args(@_);
     } else {
         _allow_manage(@_);
