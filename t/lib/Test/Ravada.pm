@@ -56,6 +56,7 @@ create_domain
     search_iptable_remote
     clean_remote
     start_node shutdown_node
+    start_domain_internal   shutdown_domain_internal
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -766,6 +767,26 @@ sub start_node($node) {
 
     is($node->is_active,1,"Expecting active node ".$node->name) or exit;
     $node->connect;
+}
+
+sub shutdown_domain_internal($domain) {
+    if ($domain->type eq 'KVM') {
+        $domain->domain->destroy();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_active => 0 );
+    } else {
+        confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+sub start_domain_internal($domain) {
+    if ($domain->type eq 'KVM') {
+        $domain->domain->create();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_active => 1 );
+    } else {
+        confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
 }
 
 
