@@ -133,7 +133,7 @@ sub base_domain_name {
     die "I can't find name in $0"   if !$name;
     $name =~ s{/}{_}g;
 
-    return $name;
+    return "tst_$name";
 }
 
 sub base_pool_name {
