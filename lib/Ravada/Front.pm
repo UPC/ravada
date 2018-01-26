@@ -205,7 +205,7 @@ sub list_domains {
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
-        for (qw(is_locked is hibernated is_paused
+        for (qw(is_locked is_hibernated is_paused
                 has_clones )) {
             $row->{$_} = 0;
         }
@@ -213,6 +213,8 @@ sub list_domains {
         my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
         warn $@ if $@;
+        $row->{is_active} = 0;
+        $row->{remote_ip} = undef;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
@@ -226,6 +228,7 @@ sub list_domains {
             $row->{node} = $domain->_vm->name if $domain->_vm;
         }
         delete $row->{spice_password};
+        lock_hash(%$row);
         warn $row->{name}." ".(time - $t0)."\n"   if time - $t0>0;
         push @domains, ($row);
     }
