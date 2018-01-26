@@ -25,6 +25,10 @@ create_domain
     flush_rules open_ipt
     arg_create_dom
     vm_names
+    search_iptable_remote
+    clean_remote
+    start_node shutdown_node
+    start_domain_internal   shutdown_domain_internal
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -502,4 +506,30 @@ sub find_ip_rule {
     return $found[0];
 }
 
+<<<<<<< HEAD
+||||||| parent of 3c08db62... [#202] start and stop domains internally
+
+=======
+sub shutdown_domain_internal($domain) {
+    if ($domain->type eq 'KVM') {
+        $domain->domain->destroy();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_active => 0 );
+    } else {
+        confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+sub start_domain_internal($domain) {
+    if ($domain->type eq 'KVM') {
+        $domain->domain->create();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_active => 1 );
+    } else {
+        confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+
+>>>>>>> 3c08db62... [#202] start and stop domains internally
 1;
