@@ -56,6 +56,8 @@ Add the drive to the Virtual Manager
     $ sudo virsh pool-define-as pool2 dir - - - - /var/lib/libvirt/images.2
     $ sudo virsh pool-autostart pool2
     $ sudo virsh pool-start pool2
+    $ sudo virsh pool-list
+ 
 
 And that's it, now Ravada will use the pool that has more empty space
 the next time it needs to create a volume.
