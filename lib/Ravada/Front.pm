@@ -14,6 +14,7 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
+use Ravada::Front::Domain;
 use Ravada::Network;
 
 use feature qw(signatures);
@@ -46,6 +47,7 @@ our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
+our %VM_ID;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
 =head2 BUILD
@@ -75,7 +77,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases {
     my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, is_base FROM domains where is_base=1");
     $sth->execute();
     
     my @bases = ();
@@ -84,6 +86,7 @@ sub list_bases {
         eval { $domain   = $self->search_domain($row->{name}) };
         next if !$domain;
         $row->{has_clones} = $domain->has_clones;
+        delete $row->{spice_password};
         push @bases, ($row);
     }
     $sth->finish;
@@ -116,7 +119,7 @@ sub list_machines_user {
     );
     my ($id, $name, $is_public, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
 
     my @list;
     while ( $sth->fetch ) {
@@ -126,7 +129,7 @@ sub list_machines_user {
             ,id_base => $id
         );
         my %base = ( id => $id, name => $name
-            , is_public => $is_public
+            , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
             , id_clone => undef
@@ -185,33 +188,48 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT * FROM domains ORDER BY name";
+    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status "
+        ."      ,vms.name as node "
+        ." FROM domains d LEFT JOIN vms "
+        ."  ON d.id_vm = vms.id ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
         $where .= " AND " if $where;
-        $where .= " $field=?"
+        $where .= " d.$field=?"
     }
     $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where");
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        for (qw(is_locked is_hibernated is_paused
+                has_clones )) {
+            $row->{$_} = 0;
+        }
         my $domain ;
+        my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
+        warn $@ if $@;
+        $row->{is_active} = 0;
+        $row->{remote_ip} = undef;
         if ( $domain ) {
-            $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = 1 if $domain->is_hibernated;
-            $row->{is_paused} = 1 if $domain->is_paused;
+            $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
+            $row->{is_paused} = 1 if $row->{status} eq 'paused';
+            $row->{is_active} = 1 if $row->{status} eq 'active';
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
+            $row->{node} = $domain->_vm->name if $domain->_vm;
         }
+        delete $row->{spice_password};
+        lock_hash(%$row);
+        warn $row->{name}." ".(time - $t0)."\n"   if time - $t0>0;
         push @domains, ($row);
     }
     $sth->finish;
@@ -251,7 +269,10 @@ sub domain_exists {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM domains "
-        ." WHERE name=?"
+        ." WHERE name=? "
+        ."    AND ( is_volatile = 0 "
+        ."          OR is_volatile=1 AND status = 'active' "
+        ."         ) "
     );
     $sth->execute($name);
     my ($id) = $sth->fetchrow;
@@ -276,6 +297,51 @@ sub list_vm_types {
     $self->{cache}->{vm_types} = $result if $result->[0];
 
     return $result;
+}
+
+=head2 list_vms
+
+Returns a list of Virtual Managers
+
+=cut
+
+sub list_vms($self, $type=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active FROM vms ";
+
+    my @args = ();
+    if ($type) {
+        $sql .= "WHERE (vm_type=? or vm_type=?)";
+        my $type2 = $type;
+        $type2 = 'qemu' if $type eq 'KVM';
+        @args = ( $type, $type2);
+    }
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute(@args);
+
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        my $vm = $self->_vm_id($row->{id});
+        $self->_list_bases_vm($row);
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    return @list;
+}
+
+sub _list_bases_vm($self, $node) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+    );
+    $sth->execute($node->{id});
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        $node->{"base_".$id_domain} =0;
+    }
+    $sth->finish;
 }
 
 =head2 list_iso_images
@@ -371,7 +437,7 @@ Returns a reference to a list of the users
 =cut
 
 sub list_users($self,$name=undef) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users ");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
     
     my @users = ();
@@ -571,17 +637,17 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE name=?");
-    $sth->execute($name);
+    return Ravada::Front::Domain->search_domain($name);
 
-    my $row = $sth->fetchrow_hashref;
+}
 
-    return if !keys %$row;
-
-    my $vm_name = $row->{vm} or confess "Unknown vm for domain $name";
-
-    my $vm = $self->open_vm($vm_name);
-    return $vm->search_domain($name);
+sub _vm_id($self, $id) {
+    my $vm = $VM_ID{$id};
+    if (!$vm ) {
+        $vm = Ravada::VM->open(id => $id, readonly => 1);
+        $VM_ID{$id} = $vm if $vm;
+    }
+    return $vm;
 }
 
 =head2 list_requests
@@ -601,13 +667,13 @@ sub list_requests {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":00";
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT requests.id, command, args, date_changed, status"
+        "SELECT requests.id, command, args, date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
             ." ,date_changed "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
-        ."    status <> 'done' "
+        ."    requests.status <> 'done' "
         ."  OR ( command = 'download' AND date_changed >= ?) "
         ." ORDER BY date_changed DESC LIMIT 10"
     );
@@ -623,7 +689,9 @@ sub list_requests {
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
-                || $command eq 'hibernate';
+                || $command eq 'hibernate'
+                || $command eq 'ping_backend'
+                || $command eq 'refresh_vms';
         my $args;
         $args = decode_json($j_args) if $j_args;
 
@@ -671,7 +739,7 @@ sub search_domain_by_id {
     my $self = shift;
       my $id = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains WHERE id=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, id_base, is_base FROM domains WHERE id=?");
     $sth->execute($id);
 
     my $row = $sth->fetchrow_hashref;
@@ -736,7 +804,7 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, id_base FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
     
     my @bases = ();

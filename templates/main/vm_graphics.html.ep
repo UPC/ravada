@@ -5,11 +5,9 @@
         </div>
 %   }
 %   my $driver = $domain->drivers("image");
-%   my ($first, $second) = $driver->get_options();
     <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
                     <strong>This machine has not Graphics parameters!</strong>
     </div>
-
 % my %recomend = (
 %   image => 'auto_glz'
 %   ,jpeg => 'auto'
@@ -22,7 +20,7 @@
     </div>
     <form class="form-horizontal" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(image jpeg zlib playback streaming)) {
-%           my $driver = $domain->drivers($driver_name);
+%           my $driver = $domain->drivers($driver_name) or next;
 
                 <div class="row">
                     <div class="col-md-2">
@@ -35,7 +33,8 @@
 %                       for my $option( $driver->get_options ) {
 %                           my $selected ='';
 %                           $selected = 'selected'
-%                                if $domain->get_driver($driver_name) eq $option->{value};
+%                                if $domain->get_driver($driver_name)
+%                                   && $domain->get_driver($driver_name) eq $option->{value};
                             <option <%= $selected %>
                                   value="<%= $option->{id} %>"><%= $option->{name} %>
                             </option>
@@ -45,7 +44,7 @@
                     <div class="col-md-1">
 %                       if ($recomend{$driver_name}) {
                             <span class="label label-default">
-                                <%= $recomend{$driver_name} or '' %>
+                                <%= ($recomend{$driver_name} or '') %>
                             </span>
 %                       }
                     </div>

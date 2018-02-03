@@ -27,8 +27,8 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 my $USER = create_user('foo','bar');
 
 my %CREATE_ARGS = (
-    Void => { id_iso => 1,       id_owner => $USER->id }
-    ,KVM => { id_iso => 1,       id_owner => $USER->id }
+    Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
+    ,KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 
@@ -133,6 +133,8 @@ for my $vm_name ('Void','KVM','LXC') {
     ok(!$req->error,"[$vm_name] Request start domain expecting no error, got '".$req->error
         ."'") or exit;
 
+    $domain  = $RVD_FRONT->search_domain($name);
+    is($domain->_data('status'),'active',$domain->name." status");
     ok($domain->is_active,"[$vm_name] Expecting domain $name active, got ".$domain->is_active)
         or exit;
 

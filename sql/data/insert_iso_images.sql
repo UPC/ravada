@@ -1,13 +1,13 @@
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,file_re,md5)
-VALUES('Debian Jessie 32 bits'
-    ,'Debian 8.5.0 Jessie 32 bits (netsinst)'
-    ,'i386'
-    ,'jessie-i386.xml'
-    ,'jessie-volume.xml'
-    ,'http://cdimage.debian.org/cdimage/archive/8.5.0/i386/iso-cd/'
-    ,'debian-8.5.0-i386-netinst.iso'
-    ,'b3cd3e2e6a74b93ab41059c47c2b43fd'
+(name,description,arch,xml,xml_volume,url,file_re,sha256_url)
+VALUES('Alpine 3.7'
+        ,'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
+        ,'amd64'
+        ,'yakkety64-amd64.xml'
+        ,'yakkety64-volume.xml'
+        ,'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
+        ,'alpine-virt-3.7.\d+-x86_64.iso'
+        ,'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
    );
 
 INSERT INTO iso_images

@@ -53,7 +53,7 @@
 %       for my $machine (@$machines) {
 %           next if !$machine->{is_public} && !$user->is_admin;
             <div class="col-sm-4"
-                ng-hide="<%= !$machine->{is_public} %> && only_public">
+                ng-hide="!<%= $machine->{is_public} %> && only_public">
             <div class="panel panel-success"> 
             <div class="panel-heading">
                 <h3 class="panel-title"><a
@@ -63,7 +63,7 @@
 %                   }
                 </h3>
 %               if ($machine->{screenshot} ) {
-                    <img src="<%= $machine->{screenshot} %>" width="260">
+                    <img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260">
 %               }
             </div>
             <div class="panel-body">
@@ -78,7 +78,7 @@
                         <option value=""><%=l 'action'%></option>
 %                       if ($machine->{is_active}) {
                             <option value="shutdown.<%= $machine->{id_clone} %>"><%=l 'Shutdown' %></option>
-                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hybernate' %></option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hibernate' %></option>
 %                       }
 %                       if ($machine->{id_clone}) {
                             <option value="restore.<%= $machine->{id_clone} %>"><%=l 'Restore'%></option>

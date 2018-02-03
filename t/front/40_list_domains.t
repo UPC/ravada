@@ -18,14 +18,8 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-my @VMS = keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 #########################################################
@@ -39,16 +33,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -85,6 +73,14 @@ sub test_list_domains {
     is($list_domains->[0]->{remote_ip}, $remote_ip);
 }
 
+sub test_open_domain {
+    my ($vm_name, $domain) = @_;
+
+    my $domain_f = rvd_front->search_domain_by_id($domain->id);
+    is($domain_f->id , $domain->id);
+    is($domain_f->type, $domain->type);
+}
+
 #########################################################
 
 remove_old_domains();
@@ -118,6 +114,8 @@ for my $vm_name (reverse sort @VMS) {
 
         my $domain = test_create_domain($vm_name);
         test_list_domains($vm_name, $domain);
+
+        test_open_domain($vm_name, $domain);
         $domain->remove($USER);
 
     }

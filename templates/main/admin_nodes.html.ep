@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div id="admin-content">
+        <h2>Nodes</h2>
+        <table class="table table-striped">
+        <thead>
+            <tr>
+            <th><%=l 'Name' %></th>
+            <th><%=l 'Host' %></th>
+            </tr>
+        </thead>
+        <tbody>
+%       for my $node (@$list_nodes) {
+            <tr>
+                <td><%= $node->{name} %></td>
+                <td><%= $node->{hostname} %></td>
+            </tr>
+%       }
+        </tbody>
+        </table>
+      </div>
+    </div>
+</div>
+%= include 'bootstrap/footer'
+</body>
+</html>

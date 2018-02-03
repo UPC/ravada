@@ -19,7 +19,8 @@ init($test->connector, 't/etc/ravada.conf');
 
 my $USER = create_user("foo","bar");
 
-my $ID_ISO = 1;
+rvd_back();
+my $ID_ISO = search_id_iso('Alpine');
 my @ARG_CREATE_DOM = (
         id_iso => $ID_ISO
         ,id_owner => $USER->id
@@ -410,12 +411,19 @@ sub test_shutdown_by_name {
     eval { $req = Ravada::Request->shutdown_domain(
         name => $domain_name
         ,uid => $USER->id
+        ,timeout => 1
         );
     };
     is($@,'') or return;
     ok($req);
     rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
+
+    for ( 1 .. 2 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        last if !$domain->is_active;
+        sleep 1;
+    }
 
     my $domain2 = $vm->search_domain($domain_name);
     is($domain2->is_active,0);
@@ -436,13 +444,20 @@ sub test_shutdown_by_id {
     eval { $req = Ravada::Request->shutdown_domain(
         id_domain => $id_domain
         ,uid => $USER->id
+        ,timeout => 1
         );
     };
     is($@,'') or return;
     ok($req);
-    rvd_back->_process_all_requests_dont_fork(1);
+    rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
     is($req->error(),'');
+
+    for ( 1 .. 2 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        last if !$domain->is_active;
+        sleep 1;
+    }
 
     my $domain2 = $vm->search_domain($domain_name);
     is($domain2->is_active,0);
@@ -466,7 +481,7 @@ for my $vm_name ( qw(KVM Void)) {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = 1 if $vm;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id );
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id );
 
         if ($vm_name eq 'KVM') {
             my $iso = $vm->_search_iso($ID_ISO);

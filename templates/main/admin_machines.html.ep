@@ -31,7 +31,7 @@
             
 %=      include 'bootstrap/requests'
 
-        <table class="table table-striped admin-cont-body" border="0">
+        <table class="table table-striped admin-cont-body" border="1">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"
@@ -68,6 +68,7 @@
                                                                       ng-cloak
                        ng-hide="orderParam[0] !== '-is_active'"></i><%=l 'Status' %></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
+                    <th class="lgMachNode"><%=l 'Node' %></th>
                 </tr>
             </thead>
             <tbody>
@@ -105,7 +106,6 @@
                     <td class="lgMachToggle">
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
 %              if ($_user-> can_clone){
-                      <div ng-hide="{{machine.is_locked}}">
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
                          ng-disabled="machine.is_active"
@@ -147,6 +147,7 @@
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak>This Machine is a base</div>
                     </td>
+                    <td class="lgMachNode"></tg>
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
@@ -215,6 +216,7 @@
                         </div>
                         <div ng-show="{{child.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{child.is_locked}}.html">process</a></div>
                       </td>
+                      <td class="lgMachToggle">{{child.node}}</td>
                     </tr>
                     <tr ng-repeat-end ng-hide="true"></tr>
             </tbody>

@@ -129,7 +129,7 @@ sub test_req_create_domain_iso {
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
             name => $name
-         ,id_iso => 1
+         ,id_iso => search_id_iso('alpine')
        ,id_owner => $USER->id
              ,vm => $BACKEND
     );
@@ -159,7 +159,7 @@ sub test_force_kvm {
     my $name = new_domain_name();
     my $req = Ravada::Request->create_domain(
         name => $name
-        ,id_iso => 1
+        ,id_iso => search_id_iso('alpine')
       ,id_owner => $USER->id
         ,vm => 'kvm'
     );

@@ -6,7 +6,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
   VERSION   => '0.01',
   PREREQ_PM => {
-          'Mojolicious' => '6.15'
+          'Mojolicious' => '7.01'
      ,'DBIx::Connector' => 0
   ,'Authen::Passphrase' => 0
 	      ,'IPC::Run3'  => 0
@@ -26,6 +26,8 @@ WriteMakefile(
     ,'DBD::SQLite'      => 0
     ,'IPTables::ChainMgr' => 0
     ,'Net::DNS' => 0
+    ,'Net::SSH2' => 0
+    ,'File::Rsync' => 0
   },
   BUILD_REQUIRES => {
     'Test::SQL::Data' => 0
@@ -33,6 +35,6 @@ WriteMakefile(
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
-  clean     => {FILES => 't/.db' }
+  clean     => {FILES => ['t/.db', '/var/tmp/rvd_void'] }
 
 );

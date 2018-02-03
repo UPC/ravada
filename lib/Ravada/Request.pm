@@ -11,6 +11,7 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
+use Date::Calc qw(Today_and_Now);
 use JSON::XS;
 use Hash::Util;
 use Ravada;
@@ -34,14 +35,14 @@ our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
-              vm => 1
+              vm => 2
            ,name => 1
            ,swap => 2
-         ,id_iso => 1
+         ,id_iso => 2
          ,iso_file => 2
-        ,id_base => 1
+        ,id_base => 2
        ,id_owner => 1
-    ,id_template => 1
+    ,id_template => 2
          ,memory => 2
            ,disk => 2
         ,network => 2
@@ -52,7 +53,7 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2 }
+    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
@@ -60,6 +61,9 @@ our %VALID_ARG = (
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
+    ,refresh_storage => { id_vm => 2 }
+    ,refresh_vms => { id_domain => 2 }
+    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -140,19 +144,15 @@ sub create_domain {
 
     my %args = @_;
 
-    confess "Missing domain name "
-        if !$args{name};
+    my $args = _check_args('create_domain', @_ );
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
-    }
     my $self = {};
-    if ($args{network}) {
-        $args{network} = JSON::XS->new->convert_blessed->encode($args{network});
+    if ($args->{network}) {
+        $args->{network} = JSON::XS->new->convert_blessed->encode($args->{network});
     }
 
     bless($self,$class);
-    return $self->_new_request(command => 'create' , args => encode_json(\%args));
+    return $self->_new_request(command => 'create' , args => encode_json($args));
 }
 
 =head2 remove_domain
@@ -425,6 +425,8 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
+        $args{id_domain} = $args{args}->{id_domain}
+            if exists $args{args}->{id_domain} && ! $args{id_domain};
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
@@ -809,6 +811,111 @@ sub download {
     );
 
 }
+
+=head2 refresh_storage
+
+Refreshes a storage pool
+
+=cut
+
+sub refresh_storage {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_storage', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+        command => 'refresh_storage'
+        , args => $args
+    );
+
+
+}
+
+=head2 refresh_vms
+
+Refreshes a storage pool
+
+=cut
+
+sub refresh_vms {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_vms', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id, date_changed FROM requests WHERE command = 'refresh_vms' "
+        ." AND date_changed > ? "
+    );
+
+    my @now = Today_and_Now();
+    $now[4]-- if $now[4] >1 ;
+    my $before = "$now[0]-$now[1]-$now[2] $now[3]:$now[4]:$now[5]";
+    $sth->execute($before);
+    my ($id, $date) = $sth->fetchrow;
+    return if $id;
+    return $self->_new_request(
+        command => 'refresh_vms'
+        , args => $args
+    );
+
+
+}
+
+=head2 set_base_vm
+
+Enables a base in a Virtual Manager
+
+=cut
+
+sub set_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 1 if !exists $args->{value};
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => $args
+    );
+
+}
+
+=head2 remove_base_vm
+
+Disables a base in a Virtual Manager
+
+=cut
+
+sub remove_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 0;
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => encode_json($args)
+    );
+
+}
+
 
 sub AUTOLOAD {
     my $self = shift;

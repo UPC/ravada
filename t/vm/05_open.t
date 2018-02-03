@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
+use JSON::XS;
 use Test::More;
 use Test::SQL::Data;
 
@@ -21,9 +22,10 @@ clean();
 #############################################################
 
 sub test_create_domain {
+    my $vm = shift;
     my $vm_type = shift;
 
-    my $domain = create_domain($vm_type);
+    my $domain = create_domain($vm);
     my $domain_open = Ravada::Domain->open($domain->id);
 
     is(ref($domain_open),"Ravada::Domain::$vm_type"
@@ -40,24 +42,38 @@ sub test_create_domain {
     }
 }
 
-my $id = 1;
+my $id = 10;
+my $security = encode_json({ transport => 'tcp' });
+
+
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
+
+    my $vm = rvd_back->search_vm($vm_type);
     my $exp_class = "Ravada::VM::$vm_type";
 
-    my $sth = $test->connector->dbh->prepare(
-        "INSERT INTO vms (id, name, vm_type, hostname) "
-        ." VALUES(?,?,?,?)"
+    SKIP: {
+        skip("Skipping $exp_class on this system",10)   if !$vm;
+
+    my $sth = $test->dbh->prepare("DELETE FROM vms WHERE vm_type=?");
+    $sth->execute($vm_type);
+    $sth->finish;
+
+    $sth = $test->connector->dbh->prepare(
+        "INSERT INTO vms (id, name, vm_type, hostname, security) "
+        ." VALUES(?,?,?,?,?)"
     );
-    $sth->execute($id, $vm_type, $vm_type, 'localhost');
+    eval {$sth->execute(++$id, $vm_type, $vm_type, 'localhost', $security) };
+    is($@,'',"[$vm_type] Expecting no errors insert $vm_type in db");
     $sth->finish;
 
     my $vm = Ravada::VM->open($id);
     is(ref($vm),$exp_class);
 
-    test_create_domain($vm_type) if rvd_back->search_vm($vm_type);
+    test_create_domain($vm, $vm_type) if rvd_back->search_vm($vm_type);
 
     $id++;
+    };
 }
 
 done_testing();

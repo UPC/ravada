@@ -30,11 +30,19 @@ my $REMOVE_ADMIN_USER;
 my $START = 1;
 
 my $URL_ISOS;
+my $ALL;
+my $HIBERNATED;
 
+my $LIST;
+
+my $HIBERNATE_DOMAIN;
+my $START_DOMAIN;
+my $SHUTDOWN_DOMAIN;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
-        ." [--change-password] [--make-admin=username]"
+        ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
+        ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -42,20 +50,37 @@ my $USAGE = "$0 "
         ." --import-domain : import a domain\n"
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
-        ." -X : start in foreground\n"
+        ." --no-fork : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
+        ."\n"
+        ."Operations on Virtual Machines:\n"
+        ." --list\n"
+        ." --start\n"
+        ." --hibernate machine\n"
+        ." --shutdown machine\n"
+        ."\n"
+        ."Operations modifiers:\n"
+        ." --all : execute on all virtual machines\n"
+        ."          For hibernate, it is executed on all the actives\n"
+        ." --hibernated: execute on hibernated machines\n"
         ."\n"
     ;
 
 $START = 0 if scalar @ARGV && $ARGV[0] ne '&';
 
 GetOptions (       help => \$help
+                   ,all => \$ALL
+                  ,list => \$LIST
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
+             ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
+           ,'hibernated'=> \$HIBERNATED
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
+           ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
+          ,'hibernate:s'=> \$HIBERNATE_DOMAIN
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -65,6 +90,7 @@ GetOptions (       help => \$help
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
+
 
 #####################################################################
 #
@@ -79,11 +105,18 @@ die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_
 die "ERROR: Missing file config $FILE_CONFIG\n"
     if $FILE_CONFIG && ! -e $FILE_CONFIG;
 
+die "ERROR: Shutdown requires a domain name, or --all or --hibernated\n"
+    if defined $SHUTDOWN_DOMAIN && !$SHUTDOWN_DOMAIN && !$ALL && !$HIBERNATED;
+
+die "ERROR: Hibernate requires a domain name, or --all\n"
+    if defined $HIBERNATE_DOMAIN && !$HIBERNATE_DOMAIN && !$ALL;
+
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
 $Ravada::DEBUG=1    if $DEBUG;
 $Ravada::CAN_FORK=0    if $NOFORK;
+
 ###################################################################
 
 my $PID_LONGS;
@@ -136,10 +169,14 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm;
+            $vm->vm if $vm->ping;
         }
     }
     for (;;) {
+        if ($NOFORK ) {
+            do_start();
+            next;
+        }
         my $pid = fork();
         die "I can't fork $!" if !defined $pid;
         if ($pid == 0 ) {
@@ -272,6 +309,7 @@ sub import_vbox {
 sub set_url_isos {
     my $url = shift;
     my $rvd_back = Ravada->new(%CONFIG);
+
     if ($url =~ /^default$/i) {
         my $sth = $rvd_back->connector->dbh->prepare("DROP TABLE iso_images");
         $sth->execute;
@@ -281,6 +319,120 @@ sub set_url_isos {
         $rvd_back->_set_url_isos($url);
         print "ISO_IMAGES table URLs set from $url\n";
     }
+}
+
+sub list {
+    my $all = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        next if !$all && !$domain->is_active && !$domain->is_hibernated;
+        $found++;
+        print $domain->name."\t";
+        if ($domain->is_active) {
+            print "active";
+        } elsif ($domain->is_hibernated) {
+            print "hibernated";
+        } else {
+            print "down";
+        }
+        print "\n";
+    }
+    print "$found machines found.\n";
+}
+
+sub hibernate {
+    my $domain_name = shift;
+    my $all = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ( ($all && $domain->is_active)
+                || ($domain_name && $domain->name eq $domain_name)) {
+            $found++;
+            if (!$domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n";
+                next;
+            }
+            if ($domain->can_hibernate) {
+                $domain->hibernate();
+                $down++;
+            } else {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." can't hibernate because it is not supported in ".$domain->type
+                    ." domains."
+                    ."\n";
+            }
+        }
+    }
+    print "$down machines hibernated.\n";
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$all && !$found;
+}
+
+sub start_domain {
+    my $domain_name = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $up= 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ($domain->name eq $domain_name) {
+            $found++;
+            if ($domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already up.\n";
+                next;
+            }
+            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            if ($@) {
+                warn $@;
+                next;
+            }
+            print $domain->name." started.\n"
+                if $domain->is_active;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$found;
+}
+
+sub shutdown_domain {
+    my $domain_name = shift;
+    my ($all,$hibernated) = @_;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ((defined $domain_name && $domain->name eq $domain_name)
+            || ($hibernated && $domain->is_hibernated)
+            || $all ){
+            $found++;
+            if (!$domain->is_active && !$domain->is_hibernated) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n"
+                        if !$all;
+                next;
+            }
+            if ($domain->is_hibernated) {
+                $domain->start(user => $Ravada::USER_DAEMON);
+            }
+            $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 60);
+            print "Shutting down ".$domain->name.".\n";
+            $down++;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if $domain_name && !$found;
+    print "$down domains shut down.\n";
 }
 
 sub DESTROY {
@@ -295,6 +447,11 @@ sub DESTROY {
 }
 
 #################################################################
+
+{
+
+my $rvd_back = Ravada->new(%CONFIG);
+
 add_user($ADD_USER)                 if $ADD_USER;
 add_user($ADD_USER_LDAP)            if $ADD_USER_LDAP;
 change_password()                   if $CHANGE_PASSWORD;
@@ -303,6 +460,16 @@ import_vbox($IMPORT_VBOX)           if $IMPORT_VBOX;
 make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
+
+list($ALL)                          if $LIST;
+hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;
+start_domain($START_DOMAIN)         if $START_DOMAIN;
+
+shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
+                                    if defined $SHUTDOWN_DOMAIN;
+
+}
+
 
 if ($START) {
     die "Already started" if Proc::PID::File->running( name => 'rvd_back');

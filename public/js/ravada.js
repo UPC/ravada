@@ -12,7 +12,6 @@
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
-    	    .service("listUsers", gtListUsers)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
 //            .controller("machines", machinesCrtl)
@@ -131,7 +130,7 @@
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
-          $scope.getSingleMachine = function(){
+/*          $scope.getSingleMachine = function(){
             $http.get("/list_machines.json").then(function(response) {
               for (var i=0, iLength=response.data.length; i<iLength; i++) {
                 if (response.data[i].id == $scope.showmachineId) {
@@ -139,12 +138,14 @@
                   if (!$scope.new_name) {
                     $scope.new_name =   $scope.showmachine.name;
                   }
-                return;
+                  $scope.domain = response.data[i];
+                  return;
                 }
               }
               window.location.href = "/admin/machines";
             });
           };
+            */
           $scope.remove = function(machineId) {
             $http.get('/machine/remove/'+machineId+'.json');
           };
@@ -163,17 +164,17 @@
             //   TODO check previous rename returned ok
             window.location.href = "/admin/machines";
           };
-            $scope.cancel_rename=function(old_name) {
+          $scope.cancel_rename=function(old_name) {
                 $scope.new_name = old_name;
-            };
+          };
 
           $scope.validate_new_name = function(old_name) {
             $scope.new_name_duplicated = false;
-            if(!$scope.new_name || old_name == $scope.new_name) {
-              $scope.new_name_invalid=true;
+            if(old_name == $scope.new_name) {
+              $scope.new_name_invalid=false;
               return;
             }
-            var valid_domain_name = /^[a-zA-Z]\w+$/;
+            var valid_domain_name = /^[a-zA-Z][\w_-]+$/;
             if ( !valid_domain_name.test($scope.new_name)) {
                 $scope.new_name_invalid = true;
                 return;
@@ -191,11 +192,27 @@
           $scope.set_public = function(machineId, value) {
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-
+          $scope.toggle_base= function(vmId,machineId) {
+            $http.get("/machine/toggle_base_vm/" +vmId+ "/" +machineId+".json")
+              .then(function(response) {
+                    $scope.getReqs();
+              });
+          };
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.getSingleMachine();
-          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+          $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
+              $scope.showmachine=response.data;
+          });
+//          $scope.getSingleMachine();
+//          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+          $scope.getReqs= function() {
+            $http.get('/requests.json').then(function(response) {
+                $scope.requests=response.data;
+                $scope.getSingleMachine();
+            });
+          };
+          $scope.getReqs();
+
         };
 
     function swListMach() {
@@ -270,10 +287,6 @@
 // list users
     function usersCrtl($scope, $http, request, listUsers) {
 
-        $http.get('/list_users.json').then(function(response) {
-                $scope.list_users= response.data;
-        });
-
         $scope.make_admin = function(id) {
             $http.get('/users/make_admin/' + id + '.json')
             location.reload();
@@ -314,14 +327,6 @@
 
     };
 
-      function gtListUsers($resource){
-
-        return $resource('/list_users.json',{},{
-            get:{isArray:true}
-        });
-
-    };
-
     function gtListMess($resource){
 
         return $resource('/messages.json',{},{
@@ -342,7 +347,20 @@
       var toGet = '/messages/read/'+message[0].id+'.html';
       $http.get(toGet);
     };
-  }
+    $scope.getAlerts();
+  };
+
+/*
+  function requestsCrtlSingle($scope, $interval, $http, request){
+    $scope.getReqs= function() {
+      $http.get('/requests.json').then(function(response) {
+          $scope.requests=response.data;
+      });
+    };
+//    $interval($scope.getReqs,5000);
+    $scope.getReqs();
+  };
+*/
 
 	function nameAvail($timeout, $q) {
     return {

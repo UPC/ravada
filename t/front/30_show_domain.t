@@ -24,7 +24,7 @@ my $RVD_FRONT = Ravada::Front->new(
 my $USER = create_user('foo','bar');
 
 my %CREATE_ARGS = (
-     KVM => { id_iso => 1,       id_owner => $USER->id }
+     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
     ,Void => { id_owner => $USER->id }
 );
@@ -93,7 +93,9 @@ sub test_start_domain {
     eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
-    ok($domain_f->is_active);# && !$domain_f->is_active);
+
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,1);# && !$domain_f->is_active);
 
 }
 
@@ -105,6 +107,12 @@ sub test_shutdown_domain {
     my $domain_b = $vm->search_domain($name);
     ok($domain_b,"Domain $name should be in backend");
     ok(!$domain_b->readonly,"Domain $name should not be readonly");
+
+    my $vm2 = Ravada::VM->open( id => $vm->id);
+    ok($vm2,"[$vm_name] expecting a VM") or exit;
+
+    my $vm3 = Ravada::VM->open( id => $vm->id, readonly => 1);
+    ok($vm3,"[$vm_name] expecting a VM") or exit;
 
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
@@ -129,7 +137,8 @@ sub test_shutdown_domain {
     eval { $domain_b->shutdown(user => $USER,force => 1) };
     ok(!$@,$@);
 
-    ok(!$domain_f->is_active);# && !$domain_f->is_active);
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,0);# && !$domain_f->is_active);
 
 }
 

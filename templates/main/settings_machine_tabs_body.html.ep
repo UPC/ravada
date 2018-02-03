@@ -12,11 +12,7 @@
 
 % if ($USER->can_change_settings ) {
     <div class="tab-pane fade" id="options">
-      % if ($domain->is_base) {
-        %= include 'main/vm_locked_is_base'
-      % } else {
         %= include 'main/vm_options'
-      % }
     </div>
 % }
 % if ($USER->can_change_settings && $domain->drivers) {
@@ -44,6 +40,12 @@
 % if ( $USER->can_remove ) {
     <div class="tab-pane fade" id="remove" >
         %= include 'main/vm_remove'
+    </div>
+% }
+
+% if ( $USER->is_admin && $domain->is_base) {
+    <div class="tab-pane fade" id="base" >
+        %= include 'main/vm_base'
     </div>
 % }
 

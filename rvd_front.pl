@@ -9,6 +9,7 @@ use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 
 use Mojo::Home;
@@ -25,12 +26,16 @@ use POSIX qw(locale_h);
 
 my $help;
 
-my $FILE_CONFIG;
+my $FILE_CONFIG = "/etc/rvd_front.conf";
+
+my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
-    warn "WARNING: Found config file at $_ and at $FILE_CONFIG\n"
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
         if -e $file && $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
+    $error_file_duplicated++;
 }
+warn "WARNING: using $FILE_CONFIG\n"    if$error_file_duplicated>2;
 
 my $FILE_CONFIG_RAVADA;
 for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
@@ -267,6 +272,8 @@ get '/iso_file.json' => sub {
 get '/list_machines.json' => sub {
     my $c = shift;
 
+    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
+    my $req = Ravada::Request->refresh_vms();
     $c->render(json => $RAVADA->list_domains);
 };
 
@@ -275,11 +282,6 @@ get '/list_bases_anonymous.json' => sub {
 
     # shouldn't this be "list_bases" ?
     $c->render(json => $RAVADA->list_bases_anonymous(_remote_ip($c)));
-};
-
-get '/list_users.json' => sub {
-    my $c = shift;
-    $c->render(json => $RAVADA->list_users);
 };
 
 get '/list_lxc_templates.json' => sub {
@@ -299,6 +301,13 @@ get '/machine/info/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     die "No id " if !$id;
+
+    my ($domain) = _search_requested_machine($c);
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id;
+
     $c->render(json => $RAVADA->domain_info(id => $id));
 };
 
@@ -310,6 +319,13 @@ any '/machine/settings/(:id).(:type)' => sub {
 
 any '/machine/manage/(:id).(:type)' => sub {
     my $c = shift;
+
+    my ($domain) = _search_requested_machine($c);
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id;
+
     return manage_machine($c);
 };
 
@@ -317,6 +333,12 @@ get '/machine/view/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     my $type = $c->stash('type');
+
+    my ($domain) = _search_requested_machine($c);
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id;
 
     return view_machine($c);
 };
@@ -355,6 +377,11 @@ any '/machine/remove_clones/(:id).(:type)' => sub {
 get '/machine/prepare/(:id).(:type)' => sub {
         my $c = shift;
         return prepare_machine($c);
+};
+
+get '/machine/toggle_base_vm/(:id_vm)/(:id_domain).(:type)' => sub {
+    my $c = shift;
+    return toggle_base_vm($c);
 };
 
 get '/machine/remove_b/(:id).(:type)' => sub {
@@ -417,8 +444,7 @@ get '/machine/rename/#id/#value' => sub {
 
 any '/machine/copy' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER -> can_copy();
-#    return access_denied($c)    if !$USER -> can_clone_all();
+    return access_denied($c)    if !$USER -> can_clone_all();
     return copy_machine($c);
 };
 
@@ -623,25 +649,31 @@ sub user_settings {
     $c->param('tongue' => $USER->language);
     my @errors;
     if ($c->param('button_click')) {
-        if (($c->param('password') eq "") || ($c->param('conf_password') eq "")) {
+        if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
         } 
         else {
-            if ($c->param('password') eq $c->param('conf_password')) {
-                eval { 
-                    $USER->change_password($c->param('password')); 
-                    _logged_in($c);
-                };
-                if ($@ =~ /Password too small/) {
-                    push @errors,("Password too small")
+            my $comp_password = $USER->compare_password($c->param('current_password'));
+            if ($comp_password) {
+                if ($c->param('password') eq $c->param('conf_password')) {
+                    eval {
+                        $USER->change_password($c->param('password'));
+                        _logged_in($c);
+                    };
+                    if ($@ =~ /Password too small/) {
+                        push @errors,("New Password is too small");
+                    }
+                    else {
+                        $changed_pass = 1;
+                    };
                 }
                 else {
-                    $changed_pass = 1;
-                };
-          }
-          else {
-              push @errors,("Password fields aren't equal")
-          }
+                    push @errors,("Password fields aren't equal");
+                }
+            }
+            else {
+                push @errors, ("Invalid Current Password");
+            }
         }
     }
     $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
@@ -896,7 +928,11 @@ sub admin {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
     }
+    if ($page eq 'nodes') {
+        $c->stash(list_nodes => [$RAVADA->list_vms]);
+    }
     if ($page eq 'machines') {
+        Ravada::Request->refresh_vms();
         $c->stash(hide_clones => 0 );
 
         my $list_domains = $RAVADA->list_domains();
@@ -927,6 +963,9 @@ sub new_machine {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
         }
+    } else {
+        my $req = Ravada::Request->refresh_storage();
+        # TODO handle possible errors
     }
     $c->stash(errors => \@error);
     push @{$c->stash->{js}}, '/js/admin.js';
@@ -952,8 +991,8 @@ sub req_new_domain {
         ,id_owner => $USER->id
         ,swap => $swap
     );
-    $args{memory} = int($c->param('memory')*1024*1024)  if $args{memory};
-    $args{disk} = int($c->param('disk')*1024*1024*1024) if $args{disk};
+    $args{memory} = int($c->param('memory')*1024*1024)  if $c->param('memory');
+    $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
@@ -1031,7 +1070,8 @@ sub provision {
     die "Missing id_base "  if !defined $id_base;
     die "Missing name "     if !defined $name;
 
-    my $domain = $RAVADA->search_domain($name);
+    my $domain;
+    $domain = $RAVADA->search_domain($name) if $RAVADA->domain_exists($name);
     return $domain if $domain && !$domain->is_base;
 
     if ($domain) {
@@ -1135,6 +1175,8 @@ sub show_link {
         $description = $base->description();
     }
     $c->stash(description => $description);
+    $c->stash(domain => $domain );
+    $c->stash(msg_timeout => _message_timeout($domain));
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1144,6 +1186,22 @@ sub show_link {
                 ,display_port => $display_port
                 ,description => $description
                 ,login => $c->session('login'));
+}
+
+sub _message_timeout {
+    my $domain = shift;
+    return '' if !$domain->run_timeout;
+    my $msg_timeout = "in ".int($domain->run_timeout / 60 )
+        ." minutes.";
+    for my $request ( $domain->list_requests ) {
+        if ( $request->command eq 'shutdown' ) {
+            my $t1 = Time::Piece->localtime($request->at_time);
+            my $t2 = localtime();
+
+            $msg_timeout = " in ".($t1 - $t2)->pretty;
+        }
+    }
+    return $msg_timeout;
 }
 
 sub _open_iptables {
@@ -1204,14 +1262,14 @@ sub init {
 
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
-            return if -e $home->rel_dir("public");
+            return if -e $home->rel_file("public");
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
-            or $home->rel_dir("public"));
+            or $home->rel_file("public"));
     app->renderer->paths->[0] =($CONFIG_FRONT->{dir}->{templates}
-            or $home->rel_dir("templates"));
+            or $home->rel_file("templates"));
     app->renderer->paths->[1] =($CONFIG_FRONT->{dir}->{custom}
-            or $home->rel_dir("templates"));
+            or $home->rel_file("templates"));
 
 }
 
@@ -1310,6 +1368,13 @@ sub manage_machine {
 sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
+
+    return access_denied($c)    if !$domain;
+
+    return access_denied($c)
+        unless $USER->is_admin
+        || $domain->id_owner == $USER->id;
+
     return $c->render("Domain not found")   if !$domain;
 
     $c->stash(domain => $domain);
@@ -1340,21 +1405,23 @@ sub settings_machine {
         }
     }
 
-    $c->stash(description => '');
-    my $description = $domain->description;
-    $c->stash(description => $description);
-
-    if ( $c->param("description") ) {
-        $domain->description($c->param("description"));
-        $c->stash(message => 'Description applied!');
-        my $description = $domain->description;
-        $c->stash(description => $description);
+    for my $option (qw(description run_timeout)) {
+        if ( defined $c->param($option) ) {
+            my $value = $c->param($option);
+            $value = 0 if !defined $value || !$value;
+            $value *= 60 if $option eq 'run_timeout';
+            $domain->set_option($option, $value);
+            $c->stash(message => "\U$option changed!");
+        }
     }
+
+    push @reqs,(Ravada::Request->refresh_vms( id_domain => $domain->id ));
 
     for my $req (@reqs) {
-        $RAVADA->wait_request($req, 60)
+        $RAVADA->wait_request($req, 10)
     }
     return $c->render(template => 'main/settings_machine'
+        , nodes => [$RAVADA->list_vms($domain->type)]
         , action => $c->req->url->to_abs->path);
 }
 
@@ -1485,6 +1552,27 @@ sub screenshot_machine {
     $c->render(json => { request => $req->id});
 }
 
+sub toggle_base_vm {
+    my $c = shift;
+
+    my $id_vm = $c->stash('id_vm');
+    my $domain = Ravada::Domain->open($c->stash('id_domain'),'readonly');
+
+    if ($USER->id != $domain->id && !$USER->is_admin) {
+        return $c->render(json => {message => 'access denied'});
+    }
+    my $new_value = 0;
+    $new_value = 1 if !$domain->base_in_vm($id_vm);
+
+    my $req = Ravada::Request->set_base_vm(
+          value => $new_value
+        , id_vm => $id_vm
+        , id_domain => $domain->id
+        , uid => $USER->id
+    );
+    return $c->render(json => {message => 'processing request'});
+}
+
 sub prepare_machine {
     my $c = shift;
     return login($c)    if !_logged_in($c);
@@ -1516,6 +1604,8 @@ sub start_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
+    return $c->render(text => "Domain not found") if !$domain;
+
     my $req = Ravada::Request->start_domain( uid => $USER->id
                                            ,name => $domain->name
                                       ,remote_ip => _remote_ip($c)
@@ -1546,7 +1636,7 @@ sub copy_machine {
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
-    if (!$base->is_base) {
+    if (!$base->is_base || $base->is_locked) {
         my $req = Ravada::Request->prepare_base(
             id_domain => $id_base
             ,uid => $USER->id
