@@ -21,29 +21,7 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
-# Runtime Rex checking availability
-#
-
-eval {
-    require Rex;
-    Rex->import();
-
-    require Rex::Commands::Run;
-    Rex::Commands::Run->import();
-
-    require Rex::Group::Entry::Server;
-    Rex::Group::Entry::Server->import();
-
-    require Rex::Commands::Iptables;
-    Rex::Commands::Iptables->import();
-
-    require Rex::Commands::File;
-    Rex::Commands::File->import();
-
-    require Rex::Commands;
-};
-our $REX_ERROR = $@;
-warn $REX_ERROR if $REX_ERROR;
+our $REX_ERROR;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -170,6 +148,7 @@ sub BUILD {
 
     my $args = $_[0];
 
+    $self->_load_rex()  if !$self->is_local;
     $self->security($args->{security})  if $args->{security};
 
     if ($args->{id}) {
@@ -191,6 +170,30 @@ sub BUILD {
             );
 
 }
+
+sub _load_rex {
+    return if defined $REX_ERROR;
+    eval {
+        require Rex;
+        Rex->import();
+    
+    #    require Rex::Commands;
+    #    Rex::Commands->import;
+    
+        require Rex::Commands::Run;
+        Rex::Commands::Run->import();
+    
+        require Rex::Group::Entry::Server;
+        Rex::Group::Entry::Server->import();
+    
+        require Rex::Commands::Iptables;
+        Rex::Commands::Iptables->import();
+    };
+    $REX_ERROR = $@;
+    $REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
+    warn $REX_ERROR if $REX_ERROR;
+
+};
 
 sub _open_type {
     my $self = shift;

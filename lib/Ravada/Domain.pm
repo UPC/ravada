@@ -20,29 +20,7 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
-# Runtime Rex checking availability
-#
-
-eval {
-    require Rex;
-    Rex->import();
-
-#    require Rex::Commands;
-#    Rex::Commands->import;
-
-    require Rex::Commands::Run;
-    Rex::Commands::Run->import();
-
-    require Rex::Group::Entry::Server;
-    Rex::Group::Entry::Server->import();
-
-    require Rex::Commands::Iptables;
-    Rex::Commands::Iptables->import();
-
-};
-our $REX_ERROR = $@;
-$REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
-warn $REX_ERROR if $REX_ERROR;
+our $REX_ERROR;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -210,8 +188,33 @@ sub BUILD {
 
     $self->is_known();
     eval { $self->_check_clean_shutdown() };
+    $self->_load_rex() if !$self->is_local;
 #    warn $@ if $@;
 }
+
+sub _load_rex {
+    return if defined $REX_ERROR;
+    eval {
+        require Rex;
+        Rex->import();
+    
+    #    require Rex::Commands;
+    #    Rex::Commands->import;
+    
+        require Rex::Commands::Run;
+        Rex::Commands::Run->import();
+    
+        require Rex::Group::Entry::Server;
+        Rex::Group::Entry::Server->import();
+    
+        require Rex::Commands::Iptables;
+        Rex::Commands::Iptables->import();
+    };
+    $REX_ERROR = $@;
+    $REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
+    warn $REX_ERROR if $REX_ERROR;
+
+};
 
 sub _check_clean_shutdown($self) {
     if ( $self->is_known
