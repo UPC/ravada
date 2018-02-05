@@ -132,6 +132,7 @@ sub test_base {
         ok(!-e $file,"Expecting volume $file doesn't exist, got : ".(-e $file or 0));
     }
 
+    $domain->remove($USER);
 }
 
 sub test_volumes_in_two_pools {
@@ -177,7 +178,8 @@ sub test_volumes_in_two_pools {
     for my $file (@volumes) {
         ok(!-e $file,"Expecting volume $file doesn't exist, got : ".(-e $file or 0));
     }
-
+    remove_pool($vm_name, $pool_name1);
+    remove_pool($vm_name, $pool_name2);
 }
 
 sub test_default_pool {
@@ -190,6 +192,15 @@ sub test_default_pool {
     }
     my $vm = rvd_back->search_vm($vm_name);
     is($vm->default_storage_pool_name, $pool_name);
+}
+
+sub remove_pool {
+    my ($vm_name, $pool_name) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $pool = $vm->get_storage_pool_by_name($pool_name);
+    $pool->undefine;
 }
 
 #########################################################################
@@ -216,6 +227,8 @@ SKIP: {
     test_default_pool($vm_name,$pool_name);
 
     test_volumes_in_two_pools($vm_name);
+
+    remove_pool($vm_name, $pool_name);
 }
 
 clean();

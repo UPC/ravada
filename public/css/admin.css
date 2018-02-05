@@ -16,6 +16,9 @@
 .lgMachActions{
   width: 200px;
 }
+.lgMachNode{
+  width: 150px;
+}
 
 #slidecontainer {
     width: 100%; /* Width of the outside container */

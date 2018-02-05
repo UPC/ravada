@@ -53,7 +53,7 @@ my $USAGE = "$0 "
         ." --import-domain-owner : owner of the domain to import\n"
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
-        ." -X : start in foreground\n"
+        ." --no-fork : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
         ."\n"
@@ -174,10 +174,14 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm;
+            $vm->vm if $vm->ping;
         }
     }
     for (;;) {
+        if ($NOFORK ) {
+            do_start();
+            next;
+        }
         my $pid = fork();
         die "I can't fork $!" if !defined $pid;
         if ($pid == 0 ) {

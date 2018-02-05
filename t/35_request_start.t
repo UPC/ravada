@@ -117,10 +117,12 @@ sub test_start {
         $id_domain = $domain->id;
         $domain->start($USER)    if !$domain->is_active();
         ok($domain->is_active);
+        is($domain->is_volatile,0);
 
         my $vm = $RAVADA->search_vm($vm_name);
         my $domain2 = $vm->search_domain($name);
         ok($domain2->is_active);
+        is($domain2->is_volatile,0);
     }
 
     $req2 = undef;
@@ -139,8 +141,9 @@ sub test_start {
 
     my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);
+    ok($domain3,"[$vm_name] Searching for domain $name") or exit;
     for ( 1 .. 60 ) {
-        last if !$domain3->is_active;
+        last if !$domain3 || !$domain3->is_active;
         sleep 1;
     }
     ok(!$domain3->is_active,"Domain $name should not be active");

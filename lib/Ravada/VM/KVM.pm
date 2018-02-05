@@ -52,7 +52,7 @@ has vm => (
 has type => (
     isa => 'Str'
     ,is => 'ro'
-    ,default => 'qemu'
+    ,default => 'KVM'
 );
 
 #########################################################################3
@@ -76,6 +76,8 @@ our $WGET = `which wget`;
 chomp $WGET;
 
 our $CACHE_DOWNLOAD = 1;
+
+our %_CREATED_DEFAULT_STORAGE = ();
 ##########################################################################
 
 
@@ -85,16 +87,46 @@ sub _connect {
     my $vm;
     confess "undefined host" if !defined $self->host;
 
+    my $con_type = $self->type;
+    $con_type = 'qemu' if $self->type eq 'KVM';
+
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
+        $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
-                              ,readonly => $self->mode
+        return if $self->readonly;
+        my $transport = 'ssh';
+        $transport = $self->security->{transport}
+            if $self->security && $self->security->{transport};
+        my $address = $con_type."+".$transport
+                                            ."://".'root@'.$self->host
+                                            ."/system";
+        eval {
+            $vm = Sys::Virt->new(
+                                address => $address
+                              ,auth => 1
+                              ,credlist => [
+                                  Sys::Virt::CRED_AUTHNAME,
+                                  Sys::Virt::CRED_PASSPHRASE,
+                              ]
+                              ,callback => sub {
+                                  my $creds = shift;
+                                  foreach my $cred (@{$creds}) {
+                                      $cred->{result} = $self->security->{user}
+                                          if $cred->{type} == Sys::Virt::CRED_AUTHNAME;
+                                      $cred->{result} = $self->security->{password}
+                                          if $cred->{type} == Sys::Virt::CRED_PASSPHRASE;
+                                  }
+                                  return 0;
+                              }
                           );
+         };
+         die $@ if $@ && $@ !~ /libvirt error code: 38/;
+         return if !$vm;
     }
-    if ( ! $vm->list_storage_pools ) {
-	warn "WARNING: No storage pools creating default\n";
+    if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
     }
     $self->_check_networks($vm);
     return $vm;
@@ -142,6 +174,8 @@ sub connect {
 sub _load_storage_pool {
     my $self = shift;
 
+    confess "no hi ha vm" if !$self->vm;
+
     my $vm_pool;
     my $available;
 
@@ -161,7 +195,7 @@ sub _load_storage_pool {
         $available = $info->{available};
 
     }
-    die "I can't find /pool/target/path in the storage pools xml\n"
+    confess "I can't find /pool/target/path in the storage pools xml\n"
         if !$vm_pool;
 
     return $vm_pool;
@@ -266,9 +300,13 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub refresh_storage_pools($self) {
+    $self->_refresh_storage_pools();
+}
+
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
-        for (;;) {
+        for ( 1 .. 10 ) {
             eval { $pool->refresh() };
             last if !$@;
             warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
@@ -417,14 +455,16 @@ sub search_domain {
     my $name = shift or confess "Missing name";
 
     $self->connect();
+    return if !$self->vm;
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
     confess $@ if $@;
 
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
+    my $dom;
+    eval { $dom = $self->vm->get_domain_by_name($name); };
+    return if !$dom;
 
-        my $domain;
+    my $domain;
 
         eval {
             $domain = Ravada::Domain::KVM->new(
@@ -437,7 +477,7 @@ sub search_domain {
         if ($domain) {
             return $domain;
         }
-    }
+
     return;
 }
 
@@ -452,10 +492,22 @@ Returns a list of the created domains
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
+
+    return if !$self->vm;
+
+    my $active = (delete $args{active} or 0);
+
+    confess "Arguments uknown ".Dumper(\%args)  if keys %args;
 
     confess "Missing vm" if !$self->vm;
     my @list;
-    my @domains = $self->vm->list_all_domains();
+    my @domains;
+    if ($active) {
+        @domains = $self->vm->list_domains();
+    } else {
+        @domains = $self->vm->list_all_domains();
+    }
     for my $name (@domains) {
         my $domain ;
         my $id;
@@ -464,8 +516,9 @@ sub list_domains {
                         ,_vm => $self
         );
         next if !$domain->is_known();
+#        next if $active && !$domain->is_active;
         $id = $domain->id();
-        warn $@ if $@ && $@ !~ /No DB info/i;
+#        warn $@ if $@ && $@ !~ /No DB info/i;
         push @list,($domain) if $domain && $id;
     }
     return @list;
@@ -1286,11 +1339,7 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    my @known_uuids;
-    for my $dom ($self->vm->list_all_domains) {
-        push @known_uuids,($dom->get_uuid_string);
-    }
-    my $new_uuid = _unique_uuid($uuid,@known_uuids);
+    my $new_uuid = $self->_unique_uuid($uuid);
     $uuid->setData($new_uuid);
 }
 
@@ -1303,12 +1352,18 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
     }
     my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
 
-    for (1..1000) {
-        my $new_last = int(rand(0x100000));
-        my $new_uuid = sprintf("%s%06d",$first,substr($new_last,0,6));
+    for my $domain ($self->vm->list_all_domains) {
+        push @uuids,($domain->get_uuid_string);
+    }
 
-        confess "Wrong uuid size ".length($new_uuid)." <> ".length($uuid)
-            if length($new_uuid) != length($uuid);
+    for (1..100) {
+        my $new_last = substr(int(rand(0x1000000)),0,6);
+        my $new_uuid = sprintf("%s%06d",$first,$new_last);
+        die "Wrong length ".length($new_uuid)
+            ."\n"
+            .$new_uuid
+        if length($new_uuid) != length($uuid);
+
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
     confess "I can't find a new unique uuid";
@@ -1851,6 +1906,24 @@ sub ping($self) {
     eval { $self->vm->list_defined_networks };
     return 1 if !$@;
     return 0;
+}
+
+sub free_memory($self) {
+
+    confess "ERROR: VM ".$self->name." inactive"
+        if !$self->is_active;
+
+    return
+    $self->vm->get_node_memory_stats()->{free}
+    + $self->vm->get_node_memory_stats()->{cached};
+    + $self->vm->get_node_memory_stats()->{buffers};
+}
+
+sub list_storage_pools($self) {
+    return
+        map { $_->get_name }
+        grep { $_-> is_active }
+        $self->vm->list_storage_pools();
 }
 
 1;

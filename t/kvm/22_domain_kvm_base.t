@@ -19,7 +19,7 @@ use_ok('Ravada');
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA = rvd_back( $test->connector , 't/etc/ravada_kvm.conf');
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
+my ($DOMAIN_NAME) = new_domain_name();
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 $DOMAIN_NAME_SON =~ s/base_//;
 

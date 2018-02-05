@@ -11,6 +11,7 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
+use Date::Calc qw(Today_and_Now);
 use JSON::XS;
 use Hash::Util;
 use Ravada;
@@ -63,6 +64,8 @@ our %VALID_ARG = (
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2, verbose => 2}
     ,refresh_storage => { id_vm => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
+    ,refresh_vms => { id_domain => 2 }
+    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -885,11 +888,93 @@ sub clone {
     my $self = {};
     bless($self,$class);
 
-    return _new_request($self
+        return _new_request($self
         , command => 'clone'
         , args =>$args
     );
 }
+
+=head2 refresh_vms
+
+Refreshes a storage pool
+
+=cut
+
+sub refresh_vms {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_vms', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id, date_changed FROM requests WHERE command = 'refresh_vms' "
+        ." AND date_changed > ? "
+    );
+
+    my @now = Today_and_Now();
+    $now[4]-- if $now[4] >1 ;
+    my $before = "$now[0]-$now[1]-$now[2] $now[3]:$now[4]:$now[5]";
+    $sth->execute($before);
+    my ($id, $date) = $sth->fetchrow;
+    return if $id;
+    return $self->_new_request(
+        command => 'refresh_vms'
+        , args => $args
+    );
+
+
+}
+
+=head2 set_base_vm
+
+Enables a base in a Virtual Manager
+
+=cut
+
+sub set_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 1 if !exists $args->{value};
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => $args
+    );
+
+}
+
+=head2 remove_base_vm
+
+Disables a base in a Virtual Manager
+
+=cut
+
+sub remove_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 0;
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => encode_json($args)
+    );
+
+}
+
 
 sub AUTOLOAD {
     my $self = shift;

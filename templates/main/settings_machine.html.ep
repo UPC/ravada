@@ -6,8 +6,7 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="singleMachinePage" ng-init="new_name='<%= $domain->name %>'">
-    <div class="page-header">
+    <div class="page-header" ng-controller="singleMachinePage">
         <div class="panel panel-default">
              <div class="panel-heading">
                  <h2>Virtual Machine 
@@ -21,8 +20,8 @@
                 %= include 'main/settings_machine_tabs_body'
             </div>
         </div><!-- del panel default-->
+%=   include 'bootstrap/requests'
     </div><!-- del page-header -->
-</div><!-- del ng-controller -->
 </div> <!-- del page-wrapper -->
 </div> <!-- del wrapper -->
     %= include 'bootstrap/scripts'

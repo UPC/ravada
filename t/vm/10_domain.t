@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Test::More;
 use Test::SQL::Data;
@@ -29,37 +30,44 @@ ok($USER);
 
 sub test_vm_connect {
     my $vm_name = shift;
+    my $host = (shift or 'localhost');
+    my $conf = (shift or {} );
 
     my $class = "Ravada::VM::$vm_name";
     my $obj = {};
 
     bless $obj,$class;
 
-    my $vm = $obj->new();
+    my %args;
+    $args{host} = $host if $host;
+
+    my $vm = $obj->new(host => $host, %$conf);
     ok($vm);
-    ok($vm->host eq 'localhost');
+    is($vm->host, $host);
 }
 
 sub test_search_vm {
     my $vm_name = shift;
-
-    return if $vm_name eq 'Void';
+    my $host = ( shift or 'localhost');
 
     my $class = "Ravada::VM::$vm_name";
 
     my $ravada = Ravada->new(@ARG_RVD);
-    my $vm = $ravada->search_vm($vm_name);
-    ok($vm,"I can't find a $vm virtual manager");
+    my $vm = $ravada->search_vm($vm_name, $host);
+    ok($vm,"I can't find a $vm_name virtual manager in host=".($host or '<UNDEF>')) or exit;
     ok(ref $vm eq $class,"Virtual Manager is of class ".(ref($vm) or '<NULL>')
         ." it should be $class");
+
+    is($vm->host, $host);
 }
 
 
 sub test_create_domain {
     my $vm_name = shift;
+    my $host = shift;
 
     my $ravada = Ravada->new(@ARG_RVD);
-    my $vm = $ravada->search_vm($vm_name);
+    my $vm = $ravada->search_vm($vm_name, $host);
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
@@ -325,11 +333,19 @@ sub test_description {
 
 sub test_create_domain_nocd {
     my $vm_name = shift;
+    my $host = (shift or 'localhost');
 
-    my $vm = rvd_back->search_vm($vm_name);
+    my $vm = rvd_back->search_vm($vm_name, $host);
     my $name = new_domain_name();
 
     my $id_iso = search_id_iso('Debian');
+
+    my $sth = $test->dbh->prepare(
+        "UPDATE iso_images set device=NULL WHERE id=?"
+    );
+    $sth->execute($id_iso);
+    $sth->finish;
+
     my $iso;
     eval { $iso = $vm->_search_iso($id_iso,'<NONE>')};
     return if $@ && $@ =~ /Can't locate object method/;
@@ -362,6 +378,35 @@ sub select_iso {
     return $sth->fetchrow_hashref;
 }
 
+sub test_vm_in_db {
+    my $vm_name = shift;
+    my $conf = shift;
+
+    my $vm;
+    eval { $vm = Ravada::VM->open(type => $vm_name, %$conf)};
+    is(''.$@,'') or return;
+
+    ok($vm);
+    ok($vm->id);
+
+    my $vm2;
+    eval { $vm2 = Ravada::VM->open($vm->id) };
+    is(''.$@,'') or exit;
+
+    is($vm2->id, $vm->id);
+    is($vm2->name, $vm->name);
+    is($vm2->host, $vm->host);
+
+    my $vm3;
+    eval { $vm3 = rvd_back->search_vm($vm_name, $vm2->host,1) };
+    is(''.$@,'') or return;
+
+    ok($vm3,"Expecting a VM ".$vm_name." ".$vm2->host) or exit;
+    is($vm3->id, $vm->id);
+    is($vm3->name, $vm->name);
+    is($vm3->host, $vm->host);
+}
+
 #######################################################
 
 remove_old_domains();
@@ -369,12 +414,22 @@ remove_old_disks();
 
 for my $vm_name (qw( Void KVM )) {
 
-    diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
+  my $remote_conf = remote_config ($vm_name);
+  my @conf = (undef, { host => 'localhost' });
 
+  for my $conf ( @conf ) {
+
+    lock_hash(%$conf);
+
+    my $host;
+    $host = $conf->{host} if $conf && exists $conf->{host};
+
+    diag("Testing VM $vm_name in host ".($host or '<UNDEF>'));
+    my $CLASS= "Ravada::VM::$vm_name";
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
+    $RAVADA->_upgrade_tables() if $RAVADA;
 
     my $vm;
 
@@ -391,12 +446,14 @@ for my $vm_name (qw( Void KVM )) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS) or next;
-        test_vm_connect($vm_name);
-        test_search_vm($vm_name);
+        test_vm_in_db($vm_name, $conf)    if $conf;
 
-        test_create_domain_nocd($vm_name);
+        test_vm_connect($vm_name, $host, $conf);
+        test_search_vm($vm_name, $host, $conf);
 
-        my $domain = test_create_domain($vm_name);
+        test_create_domain_nocd($vm_name, $host);
+
+        my $domain = test_create_domain($vm_name, $host);
         test_open($vm_name, $domain);
 
         test_description($vm_name, $domain);
@@ -431,6 +488,7 @@ for my $vm_name (qw( Void KVM )) {
         test_remove_domain($vm_name, $domain);
 
     };
+}
 }
 remove_old_domains();
 remove_old_disks();

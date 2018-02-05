@@ -74,6 +74,7 @@ sub test_add_volume {
     my $vmb = rvd_back->search_vm($vm_name);
     ok($vmb,"I can't find a VM ".$vm_name) or return;
     my $domainb = $vmb->search_domain($domain->name);
+    ok($domainb,"[$vm_name] Expecting domain ".$domain->name) or return;
     my @volumesb2 = $domainb->list_volumes();
 
     my $domain_xml = '';

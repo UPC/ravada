@@ -81,8 +81,7 @@ sub test_create_fail {
 
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
-    my $domain2 = rvd_front()->search_domain($name);
-    ok(!$domain,"Expecting doesn't exists domain '$name'");
+    is(rvd_front->domain_exists,0,"Expecting doesn't exists domain '$name'");
 
 }
 
@@ -215,7 +214,9 @@ sub test_args {
     {
         my $domain = test_req_create_domain($vm_name, $memory, $disk, "Request");
         test_memory($vm_name, $domain, $memory, "Request") if $domain;
-        test_disk($vm_name, $domain, $disk)     if $domain;
+
+        my $domain_backend = rvd_back->search_domain($domain->name);
+        test_disk($vm_name, $domain_backend, $disk)     if $domain_backend;
     }
 }
 
