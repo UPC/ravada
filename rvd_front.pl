@@ -31,7 +31,7 @@ my $FILE_CONFIG = "/etc/rvd_front.conf";
 my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
     warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
-        if -e $file && $FILE_CONFIG;
+        if -e $file && $FILE_CONFIG && $file ne $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
     $error_file_duplicated++;
 }
