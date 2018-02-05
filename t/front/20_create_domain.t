@@ -59,7 +59,7 @@ sub test_remove_domain {
     $domain = $RVD_BACK->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         $domain->remove($USER);
     }
     $domain = $RVD_BACK->search_domain($name);
