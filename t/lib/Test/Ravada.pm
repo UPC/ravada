@@ -145,7 +145,7 @@ sub base_pool_name {
     die "I can't find name in $0"   if !$name;
     $name =~ s{/}{_}g;
 
-    return "tst_poool_$name";
+    return "tst_pool_$name";
 }
 
 sub new_domain_name {
@@ -507,14 +507,13 @@ sub _qemu_storage_pool {
 sub remove_qemu_pools {
     my $vm = rvd_back->search_vm('kvm') or return;
 
-    my $base = base_domain_name();
+    my $base = base_pool_name();
     for my $pool  ( $vm->vm->list_all_storage_pools) {
         my $name = $pool->get_name;
-        next if $name !~ /^$base/;
+        next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
         $pool->destroy();
         eval { $pool->undefine() };
-        warn $@ if$@;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
 
