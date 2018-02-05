@@ -329,7 +329,8 @@ sub _around_import_domain {
     $domain->_insert_db(name => $name, id_owner => $user->id);
 
     if ($spinoff) {
-        warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
+        warn "Spinning volumes off their backing files ...\n"
+            if $ENV{TERM} && $0 !~ /\.t$/;
         $domain->spinoff_volumes();
     }
     return $domain;

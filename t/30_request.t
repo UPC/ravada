@@ -47,7 +47,7 @@ sub test_remove_domain {
     $domain = $vm->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
@@ -92,7 +92,7 @@ sub test_req_create_domain_iso {
     my $vm_name = shift;
 
     my $name = new_domain_name();
-    diag("Requesting create domain $name");
+#    diag("Requesting create domain $name");
 
     $USER->mark_all_messages_read();
     test_unread_messages($USER,0, "[$vm_name] create domain $name");
