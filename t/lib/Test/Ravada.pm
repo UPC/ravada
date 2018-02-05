@@ -512,6 +512,10 @@ sub remove_qemu_pools {
         my $name = $pool->get_name;
         next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
+        for my $vol ( $pool->list_volumes ) {
+            diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+            $vol->delete();
+        }
         $pool->destroy();
         eval { $pool->undefine() };
         ok(!$@ or $@ =~ /Storage pool not found/i);

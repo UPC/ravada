@@ -132,7 +132,6 @@ sub test_base {
         ok(!-e $file,"Expecting volume $file doesn't exist, got : ".(-e $file or 0));
     }
 
-    $domain->remove($USER);
 }
 
 sub test_volumes_in_two_pools {
@@ -155,7 +154,7 @@ sub test_volumes_in_two_pools {
     my $pool_name2 = create_pool($vm_name);
     $vm->default_storage_pool_name($pool_name2);
 
-    $domain->add_volume(name => 'volb' , size => 1024*1024 );
+    $domain->add_volume(name => $name.'_volb' , size => 1024*1024 );
 
     my @volumes = $domain->list_volumes();
     is(scalar @volumes , 2);
