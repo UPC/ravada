@@ -29,7 +29,7 @@ eval {
     Rex::Commands::Run->import();
 };
 our $REX_ERROR = $@;
-warn $REX_ERROR if $REX_ERROR;
+#warn $REX_ERROR if $REX_ERROR;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
