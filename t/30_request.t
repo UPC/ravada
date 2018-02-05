@@ -307,10 +307,7 @@ for my $vm_name ( qw(Void KVM)) {
         my $domain_base = test_req_create_base($vm);
         if ($domain_base) {
             $domain_base->is_public(1);
-            my $readonly = 0;
-            $readonly = 1 if $>;
-            is ($domain_base->_vm->readonly, $readonly) or next;
-            next if $domain_base->_vm->readonly;
+            is ($domain_base->_vm->readonly, 0) or next;
 
             my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
             test_req_start_domain($vm,$domain_clone->name);

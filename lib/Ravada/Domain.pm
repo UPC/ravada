@@ -688,7 +688,7 @@ sub open($class, $id , $readonly = 0) {
     bless $vm0, $vm_class;
 
     my @ro = ();
-    @ro = (readonly => 1 ) if $>;
+    @ro = (readonly => 1 )  if $readonly;
     my $vm = $vm0->new( @ro );
 
     my $domain = $vm->search_domain($row->{name});
