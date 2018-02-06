@@ -25,8 +25,8 @@ Add an entry to the SQL table:
 ::
 
     $ mysql -u rvd_user -p ravada
-    mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5, device)
-            VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbblamd5sumjustgenerated','/var/lib/libvirt/images/file.iso');
+    mysql> INSERT INTO iso_images (name, description, arch, xml, xml_volume, md5, sha256, device)
+            VALUES ('name','the description', 'i386', 'name.xml' ,'name-vol.xml','bbblamd5sumjustgenerated','mysha256sum','/var/lib/libvirt/images/file.iso');
 
 XML file
 --------
