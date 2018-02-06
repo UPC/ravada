@@ -55,6 +55,9 @@ sub search_domain_db
 sub test_remove_domain {
     my $name = shift;
 
+    my $domain_f = $RVD_FRONT->search_domain($name);
+    ok($domain_f,"Expecting domain $name in front");
+
     my $domain;
     $domain = $RVD_BACK->search_domain($name,1);
 
@@ -67,6 +70,12 @@ sub test_remove_domain {
         if $domain;
 
     ok(!search_domain_db($name),"Domain $name still in db");
+
+    $domain_f = $RVD_FRONT->search_domain($name);
+    ok(!$domain_f,"Expecting no domain $name in front");
+
+    my $list_domains = $RVD_FRONT->list_domains;
+    is(scalar@$list_domains,0, Dumper($list_domains));
 }
 
 sub test_list_bases {

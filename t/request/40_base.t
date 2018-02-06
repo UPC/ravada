@@ -396,6 +396,21 @@ sub test_req_remove_base {
     check_files_removed(@files_base);
 }
 
+sub test_req_remove {
+    my ($vm_name, $name_domain, $name_clone ) = @_;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $req = Ravada::Request->remove_domain(
+        uid => $USER->id
+        , name => $name_clone
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+
+    my $clone_gone = $vm->search_domain($name_clone);
+    ok(!$clone_gone);
+}
+
 sub test_shutdown_by_name {
     my ($vm_name, $domain_name) = @_;
 
@@ -516,6 +531,7 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
+        test_req_remove($vm_name, $base_name, $clone_name);
 
     };
 }
