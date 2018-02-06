@@ -43,7 +43,7 @@
             <div class="panel-heading">
 %           if ($user && $user->is_admin) {
                 <%=l 'There are no public bases available in this system.' %>
-                <a href="/admin/"><%=l 'Create one.' %></a>
+                <a href="/admin/machines"><%=l 'Create one.' %></a>
 %           } else {
                 <%=l 'There are no machines available in this system.' %>
 %           }
