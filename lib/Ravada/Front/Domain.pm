@@ -26,9 +26,14 @@ has 'readonly' => (
     ,default => 1
 );
 
-our $CONNECTOR = \$Ravada::Front::CONNECTOR;
+our $CONNECTOR;
 #
 ###########################################################################
+
+sub _init_connector {
+    $CONNECTOR= \$Ravada::CONNECTOR;
+    $CONNECTOR= \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+}
 
 sub BUILD($self, $arg) {
     my $id = $arg->{id} or confess "ERROR: id required";
@@ -88,10 +93,12 @@ sub resume              { confess "TODO" }
 sub screenshot          { confess "TODO" }
 
 sub search_domain($self,$name) {
+    _init_connector();
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
     $sth->execute($name);
     my ($id) = $sth->fetchrow;
     $sth->finish;
+    return if !$id;
     return Ravada::Front::Domain->new(id => $id);
 }
 
@@ -101,4 +108,5 @@ sub shutdown            { confess "TODO" }
 sub shutdown_now        { confess "TODO" }
 sub spinoff_volumes     { confess "TODO" }
 sub start               { confess "TODO" }
+
 1;

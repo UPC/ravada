@@ -20,6 +20,7 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my $RVD_BACK;
 
+init( $test->connector, $FILE_CONFIG);
 eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
 ok($RVD_BACK) or exit;
 
@@ -216,6 +217,23 @@ sub test_remove_domain {
     my $domain2 = rvd_back()->search_domain($domain->name);
     ok(!$domain2, "Domain ".$domain->name." should be removed in ".ref $domain);
 
+}
+
+sub test_remove_domain_already_gone {
+    my $vm_name = shift;
+    my $domain = create_domain($vm_name);
+    if ($vm_name eq 'KVM') {
+        $domain->domain->undefine();
+    } elsif ($vm_name eq 'Void') {
+        unlink $domain->_config_file();
+    }
+    rvd_back->remove_domain( name => $domain->name, uid => user_admin->id);
+
+    my $domain_b = rvd_back->search_domain($domain->name);
+    ok(!$domain_b);
+
+    my $domain_f = rvd_front->search_domain($domain->name);
+    ok(!$domain_f,"[$vm_name] Expecting no domain ".$domain->name." in front") or exit;
 }
 
 sub test_search_domain {
@@ -450,6 +468,8 @@ for my $vm_name (qw( Void KVM )) {
 
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);
+
+        test_remove_domain_already_gone($vm_name);
 
         test_create_domain_nocd($vm_name, $host);
 
