@@ -1054,7 +1054,7 @@ sub create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(@_) };
     my $error = $@;
-    $request->error($error) if $error;
+    $request->error($error) if $request && $error;
     if ($error =~ /has \d+ requests/) {
         $request->status('retry');
     }

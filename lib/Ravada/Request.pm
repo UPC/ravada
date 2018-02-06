@@ -868,6 +868,32 @@ sub refresh_storage {
 
 }
 
+=head2 clone
+
+Copies a virtual machine
+
+    my $req = Ravada::Request->clone(
+             ,uid => $user->id
+        id_domain => $domain->id
+    );
+
+=cut
+
+sub clone {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('clone', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+        return _new_request($self
+        , command => 'clone'
+        , args =>$args
+    );
+}
+
 =head2 refresh_vms
 
 Refreshes a storage pool
@@ -915,35 +941,12 @@ sub set_base_vm {
 
     my $args = _check_args('set_base_vm', @_ );
     $args->{value} = 1 if !exists $args->{value};
-    return $self->_new_request(
-            command => 'set_base_vm'
-             , args => $args
-    );
-
-}
-
-=head2 clone
-
-Copies a virtual machine
-
-    my $req = Ravada::Request->clone(
-             ,uid => $user->id
-        id_domain => $domain->id
-    );
-
-=cut
-
-sub clone {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('clone', @_ );
 
     my $self = {};
-    bless($self,$class);
+    bless ($self, $class);
 
     return $self->_new_request(
-            command => 'clone'
+            command => 'set_base_vm'
              , args => $args
     );
 

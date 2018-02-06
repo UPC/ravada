@@ -188,7 +188,7 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status "
+    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile "
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
@@ -213,7 +213,6 @@ sub list_domains {
         my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
         warn $@ if $@;
-        $row->{is_active} = 0;
         $row->{remote_ip} = undef;
         if ( $row->{is_volatile} && !$domain ) {
             $self->_remove_domain_db($row->{id});
@@ -221,6 +220,8 @@ sub list_domains {
         }
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
+        $row->{is_active} = 0;
+        $row->{remote_ip} = undef;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';

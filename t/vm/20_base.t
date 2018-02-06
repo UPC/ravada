@@ -425,6 +425,7 @@ sub test_domain_limit_already_requested {
         $domain->shutdown_now(user_admin);
     }
     my $domain = create_domain($vm_name, $USER);
+
     ok($domain,"Expecting a new domain created") or return;
     $domain->shutdown_now($USER)    if $domain->is_active;
 

@@ -120,7 +120,7 @@ sub remove_disks {
 
     my $removed = 0;
 
-    return if !$self->is_known();
+    return if !$self->is_known();# || $self->is_removed;
 
     my $id;
     eval { $id = $self->id };
@@ -154,7 +154,9 @@ Cleanup operations executed before removing this domain
 
 sub pre_remove_domain {
     my $self = shift;
+    warn "Domain::KVM - pre_remove domain 1";
     $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
+    warn "Domain::KVM - pre_remove domain 2";
 }
 
 sub _vol_remove {
@@ -191,19 +193,18 @@ sub remove {
     my $self = shift;
     my $user = shift;
 
+    if (!$self->is_removed ) {
+        $self->list_disks();
+    }
+
     if ($self->domain->is_active) {
         $self->_do_force_shutdown();
     }
 
-    $self->list_disks();
-
-    $self->domain->undefine();
+    eval { $self->domain->undefine() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     $self->remove_disks();
-
-    eval { $self->remove_disks(); };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
-#    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
     eval { $self->_remove_file_image() };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
@@ -212,8 +213,6 @@ sub remove {
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    eval { $self->domain->undefine() };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 

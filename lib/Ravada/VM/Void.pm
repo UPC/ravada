@@ -252,8 +252,10 @@ sub import_domain {
     confess "Not implemented";
 }
 
-sub security {
-}
+sub refresh_storage {}
+
+sub ping { return 1 }
+
 sub free_memory { return 1024*1024 }
 
 sub refresh_storage_pools {
@@ -263,11 +265,6 @@ sub refresh_storage_pools {
 sub list_storage_pools {
     return $Ravada::Domain::Void::DIR_TMP;
 }
-
-sub refresh_storage {}
-
-sub ping { return 1 }
-
 #########################################################################3
 
 1;

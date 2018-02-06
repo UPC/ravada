@@ -11,8 +11,8 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
-use File::Rsync;
 use File::Copy;
+use File::Rsync;
 use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
@@ -20,29 +20,7 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
-# Runtime Rex checking availability
-#
-
-eval {
-    require Rex;
-    Rex->import();
-
-#    require Rex::Commands;
-#    Rex::Commands->import;
-
-    require Rex::Commands::Run;
-    Rex::Commands::Run->import();
-
-    require Rex::Group::Entry::Server;
-    Rex::Group::Entry::Server->import();
-
-    require Rex::Commands::Iptables;
-    Rex::Commands::Iptables->import();
-
-};
-our $REX_ERROR = $@;
-$REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
-warn $REX_ERROR if $REX_ERROR;
+our $REX_ERROR;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -181,9 +159,6 @@ before 'resume' => \&_allow_manage;
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 
-before 'shutdown_now' => \&_pre_shutdown_now;
-after 'shutdown_now' => \&_post_shutdown_now;
-
 around 'shutdown_now' => \&_around_shutdown_now;
 around 'force_shutdown' => \&_around_shutdown_now;
 
@@ -209,11 +184,37 @@ around 'get_info' => \&_around_get_info;
 
 sub BUILD {
     my $self = shift;
+    $self->_init_connector();
 
     $self->is_known();
     eval { $self->_check_clean_shutdown() };
+    $self->_load_rex() if !$self->is_local;
 #    warn $@ if $@;
 }
+
+sub _load_rex {
+    return if defined $REX_ERROR;
+    eval {
+        require Rex;
+        Rex->import();
+    
+    #    require Rex::Commands;
+    #    Rex::Commands->import;
+    
+        require Rex::Commands::Run;
+        Rex::Commands::Run->import();
+    
+        require Rex::Group::Entry::Server;
+        Rex::Group::Entry::Server->import();
+    
+        require Rex::Commands::Iptables;
+        Rex::Commands::Iptables->import();
+    };
+    $REX_ERROR = $@;
+    $REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
+    warn $REX_ERROR if $REX_ERROR;
+
+};
 
 sub _check_clean_shutdown($self) {
     if ( $self->is_known
@@ -689,7 +690,7 @@ sub open($class, $id , $readonly = 0) {
     bless $vm0, $vm_class;
 
     my @ro = ();
-    @ro = (readonly => 1 ) if $> || $readonly;
+    @ro = (readonly => 1 )  if $readonly;
     my $vm = $vm0->new( @ro );
 
     my $domain = $vm->search_domain($row->{name});
@@ -906,6 +907,7 @@ sub _pre_remove_domain($self, $user, @) {
     $self->pre_remove();
     $self->_allow_remove($user);
     $self->pre_remove();
+#    warn "remove ".$self->name." 1\n";
 }
 
 sub _after_remove_domain {
@@ -913,7 +915,7 @@ sub _after_remove_domain {
     my ($user, $cascade) = @_;
 
     $self->_remove_iptables(user => $user)  if $self->is_known();
-    $self->_remove_domain_cascade(@_)   if !$cascade;
+    $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_base) {
         $self->_do_remove_base(@_);
@@ -924,12 +926,13 @@ sub _after_remove_domain {
     $self->_remove_domain_db();
 }
 
+# removes domain in other VMs
 sub _remove_domain_cascade($self,$user, $cascade = 1) {
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM vms");
-    my $id;
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name FROM vms");
+    my ($id, $name);
     $sth->execute();
-    $sth->bind_columns(\($id));
+    $sth->bind_columns(\($id, $name));
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
@@ -1377,10 +1380,10 @@ sub _around_shutdown_now {
     my $self = shift;
     my $user = shift;
 
-    $self->_post_shutdown(user => $user)    if $self->is_known();
     if ($self->is_active) {
         $self->$orig($user);
     }
+    $self->_post_shutdown(user => $user)    if $self->is_known();
 }
 
 =head2 can_hybernate
@@ -1460,11 +1463,11 @@ sub _remove_temporary_machine {
 
     return if !$self->is_volatile;
     my %args = @_;
-    my $user = delete $args{user} or confess "ERROR: Missing user";
 
     return if !$self->is_known();
     return if !$self->is_volatile();
 
+    my $user;
     eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
     return if !$user;
 

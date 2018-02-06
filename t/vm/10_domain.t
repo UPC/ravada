@@ -205,7 +205,7 @@ sub test_shutdown_suspended_domain {
 sub test_remove_domain {
     my $vm_name = shift;
     my $domain = shift;
-    diag("Removing domain ".$domain->name);
+#    diag("Removing domain ".$domain->name);
     my $domain0 = rvd_back()->search_domain($domain->name);
     ok($domain0, "[$vm_name] Domain ".$domain->name." should be there in ".ref $domain);
 
@@ -258,7 +258,7 @@ sub test_screenshot {
 
     my $file = "/var/tmp/screenshot.$$.png";
 
-    diag("[$vm_name] testing screenshot");
+#    diag("[$vm_name] testing screenshot");
     $domain->start($USER)   if !$domain->is_active;
     sleep 2;
 

@@ -21,29 +21,7 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
-# Runtime Rex checking availability
-#
-
-eval {
-    require Rex;
-    Rex->import();
-
-    require Rex::Commands::Run;
-    Rex::Commands::Run->import();
-
-    require Rex::Group::Entry::Server;
-    Rex::Group::Entry::Server->import();
-
-    require Rex::Commands::Iptables;
-    Rex::Commands::Iptables->import();
-
-    require Rex::Commands::File;
-    Rex::Commands::File->import();
-
-    require Rex::Commands;
-};
-our $REX_ERROR = $@;
-warn $REX_ERROR if $REX_ERROR;
+our $REX_ERROR;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -72,7 +50,6 @@ requires 'connect';
 requires 'disconnect';
 requires 'import_domain';
 
-requires 'security';
 requires 'ping';
 ############################################################
 
@@ -171,6 +148,7 @@ sub BUILD {
 
     my $args = $_[0];
 
+    $self->_load_rex()  if !$self->is_local;
     $self->security($args->{security})  if $args->{security};
 
     if ($args->{id}) {
@@ -192,6 +170,30 @@ sub BUILD {
             );
 
 }
+
+sub _load_rex {
+    return if defined $REX_ERROR;
+    eval {
+        require Rex;
+        Rex->import();
+    
+    #    require Rex::Commands;
+    #    Rex::Commands->import;
+    
+        require Rex::Commands::Run;
+        Rex::Commands::Run->import();
+    
+        require Rex::Group::Entry::Server;
+        Rex::Group::Entry::Server->import();
+    
+        require Rex::Commands::Iptables;
+        Rex::Commands::Iptables->import();
+    };
+    $REX_ERROR = $@;
+    $REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
+    warn $REX_ERROR if $REX_ERROR;
+
+};
 
 sub _open_type {
     my $self = shift;
@@ -327,7 +329,8 @@ sub _around_import_domain {
     $domain->_insert_db(name => $name, id_owner => $user->id);
 
     if ($spinoff) {
-        warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
+        warn "Spinning volumes off their backing files ...\n"
+            if $ENV{TERM} && $0 !~ /\.t$/;
         $domain->spinoff_volumes();
     }
     return $domain;
@@ -583,8 +586,8 @@ sub _select_vm_db {
 sub _insert_vm_db {
     my $self = shift;
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO vms (name, vm_type, hostname, public_ip, security)"
-        ." VALUES(?, ?, ?, ?, ?)"
+        "INSERT INTO vms (name, vm_type, hostname, public_ip)"
+        ." VALUES(?, ?, ?, ?)"
     );
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
@@ -593,8 +596,7 @@ sub _insert_vm_db {
 
     confess "Unknown args ".Dumper(\%args)  if keys %args;
 
-    my $security = ($self->security() or {});
-    eval { $sth->execute($name,$self->type,$host, $self->public_ip, encode_json($security)) };
+    eval { $sth->execute($name,$self->type,$host, $self->public_ip)  };
     confess $@ if $@;
     $sth->finish;
 

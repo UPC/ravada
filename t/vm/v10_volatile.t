@@ -164,6 +164,7 @@ sub test_volatile_auto_kvm {
 
     $clone->domain->destroy();
     $clone=undef;
+
     my $vm = rvd_back->search_vm($vm_name);
     my $domain2;
     for ( 1 .. 10 ) {
@@ -200,13 +201,13 @@ sub test_volatile_auto_kvm {
     my $clone3= $vm->search_domain($name);
     ok($clone3,"[$vm_name] Expecting clone $name");
 
-    eval { $clone2->remove(user_admin) if $clone2 };
+    { $clone2->remove(user_admin) if $clone2 };
     is(''.$@,'');
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    my $sth = $test->dbh->prepare("SELECT id, name FROM domains WHERE name=?");
     $sth->execute($name);
     my $row = $sth->fetchrow_hashref;
-    is(keys(%$row),0);
+    is($row->{id},undef, Dumper($row));
 }
 
 ################################################################################

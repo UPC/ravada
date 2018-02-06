@@ -43,7 +43,6 @@ sub test_create_domain {
 }
 
 my $id = 10;
-my $security = encode_json({ transport => 'tcp' });
 
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
@@ -59,10 +58,10 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     $sth->finish;
 
     $sth = $test->connector->dbh->prepare(
-        "INSERT INTO vms (id, name, vm_type, hostname, security) "
-        ." VALUES(?,?,?,?,?)"
+        "INSERT INTO vms (id, name, vm_type, hostname) "
+        ." VALUES(?,?,?,?)"
     );
-    eval {$sth->execute(++$id, $vm_type, $vm_type, 'localhost', $security) };
+    eval {$sth->execute(++$id, $vm_type, $vm_type, 'localhost') };
     is($@,'',"[$vm_type] Expecting no errors insert $vm_type in db");
     $sth->finish;
 

@@ -31,7 +31,7 @@ my $FILE_CONFIG = "/etc/rvd_front.conf";
 my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
     warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
-        if -e $file && $FILE_CONFIG;
+        if -e $file && $FILE_CONFIG && $file ne $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
     $error_file_duplicated++;
 }
@@ -1578,7 +1578,20 @@ sub screenshot_machine {
     $c->render(json => { request => $req->id});
 }
 
-<<<<<<< HEAD
+sub copy_screenshot {
+    my $c = shift;
+    return login($c)    if !_logged_in($c);
+
+    my $domain = _search_requested_machine($c);
+
+    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
+    my $req = Ravada::Request->copy_screenshot (
+        id_domain => $domain->id
+        ,filename => $file_screenshot
+    );
+    $c->render(json => { request => $req->id});
+}
+
 sub toggle_base_vm {
     my $c = shift;
 
@@ -1598,20 +1611,6 @@ sub toggle_base_vm {
         , uid => $USER->id
     );
     return $c->render(json => {message => 'processing request'});
-=======
-sub copy_screenshot {
-    my $c = shift;
-    return login($c)    if !_logged_in($c);
-
-    my $domain = _search_requested_machine($c);
-
-    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    my $req = Ravada::Request->copy_screenshot (
-        id_domain => $domain->id
-        ,filename => $file_screenshot
-    );
-    $c->render(json => { request => $req->id});
->>>>>>> master
 }
 
 sub prepare_machine {

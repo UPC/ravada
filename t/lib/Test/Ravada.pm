@@ -29,7 +29,7 @@ eval {
     Rex::Commands::Run->import();
 };
 our $REX_ERROR = $@;
-warn $REX_ERROR if $REX_ERROR;
+#warn $REX_ERROR if $REX_ERROR;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -48,6 +48,8 @@ create_domain
     test_chain_prerouting
     search_id_iso
     flush_rules open_ipt
+    arg_create_dom
+    vm_names
     remote_config
     remote_config_nodes
     clean_remote_node
@@ -57,8 +59,6 @@ create_domain
     clean_remote
     start_node shutdown_node remove_node
     start_domain_internal   shutdown_domain_internal
-    arg_create_dom
-    vm_names
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -145,7 +145,7 @@ sub base_pool_name {
     die "I can't find name in $0"   if !$name;
     $name =~ s{/}{_}g;
 
-    return "test_$name";
+    return "tst_pool_$name";
 }
 
 sub new_domain_name {
@@ -195,7 +195,6 @@ sub init {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-<<<<<<< HEAD
 }
 
 sub remote_config {
@@ -245,8 +244,6 @@ sub remote_config_nodes {
         }
     }
     return $conf;
-=======
->>>>>>> master
 }
 
 sub _remove_old_domains_vm {
@@ -278,11 +275,7 @@ sub _remove_old_domains_vm {
         eval { $domain->shutdown_now($USER_ADMIN); };
         warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
 
-<<<<<<< HEAD
         $domain = $vm->search_domain($domain->name);
-=======
-        $domain = $vm->search_domain($dom_name);
->>>>>>> master
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
@@ -514,12 +507,17 @@ sub _qemu_storage_pool {
 sub remove_qemu_pools {
     my $vm = rvd_back->search_vm('kvm') or return;
 
+    my $base = base_pool_name();
     for my $pool  ( $vm->vm->list_all_storage_pools) {
-        next if $pool->get_name !~ /^test_/;
+        my $name = $pool->get_name;
+        next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
+        for my $vol ( $pool->list_volumes ) {
+            diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+            $vol->delete();
+        }
         $pool->destroy();
         eval { $pool->undefine() };
-        warn $@ if$@;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
 

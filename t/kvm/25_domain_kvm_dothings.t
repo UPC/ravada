@@ -33,7 +33,7 @@ sub test_remove_domain {
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         $domain->remove($user);
     }
     $domain = $RAVADA->search_domain($name,1);

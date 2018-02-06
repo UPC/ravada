@@ -87,6 +87,8 @@ sub remove {
     $self->remove_disks();
 }
 
+sub can_hibernate { return 1; }
+
 sub is_hibernated {
     my $self = shift;
     return $self->_value('is_hibernated');

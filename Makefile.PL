@@ -9,6 +9,7 @@ WriteMakefile(
           'Mojolicious' => '7.01'
      ,'DBIx::Connector' => 0
   ,'Authen::Passphrase' => 0
+          ,'Date::Calc' => 0
 	      ,'IPC::Run3'  => 0
 	      ,'JSON::XS'   => 0
 	        ,'Moose'    => 0

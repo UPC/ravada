@@ -95,8 +95,6 @@ sub _connect {
     } else {
         return if $self->readonly;
         my $transport = 'ssh';
-        $transport = $self->security->{transport}
-            if $self->security && $self->security->{transport};
         my $address = $con_type."+".$transport
                                             ."://".'root@'.$self->host
                                             ."/system";
@@ -1901,9 +1899,11 @@ sub import_domain($self, $name, $user) {
     return $domain;
 }
 
-sub security($self,$value=undef) {
-    $self->{_security} = $value if defined $value;
-    return $self->{_security};
+sub ping($self) {
+    return 0 if !$self->vm;
+    eval { $self->vm->list_defined_networks };
+    return 1 if !$@;
+    return 0;
 }
 
 sub free_memory($self) {
@@ -1922,13 +1922,6 @@ sub list_storage_pools($self) {
         map { $_->get_name }
         grep { $_-> is_active }
         $self->vm->list_storage_pools();
-}
-
-sub ping($self) {
-    return 0 if !$self->vm;
-    eval { $self->vm->list_defined_networks };
-    return 1 if !$@;
-    return 0;
 }
 
 1;
