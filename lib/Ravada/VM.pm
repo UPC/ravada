@@ -149,10 +149,20 @@ sub BUILD {
     my $args = $_[0];
 
     $self->_load_rex()  if !$self->is_local;
-    $self->security($args->{security})  if $args->{security};
 
-    if ($args->{id}) {
-        $self->_select_vm_db(id => $args->{id})
+    my $id = delete $args->{id};
+    my $host = delete $args->{host};
+    my $name = delete $args->{name};
+    delete $args->{readonly};
+    delete $args->{security};
+
+    # TODO check if this is needed
+    delete $args->{connector};
+
+    confess "ERROR: Unknown args ".join (",", keys (%$args)) if keys %$args;
+
+    if ($id) {
+        $self->_select_vm_db(id => $id)
     } else {
         my %query = (
             hostname => ($args->{host} or 'localhost')
@@ -205,7 +215,7 @@ sub _open_type {
     my $proto = {};
     bless $proto,$class;
 
-    my $vm = $proto->new(@_);
+    my $vm = $proto->new(%args);
     eval { $vm->vm };
     warn $@ if $@;
     return if $@;
