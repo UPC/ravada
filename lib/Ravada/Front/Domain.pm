@@ -92,6 +92,7 @@ sub search_domain($self,$name) {
     $sth->execute($name);
     my ($id) = $sth->fetchrow;
     $sth->finish;
+    return if !$id;
     return Ravada::Front::Domain->new(id => $id);
 }
 
