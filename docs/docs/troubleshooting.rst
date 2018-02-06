@@ -24,6 +24,20 @@ enabled:
 ::
 
     kvm: disabled by bios
+    
+or try: kvm-ok command
+
+::
+
+    # kvm-ok
+    INFO: /dev/kvm does not exist
+    HINT:   sudo modprobe kvm_intel
+    INFO: Your CPU supports KVM extensions
+    INFO: KVM (vmx) is disabled by your BIOS
+    HINT: Enter your BIOS setup and enable Virtualization Technology (VT),
+      and then hard poweroff/poweron your system
+    KVM acceleration can NOT be used
+
 
 Dealing with permissions
 ------------------------
