@@ -42,16 +42,18 @@
                 <li><%=l 'Display IP:' %> <b><%= $display_ip %></b></li>
                 <li><%=l 'Display Port:' %> <b><%= $display_port %></b></li>
             </ul>
-            <label for="automatic"><input type="checkbox" ng-click="toggle_auto_start()"
-%           if ($c->session('auto_start')) {
+%           if (!$password) {
+            <label for="automatic"><input type="checkbox" ng-click="toggle_auto_view()"
+%           if ($c->session('auto_view')) {
                 checked
 %           }
-            > Start automatically next time</input>
+            > View automatically next time</input>
             <br/>
+%           }
             <a type="button" class="btn btn-success"
                     ng-click="copy_password()"
                     href="<%= $url_display_file %>">
-                <b><%=l 'start'%></b></a>
+                <b><%=l 'view'%></b></a>
 
         </div>
         <div class="panel-body">

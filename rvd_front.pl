@@ -627,24 +627,24 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
-any '/auto_start/(#value)/' => sub {
+any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
     if ($value =~ /toggle/i) {
-        $value = $c->session('auto_start');
+        $value = $c->session('auto_view');
         if ($value) {
             $value = 0;
         } else {
             $value = 1;
         }
     }
-    $c->session('auto_start' => $value);
-    return $c->render(json => {auto_start => $c->session('auto_start') });
+    $c->session('auto_view' => $value);
+    return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
-get '/auto_start' => sub {
+get '/auto_view' => sub {
     my $c = shift;
-    return $c->render(json => {auto_start => $c->session('auto_start') });
+    return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
 ###################################################
@@ -1191,7 +1191,7 @@ sub show_link {
     _open_iptables($c,$domain)
         if !$req;
     my $uri_file = "/machine/display/".$domain->id;
-    $c->stash(url => $uri_file)  if $c->session('auto_start');
+    $c->stash(url => $uri_file)  if $c->session('auto_view') && ! $domain->spice_password;
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     my $description = $domain->description;
     if (!$description && $domain->id_base) {

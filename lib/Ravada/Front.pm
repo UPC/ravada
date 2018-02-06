@@ -188,8 +188,8 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public, is_volatile "
-        ."      ,vms.name as node "
+    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
+        ."      ,vms.name as node , is_volatile "
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -212,6 +212,8 @@ sub list_domains {
         my $domain ;
         my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
+        warn $@ if $@;
+        $row->{remote_ip} = undef;
         if ( $row->{is_volatile} && !$domain ) {
             $self->_remove_domain_db($row->{id});
             next;
@@ -656,15 +658,6 @@ sub search_domain {
 
     return Ravada::Front::Domain->search_domain($name);
 
-}
-
-sub _vm_id($self, $id) {
-    my $vm = $VM_ID{$id};
-    if (!$vm ) {
-        $vm = Ravada::VM->open(id => $id, readonly => 1);
-        $VM_ID{$id} = $vm if $vm;
-    }
-    return $vm;
 }
 
 =head2 list_requests

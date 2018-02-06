@@ -63,9 +63,9 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2, verbose => 2}
     ,refresh_storage => { id_vm => 2 }
-    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
     ,refresh_vms => { id_domain => 2 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -943,7 +943,7 @@ sub set_base_vm {
     $args->{value} = 1 if !exists $args->{value};
 
     my $self = {};
-    bless($self,$class);
+    bless ($self, $class);
 
     return $self->_new_request(
             command => 'set_base_vm'
@@ -974,7 +974,6 @@ sub remove_base_vm {
     );
 
 }
-
 
 sub AUTOLOAD {
     my $self = shift;

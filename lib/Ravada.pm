@@ -273,16 +273,8 @@ sub _update_isos {
        ,lubuntu_aardvark => {
             name => 'Lubuntu Artful Aardvark'
             ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/lubuntu-17.10-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10/release/MD5SUMS'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-        }
-        ,lubuntu_zesty => {
-            name => 'Lubuntu Zesty Zapus'
-            ,description => 'Lubuntu 17.04 Zesty Zapus 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/lubuntu-17.04-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
         }
@@ -604,6 +596,12 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
             ."      AND NOT url  like '%*%' "
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Lubuntu Artful%'"
+            ."      AND url NOT LIKE '%*%' "
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Lubuntu Zesty%'"
+
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();

@@ -95,8 +95,6 @@ sub _connect {
     } else {
         return if $self->readonly;
         my $transport = 'ssh';
-        $transport = $self->security->{transport}
-            if $self->security && $self->security->{transport};
         my $address = $con_type."+".$transport
                                             ."://".'root@'.$self->host
                                             ."/system";

@@ -407,6 +407,8 @@ sub _allow_manage {
 
 sub _allow_remove($self, $user) {
 
+    confess "ERROR: Undefined user" if !defined $user;
+
     die "ERROR: remove not allowed for user ".$user->name
         if !$user->can_remove();
 
@@ -1794,15 +1796,6 @@ sub is_public {
     return $self->_data('is_public');
 }
 
-=head2 is_volatile
-
-Returns if the domain is volatile, so it will be removed on shutdown
-
-=cut
-
-sub is_volatile($self, $value=undef) {
-    return $self->_set_data('is_volatile', $value);
-}
 
 =head2 run_timeout
 
@@ -2366,4 +2359,13 @@ sub is_local($self) {
     return $self->_vm->is_local();
 }
 
+=head2 is_volatile
+
+Returns if the domain is volatile, so it will disappear on shutdown
+
+=cut
+
+sub is_volatile($self, $value=undef) {
+    return $self->_data('is_volatile', $value);
+}
 1;

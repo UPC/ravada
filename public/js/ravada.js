@@ -295,12 +295,12 @@
     };
 
     function run_domain_ctrl($scope, $http, request ) {
-        $http.get('/auto_start').then(function(response) {
-            $scope.auto_start = response.auto_start;
+        $http.get('/auto_view').then(function(response) {
+            $scope.auto_view = response.auto_view;
         });
-        $scope.toggle_auto_start = function() {
-            $http.get('/auto_start/toggle').then(function(response) {
-                $scope.auto_start = response.auto_start;
+        $scope.toggle_auto_view = function() {
+            $http.get('/auto_view/toggle').then(function(response) {
+                $scope.auto_view = response.auto_view;
             });
         };
         $scope.copy_password= function() {
