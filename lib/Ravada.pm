@@ -1102,6 +1102,7 @@ sub search_domain($self, $name, $import = 0) {
     $sth->execute($name);
     my ($id, $id_vm) = $sth->fetchrow();
 
+    return if !$id;
     if ($id_vm) {
         my $vm = Ravada::VM->open($id_vm);
         if (!$vm->is_active) {
@@ -1111,18 +1112,19 @@ sub search_domain($self, $name, $import = 0) {
             return $vm->search_domain($name);
         }
     }
-    for my $vm (@{$self->vm}) {
-        next if !$vm->is_active;
-        my $domain = $vm->search_domain($name, $import);
-        next if !$domain;
-        next if !$domain->_select_domain_db && !$import;
-        my $id_domain;
-        eval { $id_domain = $domain->id };
-        next if !$id_domain && !$import;
-
-        return $domain if $domain->is_active;
-    }
-    return if !$id;
+#    for my $vm (@{$self->vm}) {
+#        warn $vm->name;
+#        next if !$vm->is_active;
+#        my $domain = $vm->search_domain($name, $import);
+#        next if !$domain;
+#        next if !$domain->_select_domain_db && !$import;
+#        my $id_domain;
+#        eval { $id_domain = $domain->id };
+#        next if !$id_domain && !$import;
+#
+#        return $domain if $domain->is_active;
+#    }
+#    return if !$id;
     return Ravada::Domain->open($id);
 }
 
