@@ -927,7 +927,7 @@ sub _after_remove_domain {
 # removes domain in other VMs
 sub _remove_domain_cascade($self,$user, $cascade = 1) {
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name FROM vms");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name FROM vms WHERE is_active=1");
     my ($id, $name);
     $sth->execute();
     $sth->bind_columns(\($id, $name));
