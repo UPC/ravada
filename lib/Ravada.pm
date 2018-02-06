@@ -1083,11 +1083,18 @@ sub remove_domain {
 
     lock_hash(%arg);
 
-    my $domain = $self->search_domain($arg{name}, 1)
-        or die "ERROR: I can't find domain '$arg{name}', maybe already removed.";
-
+    my $domain = $self->search_domain($arg{name}, 1);
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
-    $domain->remove( $user);
+
+    if ($domain) {
+        $domain->remove( $user);
+    } else {
+        $domain = Ravada::Front::Domain->search_domain($arg{name});
+        if ($domain) {
+            $domain->_allow_remove($user); # dies if not allowed
+            $domain->_after_remove_domain($user);
+        }
+    }
 }
 
 =head2 search_domain

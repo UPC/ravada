@@ -215,7 +215,7 @@ sub _open_type {
     my $proto = {};
     bless $proto,$class;
 
-    my $vm = $proto->new(@_);
+    my $vm = $proto->new(%args);
     eval { $vm->vm };
     warn $@ if $@;
     return if $@;
