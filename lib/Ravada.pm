@@ -1223,17 +1223,20 @@ sub list_domains {
     die "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
 
+    my $domains_data = $self->list_domains_data();
+
     my @domains;
-    for my $vm ($self->list_vms) {
-        for my $domain ($vm->list_domains) {
-            next if defined $active &&
+
+    for my $row (@$domains_data) {
+        my $domain =  Ravada::Domain->open($row->{id});
+        next if !$domain;
+            next if defined $active && !$domain->is_removed &&
                 ( $domain->is_active && !$active
                     || !$domain->is_active && $active );
 
             next if $user && $domain->id_owner != $user->id;
 
             push @domains,($domain);
-        }
     }
     return @domains;
 }
@@ -1256,6 +1259,7 @@ sub list_domains_data {
     );
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
+        lock_hash(%$row);
         push @domains,($row);
     }
     $sth->finish;
@@ -1483,6 +1487,7 @@ sub process_requests {
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
 #        $req->status("done") if $req->status() !~ /retry/;
+        $self->_cmd_refresh_vms();
         next if !$DEBUG && !$debug;
 
         sleep 1;
@@ -2183,7 +2188,7 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
         if (defined $id_vm && !$active_vm->{$id_vm}) {
             $domain->_set_data(status => 'shutdown');
         } else {
-            my $status = 'down';
+            my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
             $domain->_set_data(status => $status);
         }
