@@ -334,7 +334,6 @@ sub list_vms($self, $type=undef) {
 
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
-        my $vm = $self->_vm_id($row->{id});
         $self->_list_bases_vm($row);
         lock_hash(%$row);
         push @list,($row);
