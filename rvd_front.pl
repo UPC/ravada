@@ -342,7 +342,7 @@ get '/machine/view/(:id).(:type)' => sub {
 };
 
 get '/machine/clone/(:id).(:type)' => sub {
-    my $c = shift;      
+    my $c = shift;
     return access_denied($c)	     if !$USER->can_clone();
     return clone_machine($c);
 };
@@ -659,7 +659,7 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
             my $comp_password = $USER->compare_password($c->param('current_password'));
             if ($comp_password) {
@@ -950,6 +950,8 @@ sub admin {
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
+
+        $c->stash(hide_subclones => 0 );
     }
     $c->render(template => 'main/admin_'.$page);
 
@@ -1311,14 +1313,14 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
+
  #   if($c ->param('submit')) {
  #       push @error,("Name is mandatory")   if !$c->param('username');
  #       push @error,("Invalid username '".$c->param('username')."'"
@@ -1334,8 +1336,8 @@ sub register {
 #    push @{$c->stash->{js}}, '/js/admin.js';
 #    $c->render(template => 'bootstrap/new_user_control'
 #        , name => $c->param('username')
-#)    
-    
+#)
+
    if ($username) {
        Ravada::Auth::SQL::add_user(name => $username, password => $password);
        return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
@@ -1617,7 +1619,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    
+
 
     my $id_base= $c->param('id_base');
 

@@ -4,6 +4,7 @@
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
     <div ng-controller="machinesPage" ng-init="hide_clones=<%= $hide_clones %>">
+    <div ng-controller="machinesPage" ng-init="hide_subclones=<%= $hide_subclones %>">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
@@ -77,8 +78,8 @@
                         title ="<%=l 'Machine settings' %>"><b
                         ng-cloak>{{machine.name}}</b></a>
 %                     if ($n_clones) {
-                        <a ng-show="hide_clones" ng-click="hideClones()"><i class="fa fa-plus-square-o"></i></a>
-                        <a ng-show="!hide_clones" ng-click="hideClones()"><i class="fa fa-minus-square-o"></i></a>
+                        <a ng-show="hide_clones" ng-click="hideSubClones()"><i class="fa fa-plus-square-o"></i></a>
+                        <a ng-show="!hide_clones" ng-click="hideSubClones()"><i class="fa fa-minus-square-o"></i></a>
 %}
                     </td>
                     <td class="lgMachToggle">
