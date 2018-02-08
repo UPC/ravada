@@ -180,7 +180,7 @@ sub _update_isos {
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.10/'
                 ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.10/MD5SUMS'
+                ,md5_url => ,'$url/MD5SUMS'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
@@ -237,8 +237,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
-            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/mini.iso'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
+            ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_artful.iso'
         }
         ,xubuntu_zesty => {
@@ -247,8 +248,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
-            ,md5_url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot/mini.iso'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot'
+            ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_zesty_mini.iso'
         }
         ,xubuntu_xenial => {
