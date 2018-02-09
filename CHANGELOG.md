@@ -10,3 +10,4 @@
 
 - Autostart does not work [\#512]
 - No md5 for lubuntu-17.10 [\#515]
+- Some ISOs fail to download [\#539]
