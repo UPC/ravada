@@ -1538,6 +1538,7 @@ sub _kill_stale_process($self) {
         ." AND command = 'refresh_vms'"
         ." AND status <> 'done' "
         ." AND pid IS NOT NULL "
+        ." AND start_time IS NOT NULL "
     );
     $sth->execute(time - 60 );
     while (my ($pid, $command, $start_time) = $sth->fetchrow) {

@@ -187,8 +187,8 @@ sub _load_rex {
         require Rex;
         Rex->import();
     
-    #    require Rex::Commands;
-    #    Rex::Commands->import;
+        require Rex::Commands;
+        Rex::Commands->import;
     
         require Rex::Commands::Run;
         Rex::Commands::Run->import();
@@ -283,6 +283,8 @@ sub _connect_rex($self) {
 
 sub _post_disconnect($self) {
     return if $self->is_local;
+
+    $self->_load_rex();
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set status='down' WHERE id_vm=? AND status='active'"
     );
@@ -290,7 +292,7 @@ sub _post_disconnect($self) {
     $sth->finish;
 
     if ( my $con = Rex::Commands::connection() ) {
-        Rex::Commands::connection->disconnect();
+        $con->disconnect();
     }
     if ($self->{_rex_connection} ) {
         $self->{_rex_connection}->{conn}->disconnect;
