@@ -140,3 +140,4 @@ Publish
 
 -  Tweet it
 -  Change the release in gh-pages
+-  Change the release in README.md
