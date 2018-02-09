@@ -174,7 +174,7 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm if $vm->ping;
+            $vm->vm if $vm->is_local && $vm->ping;
         }
     }
     for (;;) {
