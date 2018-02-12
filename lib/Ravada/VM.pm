@@ -160,16 +160,18 @@ sub BUILD {
     # TODO check if this is needed
     delete $args->{connector};
 
+    lock_hash(%$args);
+
     confess "ERROR: Unknown args ".join (",", keys (%$args)) if keys %$args;
 
     if ($id) {
         $self->_select_vm_db(id => $id)
     } else {
         my %query = (
-            hostname => ($args->{host} or 'localhost')
+            hostname => ($host or 'localhost')
             ,vm_type => $self->type
         );
-        $query{name} = $args->{name}  if $args->{name};
+        $query{name} = $name  if $name;
         $self->_select_vm_db(%query);
     }
     $self->id;
@@ -184,7 +186,6 @@ sub BUILD {
 
 sub _load_rex {
     return if defined $REX_ERROR;
-    warn "Loading Rex";
     eval {
         require Rex;
         Rex->import();
