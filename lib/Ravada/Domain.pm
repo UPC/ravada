@@ -643,6 +643,7 @@ sub _data($self, $field, $value=undef) {
 
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
+
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains set $field=? WHERE id=?"
         );
@@ -685,16 +686,20 @@ sub open($class, $id , $readonly = 0) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-    my $vm0 = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm0, $vm_class;
+    my $vm;
+    if (!$self->_data('id_vm')) {
+        my $vm0 = {};
+        my $vm_class = "Ravada::VM::".$row->{vm};
+        bless $vm0, $vm_class;
 
-    my @ro = ();
-    @ro = (readonly => 1 )  if $readonly;
-    my $vm = $vm0->new( @ro );
+        $vm = $vm0->new( readonly => $readonly );
+    } else {
+        $vm = Ravada::VM->open(id => $self->_data('id_vm'), readonly => $readonly);
+    }
+    $self->_load_rex()  if !$vm->is_local();
 
     my $domain = $vm->search_domain($row->{name});
-    $domain->_check_clean_shutdown()  if $domain;
+    $domain->_check_clean_shutdown()  if $domain && !$domain->is_active;
     return $domain;
 }
 
@@ -1613,6 +1618,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
 
 sub _create_remote_chain($self) {
     $self->_vm->_connect_rex();
+    $self->_load_rex();
 
     my $chain_exists;
 #    eval { $chain_exists = chain_exists('filter', $IPTABLES_CHAIN)};

@@ -155,6 +155,7 @@ sub BUILD {
     my $name = delete $args->{name};
     delete $args->{readonly};
     delete $args->{security};
+    delete $args->{public_ip};
 
     # TODO check if this is needed
     delete $args->{connector};
