@@ -1001,6 +1001,7 @@ sub _search_iso {
 }
 
 sub _download($self, $url) {
+    $url =~ s{(http://.*)//(.*)}{$1/$2};
     if ($url =~ m{\*}) {
         my @found = $self->_search_url_file($url);
         confess "No match for $url" if !scalar @found;
@@ -1076,7 +1077,8 @@ sub _cache_filename($url) {
     $file =~ tr{a-zA-Z0-9_-}{_}c;
     $file =~ s/__+/_/g;
 
-    my $dir = "/var/tmp/ravada_cache/$ENV{USER}";
+    my ($user) = getpwuid($>);
+    my $dir = "/var/tmp/ravada_cache/$user";
     make_path($dir)    if ! -e $dir;
     return "$dir/$file";
 }
