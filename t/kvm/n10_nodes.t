@@ -84,6 +84,12 @@ sub test_node {
     is($node->type,$vm->type) or return;
 
     is($node->host,$REMOTE_CONFIG->{host});
+    is($node->name,$REMOTE_CONFIG->{name}) or return;
+
+    eval { $node->ping };
+    is($@,'',"[$vm_name] ping ".$node->name);
+    eval { $node->_connect_rex };
+    is($@,'',"[$vm_name] connect rex ".$node->name);
 
     _shutdown_node($node)   if $node->ping && !$node->_connect_rex();
     _start_node($node);
