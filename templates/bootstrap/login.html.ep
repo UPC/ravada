@@ -15,6 +15,7 @@
 
                <!-- <input type="submit" name="submit" value="launch"> -->
                 <button id="submit" class="btn btn-lg btn-primary btn-block" type="submit" name="submit" value="launch">Launch</button>
+
                 % if (scalar @$error) {
 
                 %       for my $i (@$error) {
