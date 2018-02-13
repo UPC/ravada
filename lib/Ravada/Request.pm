@@ -148,6 +148,9 @@ sub create_domain {
 
     my $args = _check_args('create_domain', @_ );
 
+    confess "ERROR: Argument vm required without id_base"
+        if !exists $args->{vm} && !exists $args->{id_base};
+
     my $self = {};
     if ($args->{network}) {
         $args->{network} = JSON::XS->new->convert_blessed->encode($args->{network});
