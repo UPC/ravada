@@ -254,8 +254,6 @@ sub import_domain {
 
 sub refresh_storage {}
 
-sub ping { return 1 }
-
 sub free_memory { return 1024*1024 }
 
 sub refresh_storage_pools {

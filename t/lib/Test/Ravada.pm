@@ -36,6 +36,9 @@ no warnings "experimental::signatures";
 
 use Ravada;
 use Ravada::Auth::SQL;
+use Ravada::Domain::Void;
+
+$Ravada::Domain::Void::DIR_TMP = "/var/tmp/test/rvd_void";
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 

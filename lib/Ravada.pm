@@ -1027,40 +1027,50 @@ sub create_domain {
     my $self = shift;
 
     my %args = @_;
+    my $vm_name = delete $args{vm};
 
-    croak "Argument id_owner required "
-        if !$args{id_owner};
+    my @create_args = (%args);
 
-    my $vm_name = $args{vm};
-    delete $args{vm};
+    my $id_owner = delete $args{id_owner}   or croak "ERROR: Argument id_owner required ";
+    my $name = delete $args{name}           or confess "ERROR: Argument name required";
 
-    my $request = ( $args{request} or undef);
+    my $request = delete $args{request};
+    my $id_base = delete $args{id_base};
+    confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
+
+    _check_args(\%args,qw(iso_file id_base id_iso active swap memory disk id_template));
 
     my $vm;
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    if ($args{id_base}) {
-        my $base = Ravada::Domain->open($args{id_base});
-        $vm = Ravada::VM->open($base->_vm->id);
+    if ($id_base) {
+        my $base = Ravada::Domain->open($id_base)
+            or confess "ERROR: Base domain id:$id_base not found";
+        $vm = $self->search_vm($base->vm);
+
+        #TODO: check if base vm matches vm_name when both supplied
     }
 
     confess "No vm found"   if !$vm;
 
-    carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name;
-
-    confess "I can't find any vm ".Dumper($self->vm) if !$vm;
-
     my $domain;
-    eval { $domain = $vm->create_domain(@_) };
+    eval { $domain = $vm->create_domain(@create_args) };
     my $error = $@;
     $request->error($error) if $request && $error;
     if ($error =~ /has \d+ requests/) {
         $request->status('retry');
     }
     return $domain;
+}
+
+sub _check_args($args,@) {
+    for my $field (@_) {
+        delete $args->{$field};
+    }
+    confess "ERROR: Unknown arguments ".Dumper($args) if keys %$args;
+    lock_hash(%$args);
 }
 
 =head2 remove_domain

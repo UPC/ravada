@@ -50,7 +50,6 @@ requires 'connect';
 requires 'disconnect';
 requires 'import_domain';
 
-requires 'ping';
 ############################################################
 
 has 'host' => (
@@ -82,7 +81,8 @@ has 'readonly' => (
 #
 around 'create_domain' => \&_around_create_domain;
 
-before 'search_domain' => \&_connect;
+before 'search_domain' => \&_pre_search_domain;
+before 'list_domains' => \&_pre_list_domains;
 
 before 'create_volume' => \&_connect;
 
@@ -155,9 +155,12 @@ sub BUILD {
     my $name = delete $args->{name};
     delete $args->{readonly};
     delete $args->{security};
+    delete $args->{public_ip};
 
     # TODO check if this is needed
     delete $args->{connector};
+
+    lock_hash(%$args);
 
     confess "ERROR: Unknown args ".join (",", keys (%$args)) if keys %$args;
 
@@ -165,10 +168,10 @@ sub BUILD {
         $self->_select_vm_db(id => $id)
     } else {
         my %query = (
-            hostname => ($args->{host} or 'localhost')
+            hostname => ($host or 'localhost')
             ,vm_type => $self->type
         );
-        $query{name} = $args->{name}  if $args->{name};
+        $query{name} = $name  if $name;
         $self->_select_vm_db(%query);
     }
     $self->id;
@@ -190,6 +193,9 @@ sub _load_rex {
         require Rex::Commands;
         Rex::Commands->import;
     
+        require Rex::Commands::File;
+        Rex::Commands::File->import();
+
         require Rex::Commands::Run;
         Rex::Commands::Run->import();
     
@@ -239,6 +245,16 @@ sub _connect {
 sub _pre_create_domain {
     _check_create_domain(@_);
     _connect(@_);
+}
+
+sub _pre_search_domain($self,@) {
+    $self->_connect();
+    die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
+}
+
+sub _pre_list_domains($self,@) {
+    $self->_connect();
+    die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
 }
 
 sub _connect_rex($self) {
@@ -664,9 +680,10 @@ Returns wether this virtual manager is in the local host
 =cut
 
 sub is_local($self) {
-    return $self->host eq 'localhost'
+    return 1 if $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'
         || !$self->host;
+    return 0;
 }
 
 
@@ -699,15 +716,17 @@ Returns if the virtual manager connection is available
 =cut
 
 sub ping($self) {
-    #TODO local ? return 1
+    return 1 if $self->is_local();
+
     my $p = Net::Ping->new('tcp',2);
     return 1 if $p->ping($self->host);
     $p->close();
 
     return if $>; # icmp ping requires root privilege
     $p= Net::Ping->new('icmp',2);
-    return $p->ping($self->host);
+    return 1 if $p->ping($self->host);
 
+    return 0;
 }
 
 =head2 is_active
@@ -784,6 +803,7 @@ Writes a file to the node
 =cut
 
 sub write_file( $self, $file, $contents ) {
+    $self->_load_rex();
     # TODO local VMs what ?
     if ($self->_connect_rex) {
         my $fh = file_write($file);
