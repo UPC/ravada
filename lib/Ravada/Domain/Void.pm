@@ -6,6 +6,7 @@ use strict;
 use Carp qw(cluck croak);
 use Data::Dumper;
 use File::Copy;
+use File::Path qw(make_path);
 use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
@@ -40,7 +41,7 @@ sub BUILD {
 
     my $args = $_[0];
 
-    mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
+    make_path($DIR_TMP) or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
     if ($args->{id_base}) {
