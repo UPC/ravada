@@ -1502,7 +1502,6 @@ sub process_requests {
         $self->_cmd_refresh_vms();
         next if !$DEBUG && !$debug;
 
-        sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG;
 
@@ -2149,6 +2148,25 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
+
+    $self->_clean_refresh_vms_requests($request);
+}
+
+sub _clean_refresh_vms_requests($self, $request) {
+    my $query = "DELETE FROM requests "
+        ." WHERE command='refresh_vm' "
+        ."   AND status='requested'";
+
+    if ($request) {
+        $query .= "   AND id <> ?";
+    }
+    my $sth = $CONNECTOR->dbh->prepare($query);
+
+    if ($request) {
+        $sth->execute($request->id);
+    } else {
+        $sth->execute();
+    }
 }
 
 sub _refresh_active_domains($self, $request=undef) {
