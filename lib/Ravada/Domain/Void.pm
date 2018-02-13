@@ -143,6 +143,7 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
+    $self->_vm->run("mkdir -p $DIR_TMP");
     $self->_vm->write_file($disk, Dump($data));
     return $data->{$var};
 }
