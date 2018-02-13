@@ -687,7 +687,7 @@ sub open($class, $id , $readonly = 0) {
         if !keys %$row;
 
     my $vm;
-    if (!$self->_data('id_vm')) {
+    if (!$self->_data('id_vm') || $self->is_base) {
         my $vm0 = {};
         my $vm_class = "Ravada::VM::".$row->{vm};
         bless $vm0, $vm_class;
