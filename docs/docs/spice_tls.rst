@@ -169,4 +169,4 @@ See this .vv file as an example reproduced below:
     disable-effects=all
     ;secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard
 
-More information `about <https://www.spice-space.org/docs/manual/>`_
+More information `about <https://www.spice-space.org/documentation.html>`_.
