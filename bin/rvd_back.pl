@@ -125,6 +125,7 @@ $Ravada::CAN_FORK=0    if $NOFORK;
 ###################################################################
 
 my $PID_LONGS;
+my $PID_START;
 ###################################################################
 #
 
@@ -138,6 +139,7 @@ sub do_start {
     start_process_longs() if !$NOFORK;
 
     my $ravada = Ravada->new( %CONFIG );
+
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
@@ -153,7 +155,7 @@ sub _clean_old_process {
 
     my $kid;
     for ( 1 .. 10 ){
-        $kid = waitpid( $PID_LONGS , WNOHANG);
+        $kid = waitpid( $pid, WNOHANG);
         last if $kid;
         sleep 1;
     }
@@ -161,7 +163,7 @@ sub _clean_old_process {
 
     kill 9, $pid;
     for ( 1 .. 10 ){
-        $kid = waitpid( $PID_LONGS , WNOHANG);
+        $kid = waitpid( $pid, WNOHANG);
         last if $kid;
         sleep 1;
     }
@@ -179,7 +181,6 @@ sub start_process_longs {
         $PID_LONGS = $pid;
         return;
     }
-    
     warn "Processing long requests in pid $$\n" if $DEBUG;
     my $ravada = Ravada->new( %CONFIG );
     for (;;) {
@@ -208,7 +209,9 @@ sub start {
             do_start();
             next;
         }
+        _clean_old_process($PID_START)   if $PID_START;
         my $pid = fork();
+        $PID_START = $pid;
         die "I can't fork $!" if !defined $pid;
         if ($pid == 0 ) {
             do_start();
