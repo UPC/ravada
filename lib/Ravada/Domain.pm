@@ -687,14 +687,15 @@ sub open($class, $id , $readonly = 0) {
         if !keys %$row;
 
     my $vm;
-    if (!$self->_data('id_vm') || $self->is_base) {
+    if ($self->_data('id_vm') && !$self->is_base) {
+        $vm = Ravada::VM->open(id => $self->_data('id_vm'), readonly => $readonly);
+    }
+    if (!$vm || !$vm->is_active) {
         my $vm0 = {};
         my $vm_class = "Ravada::VM::".$row->{vm};
         bless $vm0, $vm_class;
 
         $vm = $vm0->new( readonly => $readonly );
-    } else {
-        $vm = Ravada::VM->open(id => $self->_data('id_vm'), readonly => $readonly);
     }
     $self->_load_rex()  if !$vm->is_local();
 
@@ -1558,6 +1559,9 @@ sub _add_iptable {
 }
 
 sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
+
+    $self->_load_rex();
+
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
