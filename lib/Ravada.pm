@@ -70,7 +70,7 @@ our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 
 # Seconds to wait for other long process
-our $SECONDS_WAIT_CHILDREN = 2;
+our $SECONDS_WAIT_CHILDREN = 5;
 # Limit for long processes
 our $LIMIT_PROCESS = 2;
 our $LIMIT_HUGE_PROCESS = 1;
