@@ -1425,9 +1425,9 @@ sub remove_volume {
 
 }
 
-=head2 clean_killed_requests
+=head2 clean_old_requests
 
-Before processing requests, old killed requests must be cleaned.
+Before processing requests, old requests must be cleaned.
 
 =cut
 
@@ -1442,6 +1442,7 @@ sub clean_killed_requests {
         $req->status("done","Killed ".$req->command." before completion");
     }
 
+    $self->_refresh_vms_requests();
 }
 
 =head2 process_requests
