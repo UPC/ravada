@@ -1906,6 +1906,13 @@ sub ping($self) {
     eval { $self->vm->list_defined_networks };
     warn $@ if $@;
     return 1 if !$@;
+    if ($@ =~ /libvirt error code: 1,/) {
+        $self->disconnect();
+        $self->connect;
+        eval { $self->vm->list_defined_networks };
+        return 1 if !$@;
+    }
+    warn $@ if $@;
     return 0;
 }
 
