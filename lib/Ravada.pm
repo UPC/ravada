@@ -2153,7 +2153,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_clean_refresh_vms_requests($request);
 }
 
-sub _clean_refresh_vms_requests($self, $request) {
+sub _clean_refresh_vms_requests($self, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command='refresh_vm' "
         ."   AND status='requested'";
