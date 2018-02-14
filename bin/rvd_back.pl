@@ -7,6 +7,7 @@ use lib './lib';
 
 use Data::Dumper;
 use Getopt::Long;
+use POSIX ":sys_wait_h";
 use Proc::PID::File;
 
 use Ravada;
@@ -146,7 +147,32 @@ sub do_start {
     }
 }
 
+sub _clean_old_process {
+    my $pid = shift;
+    kill 15 ,$pid;
+
+    my $kid;
+    for ( 1 .. 10 ){
+        $kid = waitpid( $PID_LONGS , WNOHANG);
+        last if $kid;
+        sleep 1;
+    }
+    return if $kid;
+
+    kill 9, $pid;
+    for ( 1 .. 10 ){
+        $kid = waitpid( $PID_LONGS , WNOHANG);
+        last if $kid;
+        sleep 1;
+    }
+    return if $kid;
+
+    warn "WARNING: PID $pid couldn't be killed\n";
+
+}
 sub start_process_longs {
+    _clean_old_process($PID_LONGS)  if $PID_LONGS;
+
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ( $pid ) {
