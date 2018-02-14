@@ -134,6 +134,8 @@ sub do_start {
 
     clean_old_requests();
 
+    start_process_longs() if !$NOFORK;
+
     my $ravada = Ravada->new( %CONFIG );
 
     for (;;) {

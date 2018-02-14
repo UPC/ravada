@@ -1428,8 +1428,12 @@ sub clean_old_requests {
         $req->status("done","Killed ".$req->command." before completion");
     }
 
+<<<<<<< HEAD
     $self->_clean_requests('refresh_vms');
     $self->_clean_requests('cleanup');
+=======
+    $self->_clean_refresh_vms_requests();
+>>>>>>> [#547] make start domain prioritary
 }
 
 =head2 process_requests
@@ -1478,7 +1482,12 @@ sub process_requests {
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
 
+<<<<<<< HEAD
         $self->_execute($req, $dont_fork);
+=======
+        my $err = $self->_execute($req, $dont_fork);
+        $req->error($err)   if $err;
+>>>>>>> [#547] make start domain prioritary
 #        $req->status("done") if $req->status() !~ /retry/;
         next if !$DEBUG && !$debug;
 
@@ -1620,7 +1629,13 @@ sub _execute {
     $request->pid($$);
     $request->start_time(time);
     $request->error('');
+<<<<<<< HEAD
     if ($dont_fork || !$CAN_FORK) {
+=======
+    if ($dont_fork || !$CAN_FORK
+        || (!$LONG_COMMAND{$request->command} && !$PRIORITY_COMMAND{$request->command} )
+    ) {
+>>>>>>> [#547] make start domain prioritary
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
@@ -1630,7 +1645,12 @@ sub _execute {
         return;
     }
 
+<<<<<<< HEAD
     if ( $self->_wait_requests($request) ) {
+=======
+    $self->_wait_pids_nohang();
+    if ( $self->_wait_children($request) ) {
+>>>>>>> [#547] make start domain prioritary
          $request->status("requested","Server loaded, queuing request");
          return;
      }
@@ -1768,10 +1788,31 @@ sub _wait_requests {
     for ( 1 .. $SECONDS_WAIT_CHILDREN ) {
 
         my $msg;
+<<<<<<< HEAD
 
         my $n_pids = $req->count_requests();
 
         $msg = $req->command
+=======
+        if ($HUGE_COMMAND{$req->command}) {
+            if ( $n_pids < $LIMIT_HUGE_PROCESS) {
+                $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_HUGE_PROCESS ";
+                warn $msg if $DEBUG;
+                return;
+            }
+        } elsif ($PRIORITY_COMMAND{$req->command}) {
+            if ( $n_pids < $LIMIT_PRIORITY_PROCESS) {
+                $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_PRIORITY_PROCESS ";
+                warn $msg if $DEBUG;
+                return;
+            }
+        } elsif ( $n_pids < $LIMIT_PROCESS) {
+            $msg = $req->id." ".$req->command
+>>>>>>> [#547] make start domain prioritary
                 ." waiting for processes to finish $n_pids"
                 ." of ".$req->requests_limit;
         return if $n_pids < $req->requests_limit();
