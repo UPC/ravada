@@ -74,6 +74,7 @@ our $SECONDS_WAIT_CHILDREN = 5;
 # Limit for long processes
 our $LIMIT_PROCESS = 2;
 our $LIMIT_HUGE_PROCESS = 1;
+our $LIMIT_PRIORITY_PROCESS = 20;
 
 our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
@@ -81,6 +82,7 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 # LONG commands take long
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
 our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot set_base_vm ), keys %HUGE_COMMAND);
+our %PRIORITY_COMMAND = map { $_ => 1 } qw(start);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -1431,7 +1433,7 @@ Before processing requests, old requests must be cleaned.
 
 =cut
 
-sub clean_killed_requests {
+sub clean_old_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
         ." WHERE status <> 'done' AND STATUS <> 'requested'"
@@ -1442,7 +1444,7 @@ sub clean_killed_requests {
         $req->status("done","Killed ".$req->command." before completion");
     }
 
-    $self->_refresh_vms_requests();
+    $self->_clean_refresh_vms_requests();
 }
 
 =head2 process_requests
@@ -1497,10 +1499,10 @@ sub process_requests {
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
+
         my $err = $self->_execute($req, $dont_fork);
         $req->error($err)   if $err;
 #        $req->status("done") if $req->status() !~ /retry/;
-        $self->_cmd_refresh_vms();
         next if !$DEBUG && !$debug;
 
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
@@ -1631,7 +1633,9 @@ sub _execute {
     $request->pid($$);
     $request->start_time(time);
     $request->error('');
-    if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
+    if ($dont_fork || !$CAN_FORK
+        || (!$LONG_COMMAND{$request->command} && !$PRIORITY_COMMAND{$request->command} )
+    ) {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
@@ -1642,7 +1646,10 @@ sub _execute {
     }
 
     $self->_wait_pids_nohang();
-    return if $self->_wait_children($request);
+    if ( $self->_wait_children($request) ) {
+         $request->status("requested","Server loaded, queuing request");
+         return;
+     }
 
     $request->status('working');
     warn $request->command." forking";
@@ -1776,6 +1783,14 @@ sub _wait_children {
                 $msg = $req->id." ".$req->command
                 ." waiting for processes to finish $n_pids"
                 ." of $LIMIT_HUGE_PROCESS ";
+                warn $msg if $DEBUG;
+                return;
+            }
+        } elsif ($PRIORITY_COMMAND{$req->command}) {
+            if ( $n_pids < $LIMIT_PRIORITY_PROCESS) {
+                $msg = $req->id." ".$req->command
+                ." waiting for processes to finish $n_pids"
+                ." of $LIMIT_PRIORITY_PROCESS ";
                 warn $msg if $DEBUG;
                 return;
             }
@@ -2395,6 +2410,9 @@ sub _enforce_limits_active {
     }
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
+
+        my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        next if $user->is_admin();
 
         my @domains_user = sort { $a->start_time <=> $b->start_time }
                         @{$domains{$id_user}};

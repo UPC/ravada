@@ -134,7 +134,7 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
-    clean_killed_requests();
+    clean_old_requests();
 
     start_process_longs() if !$NOFORK;
 
@@ -190,9 +190,9 @@ sub start_process_longs {
     }
 }
 
-sub clean_killed_requests {
+sub clean_old_requests {
     my $ravada = Ravada->new( %CONFIG );
-    $ravada->clean_killed_requests();
+    $ravada->clean_old_requests();
 }
 
 sub start {
