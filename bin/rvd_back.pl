@@ -136,8 +136,51 @@ sub do_start {
 
     my $ravada = Ravada->new( %CONFIG );
 
-    my $t0_cleanup = 0;
-    for ( 1 .. 100 ) {
+    for (;;) {
+        my $t0 = time;
+        $ravada->process_requests();
+        $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
+        $ravada->enforce_limits();
+        sleep 1 if time - $t0 <1;
+    }
+}
+
+sub _clean_old_process {
+    my $pid = shift;
+    kill 15 ,$pid;
+
+    my $kid;
+    for ( 1 .. 10 ){
+        $kid = waitpid( $pid, WNOHANG);
+        last if $kid;
+        sleep 1;
+    }
+    return if $kid;
+
+    kill 9, $pid;
+    for ( 1 .. 10 ){
+        $kid = waitpid( $pid, WNOHANG);
+        last if $kid;
+        sleep 1;
+    }
+    return if $kid;
+
+    warn "WARNING: PID $pid couldn't be killed\n";
+
+}
+sub start_process_longs {
+    _clean_old_process($PID_LONGS)  if $PID_LONGS;
+
+    my $pid = fork();
+    die "I can't fork" if !defined $pid;
+    if ( $pid ) {
+        $PID_LONGS = $pid;
+        return;
+    }
+    warn "Processing long requests in pid $$\n" if $DEBUG;
+    my $ravada = Ravada->new( %CONFIG );
+    for (;;) {
+>>>>>>> [#547] wait properly for dead processes
         my $t0 = time;
         $ravada->process_priority_requests();
         $ravada->process_long_requests();
@@ -167,7 +210,20 @@ sub start {
         }
     }
     for (;;) {
-        do_start();
+        if ($NOFORK ) {
+            do_start();
+            next;
+        }
+        _clean_old_process($PID_START)   if $PID_START;
+        my $pid = fork();
+        $PID_START = $pid;
+        die "I can't fork $!" if !defined $pid;
+        if ($pid == 0 ) {
+            do_start();
+            exit;
+        }
+        warn "Waiting for pid $pid\n";
+        waitpid($pid,0);
     }
 }
 
