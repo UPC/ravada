@@ -1803,9 +1803,9 @@ sub _wait_pids_nohang {
 
     for my $pid ( keys %{$self->{pids}}) {
         my $kid = waitpid($pid , WNOHANG);
-        next if !$kid || $kid == -1;
-        $self->_set_req_done($kid);
-        $self->_delete_pid($kid);
+        next if !$kid;
+        $self->_set_req_done($pid);
+        $self->_delete_pid($pid);
     }
 
 }
