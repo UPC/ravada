@@ -11,6 +11,7 @@ use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash);
 use Moose;
+use Parallel::ForkManager;
 use POSIX qw(WNOHANG);
 use YAML;
 
@@ -72,27 +73,15 @@ our $CAN_LXC = 0;
 # Seconds to wait for other long process
 our $SECONDS_WAIT_CHILDREN = 5;
 # Limit for long processes
-our $LIMIT_PROCESS = 2;
+our $LIMIT_LONG_PROCESS = 2;
 our $LIMIT_HUGE_PROCESS = 1;
 our $LIMIT_PRIORITY_PROCESS = 20;
 
 our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
-# LONG commands take long
-our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot set_base_vm ), keys %HUGE_COMMAND);
-our %PRIORITY_COMMAND = map { $_ => 1 } qw(start);
-
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
-
-has 'vm' => (
-          is => 'ro'
-        ,isa => 'ArrayRef'
-       ,lazy => 1
-     , builder => '_create_vm'
-);
 
 has 'connector' => (
         is => 'rw'
@@ -854,8 +843,6 @@ sub _init_config {
 
     $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
-    $LIMIT_PROCESS = $CONFIG->{limit_process} 
-        if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
@@ -1444,7 +1431,7 @@ sub clean_old_requests {
         $req->status("done","Killed ".$req->command." before completion");
     }
 
-    $self->_clean_refresh_vms_requests();
+    $self->_clean_requests('refresh_vms');
 }
 
 =head2 process_requests
@@ -1459,10 +1446,11 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
-    my $long_commands = (shift or 0);
-    my $short_commands = (shift or 0);
+    my $request_type = ( shift or 'all');
+    confess "ERROR: Request type '$request_type' unknown, it must be long, huge, all"
+            ." or priority"
+        if $request_type !~ /^(long|huge|priority|all)$/;
 
-    $self->_wait_pids_nohang();
     $self->_kill_stale_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
@@ -1473,27 +1461,14 @@ sub process_requests {
     );
     $sth->execute(time);
 
-    my $debug_type = '';
-    $debug_type = 'long' if $long_commands;
-    $debug_type = 'short' if $short_commands || !$long_commands;
-    $debug_type = 'all' if $long_commands && $short_commands;
-
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id_request);
+        next if $request_type ne 'all' && $req->type ne $request_type;
 
-        if ( ($long_commands && 
-                (!$short_commands && !$LONG_COMMAND{$req->command}))
-            ||(!$long_commands && $LONG_COMMAND{$req->command})
-        ) {
-            warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
-                .$req->command
-                    if $debug || $DEBUG;
-            next;
-        }
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
-        warn "[$debug_type] $$ executing request ".$req->id." ".$req->status()." "
+        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -1510,7 +1485,6 @@ sub process_requests {
 
     }
     $sth->finish;
-
 }
 
 =head2 process_long_requests
@@ -1523,7 +1497,7 @@ sub process_long_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    return $self->process_requests($debug, $dont_fork, 1);
+    return $self->process_requests($debug, $dont_fork, 'long');
 }
 
 =head2 process_all_requests
@@ -1537,10 +1511,15 @@ sub process_all_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    $self->process_requests($debug, $dont_fork,1,1);
+    $self->process_requests($debug, $dont_fork,'all');
 
 }
 
+sub process_priority_requests($self, $debug=0, $dont_fork=0) {
+
+    $self->process_requests($debug, $dont_fork,'priority');
+
+}
 
 sub _kill_stale_process($self) {
     my $sth = $CONNECTOR->dbh->prepare(
@@ -1554,7 +1533,7 @@ sub _kill_stale_process($self) {
     );
     $sth->execute(time - 60 );
     while (my ($pid, $command, $start_time) = $sth->fetchrow) {
-        warn "Killing $command stale for ".time - $start_time." seconds\n";
+        warn "Killing $command stale for ".(time - $start_time)." seconds\n";
         kill (15,$pid);
     }
     $sth->finish;
@@ -1594,13 +1573,14 @@ sub _process_all_requests_dont_fork {
     my $self = shift;
     my $debug = shift;
 
-    return $self->process_requests($debug,1, 1, 1);
+    return $self->process_requests($debug,1, 'all');
 }
 
 sub _process_requests_dont_fork {
     my $self = shift;
     my $debug = shift;
-    return $self->process_requests($debug, 1);
+    return $self->process_requests($debug, 'priority');
+    return $self->process_requests($debug, 'long');
 }
 
 =head2 list_vm_types
@@ -1633,9 +1613,7 @@ sub _execute {
     $request->pid($$);
     $request->start_time(time);
     $request->error('');
-    if ($dont_fork || !$CAN_FORK
-        || (!$LONG_COMMAND{$request->command} && !$PRIORITY_COMMAND{$request->command} )
-    ) {
+    if ($dont_fork || !$CAN_FORK) {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
@@ -1645,21 +1623,25 @@ sub _execute {
         return $err;
     }
 
-    $self->_wait_pids_nohang();
-    if ( $self->_wait_children($request) ) {
+    if ( $self->_wait_requests($request) ) {
          $request->status("requested","Server loaded, queuing request");
          return;
      }
 
-    $request->status('working');
-    warn $request->command." forking";
-    my $pid = fork();
+    $request->status('working','');
+    if (!$self->{fork_manager}) {
+        my $fm = Parallel::ForkManager->new($request->requests_limit('priority'));
+        $self->{fork_manager} = $fm;
+    }
+    my $pid = $self->{fork_manager}->start;
     die "I can't fork" if !defined $pid;
+
     if ( $pid == 0 ) {
+        warn $request->command." forking $$"    if $DEBUG;
         $self->_do_execute_command($sub, $request);
+        $self->{fork_manager}->finish; # Terminates the child process
     } else {
         $request->pid($pid);
-        $self->_add_pid($pid, $request->id);
     }
 #    $self->_connect_vm_kvm();
     return '';
@@ -1769,39 +1751,26 @@ sub _cmd_create{
 
 }
 
-sub _wait_children {
+sub _wait_requests {
     my $self = shift;
     my $req = shift or confess "Missing request";
 
+    # don't wait for priority requests
+    return if $req->type eq 'priority';
+
     my $try = 0;
     for ( 1 .. $SECONDS_WAIT_CHILDREN ) {
-        my $n_pids = scalar keys %{$self->{pids}};
 
         my $msg;
-        if ($HUGE_COMMAND{$req->command}) {
-            if ( $n_pids < $LIMIT_HUGE_PROCESS) {
-                $msg = $req->id." ".$req->command
+
+        my $n_pids = $req->count_requests();
+
+        $msg = $req->id." ".$req->command
                 ." waiting for processes to finish $n_pids"
-                ." of $LIMIT_HUGE_PROCESS ";
-                warn $msg if $DEBUG;
-                return;
-            }
-        } elsif ($PRIORITY_COMMAND{$req->command}) {
-            if ( $n_pids < $LIMIT_PRIORITY_PROCESS) {
-                $msg = $req->id." ".$req->command
-                ." waiting for processes to finish $n_pids"
-                ." of $LIMIT_PRIORITY_PROCESS ";
-                warn $msg if $DEBUG;
-                return;
-            }
-        } elsif ( $n_pids < $LIMIT_PROCESS) {
-            $msg = $req->id." ".$req->command
-                ." waiting for processes to finish $n_pids"
-                ." of $LIMIT_PROCESS ";
-            warn $msg if $DEBUG;
-            return;
-        }
-        $self->_wait_pids_nohang();
+                ." of ".$req->requests_limit;
+        warn $msg if $DEBUG;
+        return if $n_pids < $req->requests_limit();
+        return 1 if $n_pids > $req->requests_limit + 2;
         sleep 1;
 
         next if $try++;
@@ -1809,7 +1778,7 @@ sub _wait_children {
         $req->error($msg);
         $req->status('waiting') if $req->status() !~ 'waiting';
     }
-    return scalar keys %{$self->{pids}};
+    return 1;
 }
 
 sub _wait_pids_nohang {
@@ -1855,22 +1824,6 @@ sub _wait_pids {
         $self->_delete_pid($kid);
         return if $kid  == $pid;
     }
-}
-
-sub _add_pid {
-    my $self = shift;
-    my $pid = shift;
-    my $id_req = shift;
-
-    $self->{pids}->{$pid} = $id_req;
-
-}
-
-sub _delete_pid {
-    my $self = shift;
-    my $pid = shift;
-
-    delete $self->{pids}->{$pid};
 }
 
 sub _cmd_remove {
@@ -2165,12 +2118,12 @@ sub _cmd_refresh_vms($self, $request=undef) {
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
-    $self->_clean_refresh_vms_requests($request);
+    $self->_clean_requests($request, 'refresh_vms');
 }
 
-sub _clean_refresh_vms_requests($self, $request=undef) {
+sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
-        ." WHERE command='refresh_vms' "
+        ." WHERE command=? "
         ."   AND status='requested'";
 
     if ($request) {
@@ -2179,9 +2132,9 @@ sub _clean_refresh_vms_requests($self, $request=undef) {
     my $sth = $CONNECTOR->dbh->prepare($query);
 
     if ($request) {
-        $sth->execute($request->id);
+        $sth->execute($command, $request->id);
     } else {
-        $sth->execute();
+        $sth->execute($command);
     }
 }
 
@@ -2267,6 +2220,11 @@ sub _cmd_set_base_vm {
      );
 }
 
+sub _cmd_cleanup($self, $request) {
+    $self->enforce_limits($request);
+    $self->_clean_requests($request, 'cleanup');
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -2279,6 +2237,7 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
+       ,cleanup => \&_cmd_cleanup
       ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
      ,hybernate => \&_cmd_hybernate
@@ -2286,6 +2245,7 @@ sub _req_method {
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
     ,copy_screenshot => \&_cmd_copy_screenshot
+   ,cmd_cleanup => \&_cmd_cleanup
    ,remove_base => \&_cmd_remove_base
    ,set_base_vm => \&_cmd_set_base_vm
   ,ping_backend => \&_cmd_ping_backend
@@ -2335,15 +2295,36 @@ sub search_vm {
         return Ravada::VM::Void->new(host => $host);
     }
 
-    my @vms;
-    eval { @vms = @{$self->vm} };
-    return if $@ && $@ =~ /No VMs found/i;
-    die $@ if $@;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE vm_type = ? "
+        ."   AND hostname=?"
+    );
+    $sth->execute($type, $host);
+    my ($id) = $sth->fetchrow();
+    return Ravada::VM->open($id)    if $id;
+    return if $host ne 'localhost';
 
-    for my $vm (@vms) {
+    my $vms = $self->_create_vm();
+
+    for my $vm (@$vms) {
         return $vm if ref($vm) eq $class && $vm->host eq $host;
     }
     return;
+}
+
+sub vm($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    my @vms;
+    while ( my ($id) = $sth->fetchrow()) {
+        push @vms, ( Ravada::VM->open($id));
+    };
+    return [@vms] if @vms;
+    return $self->_create_vms();
+
 }
 
 =head2 import_domain
@@ -2397,6 +2378,7 @@ sub enforce_limits {
 
 sub _enforce_limits_active {
     my $self = shift;
+    confess "Even size args" if scalar(@_) % 2;
     my %args = @_;
 
     my $timeout = (delete $args{timeout} or 10);
