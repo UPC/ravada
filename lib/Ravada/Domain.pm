@@ -1590,6 +1590,7 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
 
 }
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
+    confess "local port undefined " if !$local_port;
     my @iptables_arg = ($remote_ip
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
