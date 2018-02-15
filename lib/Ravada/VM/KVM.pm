@@ -169,6 +169,11 @@ sub connect {
 #    $self->storage_pool($self->_load_storage_pool);
 }
 
+sub _reconnect($self) {
+    $self->vm(undef);
+    return $self->connect();
+}
+
 sub _load_storage_pool {
     my $self = shift;
 
@@ -1905,13 +1910,13 @@ sub ping($self) {
     return 0 if !$self->vm;
     eval { $self->vm->list_defined_networks };
     return 1 if !$@;
-    if ($@ =~ /libvirt error code: 1,/) {
-        $self->disconnect();
-        $self->connect;
-        eval { $self->vm->list_defined_networks };
-        return 1 if !$@;
-    }
-    warn $@ if $@;
+
+    $self->_reconnect;
+
+    eval { $self->vm->list_defined_networks };
+    return 1 if !$@;
+
+    warn $@;
     return 0;
 }
 
