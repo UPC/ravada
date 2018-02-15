@@ -72,10 +72,6 @@ our $CAN_LXC = 0;
 
 # Seconds to wait for other long process
 our $SECONDS_WAIT_CHILDREN = 5;
-# Limit for long processes
-our $LIMIT_LONG_PROCESS = 2;
-our $LIMIT_HUGE_PROCESS = 1;
-our $LIMIT_PRIORITY_PROCESS = 20;
 
 our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
