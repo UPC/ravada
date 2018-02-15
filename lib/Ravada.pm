@@ -189,8 +189,9 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.10/'
-                ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => ,'$url/MD5SUMS'
+                ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
@@ -199,8 +200,8 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.04/'
-                ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
+                ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
         }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
@@ -1167,6 +1168,7 @@ sub list_domains {
     }
     return @domains;
 }
+
 
 =head2 list_domains_data
 
