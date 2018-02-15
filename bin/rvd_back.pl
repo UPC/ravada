@@ -139,7 +139,6 @@ sub do_start {
     my $t0_cleanup = 0;
     for ( 1 .. 100 ) {
         my $t0 = time;
-        warn "process request";
         $ravada->process_priority_requests();
         $ravada->process_long_requests();
         $ravada->process_requests();
