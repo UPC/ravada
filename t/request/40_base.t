@@ -46,7 +46,7 @@ sub test_swap {
         ,swap => 128*1024*1024
     );
     ok($req);
-    rvd_back()->process_requests();
+    rvd_back()->_process_all_requests_dont_fork();
     wait_request($req);
 
     ok($req->status eq 'done'
@@ -198,7 +198,7 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    rvd_back->process_requests();
+    rvd_back->_process_all_requests_dont_fork();
     rvd_back->process_long_requests(0,1);
     wait_request($req);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");

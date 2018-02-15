@@ -301,11 +301,11 @@ sub _post_disconnect($self) {
     return if $self->is_local;
 
     $self->_load_rex();
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set status='down' WHERE id_vm=? AND status='active'"
-    );
-    $sth->execute($self->id);
-    $sth->finish;
+#    my $sth = $$CONNECTOR->dbh->prepare(
+#        "UPDATE domains set status='down' WHERE id_vm=? AND status='active'"
+#    );
+#    $sth->execute($self->id);
+#    $sth->finish;
 
     if ( my $con = Rex::Commands::connection() ) {
         $con->disconnect();

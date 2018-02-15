@@ -1004,7 +1004,6 @@ sub _check_signature($file, $type, $expected) {
 
 sub _download_file_external($url, $device, $verbose=1) {
     confess "ERROR: wget missing"   if !$WGET;
-    confess "verbose" if $verbose;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n"    if $verbose;
