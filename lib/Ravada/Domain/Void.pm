@@ -143,7 +143,7 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
-    $self->_vm->run("mkdir -p $DIR_TMP");
+    $self->_vm->run_command("mkdir -p $DIR_TMP");
     $self->_vm->write_file($disk, Dump($data));
     return $data->{$var};
 }
@@ -521,8 +521,11 @@ sub type { 'Void' }
 
 sub migrate($self, $node) {
     my $rsync = File::Rsync->new(update => 1);
-    for my $file ( $self->_config_file) {
+    for my $file ( $self->_config_file , $self->list_volumes, $self->list_files_base ) {
+        my ($path) = $file =~ m{(.*)/};
+        $node->run_command("mkdir -p $path");
         $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
+        die $rsync->err if $rsync->err;
     }
 
 }
