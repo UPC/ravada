@@ -777,7 +777,7 @@ sub start_node($node) {
     $node->disconnect;
     sleep 1;
 
-    for ( 1 .. 20 ) {
+    for ( 1 .. 30 ) {
         last if $node->ping ;
         sleep 1;
         diag("Waiting for ping node ".$node->name." $_") if !($_ % 10);
