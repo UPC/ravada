@@ -672,7 +672,9 @@ sub open($class, $id , $readonly = 0) {
     }
 
     my $domain = $vm->search_domain($row->{name});
-    $domain->_check_clean_shutdown()  if $domain && !$domain->is_active;
+    return if !$domain;
+    $domain->_search_already_started();
+    $domain->_check_clean_shutdown()  if !$domain->is_active;
     return $domain;
 }
 
