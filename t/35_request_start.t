@@ -70,6 +70,7 @@ sub test_new_domain {
 
 sub test_start {
     my $vm_name = shift;
+    my $fork = shift;
 
     my $name = new_domain_name();
 #    test_remove_domain($vm_name, $name);
@@ -82,14 +83,18 @@ sub test_start {
         ,uid => $USER->id
         ,remote_ip => $remote_ip
     );
-    $RAVADA->process_requests();
+    if ($fork) {
+        $RAVADA->process_requests(0);
+    } else {
+        $RAVADA->_process_all_requests_dont_fork(0);
+    }
 
     wait_request($req);
 
     ok($req->status eq 'done', "[$vm_name] Req ".$req->{id}." expecting status done, got ".$req->status);
-    ok($req->error && $req->error =~ /unknown/i
+    like($req->error , qr/unknown/i
             ,"[$vm_name] Req ".$req->{id}." expecting unknown domain error , got "
-                .($req->error or '<NULL>')) or return;
+                .($req->error or '<NULL>')) or exit;
     $req = undef;
 
     #####################################################################3
@@ -239,8 +244,10 @@ for my $vm_name (qw(KVM Void)) {
 
 #        $vmm->disconnect() if $vmm;
         diag("Testing VM $vm_name");
-        my $domain = test_start($vm_name);
+        my $domain = test_start($vm_name,0);
+        $domain = test_start($vm_name,1);
 #        $domain->_vm->disconnect;
+        next if !$domain;
         my $domain_name = $domain->name;
         $domain = undef;
 
