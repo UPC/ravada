@@ -933,7 +933,7 @@ sub refresh_vms {
     _init_connector();
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id, date_changed FROM requests WHERE command = 'refresh_vms' "
-        ." AND date_changed > ? "
+        ." AND ( date_changed > ? OR status='requested') "
     );
 
     my @now = Today_and_Now();
