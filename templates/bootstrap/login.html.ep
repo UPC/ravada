@@ -12,24 +12,23 @@
                 <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User/Email">
 
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
-        
+
                <!-- <input type="submit" name="submit" value="launch"> -->
                 <button id="submit" class="btn btn-lg btn-primary btn-block" type="submit" name="submit" value="launch">Launch</button>
-
                 % if (scalar @$error) {
-                        
+
                 %       for my $i (@$error) {
                             <p id="err"><%= $i %></p>
                 %       }
-                        
+
                 % }
                 </form>
-                
+
             </div>
         </div>
     </header>
 
-   
+
     %= include 'bootstrap/in_scripts'
 </body>
 </html>
