@@ -487,6 +487,12 @@ sub test_bases_node {
     isnt($domain->display(user_admin), $local_display) or exit;
     is($domain->base_in_vm($node->id), 1);
 
+    for my $file ( $domain->list_files_base ) {
+        my ($name) = $file =~ m{.*/(.*)};
+        my $vol_path = $node->search_volume_path($name);
+        ok($vol_path,"[$vm_name] Expecting file '$name' in node ".$node->name) or exit;
+    }
+
     $domain->set_base_vm(vm => $node, value => 0, user => user_admin);
     is($domain->base_in_vm($node->id), 0);
 
@@ -648,7 +654,8 @@ sub test_domain_already_started {
     { # clone is active, it should be found in node
     my $clone3 = rvd_back->search_domain($clone->name);
     is($clone3->id, $clone->id);
-    is($clone3->_vm->host , $node->host) or return;
+    is($clone3->_vm->host , $node->host,"Expecting ".$clone3->name
+        ." in ".$node->host) or exit;
     }
 
     $clone->remove(user_admin);
@@ -883,10 +890,11 @@ SKIP: {
         remove_node($node);
         next;
     };
+    test_bases_node($vm_name, $node);
 
-    test_start_twice($vm_name, $node);
-
+    test_sync_base($vm_name, $node);
     test_sync_back($node);
+    test_start_twice($vm_name, $node);
 
     test_shutdown($node);
 
@@ -894,14 +902,12 @@ SKIP: {
 
     test_node_renamed($vm_name, $node);
 
-    test_bases_node($vm_name, $node);
     test_bases_different_storage_pools($vm_name, $node);
 
     test_domain_already_started($vm_name, $node);
     test_clone_not_in_node($vm_name, $node);
     test_rsync_newer($vm_name, $node);
     test_domain_no_remote($vm_name, $node);
-    test_sync_base($vm_name, $node);
 
     my $domain2 = test_domain($vm_name, $node);
     test_remove_domain_from_local($vm_name, $node, $domain2)    if $domain2;
