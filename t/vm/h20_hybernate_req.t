@@ -40,19 +40,30 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
 
         next if !$domain->can_hybernate();
 
+        for my $fork ( 0, 1 ) {
         $domain->start($USER)   if !$domain->is_active;
+        for ( 1 .. 10 ) {
+            last if $domain->is_active;
+            sleep 1;
+        }
+        is($domain->is_active, 1) or exit;
 
         my $req = Ravada::Request->hybernate(
             id_domain => $domain->id
                   ,uid=> $USER->id
         );
         ok($req);
-        rvd_back->process_requests();
+        if($fork) {
+            rvd_back->process_requests();
+        } else {
+            rvd_back->_process_all_requests_dont_fork();
+        }
         wait_request($req);
 
+        $domain = rvd_back->search_domain($domain->name);
         is($domain->is_active,0);
 
-        $domain->start($USER);
+        $domain->start($USER)   if !$domain->is_active;
         if (!$domain->is_active) {
             sleep(1);
             $domain->start($USER)   if !$domain->is_active;
@@ -60,6 +71,7 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
 
         is($domain->is_active,1);
 
+        }# for my $fork
 
     }
 }
