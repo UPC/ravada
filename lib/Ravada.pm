@@ -1042,6 +1042,7 @@ sub create_domain {
 
     my $domain;
     eval { $domain = $vm->create_domain(@create_args) };
+    die $@ if $@ && !$request;
     my $error = $@;
     $request->error($error) if $request && $error;
     if ($error =~ /has \d+ requests/) {
@@ -1428,6 +1429,7 @@ sub clean_old_requests {
     }
 
     $self->_clean_requests('refresh_vms');
+    $self->_clean_requests('cleanup');
 }
 
 =head2 process_requests
@@ -1471,8 +1473,7 @@ sub process_requests {
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
 
-        my $err = $self->_execute($req, $dont_fork);
-        $req->error($err)   if $err;
+        $self->_execute($req, $dont_fork);
 #        $req->status("done") if $req->status() !~ /retry/;
         next if !$DEBUG && !$debug;
 
@@ -1529,6 +1530,11 @@ sub _kill_stale_process($self) {
     );
     $sth->execute(time - 60 );
     while (my ($pid, $command, $start_time) = $sth->fetchrow) {
+        if ($pid == $$ ) {
+            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
+                ." seconds, but I won't because it is myself";
+            next;
+        }
         warn "Killing $command stale for ".(time - $start_time)." seconds\n";
         kill (15,$pid);
     }
@@ -1616,7 +1622,7 @@ sub _execute {
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
         $request->error($err) if $err;
-        return $err;
+        return;
     }
 
     if ( $self->_wait_requests($request) ) {
@@ -1633,9 +1639,9 @@ sub _execute {
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
-        warn $request->command." forking $$"    if $DEBUG;
         $self->_do_execute_command($sub, $request);
         $self->{fork_manager}->finish; # Terminates the child process
+        $request->status('done');
     } else {
         $request->pid($pid);
     }
@@ -1657,12 +1663,10 @@ sub _do_execute_command {
 #    }
 
     eval {
-        $self->_connect_vm();
         $sub->($self,$request);
-        $self->_disconnect_vm();
     };
     my $err = ( $@ or '');
-    $request->error($err);
+    $request->error($err)   if $err;
     $request->status('done') 
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
@@ -1728,7 +1732,7 @@ sub _cmd_create{
     my $request = shift;
 
     $request->status('creating domain');
-    warn "$$ creating domain"   if $DEBUG;
+    warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
 
     $domain = $self->create_domain(%{$request->args},request => $request);
@@ -1741,6 +1745,7 @@ sub _cmd_create{
             .$request->args('name')."</a>"
             ." created."
         ;
+        warn $msg if $DEBUG;
         $request->status('done',$msg);
     }
 
@@ -1761,10 +1766,9 @@ sub _wait_requests {
 
         my $n_pids = $req->count_requests();
 
-        $msg = $req->id." ".$req->command
+        $msg = $req->command
                 ." waiting for processes to finish $n_pids"
                 ." of ".$req->requests_limit;
-        warn $msg if $DEBUG;
         return if $n_pids < $req->requests_limit();
         return 1 if $n_pids > $req->requests_limit + 2;
         sleep 1;
@@ -1908,8 +1912,8 @@ sub _cmd_start {
 
     my $name = $request->args('name');
 
-    my $domain = $self->search_domain($name);
-    die "Unknown domain '$name'" if !$domain;
+    my $domain = $self->search_domain($name)
+        or die "Unknown domain $name ";
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
@@ -1969,7 +1973,9 @@ sub _cmd_hybernate {
     my $id_domain = $request->id_domain or confess "Missing request id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+
+    warn "open $id_domain";
+    my $domain = Ravada::Domain->open($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
@@ -2114,7 +2120,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
-    $self->_clean_requests($request, 'refresh_vms');
+    $self->_clean_requests('refresh_vms', $request);
 }
 
 sub _clean_requests($self, $command, $request=undef) {
@@ -2123,6 +2129,7 @@ sub _clean_requests($self, $command, $request=undef) {
         ."   AND status='requested'";
 
     if ($request) {
+        confess "Wrong request" if !ref($request) || ref($request) !~ /Request/;
         $query .= "   AND id <> ?";
     }
     my $sth = $CONNECTOR->dbh->prepare($query);
@@ -2217,8 +2224,8 @@ sub _cmd_set_base_vm {
 }
 
 sub _cmd_cleanup($self, $request) {
-    $self->enforce_limits($request);
-    $self->_clean_requests($request, 'cleanup');
+    $self->enforce_limits( request => $request);
+    $self->_clean_requests('cleanup', $request);
 }
 
 sub _req_method {
@@ -2378,6 +2385,7 @@ sub _enforce_limits_active {
     my %args = @_;
 
     my $timeout = (delete $args{timeout} or 10);
+    my $request = delete $args{request};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
