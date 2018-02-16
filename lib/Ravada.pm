@@ -1460,7 +1460,12 @@ sub process_requests {
     $sth->execute(time);
 
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
-        my $req = Ravada::Request->open($id_request);
+        my $req;
+        eval { $req = Ravada::Request->open($id_request) };
+        next if $@ && $@ =~ /I can't find/;
+        warn $@ if $@;
+        next if !$req;
+
         next if $request_type ne 'all' && $req->type ne $request_type;
 
         next if $req->command !~ /shutdown/i
