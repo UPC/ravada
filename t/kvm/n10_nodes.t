@@ -765,7 +765,7 @@ sub test_sync_back($node) {
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
         my $md5_remote = _md5($file, $node);
-        is($md5_remote, $md5);
+        is( $md5_remote, $md5, "[".$node->type."] $file" ) or exit;
     }
     $clone->remove(user_admin);
     $domain->remove(user_admin);
