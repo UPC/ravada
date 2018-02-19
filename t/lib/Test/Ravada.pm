@@ -775,11 +775,6 @@ sub start_node($node) {
 
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
-    sleep 2;
-
-    $node->disconnect;
-    sleep 1;
-
     for ( 1 .. 30 ) {
         last if $node->ping ;
         sleep 1;
@@ -797,8 +792,9 @@ sub start_node($node) {
     is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
     my $connect;
-    for ( 1 .. 10 ) {
+    for ( 1 .. 20 ) {
         eval { $connect = $node->connect };
+        warn $@ if $@;
         last if $connect;
         sleep 1;
         diag("Waiting for connection to node ".$node->name." $_") if !($_ % 5);
@@ -806,6 +802,8 @@ sub start_node($node) {
     is($connect,1
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
+
+    $node->run_command("hwclock","--hctosys");
 }
 
 sub remove_node($node) {
