@@ -758,14 +758,21 @@ sub test_sync_back($node) {
     my $clone = $domain->clone( name => new_domain_name(), user => user_admin );
     $clone->migrate($node);
     $clone->start(user_admin);
-    _shutdown_nicely($clone);
+    is($clone->_vm->host, $node->host);
+
     _write_in_volumes($clone);
-    $clone->shutdown_now(user_admin)    if !$clone->is_active;
+    for my $file ($clone->list_volumes) {
+        my $md5 = _md5($file, $vm);
+        my $md5_remote = _md5($file, $node);
+        isnt( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" ) or exit;
+    }
+
+    _shutdown_nicely($clone);
     is ( $clone->is_active, 0 );
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
         my $md5_remote = _md5($file, $node);
-        is( $md5_remote, $md5, "[".$node->type."] $file" ) or exit;
+        is( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" ) or exit;
     }
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -822,18 +829,10 @@ sub test_shutdown($node) {
 }
 
 sub _md5($file, $vm) {
-    if ($vm->is_local) {
-        my  $ctx = Digest::MD5->new;
-        open my $in,'<',$file or die "$! $file";
-        $ctx->addfile($in);
-        return $ctx->hexdigest;
-    } else {
-        my @md5 = $vm->run_command("md5sum $file");
-        my $md5 = $md5[0];
-        chomp $md5;
-        $md5 =~ s/(.*?)\s+.*/$1/;
-        return $md5;
-    }
+    my ($md5) = $vm->run_command("md5sum",$file);
+    chomp $md5;
+    $md5 =~ s/(.*?)\s+.*/$1/;
+    return $md5;
 }
 
 sub _shutdown_nicely($clone) {
@@ -906,6 +905,7 @@ SKIP: {
 
     test_sync_base($vm_name, $node);
     test_sync_back($node);
+
     test_start_twice($vm_name, $node);
 
     test_shutdown($node);
