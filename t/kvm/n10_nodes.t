@@ -89,8 +89,19 @@ sub test_node {
     eval { $node->ping };
     is($@,'',"[$vm_name] ping ".$node->name);
 
-    shutdown_node($node)   if $node->ping && !$node->_connect_ssh();
-    start_node($node);
+    if ( $node->ping && !$node->_connect_ssh() ) {
+        my $ssh;
+        for ( 1 .. 10 ) {
+            $ssh = $node->_connect_ssh();
+            last if $ssh;
+            sleep 1;
+            diag("I can ping node ".$node->name." but I can't connect to ssh");
+        }
+        if (! $ssh ) {
+            shutdown_node($node);
+        }
+    }
+    start_node($node)   if !$node->is_active();
 
     clean_remote_node($node);
 
@@ -713,7 +724,7 @@ sub test_remove_base($node) {
 sub test_node_inactive {
     my ($vm_name, $node) = @_;
 
-    shutdown_node($node);
+    hibernate_node($node);
     is($node->is_active,0);
 
     my @list_nodes = rvd_front->list_vms;
@@ -750,6 +761,7 @@ sub test_sync_back($node) {
     _shutdown_nicely($clone);
     _write_in_volumes($clone);
     $clone->shutdown_now(user_admin)    if !$clone->is_active;
+    is ( $clone->is_active, 0 );
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
         my $md5_remote = _md5($file, $node);
