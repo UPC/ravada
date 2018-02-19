@@ -1905,21 +1905,17 @@ sub import_domain($self, $name, $user) {
     return $domain;
 }
 
-sub ping($self) {
+=head2 is_alive
+
+Returns true if the virtual manager connection is active, false otherwise.
+
+=cut
+
+sub is_alive($self) {
     return 0 if !$self->vm;
-    eval { $self->vm->list_defined_networks };
-    warn $@ if $@;
-    return 1 if !$@;
-
-    $self->_reconnect;
-
-    eval { $self->vm->list_defined_networks };
-    return 1 if !$@;
-
-    warn $@;
+    return 1 if $self->vm->is_alive;
     return 0;
 }
-
 sub free_memory($self) {
 
     confess "ERROR: VM ".$self->name." inactive"
