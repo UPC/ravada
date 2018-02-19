@@ -14,7 +14,7 @@ Please, don't remove unwanted spaces if aren't yours. Highlight them
 with these tips: http://vim.wikia.com/wiki/Highlight\_unwanted\_spaces
 
 To disable autoremove of trailing spaces in **Atom**: In Atom
-Preferences->Packages, select the whitespace package. In the whitespace
+Preferences->Packages, select the `whitespace package <https://atom.io/packages/whitespace>`_ . In the whitespace
 package settings, disable "Remove Trailing Whitespace".
 
 Vim Example
