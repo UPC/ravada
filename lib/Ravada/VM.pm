@@ -792,13 +792,17 @@ Writes a file to the node
 =cut
 
 sub write_file( $self, $file, $contents ) {
-    $self->_load_rex();
-    # TODO local VMs what ?
-    if ($self->_connect_rex) {
-        my $fh = file_write($file);
-        $fh->write($contents);
-        $fh->close;
-    }
+    return $self->_write_file_local($file, $contents )  if $self->is_local;
+
+    my $chan = $self->_ssh_channel();
+    $chan->exec("cat > $file");
+    my $bytes = $chan->write($contents);
+    $chan->send_eof();
 }
+
+sub _write_file_local( $self, $file, $contents ) {
+    confess "TODO";
+}
+
 1;
 
