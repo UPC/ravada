@@ -131,10 +131,9 @@ sub _load($self) {
 sub _load_remote($self) {
     my ($disk) = $self->_config_file();
 
-    my @lines = $self->_vm->run_command("cat $disk");
+    my ($lines, $err) = $self->_vm->run_command("cat $disk");
 
-    my $data = Load(join("\n",@lines));
-    return $data;
+    return Load($lines);
 }
 
 sub _store_remote($self, $var, $value) {
@@ -143,7 +142,7 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
-    $self->_vm->run("mkdir -p $DIR_TMP");
+    $self->_vm->run_command("mkdir -p $DIR_TMP");
     $self->_vm->write_file($disk, Dump($data));
     return $data->{$var};
 }

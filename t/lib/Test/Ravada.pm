@@ -9,28 +9,6 @@ use IPC::Run3 qw(run3);
 use  Test::More;
 use YAML qw(LoadFile);
 
-eval {
-    require Rex;
-    Rex->import();
-
-#    require Rex::Commands;
-#    Rex::Commands->import;
-
-    require Rex::Commands::Run;
-    Rex::Commands::Run->import();
-
-    require Rex::Group::Entry::Server;
-    Rex::Group::Entry::Server->import();
-
-    require Rex::Commands::Iptables;
-    Rex::Commands::Iptables->import();
-
-    require Rex::Commands::Run;
-    Rex::Commands::Run->import();
-};
-our $REX_ERROR = $@;
-#warn $REX_ERROR if $REX_ERROR;
-
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
@@ -305,7 +283,11 @@ sub _remove_old_domains_void {
 }
 
 sub _remove_old_domains_void_remote($vm) {
-
+    return if !$vm->ping;
+    eval { $vm->connect };
+    warn $@ if $@;
+    return if !$vm->is_connected;
+    warn $vm->type." ".$vm->name;
     $vm->run_command("rm -f ".$vm->dir_img."/*yml "
                     .$vm->dir_img."/*qcow "
                     .$vm->dir_img."/*img"
@@ -636,16 +618,11 @@ sub search_id_iso {
 sub search_iptable_remote {
     my %args = @_;
     my $node = delete $args{node};
-    if ($REX_ERROR ) {
-        diag("Skipping search_iptable_remote , no Rex installed");
-        return;
-    }
-    return if ! $node->_connect_rex();
     my $remote_ip = delete $args{remote_ip};
     my $local_ip = delete $args{local_ip};
     my $local_port= delete $args{local_port};
     my $jump = (delete $args{jump} or 'ACCEPT');
-    my $iptables = iptables_list();
+    my $iptables = $node->iptables_list();
 
     $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
     $local_ip .= "/32"  if defined $local_ip && $local_ip !~ m{/};
@@ -671,6 +648,7 @@ sub search_iptable_remote {
 }
 
 sub _flush_rules_remote($node) {
+    $node->create_iptables_chain($CHAIN);
     $node->run_command("iptables -F $CHAIN");
     $node->run_command("iptables -X $CHAIN");
 }
@@ -758,6 +736,7 @@ sub shutdown_node($node) {
 
 sub start_node($node) {
 
+    diag("start node ".$node->type." ".$node->name);
     confess "Undefined node " if!$node;
 
     $node->disconnect;
@@ -777,13 +756,13 @@ sub start_node($node) {
     $node->disconnect;
     sleep 1;
 
-    for ( 1 .. 20 ) {
+    for ( 1 .. 30 ) {
         last if $node->ping ;
         sleep 1;
         diag("Waiting for ping node ".$node->name." $_") if !($_ % 10);
     }
 
-    is($node->ping,1,"Expecting ping node ".$node->name) or exit;
+    is($node->ping,1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
     for ( 1 .. 20 ) {
         last if $node->is_active;
@@ -792,7 +771,17 @@ sub start_node($node) {
     }
 
     is($node->is_active,1,"Expecting active node ".$node->name) or exit;
-    $node->connect;
+
+    my $connect;
+    for ( 1 .. 10 ) {
+        eval { $connect = $node->connect };
+        last if $connect;
+        sleep 1;
+        diag("Waiting for connection to node ".$node->name." $_") if !($_ % 5);
+    }
+    is($connect,1
+            ,"[".$node->type."] "
+                .$node->name." Expecting connection") or exit;
 }
 
 sub remove_node($node) {

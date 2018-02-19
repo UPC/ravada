@@ -37,7 +37,7 @@ sub create_node {
 
     eval { $node = $vm->new(%{$REMOTE_CONFIG}) };
 
-    shutdown_node($node)   if $node->ping && !$node->_connect_rex();
+    shutdown_node($node)   if $node->ping && !$node->is_connected();
     start_node($node);
 
     clean_remote_node($node);

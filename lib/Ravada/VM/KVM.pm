@@ -165,7 +165,7 @@ sub connect {
     my $self = shift;
     return if $self->vm;
 
-    $self->vm($self->_connect);
+    return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
 }
 
@@ -1904,6 +1904,7 @@ sub import_domain($self, $name, $user) {
 sub ping($self) {
     return 0 if !$self->vm;
     eval { $self->vm->list_defined_networks };
+    warn $@ if $@;
     return 1 if !$@;
     return 0;
 }
