@@ -757,9 +757,10 @@ Run a command on the node
 =cut
 
 sub run_command($self, $command) {
+
     return $self->_run_command_local($command) if $self->is_local();
 
-        my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
+    my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
 
     $command = join(" ",@$command) if ref($command);
     $chan->exec($command);# or $self->{_ssh}->die_with_error;
