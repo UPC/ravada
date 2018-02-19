@@ -51,6 +51,14 @@ sub test_create_domain {
     return $domain;
 }
 
+sub test_create_domain_swap {
+    my $vm_name = shift;
+    my $domain = test_create_domain($vm_name);
+
+    $domain->add_volume_swap( size => 128 * 1024 * 1024 );
+    return $domain;
+}
+
 sub test_files_base {
     my $domain = shift;
     my $n_expected = shift;
@@ -97,6 +105,7 @@ sub test_display {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
+    my $n_volumes = (shift or 1);
 
     test_files_base($domain,0);
     $domain->shutdown_now($USER)    if $domain->is_active();
@@ -121,7 +130,7 @@ sub test_prepare_base {
     ok($domain->is_base);
     $domain->is_public(1);
 
-    test_files_base($domain,1);
+    test_files_base($domain, $n_volumes);
 
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER)    if $domain->is_active;
@@ -513,6 +522,20 @@ for my $vm_name ('Void','KVM') {
 
         test_spinned_off_base($vm_name);
         test_domain_limit($vm_name);
+
+
+        $domain->remove($USER);
+        $domain = undef;
+
+        my $domain2 = test_create_domain_swap($vm_name);
+        test_prepare_base($vm_name, $domain2 , 2);
+        $domain2->remove($USER);
+
+        $domain2 = test_create_domain_swap($vm_name);
+        $domain2->start($USER);
+        $domain2->shutdown_now($USER);
+        test_prepare_base($vm_name, $domain2 , 2);
+        $domain2->remove($USER);
 
     }
 }
