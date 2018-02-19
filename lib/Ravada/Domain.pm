@@ -20,8 +20,6 @@ use Moose::Role;
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
-our $REX_ERROR;
-
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -188,33 +186,8 @@ sub BUILD {
 
     $self->is_known();
     eval { $self->_check_clean_shutdown() };
-    $self->_load_rex() if !$self->is_local;
 #    warn $@ if $@;
 }
-
-sub _load_rex {
-    return if defined $REX_ERROR;
-    eval {
-        require Rex;
-        Rex->import();
-    
-    #    require Rex::Commands;
-    #    Rex::Commands->import;
-    
-        require Rex::Commands::Run;
-        Rex::Commands::Run->import();
-    
-        require Rex::Group::Entry::Server;
-        Rex::Group::Entry::Server->import();
-    
-        require Rex::Commands::Iptables;
-        Rex::Commands::Iptables->import();
-    };
-    $REX_ERROR = $@;
-    $REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
-    warn $REX_ERROR if $REX_ERROR;
-
-};
 
 sub _check_clean_shutdown($self) {
     if ( $self->is_known
@@ -696,7 +669,6 @@ sub open($class, $id , $readonly = 0) {
     } else {
         $vm = Ravada::VM->open(id => $self->_data('id_vm'), readonly => $readonly);
     }
-    $self->_load_rex()  if !$vm->is_local();
 
     my $domain = $vm->search_domain($row->{name});
     $domain->_check_clean_shutdown()  if $domain && !$domain->is_active;
@@ -1564,8 +1536,7 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
     $s .= "/32" if defined $s && $s !~ m{/};
     $d .= "/32" if defined $d && $d !~ m{/};
 
-    $vm->_connect_rex();
-    my $iptables_list = iptables_list();
+    my $iptables_list = $self->_vm->iptables_list();
 
     my $count = 0;
     for my $line (@{$iptables_list->{$filter}}) {
@@ -1578,7 +1549,7 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
            && exists $args{dport} && exists $extra->{d_port}
            && $args{dport} eq $extra->{d_port}) {
 
-           run("iptables -t $filter -D $chain $count");
+           $self->_vm->run_command("iptables -t $filter -D $chain $count");
            $count--;
         }
 
@@ -1586,20 +1557,12 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
 
 }
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
+    $self->_vm->create_iptables_chain($IPTABLES_CHAIN);
     my @iptables_arg = ($remote_ip
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-    if ($self->is_local) {
-        my $ipt_obj = _obj_iptables();
-	    my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    } else {
-        if ($REX_ERROR) {
-            warn "ERROR: Missing Rex: $REX_ERROR\n";
-        } else {
-            $self->_vm->_connect_rex();
-            $self->_create_remote_chain();
-            my $out = iptables(
+    $self->_vm->iptables(
                 A => $IPTABLES_CHAIN
                 ,m => 'tcp'
                 ,p => 'tcp'
@@ -1607,28 +1570,10 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-            );
-            warn $out if $out;
-        }
-    }
+    );
 
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
-}
-
-sub _create_remote_chain($self) {
-    $self->_vm->_connect_rex();
-    $self->_load_rex();
-
-    my $chain_exists;
-#    eval { $chain_exists = chain_exists('filter', $IPTABLES_CHAIN)};
-#    warn $@ if $@;
-#    if ($@) {
-        $chain_exists = run("iptables -L $IPTABLES_CHAIN");
-#    }
-    return if $chain_exists =~ /^Chain $IPTABLES_CHAIN/;
-
-    iptables(t => 'filter', N => $IPTABLES_CHAIN);
 }
 
 sub _close_port($self, $user, $remote_ip, $local_ip, $local_port) {
@@ -2115,8 +2060,8 @@ Argument: Ravada::VM
 sub rsync($self, $node=$self->_vm, $request=undef) {
     $request->status("working") if $request;
     # TODO check if domain is running on remote , then return
-    my $rex = $node->_connect_rex();
-    die "No Connection to ".$node->host if !$rex;
+    my $ssh = $node->_connect_ssh();
+    die "No Connection to ".$node->host if !$ssh;
 #    This does nothing and doesn't fail
 #
 #    for my $file ( $self->list_volumes()) {
