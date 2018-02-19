@@ -34,29 +34,39 @@ has 'vm' => (
     ,lazy => 1
 );
 
-our $SSH;
-
 ##########################################################################
 #
 
 sub _connect {
     my $self = shift;
     return 1 if ! $self->host || $self->host eq 'localhost'
-                || $self->host eq '127.0.0.1';
+                || $self->host eq '127.0.0.1'
+                || $self->{_ssh};
 
-    my $out = $self->run_command("ls -l ".$self->dir_img." || mkdir ".$self->dir_img);
+    my ($out, $err)
+        = $self->run_command("ls -l ".$self->dir_img." || mkdir -p ".$self->dir_img);
 
-    return $self->{_rex_connection};
+    warn "ERROR: error connecting to ".$self->host." $err"  if $err;
+    return 0 if $err;
+    return 1;
 }
 
 sub connect($self) {
-    return if $self->vm;
-    $self->vm($self->_connect);
+    return 1 if $self->vm;
+    return $self->vm($self->_connect);
 }
 
+sub is_connected($self) {
+    return 1 if $self->is_local
+        || $self->{_ssh};
+}
 sub disconnect {
     my $self = shift;
     $self->vm(0);
+
+    return if !$self->{_ssh};
+    $self->{_ssh}->disconnect;
+    delete $self->{_ssh};
 }
 
 sub reconnect {}
@@ -157,10 +167,10 @@ sub _list_domains_remote($self, %args) {
 
     confess "Wrong arguments ".Dumper(\%args) if keys %args;
 
-    my @lines = $self->run_command("ls -1 ".$self->dir_img);
+    my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
 
     my @domain;
-    for my $file (@lines) {
+    for my $file (split /\n/,$out) {
         if ( my $domain = $self->_is_a_domain($file)) {
             next if defined $active && $active
                         && !$domain->is_active;
@@ -215,10 +225,10 @@ sub search_volume($self, $pattern) {
 
 sub _search_volume_remote($self, $pattern) {
 
-    my @lines = $self->run_command("ls -1 ".$self->dir_img);
+    my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
 
     my $found;
-    for my $file ( @lines ) {
+    for my $file ( split /\n/,$out ) {
         $found = $self->dir_img."/".$file if $file eq $pattern;
     }
 
