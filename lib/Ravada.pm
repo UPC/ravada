@@ -172,6 +172,24 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
+        mate_artful => {
+                    name => 'Ubuntu Mate 17.10.1'
+            ,description => 'Ubuntu Mate 17.10.1 (Artful) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
+        mate_xenial => {
+                    name => 'Ubuntu Mate 16.04.3'
+            ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
         alpine_37 => {
                     name => 'Alpine 3.7'
             ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
