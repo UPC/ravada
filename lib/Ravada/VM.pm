@@ -713,7 +713,6 @@ sub is_active($self) {
 sub _do_is_active($self) {
     my $ret = 0;
     if ( !$self->ping() ) {
-        warn "I can'ping";
         $ret = 0;
     } else {
         my $ssh;
