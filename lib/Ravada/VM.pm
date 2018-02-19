@@ -12,16 +12,16 @@ Ravada::VM - Virtual Managers library for Ravada
 use Carp qw( carp croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
 use Net::Ping;
+use Net::SSH2;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
-
-our $REX_ERROR;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -35,7 +35,7 @@ our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
 
-our %REX_CONNECTION;
+our %SSH;
 # domain
 requires 'create_domain';
 requires 'search_domain';
@@ -87,8 +87,6 @@ before 'list_domains' => \&_pre_list_domains;
 before 'create_volume' => \&_connect;
 
 around 'import_domain' => \&_around_import_domain;
-
-after 'disconnect' => \&_post_disconnect;
 
 #############################################################
 #
@@ -148,8 +146,6 @@ sub BUILD {
 
     my $args = $_[0];
 
-    $self->_load_rex()  if !$self->is_local;
-
     my $id = delete $args->{id};
     my $host = delete $args->{host};
     my $name = delete $args->{name};
@@ -183,33 +179,6 @@ sub BUILD {
             );
 
 }
-
-sub _load_rex {
-    return if defined $REX_ERROR;
-    eval {
-        require Rex;
-        Rex->import();
-    
-        require Rex::Commands;
-        Rex::Commands->import;
-    
-        require Rex::Commands::File;
-        Rex::Commands::File->import();
-
-        require Rex::Commands::Run;
-        Rex::Commands::Run->import();
-    
-        require Rex::Group::Entry::Server;
-        Rex::Group::Entry::Server->import();
-    
-        require Rex::Commands::Iptables;
-        Rex::Commands::Iptables->import();
-    };
-    $REX_ERROR = $@;
-    $REX_ERROR .= "\nInstall from http://www.rexify.org/get.html\n\n" if $REX_ERROR;
-    warn $REX_ERROR if $REX_ERROR;
-
-};
 
 sub _open_type {
     my $self = shift;
@@ -257,12 +226,12 @@ sub _pre_list_domains($self,@) {
     die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
 }
 
-sub _connect_rex($self) {
-    confess "Don't connect to local rex"
+sub _connect_ssh($self, $disconnect=0) {
+    confess "Don't connect to local ssh"
         if $self->is_local;
 
     if ( $self->readonly ) {
-        warn $self->name." readonly, don't do rex";
+        warn $self->name." readonly, don't do ssh";
         return;
     }
     return if !$self->ping();
@@ -270,55 +239,46 @@ sub _connect_rex($self) {
     my @pwd = getpwuid($>);
     my $home = $pwd[7];
 
-    return $self->{_rex_connection} if exists $self->{_rex_connection}
-        && $self->{_rex_connection}->{conn}->server eq $self->host
-        && $self->{_rex_connection}->{conn}->{connected};
+    my $ssh= $self->{_ssh};
+    $ssh = $SSH{$self->host}    if exists $SSH{$self->host};
 
-    if ($REX_CONNECTION{$self->host}) {
-        $self->{_rex_connection} = $REX_CONNECTION{$self->host};
-        return $self->{_rex_connection}
-            if $self->{_rex_connection}->{conn}->{connected}
+    if (! $ssh || $disconnect ) {
+        $ssh->disconnect if $ssh && $disconnect;
+        $ssh = Net::SSH2->new();
+        my $connect;
+        for ( 1 .. 3 ) {
+            $connect = $ssh->connect($self->host);
+            last if $connect;
+            warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
+            sleep 1;
+        }
+        $connect = $ssh->connect($self->host)   if !$connect;
+        confess $ssh->error()   if !$connect;
+        $ssh->auth_publickey( 'root'
+            , "$home/.ssh/id_rsa.pub"
+            , "$home/.ssh/id_rsa"
+        ) or $ssh->die_with_error();
+        $self->{_ssh} = $ssh;
+        $SSH{$self->host} = $ssh;
     }
-    my $connection;
-    eval {
-        Rex::Commands::timeout(60);
-        Rex::Commands::max_connect_retries(3);
-        $connection = Rex::connect(
-            server    => $self->host,
-            user      => "root",
-            private_key => "$home/.ssh/id_rsa",
-            public_key => "$home/.ssh/id_rsa.pub"
-        );
-    };
-    warn $@ if $@;
-    return if !$connection;
-    $self->{_rex_connection} = $connection;
-    $REX_CONNECTION{$self->host} = $connection;
-    return $connection;
+    return $ssh;
 }
 
-sub _post_disconnect($self) {
-    return if $self->is_local;
-
-    $self->_load_rex();
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set status='down' WHERE id_vm=? AND status='active'"
-    );
-    $sth->execute($self->id);
-    $sth->finish;
-
-    if ( my $con = Rex::Commands::connection() ) {
-        $con->disconnect();
+sub _ssh_channel($self) {
+    my $ssh = $self->_connect_ssh();
+    my $ssh_channel;
+    for ( 1 .. 5 ) {
+        $ssh_channel = $ssh->channel();
+        last if $ssh_channel;
+        sleep 1;
     }
-    if ($self->{_rex_connection} ) {
-        $self->{_rex_connection}->{conn}->disconnect;
-#        $self->{_rex_connection}->{conn}->disconnect();
-        delete $self->{_rex_connection};
+    if (!$ssh_channel) {
+        $ssh = $self->_connect_ssh(1);
+        $ssh_channel = $ssh->channel();
     }
-    if ( $REX_CONNECTION{$self->host} ) {
-        $REX_CONNECTION{$self->host}->{conn}->disconnect;
-        delete $REX_CONNECTION{$self->host};
-    }
+    die $ssh->die_with_error    if !$ssh_channel;
+    $ssh->blocking(1);
+    return $ssh_channel;
 }
 
 sub _around_create_domain {
@@ -747,11 +707,19 @@ sub is_active($self) {
     }
 
     return $self->_cached_active if time - $self->_cached_active_time < 5;
+    return $self->_do_is_active();
+}
+
+sub _do_is_active($self) {
     my $ret = 0;
     if ( !$self->ping() ) {
+        warn "I can'ping";
         $ret = 0;
-    } elsif ( $self->_connect_rex ) {
-        $ret = 1;
+    } else {
+        my $ssh;
+        eval { $ssh = $self->_connect_ssh };
+        warn $@ if $@ && $@ !~ /Connection refused/;
+        $ret = 1 if $ssh;
     }
     $self->_cached_active($ret);
     $self->_cached_active_time(time);
