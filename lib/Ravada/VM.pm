@@ -757,9 +757,30 @@ Run a command on the node
 =cut
 
 sub run_command($self, $command) {
-    # TODO local VMs what ?
-    $self->_connect_rex()
-        && return run($command);
+    return $self->_run_command_local($command) if $self->is_local();
+
+        my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
+
+    $command = join(" ",@$command) if ref($command);
+    $chan->exec($command);# or $self->{_ssh}->die_with_error;
+
+    $chan->send_eof();
+
+    my ($out, $err) = ('', '');
+    while (!$chan->eof) {
+        if (my ($o, $e) = $chan->read2) {
+            $out .= $o;
+            $err .= $e;
+        }
+    }
+    return ($out, $err);
+}
+
+sub _run_command_local($self, $command) {
+    my ( $in, $out, $err);
+    $command = [$command] if !ref($command);
+    run3($command, \$in, \$out, \$err);
+    return ($out, $err);
 }
 
 =head2 write_file
