@@ -50,6 +50,7 @@ requires 'connect';
 requires 'disconnect';
 requires 'import_domain';
 
+requires 'is_alive';
 ############################################################
 
 has 'host' => (
@@ -675,14 +676,21 @@ Returns if the virtual manager connection is available
 
 =cut
 
-sub ping($self) {
+sub ping($self, $option=undef) {
+    confess "ERROR: option unknown" if defined $option && $option ne 'debug';
+    
+    my $debug = 0;
+    $debug = 1 if defined $option && $option eq 'debug';
+
     return 1 if $self->is_local();
 
+    warn "trying tcp"   if $debug;
     my $p = Net::Ping->new('tcp',2);
     return 1 if $p->ping($self->host);
     $p->close();
 
     return if $>; # icmp ping requires root privilege
+    warn "trying icmp"   if $debug;
     $p= Net::Ping->new('icmp',2);
     return 1 if $p->ping($self->host);
 
@@ -696,15 +704,7 @@ Returns if the domain is active.
 =cut
 
 sub is_active($self) {
-    if ($self->is_local) {
-        my $active = 0;
-        $active=1 if $self->vm;
-
-        # store it anyway for the frontend
-        $self->_cached_active($active);
-        $self->_cached_active_time(time);
-        return $active;
-    }
+    return $self->_do_is_active() if $self->is_local;
 
     return $self->_cached_active if time - $self->_cached_active_time < 5;
     return $self->_do_is_active();
@@ -712,13 +712,19 @@ sub is_active($self) {
 
 sub _do_is_active($self) {
     my $ret = 0;
-    if ( !$self->ping() ) {
-        $ret = 0;
+    if ( $self->is_local ) {
+        $ret = 1 if $self->vm;
     } else {
-        my $ssh;
-        eval { $ssh = $self->_connect_ssh };
-        warn $@ if $@ && $@ !~ /Connection refused/;
-        $ret = 1 if $ssh;
+        if ( !$self->ping() ) {
+            $ret = 0;
+        } else {
+            if ( $self->is_alive ) {
+                $ret = 1;
+            }  else {
+                $self->connect();
+                $ret = 1 if $self->is_alive;
+            }
+        }
     }
     $self->_cached_active($ret);
     $self->_cached_active_time(time);
