@@ -761,13 +761,13 @@ Run a command on the node
 
 =cut
 
-sub run_command($self, $command) {
+sub run_command($self, @command) {
 
-    return $self->_run_command_local($command) if $self->is_local();
+    return $self->_run_command_local(@command) if $self->is_local();
 
     my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
 
-    $command = join(" ",@$command) if ref($command);
+    my $command = join(" ",@command);
     $chan->exec($command);# or $self->{_ssh}->die_with_error;
 
     $chan->send_eof();
@@ -782,10 +782,9 @@ sub run_command($self, $command) {
     return ($out, $err);
 }
 
-sub _run_command_local($self, $command) {
+sub _run_command_local($self, @command) {
     my ( $in, $out, $err);
-    $command = [$command] if !ref($command);
-    run3($command, \$in, \$out, \$err);
+    run3(\@command, \$in, \$out, \$err);
     return ($out, $err);
 }
 
@@ -811,10 +810,10 @@ sub _write_file_local( $self, $file, $contents ) {
 }
 
 sub create_iptables_chain($self,$chain) {
-    my ($out, $err) = $self->run_command(["iptables","-n","-L",$chain]);
+    my ($out, $err) = $self->run_command("iptables","-n","-L",$chain);
     return if $out =~ /^Chain $chain/;
 
-    $self->run_command(["iptables", '-N' => $chain]);
+    $self->run_command("iptables", '-N' => $chain);
 }
 
 sub iptables($self, @args) {
@@ -827,7 +826,7 @@ sub iptables($self, @args) {
         push @cmd,(shift @args);
 
     }
-    my ($out, $err) = $self->run_command([@cmd]);
+    my ($out, $err) = $self->run_command(@cmd);
     warn $err if $err;
 }
 
