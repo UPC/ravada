@@ -805,5 +805,62 @@ sub _write_file_local( $self, $file, $contents ) {
     confess "TODO";
 }
 
+sub create_iptables_chain($self,$chain) {
+    my ($out, $err) = $self->run_command(["iptables","-n","-L",$chain]);
+    return if $out =~ /^Chain $chain/;
+
+    $self->run_command(["iptables", '-N' => $chain]);
+}
+
+sub iptables($self, @args) {
+    my @cmd = ('iptables');
+    for ( ;; ) {
+        my $key = shift @args or last;
+        my $field = "-$key";
+        $field = "-$field" if length($key)>1;
+        push @cmd,($field);
+        push @cmd,(shift @args);
+
+    }
+    my ($out, $err) = $self->run_command([@cmd]);
+    warn $err if $err;
+}
+
+sub iptables_list($self) {
+#   Extracted from Rex::Commands::Iptables
+#   (c) Jan Gehring <jan.gehring@gmail.com>
+    my ($out,$err) = $self->run_command("iptables-save");
+    my ( %tables, $ret );
+
+    my ($current_table);
+    for my $line (split /\n/, $out) {
+        chomp $line;
+
+        next if ( $line eq "COMMIT" );
+        next if ( $line =~ m/^#/ );
+        next if ( $line =~ m/^:/ );
+
+        if ( $line =~ m/^\*([a-z]+)$/ ) {
+            $current_table = $1;
+            $tables{$current_table} = [];
+            next;
+        }
+
+        #my @parts = grep { ! /^\s+$/ && ! /^$/ } split (/(\-\-?[^\s]+\s[^\s]+)/i, $line);
+        my @parts = grep { !/^\s+$/ && !/^$/ } split( /^\-\-?|\s+\-\-?/i, $line );
+
+        my @option = ();
+        for my $part (@parts) {
+            my ( $key, $value ) = split( /\s/, $part, 2 );
+            push( @option, $key => $value );
+        }
+
+        push( @{ $ret->{$current_table} }, \@option );
+
+    }
+
+    return $ret;
+}
+
 1;
 
