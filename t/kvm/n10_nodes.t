@@ -88,11 +88,9 @@ sub test_node {
 
     eval { $node->ping };
     is($@,'',"[$vm_name] ping ".$node->name);
-    eval { $node->_connect_rex };
-    is($@,'',"[$vm_name] connect rex ".$node->name);
 
-    _shutdown_node($node)   if $node->ping && !$node->_connect_rex();
-    _start_node($node);
+    shutdown_node($node)   if $node->ping && !$node->_connect_ssh();
+    start_node($node);
 
     clean_remote_node($node);
 
@@ -708,7 +706,7 @@ sub test_remove_base($node) {
 sub test_node_inactive {
     my ($vm_name, $node) = @_;
 
-    _shutdown_node($node);
+    shutdown_node($node);
     is($node->is_active,0);
 
     my @list_nodes = rvd_front->list_vms;
@@ -718,10 +716,10 @@ sub test_node_inactive {
         or return;
     is($node2->{is_active},0,Dumper($node2)) or return;
 
-    _start_node($node);
+    start_node($node);
 
     for ( 1 .. 10 ) {
-        last if $node->is_active;
+        last if $node->_do_is_active;
         sleep 1;
         diag("[$vm_name] waiting for node ".$node->name);
     }
@@ -835,37 +833,6 @@ sub _write_in_volumes($clone) {
     }
 }
 
-sub _shutdown_node($node) {
-
-    if ($node->is_active) {
-        for my $domain ($node->list_domains()) {
-            diag("Shutting down ".$domain->name." on node ".$node->name);
-            $domain->shutdown_now(user_admin);
-        }
-    }
-    $node->disconnect;
-
-    my $domain_node = _domain_node($node);
-    eval {
-        $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
-    };
-    sleep 2 if !$node->ping;
-    for ( 1 .. 30 ) {
-        diag("Waiting for node ".$node->name." to be inactive $_");
-        last if !$node->ping;
-        sleep 1;
-    }
-    return if !$node->ping;
-    $node->run_command("init 0");
-    for ( 1 .. 30 ) {
-        diag("Waiting for node ".$node->name." to be inactive $_");
-        last if !$node->ping;
-        sleep 1;
-    }
-
-    is($node->ping,0);
-}
-
 sub _domain_node($node) {
     my $vm = rvd_back->search_vm('KVM','localhost');
     my $domain = $vm->search_domain($node->name);
@@ -878,44 +845,6 @@ sub _domain_node($node) {
     ok($domain->id,"Expecting an ID for domain ".Dumper($domain)) or exit;
     $domain->_set_vm($vm, 'force');
     return $domain;
-}
-sub _start_node($node) {
-
-    confess "Undefined node " if!$node;
-
-    $node->disconnect;
-    if ( $node->is_active ) {
-        $node->connect && return;
-        warn "I can't connect";
-    }
-
-    my $domain = _domain_node($node);
-
-    ok($domain->_vm->host eq 'localhost');
-
-    $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
-
-    sleep 2;
-
-    $node->disconnect;
-    sleep 1;
-
-    for ( 1 .. 20 ) {
-        last if $node->ping ;
-        sleep 1;
-        diag("Waiting for ping node ".$node->name." $_");
-    }
-
-    is($node->ping,1,"Expecting ping node ".$node->name) or exit;
-
-    for ( 1 .. 20 ) {
-        last if $node->is_active;
-        sleep 1;
-        diag("Waiting for active node ".$node->name." $_");
-    }
-
-    is($node->is_active,1,"Expecting active node ".$node->name) or exit;
-    $node->connect;
 }
 
 #############################################################
@@ -989,7 +918,7 @@ SKIP: {
 
     test_node_inactive($vm_name, $node);
 
-    _start_node($node);
+    start_node($node);
     clean_remote_node($node);
     clean_remote_node($vm);
     remove_node($node);
