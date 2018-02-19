@@ -1553,7 +1553,7 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
            && exists $args{dport} && exists $extra->{d_port}
            && $args{dport} eq $extra->{d_port}) {
 
-           $self->_vm->run_command("iptables -t $filter -D $chain $count");
+           $self->_vm->run_command("iptables", "-t", $filter, "-D", $chain, $count);
            $count--;
         }
 
