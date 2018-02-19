@@ -21,10 +21,6 @@ use feature qw(signatures);
 
 with 'Ravada::VM';
 
-has 'vm' => (
-    is => 'rw'
-);
-
 has 'type' => (
     is => 'ro'
     ,isa => 'Str'
