@@ -905,6 +905,7 @@ SKIP: {
 
     test_sync_base($vm_name, $node);
     test_sync_back($node);
+    test_start_twice($vm_name, $node);
 
     test_start_twice($vm_name, $node);
 

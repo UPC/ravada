@@ -1648,11 +1648,9 @@ sub _execute {
         $self->{fork_manager}->finish; # Terminates the child process
         $request->status('done');
         exit;
-    } else {
-        $request->pid($pid);
     }
+    $request->pid($pid);
     $self->{fork_manager}->reap_finished_children;
-    return '';
 }
 
 sub _do_execute_command {

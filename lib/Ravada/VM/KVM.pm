@@ -1916,6 +1916,7 @@ sub is_alive($self) {
     return 1 if $self->vm->is_alive;
     return 0;
 }
+
 sub free_memory($self) {
 
     confess "ERROR: VM ".$self->name." inactive"
