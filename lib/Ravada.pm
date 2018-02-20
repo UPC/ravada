@@ -173,7 +173,7 @@ sub _update_isos {
     my $field = 'name';
     my %data = (
         mate_artful => {
-                    name => 'Ubuntu Mate 17.10.1'
+                    name => 'Ubuntu Mate Artful'
             ,description => 'Ubuntu Mate 17.10.1 (Artful) 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'yakkety64-amd64.xml'
@@ -182,7 +182,7 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
         },
         mate_xenial => {
-                    name => 'Ubuntu Mate 16.04.3'
+                    name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'yakkety64-amd64.xml'
