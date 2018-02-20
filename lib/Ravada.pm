@@ -1647,10 +1647,11 @@ sub _execute {
         $self->_do_execute_command($sub, $request);
         $self->{fork_manager}->finish; # Terminates the child process
         $request->status('done');
+        exit;
     } else {
         $request->pid($pid);
     }
-#    $self->_connect_vm_kvm();
+    $self->{fork_manager}->reap_finished_children;
     return '';
 }
 
