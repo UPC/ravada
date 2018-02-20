@@ -329,6 +329,7 @@ sub _update_isos {
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -336,6 +337,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -343,6 +345,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '3'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -357,6 +360,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
     );
 
