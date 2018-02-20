@@ -680,9 +680,9 @@ sub _display_file_spice($self,$user) {
         "fullscreen=1\n"
         ."title=".$self->name." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
+        ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=1\n"
-        ."usb-filter=-1,-1,-1,-1,0\n";
+        ."delete-this-file=1\n";
 
     $ret .=";" if !$self->tls;
     $ret .= "tls-ciphers=DEFAULT\n"
