@@ -163,7 +163,7 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return if $self->vm;
+    return 1 if $self->vm;
 
     return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
