@@ -207,8 +207,9 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.10/'
-                ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => ,'$url/MD5SUMS'
+                ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
@@ -217,8 +218,8 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.04/'
-                ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
+                ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
         }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
@@ -340,6 +341,7 @@ sub _update_isos {
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -347,6 +349,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -354,6 +357,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '3'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -368,6 +372,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
     );
 
@@ -776,6 +781,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+    $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -1184,6 +1190,7 @@ sub list_domains {
     }
     return @domains;
 }
+
 
 =head2 list_domains_data
 
