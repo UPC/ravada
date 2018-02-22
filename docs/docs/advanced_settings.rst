@@ -11,3 +11,18 @@ with the public address of the server.
 ::
 
     display_ip: public.display.ip
+
+NAT
+---
+
+The Ravada server can be behind a NAT environment.
+
+      RVD    _______________ NAT ________________ client
+      Server 1.1.1.1             2.2.2.2
+
+Configure this option in /etc/ravada.conf
+
+::
+
+    display_ip: 1.1.1.1
+    nat_ip: 2.2.2.2
