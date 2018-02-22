@@ -266,6 +266,12 @@ sub ip {
     return '127.0.0.1';
 }
 
+=head2 nat_ip
+
+Returns the IP of the VM when it is in a NAT environment
+
+=cut
+
 sub nat_ip($self) {
     my $name = Ravada::nat_ip() or return;
 
