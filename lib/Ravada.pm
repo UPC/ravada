@@ -841,10 +841,18 @@ Returns the default display IP read from the config file
 =cut
 
 sub display_ip {
-
     my $ip = $CONFIG->{display_ip};
-
     return $ip if $ip;
+}
+
+=head2 nat_ip
+
+Returns the IP for NATed environments
+
+=cut
+
+sub nat_ip {
+    return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
 }
 
 sub _init_config {
