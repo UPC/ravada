@@ -67,7 +67,7 @@ sub name {
 sub display {
     my $self = shift;
 
-    my $ip = $self->_vm->ip();
+    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     return "void://$ip:5990/";
 }
 
