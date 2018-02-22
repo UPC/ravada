@@ -1319,7 +1319,8 @@ sub _add_iptable {
     my $uid = $user->id;
 
     my $display = $self->display($user);
-    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+    my ($local_port) = $display =~ m{\w+://.*:(\d+)};
+    my $local_ip = $self->_vm->ip;
 
     my $ipt_obj = _obj_iptables();
 	# append rule at the end of the RAVADA chain in the filter table to
