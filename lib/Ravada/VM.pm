@@ -266,6 +266,18 @@ sub ip {
     return '127.0.0.1';
 }
 
+sub nat_ip($self) {
+    my $name = Ravada::nat_ip() or return;
+
+    my $ip;
+    if ($name =~ /^\d+\.\d+\.\d+\.\d+$/) {
+        $ip = $name;
+    } else {
+        $ip = inet_ntoa(inet_aton($name));
+    }
+    return $ip if $ip && $ip !~ /^127\./;
+}
+
 sub _interface_ip {
     my $s = IO::Socket::INET->new(Proto => 'tcp');
 

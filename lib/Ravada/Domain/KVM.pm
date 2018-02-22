@@ -476,6 +476,7 @@ sub display {
     my ($type) = $graph->getAttribute('type');
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
+    $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
