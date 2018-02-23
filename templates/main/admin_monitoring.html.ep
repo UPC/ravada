@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+    <div ng-controller="messagesPage">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper">
+      <div id="admin-content">
+<h2><%=l 'Server Monitoring' %></h2>
+<div class="panel-body">
+    <div class="col-lg-12">
+                <div style="margin-right: 10px;" data-netdata="system.swap"
+                    data-dimensions="used"
+                    data-append-options="percentage"
+                    data-chart-library="easypiechart"
+                    data-title="Used Swap"
+                    data-units="%"
+                    data-easypiechart-max-value="100"
+                    data-width="9%"
+                    data-before="0"
+                    data-after="- duration.toString()"
+                    data-points="duration.toString()"
+                    data-colors="#DD4400"
+                    role="application"></div>
+
+                  <div style="margin-right: 10px;" data-netdata="system.io"
+                      data-dimensions="in"
+                      data-chart-library="easypiechart"
+                      data-title="Disk Read"
+                      data-width="11%"
+                      data-before="0"
+                      data-after="- duration.toString()"
+                      data-points="duration.toString()"
+                      data-common-units="system.io.mainhead"
+                      role="application"></div>
+
+                  <div style="margin-right: 10px;" data-netdata="system.io"
+                        data-dimensions="out"
+                        data-chart-library="easypiechart"
+                        data-title="Disk Write"
+                        data-width="11%"
+                        data-before="0"
+                        data-after="- duration.toString()"
+                        data-points="duration.toString()"
+                        data-common-units="system.io.mainhead"
+                        role="application"></div>
+
+                  <div style="margin-right: 10px;" data-netdata="system.cpu"
+                        data-chart-library="gauge"
+                        data-title="CPU"
+                        data-units="%"
+                        data-gauge-max-value="100"
+                        data-width="20%"
+                        data-after="- duration.toString()"
+                        data-points="duration.toString()"
+                        role="application"></div>
+
+                  <div style="margin-right: 10px;" data-netdata="system.net"
+                        data-dimensions="received"
+                        data-chart-library="easypiechart"
+                        data-title="Net Inbound"
+                        data-width="11%"
+                        data-before="0"
+                        data-after="- duration.toString()"
+                        data-points="duration.toString()"
+                        data-common-units="system.net.mainhead"
+                        role="application"></div>
+
+                  <div style="margin-right: 10px;" data-netdata="system.net"
+                        data-dimensions="sent"
+                        data-chart-library="easypiechart"
+                        data-title="Net Outbound"
+                        data-width="11%"
+                        data-before="0"
+                        data-after="- duration.toString()"
+                        data-points="duration.toString()"
+                        data-common-units="system.net.mainhead"
+                        role="application"></div>
+
+                  <div style="margin-right: 10px;" data-netdata="system.ram"
+                          data-dimensions="used|buffers"
+                          data-append-options="percentage"
+                          data-chart-library="easypiechart"
+                          data-title="Used RAM"
+                          data-units="%"
+                          data-easypiechart-max-value="100"
+                          data-width="9%"
+                          data-after="- duration.toString()"
+                          data-points="duration.toString()"
+                          role="application"></div>
+
+      <div data-netdata="system.load"></div>
+      <div data-netdata="system.cpu"></div>
+      <div data-netdata="system.io"></div>
+      <div data-netdata="system.ram"></div>
+      <div data-netdata="system.swap"></div>
+      <div data-netdata="system.net"></div>
+      <div data-netdata="system.processes"></div>
+
+
+ </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+%= include 'bootstrap/scripts'
+%= include 'bootstrap/footer'
+<div id="overNotifications" class="notifications" ng-controller="notifCrtl">
+<script type="text/ng-template" id="alert.html">
+<div ng-transclude></div>
+</script>
+<div uib-alert ng-repeat="alert in alerts"
+ ng-class="'alert-' + (alert.type || 'warning')"
+  ng-click="closeAlert($index)"
+  ng-mouseover="alert.showMessage = false"
+  ng-mouseleave="alert.showMessage = true"
+  ng-bind-html="alert.subject">
+  {{alert.subject}}
+  <div ng-if="alert.message" ng-init="alert.showMessage = true" ng-hide="alert.showMessage" ng-bind-html="alert.message">
+    {{alert.message}}
+  </div>
+</div>
+</div>
+</body>
+</html>
