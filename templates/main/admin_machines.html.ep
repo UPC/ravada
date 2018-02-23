@@ -12,6 +12,7 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong><%=l 'Error!' %></strong><%=l 'Backend no available!' %>
       </div>
+    <div class="row">
       <div style="margin-right: 10px;" data-netdata="system.swap"
           data-dimensions="used"
           data-append-options="percentage"
@@ -91,6 +92,7 @@
                 data-after="- duration.toString()"
                 data-points="duration.toString()"
                 role="application"></div>
+      </div>
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
@@ -231,9 +233,11 @@
                           <a align="right" href="/machine/settings/{{child.id}}.html"
                           title ="Machine settings"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
-                          <span style="color:gray">[ <%=l 'Cloned' %> </span>
-                          <span style="color:gray" ng-show="{{child.is_volatile}}">, <%=l 'Volatile' %></span>
-                          <span style="color:gray">]</span>
+                          <span style="color:gray">[ Cloned ]</span>
+                        </br>
+                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_{{child.name}}.cpu&label=CPU"></img>
+                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_{{child.name}}.mem&label=RAM"></img>
+                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_{{child.name}}.cpu&label=DISK"></img>
                       </td>
                       <td class="lgMachToggle">
                           <i ng-show="{{child.has_clones}}" class="fa fa-check" aria-hidden="true"
