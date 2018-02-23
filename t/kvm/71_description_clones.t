@@ -106,8 +106,15 @@ sub test_prepare_base {
     test_files_base($domain,1);
 
     my @disk = $domain->disk_device();
-    $domain->shutdown_now($USER)    if $domain->is_active;
-    is($domain->is_active,0,"[$vm_name] Expecting domain inactive");
+    $domain->shutdown(user => $USER)    if $domain->is_active;
+
+
+    eval {
+        $domain->remove_base( $USER);
+        $domain->prepare_base( $USER);
+    };
+    is($@,'');
+    ok($domain->is_base);
 
     my $name_clone = new_domain_name();
 
@@ -153,8 +160,10 @@ sub test_prepare_base {
 
     $domain_clone->remove($USER);
 
-    $domain->remove_base($USER);
-    eval { $domain->prepare_base($USER) };
+    eval {
+        $domain->remove_base($USER);
+        $domain->prepare_base($USER)
+    };
 
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
