@@ -65,6 +65,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
    docs/resize_hard_drive
+   docs/resize_hard_drive_linux_machine
    docs/ldap_local
    docs/new_kvm_template
    docs/new_iso_image
@@ -90,6 +91,8 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/advanced_settings
    docs/new_documentation
    docs/auth_ldap
+   docs/auth_active_directory
+   devel-docs/test_ad
    docs/tuning
    devel-docs/translations
 
