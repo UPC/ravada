@@ -26,4 +26,4 @@ Steps
 
 5. Now, you can see a list of available machines and the operations of each.
 
-.. Tipi:: Please note that you can see any upcoming error or problems in section "messages".
+.. note:: Please note that you can see any upcoming error or problems in section "messages".
