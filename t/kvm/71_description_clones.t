@@ -133,9 +133,11 @@ sub test_prepare_base {
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER)    if $domain->is_active;
 
-    touch_mtime(@disk);
 
-    eval { $domain->prepare_base( $USER) };
+    eval {
+        $domain->remove_base( $USER);
+        $domain->prepare_base( $USER);
+    };
     is($@,'');
     ok($domain->is_base);
 
@@ -185,7 +187,10 @@ sub test_prepare_base {
     $domain_clone->remove($USER);
 
     touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
+    eval {
+        $domain->remove_base($USER);
+        $domain->prepare_base($USER)
+    };
 
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);

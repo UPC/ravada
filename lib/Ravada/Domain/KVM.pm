@@ -302,12 +302,13 @@ sub _create_qcow_base {
     my $base_name = $self->name;
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
-        confess "ERROR: missing $file_img"
-            if !-e $file_img;
         my $base_img = $file_img;
 
         my @cmd;
         $base_img =~ s{\.\w+$}{\.ro.qcow2};
+
+        die "ERROR: base image already exists '$base_img'" if -e $base_img;
+
         if ($file_img =~ /\.SWAP\.\w+$/) {
             @cmd = _cmd_copy($file_img, $base_img);
         } else {
@@ -316,16 +317,20 @@ sub _create_qcow_base {
 
         push @base_img,([$base_img,$target]);
 
-
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
-        warn $err   if $err;
+        warn "$?: $err"   if $err;
 
-        if (! -e $base_img) {
-            warn "ERROR: Output file $base_img not created at "
+        if ($? || ! -e $base_img) {
+            chomp $err;
+            chomp $out;
+            die "ERROR: Output file $base_img not created at "
+                ."\n"
+                ."ERROR $?: '".($err or '')."'\n"
+                ."  OUT: '".($out or '')."'\n"
+                ."\n"
                 .join(" ",@cmd);
-            exit;
         }
 
         chmod 0555,$base_img;
@@ -582,7 +587,10 @@ sub force_shutdown{
 
 sub _do_force_shutdown {
     my $self = shift;
-    return $self->domain->destroy;
+    return if !$self->domain->is_active;
+
+    eval { $self->domain->destroy   };
+    warn $@ if $@;
 
 }
 
