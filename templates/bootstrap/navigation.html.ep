@@ -31,6 +31,9 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <li><a href="/admin/messages">
                       <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
                     </li>
+                    <li><a href="/admin/monitoring">
+                      <i class="fa fa-tachometer" aria-hidden="true"></i>&nbsp<%=l 'monitoring' %></a>
+                    </li>
                   </ul>
                 </li>
 % }
