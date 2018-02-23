@@ -616,6 +616,12 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+any '/admin/monitoring' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/monitoring');
+};
+
 any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
@@ -659,8 +665,9 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
+<<<<<<< HEAD
             my $comp_password = $USER->compare_password($c->param('current_password'));
             if ($comp_password) {
                 if ($c->param('password') eq $c->param('conf_password')) {
@@ -674,6 +681,15 @@ sub user_settings {
                     else {
                         $changed_pass = 1;
                     };
+=======
+            if ($c->param('password') eq $c->param('conf_password')) {
+                eval {
+                    $USER->change_password($c->param('password'));
+                    _logged_in($c);
+                };
+                if ($@ =~ /Password too small/) {
+                    push @errors,("Password too small")
+>>>>>>> d515201c... [#567] Embed netdata
                 }
                 else {
                     push @errors,("Password fields aren't equal");
@@ -1311,34 +1327,27 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
- #   if($c ->param('submit')) {
- #       push @error,("Name is mandatory")   if !$c->param('username');
- #       push @error,("Invalid username '".$c->param('username')."'"
- #               .".It can only contain words and numbers.")
- #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
- #       if (!@error) {
- #           Ravada::Auth::SQL::add_user($username, $password,0);
- #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
- #       }
 
-#    }
-#    $c->stash(errors => \@error);
-#    push @{$c->stash->{js}}, '/js/admin.js';
-#    $c->render(template => 'bootstrap/new_user_control'
-#        , name => $c->param('username')
-#)    
-    
-   if ($username) {
-       Ravada::Auth::SQL::add_user(name => $username, password => $password);
-       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+   if($username) {
+       my @list_users = Ravada::Auth::SQL::list_all_users();
+       warn join(", ", @list_users);
+
+       if (grep {$_ eq $username} @list_users) {
+           push @error,("Username already exists, please choose another one");
+           $c->render(template => 'bootstrap/new_user',error => \@error);
+       }
+       else {
+           #username don't exists
+           Ravada::Auth::SQL::add_user(name => $username, password => $password);
+           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+       }
    }
    $c->render(template => 'bootstrap/new_user');
 
