@@ -1,5 +1,5 @@
 How to change the controller driver of a Windows VM to VirtIO
-------------------------------------------------------
+-------------------------------------------------------------
 
 #. Add a new virtio disk (a small one, even 100mb will be enough. We will not be using it)
   * Use virt manager
