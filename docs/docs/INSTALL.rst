@@ -84,7 +84,7 @@ the same one as the ravada package.
     $ sudo apt-get install mysql-server
 
 MySQL database and user
-~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 It is required a database for internal use. In this examples we call it *ravada*.
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
