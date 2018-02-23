@@ -1075,7 +1075,13 @@ sub _post_shutdown {
 
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
-    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
+    if ($self->id_base) {
+        for ( 1 ..  5 ) {
+            last if !$self->is_active;
+            sleep 1;
+        }
+        $self->clean_swap_volumes(@_) if !$self->is_active;
+    }
 
     if (defined $timeout) {
         if ($timeout<2 && $self->is_active) {
