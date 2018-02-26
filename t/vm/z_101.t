@@ -45,6 +45,8 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        init($test->connector, $vm_name);
+
         my $domain = create_domain($vm_name);
         my $t0 = time;
         my $clone0;
