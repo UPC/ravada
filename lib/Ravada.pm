@@ -843,7 +843,7 @@ sub _init_config {
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
-    die "ERROR: Missing config file $file\n"
+    confess "ERROR: Missing config file $file\n"
         if !-e $file;
 
     eval { $CONFIG = YAML::LoadFile($file) };
@@ -866,8 +866,10 @@ sub _init_config_vm {
             if !$VALID_VM{$vm} && $0 !~ /\.t$/;
     }
 
-    delete $VALID_VM{Void}
-        if !grep /^Void$/,@{$CONFIG->{vm}};
+    for my $vm ( keys %VALID_VM ) {
+        delete $VALID_VM{$vm}
+            if !grep /^$vm$/,@{$CONFIG->{vm}};
+    }
 
     @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
