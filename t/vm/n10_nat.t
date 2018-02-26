@@ -31,12 +31,13 @@ my $CHAIN = 'RAVADA';
 sub _search_other_ip($ip) {
     my $out = `ifconfig`;
     for my $line ( split /\n/, $out ) {
-        my ($ip2) = $line =~ /inet (\d+\.\d+\.\d+\.\d+) /;
+        my ($ip2) = $line =~ /inet.(\d+\.\d+\.\d+\.\d+) /;
 
         return $ip2 if $ip2
                         && $ip2 ne $ip
                         && $ip2 ne '127.0.0.1';
     }
+    die "I can't find another ip address here";
 }
 
 sub test_nat($vm_name) {
