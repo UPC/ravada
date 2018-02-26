@@ -1787,6 +1787,13 @@ sub type {
     return $self->_data('vm');
 }
 
+=head2 file_screenshot
+
+Returns the file name where the domain screenshot has been stored
+
+=cut
+
+
 sub file_screenshot($self) {
     return $self->_data('file_screenshot');
 }
