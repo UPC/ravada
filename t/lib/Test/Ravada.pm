@@ -170,7 +170,11 @@ sub init {
 
     confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
 
-    if (ref($config) ) {
+    if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
+        $config = { vm => [ $config ] };
+    }
+
+    if ($config && ref($config) ) {
         $FILE_CONFIG_TMP = "/tmp/ravada_".base_domain_name()."_$$.conf";
         DumpFile($FILE_CONFIG_TMP, $config);
         $CONFIG = $FILE_CONFIG_TMP;
@@ -180,7 +184,7 @@ sub init {
 
     clean();
     # clean removes the temporary config file, so we dump it again
-    DumpFile($FILE_CONFIG_TMP, $config) if ref($config);
+    DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
 
     $Ravada::CONNECTOR = $CONNECTOR;# if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
