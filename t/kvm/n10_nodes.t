@@ -398,16 +398,7 @@ sub test_start_twice {
     is($clone2->_vm->host, $vm->host);
     is($clone2->is_active,0);
 
-    # start the clone on local node internally
-    if ($vm_name eq 'KVM') {
-        eval { $clone2->domain->create() };
-        is(''.$@ ,'' , "[$vm_name] Starting ".$clone2->name." from libvirt")
-            or exit;
-    } elsif ($vm_name eq 'Void') {
-        $clone2->_store(is_active => 1);
-    } else {
-        die "test_start_twice not available on $vm_name";
-    }
+    start_domain_internal($clone2);
 
     eval { $clone->start(user => user_admin ) };
     like(''.$@,qr'libvirt error code: 55,',$clone->name) or exit
@@ -419,6 +410,64 @@ sub test_start_twice {
     $clone->remove(user_admin);
     $base->remove(user_admin);
 
+}
+
+sub test_already_started_twice($vm_name, $node) {
+    my ($base, $clone) = _create_clone($node);
+    my $vm = rvd_back->search_vm($vm_name);
+
+    diag("test start twice both already started");
+
+    is($vm->is_local, 1);
+
+    my $clone_local = $vm->search_domain($clone->name);
+    is($clone_local->_vm->is_local, 1);
+
+    start_domain_internal($clone);
+    start_domain_internal($clone_local);
+
+    is($clone->is_active, 1,"expecting clone active on remote");
+    is($clone_local->is_active, 1, "expecting clone active on local");
+
+    my $clone2 = rvd_back->search_domain($clone->name);
+    eval { $clone2->start(user => user_admin) };
+    like($@,qr/already running/)    if $@;
+
+    rvd_back->_process_requests_dont_fork(1);
+    for ( 1 .. 10 ) {
+        last if !$clone->is_active;
+        last if !$clone_local->is_active;
+        sleep 1;
+    }
+    rvd_back->_process_requests_dont_fork(1);
+
+    is($clone->is_active, 0);
+    is($clone_local->is_active, 0);
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
+sub _create_clone($node) {
+
+    my $vm =rvd_back->search_vm($node->type);
+    my $base = create_domain($vm->type);
+    my $clone = $base->clone(
+        name => new_domain_name
+       ,user => user_admin
+    );
+    $clone->shutdown_now(user_admin)    if $clone->is_active;
+    is($clone->is_active,0);
+
+    eval { $base->set_base_vm(vm => $node, user => user_admin); };
+    is(''.$@,'')    or return;
+
+    eval { $clone->migrate($node); };
+    is(''.$@,'')    or return;
+
+    is($clone->_vm->host, $node->host) or exit;
+
+    return($base, $clone);
 }
 
 sub test_rsync_newer {
@@ -772,7 +821,8 @@ sub test_sync_back($node) {
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
         my $md5_remote = _md5($file, $node);
-        is( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" ) or exit;
+        is( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" )
+                or exit;
     }
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -829,7 +879,7 @@ sub test_shutdown($node) {
 }
 
 sub _md5($file, $vm) {
-    my ($md5) = $vm->run_command("md5sum",$file);
+    my ($md5) = $vm->run_command("/usr/bin/md5sum",$file);
     chomp $md5;
     $md5 =~ s/(.*?)\s+.*/$1/;
     return $md5;
@@ -864,6 +914,53 @@ sub _domain_node($node) {
     $domain->_set_vm($vm, 'force');
     return $domain;
 }
+
+sub test_status($node) {
+    my ($base, $clone)= _create_clone($node);
+
+    $clone->migrate($node);
+
+    is($clone->_vm->host, $node->host);
+
+    $clone->start(user_admin);
+
+    my $vm = rvd_back->search_vm($node->type);
+    is($vm->is_local, 1);
+    my $domain_local = $vm->search_domain($clone->name);
+    is($domain_local->is_active, 0 );
+
+    my $domain_front = Ravada::Front::Domain->open($clone->id);
+    is($domain_front->is_active, 1);
+
+    my $domain_local2 = Ravada::Domain->open( id => $clone->id, id_vm => $vm->id);
+    is($domain_local2->_vm->id, $vm->id) or exit;
+    is($domain_local2->is_local, 1 );
+    is($domain_local2->is_active, 0 );
+
+    $domain_front = Ravada::Front::Domain->open($clone->id);
+    is($domain_front->is_active, 1);
+
+    $clone->shutdown_now(user_admin);
+
+    diag("test status of local domain");
+    $clone->_set_vm($vm->id, 1);
+    $clone->start(user_admin);
+    is($clone->_vm->name, $vm->name);
+
+    my $domain_remote = $node->search_domain($clone->name);
+    is($domain_remote->is_active, 0 );
+
+    $domain_front = Ravada::Front::Domain->open($clone->id);
+    is($domain_front->is_active, 1);
+
+    $domain_local2 = Ravada::Domain->open( id => $clone->id, id_vm => $node->id);
+    is($domain_local2->is_active, 0 );
+
+    $domain_front = Ravada::Front::Domain->open($clone->id);
+    is($domain_front->is_active, 1);
+
+}
+
 
 #############################################################
 clean();
@@ -906,7 +1003,11 @@ SKIP: {
     test_sync_base($vm_name, $node);
     test_sync_back($node);
 
+    test_status($node);
+
     test_start_twice($vm_name, $node);
+
+    test_already_started_twice($vm_name, $node);
 
     test_shutdown($node);
 
