@@ -97,6 +97,8 @@
       <div data-netdata="system.swap"></div>
       <div data-netdata="system.net"></div>
       <div data-netdata="system.processes"></div>
+      <div data-netdata="system.io"></div>
+
 
 
  </div>

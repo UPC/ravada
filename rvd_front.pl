@@ -915,7 +915,6 @@ sub admin {
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
-
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
@@ -927,9 +926,12 @@ sub admin {
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
-    }
-    $c->render(template => 'main/admin_'.$page);
 
+    }
+    my $name = $c->param('name');
+    my $domain = $RAVADA->search_domain($name);
+    my $id =  $domain->internal_id();
+    $c->render(template => 'main/admin_'.$page, id => $id);
 };
 
 sub new_machine {
