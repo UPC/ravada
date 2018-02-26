@@ -593,6 +593,12 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+any '/admin/monitoring' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/monitoring');
+};
+
 any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
@@ -636,11 +642,11 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
             if ($c->param('password') eq $c->param('conf_password')) {
-                eval { 
-                    $USER->change_password($c->param('password')); 
+                eval {
+                    $USER->change_password($c->param('password'));
                     _logged_in($c);
                 };
                 if ($@ =~ /Password too small/) {
@@ -909,7 +915,6 @@ sub admin {
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
-
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
@@ -921,9 +926,12 @@ sub admin {
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
-    }
-    $c->render(template => 'main/admin_'.$page);
 
+    }
+    my $name = $c->param('name');
+    my $domain = $RAVADA->search_domain($name);
+    my $id =  $domain->internal_id();
+    $c->render(template => 'main/admin_'.$page, id => $id);
 };
 
 sub new_machine {
@@ -1254,20 +1262,20 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
+
    if($username) {
        my @list_users = Ravada::Auth::SQL::list_all_users();
        warn join(", ", @list_users);
-      
+
        if (grep {$_ eq $username} @list_users) {
-           push @error,("Username already exists, please choose another one"); 
+           push @error,("Username already exists, please choose another one");
            $c->render(template => 'bootstrap/new_user',error => \@error);
        }
        else {
