@@ -302,8 +302,15 @@ sub _search_already_started($self) {
             $domain->_data(status => $status);
         }
     }
-    confess "ERROR: Domain started in ".Dumper(\%started)
-        if keys %started > 1;
+    if (keys %started > 1) {
+        for my $id_vm (sort keys %started) {
+            Ravada::Request->shutdown_domain(
+                id_domain => $self->id
+                , uid => $self->id_owner
+                , id_vm => $id_vm
+            );
+        }
+    }
     return keys %started;
 }
 
