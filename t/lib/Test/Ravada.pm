@@ -57,6 +57,10 @@ our %ARG_CREATE_DOM = (
     ,Void => []
 );
 
+our %VM_VALID = ( KVM => 1
+    ,Void => 0
+);
+
 sub user_admin {
     return $USER_ADMIN;
 }
@@ -250,6 +254,8 @@ sub remote_config_nodes {
 sub _remove_old_domains_vm {
     my $vm_name = shift;
 
+    return if !$VM_VALID{$vm_name};
+
     my $domain;
 
     my $vm;
@@ -262,9 +268,12 @@ sub _remove_old_domains_vm {
         return if !$rvd_back;
         $vm = $rvd_back->search_vm($vm_name);
         };
-        diag($@) if $@;
+        diag($@) if $@ && $@ !~ /Missing qemu-img/;
 
-        return if !$vm;
+        if ( !$vm ) {
+            $VM_VALID{$vm_name} = 0;
+            return;
+        }
     }
     my $base_name = base_domain_name();
 
@@ -315,6 +324,7 @@ sub _remove_old_domains_void_remote($vm) {
 }
 
 sub _remove_old_domains_kvm {
+    return if !$VM_VALID{'KVM'};
     my $vm = shift;
 
     if (!$vm) {
@@ -367,6 +377,7 @@ sub _activate_storage_pools($vm) {
     }
 }
 sub _remove_old_disks_kvm {
+    return if !$VM_VALID{'KVM'};
     my $vm = shift;
 
     my $name = base_domain_name();
@@ -510,7 +521,15 @@ sub _qemu_storage_pool {
 }
 
 sub remove_qemu_pools {
-    my $vm = rvd_back->search_vm('kvm') or return;
+    return if !$VM_VALID{'KVM'} || $>;
+    my $vm;
+    eval { $vm = rvd_back->search_vm('kvm') };
+    if ($@ && $@ !~ /Missing qemu-img/) {
+        warn $@;
+    }
+    if  ( !$vm ) {
+        $VM_VALID{'KVM'} = 0;
+    }
 
     my $base = base_pool_name();
     for my $pool  ( $vm->vm->list_all_storage_pools) {
