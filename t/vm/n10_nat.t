@@ -35,7 +35,7 @@ sub _search_other_ip($ip) {
 
         return $ip2 if $ip2
                         && $ip2 ne $ip
-                        && $ip ne '127.0.0.1';
+                        && $ip2 ne '127.0.0.1';
     }
 }
 
