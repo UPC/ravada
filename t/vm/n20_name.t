@@ -21,7 +21,7 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 init( $test->connector , $FILE_CONFIG );
 
-my $NAT_IP = '2.2.2.2';
+my $NAT_IP = 'www.example.com';
 
 my $REMOTE_IP = '9.9.9.9';
 
@@ -37,7 +37,7 @@ sub _search_other_ip($ip) {
                         && $ip2 ne $ip
                         && $ip2 ne '127.0.0.1';
     }
-    die "I can't find another ip address here";
+    die "I can't find another IP address here";
 }
 
 sub test_nat($vm_name) {
