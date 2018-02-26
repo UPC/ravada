@@ -2236,6 +2236,12 @@ sub remove_base_vm($self, %args) {
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
+=head2 file_screenshot
+
+Returns the file name where the domain screenshot has been stored
+
+=cut
+
 sub file_screenshot($self) {
     return $self->_data('file_screenshot');
 }
