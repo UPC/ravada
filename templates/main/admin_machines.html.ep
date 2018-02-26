@@ -235,9 +235,10 @@
                              ng-cloak>&nbsp;{{child.name}}</i></a>
                           <span style="color:gray">[ Cloned ]</span>
                         </br>
-                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_{{child.name}}.cpu&label=CPU"></img>
-                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_{{child.name}}.mem&label=RAM"></img>
-                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_{{child.name}}.cpu&label=DISK"></img>
+                          <p>
+                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_qemu_{{internal_id}}-{{child.name}}.cpu&label=CPU"></img>
+                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_qemu_{{internal_id}}-{{child.name}}.mem&label=RAM"></img>
+                          <img src="http://localhost:19999/api/v1/badge.svg?chart=cgroup_qemu_qemu_{{internal_id}}-{{child.name}}.cpu&label=DISK"></img>
                       </td>
                       <td class="lgMachToggle">
                           <i ng-show="{{child.has_clones}}" class="fa fa-check" aria-hidden="true"
