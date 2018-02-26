@@ -273,15 +273,7 @@ Returns the IP of the VM when it is in a NAT environment
 =cut
 
 sub nat_ip($self) {
-    my $name = Ravada::nat_ip() or return;
-
-    my $ip;
-    if ($name =~ /^\d+\.\d+\.\d+\.\d+$/) {
-        $ip = $name;
-    } else {
-        $ip = inet_ntoa(inet_aton($name));
-    }
-    return $ip if $ip && $ip !~ /^127\./;
+    return Ravada::nat_ip();
 }
 
 sub _interface_ip {
