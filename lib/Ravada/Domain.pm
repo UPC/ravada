@@ -658,6 +658,12 @@ sub _insert_db {
     }
     $sth->finish;
 
+    $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set internal_id=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->internal_id, $self->id);
+    $sth->finish;
 }
 
 =head2 pre_remove
@@ -1635,6 +1641,17 @@ Returns the name of the file where the virtual machine screenshot is stored
 
 sub file_screenshot($self){
   return $self->_data('file_screenshot');
+}
+
+=head2 internal_id
+
+Returns the internal id of this domain as found in its Virtual Manager connection
+
+=cut
+
+sub internal_id {
+    my $self = shift;
+    return $self->id;
 }
 
 1;
