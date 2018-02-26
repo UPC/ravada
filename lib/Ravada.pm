@@ -180,6 +180,7 @@ sub _update_isos {
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
+                ,min_disk_size => '10'
         },
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
@@ -189,6 +190,7 @@ sub _update_isos {
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
+                ,min_disk_size => '10'
         },
         alpine_37 => {
                     name => 'Alpine 3.7'
@@ -199,6 +201,7 @@ sub _update_isos {
                     ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
                 ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
                 ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+                ,min_disk_size => '10'
         }
         ,artful => {
                     name => 'Ubuntu Artful Aardvark'
@@ -209,7 +212,7 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/17.10/'
                 ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
-          ,min_disk_size => '9'
+          ,min_disk_size => '10'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
@@ -220,6 +223,7 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/17.04/'
                 ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
                 ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,min_disk_size => '10'
         }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
@@ -231,6 +235,7 @@ sub _update_isos {
         ,file_re => 'linuxmint-18.1-mate-64bit.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+            ,min_disk_size => '10'
 
         }
         ,fedora => {
@@ -241,6 +246,7 @@ sub _update_isos {
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
         }
         ,fedora_26 => {
             name => 'Fedora 26'
@@ -250,6 +256,7 @@ sub _update_isos {
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
         }
         ,fedora_27 => {
             name => 'Fedora 27'
@@ -259,6 +266,7 @@ sub _update_isos {
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
         }
         ,xubuntu_artful => {
             name => 'Xubuntu Artful Aardvark'
@@ -270,6 +278,7 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_artful.iso'
+            ,min_disk_size => '10'
         }
         ,xubuntu_zesty => {
             name => 'Xubuntu Zesty Zapus'
@@ -281,6 +290,7 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_zesty_mini.iso'
+            ,min_disk_size => '10'
         }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
@@ -290,6 +300,7 @@ sub _update_isos {
             ,xml_volume => 'yakkety64-volume.xml'
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
             ,rename_file => 'xubuntu_xenial_mini.iso'
+            ,min_disk_size => '10'
         }
        ,lubuntu_aardvark => {
             name => 'Lubuntu Artful Aardvark'
@@ -298,6 +309,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
         }
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
@@ -307,6 +319,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
         }
         ,debian_jessie_32 => {
             name =>'Debian Jessie 32 bits'
@@ -316,6 +329,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
         }
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
@@ -325,6 +339,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
         }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
@@ -334,6 +349,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
         }
         ,windows_7 => {
           name => 'Windows 7'
@@ -365,6 +381,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_12.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_8 => {
           name => 'Windows 8.1'
