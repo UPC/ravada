@@ -2018,16 +2018,22 @@ sub _cmd_shutdown {
     my $name = $request->defined_arg('name');
     my $id_domain = $request->defined_arg('id_domain');
     my $timeout = ($request->args('timeout') or 60);
+    my $id_vm = $request->defined_arg('id_vm');
 
     confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
 
     my $domain;
     if ($name) {
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+        if ($id_vm) {
+            my $vm = Ravada::VM->open($id_vm);
+            $domain = $vm->search_domain($name);
+        } else {
+            $domain = $self->search_domain($name);
+        }
+        die "Unknown domain '$name'\n" if !$domain;
     }
     if ($id_domain) {
-        my $domain2 = $self->search_domain_by_id($id_domain);
+        my $domain2 = Ravada::Domain->open(id => $id_domain, id_vm => $id_vm);
         die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
             if $domain && $domain->name ne $domain2->name;
         $domain = $domain2;
