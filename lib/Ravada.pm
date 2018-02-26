@@ -803,6 +803,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
+    $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 

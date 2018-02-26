@@ -726,6 +726,12 @@ sub _insert_db {
     }
     $sth->finish;
 
+    $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set internal_id=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->internal_id, $self->id);
+    $sth->finish;
 }
 
 =head2 pre_remove
@@ -1810,6 +1816,27 @@ sub _pre_clone($self,%args) {
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
+}
+
+=head2 file_screenshot
+
+Returns the name of the file where the virtual machine screenshot is stored
+
+=cut
+
+sub file_screenshot($self){
+  return $self->_data('file_screenshot');
+}
+
+=head2 internal_id
+
+Returns the internal id of this domain as found in its Virtual Manager connection
+
+=cut
+
+sub internal_id {
+    my $self = shift;
+    return $self->id;
 }
 
 1;

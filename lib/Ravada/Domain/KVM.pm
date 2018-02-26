@@ -1614,4 +1614,8 @@ sub is_removed($self) {
     return 0;
 }
 
+sub internal_id($self) {
+    return $self->domain->get_id();
+}
+
 1;

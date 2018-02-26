@@ -77,6 +77,12 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
 
+    if ($vm_name eq 'KVM') {
+        is($domain->internal_id, $domain->domain->get_id);
+    } else {
+        ok($domain->internal_id);
+    }
+
     for my $dom2 ( $vm->list_domains ) {
         is(ref($dom2),ref($domain)) if $vm_name ne 'Void';
     }
