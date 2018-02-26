@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use  Carp qw(carp confess);
-use  Data::Dumper;
+use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
@@ -45,7 +45,7 @@ create_domain
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
 
-our ($CONNECTOR, $CONFIG);
+our ($CONNECTOR, $CONFIG , $FILE_CONFIG_TMP);
 
 our $CONT = 0;
 our $CONT_POOL= 0;
@@ -163,16 +163,32 @@ sub rvd_front {
 }
 
 sub init {
-    my $create_user;
-    ($CONNECTOR, $CONFIG, $create_user) = @_;
+    my ($config, $create_user);
+    ($CONNECTOR, $config, $create_user) = @_;
 
     $create_user = 1 if !defined $create_user;
 
     confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
 
-    $Ravada::CONNECTOR = $CONNECTOR if !$Ravada::CONNECTOR;
+    if (ref($config) ) {
+        $FILE_CONFIG_TMP = "/tmp/ravada_".base_domain_name()."_$$.conf";
+        DumpFile($FILE_CONFIG_TMP, $config);
+        $CONFIG = $FILE_CONFIG_TMP;
+    } else {
+        $CONFIG = $config;
+    }
+
+    clean();
+    # clean removes the temporary config file, so we dump it again
+    DumpFile($FILE_CONFIG_TMP, $config) if ref($config);
+
+    $Ravada::CONNECTOR = $CONNECTOR;# if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
+    eval {
     $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
+    };
+
+    die $@ if $@ && $@ !~ /UNIQUE constraint failed: users.name/;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
@@ -526,6 +542,7 @@ sub clean {
         _clean_remote_nodes($config)    if $config;
     }
     _clean_db();
+    _clean_file_config();
 }
 
 sub _clean_db {
@@ -815,5 +832,15 @@ sub start_domain_internal($domain) {
     }
 }
 
+sub _clean_file_config {
+    if ( $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP ) {
+        unlink $FILE_CONFIG_TMP or warn "$! $FILE_CONFIG_TMP";
+        $CONFIG = $DEFAULT_CONFIG;
+    }
+}
+
+sub DESTROY {
+    _clean_file_config();
+}
 
 1;
