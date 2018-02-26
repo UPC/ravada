@@ -784,6 +784,8 @@ sub run_command($self, @command) {
 
 sub _run_command_local($self, @command) {
     my ( $in, $out, $err);
+    my ($exec) = $command[0];
+    confess "ERROR: Missing command $exec"  if ! -e $exec;
     run3(\@command, \$in, \$out, \$err);
     return ($out, $err);
 }
@@ -810,14 +812,14 @@ sub _write_file_local( $self, $file, $contents ) {
 }
 
 sub create_iptables_chain($self,$chain) {
-    my ($out, $err) = $self->run_command("iptables","-n","-L",$chain);
+    my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
     return if $out =~ /^Chain $chain/;
 
-    $self->run_command("iptables", '-N' => $chain);
+    $self->run_command("/sbin/iptables", '-N' => $chain);
 }
 
 sub iptables($self, @args) {
-    my @cmd = ('iptables');
+    my @cmd = ('/sbin/iptables');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
@@ -833,7 +835,7 @@ sub iptables($self, @args) {
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
 #   (c) Jan Gehring <jan.gehring@gmail.com>
-    my ($out,$err) = $self->run_command("iptables-save");
+    my ($out,$err) = $self->run_command("/sbin/iptables-save");
     my ( %tables, $ret );
 
     my ($current_table);
