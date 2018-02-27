@@ -109,6 +109,13 @@ sub test_manage_domain {
     $domain->start($USER) if !$domain->is_active();
     ok(!$domain->is_locked,"Domain ".$domain->name." should not be locked");
 
+    if ($vm_name eq 'KVM') {
+        is($domain->internal_id, $domain->domain->get_id);
+    } else {
+        ok($domain->internal_id);
+    }
+
+
     my $display;
     eval { $display = $domain->display($USER) };
     ok($display,"No display for ".$domain->name." $@");
