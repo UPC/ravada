@@ -15,3 +15,4 @@ Need internal id for monitoring VMs [\#575]
 
 In admin users page search box doesn't clean on clicking [\#525]
 Add USB redir option in .vv file [\#474]
+Prepare base with swap volume fails [\#554]
