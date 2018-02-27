@@ -82,7 +82,7 @@
             <label for="disk" class="col-lg-3 control-label"><%=l 'Disk Size: (GB)' %></label>     
             <div class="col-lg-2">
                 <input class="slider form-control" ng-model="ddsize" type="range" name="disk"
-                    min="{{min_size}}" max="100" value="20" required="">
+                    min="{{min_size}}" max="100" required="">
             </div>{{ddsize}}
               <a ng-show="!seeswap"
                   ng-click="show_swap()"
@@ -93,7 +93,7 @@
                   class="label label-primary"
                   align="right">Remove swap</a>
               <div ng-show="showMinSize">
-                <font color="#500000"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
+                <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
             </div>  
         </div>
         <div class="form-group row" ng-show="seeswap" ng-if="backend == 'KVM'">
