@@ -700,7 +700,8 @@ sub list_requests {
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
                 || $command eq 'ping_backend'
-                || $command eq 'refresh_vms';
+                || $command eq 'refresh_vms'
+                || $command eq 'cleanup';
         my $args;
         $args = decode_json($j_args) if $j_args;
 
