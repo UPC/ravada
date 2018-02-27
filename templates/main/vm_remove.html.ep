@@ -49,6 +49,8 @@
                         <a type="button" class="btn btn-danger"
                             ng-click="domain_remove_clones=0"
                         >No</a>
+                        <a type="button" class="btn btn-warning"
+                            ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;"
                         <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
                             >Yes, remove all the clones</a>
            </div><!-- del domain remove clones-->
