@@ -6,7 +6,7 @@ VALUES('Alpine 3.7'
         ,'yakkety64-amd64.xml'
         ,'yakkety64-volume.xml'
         ,'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
-        ,'alpine-virt-3.7.\d+-x86_64.iso'
+        ,'alpine-virt-3.7.\\d+-x86_64.iso'
         ,'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
    );
 
