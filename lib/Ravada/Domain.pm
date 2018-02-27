@@ -612,9 +612,9 @@ sub _display_file_spice($self,$user) {
         "fullscreen=1\n"
         ."title=".$self->name." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
+        ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=1\n"
-        ."usb-filter=-1,-1,-1,-1,0\n";
+        ."delete-this-file=1\n";
 
     $ret .=";" if !$self->tls;
     $ret .= "tls-ciphers=DEFAULT\n"
@@ -658,6 +658,12 @@ sub _insert_db {
     }
     $sth->finish;
 
+    $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set internal_id=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->internal_id, $self->id);
+    $sth->finish;
 }
 
 =head2 pre_remove
@@ -1075,7 +1081,13 @@ sub _post_shutdown {
 
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(@_);
-    $self->clean_swap_volumes(@_) if $self->id_base() && !$self->is_active;
+    if ($self->id_base) {
+        for ( 1 ..  5 ) {
+            last if !$self->is_active;
+            sleep 1;
+        }
+        $self->clean_swap_volumes(@_) if !$self->is_active;
+    }
 
     if (defined $timeout) {
         if ($timeout<2 && $self->is_active) {
@@ -1629,6 +1641,17 @@ Returns the name of the file where the virtual machine screenshot is stored
 
 sub file_screenshot($self){
   return $self->_data('file_screenshot');
+}
+
+=head2 internal_id
+
+Returns the internal id of this domain as found in its Virtual Manager connection
+
+=cut
+
+sub internal_id {
+    my $self = shift;
+    return $self->id;
 }
 
 1;

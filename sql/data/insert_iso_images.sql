@@ -1,5 +1,5 @@
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url,file_re,md5_url)
+(name,description,arch,xml,xml_volume,url,file_re,md5_url, min_disk_size)
 VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'i386'
     ,'trusty-i386.xml'
@@ -7,10 +7,11 @@ VALUES('Ubuntu Trusty 32 bits','Ubuntu 14.04 LTS Trusty 32 bits'
     ,'http://releases.ubuntu.com/14.04/'
     ,'ubuntu-14.04.*-desktop-i386.iso'
     ,'$url/MD5SUMS'
+    ,'10'
 	);
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url, file_re, md5_url)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url, min_disk_size)
 VALUES('Ubuntu Trusty 64 bits','Ubuntu 14.04.1 LTS Trusty 64 bits'
     ,'amd64'
     ,'trusty-amd64.xml'
@@ -18,10 +19,11 @@ VALUES('Ubuntu Trusty 64 bits','Ubuntu 14.04.1 LTS Trusty 64 bits'
     ,'http://releases.ubuntu.com/14.04/'
     ,'ubuntu-14.04.*-desktop-amd64.iso'
     ,'http://releases.ubuntu.com/14.04/MD5SUMS'
+    ,'10'
 	);
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url, file_re, md5_url)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url, min_disk_size)
 VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'i386'
     ,'xenial-i386.xml'
@@ -29,10 +31,11 @@ VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'http://releases.ubuntu.com/16.04/'
     ,'ubuntu-16.04.*desktop-i386.iso'
     ,'http://releases.ubuntu.com/16.04/MD5SUMS'
+    ,'10'
     );
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url, file_re, md5_url)
+(name,description,arch,xml,xml_volume,url, file_re, md5_url, min_disk_size)
 VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
     ,'amd64'
     ,'xenial64-amd64.xml'
@@ -40,6 +43,7 @@ VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
     ,'http://releases.ubuntu.com/16.04/'
     ,'ubuntu-16.04.*-desktop-amd64.iso'
     ,'http://releases.ubuntu.com/16.04/MD5SUMS'
+    ,'10'
     );
 
 INSERT INTO iso_images
