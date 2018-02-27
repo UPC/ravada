@@ -140,7 +140,7 @@
                     <th class="lgMachToggle"><%=l 'Public'%></th>
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
-                      <i class="fa fa-exchange fa-rotate-90"
+                      <i class="fas fa-exchange-alt fa-rotate-90"
                        ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i><i class="fa fa-arrow-down" ng-cloak
                        ng-hide="orderParam[0] !== 'is_active'"></i><i class="fa fa-arrow-up"
                                                                       ng-cloak

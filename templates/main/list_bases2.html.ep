@@ -88,7 +88,7 @@
 %                   } elsif ($machine->{id_clone}) {
                         <a type="button" class="btn btn-danger"
                              ng-click="host_restore=<%= $machine->{id_clone} %>"
-                        ><strong><i class="fa fa-off" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
+                        ><strong><i class="fas fa-redo" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
 
 %                   }
 %                   if ( $machine->{id_clone}) {
