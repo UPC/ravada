@@ -785,6 +785,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
+    $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
 }
 
 

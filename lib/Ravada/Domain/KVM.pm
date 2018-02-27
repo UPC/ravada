@@ -1574,4 +1574,8 @@ sub pre_remove {
     $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
 }
 
+sub internal_id($self) {
+    return $self->domain->get_id();
+}
+
 1;
