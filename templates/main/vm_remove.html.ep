@@ -48,16 +48,7 @@
                         <a type="button" class="btn btn-danger"
                             ng-click="domain_remove_clones=0"
                         >No</a>
-<<<<<<< HEAD
-<<<<<<< HEAD
-                        <a type="button" class="btn btn-warning"
-                            ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;"
-=======
                         <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
->>>>>>> 100e21c... [#452] Add other languages to each language
-=======
-                        <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
->>>>>>> 100e21cf... [#452] Add other languages to each language
                             >Yes, remove all the clones</a>
            </div><!-- del domain remove clones-->
 
