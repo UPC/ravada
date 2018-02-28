@@ -43,6 +43,10 @@ sub BUILD($self, $arg) {
         if $self->is_volatile && ! $self->is_active;
 }
 
+sub open($self, $id) {
+    return $self->new(id => $id);
+}
+
 sub _do_force_shutdown  { confess "TODO" }
 sub add_volume          { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }

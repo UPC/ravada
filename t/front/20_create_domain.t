@@ -157,6 +157,15 @@ for my $vm_name ('Void','KVM','LXC') {
     eval { $display = $RVD_FRONT->domdisplay($name ) };
     ok(!$display,"No display should b e returned with no user");
 
+
+    my $domain_front2 = Ravada::Front::Domain->open($domain->id);
+    is($domain_front2->id, $domain->id);
+    is($domain_front2->{_vm}, undef);
+
+    my $domain_front3 = Ravada::Front::Domain->new( id => $domain->id);
+    is($domain_front3->id, $domain->id);
+    is($domain_front3->{_vm}, undef);
+
     test_remove_domain($name);
 }
 }

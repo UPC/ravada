@@ -21,6 +21,7 @@ use Mojo::Home;
 use lib 'lib';
 
 use Ravada::Front;
+use Ravada::Front::Domain;
 use Ravada::Auth;
 use POSIX qw(locale_h);
 
@@ -1195,7 +1196,7 @@ sub show_link {
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     my $description = $domain->description;
     if (!$description && $domain->id_base) {
-        my $base = Ravada::Domain->open($domain->id_base);
+        my $base = Ravada::Front::Domain->open($domain->id_base);
         $description = $base->description();
     }
     $c->stash(description => $description);
