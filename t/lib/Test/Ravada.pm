@@ -40,6 +40,7 @@ create_domain
     clean_remote
     start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
+    hibernate_domain_internal
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -814,6 +815,17 @@ sub remove_node($node) {
     eval { $node2 = Ravada::VM->open($node->id) };
     like($@,qr"can't find VM");
     ok(!$node2, "Expecting no node ".$node->id);
+}
+
+sub hibernate_domain_internal($domain) {
+    start_domain_internal($domain)  if !$domain->is_active;
+    if ($domain->type eq 'KVM') {
+        $domain->domain->managed_save();
+    } elsif ($domain->type eq 'Void') {
+        $domain->_store(is_hibernated => 1 );
+    } else {
+        confess "ERROR: I don't know how to hibernate internal domain of type ".$domain->type;
+    }
 }
 
 sub shutdown_domain_internal($domain) {
