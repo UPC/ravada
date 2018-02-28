@@ -128,7 +128,6 @@ for my $vm_name ('Void','KVM','LXC') {
     ok($domain->internal_id,"[$vm_name] Expecting an internal id , got ".($domain->internal_id or ''));
     if ($domain->type =~ /kvm/i) {
         is($domain->internal_id, $domain->domain->get_id);
-        diag($domain->domain->get_id);
     }
     my $ip = '99.88.77.66';
 

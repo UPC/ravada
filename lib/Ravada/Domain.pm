@@ -433,9 +433,7 @@ sub id {
 
 ##################################################################################
 
-sub _data {
-    my $self = shift;
-    my $field = shift or confess "Missing field name";
+sub _data($self, $field) {
 
     _init_connector();
 
@@ -658,7 +656,11 @@ sub _insert_db {
     }
     $sth->finish;
 
-    $sth = $$CONNECTOR->dbh->prepare(
+    $self->_update_internal_id();
+}
+
+sub _update_internal_id($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set internal_id=? "
         ." WHERE id=?"
     );
@@ -1192,6 +1194,7 @@ sub _post_resume {
 sub _post_start {
     my $self = shift;
 
+    $self->_update_internal_id();
     $self->_add_iptable(@_);
 }
 
