@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use  Carp qw(carp confess);
+use Data::Dumper;
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
