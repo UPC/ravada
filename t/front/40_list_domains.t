@@ -83,6 +83,9 @@ sub test_list_domains {
     ok($domain->is_active,"Domain should be active, got ".$domain->is_active);
     $list_domains = rvd_front->list_domains();
     is($list_domains->[0]->{remote_ip}, $remote_ip);
+
+    is($list_domains->[0]->{name}, $domain->name);
+    is($list_domains->[0]->{internal_id}, $domain->internal_id);
 }
 
 #########################################################
