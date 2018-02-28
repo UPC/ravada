@@ -125,11 +125,6 @@ for my $vm_name ('Void','KVM','LXC') {
         $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
         .($domain->name or '<UNDEF>'));
 
-    ok($domain->internal_id,"[$vm_name] Expecting an internal id , got ".($domain->internal_id or ''));
-    if ($domain->type =~ /kvm/i) {
-        is($domain->internal_id, $domain->domain->get_id);
-        diag($domain->domain->get_id);
-    }
     my $ip = '99.88.77.66';
 
     $req = $RVD_FRONT->start_domain(name => $name, user =>  $USER, remote_ip => $ip);
@@ -152,6 +147,13 @@ for my $vm_name ('Void','KVM','LXC') {
     $display = undef;
     eval { $display = $RVD_FRONT->domdisplay($name ) };
     ok(!$display,"No display should b e returned with no user");
+
+    ok($domain->internal_id,"[$vm_name] Expecting an internal id , got ".($domain->internal_id or ''));
+    if ($domain->type =~ /kvm/i) {
+        my $domain_back = rvd_back->search_domain($domain->name);
+        is($domain->internal_id, $domain_back->domain->get_id);
+    }
+
 
     test_remove_domain($name);
 }

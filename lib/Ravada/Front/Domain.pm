@@ -57,6 +57,8 @@ sub get_info($self) {
 }
 sub hybernate           { confess "TODO" }
 
+sub internal_id($self) { return $self->_data('internal_id')}
+
 sub is_active($self) {
     return 1 if $self->_data('status') eq 'active';
     return 0;
