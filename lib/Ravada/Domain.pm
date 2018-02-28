@@ -483,7 +483,7 @@ sub _data($self, $field, $value=undef) {
             if !$self->is_known();
 
         confess "ERROR: Invalid field '$field'"
-            if $field !~ /^[a-z]+[a-z0-9]*$/;
+            if $field !~ /^[a-z]+[a-z0-9_]*$/;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains set $field=? WHERE id=?"
         );
@@ -1299,6 +1299,8 @@ sub _post_start {
     );
     $sth->execute(time, $self->id);
     $sth->finish;
+
+    $self->_data('internal_id',$self->internal_id);
 
     $self->_add_iptable(@_);
 
