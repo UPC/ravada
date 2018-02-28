@@ -433,13 +433,50 @@ sub test_already_started_twice($vm_name, $node) {
     eval { $clone2->start(user => user_admin) };
     like($@,qr/already running/)    if $@;
 
-    rvd_back->_process_requests_dont_fork();
+    for ( 1 .. 3 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        for ( 1 .. 10 ) {
+            last if !$clone->is_active
+            && !$clone_local->is_active;
+            sleep 1;
+        }
+    }
+    rvd_back->_process_all_requests_dont_fork();
+
+    is($clone->is_active, 0,"[".$node->type."] expecting remote clone ".$clone->name." down");
+    is($clone_local->is_active, 0,"[".$node->type."] expecting local clone down");
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
+sub test_already_started_hibernated($vm_name, $node) {
+    my ($base, $clone) = _create_clone($node);
+    my $vm = rvd_back->search_vm($vm_name);
+
+    is($vm->is_local, 1);
+
+    my $clone_local = $vm->search_domain($clone->name);
+    is($clone_local->_vm->is_local, 1);
+
+    start_domain_internal($clone);
+    hibernate_domain_internal($clone_local);
+
+    is($clone->is_active, 1,"expecting clone active on remote");
+    is($clone_local->is_hibernated, 1, "expecting clone hibernated on local");
+
+    my $clone2 = rvd_back->search_domain($clone->name);
+    eval { $clone2->start(user => user_admin) };
+    like($@,qr/already running/)    if $@;
+
+    rvd_back->_process_all_requests_dont_fork();
     for ( 1 .. 10 ) {
-        last if !$clone->is_active;
-        last if !$clone_local->is_active;
+        last if $clone->is_active
+                && !$clone_local->is_active
+                && !$clone_local->is_hibernated;
         sleep 1;
     }
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_all_requests_dont_fork();
 
     is($clone->is_active, 0);
     is($clone_local->is_active, 0);
@@ -447,6 +484,7 @@ sub test_already_started_twice($vm_name, $node) {
     $clone->remove(user_admin);
     $base->remove(user_admin);
 }
+
 
 sub _create_clone($node) {
 
@@ -1008,6 +1046,8 @@ SKIP: {
     test_start_twice($vm_name, $node);
 
     test_already_started_twice($vm_name, $node);
+
+    test_already_started_hibernated($vm_name, $node);
 
     test_shutdown($node);
 

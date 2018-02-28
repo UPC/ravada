@@ -2054,9 +2054,15 @@ sub _cmd_force_shutdown {
 
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
 
     my $domain;
-    $domain = $self->search_domain_by_id($id_domain);
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
     die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);

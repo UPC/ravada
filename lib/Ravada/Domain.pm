@@ -1368,6 +1368,7 @@ sub _post_shutdown {
 
         my $req = Ravada::Request->force_shutdown_domain(
             id_domain => $self->id
+               ,id_vm => $self->_vm->id
                 , uid => $arg{user}->id
                  , at => time+$timeout 
         );
