@@ -433,11 +433,13 @@ sub test_already_started_twice($vm_name, $node) {
     eval { $clone2->start(user => user_admin) };
     like($@,qr/already running/)    if $@;
 
-    rvd_back->_process_all_requests_dont_fork();
-    for ( 1 .. 10 ) {
-        last if !$clone->is_active
+    for ( 1 .. 3 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        for ( 1 .. 10 ) {
+            last if !$clone->is_active
             && !$clone_local->is_active;
-        sleep 1;
+            sleep 1;
+        }
     }
     rvd_back->_process_all_requests_dont_fork();
 
