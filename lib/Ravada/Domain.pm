@@ -182,11 +182,10 @@ around 'get_info' => \&_around_get_info;
 
 sub BUILD {
     my $self = shift;
+
     $self->_init_connector();
 
     $self->is_known();
-    eval { $self->_check_clean_shutdown() };
-#    warn $@ if $@;
 }
 
 sub _check_clean_shutdown($self) {
@@ -213,7 +212,6 @@ sub _set_vm($self, $vm, $force=0) {
     eval { $domain = $vm->search_domain($self->name) };
     die $@ if $@ && $@ !~ /no domain with matching name/;
     if ($domain && ($force || $domain->is_active)) {
-        $self->_pre_migrate($vm);
        $self->_vm($vm);
        $self->domain($domain->domain);
         $self->_update_id_vm();
@@ -304,8 +302,15 @@ sub _search_already_started($self) {
             $domain->_data(status => $status);
         }
     }
-    confess "ERROR: Domain started in ".Dumper(\%started)
-        if keys %started > 1;
+    if (keys %started > 1) {
+        for my $id_vm (sort keys %started) {
+            Ravada::Request->shutdown_domain(
+                id_domain => $self->id
+                , uid => $self->id_owner
+                , id_vm => $id_vm
+            );
+        }
+    }
     return keys %started;
 }
 
@@ -401,7 +406,8 @@ sub _allow_shutdown {
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
     if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = Ravada::Domain->open($self->id_base);
+        my $base = Ravada::Domain->open($self->id_base)
+            or confess "ERROR: Base domain id: ".$self->id_base." not found";
         return if $base->id_owner == $user->id;
     } elsif($user->can_shutdown_all) {
         return;
@@ -611,6 +617,7 @@ sub _data($self, $field, $value=undef) {
     _init_connector();
 
     if (defined $value) {
+        cluck "yup" if $self->name eq 'al-copy3' && $field eq 'status' && $value eq 'shutdown';
         confess "Domain ".$self->name." is not in the DB"
             if !$self->is_known();
 
@@ -639,12 +646,25 @@ sub _data($self, $field, $value=undef) {
 Open a domain
 
 Argument: id
+Arguments: id => $id , [ readonly => {0|1} ]
 
-Returns: Domain object read only
+Returns: Domain object
 
 =cut
 
-sub open($class, $id , $readonly = 0) {
+sub open($class, @args) {
+    my ($id) = @args;
+    my $readonly = 0;
+    my $id_vm;
+
+    if (scalar @args > 1) {
+        my %args = @args;
+        $id = delete $args{id} or confess "ERROR: Missing field id";
+        $readonly = delete $args{readonly} if exists $args{readonly};
+        $id_vm = delete $args{id_vm};
+        confess "ERROR: Unknown fields ".join(",", sort keys %args)
+            if keys %args;
+    }
     confess "Undefined id"  if !defined $id;
     my $self = {};
 
@@ -660,18 +680,24 @@ sub open($class, $id , $readonly = 0) {
         if !keys %$row;
 
     my $vm;
-    if (!$self->_data('id_vm') || $self->is_base) {
+    if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
+        $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+                , readonly => $readonly);
+    }
+    if (!$vm || !$vm->is_active) {
         my $vm0 = {};
         my $vm_class = "Ravada::VM::".$row->{vm};
         bless $vm0, $vm_class;
 
         $vm = $vm0->new( readonly => $readonly );
-    } else {
-        $vm = Ravada::VM->open(id => $self->_data('id_vm'), readonly => $readonly);
     }
 
     my $domain = $vm->search_domain($row->{name});
-    $domain->_check_clean_shutdown()  if $domain && !$domain->is_active;
+    return if !$domain;
+    if (!$id_vm) {
+        $domain->_search_already_started();
+        $domain->_check_clean_shutdown()  if !$domain->is_active;
+    }
     return $domain;
 }
 
@@ -1530,6 +1556,7 @@ sub _add_iptable {
 }
 
 sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
+
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
@@ -1549,7 +1576,7 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
            && exists $args{dport} && exists $extra->{d_port}
            && $args{dport} eq $extra->{d_port}) {
 
-           $self->_vm->run_command("iptables -t $filter -D $chain $count");
+           $self->_vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count);
            $count--;
         }
 
@@ -1557,7 +1584,10 @@ sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
 
 }
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
+    confess "local port undefined " if !$local_port;
+
     $self->_vm->create_iptables_chain($IPTABLES_CHAIN);
+
     my @iptables_arg = ($remote_ip
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
@@ -2113,7 +2143,11 @@ sub _pre_migrate($self, $node) {
     $self->_check_equal_storage_pools($node);
 
     return if !$self->id_base;
+
+    confess "ERROR: Active domains can't be migrated"   if $self->is_active;
+
     my $base = Ravada::Domain->open($self->id_base);
+    confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
     die "ERROR: Base ".$base->name." files not migrated to ".$node->name
         if !$base->base_in_vm($node->id);

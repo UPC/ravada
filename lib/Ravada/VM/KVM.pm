@@ -163,10 +163,15 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return if $self->vm;
+    return 1 if $self->vm;
 
     return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
+}
+
+sub _reconnect($self) {
+    $self->vm(undef);
+    return $self->connect();
 }
 
 sub _load_storage_pool {
@@ -999,7 +1004,6 @@ sub _check_signature($file, $type, $expected) {
 
 sub _download_file_external($url, $device, $verbose=1) {
     confess "ERROR: wget missing"   if !$WGET;
-    confess "verbose" if $verbose;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n"    if $verbose;
@@ -1901,14 +1905,17 @@ sub import_domain($self, $name, $user) {
     return $domain;
 }
 
-sub ping($self) {
+=head2 is_alive
+
+Returns true if the virtual manager connection is active, false otherwise.
+
+=cut
+
+sub is_alive($self) {
     return 0 if !$self->vm;
-    eval { $self->vm->list_defined_networks };
-    warn $@ if $@;
-    return 1 if !$@;
+    return 1 if $self->vm->is_alive;
     return 0;
 }
-
 sub free_memory($self) {
 
     confess "ERROR: VM ".$self->name." inactive"

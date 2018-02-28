@@ -70,6 +70,7 @@ sub test_new_domain_from_iso {
                                         ,id_owner => $USER->id
             ) 
     };
+    is(''.$@,'') or return;
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -289,6 +290,7 @@ SKIP: {
 
     use_ok("Ravada::Domain::$BACKEND");
 
+    clean();
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);
 test_remove_domain($DOMAIN_NAME_SON);

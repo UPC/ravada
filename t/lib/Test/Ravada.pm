@@ -38,7 +38,7 @@ create_domain
     vm_names
     search_iptable_remote
     clean_remote
-    start_node shutdown_node remove_node
+    start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
 );
 
@@ -302,8 +302,7 @@ sub _remove_old_domains_void_remote($vm) {
     return if !$vm->ping;
     eval { $vm->connect };
     warn $@ if $@;
-    return if !$vm->is_connected;
-    warn $vm->type." ".$vm->name;
+    return if !$vm->_do_is_active;
     $vm->run_command("rm -f ".$vm->dir_img."/*yml "
                     .$vm->dir_img."/*qcow "
                     .$vm->dir_img."/*img"
@@ -575,7 +574,7 @@ sub clean_remote {
         my $node;
         eval { $node = $vm->new(%{$conf->{$vm_name}}) };
         next if ! $node;
-        if ( !$node->is_active ) {
+        if ( !$node->_do_is_active ) {
             $node->remove;
             next;
         }
@@ -595,7 +594,7 @@ sub _clean_remote_nodes {
         my $vm = rvd_back->search_vm($config->{$name}->{type});
         eval { $node = $vm->new($config->{$name}) };
         warn $@ if $@;
-        next if !$node || !$node->is_active;
+        next if !$node || !$node->_do_is_active;
 
         clean_remote_node($node);
 
@@ -718,8 +717,33 @@ sub _domain_node($node) {
     return $domain;
 }
 
+sub hibernate_node($node) {
+    diag("hibernate node ".$node->type." ".$node->name);
+    if ($node->is_active) {
+        for my $domain ($node->list_domains()) {
+            diag("Shutting down ".$domain->name." on node ".$node->name);
+            $domain->shutdown_now(user_admin);
+        }
+    }
+    $node->disconnect;
+
+    my $domain_node = _domain_node($node);
+    $domain_node->hibernate( user => user_admin);
+
+    my $max_wait = 30;
+    my $ping;
+    for ( 1 .. $max_wait ) {
+        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
+        $ping = $node->ping;
+        last if !$ping;
+        sleep 1;
+    }
+    is($ping,0, "Expecting node ".$node->name." hibernated not pingable");
+}
+
 sub shutdown_node($node) {
 
+    diag("shutdown node ".$node->type." ".$node->name);
     if ($node->is_active) {
         for my $domain ($node->list_domains()) {
             diag("Shutting down ".$domain->name." on node ".$node->name);
@@ -757,7 +781,7 @@ sub start_node($node) {
     confess "Undefined node " if!$node;
 
     $node->disconnect;
-    if ( $node->is_active ) {
+    if ( $node->_do_is_active ) {
         $node->connect && return;
         warn "I can't connect";
     }
@@ -768,30 +792,26 @@ sub start_node($node) {
 
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
-    sleep 2;
-
-    $node->disconnect;
-    sleep 1;
-
     for ( 1 .. 30 ) {
         last if $node->ping ;
         sleep 1;
         diag("Waiting for ping node ".$node->name." $_") if !($_ % 10);
     }
 
-    is($node->ping,1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
+    is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
     for ( 1 .. 20 ) {
-        last if $node->is_active;
+        last if $node->_do_is_active;
         sleep 1;
         diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
     }
 
-    is($node->is_active,1,"Expecting active node ".$node->name) or exit;
+    is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
     my $connect;
-    for ( 1 .. 10 ) {
+    for ( 1 .. 20 ) {
         eval { $connect = $node->connect };
+        warn $@ if $@;
         last if $connect;
         sleep 1;
         diag("Waiting for connection to node ".$node->name." $_") if !($_ % 5);
@@ -799,10 +819,11 @@ sub start_node($node) {
     is($connect,1
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
+
+    $node->run_command("hwclock","--hctosys");
 }
 
 sub remove_node($node) {
-    shutdown_node($node);
     eval { $node->remove() };
     is(''.$@,'');
 

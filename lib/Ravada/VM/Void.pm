@@ -56,10 +56,6 @@ sub connect($self) {
     return $self->vm($self->_connect);
 }
 
-sub is_connected($self) {
-    return 1 if $self->is_local
-        || $self->{_ssh};
-}
 sub disconnect {
     my $self = shift;
     $self->vm(0);
@@ -268,6 +264,11 @@ sub refresh_storage_pools {
 
 sub list_storage_pools {
     return $Ravada::Domain::Void::DIR_TMP;
+}
+
+sub is_alive($self) {
+    return 0 if !$self->vm;
+    return 1;
 }
 #########################################################################3
 

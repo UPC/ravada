@@ -7,6 +7,7 @@ use lib './lib';
 
 use Data::Dumper;
 use Getopt::Long;
+use POSIX ":sys_wait_h";
 use Proc::PID::File;
 
 use Ravada;
@@ -123,7 +124,6 @@ $Ravada::CAN_FORK=0    if $NOFORK;
 
 ###################################################################
 
-my $PID_LONGS;
 ###################################################################
 #
 
@@ -132,40 +132,29 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
-    clean_killed_requests();
-
-    start_process_longs() if !$NOFORK;
+    clean_old_requests();
 
     my $ravada = Ravada->new( %CONFIG );
-    for (;;) {
-        my $t0 = time;
-        $ravada->process_requests();
-        $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
-        $ravada->enforce_limits();
-        sleep 1 if time - $t0 <1;
-    }
-}
 
-sub start_process_longs {
-    my $pid = fork();
-    die "I can't fork" if !defined $pid;
-    if ( $pid ) {
-        $PID_LONGS = $pid;
-        return;
-    }
-    
-    warn "Processing long requests in pid $$\n" if $DEBUG;
-    my $ravada = Ravada->new( %CONFIG );
-    for (;;) {
+    my $t0_cleanup = 0;
+    for ( 1 .. 100 ) {
         my $t0 = time;
+        $ravada->process_priority_requests();
         $ravada->process_long_requests();
+        $ravada->process_requests();
+
+        if ( time - $t0_cleanup > 60 ) {
+            Ravada::Request->cleanup();
+            $t0_cleanup = time;
+        }
         sleep 1 if time - $t0 <1;
     }
+
 }
 
-sub clean_killed_requests {
+sub clean_old_requests {
     my $ravada = Ravada->new( %CONFIG );
-    $ravada->clean_killed_requests();
+    $ravada->clean_old_requests();
 }
 
 sub start {
@@ -178,18 +167,7 @@ sub start {
         }
     }
     for (;;) {
-        if ($NOFORK ) {
-            do_start();
-            next;
-        }
-        my $pid = fork();
-        die "I can't fork $!" if !defined $pid;
-        if ($pid == 0 ) {
-            do_start();
-            exit;
-        }
-        warn "Waiting for pid $pid\n";
-        waitpid($pid,0);
+        do_start();
     }
 }
 
@@ -444,14 +422,6 @@ sub shutdown_domain {
 }
 
 sub DESTROY {
-    return if !$PID_LONGS;
-    warn "Killing pid: $PID_LONGS";
-
-    my $cnt = kill 15 , $PID_LONGS;
-    return if !$cnt;
-
-    kill 9 , $PID_LONGS;
-    
 }
 
 #################################################################

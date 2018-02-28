@@ -50,6 +50,7 @@ requires 'connect';
 requires 'disconnect';
 requires 'import_domain';
 
+requires 'is_alive';
 ############################################################
 
 has 'host' => (
@@ -675,14 +676,21 @@ Returns if the virtual manager connection is available
 
 =cut
 
-sub ping($self) {
+sub ping($self, $option=undef) {
+    confess "ERROR: option unknown" if defined $option && $option ne 'debug';
+    
+    my $debug = 0;
+    $debug = 1 if defined $option && $option eq 'debug';
+
     return 1 if $self->is_local();
 
+    warn "trying tcp"   if $debug;
     my $p = Net::Ping->new('tcp',2);
     return 1 if $p->ping($self->host);
     $p->close();
 
     return if $>; # icmp ping requires root privilege
+    warn "trying icmp"   if $debug;
     $p= Net::Ping->new('icmp',2);
     return 1 if $p->ping($self->host);
 
@@ -696,15 +704,7 @@ Returns if the domain is active.
 =cut
 
 sub is_active($self) {
-    if ($self->is_local) {
-        my $active = 0;
-        $active=1 if $self->vm;
-
-        # store it anyway for the frontend
-        $self->_cached_active($active);
-        $self->_cached_active_time(time);
-        return $active;
-    }
+    return $self->_do_is_active() if $self->is_local;
 
     return $self->_cached_active if time - $self->_cached_active_time < 5;
     return $self->_do_is_active();
@@ -712,13 +712,19 @@ sub is_active($self) {
 
 sub _do_is_active($self) {
     my $ret = 0;
-    if ( !$self->ping() ) {
-        $ret = 0;
+    if ( $self->is_local ) {
+        $ret = 1 if $self->vm;
     } else {
-        my $ssh;
-        eval { $ssh = $self->_connect_ssh };
-        warn $@ if $@ && $@ !~ /Connection refused/;
-        $ret = 1 if $ssh;
+        if ( !$self->ping() ) {
+            $ret = 0;
+        } else {
+            if ( $self->is_alive ) {
+                $ret = 1;
+            }  else {
+                $self->connect();
+                $ret = 1 if $self->is_alive;
+            }
+        }
     }
     $self->_cached_active($ret);
     $self->_cached_active_time(time);
@@ -755,13 +761,13 @@ Run a command on the node
 
 =cut
 
-sub run_command($self, $command) {
+sub run_command($self, @command) {
 
-    return $self->_run_command_local($command) if $self->is_local();
+    return $self->_run_command_local(@command) if $self->is_local();
 
     my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
 
-    $command = join(" ",@$command) if ref($command);
+    my $command = join(" ",@command);
     $chan->exec($command);# or $self->{_ssh}->die_with_error;
 
     $chan->send_eof();
@@ -776,10 +782,11 @@ sub run_command($self, $command) {
     return ($out, $err);
 }
 
-sub _run_command_local($self, $command) {
+sub _run_command_local($self, @command) {
     my ( $in, $out, $err);
-    $command = [$command] if !ref($command);
-    run3($command, \$in, \$out, \$err);
+    my ($exec) = $command[0];
+    confess "ERROR: Missing command $exec"  if ! -e $exec;
+    run3(\@command, \$in, \$out, \$err);
     return ($out, $err);
 }
 
@@ -805,14 +812,14 @@ sub _write_file_local( $self, $file, $contents ) {
 }
 
 sub create_iptables_chain($self,$chain) {
-    my ($out, $err) = $self->run_command(["iptables","-n","-L",$chain]);
+    my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
     return if $out =~ /^Chain $chain/;
 
-    $self->run_command(["iptables", '-N' => $chain]);
+    $self->run_command("/sbin/iptables", '-N' => $chain);
 }
 
 sub iptables($self, @args) {
-    my @cmd = ('iptables');
+    my @cmd = ('/sbin/iptables');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
@@ -821,14 +828,14 @@ sub iptables($self, @args) {
         push @cmd,(shift @args);
 
     }
-    my ($out, $err) = $self->run_command([@cmd]);
+    my ($out, $err) = $self->run_command(@cmd);
     warn $err if $err;
 }
 
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
 #   (c) Jan Gehring <jan.gehring@gmail.com>
-    my ($out,$err) = $self->run_command("iptables-save");
+    my ($out,$err) = $self->run_command("/sbin/iptables-save");
     my ( %tables, $ret );
 
     my ($current_table);
