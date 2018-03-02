@@ -95,6 +95,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/test_ad
    docs/tuning
    devel-docs/translations
+   docs/monitoring
 
 .. _about-docs:
 
