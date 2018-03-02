@@ -12,15 +12,10 @@
 %   } else {
     <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.cpu"></div>
     <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.cpu_per_core"></div>
-
     <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.mem_usage"></div>
     <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.mem"></div>
-
     <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.writeback"></div>
-
     <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.io"></div>
-
-    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.net_vnet<%= ($domain->internal_id)-1 %>"></div>
 %   }
     </div>
 </div>
