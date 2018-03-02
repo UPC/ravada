@@ -22,4 +22,4 @@ for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
 Disable mail alarms
 -------------------
 
-Edit this file ```/opt/netdata/etc/netdata/health_alarm_notify.conf``` and set SEND_MAIL="NO"
+Edit this file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set SEND_MAIL="NO"
