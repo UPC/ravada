@@ -22,4 +22,26 @@ for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
 Disable mail alarms
 -------------------
 
-Edit this file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set SEND_MAIL="NO"
+Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set SEND_MAIL="NO"
+
+Graphite backend
+----------------
+
+Edit the file ``/opt/netdata/etc/netdata/netdata.conf``:
+
+::
+
+ [backend]
+     host tags =
+     enabled = yes
+     data source = average
+     type = graphite
+     destination = <GraphiteServer>
+     prefix = netdata
+     hostname = <hostname>
+     update every = 10
+     buffer on failures = 10
+     timeout ms = 20000
+     send names instead of ids = yes
+     send charts matching = *
+     send hosts matching = localhost *
