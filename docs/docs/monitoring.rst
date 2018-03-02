@@ -22,19 +22,19 @@ for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
 Disable mail alarms
 -------------------
 
-Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set SEND_MAIL="NO"
+Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set 
+
+::
+
+ SEND_MAIL="NO"
 
 
 Monitoring Architecture
 -----------------------
 
 All servers have a local `My-netdata <http://my-netdata.io/>`_ installation, this lets us know what happens now. Metrics in real time, small story.
-
 The file of metrics is stored in the `Graphite <https://graphiteapp.org/>`_ server, this allows us to obtain historical and archived data.
-
 And `Grafana <https://grafana.com/>`_ lets us know what happened in the past. Low detail metric, long history.
-
-
 Follow this `link <https://github.com/firehol/netdata/wiki/netdata-backends>`_ to known more about it.
 
 Graphite backend
