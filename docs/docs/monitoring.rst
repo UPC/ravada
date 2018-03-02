@@ -24,6 +24,19 @@ Disable mail alarms
 
 Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set SEND_MAIL="NO"
 
+
+Monitoring Architecture
+-----------------------
+
+All servers have a local `My-netdata <http://my-netdata.io/>`_ installation, this lets us know what happens now. Metrics in real time, small story.
+
+The file of metrics is stored in the `Graphite <https://graphiteapp.org/>`_ server, this allows us to obtain historical and archived data.
+
+And `Grafana <https://grafana.com/>`_ lets us know what happened in the past. Low detail metric, long history.
+
+
+Follow this `link <https://github.com/firehol/netdata/wiki/netdata-backends>`_ to known more about it.
+
 Graphite backend
 ----------------
 
@@ -45,3 +58,8 @@ Edit the file ``/opt/netdata/etc/netdata/netdata.conf``:
      send names instead of ids = yes
      send charts matching = *
      send hosts matching = localhost *
+     
+Graphana
+--------
+
+This `dashboard <https://grafana.com/dashboards/3938>`_ makes our lives easier.
