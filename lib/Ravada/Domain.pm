@@ -176,7 +176,8 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
 
-before 'autostart' => \&_pre_autostart;
+around 'autostart' => \&_around_autostart;
+
 ##################################################
 #
 
@@ -351,13 +352,17 @@ sub _post_prepare_base {
     }
 
     $self->_remove_id_base();
-    $self->autostart(0);
+    $self->autostart(0, $user);
 };
 
 
-sub _pre_autostart($self, $value=undef) {
-    confess "ERROR: Autostart can't be activated on bases"
+sub _around_autostart($orig, $self, @arg) {
+    my ($value, $user) = @arg;
+    $self->_allowed($user) if defined $value;
+    confess "ERROR: Autostart can't be activated on base ".$self->name
         if $value && $self->is_base;
+
+    return $self->$orig($value);
 }
 sub _check_has_clones {
     my $self = shift;
