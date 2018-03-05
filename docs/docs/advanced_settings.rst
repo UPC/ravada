@@ -32,7 +32,8 @@ Auto Start
 
 Virtual machines can be configured to auto-start on host boot. This feature
 is available from release 0.2.15
-You must enable the auto-start column at the frontend configuration file.
+You must enable the auto-start column at the frontend configuration file at
+/etc/rvd_font.conf .
 
 ::
 
