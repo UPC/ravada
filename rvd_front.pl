@@ -471,6 +471,16 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/autostart/#id/#value' => sub {
+    my $c = shift;
+    my $req = Ravada::Request->domain_autostart(
+        id_domain => $c->stash('id')
+           ,value => $c->stash('value')
+             ,uid => $USER->id
+    );
+    return $c->render(json => { request => $req->id});
+};
+
 get '/machine/display/#id' => sub {
     my $c = shift;
 
@@ -962,7 +972,8 @@ sub admin {
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
-            if scalar @$list_domains
+            if defined $CONFIG_FRONT->{admin}->{hide_clones}
+                && scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
         # count clones from list_domains grepping those that have id_base

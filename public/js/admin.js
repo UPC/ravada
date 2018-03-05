@@ -162,6 +162,9 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.getMachines();
         });
     };
+    $scope.set_autostart= function(machineId, value) {
+      $http.get("/machine/autostart/"+machineId+"/"+value);
+    };
     $scope.set_public = function(machineId, value) {
       $http.get("/machine/public/"+machineId+"/"+value);
     };
