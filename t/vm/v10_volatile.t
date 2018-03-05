@@ -221,13 +221,11 @@ for my $vm_name ('Void', 'KVM') {
     SKIP: {
 
         my $msg = "SKIPPED: No virtual managers found";
-        if ($vm && $vm_name =~ /kvm/i && $>) {
-            $msg = "SKIPPED: Test must run as root";
-            $vm = undef;
-        }
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile for $vm_name");
+
+        init($test->connector, $vm_name );
 
         create_network();
 
