@@ -33,7 +33,7 @@
       %= include 'main/vm_screenshot'
     </div>
 % }
-% if ($domain->type eq 'KVM') {
+% if ($domain->drivers) {
     <div class="tab-pane fade" id="graphics">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
