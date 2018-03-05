@@ -351,6 +351,7 @@ sub _post_prepare_base {
     }
 
     $self->_remove_id_base();
+    $self->autostart(0);
 };
 
 
