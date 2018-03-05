@@ -7,6 +7,10 @@
       templates => '/usr/share/ravada/templates'
         ,public => '/usr/share/ravada/public'
   }
+  ,admin => {
+      hide_clones => 15
+      , autostart => 0
+  }
   ,user => 'ravada'
   ,group => 'ravada'
   ,secrets => ['changeme1','changeme2']
