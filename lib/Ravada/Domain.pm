@@ -352,7 +352,7 @@ sub _post_prepare_base {
     }
 
     $self->_remove_id_base();
-    $self->autostart(0, $user);
+    $self->autostart(0);
 };
 
 
