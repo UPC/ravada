@@ -176,6 +176,7 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
 
+before 'autostart' => \&_pre_autostart;
 ##################################################
 #
 
@@ -352,6 +353,11 @@ sub _post_prepare_base {
     $self->_remove_id_base();
 };
 
+
+sub _pre_autostart($self, $value=undef) {
+    confess "ERROR: Autostart can't be activated on bases"
+        if $value && $self->is_base;
+}
 sub _check_has_clones {
     my $self = shift;
     return if !$self->is_known();
