@@ -174,6 +174,9 @@
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="<%=l 'Make private'%>">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
+%                   if ($autostart) {
+                        <td></td>
+%                   }
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                         <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
@@ -250,11 +253,10 @@
                       <td class="lgMachToggle">
                           <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="set_public(child.id,0)" title="Make private">
                       <td class="lgMachToggle">
-                           <input type="checkbox" ng-hide="{{child.is_public}} || {{child.is_volatile}}" ng-click="set_public(child.id,1)" title="Make public"></td>
+                           <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
 %                   if ($autostart) {
                         <td class="lgMachToggle">
-                            <input type="checkbox" checked ng-show="{{child.autostart}}" ng-click="set_autostart(child.id,0)" title="<%=l 'Enable autostart'%>">
-                            <input type="checkbox" ng-hide="{{child.autostart}}" ng-click="set_autostart(child.id,1)" title="<%=l 'Disable autostart'%>">
+                        <input type="checkbox" ng-click="toggle_autostart(machine.id)" title="<%=l 'Toggle autostart'%>">
                         </td>
 %                   }
                       <td class="lgMachActions">
