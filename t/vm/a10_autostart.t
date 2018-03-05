@@ -28,7 +28,7 @@ sub test_autostart($vm_name) {
     is($domain->autostart,0,"[$vm_name] Expecting autostart=0 on domain ".$domain->name);
     is($domain->is_active,0);
 
-    $domain->autostart(1);
+    $domain->autostart(1, user_admin);
     is($domain->autostart,1);
 
     if ($vm_name eq 'KVM') {
@@ -46,12 +46,12 @@ sub test_autostart_base($vm_name) {
     $domain->prepare_base(user_admin);
 
     is($domain->autostart,0);
-    eval { $domain->autostart(1) };
+    eval { $domain->autostart(1, user_admin) };
     like($@,qr'.',"[$vm_name] Expecting error when setting autostart on base");
 
     $domain->remove_base(user_admin);
     is($domain->autostart,0);
-    eval { $domain->autostart(1) };
+    eval { $domain->autostart(1, user_admin) };
     is(''.$@,'');
 
     is($domain->autostart,1);
@@ -61,7 +61,7 @@ sub test_autostart_base($vm_name) {
 
 sub test_autostart_prepare_base($vm_name) {
     my $domain = create_domain($vm_name);
-    $domain->autostart(1);
+    $domain->autostart(1, user_admin);
     is($domain->autostart,1);
 
     $domain->prepare_base(user_admin);
@@ -70,6 +70,26 @@ sub test_autostart_prepare_base($vm_name) {
     $domain->remove(user_admin);
 }
 
+sub test_autostart_denied($vm_name) {
+    my $domain = create_domain($vm_name);
+    my $jimmy= create_user("jimmy$domain",$$,0);
+    eval { $domain->autostart(1, $jimmy) };
+    like($@,qr/not allowed/i);
+}
+
+sub test_autostart_req($vm_name) {
+    my $domain = create_domain($vm_name);
+    my $req = Ravada::Request->domain_autostart(
+               uid => user_admin->id
+            ,value => 1
+        ,id_domain => $domain->id
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status , 'done');
+    is($req->error, '');
+
+    is($domain->autostart, 1);
+}
 #######################################################################
 
 clean();
@@ -93,6 +113,8 @@ for my $vm_name ( 'Void', 'KVM' ) {
         test_autostart($vm_name);
         test_autostart_base($vm_name);
         test_autostart_prepare_base($vm_name);
+        test_autostart_req($vm_name);
+        test_autostart_denied($vm_name);
     }
 }
 
