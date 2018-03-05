@@ -26,3 +26,22 @@ Configure this option in /etc/ravada.conf
 
     display_ip: 1.1.1.1
     nat_ip: 2.2.2.2
+
+Auto Start
+----------
+
+Virtual machines can be configured to auto-start on host boot. This feature
+is available from release 0.2.15
+You must enable the auto-start column at the frontend configuration file.
+
+::
+
+    {
+        admin => {
+            autostart => 1
+        }
+    };
+
+Reboot the frontend and auto-start can be setted at the machine list
+page in admin.
+
