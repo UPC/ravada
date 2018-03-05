@@ -17,7 +17,9 @@ NAT
 
 The Ravada server can be behind a NAT environment.
 
-      RVD    _______________ NAT ________________ client
+::
+
+  ____RVD    _______________ NAT ________________ client
       Server 1.1.1.1             2.2.2.2
 
 Configure this option in /etc/ravada.conf
