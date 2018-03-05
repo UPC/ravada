@@ -69,6 +69,7 @@ requires 'get_info';
 requires 'set_memory';
 requires 'set_max_mem';
 
+requires 'autostart';
 requires 'hybernate';
 
 ##########################################################

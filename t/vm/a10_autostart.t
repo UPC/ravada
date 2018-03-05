@@ -25,7 +25,7 @@ init( $test->connector , $FILE_CONFIG );
 
 sub test_autostart($vm_name) {
     my $domain = create_domain($vm_name);
-    is($domain->autostart,0);
+    is($domain->autostart,0,"[$vm_name] Expecting autostart=0 on domain ".$domain->name);
     is($domain->is_active,0);
 
     $domain->autostart(1);
