@@ -47,7 +47,7 @@ sub test_autostart_base($vm_name) {
 
     is($domain->autostart,0);
     eval { $domain->autostart(1) };
-    is($@,"[$vm_name] Expecting error when setting autostart on base");
+    like($@,qr'.',"[$vm_name] Expecting error when setting autostart on base");
 
     $domain->remove_base(user_admin);
     is($domain->autostart,0);
