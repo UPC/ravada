@@ -12,6 +12,87 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong>Error!</strong> Backend no available!
       </div>
+    <div class="row">
+      <div style="margin-right: 10px;" data-netdata="system.swap"
+          data-dimensions="used"
+          data-append-options="percentage"
+          data-chart-library="easypiechart"
+          data-title="Used Swap"
+          data-units="%"
+          data-easypiechart-max-value="100"
+          data-width="9%"
+          data-before="0"
+          data-after="- duration.toString()"
+          data-points="duration.toString()"
+          data-colors="#DD4400"
+          role="application"></div>
+
+        <div style="margin-right: 10px;" data-netdata="system.io"
+            data-dimensions="in"
+            data-chart-library="easypiechart"
+            data-title="Disk Read"
+            data-width="11%"
+            data-before="0"
+            data-after="- duration.toString()"
+            data-points="duration.toString()"
+            data-common-units="system.io.mainhead"
+            role="application"></div>
+
+        <div style="margin-right: 10px;" data-netdata="system.io"
+              data-dimensions="out"
+              data-chart-library="easypiechart"
+              data-title="Disk Write"
+              data-width="11%"
+              data-before="0"
+              data-after="- duration.toString()"
+              data-points="duration.toString()"
+              data-common-units="system.io.mainhead"
+              role="application"></div>
+
+        <div style="margin-right: 10px;" data-netdata="system.cpu"
+              data-chart-library="gauge"
+              data-title="CPU"
+              data-units="%"
+              data-gauge-max-value="100"
+              data-width="20%"
+              data-after="- duration.toString()"
+              data-points="duration.toString()"
+              role="application"></div>
+
+        <div style="margin-right: 10px;" data-netdata="system.net"
+              data-dimensions="received"
+              data-chart-library="easypiechart"
+              data-title="Net Inbound"
+              data-width="11%"
+              data-before="0"
+              data-after="- duration.toString()"
+              data-points="duration.toString()"
+              data-common-units="system.net.mainhead"
+              role="application"></div>
+
+        <div style="margin-right: 10px;" data-netdata="system.net"
+              data-dimensions="sent"
+              data-chart-library="easypiechart"
+              data-title="Net Outbound"
+              data-width="11%"
+              data-before="0"
+              data-after="- duration.toString()"
+              data-points="duration.toString()"
+              data-common-units="system.net.mainhead"
+              role="application"></div>
+
+        <div style="margin-right: 10px;" data-netdata="system.ram"
+                data-dimensions="used|buffers"
+                data-append-options="percentage"
+                data-chart-library="easypiechart"
+                data-title="Used RAM"
+                data-units="%"
+                data-easypiechart-max-value="100"
+                data-width="9%"
+                data-after="- duration.toString()"
+                data-points="duration.toString()"
+                role="application"></div>
+      </div>
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
@@ -59,7 +140,7 @@
                     <th class="lgMachToggle"><%=l 'Public'%></th>
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
-                      <i class="fa fa-exchange fa-rotate-90"
+                      <i class="fas fa-exchange-alt fa-rotate-90"
                        ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i><i class="fa fa-arrow-down" ng-cloak
                        ng-hide="orderParam[0] !== 'is_active'"></i><i class="fa fa-arrow-up"
                                                                       ng-cloak
@@ -77,11 +158,11 @@
                     <td class="lgMachToggle">
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
-                        <input type="checkbox" checked 
+                        <input type="checkbox" checked
                                ng-show="can_remove_base(machine)"
                             ng-click="action('machine','remove_base',machine.id)"
                             title ="<%=l 'Remove base' %>" ng-cloak>
-                        <input type="checkbox" 
+                        <input type="checkbox"
                                ng-show="can_prepare_base(machine)"
                             ng-click="action('machine','prepare',machine.id)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
@@ -115,7 +196,7 @@
                         <a type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
-                         title="<%=l 'ShutDown' %>">    
+                         title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
                        </a>
                         <a type="button" class="btn btn-primary btn-sm"
