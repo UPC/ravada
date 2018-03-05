@@ -59,6 +59,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
+                                                    ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               }
@@ -976,6 +977,7 @@ sub admin {
                 && scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
+        $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
         # count clones from list_domains grepping those that have id_base
         $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
 
