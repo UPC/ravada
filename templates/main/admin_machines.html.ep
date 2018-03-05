@@ -212,12 +212,6 @@
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                         </a>
-                        <a type="button" class="btn btn-primary btn-sm"
-                         ng-click="action('machine','screenshot',machine.id)"
-                         ng-disabled="!machine.is_active"
-                         title="<%=l 'Screenshot' %>">
-                         <i class="fa fa-camera" aria-hidden="true"></i>
-                       </a>
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html">process</a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
@@ -285,12 +279,6 @@
                            title="<%=l 'View' %>">
                             <i class="fa fa-desktop"></i>
                           </a>
-                          <a type="button" class="btn btn-primary btn-sm"
-                           ng-click="action('machine','screenshot',child.id)"
-                           ng-disabled="!child.is_active"
-                           title="<%=l 'Screenshot' %>">
-                           <i class="fa fa-camera" aria-hidden="true"></i>
-                         </a>
                         </div>
                         <div ng-show="{{child.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{child.is_locked}}.html">process</a></div>
                       </td>
