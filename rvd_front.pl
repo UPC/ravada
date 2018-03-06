@@ -49,6 +49,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
                                               }
@@ -842,6 +843,12 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
+
+    if ($CONFIG_FRONT->{guide_custom}) {
+        push @{$c->stash->{js}}, $CONFIG_FRONT->{guide_custom};
+    } else {
+        push @{$c->stash->{js}}, '/js/ravada_guide.js';
+    }
     return $c->render(
         template => 'main/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)

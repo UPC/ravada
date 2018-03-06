@@ -17,6 +17,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.js"></script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
+
 % foreach my $jslink (@$js) {
 <script src="<%= $jslink %>"></script>
 % }

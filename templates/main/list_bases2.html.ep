@@ -27,6 +27,9 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
+%       if ( $public_bases ) {
+            <a class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
+%           }
 %           if ($user->is_admin && $public_bases && $private_bases) {
             <div ng-cloak>
                 <a ng-click="toggle_only_public()" class="label label-primary"
@@ -55,7 +58,7 @@
             <div class="col-sm-4"
                 ng-hide="!<%= $machine->{is_public} %> && only_public">
             <div class="panel panel-success">
-            <div class="panel-heading">
+            <div class="panel-heading" id="step1">
                 <h3 class="panel-title"><a class="btn btn-link"
                    href="/machine/clone/<%= $machine->{id} %>.html" role="button"><%= $machine->{name} %></a>
 %                   if ( !$machine->{is_public} ) {
@@ -69,7 +72,7 @@
 %               }
 
             </div>
-            <div class="panel-body">
+            <div class="panel-body" id="step2">
                 <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
 %               if (!$machine->{is_locked}) {
 %                   if ( $machine->{id_clone} && $machine->{is_active} ) {
@@ -126,7 +129,14 @@
 </div><!-- page header -->
 </div><!-- page wrapper -->
 %= include 'bootstrap/scripts'
+
 </div>
+
+<style>
+.introjs-tooltip {
+    min-width: 450px;
+}
+</style>
 
 %= include 'bootstrap/footer'
 %= include 'bootstrap/messages'
