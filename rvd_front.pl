@@ -667,21 +667,6 @@ sub user_settings {
             push @errors,("Some of the password's fields are empty");
         }
         else {
-<<<<<<< HEAD
-            my $comp_password = $USER->compare_password($c->param('current_password'));
-            if ($comp_password) {
-                if ($c->param('password') eq $c->param('conf_password')) {
-                    eval {
-                        $USER->change_password($c->param('password'));
-                        _logged_in($c);
-                    };
-                    if ($@ =~ /Password too small/) {
-                        push @errors,("New Password is too small");
-                    }
-                    else {
-                        $changed_pass = 1;
-                    };
-=======
             if ($c->param('password') eq $c->param('conf_password')) {
                 eval {
                     $USER->change_password($c->param('password'));
@@ -689,14 +674,13 @@ sub user_settings {
                 };
                 if ($@ =~ /Password too small/) {
                     push @errors,("Password too small")
->>>>>>> d515201c... [#567] Embed netdata
                 }
                 else {
-                    push @errors,("Password fields aren't equal");
+                    $changed_pass = 1;
                 }
             }
             else {
-                push @errors, ("Invalid Current Password");
+                    push @errors,("Password fields aren't equal")
             }
         }
     }
