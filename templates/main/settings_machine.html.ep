@@ -19,7 +19,7 @@
              </div> <!-- del panel heading-->
              <ul class="nav nav-tabs" id="myTab">
                <li class="nav active"><a href="#drivers" data-toggle="tab">Drivers</a></li>
-               % if ( $USER->can_remove ) {
+%            if ( $USER->can_remove || $USER->can_remove_clone_all ) {
                <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
 % }
                <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>

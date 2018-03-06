@@ -875,7 +875,7 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
 
-    my %args )= (
+    my %args = (
            name => $name
         ,vm=> $vm
         ,id_owner => $USER->id
