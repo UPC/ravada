@@ -49,6 +49,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,monitoring => 0
                                               ,admin => {
                                                     hide_clones => 15
                                               }
@@ -799,8 +800,8 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
+                      ,monitoring => ($CONFIG_FRONT->{monitoring} or 0)
     );
-
 }
 
 sub logout {
