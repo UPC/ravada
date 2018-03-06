@@ -17,6 +17,7 @@
     <link href="<%= $csslink %>" rel="stylesheet">
 % }
     <link href="https://use.fontawesome.com/releases/v5.0.7/css/all.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/introjs.css" rel="stylesheet" type="text/css">
 
   <style>
 % foreach my $csssnip (@$csssnippets) {
