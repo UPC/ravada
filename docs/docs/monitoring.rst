@@ -1,8 +1,10 @@
 Server Monitoring 
 =================
 
-In order to support Ravada server monitoring, you have to do a few steps:
+Server monitoring is disable for default. In order to support Ravada server monitoring, you have to do a few steps:
 
+- install `netdata <http://my-netdata.io/>`_ on a ravada server
+- and enable monitoring in ``/etc/rvd_front.conf``
 
 Install my-netdata.io
 ---------------------
@@ -17,10 +19,22 @@ for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
 ::
 
     # bash <(curl -Ss https://my-netdata.io/kickstart-static64.sh)
+Enable monitoring
+-----------------
 
+In ``/etc/rvd_front.conf``:
+
+::
+
+    monitoring => 1
+
+Restart rvd_front service: ``systemctl restart rvd_front.service``
+    
+Tunning netdata
+---------------
 
 Disable mail alarms
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set 
 
