@@ -3,8 +3,8 @@
 
 **Implemented enhancements:**
 
-Allow virtual machines auto-start [\#589]
- Server monitoring support [\#567]
+- Allow virtual machines auto-start [\#589]
+- Server monitoring support [\#567]
 
 **Fixed bugs:**
 
