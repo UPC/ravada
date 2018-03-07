@@ -118,6 +118,7 @@ hook before_routes => sub {
             ,_logged_in => undef
             ,_anonymous => undef
             ,_user => undef
+            ,monitoring => $CONFIG_FRONT->{monitoring}
             );
 
   return access_denied($c)
@@ -823,7 +824,7 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
-                      ,monitoring => ($CONFIG_FRONT->{monitoring} or 0)
+                      ,monitoring => $CONFIG_FRONT->{monitoring}
     );
 }
 
