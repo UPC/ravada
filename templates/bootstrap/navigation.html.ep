@@ -31,9 +31,11 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <li><a href="/admin/messages">
                       <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
                     </li>
+% if ($monitoring) {
                     <li><a href="/admin/monitoring">
                       <i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp<%=l 'monitoring' %></a>
                     </li>
+% }
                   </ul>
                 </li>
 % }
