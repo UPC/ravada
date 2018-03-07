@@ -27,7 +27,11 @@ In ``/etc/rvd_front.conf``:
 
     monitoring => 1
 
-Restart rvd_front service: ``systemctl restart rvd_front.service``
+Restart rvd_front service: 
+
+::
+    
+    systemctl restart rvd_front.service
     
 Tunning netdata
 ---------------
