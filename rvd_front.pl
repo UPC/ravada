@@ -814,6 +814,7 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
+                      ,monitoring => $CONFIG_FRONT->{monitoring}
     );
 
 }
