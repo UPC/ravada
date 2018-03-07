@@ -1,7 +1,7 @@
 Server Monitoring 
 =================
 
-Server monitoring is disable for default. In order to support Ravada server monitoring, you have to do a few steps:
+Server monitoring is disabled for default. In order to support Ravada server monitoring, you have to do a few steps:
 
 - install `netdata <http://my-netdata.io/>`_ on a ravada server
 - and enable monitoring in ``/etc/rvd_front.conf``
