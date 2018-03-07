@@ -30,7 +30,7 @@ VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
     ,'xenial-volume.xml'
     ,'http://releases.ubuntu.com/16.04/'
     ,'ubuntu-16.04.*desktop-i386.iso'
-    ,'http://releases.ubuntu.com/16.04/MD5SUMS'
+    ,'$url/MD5SUMS'
     ,'10'
     );
 
@@ -42,7 +42,7 @@ VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
     ,'xenial64-volume.xml'
     ,'http://releases.ubuntu.com/16.04/'
     ,'ubuntu-16.04.*-desktop-amd64.iso'
-    ,'http://releases.ubuntu.com/16.04/MD5SUMS'
+    ,'$url/MD5SUMS'
     ,'10'
     );
 
