@@ -81,7 +81,7 @@
 </div>
 </div>
 %= include 'bootstrap/scripts'
-%= include 'bootstrap/footer'
+%= include $footer
 <div id="overNotifications" class="notifications" ng-controller="notifCrtl">
 <script type="text/ng-template" id="alert.html">
 <div ng-transclude></div>
