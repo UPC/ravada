@@ -330,12 +330,13 @@ get '/machine/shutdown/(:id).(:type)' => sub {
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)       if !$USER -> can_remove();
+	return access_denied($c)       if (!$USER -> can_remove() || ($USER->can_remove_clone_all && $domain->id_base));
         return remove_machine($c);
 };
 
 any '/machine/remove_clones/(:id).(:type)' => sub {
         my $c = shift;
+	return access_denied($c)       if !$USER -> can_remove_clone_all();
         return remove_clones($c);
 };
 
