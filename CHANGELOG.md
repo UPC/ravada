@@ -18,3 +18,4 @@
 - Prepare base with swap volume fails [\#554]
 - Graphics tab does not work at Machine Settings [\#550]
 - Wrong rules in iptables [\#597]
+- Ubuntu 16.04 ISO fails to download [\#596]
