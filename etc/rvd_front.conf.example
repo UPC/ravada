@@ -15,6 +15,7 @@
   ,group => 'ravada'
   ,secrets => ['changeme1','changeme2']
   ,login_custom => ''
+  ,footer => ''
   ,session_timeout => 5*60
   ,session_timeout_admin => 15*60
 };

@@ -49,6 +49,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,footer => 'bootstrap/footer'
                                               ,admin => {
                                                     hide_clones => 15
                                                     ,autostart => 0
@@ -116,6 +117,7 @@ hook before_routes => sub {
             ,_logged_in => undef
             ,_anonymous => undef
             ,_user => undef
+            ,footer=> $CONFIG_FRONT->{footer}
             );
 
   return access_denied($c)
