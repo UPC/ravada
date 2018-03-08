@@ -1342,7 +1342,7 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
-    @iptables_arg = ( '0.0.0.0'
+    @iptables_arg = ( '0.0.0.0/0'
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
     
@@ -1406,8 +1406,9 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-        $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
 	}
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
