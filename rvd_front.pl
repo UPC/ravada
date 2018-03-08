@@ -54,7 +54,10 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
                                               ,footer => 'bootstrap/footer'
+<<<<<<< 90738dc59c60aa9ab396a2d964f5c5c47d8de6b7
                                               ,monitoring => 0
+=======
+>>>>>>> [#559]I have added the option to customize the footer
                                               ,admin => {
                                                     hide_clones => 15
                                               }
@@ -120,10 +123,13 @@ hook before_routes => sub {
             ,_anonymous => undef
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
+<<<<<<< 90738dc59c60aa9ab396a2d964f5c5c47d8de6b7
 <<<<<<< HEAD
 =======
             ,monitoring => $CONFIG_FRONT->{monitoring}
 >>>>>>> 6695c52cd536735c2fc51bc35d759673986bf405
+=======
+>>>>>>> [#559]I have added the option to customize the footer
             );
 
   return access_denied($c)
