@@ -17,3 +17,4 @@
 - Add USB redir option in .vv file [\#474]
 - Prepare base with swap volume fails [\#554]
 - Graphics tab does not work at Machine Settings [\#550]
+- Wrong rules in iptables [\#597]
