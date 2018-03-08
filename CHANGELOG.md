@@ -8,3 +8,4 @@
 
 **Fixed bugs:**
 
+- Wrong rules in iptables [\#597]
