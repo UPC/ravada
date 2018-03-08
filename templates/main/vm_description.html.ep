@@ -10,7 +10,8 @@
                 <div class="col-md-12">
                     <label for="description">This information will be available to the users.</label>
                     <br/>
-                    <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>                </div>
+                    <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-6">
