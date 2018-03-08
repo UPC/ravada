@@ -1,6 +1,15 @@
 Server Monitoring 
 =================
 
+From VM settings tab you can see the VM system overview:
+
+.. image:: ../../img/monit_vm.png
+
+And for admin role you can see the server:
+
+.. image:: ../../img/monit.png
+
+
 Server monitoring is disabled for default. In order to support Ravada server monitoring, you have to do a few steps:
 
 - install `netdata <http://my-netdata.io/>`_ on a ravada server
