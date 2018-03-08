@@ -1407,7 +1407,8 @@ sub _obj_iptables {
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
 	}
-    $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
