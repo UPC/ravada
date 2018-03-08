@@ -27,7 +27,7 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
-%       if ( $public_bases ) {
+%       if ( $guide and $public_bases ) {
             <a class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
 %           }
 %           if ($user->is_admin && $public_bases && $private_bases) {

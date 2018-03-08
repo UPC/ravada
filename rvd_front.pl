@@ -48,6 +48,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
+                                              ,guide => 0
                                               ,login_custom => ''
                                               ,footer => 'bootstrap/footer'
                                               ,monitoring => 0
@@ -125,6 +126,7 @@ hook before_routes => sub {
             ,monitoring => $CONFIG_FRONT->{monitoring}
             ,host => $host
             ,footer=> $CONFIG_FRONT->{footer}
+            ,guide => $CONFIG_FRONT->{guide}
             );
 
   return access_denied($c)
@@ -821,6 +823,7 @@ sub login {
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,monitoring => $CONFIG_FRONT->{monitoring}
+                      ,guide => $CONFIG_FRONT->{guide}
     );
 }
 
