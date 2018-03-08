@@ -1,3 +1,5 @@
+% if ($monitoring) {
+
 <div class="panel-body">
 %   if ($message) {
         <div class="panel panel-success">
@@ -19,3 +21,4 @@
 %   }
     </div>
 </div>
+% }

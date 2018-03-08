@@ -49,6 +49,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
+                                              ,monitoring => 0
                                               ,admin => {
                                                     hide_clones => 15
                                                     ,autostart => 0
@@ -116,6 +117,7 @@ hook before_routes => sub {
             ,_logged_in => undef
             ,_anonymous => undef
             ,_user => undef
+            ,monitoring => $CONFIG_FRONT->{monitoring}
             );
 
   return access_denied($c)
@@ -810,8 +812,8 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
+                      ,monitoring => $CONFIG_FRONT->{monitoring}
     );
-
 }
 
 sub logout {
