@@ -7,10 +7,10 @@
     <div class="form-group">
         <form class="form-inline" action="<%= $action %>" accept-charset="ISO-8859-1" method="post">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <label for="description">This information will be available to the users.</label>
                     <br/>
-                    <textarea name="description" class="col-md-12" rows="6" placeholder="Description"><%= $domain->description %></textarea>
+                    <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
                 </div>
             </div>
             <div class="row">

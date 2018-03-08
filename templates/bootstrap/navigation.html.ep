@@ -33,6 +33,11 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <li><a href="/admin/messages">
                     <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp<%=l 'messages' %></a>
                     </li>
+% if ($monitoring) {
+                    <li><a href="/admin/monitoring">
+                      <i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp<%=l 'monitoring' %></a>
+                    </li>
+% }
                   </ul>
                 </li>
 % }
@@ -40,7 +45,7 @@ navbar-inverse navbar-fixed-top" role="navigation">
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;<%=l 'Help' %><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="/requirements"><i class="fa fa-gears"></i>&nbsp;<%=l 'Requirements' %></a></li>
+                        <li><a href="/requirements"><i class="fa fa-cogs"></i>&nbsp;<%=l 'Requirements' %></a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="/about"><i class="fa fa-info-circle"></i>&nbsp;<%=l 'About' %></a></li>
                     </ul>

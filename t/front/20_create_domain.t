@@ -148,6 +148,13 @@ for my $vm_name ('Void','KVM','LXC') {
     eval { $display = $RVD_FRONT->domdisplay($name ) };
     ok(!$display,"No display should b e returned with no user");
 
+    ok($domain->internal_id,"[$vm_name] Expecting an internal id , got ".($domain->internal_id or ''));
+    if ($domain->type =~ /kvm/i) {
+        my $domain_back = rvd_back->search_domain($domain->name);
+        is($domain->internal_id, $domain_back->domain->get_id);
+    }
+
+
     test_remove_domain($name);
 }
 }

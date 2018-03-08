@@ -16,7 +16,7 @@
 % foreach my $csslink (@$css) {
     <link href="<%= $csslink %>" rel="stylesheet">
 % }
-    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="https://use.fontawesome.com/releases/v5.0.7/css/all.css" rel="stylesheet">
 
   <style>
 % foreach my $csssnip (@$csssnippets) {

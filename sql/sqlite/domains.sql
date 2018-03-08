@@ -18,6 +18,7 @@ CREATE TABLE `domains` (
 ,  `status` varchar(32) default 'shutdown'
 ,  `display` varchar(128) default NULL
 ,  `info` varchar(255) default NULL
+,  `internal_id` varchar(64) DEFAULT NULL
 ,  UNIQUE (`id_base`,`name`)
 ,  UNIQUE (`name`)
 );

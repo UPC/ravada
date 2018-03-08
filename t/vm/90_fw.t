@@ -178,6 +178,30 @@ sub test_fw_ssh {
     test_chain_prerouting($vm_name, $local_ip, $port, $domain_ip, 0);
 
 }
+
+sub test_jump {
+    my ($vm_name, $domain_name) = @_;
+    my $out = `iptables -L INPUT -n`;
+    my $count = 0;
+    for my $line ( split /\n/,$out ) {
+        next if $line !~ /^[A-Z]+ /;
+        $count++;
+        next if $line !~ /^RAVADA/;
+        `iptables -D INPUT $count`;
+    }
+    $out = `iptables -L INPUT -n`;
+    ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out");
+
+    my $vm =$RVD_BACK->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_name);
+
+    $domain->start(user_admin)  if !$domain->is_active;
+
+    $domain->open_iptables(remote_ip => '1.1.1.1', uid => user_admin->id);
+
+    $out = `iptables -L INPUT -n`;
+    ok(grep(/^RAVADA /, split(/\n/,$out)),"Expecting RAVADA jump in $out");
+}
 #######################################################
 
 remove_old_domains();
@@ -214,6 +238,8 @@ for my $vm_name (qw( Void KVM )) {
 
         my $domain2 = test_create_domain($vm_name);
         test_fw_domain_stored($vm_name, $domain2->name);
+
+        test_jump($vm_name, $domain2->name);
     };
 }
 flush_rules() if !$>;
