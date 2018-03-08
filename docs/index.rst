@@ -96,6 +96,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/tuning
    devel-docs/translations
    docs/monitoring
+   docs/guide
 
 .. _about-docs:
 
