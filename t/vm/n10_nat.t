@@ -59,7 +59,7 @@ sub test_nat($vm_name) {
     ok($ip, "Expecting an IP , got ''") or return;
 
     test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => $REMOTE_IP);
-    test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => '0.0.0.0'
+    test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP');
 
 
@@ -70,7 +70,7 @@ sub test_nat($vm_name) {
 
     test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => $REMOTE_IP
         , enabled => 0);
-    test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => '0.0.0.0'
+    test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP', enabled => 0);
 
     #--------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ sub test_nat($vm_name) {
 
     test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => $REMOTE_IP
         , msg => "display");
-    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0'
+    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP');
 
 
@@ -106,7 +106,7 @@ sub test_nat($vm_name) {
 
     test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => $REMOTE_IP
         , enabled => 0);
-    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0'
+    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP', enabled => 0);
 
     #--------------------------------------------------------------------------------
@@ -127,14 +127,14 @@ sub test_nat($vm_name) {
 
     test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => $REMOTE_IP
         , msg => 'nat');
-    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0'
+    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP', msg => 'nat');
 
     $domain->shutdown_now(user_admin)   if $domain->is_active;
 
     test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => $REMOTE_IP
         , enabled => 0, msg => 'nat');
-    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0'
+    test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP', enabled => 0, msg => 'nat');
 
     unlink($file_config);
