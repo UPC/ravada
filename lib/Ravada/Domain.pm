@@ -252,12 +252,15 @@ sub _allow_remove($self, $user) {
     confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
-        if !$user->can_remove();
+        if (!$user->can_remove());
 
     $self->_check_has_clones() if $self->is_known();
-    if ($self->is_known() && $user->can_remove_clone() && $self->id_base) {
+    if ( $self->is_known
+        && $self->id_base
+        && ($user->can_remove_clone() || $user->can_remove_clone_all())
+    ) {
         my $base = $self->open($self->id_base);
-        return if $base->id_owner == $user->id;
+        return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
     $self->_allowed($user);
 

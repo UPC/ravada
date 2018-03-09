@@ -8,22 +8,21 @@
             </div>
 
             <div ng-show="!domain_remove_done">
-                <h2 class="Subhead-heading">
-                Danger Zone
-                </h2>
-                    <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
-					<a ng-show="showmachine.has_clones>0" type="button" class="btn btn-danger"
+ %              if ($USER->can_remove_clone_all) {
+                <a ng-show="showmachine.has_clones > 0" type="button" class="btn btn-danger"
                               ng-click="domain_remove_clones=1"
                           >
                           <%=l 'Remove Clones' %>
-               		</a>
-                    <a type="button" class="btn btn-danger"
+                </a>
+%                }
+%               if (($USER->can_remove_clone_all && $domain->id_base != 0) || $domain->id_base == 0) { 
+                <a type="button" class="btn btn-danger"
                               ng-hide="showmachine.has_clones > 0"
                               ng-click="domain_remove=1"
-                            >
-                            <%=l 'Delete this machine' %>
-                    </a>
-                    <input type="button" value="Cancel" onclick = "location='/admin/machines'"/>
+                          >
+                          <%=l 'Remove' %>
+                </a>
+%              }
             </div>
 
             <div ng-show="domain_remove">
