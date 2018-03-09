@@ -9,7 +9,7 @@ use Test::SQL::Data;
 use_ok('Ravada');
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $ravada = Ravada->new( connector => $test->connector);
+my $ravada = Ravada->new( connector => $test->connector, config => 't/etc/ravada.conf');
 
 my @images = $ravada->list_images();
 

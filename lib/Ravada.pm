@@ -3,11 +3,12 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.2.7-beta1';
+our $VERSION = '0.3.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
+use File::Copy;
 use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
@@ -15,10 +16,34 @@ use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada::Auth;
 use Ravada::Request;
-use Ravada::VM::KVM;
 use Ravada::VM::Void;
+
+our %VALID_VM;
+our %ERROR_VM;
+
+eval {
+    require Ravada::VM::KVM and do {
+        Ravada::VM::KVM->import;
+    };
+    $VALID_VM{KVM} = 1;
+};
+$ERROR_VM{KVM} = $@;
+
+eval {
+    require Ravada::VM::Void and do {
+        Ravada::VM::Void->import;
+    };
+    $VALID_VM{Void} = 1;
+};
+$ERROR_VM{Void} = $@;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 =head1 NAME
 
@@ -34,6 +59,7 @@ Ravada - Remove Virtual Desktop Manager
 
 
 our $FILE_CONFIG = "/etc/ravada.conf";
+$FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 ###########################################################################
 
@@ -93,7 +119,7 @@ sub BUILD {
     if ($self->config()) {
         _init_config($self->config);
     } else {
-        _init_config($FILE_CONFIG) if -e $FILE_CONFIG;
+        _init_config($FILE_CONFIG) if $FILE_CONFIG && -e $FILE_CONFIG;
     }
 
     if ( $self->connector ) {
@@ -146,15 +172,58 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        zesty => {
+        mate_artful => {
+                    name => 'Ubuntu Mate Artful'
+            ,description => 'Ubuntu Mate 17.10.1 (Artful) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+                ,min_disk_size => '10'
+        },
+        mate_xenial => {
+                    name => 'Ubuntu Mate Xenial'
+            ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+                ,min_disk_size => '10'
+        },
+        alpine_37 => {
+                    name => 'Alpine 3.7'
+            ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
+                ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
+                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+                ,min_disk_size => '10'
+        }
+        ,artful => {
+                    name => 'Ubuntu Artful Aardvark'
+            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/17.10/'
+                ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '10'
+        }
+        ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
             ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.04/'
-                ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
+                ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,min_disk_size => '10'
         }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
@@ -166,6 +235,7 @@ sub _update_isos {
         ,file_re => 'linuxmint-18.1-mate-64bit.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+            ,min_disk_size => '10'
 
         }
         ,fedora => {
@@ -175,7 +245,40 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
+        }
+        ,fedora_26 => {
+            name => 'Fedora 26'
+            ,description => 'RedHat Fedora 26 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-26-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
+        }
+        ,fedora_27 => {
+            name => 'Fedora 27'
+            ,description => 'RedHat Fedora 27 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-27-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
+        }
+        ,xubuntu_artful => {
+            name => 'Xubuntu Artful Aardvark'
+            ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
+            ,file_re => 'mini.iso'
+            ,rename_file => 'xubuntu_artful.iso'
+            ,min_disk_size => '10'
         }
         ,xubuntu_zesty => {
             name => 'Xubuntu Zesty Zapus'
@@ -183,8 +286,11 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
-            ,md5 => '6bd80e10bf223a04d3aafe0f997d046b'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot/mini.iso'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot'
+            ,file_re => 'mini.iso'
+            ,rename_file => 'xubuntu_zesty_mini.iso'
+            ,min_disk_size => '10'
         }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
@@ -193,45 +299,348 @@ sub _update_isos {
            ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
+            ,rename_file => 'xubuntu_xenial_mini.iso'
+            ,min_disk_size => '10'
         }
-        ,lubuntu_zesty => {
-            name => 'Lubuntu Zesty Zapus'
-            ,description => 'Lubuntu 17.04 Zesty Zapus 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/lubuntu-17.04-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.04/release/MD5SUMS'
+       ,lubuntu_aardvark => {
+            name => 'Lubuntu Artful Aardvark'
+            ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
         }
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/lubuntu-16.04.2-desktop-amd64.iso'
-            ,md5_url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.2/release/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.*/release/'
+            ,file_re => 'lubuntu-16.04.*-desktop-amd64.iso'
+            ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
         }
-
+        ,debian_jessie_32 => {
+            name =>'Debian Jessie 32 bits'
+            ,description => 'Debian 8 Jessie 32 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_jessie_64 => {
+            name =>'Debian Jessie 64 bits'
+            ,description => 'Debian 8 Jessie 64 bits'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_stretch => {
+            name =>'Debian Stretch 64 bits'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,windows_7 => {
+          name => 'Windows 7'
+          ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
+            .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_7.xml'
+          ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
+        }
+        ,windows_10 => {
+          name => 'Windows 10'
+          ,description => 'Windows 10 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_10.xml'
+          ,xml_volume => 'windows10-volume.xml'
+          ,min_disk_size => '21'
+        }
+        ,windows_xp => {
+          name => 'Windows XP'
+          ,description => 'Windows XP 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_xp.xml'
+          ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '3'
+        }
+        ,windows_12 => {
+          name => 'Windows 2012'
+          ,description => 'Windows 2012 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_12.xml'
+          ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
+        }
+        ,windows_8 => {
+          name => 'Windows 8.1'
+          ,description => 'Windows 8.1 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_8.xml'
+          ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
+        }
     );
 
+    $self->_update_table($table, $field, \%data);
+
+}
+
+sub _update_domain_drivers_types($self) {
+
+    my $data = {
+        image => {
+            id => 4,
+            ,name => 'image'
+           ,description => 'Graphics Options'
+           ,vm => 'KVM'
+        },
+        jpeg => {
+            id => 5,
+            ,name => 'jpeg'
+           ,description => 'Graphics Options'
+           ,vm => 'KVM'
+        },
+        zlib => {
+            id => 6,
+            ,name => 'zlib'
+           ,description => 'Graphics Options'
+           ,vm => 'KVM'
+        },
+        playback => {
+            id => 7,
+            ,name => 'playback'
+           ,description => 'Graphics Options'
+           ,vm => 'KVM'
+
+        },
+        streaming => {
+            id => 8,
+            ,name => 'streaming'
+           ,description => 'Graphics Options'
+           ,vm => 'KVM'
+
+        }
+    };
+    $self->_update_table('domain_drivers_types','id',$data);
+}
+
+sub _update_domain_drivers_options($self) {
+
+    my $data = {
+        qxl => {
+            id => 1,
+            ,id_driver_type => 1,
+            ,name => 'QXL'
+           ,value => 'type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"'
+        },
+        vmvga => {
+            id => 2,
+            ,id_driver_type => 1,
+            ,name => 'VMVGA'
+           ,value => 'type="vmvga" vram="16384" heads="1" primary="yes"'
+        },
+        cirrus => {
+            id => 3,
+            ,id_driver_type => 1,
+            ,name => 'Cirrus'
+           ,value => 'type="cirrus" vram="16384" heads="1" primary="yes"'
+        },
+        vga => {
+            id => 4,
+            ,id_driver_type => 1,
+            ,name => 'VGA'
+           ,value => 'type="vga" vram="16384" heads="1" primary="yes"'
+        },
+        ich6 => {
+            id => 6,
+            ,id_driver_type => 2,
+            ,name => 'ich6'
+           ,value => 'model="ich6"'
+        },
+        ac97 => {
+            id => 7,
+            ,id_driver_type => 2,
+            ,name => 'ac97'
+           ,value => 'model="ac97"'
+        },
+        virtio => {
+            id => 8,
+            ,id_driver_type => 3,
+            ,name => 'virtio'
+           ,value => 'type="virtio"'
+        },
+        e1000 => {
+            id => 9,
+            ,id_driver_type => 3,
+            ,name => 'e1000'
+           ,value => 'type="e1000"'
+        },
+        rtl8139 => {
+            id => 10,
+            ,id_driver_type => 3,
+            ,name => 'rtl8139'
+           ,value => 'type="rtl8139"'
+        },
+        auto_glz => {
+            id => 11,
+            ,id_driver_type => 4,
+            ,name => 'auto_glz'
+           ,value => 'compression="auto_glz"'
+        },
+        auto_lz => {
+            id => 12,
+            ,id_driver_type => 4,
+            ,name => 'auto_lz'
+           ,value => 'compression="auto_lz"'
+        },
+        quic => {
+            id => 13,
+            ,id_driver_type => 4,
+            ,name => 'quic'
+           ,value => 'compression="quic"'
+        },
+        glz => {
+            id => 14,
+            ,id_driver_type => 4,
+            ,name => 'glz'
+           ,value => 'compression="glz"'
+        },
+        lz => {
+            id => 15,
+            ,id_driver_type => 4,
+            ,name => 'lz'
+           ,value => 'compression="lz"'
+        },
+        off => {
+            id => 16,
+            ,id_driver_type => 4,
+            ,name => 'off'
+           ,value => 'compression="off"'
+        },
+        auto => {
+            id => 17,
+            ,id_driver_type => 5,
+            ,name => 'auto'
+           ,value => 'compression="auto"'
+        },
+        never => {
+            id => 18,
+            ,id_driver_type => 5,
+            ,name => 'never'
+           ,value => 'compression="never"'
+        },
+        always => {
+            id => 19,
+            ,id_driver_type => 5,
+            ,name => 'always'
+           ,value => 'compression="always"'
+        },
+        auto1 => {
+            id => 20,
+            ,id_driver_type => 6,
+            ,name => 'auto'
+           ,value => 'compression="auto"'
+        },
+        never1 => {
+            id => 21,
+            ,id_driver_type => 6,
+            ,name => 'never'
+           ,value => 'compression="never"'
+        },
+        always1 => {
+            id => 22,
+            ,id_driver_type => 6,
+            ,name => 'always'
+           ,value => 'compression="always"'
+        },
+        on => {
+            id => 23,
+            ,id_driver_type => 7,
+            ,name => 'on'
+           ,value => 'compression="on"'
+        },
+        off1 => {
+            id => 24,
+            ,id_driver_type => 7,
+            ,name => 'off'
+           ,value => 'compression="off"'
+        },
+        filter => {
+            id => 25,
+            ,id_driver_type => 8,
+            ,name => 'filter'
+           ,value => 'mode="filter"'
+        },
+        all => {
+            id => 26,
+            ,id_driver_type => 8,
+            ,name => 'all'
+           ,value => 'mode="all"'
+        },
+        off2 => {
+            id => 27,
+            ,id_driver_type => 8,
+            ,name => 'off'
+           ,value => 'mode="off"'
+        }
+    };
+    $self->_update_table('domain_drivers_options','id',$data);
+}
+
+sub _update_table($self, $table, $field, $data) {
+
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %data) {
-        my $row = $data{$name};
+    for my $name (keys %$data) {
+        my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
         next if $id;
         warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
-            "INSERT INTO iso_images "
+            "INSERT INTO $table "
             ."("
-            .join(" , ", sort keys %{$data{$name}})
+            .join(" , ", sort keys %{$data->{$name}})
             .")"
             ." VALUES ( "
-            .join(" , ", map { "?" } keys %{$data{$name}})
+            .join(" , ", map { "?" } keys %{$data->{$name}})
             ." )"
         ;
         my $sth = $CONNECTOR->dbh->prepare($sql);
-        $sth->execute(map { $data{$name}->{$_} } sort keys %{$data{$name}});
+        $sth->execute(map { $data->{$name}->{$_} } sort keys %{$data->{$name}});
+        $sth->finish;
+    }
+}
+
+sub _remove_old_isos {
+    my $self = shift;
+    for my $sql (
+        "DELETE FROM iso_images "
+            ."  WHERE url like '%debian-9.0%iso'"
+        ,"DELETE FROM iso_images"
+            ."  WHERE name like 'Debian%' "
+            ."      AND NOT url  like '%*%' "
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Lubuntu Artful%'"
+            ."      AND url NOT LIKE '%*%' "
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Lubuntu Zesty%'"
+
+    ) {
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute();
         $sth->finish;
     }
 }
@@ -239,10 +648,39 @@ sub _update_isos {
 sub _update_data {
     my $self = shift;
 
+    $self->_remove_old_isos();
     $self->_update_isos();
     $self->_update_user_grants();
+    $self->_update_domain_drivers_types();
+    $self->_update_domain_drivers_options();
+    $self->_update_old_qemus();
 }
 
+sub _update_old_qemus($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms SET vm_type='KVM'"
+        ." WHERE vm_type='qemu' AND name ='KVM_localhost'"
+    );
+    $sth->execute;
+
+}
+
+sub _set_url_isos($self, $new_url='http://localhost/iso/') {
+    $new_url .= '/' if $new_url !~ m{/$};
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,url FROM iso_images "
+        ."WHERE url is NOT NULL"
+    );
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE iso_images set url=? WHERE id=?"
+    );
+    $sth->execute();
+    while ( my ($id, $url) = $sth->fetchrow) {
+        $url =~ s{\w+://(.*?)/(.*)}{$new_url$2};
+        $sth_update->execute($url, $id);
+    }
+    $sth->finish;
+
+}
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -256,6 +694,24 @@ sub _upgrade_table {
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
     return 1;
+}
+
+sub _remove_field {
+    my $self = shift;
+    my ($table, $field ) = @_;
+
+    my $dbh = $CONNECTOR->dbh;
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return if !$row;
+
+    warn "INFO: removing $field to $table\n"  if $0 !~ /\.t$/;
+    $dbh->do("alter table $table drop column $field");
+    return 1;
+
 }
 
 sub _create_table {
@@ -314,6 +770,16 @@ sub _create_tables {
     closedir $ls;
 }
 
+sub _clean_iso_mini {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE device like ?");
+    $sth->execute('%/mini.iso');
+    $sth->finish;
+
+    $sth = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE url like ? AND rename_file = NULL");
+    $sth->execute('%/mini.iso');
+    $sth->finish;
+}
+
 sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
@@ -325,11 +791,14 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 
+    $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
+    $self->_clean_iso_mini();
     $self->_upgrade_table('iso_images','md5_url','varchar(255)');
     $self->_upgrade_table('iso_images','sha256','varchar(255)');
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+    $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -343,6 +812,18 @@ sub _upgrade_tables {
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
 
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
+    $self->_upgrade_table('domains','description','text DEFAULT NULL');
+    $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','start_time','int DEFAULT 0');
+    $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+
+    $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
+    $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
+    $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
+    $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
+
+    $self->_upgrade_table('domains_network','allowed','int not null default 1');
+
 }
 
 
@@ -351,10 +832,24 @@ sub _connect_dbh {
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
     my $db_pass = ($CONFIG->{db}->{password} or undef);
     my $db = ( $CONFIG->{db}->{db} or 'ravada' );
-    return DBIx::Connector->new("DBI:$driver:$db"
+    my $host = $CONFIG->{db}->{host};
+
+    my $data_source = "DBI:$driver:$db";
+    $data_source = "DBI:$driver:database=$db;host=$host"    
+        if $host && $host ne 'localhost';
+
+    my $con;
+    for my $try ( 1 .. 10 ) {
+        eval { $con = DBIx::Connector->new($data_source
                         ,$db_user,$db_pass,{RaiseError => 1
                         , PrintError=> 0 });
-
+            $con->dbh();
+        };
+        return $con if $con && !$@;
+        sleep 1;
+        warn "Try $try $@\n";
+    }
+    die ($@ or "Can't connect to $driver $db at $host");
 }
 
 =head2 display_ip
@@ -364,46 +859,74 @@ Returns the default display IP read from the config file
 =cut
 
 sub display_ip {
-
     my $ip = $CONFIG->{display_ip};
-
     return $ip if $ip;
 }
 
+=head2 nat_ip
+
+Returns the IP for NATed environments
+
+=cut
+
+sub nat_ip {
+    return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
+}
+
 sub _init_config {
-    my $file = shift;
+    my $file = shift or confess "ERROR: Missing config file";
 
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
-    $CONFIG = YAML::LoadFile($file);
+    die "ERROR: Missing config file $file\n"
+        if !-e $file;
+
+    eval { $CONFIG = YAML::LoadFile($file) };
+
+    die "ERROR: Format error in config file $file\n$@"  if $@;
+
+    $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
     $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
+
+    _init_config_vm();
+}
+
+sub _init_config_vm {
+
+    for my $vm ( @{$CONFIG->{vm}} ) {
+        warn "$vm not available in this system.\n".($ERROR_VM{$vm})
+            if !$VALID_VM{$vm} && $0 !~ /\.t$/;
+    }
+
+    delete $VALID_VM{Void}
+        if !grep /^Void$/,@{$CONFIG->{vm}};
+
+    @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
 
 sub _create_vm_kvm {
     my $self = shift;
+    die "KVM not installed" if !$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
 
-    return(undef,"ERROR: Missing qemu-img") if !$cmd_qemu_img;
+    die "ERROR: Missing qemu-img" if !$cmd_qemu_img;
 
     my $vm_kvm;
 
-    eval { $vm_kvm = Ravada::VM::KVM->new( connector => ( $self->connector or $CONNECTOR )) };
-    my $err_kvm = $@;
+    $vm_kvm = Ravada::VM::KVM->new( );
 
     my ($internal_vm , $storage);
-    eval {
-        $storage = $vm_kvm->dir_img();
-        $internal_vm = $vm_kvm->vm;
-    };
-    $vm_kvm = undef if $@ || !$internal_vm || !$storage;
-    $err_kvm .= ($@ or '');
-    return ($vm_kvm,$err_kvm);
+    $storage = $vm_kvm->dir_img();
+    $internal_vm = $vm_kvm->vm;
+    $vm_kvm = undef if !$internal_vm || !$storage;
+
+    return $vm_kvm;
 }
 
 =head2 disconnect_vm
@@ -447,28 +970,40 @@ sub _connect_vm {
     }
 }
 
+sub _create_vm_lxc {
+    my $self = shift;
+
+    return Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR ));
+}
+
+sub _create_vm_void {
+    my $self = shift;
+
+    return Ravada::VM::Void->new( connector => ( $self->connector or $CONNECTOR ));
+}
+
 sub _create_vm {
     my $self = shift;
 
+    # TODO: add a _create_vm_default for VMs that just are created with ->new
+    #       like Void or LXC
+    my %create = (
+        'KVM' => \&_create_vm_kvm
+        ,'LXC' => \&_create_vm_lxc
+        ,'Void' => \&_create_vm_void
+    );
+
     my @vms = ();
+    my $err;
 
-    my ($vm_kvm, $err_kvm) = $self->_create_vm_kvm();
-    warn $err_kvm if $err_kvm && $0 !~ /\.t$/;
-
-    my $err = $err_kvm;
-
-    push @vms,($vm_kvm) if $vm_kvm;
-
-    my $vm_lxc;
-    if ($CAN_LXC) {
-        eval { $vm_lxc = Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR )) };
-        push @vms,($vm_lxc) if $vm_lxc;
-        my $err_lxc = $@;
-        $err .= "\n$err_lxc" if $err_lxc;
+    for my $vm_name (keys %VALID_VM) {
+        my $vm;
+        eval { $vm = $create{$vm_name}->($self) };
+        $err.= $@ if $@;
+        push @vms,($vm) if $vm;
     }
-    if (!@vms) {
-        warn "No VMs found: $err\n" if $self->warn_error;
-    }
+    die "No VMs found: $err\n" if $self->warn_error && !@vms;
+
     return \@vms;
 
 }
@@ -525,7 +1060,10 @@ sub create_domain {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    $vm = $self->vm->[0]               if !$vm;
+    if ($args{id_base}) {
+        my $base = Ravada::Domain->open($args{id_base});
+        $vm = Ravada::VM->open($base->_vm->id);
+    }
 
     confess "No vm found"   if !$vm;
 
@@ -534,7 +1072,14 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    return $vm->create_domain(@_);
+    my $domain;
+    eval { $domain = $vm->create_domain(@_) };
+    my $error = $@;
+    $request->error($error) if $error;
+    if ($error =~ /has \d+ requests/) {
+        $request->status('retry');
+    }
+    return $domain;
 }
 
 =head2 remove_domain
@@ -620,24 +1165,58 @@ sub search_domain_by_id {
     return $self->search_domain($name);
 }
 
+=head2 list_vms
+
+List all the Virtual Machine Managers
+
+=cut
+
+sub list_vms($self) {
+    return @{$self->vm};
+}
+
 =head2 list_domains
 
 List all created domains
 
   my @list = $ravada->list_domains();
 
+This list can be filtered:
+
+  my @active = $ravada->list_domains(active => 1);
+  my @inactive = $ravada->list_domains(active => 0);
+
+  my @user_domains = $ravada->list_domains(user => $id_user);
+
+  my @user_active = $ravada->list_domains(user => $id_user, active => 1);
+
 =cut
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
+
+    my $active = delete $args{active};
+    my $user = delete $args{user};
+
+    die "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
     my @domains;
-    for my $vm (@{$self->vm}) {
+    for my $vm ($self->list_vms) {
         for my $domain ($vm->list_domains) {
+            next if defined $active &&
+                ( $domain->is_active && !$active
+                    || !$domain->is_active && $active );
+
+            next if $user && $domain->id_owner != $user->id;
+
             push @domains,($domain);
         }
     }
     return @domains;
 }
+
 
 =head2 list_domains_data
 
@@ -696,7 +1275,7 @@ sub list_bases {
     for my $vm (@{$self->vm}) {
         for my $domain ($vm->list_domains) {
             eval { $domain->id };
-            warn $@ if $@;
+            confess $@ if $@;
             next    if $@;
             push @domains,($domain) if $domain->is_base;
         }
@@ -848,7 +1427,7 @@ sub process_requests {
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
-        ."    ( status='requested' OR status like 'retry %' OR status='waiting')"
+        ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
         ." ORDER BY date_req"
     );
@@ -885,6 +1464,8 @@ sub process_requests {
             if ( $n_retry < 3) {
                 warn $req->id." ".$req->command." to retry" if $DEBUG;
                 $req->status("retry ".++$n_retry)
+            } else {
+                $req->status("done");
             }
         }
         next if !$DEBUG && !$debug;
@@ -997,12 +1578,14 @@ sub _execute {
     confess "Unknown command ".$request->command
             if !$sub;
 
+    $request->error('');
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
-        $request->error($err);
-        $request->status('done') if $request->status() ne 'done';
+        $request->status('done') if $request->status() ne 'done'
+                                    && $request->status !~ /retry/;
+        $request->error($err) if $err;
         return $err;
     }
 
@@ -1041,7 +1624,9 @@ sub _do_execute_command {
     };
     my $err = ( $@ or '');
     $request->error($err);
-    $request->status('done') if $request->status() ne 'done';
+    $request->status('done') 
+        if $request->status() ne 'done'
+            && $request->status() !~ /^retry/i;
     exit;
 
 }
@@ -1076,6 +1661,28 @@ sub _cmd_screenshot {
     $request->error("No data received") if !$bytes;
 }
 
+sub _cmd_copy_screenshot {
+    my $self = shift;
+    my $request = shift;
+    
+    my $id_domain = $request->args('id_domain');  
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    my $id_base = $domain->id_base;
+    my $base = $self->search_domain_by_id($id_base);
+
+    if (!$domain->file_screenshot) {
+        die "I don't have the screenshot of the domain ".$domain->name;
+    } else {
+
+        my $base_screenshot = $domain->file_screenshot();
+    
+        $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
+        $base->_post_screenshot($base_screenshot);  
+
+        copy($domain->file_screenshot, $base_screenshot); 
+    }
+}
 
 sub _cmd_create{
     my $self = shift;
@@ -1095,9 +1702,9 @@ sub _cmd_create{
             .$request->args('name')."</a>"
             ." created."
         ;
+        $request->status('done',$msg);
     }
 
-    $request->status('done',$msg);
 
 }
 
@@ -1262,6 +1869,21 @@ sub _cmd_open_iptables {
     );
 }
 
+sub _cmd_clone($self, $request) {
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+
+    my @args = ( request => $request);
+    push @args, ( memory => $request->args('memory'))
+        if $request->defined_arg('memory');
+
+    $domain->clone(
+        name => $request->args('name')
+        ,user => Ravada::Auth::SQL->search_by_id($request->args('uid'))
+        ,@args
+    );
+
+}
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -1350,13 +1972,14 @@ sub _cmd_download {
 
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
+    my $verbose = $request->defined_arg('verbose');
 
     my $iso = $vm->_search_iso($id_iso);
     if ($iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
-    my $device_cdrom = $vm->_iso_name($iso, $request);
+    my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
 }
 
 sub _cmd_shutdown {
@@ -1364,16 +1987,27 @@ sub _cmd_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $name = $request->defined_arg('name');
+    my $id_domain = $request->defined_arg('id_domain');
     my $timeout = ($request->args('timeout') or 60);
 
+    confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
+
     my $domain;
+    if ($name) {
     $domain = $self->search_domain($name);
     die "Unknown domain '$name'\n" if !$domain;
+    }
+    if ($id_domain) {
+        my $domain2 = $self->search_domain_by_id($id_domain);
+        die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
+            if $domain && $domain->name ne $domain2->name;
+        $domain = $domain2;
+    }
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    $domain->shutdown(timeout => $timeout, name => $name, user => $user
+    $domain->shutdown(timeout => $timeout, user => $user
                     , request => $request);
 
 }
@@ -1383,11 +2017,11 @@ sub _cmd_force_shutdown {
     my $request = shift;
 
     my $uid = $request->args('uid');
-    my $name = $request->args('name');
+    my $id_domain = $request->args('id_domain');
 
     my $domain;
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+    $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
@@ -1446,13 +2080,25 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
+sub _cmd_refresh_storage($self, $request) {
+
+    my $vm;
+    if ($request->defined_arg('id_vm')) {
+        $vm = Ravada::VM->open($request->defined_arg('id_vm'));
+    } else {
+        $vm = $self->search_vm('KVM');
+    }
+    $vm->refresh_storage();
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
 
     my %methods = (
 
-          start => \&_cmd_start
+          clone => \&_cmd_clone
+         ,start => \&_cmd_start
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
@@ -1463,6 +2109,7 @@ sub _req_method {
     ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
+    ,copy_screenshot => \&_cmd_copy_screenshot
    ,remove_base => \&_cmd_remove_base
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
@@ -1470,6 +2117,8 @@ sub _req_method {
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
+,refresh_storage => \&_cmd_refresh_storage
+
     );
     return $methods{$cmd};
 }
@@ -1526,6 +2175,7 @@ Imports a domain in Ravada
                             vm => 'KVM'
                             ,name => $name
                             ,user => $user_name
+                            ,spinoff_disks => 1
     );
 
 =cut
@@ -1537,6 +2187,8 @@ sub import_domain {
     my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
     my $name = $args{name} or die "ERROR: mandatory argument domain name required";
     my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+    my $spinoff_disks = delete $args{spinoff_disks};
+    $spinoff_disks = 1 if !defined $spinoff_disks;
 
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -1546,7 +2198,57 @@ sub import_domain {
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
-    return $vm->import_domain($name, $user);
+    return $vm->import_domain($name, $user, $spinoff_disks);
+}
+
+=head2 enforce_limits
+
+Check no user has passed the limits and take action.
+
+Some limits:
+
+- More than 1 domain running at a time ( older get shut down )
+
+
+=cut
+
+sub enforce_limits {
+    _enforce_limits_active(@_);
+}
+
+sub _enforce_limits_active {
+    my $self = shift;
+    my %args = @_;
+
+    my $timeout = (delete $args{timeout} or 10);
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my %domains;
+    for my $domain ($self->list_domains( active => 1 )) {
+        push @{$domains{$domain->id_owner}},$domain;
+    }
+    for my $id_user(keys %domains) {
+        next if scalar @{$domains{$id_user}}<2;
+
+        my @domains_user = sort { $a->start_time <=> $b->start_time }
+                        @{$domains{$id_user}};
+
+#        my @list = map { $_->name => $_->start_time } @domains_user;
+        my $last = pop @domains_user;
+        DOMAIN: for my $domain (@domains_user) {
+            #TODO check the domain shutdown has been already requested
+            for my $request ($domain->list_requests) {
+                next DOMAIN if $request->command =~ /shutdown/;
+            }
+            if ($domain->can_hybernate) {
+                $domain->hybernate($USER_DAEMON);
+            } else {
+                $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
+            }
+        }
+    }
 }
 
 =head2 version

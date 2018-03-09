@@ -27,8 +27,7 @@ my $USER = create_user("foo","bar");
 $RVD_BACK = undef;
 
 my @ARG_CREATE_DOM = (
-        id_iso => 1
-        ,id_owner => $USER->id
+        id_owner => $USER->id
 );
 
 $Ravada::CAN_FORK = 0;
@@ -101,6 +100,7 @@ sub test_req_create_domain_iso {
     my $req;
     eval { $req = Ravada::Request->create_domain( 
         name => $name
+        ,id_iso => search_id_iso('Alpine')
         ,@ARG_CREATE_DOM
         );
     };
@@ -222,9 +222,58 @@ sub test_unread_messages {
     $user->mark_all_messages_read();
 }
 
+sub test_requests_by_domain {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = create_domain($vm_name, user_admin);
+    ok($domain,"Expecting new domain created") or exit;
+
+    my $req1 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 1);
+
+    my $req2 = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 2);
+
+    my $clone_name = new_domain_name();
+    my $req_clone = Ravada::Request->create_domain (
+        name => $clone_name
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,vm => $vm_name
+    );
+
+    my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    ok($domain->list_requests == 3);
+
+    eval {
+            rvd_back->_process_all_requests_dont_fork();
+    };
+
+
+    is($req1->status , 'done');
+    is($req2->status , 'done');
+
+    is($@,'');
+    like($req_clone->error,qr(has \d req)) or exit;
+    is($req_clone->status , 'retry');
+
+    is($req4->status , 'done');
+    is($domain->is_base,1) or exit;
+
+    my $req4b = Ravada::Request->open($req4->id);
+    is($req4b->status , 'done') or exit;
+
+    rvd_back->_process_all_requests_dont_fork();
+    like($req_clone->status,qr(done)) or exit;
+    is($req_clone->error, '') or exit;
+
+    my $clone = $vm->search_domain($clone_name);
+    ok($clone,"Expecting domain $clone_name created") or exit;
+}
 
 ################################################
-eval { $ravada = Ravada->new(connector => $test->connector) };
+eval { $ravada = rvd_back () };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
@@ -234,19 +283,21 @@ for my $vm_name ( qw(Void KVM)) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id )       if $vm;
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('alpine'), vm => $vm_name, id_owner => $USER->id )       if $vm;
     };
 
     SKIP: {
-        my $msg = "SKIPPED: No virtual managers found";
+        my $msg = "SKIPPED: No $vm_name found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
+        diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
     
         diag("Testing requests with ".(ref $vm or '<UNDEF>'));
     
+        test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);
         test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;
     
@@ -255,9 +306,13 @@ for my $vm_name ( qw(Void KVM)) {
     
         my $domain_base = test_req_create_base($vm);
         if ($domain_base) {
-            test_req_start_domain($vm,$domain_base->name);
+            $domain_base->is_public(1);
+            my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
+            test_req_start_domain($vm,$domain_clone->name);
+            $domain_clone->remove($USER);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
+
     };
 }
 

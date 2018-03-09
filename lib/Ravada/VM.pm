@@ -19,6 +19,9 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 requires 'connect';
 
 # global DB Connection
@@ -39,7 +42,9 @@ requires 'create_volume';
 
 requires 'connect';
 requires 'disconnect';
+requires 'import_domain';
 
+requires 'ping';
 ############################################################
 
 has 'host' => (
@@ -69,6 +74,7 @@ before 'search_domain' => \&_connect;
 
 before 'create_volume' => \&_connect;
 
+around 'import_domain' => \&_around_import_domain;
 #############################################################
 #
 # method modifiers
@@ -127,9 +133,40 @@ sub _around_create_domain {
     my $self = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
+
     $self->_pre_create_domain(@_);
+
     my $domain = $self->$orig(@_);
+
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+
+    if ($args{id_base}) {
+        my $base = $self->search_domain_by_id($args{id_base});
+        $domain->run_timeout($base->run_timeout)
+            if defined $base->run_timeout();
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+    $domain->is_volatile(1)    if $user->is_temporary();
+
+    $domain->get_info();
+
+    return $domain;
+}
+
+sub _around_import_domain {
+    my $orig = shift;
+    my $self = shift;
+    my ($name, $user, $spinoff) = @_;
+
+    my $domain = $self->$orig($name, $user);
+
+    $domain->_insert_db(name => $name, id_owner => $user->id);
+
+    if ($spinoff) {
+        warn "Spinning volumes off their backing files ...\n" if $ENV{TERM};
+        $domain->spinoff_volumes();
+    }
     return $domain;
 }
 
@@ -229,6 +266,16 @@ sub ip {
     return '127.0.0.1';
 }
 
+=head2 nat_ip
+
+Returns the IP of the VM when it is in a NAT environment
+
+=cut
+
+sub nat_ip($self) {
+    return Ravada::nat_ip();
+}
+
 sub _interface_ip {
     my $s = IO::Socket::INET->new(Proto => 'tcp');
 
@@ -274,12 +321,33 @@ sub _check_require_base {
     my $self = shift;
 
     my %args = @_;
-    return if !$args{id_base};
 
-    my $base = $self->search_domain_by_id($args{id_base});
+    my $id_base = delete $args{id_base} or return;
+    my $request = delete $args{request};
+    my $id_owner = delete $args{id_owner}
+        or confess "ERROR: id_owner required ";
+
+    delete @args{'_vm','name','vm', 'memory','description'};
+
+    confess "ERROR: Unknown arguments ".join(",",keys %args)
+        if keys %args;
+
+    my $base = Ravada::Domain->open($id_base);
+    if (my @requests = $base->list_requests) {
+        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
+                            ." requests.\n"
+            unless scalar @requests == 1 && $request
+                && $requests[0]->id eq $request->id;
+    }
+
+
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    die "ERROR: Base ".$base->name." is not public\n"
+        unless $user->is_admin || $base->is_public;
 }
 
 =head2 id
@@ -377,5 +445,21 @@ sub default_storage_pool_name {
     return $self->_data('default_storage');
 }
 
+=head2 list_drivers
+
+Lists the drivers available for this Virtual Machine Manager
+
+Arguments: Optional driver type
+
+Returns a list of strings with the nams of the drivers.
+
+    my @drivers = $vm->list_drivers();
+    my @drivers = $vm->list_drivers('image');
+
+=cut
+
+sub list_drivers($self, $name=undef) {
+    return Ravada::Domain::drivers(undef,$name,$self->type);
+}
 
 1;

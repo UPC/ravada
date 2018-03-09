@@ -19,7 +19,8 @@ init($test->connector, 't/etc/ravada.conf');
 
 my $USER = create_user("foo","bar");
 
-my $ID_ISO = 1;
+rvd_back();
+my $ID_ISO = search_id_iso('Alpine');
 my @ARG_CREATE_DOM = (
         id_iso => $ID_ISO
         ,id_owner => $USER->id
@@ -176,13 +177,17 @@ sub test_req_prepare_base {
     my $name = shift;
 
     my $rvd_back = rvd_back();
+    {
+        my $domain = $rvd_back->search_domain($name);
+        $domain->shutdown_now($USER)    if $domain->is_active();
+        is($domain->is_active(),0);
+    }
     my $req;
     {
         my $vm = rvd_front()->search_vm($vm_name);
         my $domain = $vm->search_domain($name);
         ok($domain, "Searching for domain $name, got ".ref($name)) or return;
         ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
-
         $req = Ravada::Request->prepare_base(
             id_domain => $domain->id
             ,uid => $USER->id
@@ -201,12 +206,17 @@ sub test_req_prepare_base {
     my $vm = rvd_front()->search_vm($vm_name);
     my $domain2 = $vm->search_domain($name);
     ok($domain2->is_base, "Expecting domain base=1 , got: '".$domain2->is_base."'");# or exit;
-
+    $domain2->is_public(1);
     my @unread_messages = $USER->unread_messages;
     like($unread_messages[-1]->{subject}, qr/done$/i);
 
     my @messages = $USER->messages;
     like($messages[-1]->{subject}, qr/done|downloaded/i);
+
+    {
+        my $domain = $rvd_back->search_domain($name);
+        is($domain->is_active(),0);
+    }
 
 }
 
@@ -386,6 +396,73 @@ sub test_req_remove_base {
     check_files_removed(@files_base);
 }
 
+sub test_shutdown_by_name {
+    my ($vm_name, $domain_name) = @_;
+
+    my $id_domain;
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_name);
+    $id_domain = $domain->id;
+    $domain->start($USER);
+
+    is($domain->is_active,1);
+
+    my $req;
+    eval { $req = Ravada::Request->shutdown_domain(
+        name => $domain_name
+        ,uid => $USER->id
+        ,timeout => 1
+        );
+    };
+    is($@,'') or return;
+    ok($req);
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status(),'done');
+
+    for ( 1 .. 2 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        last if !$domain->is_active;
+        sleep 1;
+    }
+
+    my $domain2 = $vm->search_domain($domain_name);
+    is($domain2->is_active,0);
+}
+
+sub test_shutdown_by_id {
+    my ($vm_name, $domain_name) = @_;
+
+    my $id_domain;
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_name);
+    $id_domain = $domain->id;
+    $domain->start($USER);
+
+    is($domain->is_active,1);
+
+    my $req;
+    eval { $req = Ravada::Request->shutdown_domain(
+        id_domain => $id_domain
+        ,uid => $USER->id
+        ,timeout => 1
+        );
+    };
+    is($@,'') or return;
+    ok($req);
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status(),'done');
+    is($req->error(),'');
+
+    for ( 1 .. 2 ) {
+        rvd_back->_process_all_requests_dont_fork();
+        last if !$domain->is_active;
+        sleep 1;
+    }
+
+    my $domain2 = $vm->search_domain($domain_name);
+    is($domain2->is_active,0);
+}
+
 ################################################
 
 {
@@ -404,7 +481,7 @@ for my $vm_name ( qw(KVM Void)) {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = 1 if $vm;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id );
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id );
 
         if ($vm_name eq 'KVM') {
             my $iso = $vm->_search_iso($ID_ISO);
@@ -424,7 +501,9 @@ for my $vm_name ( qw(KVM Void)) {
         diag("Testing requests with $vm_name");
         test_swap($vm_name);
 
-        test_req_create_domain_iso($vm_name);
+        my $domain_name = test_req_create_domain_iso($vm_name);
+        test_shutdown_by_name($vm_name, $domain_name);
+        test_shutdown_by_id($vm_name, $domain_name);
 
         my $base_name = test_req_create_domain($vm_name) or next;
 

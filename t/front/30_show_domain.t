@@ -24,7 +24,7 @@ my $RVD_FRONT = Ravada::Front->new(
 my $USER = create_user('foo','bar');
 
 my %CREATE_ARGS = (
-     KVM => { id_iso => 1,       id_owner => $USER->id }
+     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
     ,Void => { id_owner => $USER->id }
 );
@@ -93,7 +93,9 @@ sub test_start_domain {
     eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
-    ok($domain_f->is_active);# && !$domain_f->is_active);
+
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,1);# && !$domain_f->is_active);
 
 }
 
@@ -115,7 +117,7 @@ sub test_shutdown_domain {
 
     ok($domain_f->is_active);
 
-    eval { $domain_f->shutdown( force => 1) };
+    eval { $domain_f->shutdown( force => 1, user => user_admin) };
     ok($@,"[$vm_name] Shutdown should be denied from front ");
     ok($domain_f->is_active,"[$vm_name] Domain should be active");
 
@@ -126,10 +128,11 @@ sub test_shutdown_domain {
         ok($@,"[$vm_name] Shutdown should be denied from front ");
     }
 
-    eval { $domain_b->shutdown(user => $USER,force => 1) };
-    ok(!$@,$@);
+    eval { $domain_b->force_shutdown($USER) };
+    is($@,'');
 
-    ok(!$domain_f->is_active);# && !$domain_f->is_active);
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,0);# && !$domain_f->is_active);
 
 }
 

@@ -3,14 +3,10 @@
 
 **Implemented enhancements:**
 
-- Support sha256 for ISO [\#225]
-- Create virtual machine from Fedora Workstation ISO
-- Create virtual machine from Lubuntu Desktop ISO
-- Create virtual machine from Xubuntu Desktop ISO
+- Review volatile desktops and Kiosk mode [\#320]
+- Manage user permissions [\#222]
+- Add a minimun disk size for each KVM template [\#447]
 
 **Fixed bugs:**
 
-- No filename for custom iso images [\#232]
-- Client IP is missing from machines list [\#227]
-- The header in the requirements page doesn't show options [\#221]
-- list iso images fails for fresh installs [\#235]
+- Don't prepare base if already prepared [\#501]

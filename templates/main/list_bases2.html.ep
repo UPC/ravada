@@ -8,9 +8,15 @@
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
 % my $public_bases = 0;
+% my $private_bases = 0;
 % for my $machine(@$machines) {
-%   $public_bases = 1 if $machine->{is_public};
+%   if ($machine->{is_public}) {
+%       $public_bases++;
+%   } else {
+%       $private_bases++;
+%   }
 % }
+
 
 <div id="page-wrapper">
 
@@ -21,61 +27,74 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
+%           if ($user && $user->is_admin && $public_bases && $private_bases) {
+            <div ng-cloak>
+                <a ng-click="toggle_only_public()" class="label label-primary"
+                  align="right" ng-show="!only_public">Hide Private</a>
+                <a ng-click="toggle_only_public()" class="label label-primary"
+                  align="right" ng-show="only_public">Show All</a>
+%           }
+            </div>
+
         </div>
         <div class="panel-body">
 %       if (! $public_bases ) {
             <div class="panel panel-warning">
             <div class="panel-heading">
-%           if ($_user->is_admin) {
-                There are no public bases available in this system.
-                <a href="/admin/">Create one.</a>
+%           if ($user && $user->is_admin) {
+                <%=l 'There are no public bases available in this system.' %>
+                <a href="/admin/machines"><%=l 'Create one.' %></a>
 %           } else {
-                There are no machines available in this system.
+                <%=l 'There are no machines available in this system.' %>
 %           }
             </div>
             </div>
 %       }
 %       for my $machine (@$machines) {
-%           next if !$machine->{is_public} && !$user->is_admin;
-            <div class="col-sm-4">
+%           next if !$machine->{is_public} && (!$user || !$user->is_admin);
+%           my $clone_link = "/machine/clone/".$machine->{id}.".html";
+%           $clone_link = "/anonymous/".$machine->{id}.".html"  if $_anonymous;
+            <div class="col-sm-4"
+                ng-hide="!<%= $machine->{is_public} %> && only_public">
             <div class="panel panel-success">
             <div class="panel-heading">
-                <h3 class="panel-title"><a
-                   href="/machine/clone/<%= $machine->{id} %>.html"><%= $machine->{name} %></a>
+                <h3 class="panel-title"><a class="btn btn-link"
+                   href="/machine/clone/<%= $machine->{id} %>.html" role="button"><%= $machine->{name} %></a>
 %                   if ( !$machine->{is_public} ) {
-                        <i>( not public )</i>
+                        <i>(<%=l 'not public' %>)</i>
 %                   }
                 </h3>
 %               if ($machine->{screenshot} ) {
-                    <img src="<%= $machine->{screenshot} %>" width="260">
+                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="<%= $machine->{screenshot} %>" class="img-thumbnail" width="260"></a>
+%               }else{
+                    <a href="/machine/clone/<%= $machine->{id} %>.html"><img src="/img/default_screenshot.png" class="screenshot-default img-thumbnail" width="260"></a>
 %               }
+
             </div>
             <div class="panel-body">
-%		if ($_user->can_screenshot) {
-                <a type="button" class="btn btn-success" href="/machine/clone/<%= $machine->{id} %>.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
-%                }
+                <a type="button" class="btn btn-success" href="<%= $clone_link %>"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
 %               if (!$machine->{is_locked}) {
 %                   if ( $machine->{id_clone} && $machine->{is_active} ) {
-                        <select ng-model="host_action"
+                        <select class="selectpicker" data-width="fit" ng-model="host_action"
                         ng-change="action(<%= $machine->{id_clone} %>)"
                         >
                         <option value=""><%=l 'action'%></option>
 %                       if ($machine->{is_active}) {
-                            <option value="shutdown.<%= $machine->{id_clone} %>"><%=l 'Shutdown' %></option>
-                            <option value="hybernate.<%= $machine->{id_clone} %>"><%=l 'Hybernate' %></option>
+                            <option value="shutdown.<%= $machine->{id_clone} %>" data-icon="glyphicon glyphicon-off"><%=l 'Shutdown' %></option>
+                            <option value="hybernate.<%= $machine->{id_clone} %>" data-icon="glyphicon glyphicon-pause"><%=l 'Hibernate' %></option>
 %                       }
 %                       if ($machine->{id_clone}) {
-                            <option value="restore.<%= $machine->{id_clone} %>"><%=l 'Restore'%></option>
+                            <option value="restore.<%= $machine->{id_clone} %>" data-icon="glyphicon glyphicon-repeat"><%=l 'Restore'%></option>
 %                       }
                         </select>
 %                   } elsif ($machine->{id_clone}) {
                         <a type="button" class="btn btn-danger"
                              ng-click="host_restore=<%= $machine->{id_clone} %>"
-                        ><strong><i class="fa fa-off" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
+                        ><strong><i class="fas fa-redo" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
 
 %                   }
 %                   if ( $machine->{id_clone}) {
-%			if ($_user->can_change_settings){
+%			if ($user->can_change_settings){
                         <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
 %      							}
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">
@@ -113,7 +132,7 @@
 %= include 'bootstrap/scripts'
 </div>
 
-%= include 'bootstrap/footer'
+%= include $footer
 %= include 'bootstrap/messages'
 </body>
 </html>

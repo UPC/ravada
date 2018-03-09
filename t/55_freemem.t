@@ -15,7 +15,6 @@ use Sys::Statistics::Linux;
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
-use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
@@ -30,7 +29,7 @@ sub test_new_domain {
     my $freemem = _check_free_memory();
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
-                                        , id_iso => 1
+                                        , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
                                         ,memory => 1.5*1024*1024
@@ -84,6 +83,8 @@ SKIP: {
     my $vm = $RVD_BACK->search_vm('KVM');
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
+
+    use_ok("Ravada::Domain::$BACKEND");
 
     my $freemem = _check_free_memory();
     my $n_domains = int($freemem)+2;

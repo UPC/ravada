@@ -12,7 +12,6 @@ use Test::Ravada;
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
-use_ok("Ravada::Domain::$BACKEND");
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 
@@ -77,7 +76,8 @@ sub test_new_domain {
     test_remove_domain($name);
 
     diag("Creating domain $name");
-    my $domain = $RAVADA->create_domain(name => $name, id_iso => 1, active => $active
+    my $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('Alpine')
+        , active => $active
         , id_owner => $USER->id
         , vm => $BACKEND
     );
@@ -99,6 +99,49 @@ sub test_new_domain {
     ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
     ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
         .$domain2->name);
+
+    return $domain;
+}
+
+sub test_new_domain_iso {
+    my $active = shift;
+    
+    my $vm = rvd_back()->search_vm($BACKEND);
+    my $iso = $vm->_search_iso(1);
+    my $name = new_domain_name();
+
+    test_remove_domain($name);
+
+    diag("Creating domain $name");
+    my $domain;
+    eval {
+      $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('alpine')
+          , active => $active
+        , id_owner => $USER->id , iso_file => $iso->{device}
+        , vm => $BACKEND
+        );
+      };
+    is($@,'') or return;
+    
+    ok($domain,"Domain not created");
+    my $exp_ref= 'Ravada::Domain::KVM';
+    ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
+        if $domain;
+        
+    my @cmd = ('virsh','desc',$name);
+    my ($in,$out,$err);
+    run3(\@cmd,\$in,\$out,\$err);
+    ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
+
+    my $row =  search_domain_db($domain->name);
+    ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
+
+    my $domain2 = $RAVADA->search_domain($domain->name);
+
+    ok($domain2->id eq $domain->id,"Expecting id = ".$domain->id." , got ".$domain2->id);
+    ok($domain2->name eq $domain->name,"Expecting name = ".$domain->name." , got "
+        .$domain2->name);
+    #TODO HOW TO COMPARE THE ISO OF TWO MACHINES    
 
     return $domain;
 }
@@ -225,6 +268,14 @@ sub test_domain_by_name {
     }
 }
 
+sub test_domain_with_iso {
+  my $domain = test_new_domain_iso();
+  
+  if (ok($domain,"test domain not created")) {
+      test_remove_domain_by_name($domain->name);
+  }
+}
+
 sub test_prepare_import {
     my $domain = test_new_domain();
 
@@ -256,11 +307,14 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    use_ok("Ravada::Domain::$BACKEND");
+
 test_vm_kvm();
 
 remove_old_domains();
 remove_old_disks();
 test_domain();
+test_domain_with_iso();
 test_domain_missing_in_db();
 test_domain_inactive();
 test_domain_by_name();

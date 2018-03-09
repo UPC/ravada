@@ -1,4 +1,5 @@
-# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.4-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE)
+# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.13-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE) [![Documentation Status](https://readthedocs.org/projects/ravada/badge/?version=latest)](http://ravada.readthedocs.io/en/latest/?badge=latest) [![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/upc/ravada)
+
 
 ## Remote Virtual Desktops Manager
 
@@ -23,18 +24,18 @@ KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual
 
 ## Install
 
-Read [INSTALL](https://upc.github.io/ravada/documentation/docs/INSTALL.html).
+Read [INSTALL](http://ravada.readthedocs.io/en/latest/docs/INSTALL.html).
 
 
 ### Production
 
-See [production](https://upc.github.io/ravada/documentation/docs/production.html)
+See [production](http://ravada.readthedocs.io/en/latest/docs/production.html)
 for production fine-tuning guidelines.
 
 ### Operation
 
-See [operation](https://upc.github.io/ravada/documentation/docs/operation.html).
+See [operation](http://ravada.readthedocs.io/en/latest/docs/operation.html).
 
 ### Update
 
-See [update](https://upc.github.io/ravada/documentation/docs/update.html).
+See [update](http://ravada.readthedocs.io/en/latest/docs/update.html).

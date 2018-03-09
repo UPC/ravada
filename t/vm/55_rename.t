@@ -17,11 +17,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user("foo","bar");
@@ -37,17 +32,11 @@ sub test_create_domain {
     my $vm = $ravada->search_vm($vm_name);
     ok($vm,"Expecting VM $vm_name") or return;
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     #diag("[$vm_name] creating domain $name");
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"[$vm_name] Expecting VM $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -146,6 +135,7 @@ sub test_clone_domain {
     ok($domain,"[$vm_name] Expecting domain $domain_name") or exit;
 
     $domain->shutdown_now($USER);
+    $domain->is_public(1);
     my $clone = $domain->clone(name => $clone_name, user=>$USER);
     ok($clone) or return;
     return $clone_name;
@@ -202,7 +192,7 @@ for my $vm_name (qw( Void KVM )) {
 
     my $vm_ok;
     eval {
-        my $vm = rvd_front()->search_vm($vm_name);
+        my $vm = rvd_back()->search_vm($vm_name);
         $vm_ok = 1 if $vm;
     };
     diag($@) if $@;

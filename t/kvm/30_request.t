@@ -37,6 +37,7 @@ sub test_req_prepare_base {
     ok(scalar $domain->list_files_base," Domain $name should have files_base, got ".
         scalar $domain->list_files_base);
 
+    $domain->is_public(1);
 }
 
 sub test_remove_domain {
@@ -65,19 +66,20 @@ sub test_dont_remove_father {
     my $domain = $name if ref($name);
     $domain = $VMM->search_domain($name,1);
 
-    if ($domain) {
+    my @clones = $domain->clones;
+    ok(@clones,"Expecting ".$domain->name." has clones, got ".@clones);
+
         diag("Removing domain $name");
         eval { $domain->remove($USER) };
-        ok($@ , "Error removing domain $name with clones should not be allowed");
+        ok($@ , "Error removing domain $name with clones should not be allowed") or exit;
 
         for my $file ( $domain->list_files_base ) {
             ok( -e $file,"Image file $file should not be removed") or exit;
         }
 
 
-    }
-    $domain = $RAVADA->search_domain($name,1);
-    ok($domain, "Domain $name with clones should not be removed");
+    my $domain2 = $RAVADA->search_domain($name,1);
+    ok($domain2, "Domain $name with clones should not be removed");
 
 }
 
@@ -127,7 +129,7 @@ sub test_req_create_domain_iso {
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
             name => $name
-         ,id_iso => 1
+         ,id_iso => search_id_iso('alpine')
        ,id_owner => $USER->id
              ,vm => $BACKEND
     );
@@ -157,7 +159,7 @@ sub test_force_kvm {
     my $name = new_domain_name();
     my $req = Ravada::Request->create_domain(
         name => $name
-        ,id_iso => 1
+        ,id_iso => search_id_iso('alpine')
       ,id_owner => $USER->id
         ,vm => 'kvm'
     );
@@ -218,6 +220,7 @@ SKIP: {
         if ($domain ) {
             test_req_prepare_base($domain->name);
             my $domain_clon = test_req_clone($domain);
+            ok($domain_clon) or exit;
             test_dont_remove_father($domain->name);
             test_remove_domain($domain_clon->name);
             test_remove_domain($domain->name);

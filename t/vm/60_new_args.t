@@ -18,11 +18,6 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my %TEST_DISK = (
     Void => \&test_disk_void
     ,KVM => \&test_disk_kvm
@@ -45,18 +40,12 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -81,25 +70,18 @@ sub test_create_fail {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
     ok($@,"Expecting error , got ''");
 
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
-    my $domain2 = rvd_front()->search_domain($name);
-    ok(!$domain,"Expecting doesn't exists domain '$name'");
+    is(rvd_front->domain_exists,0,"Expecting doesn't exists domain '$name'");
 
 }
 
@@ -117,7 +99,7 @@ sub test_req_create_domain{
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , @{$ARG_CREATE_DOM{$vm_name}}
+                    , arg_create_dom($vm_name)
         );
    
     }
@@ -149,7 +131,7 @@ sub test_req_create_fail {
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , @{$ARG_CREATE_DOM{$vm_name}}
+                    , arg_create_dom($vm_name)
         );
    
         ok($req,"Expecting request to create_domain");
@@ -232,7 +214,9 @@ sub test_args {
     {
         my $domain = test_req_create_domain($vm_name, $memory, $disk, "Request");
         test_memory($vm_name, $domain, $memory, "Request") if $domain;
-        test_disk($vm_name, $domain, $disk)     if $domain;
+
+        my $domain_backend = rvd_back->search_domain($domain->name);
+        test_disk($vm_name, $domain_backend, $disk)     if $domain_backend;
     }
 }
 
@@ -264,9 +248,6 @@ $Data::Dumper::Sortkeys = 1;
 for my $vm_name (qw( Void KVM )) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS) or next;
 
     my $vm_ok;
     eval {
@@ -286,6 +267,8 @@ for my $vm_name (qw( Void KVM )) {
 
         diag($msg)      if !$vm_ok;
         skip $msg,10    if !$vm_ok;
+
+        use_ok("Ravada::VM::$vm_name");
         test_args($vm_name);
         test_small($vm_name);
     };

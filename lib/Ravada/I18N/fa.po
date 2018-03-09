@@ -390,3 +390,20 @@ msgstr "کاربر می تواند ماشین های مجازی همسان شد�
 msgid "Submit Query"
 msgstr "ثبت"
 
+msgid "Galician"
+msgstr "گالیکسی"
+
+msgid "French"
+msgstr "فرانسوی"
+
+msgid "Indonesian"
+msgstr "اندونزیایی"
+
+msgid "Persian"
+msgstr "فارسی"
+
+msgid "Japanese"
+msgstr "ژاپنی"
+
+msgid "Hindi"
+msgstr "هندی"

@@ -18,7 +18,7 @@ init($test->connector, 't/etc/ravada.conf');
 my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
-my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => 1 );
+my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => search_id_iso('Alpine') );
 
 sub test_remove_domain {
     my $vm_name = shift;
@@ -111,8 +111,10 @@ sub test_start {
     ok($req2->status eq 'done',"Expecting request status 'done' , got "
                                 .$req2->status);
 
+    my $id_domain;
     {
         my $domain = $RAVADA->search_domain($name);
+        $id_domain = $domain->id;
         $domain->start($USER)    if !$domain->is_active();
         ok($domain->is_active);
 
@@ -127,7 +129,7 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->force_shutdown_domain(name => $name, uid => $USER->id);
+    my $req3 = Ravada::Request->force_shutdown_domain(id_domain => $id_domain, uid => $USER->id);
     $RAVADA->process_requests();
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "

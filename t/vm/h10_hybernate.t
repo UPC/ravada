@@ -15,19 +15,15 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 use_ok('Ravada');
 
 my $RVD_BACK = rvd_back($test->connector);
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
-my $USER = create_user("foo","bar");
+my @VMS = vm_names();
+my $USER = create_user("foo","bar",1);
 
 sub test_hybernate {
     my $vm_name = shift;
 
     my $domain = create_domain($vm_name, $USER) or next;
 
-    next if !$domain->can_hybernate();
+    return $domain if !$domain->can_hybernate();
 
     $domain->start($USER)   if !$domain->is_active;
 
@@ -46,6 +42,7 @@ sub test_hybernate {
 sub test_hybernate_clone {
     my ($vm_name, $domain) = @_;
 
+    $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     eval {$clone->start($USER)  if !$clone->is_active };
@@ -60,7 +57,7 @@ sub test_hybernate_clone {
     is($clone->is_active,1);
 
     $clone->shutdown_now($USER) if $clone->is_active;
-
+    $clone->remove($USER);
 }
 
 sub test_hybernate_clone_swap {
@@ -103,13 +100,20 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
             $vm = undef;
         }
 
+        diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
 
         my $domain = test_hybernate($vm_name);
-        test_hybernate_clone($vm_name, $domain);
-        test_hybernate_clone_swap($vm_name, $domain);
 
-        test_remove_hybernated($vm_name,$domain);
+        if ( $domain->can_hybernate() ) {
+            test_hybernate_clone($vm_name, $domain);
+            test_hybernate_clone_swap($vm_name, $domain);
+
+            test_remove_hybernated($vm_name,$domain);
+        } else {
+            diag("Skipped because $vm_name domains can't hibernate");
+        }
+        $domain->remove(user_admin());
     }
 }
 

@@ -14,11 +14,10 @@ use Test::Ravada;
 my $BACKEND = 'KVM';
 
 use_ok('Ravada');
-use_ok("Ravada::Domain::$BACKEND");
 
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RAVADA = rvd_back( $test->connector , 't/etc/ravada_kvm.conf');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
@@ -27,7 +26,7 @@ $DOMAIN_NAME_SON =~ s/base_//;
 my $USER = create_user('foo','bar');
 
 sub test_vm_kvm {
-    my $vm = $RAVADA->vm->[0];
+    my $vm = $RAVADA->search_vm('KVM');
     ok($vm,"No vm found") or exit;
     ok(ref($vm) =~ /KVM$/,"vm is no kvm ".ref($vm)) or exit;
 
@@ -66,7 +65,7 @@ sub test_new_domain_from_iso {
     diag("Creating domain $name from iso");
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
-                                        , id_iso => 1
+                                        , id_iso => search_id_iso('alpine')
                                         ,vm => $BACKEND
                                         ,id_owner => $USER->id
             ) 
@@ -130,13 +129,19 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    $domain->prepare_base($USER);
+    eval { $domain->prepare_base($USER) };
+    is($@,'') or exit;
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{is_base});
     $sth->finish;
+
+    is($domain->is_base,1);
+    is($domain->is_public,0);
+    $domain->is_public(1);
+    is($domain->is_public,1);
 
     my @list2 = $RAVADA->list_bases();
     ok(scalar @list2 == scalar @list + 1 ,"Expecting ".(scalar(@list)+1)." bases"
@@ -149,17 +154,23 @@ sub test_prepare_base {
 sub test_new_domain_from_base {
     my $base = shift;
 
+    is($base->is_base,1) or return;
+    is($base->is_public,1) or return;
+
     my $name = $DOMAIN_NAME_SON;
     test_remove_domain($name);
 
     diag("Creating domain $name from ".$base->name);
-    my $domain = $RAVADA->create_domain(
+    my $domain;
+    eval { $domain = $RAVADA->create_domain(
                 name => $name
             ,id_base => $base->id
            ,id_owner => $USER->id
             ,vm => $BACKEND
     );
-    ok($domain,"Domain not created");
+    };
+    is($@,'');
+    ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
         if $domain;
@@ -275,6 +286,8 @@ SKIP: {
 
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
+
+    use_ok("Ravada::Domain::$BACKEND");
 
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);

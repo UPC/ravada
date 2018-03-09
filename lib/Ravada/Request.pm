@@ -34,13 +34,14 @@ our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
 our %VALID_ARG = (
     create_domain => {
-              vm => 1
+              vm => 2
            ,name => 1
            ,swap => 2
-         ,id_iso => 1
-        ,id_base => 1
+         ,id_iso => 2
+         ,iso_file => 2
+        ,id_base => 2
        ,id_owner => 1
-    ,id_template => 1
+    ,id_template => 2
          ,memory => 2
            ,disk => 2
         ,network => 2
@@ -51,14 +52,17 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 1, uid => 1, timeout => 2 }
-    ,force_shutdown_domain => { name => 1, uid => 1, at => 2 }
+    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
+    ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
+    ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2, verbose => 2}
+    ,refresh_storage => { id_vm => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -139,19 +143,15 @@ sub create_domain {
 
     my %args = @_;
 
-    confess "Missing domain name "
-        if !$args{name};
+    my $args = _check_args('create_domain', @_ );
 
-    for (keys %args) {
-        confess "Invalid argument $_" if !$VALID_ARG{'create_domain'}->{$_};
-    }
     my $self = {};
-    if ($args{network}) {
-        $args{network} = JSON::XS->new->convert_blessed->encode($args{network});
+    if ($args->{network}) {
+        $args->{network} = JSON::XS->new->convert_blessed->encode($args->{network});
     }
 
     bless($self,$class);
-    return $self->_new_request(command => 'create' , args => encode_json(\%args));
+    return $self->_new_request(command => 'create' , args => encode_json($args));
 }
 
 =head2 remove_domain
@@ -248,6 +248,7 @@ sub resume_domain {
 
 sub _check_args {
     my $sub = shift;
+    confess "Odd number of elements ".Dumper(\@_)   if scalar(@_) % 2;
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
@@ -304,10 +305,13 @@ sub shutdown_domain {
 
     $args->{timeout} = 10 if !exists $args->{timeout};
 
+    confess "ERROR: You must supply either id_domain or name ".Dumper($args)
+        if !$args->{id_domain} && !$args->{name};
+
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'shutdown' , args => encode_json($args));
+    return $self->_new_request(command => 'shutdown' , args => $args);
 }
 
 =head2 prepare_base
@@ -421,6 +425,13 @@ sub _new_request {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
+        my $id_domain_args = $args{args}->{id_domain};
+
+        if ($id_domain_args) {
+            confess "ERROR: Different id_domain: ".Dumper(\%args)
+                if $args{id_domain} && $args{id_domain} ne $id_domain_args;
+            $args{id_domain} = $id_domain_args;
+        }
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
@@ -682,6 +693,31 @@ sub screenshot_domain {
 
 }
 
+=head2 copy_screenshot
+
+Request to copy a screenshot from a domain to another
+
+=cut
+
+sub copy_screenshot {
+  my $proto = shift;
+  my $class=ref($proto) || $proto;
+
+  my $args = _check_args('copy_screenshot', @_ );
+
+  $args->{filename} = '' if !exists $args->{filename};
+
+  my $self = {};
+  bless($self,$class);
+
+  return $self->_new_request(
+       command => 'copy_screenshot'
+      ,id_domain => $args->{id_domain}
+      ,args => $args
+      );
+  
+}
+
 =head2 open_iptables
 
 Request to open iptables for a remote client
@@ -804,6 +840,55 @@ sub download {
              , args => encode_json($args)
     );
 
+}
+
+=head2 refresh_storage
+
+Refreshes a storage pool
+
+=cut
+
+sub refresh_storage {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_storage', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+        command => 'refresh_storage'
+        , args => $args
+    );
+
+
+}
+
+=head2 clone
+
+Copies a virtual machine
+
+    my $req = Ravada::Request->clone(
+             ,uid => $user->id
+        id_domain => $domain->id
+    );
+
+=cut
+
+sub clone {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('clone', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return _new_request($self
+        , command => 'clone'
+        , args =>$args
+    );
 }
 
 sub AUTOLOAD {

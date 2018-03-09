@@ -18,6 +18,8 @@ init($test->connector);
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
+##################################################################
+
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
     my $vm = $rvd_back->search_vm($vm_name);
@@ -54,7 +56,7 @@ for my $vm_name ('KVM') {
 
         ################################################
         #
-        # Request for the 1st ISO
+        # Request for the 2nd ISO
         $id_iso = 2;
         my $iso2 = $vm->_search_iso($id_iso);
         if (!$iso2->{device} || ! -e $iso2->{device}) {

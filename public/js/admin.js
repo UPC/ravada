@@ -1,3 +1,5 @@
+(function() {
+
 ravadaApp.directive("solShowMachine", swMach)
         .directive("solShowNewmachine", swNewMach)
         .controller("new_machine", newMachineCtrl)
@@ -20,15 +22,25 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function newMachineCtrl($scope, $http) {
-      $http.get('/list_vm_types.json').then(function(response) {
-              $scope.backends = response.data;
+
+    $http.get('/list_vm_types.json').then(function(response) {
+            $scope.backends = response.data;
+            $scope.backend = response.data[0];
+            $scope.loadTemplates();
+    });
+      $scope.loadTemplates = function() {
+        $http.get('/list_images.json',{
+          params: {
+            backend: $scope.backend
+          }
+        }).then(function(response) {
+                $scope.images = response.data;
+        });
+      }
+      $http.get('/iso_file.json').then(function(response) {
+              $scope.isos = response.data;
       });
 
-      //This may have to reload when changing backends
-      url_images = "/list_images.json?backend=KVM";
-      $http.get(url_images).then(function(response) {
-              $scope.images = response.data;
-      });
 
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
@@ -39,6 +51,28 @@ ravadaApp.directive("solShowMachine", swMach)
             });
       };
       $scope.name_duplicated = false;
+    
+      $scope.ddsize=20;
+      $scope.swapsize={value:1};
+      $scope.ramSize=1;
+      $scope.seeswap=0;
+
+      $scope.showMinSize = false;
+      $scope.min_size = 15;
+      $scope.change_iso = function(id) {
+          if (id.min_disk_size != null) {
+            $scope.min_size = id.min_disk_size;
+            $scope.showMinSize = true;
+          }
+          else {
+            $scope.showMinSize = false;
+            $scope.min_size = 1;
+          }
+          if (id.device != null) {
+             return id.device;
+          }
+          else return "<NONE>";
+      };
 
       $scope.validate_new_name = function() {
           $http.get('/machine/exists/'+$scope.name)
@@ -54,9 +88,18 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.name_duplicated=false;
             }
       };
-      $scope.ddsize=20;
-      $scope.swapsize=1;
-      $scope.ramsize=1;
+
+      $scope.type = function(v) {
+        return typeof(v);
+      }
+      $scope.show_swap = function() {
+        $scope.seeswap = !($scope.seeswap);
+      };
+
+    
+      $http.get('/list_machines.json').then(function(response) {
+              $scope.base = response.data;
+      });
   };
 
   function machinesPageC($scope, $http, $interval, request, listMach) {
@@ -149,17 +192,10 @@ ravadaApp.directive("solShowMachine", swMach)
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
     });
-    $scope.getUsers = function() {
-      $http.get('/list_users.json').then(function(response) {
-        $scope.list_users= response.data;
-      });
-    }
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
     //On load code
-    $scope.getUsers();
-    $scope.updatePromise = $interval($scope.getUsers,3000);
   };
 
   function messagesPageC($scope, $http, $interval, request) {
@@ -193,3 +229,5 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.getMessages();
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
+  
+}());

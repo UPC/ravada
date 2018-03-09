@@ -13,7 +13,6 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use Hash::Util qw(lock_keys);
 use Moose;
-use Sys::Virt::Network;
 
 use XML::LibXML;
 

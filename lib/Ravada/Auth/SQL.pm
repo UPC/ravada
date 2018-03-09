@@ -145,13 +145,15 @@ sub add_user {
     $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
     $sth->finish;
 
-    return if !$is_admin;
-
-    my $id_grant = _search_id_grant('grant');
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
     $sth->execute($name);
     my ($id_user) = $sth->fetchrow;
     $sth->finish;
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+
+    # temporary allow grant permissions
+    my $id_grant = _search_id_grant('grant');
 
     $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
@@ -161,8 +163,14 @@ sub add_user {
     $sth->execute($id_grant, $id_user);
     $sth->finish;
 
-    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    $user->grant_user_permissions($user);
+    if (!$is_admin) {
+        $user->grant_user_permissions($user);
+        $user->revoke($user,'grant');
+        return $user;
+    }
     $user->grant_admin_permissions($user);
+    return $user;
 }
 
 sub _search_id_grant {
@@ -335,8 +343,10 @@ Returns true if the user is admin or has been granted special permissions
 
 sub is_operator {
     my $self = shift;
-    return $self->is_admin() 
+    return $self->is_admin()
         || $self->can_shutdown_clone()
+	|| $self->can_hibernate_clone
+	|| $self->can_change_settings_clones()
         || $self->can_remove_clone();
 }
 
@@ -410,6 +420,33 @@ sub change_password {
     $sth->execute(sha1_hex($password), $self->name);
 }
 
+=head2 compare_password
+
+Changes the input with the password of an User
+
+    $user->compare_password();
+
+Arguments: password
+
+=cut
+
+sub compare_password {
+    my $self = shift;
+    my $password = shift or die "ERROR: password required\n";
+    
+    _init_connector();
+    
+    my $sth= $$CON->dbh->prepare("SELECT password FROM users WHERE name=?");
+    $sth->execute($self->name);
+    my $hex_pass = $sth->fetchrow();
+    if ($hex_pass eq sha1_hex($password)) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 =head2 language
 
   Updates or selects the language selected for an User
@@ -481,7 +518,7 @@ sub _load_grants($self) {
     $sth->bind_columns(\($name, $allowed));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = ( $allowed or undef);
+        $self->{_grant}->{$name} = $allowed;# or undef);
     }
     $sth->finish;
 }
@@ -576,20 +613,22 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
-    return 0 if defined $value && !$value
-             && defined $user->can_do($permission) && $user->can_do($permission) == 0;
-    return $value if defined $user->can_do($permission) && $user->can_do($permission) eq $value;
+    return 0 if !$value && !$user->can_do($permission);
+
+    my $value_sql = $user->can_do($permission);
+    return $value if defined $value_sql && $value_sql eq $value;
 
     my $id_grant = _search_id_grant($permission);
-    my $sth = $$CON->dbh->prepare(
+    if (! defined $user->can_do($permission)) {
+        my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"
             ." VALUES(?,?,?) "
-    );
-    eval { $sth->execute($id_grant, $user->id, $value) };
-    $sth->finish;
-    if ($@ && $@ =~ /UNIQUE|duplicate/i) {
-        $sth = $$CON->dbh->prepare(
+        );
+        $sth->execute($id_grant, $user->id, $value);
+        $sth->finish;
+    } else {
+        my $sth = $$CON->dbh->prepare(
             "UPDATE grants_user "
             ." set allowed=?"
             ." WHERE id_grant = ? AND id_user=?"

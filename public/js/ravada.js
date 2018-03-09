@@ -12,7 +12,6 @@
             .service("request", gtRequest)
             .service("listMach", gtListMach)
             .service("listMess", gtListMess)
-    	    .service("listUsers", gtListUsers)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
 //            .controller("machines", machinesCrtl)
@@ -21,6 +20,7 @@
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
             .controller("notifCrtl", notifCrtl)
+            .controller("run_domain",run_domain_ctrl)
 
 
 
@@ -117,15 +117,20 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-
+            
+            $scope.only_public = false;
+            $scope.toggle_only_public=function() {
+                    $scope.only_public = !$scope.only_public;
+            };
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
           $scope.domain_remove = 0;
+          $scope.new_name_invalid = false;
           $http.get('/pingbackend.json').then(function(response) {
             $scope.pingbe_fail = !response.data;
           });
-          $scope.getSingleMachine = function(){
+/*          $scope.getSingleMachine = function(){
             $http.get("/list_machines.json").then(function(response) {
               for (var i=0, iLength=response.data.length; i<iLength; i++) {
                 if (response.data[i].id == $scope.showmachineId) {
@@ -139,6 +144,7 @@
               window.location.href = "/admin/machines";
             });
           };
+            */
           $scope.remove = function(machineId) {
             $http.get('/machine/remove/'+machineId+'.json');
           };
@@ -146,20 +152,66 @@
                 $http.get('/machine/remove_clones/'+machineId+'.json');
           };
 
-          $scope.action = function(target,action,machineId){
-            $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+          $scope.reload_page_msg = false;
+          $scope.fail_page_msg = false;
+          $scope.screenshot = function(machineId, isActive){
+              if (isActive) {
+                  $http.get('/machine/screenshot/'+machineId+'.json');
+                  $scope.fail_page_msg = false;
+                  $scope.reload_page_msg = true;
+                  setTimeout(function () {
+                      window.location.reload(false);
+                  }, 5000);
+              }
+              else {
+                  $scope.reload_page_msg = false;
+                  $scope.fail_page_msg = true;
+              }
           };
+          
+          $scope.reload_page_copy_msg = false;
+          $scope.fail_page_copy_msg = false;
+          $scope.copy_done = false;
+          $scope.copy_screenshot = function(machineId, fileScreenshot){
+              if (fileScreenshot != '') {
+                $http.get('/machine/copy_screenshot/'+machineId+'.json');
+                $scope.fail_page_copy_msg = false;
+                $scope.reload_page_copy_msg = true;
+                setTimeout(function () {
+                    $scope.reload_page_copy_msg = false;
+                }, 2000);
+              }
+              else {
+                  $scope.reload_page_copy_msg = false;
+                  $scope.fail_page_copy_msg = true;
+              }
+          };
+
           $scope.rename = function(machineId, old_name) {
-            if ($scope.new_name_duplicated) return;
+            if ($scope.new_name_duplicated || $scope.new_name_invalid) return;
+            $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
+            $scope.message_rename = 1;
+            //   TODO check previous rename returned ok
+            window.location.href = "/admin/machines";
+          };
+          $scope.cancel_rename=function(old_name) {
+                $scope.new_name = old_name;
           };
 
           $scope.validate_new_name = function(old_name) {
+            $scope.new_name_duplicated = false;
             if(old_name == $scope.new_name) {
-              $scope.new_name_duplicated=false;
+              $scope.new_name_invalid=false;
               return;
             }
+            var valid_domain_name = /^[a-zA-Z][\w_-]+$/;
+            if ( !valid_domain_name.test($scope.new_name)) {
+                $scope.new_name_invalid = true;
+                return;
+            }
+            $scope.new_name_invalid = false;
             $http.get('/machine/exists/'+$scope.new_name)
             .then(duplicated_callback, unique_callback);
             function duplicated_callback(response) {
@@ -172,11 +224,14 @@
           $scope.set_public = function(machineId, value) {
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-
+          
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.getSingleMachine();
-          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
+          $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
+              $scope.showmachine=response.data;
+          });
+//          $scope.getSingleMachine();
+//          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
         };
 
     function swListMach() {
@@ -225,12 +280,31 @@
 
     };
 
+    function run_domain_ctrl($scope, $http, request ) {
+        $http.get('/auto_view').then(function(response) {
+            $scope.auto_view = response.auto_view;
+        });
+        $scope.toggle_auto_view = function() {
+            $http.get('/auto_view/toggle').then(function(response) {
+                $scope.auto_view = response.auto_view;
+            });
+        };
+        $scope.copy_password= function() {
+                    $scope.view_password=1;
+                    var copyTextarea = document.querySelector('.js-copytextarea');
+                    copyTextarea.select();
+                    try {
+                        var successful = document.execCommand('copy');
+                        var msg = successful ? 'successful' : 'unsuccessful';
+                        console.log('Copying text command was ' + msg);
+                    } catch (err) {
+                        console.log('Oops, unable to copy');
+                    }
+        };
+
+    };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {
-
-        $http.get('/list_users.json').then(function(response) {
-                $scope.list_users= response.data;
-        });
 
         $scope.make_admin = function(id) {
             $http.get('/users/make_admin/' + id + '.json')
@@ -269,14 +343,6 @@
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
         };
-
-    };
-
-      function gtListUsers($resource){
-
-        return $resource('/list_users.json',{},{
-            get:{isArray:true}
-        });
 
     };
 

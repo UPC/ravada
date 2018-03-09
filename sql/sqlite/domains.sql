@@ -13,6 +13,12 @@ CREATE TABLE `domains` (
 ,  `id_owner` integer
 ,  `vm` char(120) NOT NULL
 ,  `spice_password` char(20) DEFAULT NULL
+,  `description` text
+,  `start_time` integer not null default 0
+,  `status` varchar(32) default 'shutdown'
+,  `display` varchar(128) default NULL
+,  `info` varchar(255) default NULL
+,  `internal_id` varchar(64) DEFAULT NULL
 ,  UNIQUE (`id_base`,`name`)
 ,  UNIQUE (`name`)
 );

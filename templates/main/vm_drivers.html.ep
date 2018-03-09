@@ -1,0 +1,63 @@
+<div class="panel-body">
+%   if ($message) {
+        <div class="panel panel-success">
+            <div class="panel-heading"><%= $message %></div>
+        </div>
+%   }
+
+% my %recommend=(
+%   network => 'virtio'
+%   ,video => 'qxl'
+% );
+
+    <div class="row">
+        <div class="col-md-6"></div><div class="col-md-1"><i>recommended</i></div>
+    </div>
+
+<div class="form-group">
+
+    <form class="form-inline" action="<%= $action %>" method="post">
+%       for my $driver_name (qw(network sound video)) {
+%           my $driver = $domain->drivers($driver_name);
+%           if (!$driver) {
+                <b>I can't find <%= $driver_name %> driver</b>
+%               next;
+%           }
+            <div class="row">
+                <div class="col-md-2">
+                    <label
+                                class="control-label"
+                                for="driver_<%= $driver_name %>"><%= $driver_name %></label>
+                </div>
+                <div class="col-md-4">
+                    <select class="selectpicker form-control input-lg"
+                                name="driver_<%= $driver_name %>">
+%                               for my $option( $driver->get_options ) {
+%                                   my $selected;
+%                                   $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
+                                    <option <%= $selected %>
+                                        value="<%= $option->{id} %>"><%= $option->{name} %>
+                                    </option>
+%                               }
+
+                   </select>
+		     
+                </div>
+		
+                <div class="col-md-1">
+%                       if ($recommend{$driver_name}) {
+                            <span class="label label-default">
+                                <%= ($recommend{$driver_name} or '') %>
+                            </span>
+%                       }
+                </div>
+
+             </div>
+	
+%        }
+     <input type="submit">
+     <input type="button" value="Cancel" onclick = "location='/admin/machines'"/>
+
+    </form>
+</div><!-- del form-group -->
+</div><!-- del panel-body -->

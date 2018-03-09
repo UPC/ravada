@@ -1,0 +1,25 @@
+<ul class="nav nav-tabs" id="myTab">
+    <li class="nav active"><a href="#description" data-toggle="tab">Description</a></li>
+    <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
+%   if ($USER->can_change_settings ) {
+        <li class="nav"><a href="#options" data-toggle="tab">Options</a></li>
+%   }
+%   if ($USER->can_change_settings && $domain->drivers) {
+        <li class="nav"><a href="#drivers" data-toggle="tab">Drivers</a></li>
+%   }
+%   if ($USER->can_change_settings) {
+        <li class="nav"><a href="#screenshot" data-toggle="tab">Screenshot</a></li>
+%   }
+%   if ($domain->drivers) {
+        <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
+%   }
+%   if ($USER->can_clone_all){
+        <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
+%   }
+%   if ( $USER->can_remove || $USER->can_remove_clone_all ) {
+        <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
+%   }
+% if ($monitoring) {
+    <li class="nav"><a href="#monitoring" data-toggle="tab">System overview</a></li>
+%   }
+</ul>

@@ -19,6 +19,9 @@ use Moose;
 use Sys::Virt::Stream;
 use XML::LibXML;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 with 'Ravada::Domain';
 
 has 'domain' => (
@@ -42,11 +45,21 @@ our %GET_DRIVER_SUB = (
     network => \&_get_driver_network
      ,sound => \&_get_driver_sound
      ,video => \&_get_driver_video
+     ,image => \&_get_driver_image
+     ,jpeg => \&_get_driver_jpeg
+     ,zlib => \&_get_driver_zlib
+     ,playback => \&_get_driver_playback
+     ,streaming => \&_get_driver_streaming
 );
 our %SET_DRIVER_SUB = (
     network => \&_set_driver_network
      ,sound => \&_set_driver_sound
      ,video => \&_set_driver_video
+     ,image => \&_set_driver_image
+     ,jpeg => \&_set_driver_jpeg
+     ,zlib => \&_set_driver_zlib
+     ,playback => \&_set_driver_playback
+     ,streaming => \&_set_driver_streaming
 );
 
 ##################################################
@@ -173,16 +186,20 @@ sub remove {
         $self->_do_force_shutdown();
     }
 
-    $self->remove_disks();
+
+    eval { $self->remove_disks(); };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
-    $self->_remove_file_image();
+    eval { $self->_remove_file_image() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    $self->domain->undefine();
+    eval { $self->domain->undefine() };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 
@@ -289,12 +306,13 @@ sub _create_qcow_base {
     my $base_name = $self->name;
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
-        confess "ERROR: missing $file_img"
-            if !-e $file_img;
         my $base_img = $file_img;
 
         my @cmd;
         $base_img =~ s{\.\w+$}{\.ro.qcow2};
+
+        die "ERROR: base image already exists '$base_img'" if -e $base_img;
+
         if ($file_img =~ /\.SWAP\.\w+$/) {
             @cmd = _cmd_copy($file_img, $base_img);
         } else {
@@ -303,16 +321,20 @@ sub _create_qcow_base {
 
         push @base_img,([$base_img,$target]);
 
-
         my ($in, $out, $err);
         run3(\@cmd,\$in,\$out,\$err);
         warn $out  if $out;
-        warn $err   if $err;
+        warn "$?: $err"   if $err;
 
-        if (! -e $base_img) {
-            warn "ERROR: Output file $base_img not created at "
+        if ($? || ! -e $base_img) {
+            chomp $err;
+            chomp $out;
+            die "ERROR: Output file $base_img not created at "
+                ."\n"
+                ."ERROR $?: '".($err or '')."'\n"
+                ."  OUT: '".($out or '')."'\n"
+                ."\n"
                 .join(" ",@cmd);
-            exit;
         }
 
         chmod 0555,$base_img;
@@ -454,8 +476,9 @@ sub display {
     my ($type) = $graph->getAttribute('type');
     my ($port) = $graph->getAttribute('port');
     my ($address) = $graph->getAttribute('listen');
+    $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
-    die "Unable to get port for domain ".$self->name
+    die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
     return "$type://$address:$port";
@@ -563,12 +586,15 @@ Shuts down uncleanly the domain
 
 sub force_shutdown{
     my $self = shift;
-    $self->_do_force_shutdown();
+    return $self->_do_force_shutdown() if $self->is_active;
 }
 
 sub _do_force_shutdown {
     my $self = shift;
-    return $self->domain->destroy;
+    return if !$self->domain->is_active;
+
+    eval { $self->domain->destroy   };
+    warn $@ if $@;
 
 }
 
@@ -643,6 +669,14 @@ Returns true (1) for KVM domains
 
 sub can_hybernate { 1 };
 
+=head2 can_hybernate
+
+Returns true (1) for KVM domains
+
+=cut
+
+sub can_hibernate { 1 };
+
 =head2 hybernate
 
 Take a snapshot of the domain's state and save the information to a
@@ -655,8 +689,24 @@ this state when it is next started.
 
 sub hybernate {
     my $self = shift;
+    $self->hibernate();
+}
+
+=head2 hybernate
+
+Take a snapshot of the domain's state and save the information to a
+managed save location. The domain will be automatically restored with
+this state when it is next started.
+
+    $domain->hybernate();
+
+=cut
+
+sub hibernate {
+    my $self = shift;
     $self->domain->managed_save();
 }
+
 
 =head2 add_volume
 
@@ -665,13 +715,15 @@ Adds a new volume to the domain
     $domain->add_volume(name => $name, size => $size);
     $domain->add_volume(name => $name, size => $size, xml => 'definition.xml');
 
+    $domain->add_volume(path => "/var/lib/libvirt/images/path.img");
+
 =cut
 
 sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target));
+    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target path));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -685,13 +737,15 @@ sub add_volume {
         $args{xml} = $Ravada::VM::KVM::DIR_XML."/swap-volume.xml"      if $args{swap};
     }
 
-    my $path = $args{vm}->create_volume(
+    my $path = delete $args{path};
+
+    $path = $args{vm}->create_volume(
         name => $args{name}
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
-        ,target => ( $args{target} or undef )
-    );
+        ,target => ( $args{target} or undef)
+    )   if !$path;
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
@@ -731,19 +785,24 @@ sub _new_target_dev {
 
     my %target;
 
+    my $dev;
+
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
+        next if $disk->getAttribute('device') ne 'disk'
+            && $disk->getAttribute('device') ne 'cdrom';
 
 
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'target') {
 #                die $child->toString();
-                $target{ $child->getAttribute('dev') }++;
+                my $cur_dev = $child->getAttribute('dev');
+                $target{$cur_dev}++;
+                if (!$dev && $disk->getAttribute('device') eq 'disk') {
+                    ($dev) = $cur_dev =~ /(.*).$/;
+                }
             }
         }
     }
-    my ($dev) = keys %target;
-    $dev =~ s/(.*).$/$1/;
     for ('b' .. 'z') {
         my $new = "$dev$_";
         return $new if !$target{$new};
@@ -776,16 +835,6 @@ sub _new_pci_slot{
         my $new = '0x'.$_;
         return $new if !$target{$new};
     }
-}
-
-=head2 BUILD
-
-internal build method
-
-=cut
-
-sub BUILD {
-    my $self = shift;
 }
 
 =head2 list_volumes
@@ -822,6 +871,17 @@ Takes a screenshot, it stores it in file.
 
 =cut
 
+sub handler {
+    my ($stream, $data, $n) = @_;
+    my $file_tmp = "/var/tmp/$$.tmp";
+
+    open my $out ,'>>',$file_tmp;
+    print $out $data;
+    close $out;
+
+    return $n;
+}
+
 sub screenshot {
     my $self = shift;
     my $file = (shift or $self->_file_screenshot);
@@ -833,24 +893,13 @@ sub screenshot {
     my $stream = $self->{_vm}->vm->new_stream();
 
     my $mimetype = $self->domain->screenshot($stream,0);
+    $stream->recv_all(\&handler);
 
-    my $file_tmp = "$file.tmp";
-    my $data;
-    my $bytes = 0;
-    open my $out, '>', $file_tmp or die "$! $file_tmp";
-    while ( my $rv =$stream->recv($data,1024)) {
-        $bytes += $rv;
-        last if $rv<=0;
-        print $out $data;
-    }
-    close $out;
+    my $file_tmp = "/var/tmp/$$.tmp";
+    $stream->finish;
 
     $self->_convert_png($file_tmp,$file);
     unlink $file_tmp or warn "$! removing $file_tmp";
-
-    $stream->finish;
-
-    return $bytes;
 }
 
 sub _file_screenshot {
@@ -1146,14 +1195,16 @@ sub _set_spice_ip {
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
 
-        my $password;
-        if ($set_password) {
-            $password = Ravada::Utils::random_name(4);
-            $graphics->setAttribute(passwd => $password);
-        } else {
-            $graphics->removeAttribute('passwd');
+        if ( !$self->is_hibernated() ) {
+            my $password;
+            if ($set_password) {
+                $password = Ravada::Utils::random_name(4);
+                $graphics->setAttribute(passwd => $password);
+            } else {
+                $graphics->removeAttribute('passwd');
+            }
+            $self->_set_spice_password($password);
         }
-        $self->_set_spice_password($password);
 
         my $listen;
         for my $child ( $graphics->childNodes()) {
@@ -1262,17 +1313,71 @@ sub _get_driver_generic {
     my $self = shift;
     my $xml_path = shift;
 
+    my ($tag) = $xml_path =~ m{.*/(.*)};
+
     my @ret;
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     for my $driver ($doc->findnodes($xml_path)) {
         my $str = $driver->toString;
-        $str =~ s{^<model (.*)/>}{$1};
+        $str =~ s{^<$tag (.*)/>}{$1};
         push @ret,($str);
     }
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_driver_graphics {
+    my $self = shift;
+    my $xml_path = shift;
+
+    my ($tag) = $xml_path =~ m{.*/(.*)};
+
+    my @ret;
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    for my $tags (qw(image jpeg zlib playback streaming)){
+        for my $driver ($doc->findnodes($xml_path)) {
+            my $str = $driver->toString;
+            $str =~ s{^<$tag (.*)/>}{$1};
+            push @ret,($str);
+        }
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+    }
+}
+
+sub _get_driver_image {
+    my $self = shift;
+
+    my $image = $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
+#
+#    if ( !defined $image ) {
+#        my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+#        Ravada::VM::KVM::xml_add_graphics_image($doc);
+#    }
+    return $image;
+}
+
+sub _get_driver_jpeg {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/jpeg',@_);
+}
+
+sub _get_driver_zlib {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/zlib',@_);
+}
+
+sub _get_driver_playback {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/playback',@_);
+}
+
+sub _get_driver_streaming {
+    my $self = shift;
+    return $self->_get_driver_graphics('/domain/devices/graphics/streaming',@_);
 }
 
 sub _get_driver_video {
@@ -1326,6 +1431,8 @@ sub _set_driver_generic {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
 
     my %value = _text_to_hash($value_str);
+    my $changed = 0;
+
     for my $video($doc->findnodes($xml_path)) {
         my $old_driver = $video->toString();
         for my $node ($video->findnodes('model')) {
@@ -1343,12 +1450,103 @@ sub _set_driver_generic {
                 $node->setAttribute( $name => $value{$name} );
             }
         }
-        return if $old_driver eq $video->toString();
+        $changed++ if $old_driver ne $video->toString();
+    }
+    return if !$changed;
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+
+sub _set_driver_generic_simple($self, $xml_path, $value_str) {
+    my %value = _text_to_hash($value_str);
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my $changed = 0;
+    my $found = 0;
+    for my $node ( $doc->findnodes($xml_path)) {
+        $found++;
+        my $old_driver = $node->toString();
+        for my $attrib ( $node->attributes ) {
+            my ( $name ) =$attrib =~ /\s*(.*)=/;
+            next if !defined $name;
+            my $new_value = ($value{$name} or '');
+            if ($value{$name}) {
+                $node->setAttribute($name => $value{$name});
+            } else {
+                $node->removeAttribute($name);
+            }
+        }
+        for my $name ( keys %value ) {
+                $node->setAttribute( $name => $value{$name} );
+        }
+        $changed++ if $old_driver ne $node->toString();
+    }
+    $self->_add_driver($xml_path, \%value)       if !$found;
+
+    return if !$changed;
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+sub _add_driver($self, $xml_path, $attributes=undef) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my @nodes = $doc->findnodes($xml_path);
+    return if @nodes;
+
+    my ($xml_parent, $new_node) = $xml_path =~ m{(.*)/(.*)};
+    my @parent = $doc->findnodes($xml_parent);
+
+    confess "Expecting one parent, I don't know what to do with ".scalar @parent
+        if scalar@parent > 1;
+
+    @parent = add_driver($self, $xml_parent)  if !@parent;
+
+    my $node = $parent[0]->addNewChild(undef,$new_node);
+
+    for my $name (keys %$attributes) {
+        $node->setAttribute($name => $attributes->{$name});
     }
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 
+    return $node;
+}
+
+sub _set_driver_image {
+    my $self = shift;
+    my $value_str = shift or confess "Missing value";
+    my $xml_path = '/domain/devices/graphics/image';
+
+    return $self->_set_driver_generic_simple($xml_path, $value_str);
+}
+
+sub _set_driver_jpeg {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/jpeg',@_);
+}
+
+sub _set_driver_zlib {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/zlib',@_);
+}
+
+sub _set_driver_playback {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/playback',@_);
+}
+
+sub _set_driver_streaming {
+    my $self = shift;
+    return $self->_set_driver_generic_simple('/domain/devices/graphics/streaming',@_);
 }
 
 sub _set_driver_video {
@@ -1406,6 +1604,18 @@ In KVM it removes saved images.
 sub pre_remove {
     my $self = shift;
     $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
+}
+
+sub is_removed($self) {
+    my $is_removed = 0;
+    eval { $self->domain->get_xml_description};
+    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+    die $@ if $@;
+    return 0;
+}
+
+sub internal_id($self) {
+    return $self->domain->get_id();
 }
 
 1;

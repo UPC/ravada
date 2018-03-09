@@ -18,14 +18,8 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-my @VMS = keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 #########################################################
@@ -39,16 +33,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -96,7 +84,6 @@ for my $vm_name (reverse sort @VMS) {
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS);
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -114,6 +101,8 @@ for my $vm_name (reverse sort @VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        use_ok($CLASS);
 
         my $domain = test_create_domain($vm_name);
         test_list_domains($vm_name, $domain);

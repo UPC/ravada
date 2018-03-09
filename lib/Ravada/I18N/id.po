@@ -1,0 +1,382 @@
+# Translators:
+# Kimia Mirehbar 	<kimia@etsetb.upc.edu>, 2017
+msgid ""
+msgstr ""
+"Project-Id-Version: ravada\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-10-02 20:02+0700\n"
+"Last-Translator: Mahyuddin <yudi.al@gmail.com>\n"
+"Language-Team: Indonesian <yudi.al@gmail.com>\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.11\n"
+
+msgid "Ravada broker"
+msgstr "Ravada pialang"
+
+msgid "Restore"
+msgstr "Mengembalikan"
+
+msgid "Machine Name"
+msgstr "Nama Mesin"
+
+msgid "Tools"
+msgstr "Alat"
+
+msgid "Machines List"
+msgstr "Daftar Mesin"
+
+msgid "Users"
+msgstr "Pengguna"
+
+msgid "Choose a Machine to Start"
+msgstr "Pilih Mesin untuk Mulai"
+
+msgid "Start"
+msgstr "Mulai"
+
+msgid "Stop"
+msgstr "Berhenti"
+
+msgid "View"
+msgstr "Lihat"
+
+msgid "Prepare base"
+msgstr "Siapkan dasar"
+
+msgid "Clone"
+msgstr "Klon"
+
+msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
+msgstr "Tidak Bisa Mempersiapkan Basis, Buang Basis atau Hapus. Mesin telah"
+
+msgid "Clone/s"
+msgstr "Klon/s"
+
+msgid "NEW"
+msgstr "BARU"
+
+msgid "Users List"
+msgstr "Daftar Pengguna"
+
+msgid "Name"
+msgstr "Nama"
+
+msgid "Log Out"
+msgstr "Keluar"
+
+msgid "Available Machines"
+msgstr "Mesin Tersedia"
+
+msgid "Help"
+msgstr "Bantuan"
+
+msgid "Requirements"
+msgstr "Persyaratan"
+
+msgid "About"
+msgstr "Tentang"
+
+msgid "Messages"
+msgstr "Pesan"
+
+msgid "Mark all as Read"
+msgstr "Tandai semua telah Dibaca"
+
+msgid "Settings"
+msgstr "Pengaturan"
+
+msgid "New Machine"
+msgstr "Mesin Baru"
+
+msgid "Paused"
+msgstr "Berhenti sebentar"
+
+msgid "Machine locked by"
+msgstr "Mesin dikunci oleh"
+
+msgid "process"
+msgstr "proses"
+
+msgid "Copy"
+msgstr "Salin"
+
+msgid "Error!"
+msgstr "Galat!"
+
+msgid "Backend no available!"
+msgstr "Backend tidak tersedia!"
+
+msgid "Subject"
+msgstr "Subyek"
+
+msgid "Date"
+msgstr "Tanggal"
+
+msgid "Actions"
+msgstr "Aksi"
+
+msgid "Mark as Read"
+msgstr "Tandai telah Dibaca"
+
+msgid "Mark as UnRead"
+msgstr "Tandai belum Dibaca"
+
+msgid "No message to show!"
+msgstr "Tidak ada pesan untuk ditampilkan!"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "Show/Hide clones"
+msgstr "Tampilkan/Sembunyikan klone"
+
+msgid "I want to change my password"
+msgstr "Saya ingin mengganti kata sandi saya"
+
+msgid "I want to change my language"
+msgstr "Saya ingin mengubah bahasa saya"
+
+msgid "Language:"
+msgstr "Bahasa:"
+
+msgid "English"
+msgstr "Inggris"
+
+msgid "Spanish"
+msgstr "Spanyol"
+
+msgid "Catalan"
+msgstr "Catalan"
+
+msgid "New Password:"
+msgstr "Kata Sandi Baru:"
+
+msgid "Confirm Password:"
+msgstr "Konfirmasi Sandi:"
+
+msgid "Submit"
+msgstr "Kirim"
+
+msgid "Your language has been changed successfully"
+msgstr "Bahasa Anda telah berhasil diubah"
+
+msgid "Your password has been changed successfully"
+msgstr "Kata sandi Anda telah berhasil diubah"
+
+msgid "Password too small"
+msgstr "Password terlalu kecil"
+
+msgid "Password fields aren't equal"
+msgstr "Bidang kata sandi tidak sama"
+
+msgid "Some of the password's fields are empty"
+msgstr "Beberapa bidang kata sandi kosong"
+
+msgid "Public"
+msgstr "Publik"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Machines"
+msgstr "Mesin"
+
+msgid "Down"
+msgstr "Turun"
+
+msgid "Running"
+msgstr "Berjalan"
+
+msgid "ShutDown"
+msgstr "Matikan"
+
+msgid "Screenshot"
+msgstr "Tangkapan layar"
+
+msgid "machines"
+msgstr "mesin"
+
+msgid "users"
+msgstr "pengguna"
+
+msgid "messages"
+msgstr "pesan"
+
+msgid "Admin tools"
+msgstr "Alat Admin"
+
+msgid "Remove base"
+msgstr "Hapus pengguna"
+
+msgid "public"
+msgstr "publik"
+
+msgid "Hybernate"
+msgstr "Hibernasi"
+
+msgid "Shutdown"
+msgstr "Matikan"
+
+msgid "action"
+msgstr "aksi"
+
+msgid "New Base"
+msgstr "Basis Baru"
+
+msgid "will remove all the contents of the machine"
+msgstr "akan menghapus semua isi mesin"
+
+msgid "Are you sure?"
+msgstr "Apakah Anda yakin?"
+
+msgid "Yes"
+msgstr "Iya"
+
+msgid "No"
+msgstr "Tidak"
+
+msgid "Make public"
+msgstr "Buat publik"
+
+msgid "Machine settings"
+msgstr "Pengaturan mesin"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "Tidak dapat menghapus dasar, mesin memiliki klon"
+
+msgid "For spice redirection you'll need to install"
+msgstr "Untuk pengalihan spice Anda harus memasang"
+
+msgid "in your computer."
+msgstr "di komputer Anda"
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Cari di distribusi Anda, mis. di Debia /Ubuntu dengan"
+
+msgid "You'll need to install"
+msgstr "Anda harus memasang"
+
+msgid "e.g. VirtViewer v5.0-256 in your computer."
+msgstr "e.g. VirtViewer v5.0-256 di komputer Anda."
+
+msgid "To make this possible, download"
+msgstr "Untuk membuat ini mungkin, unduh"
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, then "
+"execute the file."
+msgstr ""
+"atau salin baris berikut ini dalam berkas ASCII dan simpan dengan ekstensi .reg, "
+"lalu jalankan berkas tersebut."
+
+msgid "Login"
+msgstr "Masuk"
+
+msgid "Welcome"
+msgstr "Selamat Datang"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Diperlukan penampil untuk menjalankan mesin virtual."
+
+msgid "Virtual Machines"
+msgstr "Mesin Virtual"
+
+msgid "user"
+msgstr "pengguna"
+
+msgid "password"
+msgstr "kata sandi"
+
+msgid "Start session"
+msgstr "Mulai sesi"
+
+msgid "Login with Intranet UPC's username."
+msgstr "Masuk dengan nama pengguna Intranet UPC's."
+
+msgid "Permissions"
+msgstr "Izin"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "bisa mengubah pengaturan mesin virtual yang dimiliki."
+
+msgid "can change the settings of any virtual machines."
+msgstr "dapat mengubah pengaturan dari setiap mesin virtual."
+
+msgid ""
+"can change the settings of any virtual machines cloned from one base owned by the "
+"user."
+msgstr ""
+"dapat mengubah pengaturan mesin virtual apapun yang dikloning dari satu basis "
+"yang dimiliki oleh pengguna."
+
+msgid "can clone public virtual machines."
+msgstr "Bisa mengkloning mesin virtual publik."
+
+msgid "can clone any virtual machine."
+msgstr "Bisa mengkloning mesin virtual apapun."
+
+msgid "can create bases."
+msgstr "bisa membuat basis."
+
+msgid "can create virtual machines."
+msgstr "bisa membuat mesin virtual."
+
+msgid "can grant permissions to other users"
+msgstr "dapat memberikan izin kepada pengguna lain"
+
+msgid "can hibernate any virtual machine."
+msgstr "bisa hibernasi mesin virtual apapun."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr "Bisa hibernasi klon dari mesin virtual yang dimiliki oleh pengguna."
+
+msgid "can hibernate any clone."
+msgstr "bisa hibernasi klon apapun."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "dapat menghapus mesin virtual yang dimiliki oleh pengguna."
+
+msgid "can remove any virtual machine."
+msgstr "bisa menghapus mesin virtual apapun."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "dapat menghapus klon dari mesin virtual yang dimiliki oleh pengguna."
+
+msgid "can remove any clone."
+msgstr "bisa menghapus kloning."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+"bisa mengambil tangkapan layar dari setiap mesin virtual yang dimiliki oleh "
+"pengguna."
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "bisa mengambil tangkapan layar dari mesin virtual manapun."
+
+msgid "can shutdown any virtual machine."
+msgstr "bisa mematikan mesin virtual apapun."
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "Bisa mematikan klon dari mesin virtual yang dimiliki oleh user."
+
+msgid "Submit Query"
+msgstr "Kirim Query"
+
+msgid "Galician"
+msgstr "Galaksi"
+
+msgid "French"
+msgstr "Perancis"
+
+msgid "Indonesian"
+msgstr "Bahasa Indonesia"
+
+msgid "Persian"
+msgstr "Persia"
+
+msgid "Japanese"
+msgstr "Jepang"

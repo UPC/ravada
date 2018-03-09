@@ -16,10 +16,9 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 init($test->connector, $FILE_CONFIG);
 
 my $USER = create_user('foo','bar');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 our $TIMEOUT_SHUTDOWN = 10;
+
+our %SKIP_DEFAULT_VALUE = map { $_ => 1 } qw(image jpeg playback streaming zlib);
 
 ################################################################
 sub test_create_domain {
@@ -30,16 +29,12 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name)
+                     );
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -66,8 +61,10 @@ sub test_drivers_id {
 
     my $driver_type = $domain->drivers($type);
 
-    my $value = $driver_type->get_value();
-    ok($value);
+    if (!$SKIP_DEFAULT_VALUE{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value,"[$vm_name] Expecting a value for driver $type");
+    }
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
@@ -121,7 +118,7 @@ sub test_settings {
     my $vm_name = shift;
 
     for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
-        next if $driver->name ne 'video';
+#        next if $driver->name ne 'video';
         diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_id($vm_name, $driver->name);
     }

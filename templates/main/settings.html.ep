@@ -22,6 +22,6 @@
     </div>
     </div>
     %= include 'bootstrap/scripts'
-    %= include 'bootstrap/footer'
+    %= include $footer
 </body>
 </html>

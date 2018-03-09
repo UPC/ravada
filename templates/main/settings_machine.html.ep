@@ -5,9 +5,8 @@
 <div id="wrapper">
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
-
         <!--BASES AND DOMAINS LIST-->
-<div ng-controller="singleMachinePage">
+        <div ng-controller="singleMachinePage" ng-init="new_name='<%= $domain->name %>'">
     <div class="page-header">
         <div class="panel panel-default">
              <div class="panel-heading">
@@ -17,31 +16,10 @@
                      Settings
                  </h2>
              </div> <!-- del panel heading-->
-             <ul class="nav nav-tabs" id="myTab">
-               <li class="nav active"><a href="#drivers" data-toggle="tab">Drivers</a></li>
-%            if ( $USER->can_remove || $USER->can_remove_clone_all ) {
-               <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
-% }
-               <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
-               <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
-
-             </ul>
             <div class="tab-content">
-
-             <div class="tab-pane fade" id="remove" >
-    %= include 'main/vm_remove'
-             </div>
-             <div class="tab-pane fade" id="rename">
-    %= include 'main/vm_rename'
-             </div>
-             <div class="tab-pane fade" id="copy">
-    %= include 'main/vm_copy'
-             </div>
-       
-             <div class="tab-pane fade in active" id="drivers">
-    %= include 'main/vm_options'
-             </div>
-         </div>
+                %= include 'main/settings_machine_tabs_head'
+                %= include 'main/settings_machine_tabs_body'
+            </div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->
 </div><!-- del ng-controller -->
@@ -49,5 +27,34 @@
 </div> <!-- del wrapper -->
     %= include 'bootstrap/scripts'
     %= include 'bootstrap/messages'
+<script type="text/javascript">
+if (location.hash) {
+  $('a[href=\'' + location.hash + '\']').tab('show');
+}
+var activeTab = localStorage.getItem('activeTab');
+if (activeTab) {
+  $('a[href="' + activeTab + '"]').tab('show');
+}
+
+$('body').on('click', 'a[data-toggle=\'tab\']', function (e) {
+  e.preventDefault()
+  var tab_name = this.getAttribute('href')
+  if (history.pushState) {
+    history.pushState(null, null, tab_name)
+  }
+  else {
+    location.hash = tab_name
+  }
+  localStorage.setItem('activeTab', tab_name)
+
+  $(this).tab('show');
+  return false;
+});
+$(window).on('popstate', function () {
+  var anchor = location.hash ||
+    $('a[data-toggle=\'tab\']').first().attr('href');
+  $('a[href=\'' + anchor + '\']').tab('show');
+});
+</script>
 </body>
 </html>

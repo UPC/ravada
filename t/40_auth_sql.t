@@ -11,7 +11,10 @@ use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
 
 
-my $RAVADA = Ravada->new(connector => $test->connector);
+my $RAVADA = Ravada->new(connector => $test->connector
+    , warn_error => 0
+    , config => 't/etc/ravada.conf'
+);
 
 Ravada::Auth::SQL::add_user(name => 'test',password => $$);
 

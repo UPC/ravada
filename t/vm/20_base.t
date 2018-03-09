@@ -17,14 +17,9 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 my $DISPLAY_IP = '99.1.99.1';
@@ -40,16 +35,10 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -59,6 +48,14 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
 
+    return $domain;
+}
+
+sub test_create_domain_swap {
+    my $vm_name = shift;
+    my $domain = test_create_domain($vm_name);
+
+    $domain->add_volume_swap( size => 128 * 1024 * 1024 );
     return $domain;
 }
 
@@ -108,29 +105,50 @@ sub test_display {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
+    my $n_volumes = (shift or 1);
 
     test_files_base($domain,0);
+    $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( $USER) };
     ok(!$@, $@);
     ok($domain->is_base);
+    is($domain->is_active(),0);
+    $domain->is_public(1);
 
-    eval { $domain->prepare_base( $USER) };
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
+    my $front_domains = rvd_front->list_domains();
+    my ($dom_front) = grep { $_->{name} eq $domain->name }
+        @$front_domains;
+
+    ok($dom_front,"Expecting the domain ".$domain->name
+                    ." in list domains");
+
+    if ($dom_front) {
+        ok($dom_front->{is_base});
+    }
+
     ok($domain->is_base);
+    $domain->is_public(1);
 
-    test_files_base($domain,1);
+    test_files_base($domain, $n_volumes);
 
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER)    if $domain->is_active;
 
-    touch_mtime(@disk);
+    # We can't prepare base if already prepared
+    eval { $domain->prepare_base( $USER) };
+    like($@, qr'.');
+    is($domain->is_base,1);
 
+    # So we remove the base
+    eval { $domain->remove_base( $USER) };
+    is($@,'');
+    is($domain->is_base,0);
+
+    # And prepare again
     eval { $domain->prepare_base( $USER) };
     is($@,'');
-    ok($domain->is_base);
+    is($domain->is_base,1);
 
     my $name_clone = new_domain_name();
 
@@ -169,19 +187,21 @@ sub test_prepare_base {
     }
 
 
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
-        ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
     $domain_clone->remove($USER);
 
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->remove_base($USER) };
+    is($@,'');
 
-    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
+    eval { $domain->prepare_base($USER) };
+    is($@,'');
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
+    ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
+
+    eval { $domain->start($USER)};
+    like($@,qr/bases.*started/i);
+    is($domain->is_active,0,"Expecting base domains can't be run");
 
     $domain->is_base(0);
     ok(!$domain->is_base,"[$vm_name] Expecting domain is_base=0 , got :".$domain->is_base);
@@ -208,23 +228,8 @@ sub test_prepare_base_active {
     eval{ $domain->prepare_base($USER) };
     ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
 
-    ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
-    ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name
-                            ." should not be paused after prepare base") or return;
-}
-
-sub touch_mtime {
-    for my $disk (@_) {
-
-        my @stat0 = stat($disk);
-
-        sleep 2;
-        utime(undef, undef, $disk) or die "$! $disk";
-        my @stat1 = stat($disk);
-
-        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
-    }
-
+    ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
+            or return;
 }
 
 sub test_devices_clone {
@@ -289,6 +294,7 @@ sub test_dont_remove_base_cloned {
 
     my $name_clone = new_domain_name();
 
+    $domain->is_public(1);
     my $clone = rvd_back()->create_domain( name => $name_clone
             ,id_owner => $USER->id
             ,id_base => $domain->id
@@ -317,6 +323,180 @@ sub test_dont_remove_base_cloned {
 
 }
 
+sub test_spinned_off_base {
+    my $vm_name = shift;
+
+    my $base= test_create_domain($vm_name);
+    $base->prepare_base($USER);
+    ok($base->is_base,"[$vm_name] expecting domain is base, got "
+                        .$base->is_base);
+
+    my $name_clone = new_domain_name();
+
+    $base->is_public(1);
+    my $clone = rvd_back()->create_domain( name => $name_clone
+            ,id_owner => $USER->id
+            ,id_base => $base->id
+            ,vm => $vm_name
+    );
+
+    # Base can't started, it has clones
+    eval { $base->start(user => $USER) };
+    like($@,qr'.');
+    is($base->is_active,0);
+
+    $clone->prepare_base(user_admin);
+
+    $base->remove_base(user_admin());
+    # Base can get started now the clones are released
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $base->shutdown_now($USER);
+    is($base->is_active,0);
+
+    $clone->remove_base(user_admin);
+
+    # Base can get started now the clones are released even though they are not base
+    eval { $base->start(user => $USER) };
+    is($@,'');
+    is($base->is_active,1);
+
+    $clone->remove($USER);
+    $base->remove($USER);
+}
+
+
+sub test_private_base {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    $domain->prepare_base($USER);
+
+    my $clone_name = new_domain_name();
+
+    my $clone;
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+
+    # admin can clone
+    eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # when is public, any can clone
+    $domain->is_public(1);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    is($@,'');
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting a clone");
+    $clone->remove(user_admin)  if $clone;
+
+    # hide it again
+    $domain->is_public(0);
+    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
+    like($@,qr(.));
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2,"Expecting no clone");
+}
+
+sub test_domain_limit {
+    my $vm_name = shift;
+
+    for my $domain ( rvd_back->list_domains()) {
+        $domain->shutdown_now(user_admin);
+    }
+    my $domain = create_domain($vm_name, $USER);
+    ok($domain,"Expecting a new domain created") or exit;
+    $domain->shutdown_now($USER)    if $domain->is_active;
+
+    is(rvd_back->list_domains(user => $USER, active => 1),0
+        ,Dumper(rvd_back->list_domains())) or exit;
+
+    $domain->start($USER);
+    is($domain->is_active,1);
+
+    ok($domain->start_time <= time,"Expecting start time <= ".time
+                                    ." got ".time);
+
+    sleep 1;
+    is(rvd_back->list_domains(user => $USER, active => 1),1);
+
+    my $domain2 = create_domain($vm_name, $USER);
+    $domain2->shutdown_now($USER)   if $domain2->is_active;
+    is(rvd_back->list_domains(user => $USER, active => 1),1);
+
+    $domain2->start($USER);
+    rvd_back->enforce_limits(timeout => 2);
+    sleep 2;
+    rvd_back->_process_requests_dont_fork();
+    my @list = rvd_back->list_domains(user => $USER, active => 1);
+    is(scalar @list,1) or die Dumper(\@list);
+    is($list[0]->name, $domain2->name) if $list[0];
+}
+
+sub test_domain_limit_already_requested {
+    my $vm_name = shift;
+
+    for my $domain ( rvd_back->list_domains()) {
+        $domain->shutdown_now(user_admin);
+    }
+    my $domain = create_domain($vm_name, $USER);
+    ok($domain,"Expecting a new domain created") or return;
+    $domain->shutdown_now($USER)    if $domain->is_active;
+
+    is(rvd_back->list_domains(user => $USER, active => 1),0
+        ,Dumper(rvd_back->list_domains())) or return;
+
+    $domain->start($USER);
+    is($domain->is_active,1);
+
+    ok($domain->start_time <= time,"Expecting start time <= ".time
+                                    ." got ".time);
+
+    sleep 1;
+    is(rvd_back->list_domains(user => $USER, active => 1),1);
+
+    my $domain2 = create_domain($vm_name, $USER);
+    $domain2->shutdown_now($USER)   if $domain2->is_active;
+    is(rvd_back->list_domains(user => $USER, active => 1),1);
+
+    $domain2->start($USER);
+    my @list_requests = $domain->list_requests;
+    is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
+
+    rvd_back->enforce_limits(timeout => 2);
+
+    if (!$domain->can_hybernate) {
+        @list_requests = $domain->list_all_requests();
+        is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
+        rvd_back->enforce_limits(timeout => 2);
+        @list_requests = $domain->list_all_requests();
+
+        is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
+
+        sleep 3;
+
+        rvd_back->_process_requests_dont_fork();
+    }
+    @list_requests = $domain->list_requests;
+    is(scalar @list_requests,0,"Expecting 0 request ".Dumper(\@list_requests)) or exit;
+
+    my @list = rvd_back->list_domains(user => $USER, active => 1);
+    is(scalar @list,1) or die Dumper(\@list);
+    is($list[0]->name, $domain2->name) if $list[0];
+}
 
 #######################################################################33
 
@@ -324,12 +504,11 @@ sub test_dont_remove_base_cloned {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (reverse sort @VMS) {
+for my $vm_name ('Void','KVM') {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
 
-    use_ok($CLASS);
 
     my $RAVADA;
     eval { $RAVADA = Ravada->new(@ARG_RVD) };
@@ -348,11 +527,35 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok($CLASS);
+
+        test_domain_limit_already_requested($vm_name);
+
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
         test_prepare_base_active($vm_name);
         test_remove_base($vm_name);
         test_dont_remove_base_cloned($vm_name);
+
+        test_private_base($vm_name);
+
+        test_spinned_off_base($vm_name);
+        test_domain_limit($vm_name);
+
+
+        $domain->remove($USER);
+        $domain = undef;
+
+        my $domain2 = test_create_domain_swap($vm_name);
+        test_prepare_base($vm_name, $domain2 , 2);
+        $domain2->remove($USER);
+
+        $domain2 = test_create_domain_swap($vm_name);
+        $domain2->start($USER);
+        $domain2->shutdown_now($USER);
+        test_prepare_base($vm_name, $domain2 , 2);
+        $domain2->remove($USER);
+
     }
 }
 

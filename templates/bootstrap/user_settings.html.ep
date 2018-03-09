@@ -7,7 +7,7 @@
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div>
+        <div ng-controller="user_settings">
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -27,11 +27,14 @@
                         <p><form method='post' enctype="multipart/form-data">
                             <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
                                 <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
-                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
                                 <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
+                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
                                 <option <%= $c->param("tongue") eq 'gl' ? "selected" : "" %> value="gl" ><%=l 'Galician' %></option>
                                 <option <%= $c->param("tongue") eq 'fr' ? "selected" : "" %> value="fr" ><%=l 'French' %></option>
+                                <option <%= $c->param("tongue") eq 'hi' ? "selected" : "" %> value="hi" ><%=l 'Hindi' %></option>
+                                <option <%= $c->param("tongue") eq 'id' ? "selected" : "" %> value="id" ><%=l 'Indonesian' %></option>
                                 <option <%= $c->param("tongue") eq 'fa' ? "selected" : "" %> value="fa" ><%=l 'Persian' %></option>
+                                <option <%= $c->param("tongue") eq 'jp' ? "selected" : "" %> value="jp" ><%=l 'Japanese' %></option>
                              </select>
 %                            if ($changed_lang) {
                                  <font color="green">   <%=l 'Your language has been changed successfully' %></font> 
@@ -43,6 +46,7 @@
                         <form method='post' enctype="multipart/form-data">
                             <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
                             <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
+                            <p><%=l 'Current Password:' %><input type='password' name='current_password' id='current_password'></p>
                             <p><input type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Submit' %>'></input>
 %                               if ($changed_pass) {
                                     <font color="green">   <%=l 'Your password has been changed successfully' %></font> 
@@ -57,6 +61,6 @@
     </div>
     </div>
     %= include 'bootstrap/scripts'
-    %= include 'bootstrap/footer'
+    %= include $footer
 </body>
 </html>

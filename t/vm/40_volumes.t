@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use File::Copy;
 use Test::More;
 use Test::SQL::Data;
 
@@ -20,14 +21,9 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
-my @VMS = keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 #######################################################################33
 
@@ -41,11 +37,7 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = (@{$ARG_CREATE_DOM{$vm_name}}
+    my @arg_create = (arg_create_dom($vm_name)
         ,id_owner => $USER->id
         ,name => $name
     );
@@ -131,6 +123,7 @@ sub test_clone {
 
     my $name_clone = new_domain_name();
 #    diag("[$vm_name] going to clone from ".$domain->name);
+    $domain->is_public(1);
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
         ,id_owner => $USER->id
@@ -181,9 +174,9 @@ sub test_files_base {
 
     $domain->stop if $domain->is_active;
     eval { $domain->start($USER) };
-    ok(!$@,"Expecting no error, got : '".($@ or '')."'");
-    ok($domain->is_active,"Expecting domain active");
-
+    ok($@,"Expecting error, got : '".($@ or '')."'");
+    ok(!$domain->is_active,"Expecting domain not active");
+    $domain->shutdown_now($USER)    if $domain->is_active;
 }
 
 sub test_domain_2_volumes {
@@ -221,9 +214,12 @@ sub test_domain_n_volumes {
     my $vm = $RVD_BACK->search_vm($vm_name);
 
     my $domain = test_create_domain($vm_name);
+    diag("Creating domain ".$domain->name." with $n volumes");
+
     test_add_volume($vm, $domain, 'vdb',"swap");
     for ( reverse 3 .. $n) {
-        test_add_volume($vm, $domain, 'vd'.chr(ord('a')-1+$_));
+        my $vol_name = 'vd'.chr(ord('a')-1+$_);
+        test_add_volume($vm, $domain, $vol_name);
     }
 
     my @volumes = $domain->list_volumes;
@@ -248,6 +244,30 @@ sub test_domain_n_volumes {
     }
 }
 
+sub test_add_volume_path {
+    my $vm_name = shift;
+
+    my $vm = $RVD_BACK->search_vm($vm_name);
+
+    my $domain = test_create_domain($vm_name);
+    my @volumes = $domain->list_volumes();
+
+    my $file_path = $vm->dir_img."/mock.img";
+
+    open my $out,'>',$file_path or die "$! $file_path";
+    print $out "hi\n";
+    close $out;
+
+    $domain->add_volume(path => $file_path);
+
+    my $domain2 = $vm->search_domain($domain->name);
+    my @volumes2 = $domain2->list_volumes();
+    is(scalar @volumes2,scalar @volumes + 1);# or exit;
+
+    $domain->remove(user_admin);
+    unlink $file_path or die "$! $file_path"
+        if -e $file_path;
+}
 
 sub test_domain_1_volume {
     my $vm_name = shift;
@@ -305,6 +325,7 @@ sub test_domain_swap {
         ok(-e $file_base,
                 "Expecting file base created for $file_base");
     }
+    $domain->is_public(1);
     my $domain_clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     # after clone, the qcow file should be there, swap shouldn't
@@ -325,15 +346,30 @@ sub test_domain_swap {
     ok($domain_clone->is_active,"Domain ".$domain_clone->name
                                 ." should be active");
 
+    my $min_size = 197120 if $vm_name eq 'KVM';
+    $min_size = 529 if $vm_name eq 'Void';
     # after start, all the files should be there
+     my $found_swap = 0;
     for my $file ( $domain_clone->list_volumes) {
          ok(-e $file ,
-            "Expecting file exists $file")
+            "Expecting file exists $file");
+        if ( $file =~ /SWAP/) {
+            $found_swap++;
+            my $size = -s $file;
+            copy($file, "$file.tmp");
+            `/bin/cat $file.tmp >> $file`;
+            ok(-s $file > $size);
+            ok(-s $file > $min_size
+                , "Expecting swap file bigger than $min_size, got :"
+                    .-s $file);
+        }
     }
     $domain_clone->shutdown_now($USER);
+    if ( $create_swap ) {
+        ok($found_swap, "Expecting swap files , got :$found_swap") or exit;
+    }
 
     # after shutdown, the qcow file should be there, swap be empty
-    my $min_size = 197120;
     for my $file( $domain_clone->list_volumes) {
         ok(-e $file,
                 "Expecting file exists $file")
@@ -341,8 +377,7 @@ sub test_domain_swap {
         next if ( $file!~ /SWAP/);
 
         ok(-s $file <= $min_size
-                ,"Expecting swap $file size <= $min_size , got :".-s $file)
-        or exit;
+            ,"[$vm_name] Expecting swap $file size <= $min_size , got :".-s $file)
 
     }
 
@@ -350,6 +385,12 @@ sub test_domain_swap {
 
 sub test_search($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
+    $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
+
+    my $file_old = $vm->search_volume_path("file.iso");
+    unlink $file_old if -e $file_old;
+
+    $vm->default_storage_pool_name('default');
 
     my $file_out = $vm->dir_img."/file.iso";
 
@@ -359,6 +400,8 @@ sub test_search($vm_name) {
     };
     print $out "foo.bar\n";
     close $out;
+
+    $vm->refresh_storage();
 
     my $file = $vm->search_volume_path("file.iso");
     is($file_out, $file);
@@ -378,9 +421,6 @@ remove_old_disks();
 for my $vm_name (reverse sort @VMS) {
 
     diag("Testing $vm_name VM");
-    my $CLASS= "Ravada::VM::$vm_name";
-
-    use_ok($CLASS);
 
     my $vm;
     eval { $vm = $RVD_BACK->search_vm($vm_name) } if $RVD_BACK;
@@ -395,6 +435,8 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        use_ok("Ravada::VM::$vm_name");
+
         test_domain_swap($vm_name);
         test_domain_create_with_swap($vm_name);
         test_domain_1_volume($vm_name);
@@ -403,6 +445,8 @@ for my $vm_name (reverse sort @VMS) {
             test_domain_n_volumes($vm_name,$_);
         }
         test_search($vm_name);
+
+        test_add_volume_path($vm_name);
     }
 }
 
