@@ -6,7 +6,6 @@
 - Complete the Japanese translation [\#421]
 - Add other languages to each language [\#452]
 - Add Ubuntu Mate [\#557]
-- Add a minimun disk size for each KVM template [\#447]
 - Add rich text editing in description tab [\#562]
 - External IP / dns name  [\#571]
 - Need internal id for monitoring VMs [\#575]
