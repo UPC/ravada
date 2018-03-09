@@ -54,10 +54,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
                                               ,footer => 'bootstrap/footer'
-<<<<<<< 90738dc59c60aa9ab396a2d964f5c5c47d8de6b7
                                               ,monitoring => 0
-=======
->>>>>>> [#559]I have added the option to customize the footer
                                               ,admin => {
                                                     hide_clones => 15
                                               }
