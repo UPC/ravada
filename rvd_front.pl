@@ -54,6 +54,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,secrets => ['changeme0']
                                               ,login_custom => ''
                                               ,footer => 'bootstrap/footer'
+                                              ,monitoring => 0
                                               ,admin => {
                                                     hide_clones => 15
                                               }
@@ -119,6 +120,10 @@ hook before_routes => sub {
             ,_anonymous => undef
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
+<<<<<<< HEAD
+=======
+            ,monitoring => $CONFIG_FRONT->{monitoring}
+>>>>>>> 6695c52cd536735c2fc51bc35d759673986bf405
             );
 
   return access_denied($c)
@@ -618,6 +623,12 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+any '/admin/monitoring' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/monitoring');
+};
+
 any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
@@ -661,28 +672,22 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
-            my $comp_password = $USER->compare_password($c->param('current_password'));
-            if ($comp_password) {
-                if ($c->param('password') eq $c->param('conf_password')) {
-                    eval {
-                        $USER->change_password($c->param('password'));
-                        _logged_in($c);
-                    };
-                    if ($@ =~ /Password too small/) {
-                        push @errors,("New Password is too small");
-                    }
-                    else {
-                        $changed_pass = 1;
-                    };
+            if ($c->param('password') eq $c->param('conf_password')) {
+                eval {
+                    $USER->change_password($c->param('password'));
+                    _logged_in($c);
+                };
+                if ($@ =~ /Password too small/) {
+                    push @errors,("Password too small")
                 }
                 else {
-                    push @errors,("Password fields aren't equal");
+                    $changed_pass = 1;
                 }
             }
             else {
-                push @errors, ("Invalid Current Password");
+                    push @errors,("Password fields aren't equal")
             }
         }
     }
@@ -824,8 +829,8 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
+                      ,monitoring => $CONFIG_FRONT->{monitoring}
     );
-
 }
 
 sub logout {
@@ -940,7 +945,6 @@ sub admin {
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
-
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
@@ -953,8 +957,7 @@ sub admin {
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
     }
-    $c->render(template => 'main/admin_'.$page);
-
+    $c->render( template => 'main/admin_'.$page);
 };
 
 sub new_machine {
@@ -1313,34 +1316,27 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
- #   if($c ->param('submit')) {
- #       push @error,("Name is mandatory")   if !$c->param('username');
- #       push @error,("Invalid username '".$c->param('username')."'"
- #               .".It can only contain words and numbers.")
- #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
- #       if (!@error) {
- #           Ravada::Auth::SQL::add_user($username, $password,0);
- #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
- #       }
 
-#    }
-#    $c->stash(errors => \@error);
-#    push @{$c->stash->{js}}, '/js/admin.js';
-#    $c->render(template => 'bootstrap/new_user_control'
-#        , name => $c->param('username')
-#)    
-    
-   if ($username) {
-       Ravada::Auth::SQL::add_user(name => $username, password => $password);
-       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+   if($username) {
+       my @list_users = Ravada::Auth::SQL::list_all_users();
+       warn join(", ", @list_users);
+
+       if (grep {$_ eq $username} @list_users) {
+           push @error,("Username already exists, please choose another one");
+           $c->render(template => 'bootstrap/new_user',error => \@error);
+       }
+       else {
+           #username don't exists
+           Ravada::Auth::SQL::add_user(name => $username, password => $password);
+           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+       }
    }
    $c->render(template => 'bootstrap/new_user');
 

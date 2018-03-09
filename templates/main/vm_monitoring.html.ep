@@ -1,0 +1,24 @@
+% if ($monitoring) {
+
+<div class="panel-body">
+%   if ($message) {
+        <div class="panel panel-success">
+            <div class="panel-heading"><%= $message %></div>
+        </div>
+%   }
+    <div class="form-group">
+%   if ( ($domain->internal_id) < 1) {
+    <div class="alert alert-info">
+        The VM is <strong>stopped</strong>. Nothing to monitoring
+    </div>
+%   } else {
+    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.cpu"></div>
+    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.cpu_per_core"></div>
+    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.mem_usage"></div>
+    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.mem"></div>
+    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.writeback"></div>
+    <div data-netdata="cgroup_qemu_qemu_<%= $domain->internal_id %>-<%= lc($domain->name) %>.io"></div>
+%   }
+    </div>
+</div>
+% }

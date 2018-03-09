@@ -483,7 +483,7 @@ sub _data($self, $field, $value=undef) {
             if !$self->is_known();
 
         confess "ERROR: Invalid field '$field'"
-            if $field !~ /^[a-z]+[a-z0-9]*$/;
+            if $field !~ /^[a-z]+[a-z0-9_]*$/;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains set $field=? WHERE id=?"
         );
@@ -726,6 +726,12 @@ sub _insert_db {
     }
     $sth->finish;
 
+    $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set internal_id=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->internal_id, $self->id);
+    $sth->finish;
 }
 
 =head2 pre_remove
@@ -1157,10 +1163,14 @@ sub _post_shutdown {
 
     $self->_remove_iptables(@_);
     $self->_data(status => 'shutdown')    if !$self->is_volatile && !$self->is_active;
-    if ($self->id_base()) {
-        $self->clean_swap_volumes(@_) if !$self->is_removed && !$self->is_removed;
-    }
     $self->_remove_temporary_machine(@_);
+    if ($self->id_base) {
+        for ( 1 ..  5 ) {
+            last if !$self->is_active;
+            sleep 1;
+        }
+        $self->clean_swap_volumes(@_) if !$self->is_active;
+    }
 
     if (defined $timeout && !$self->is_removed) {
         if ($timeout<2 && !$self->is_removed && $self->is_active) {
@@ -1290,6 +1300,8 @@ sub _post_start {
     $sth->execute(time, $self->id);
     $sth->finish;
 
+    $self->_data('internal_id',$self->internal_id);
+
     $self->_add_iptable(@_);
 
     if ($self->run_timeout) {
@@ -1315,7 +1327,8 @@ sub _add_iptable {
     my $uid = $user->id;
 
     my $display = $self->display($user);
-    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+    my ($local_port) = $display =~ m{\w+://.*:(\d+)};
+    my $local_ip = $self->_vm->ip;
 
     my $ipt_obj = _obj_iptables();
 	# append rule at the end of the RAVADA chain in the filter table to
@@ -1329,7 +1342,7 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
-    @iptables_arg = ( '0.0.0.0'
+    @iptables_arg = ( '0.0.0.0/0'
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
     
@@ -1393,8 +1406,9 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-        $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
 	}
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
@@ -1782,10 +1796,6 @@ sub type {
     return $self->_data('vm');
 }
 
-sub file_screenshot($self) {
-    return $self->_data('file_screenshot');
-}
-
 sub _pre_clone($self,%args) {
     my $name = delete $args{name};
     my $user = delete $args{user};
@@ -1798,6 +1808,27 @@ sub _pre_clone($self,%args) {
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
+}
+
+=head2 file_screenshot
+
+Returns the name of the file where the virtual machine screenshot is stored
+
+=cut
+
+sub file_screenshot($self){
+  return $self->_data('file_screenshot');
+}
+
+=head2 internal_id
+
+Returns the internal id of this domain as found in its Virtual Manager connection
+
+=cut
+
+sub internal_id {
+    my $self = shift;
+    return $self->id;
 }
 
 1;

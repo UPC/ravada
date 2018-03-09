@@ -40,6 +40,7 @@ sub test_defaults {
     ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 
+    ok(!$user->can_create_base);
     ok(!$user->can_create_domain);
     ok(!$user->can_remove_all);
     ok(!$user->can_remove_clone_all);
@@ -49,6 +50,9 @@ sub test_defaults {
 
     ok(!$user->can_hibernate_clone);
     ok(!$user->can_hibernate_all);
+    ok(!$user->can_hibernate_clone_all);
+    
+    ok(!$user->can_manage_users);
 
     for my $perm (user_admin->list_permissions) {
         if ( $perm =~ m{^(clone|change_settings|screenshot|remove)$}) {
