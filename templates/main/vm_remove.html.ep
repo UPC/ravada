@@ -4,17 +4,26 @@
                 <div class="panel-heading">
                     This virtual machine can't be removed because it
                     has {{showmachine.has_clones}} clones.
+                    <ul>
+%                   for my $clone (sort @$list_clones) {
+                        <li><%= $clone %></li>
+%                   }
+                    </ul>
                 </div>
             </div>
 
             <div ng-show="!domain_remove_done">
+                <h2 class="Subhead-heading">
+                    Danger Zone
+                </h2>
+                 <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
  %              if ($USER->can_remove_clone_all) {
-                <a ng-show="showmachine.has_clones > 0" type="button" class="btn btn-danger"
+                    <a ng-show="showmachine.has_clones > 0" type="button" class="btn btn-danger"
                               ng-click="domain_remove_clones=1"
                           >
                           <%=l 'Remove Clones' %>
-                </a>
-%                }
+                    </a>
+%               }
 %               if (($USER->can_remove_clone_all && $domain->id_base != 0) || $domain->id_base == 0) { 
                 <a type="button" class="btn btn-danger"
                               ng-hide="showmachine.has_clones > 0"

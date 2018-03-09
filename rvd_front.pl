@@ -1428,6 +1428,7 @@ sub settings_machine {
         $RAVADA->wait_request($req, 60)
     }
     return $c->render(template => 'main/settings_machine'
+        , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path);
 }
 
