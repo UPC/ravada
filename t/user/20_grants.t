@@ -285,6 +285,8 @@ sub test_remove_clone_all {
     my $vm_name = shift;
     my $user = create_user("oper_rca$$","bar");
     is($user->can_remove_clone_all(),undef) or return;
+    is($user->is_operator,undef);
+
     my $usera = create_user("admin_rca$$","bar",1);
     is($usera->can_remove_clone_all(),1) or return;
 
@@ -301,6 +303,7 @@ sub test_remove_clone_all {
 
     $usera->grant($user,'remove_clone_all');
     is($user->can_remove_clone_all(),1);
+    is($user->is_operator,1);
 
     eval { $clone->remove($user); };
     is($@,'');
