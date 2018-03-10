@@ -21,6 +21,7 @@
 <script>var netdataNoBootstrap = true;</script>
 <script type="text/javascript" src="http://localhost:19999/dashboard.js"></script>
 % }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
 
 % foreach my $jslink (@$js) {
 <script src="<%= $jslink %>"></script>

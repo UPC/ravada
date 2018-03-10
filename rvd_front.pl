@@ -52,9 +52,11 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
+                                              ,guide => 0
                                               ,login_custom => ''
                                               ,footer => 'bootstrap/footer'
                                               ,monitoring => 0
+                                              ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
                                               }
@@ -121,6 +123,7 @@ hook before_routes => sub {
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
             ,monitoring => $CONFIG_FRONT->{monitoring}
+            ,guide => $CONFIG_FRONT->{guide}
             );
 
   return access_denied($c)
@@ -366,14 +369,19 @@ get '/machine/shutdown/(:id).(:type)' => sub {
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)       if !$USER -> can_remove();
+	return access_denied($c)       if (!$USER -> can_remove());
         return remove_machine($c);
 };
 
 any '/machine/remove_clones/(:id).(:type)' => sub {
-        my $c = shift;
-	return access_denied($c)	if !$USER ->can_remove_clone();
-        return remove_clones($c);
+    my $c = shift;
+
+    # TODO : call to $domain->_allow_remove();
+	return access_denied($c)
+        unless
+            $USER -> can_remove_clone_all()
+	        || $USER ->can_remove_clone();
+    return remove_clones($c);
 };
 
 get '/machine/prepare/(:id).(:type)' => sub {
@@ -827,6 +835,7 @@ sub login {
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,monitoring => $CONFIG_FRONT->{monitoring}
+                      ,guide => $CONFIG_FRONT->{guide}
     );
 }
 
@@ -875,6 +884,12 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
+
+    if ($CONFIG_FRONT->{guide_custom}) {
+        push @{$c->stash->{js}}, $CONFIG_FRONT->{guide_custom};
+    } else {
+        push @{$c->stash->{js}}, '/js/ravada_guide.js';
+    }
     return $c->render(
         template => 'main/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)
@@ -988,6 +1003,7 @@ sub req_new_domain {
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
+
     my %args = (
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -1422,6 +1438,7 @@ sub settings_machine {
         $RAVADA->wait_request($req, 60)
     }
     return $c->render(template => 'main/settings_machine'
+        , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path);
 }
 

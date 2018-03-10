@@ -281,6 +281,50 @@ sub test_shutdown_all {
     $domain->remove($usera);
 }
 
+sub test_remove_clone_all {
+    my $vm_name = shift;
+    my $user = create_user("oper_rca$$","bar");
+    is($user->can_remove_clone_all(),undef) or return;
+    my $usera = create_user("admin_rca$$","bar",1);
+    is($usera->can_remove_clone_all(),1) or return;
+
+    my $domain = create_domain($vm_name, $usera);
+    my $clone_name = new_domain_name();
+
+    my $clone = $domain->clone(user => $usera, name => $clone_name);
+
+    eval { $clone->remove($user); };
+    like($@,qr'.');
+
+    my $clone2 = rvd_back->search_domain($clone_name);
+    ok($clone2,"[$vm_name] domain $clone_name shouldn't be removed") or return;
+
+    $usera->grant($user,'remove_clone_all');
+    is($user->can_remove_clone_all(),1);
+
+    eval { $clone->remove($user); };
+    is($@,'');
+    
+    my $domain2 = create_domain($vm_name, $usera);
+    eval { $domain2->remove($user); };
+    like($@,qr'.');
+    
+    $clone2 = rvd_back->search_domain($clone_name);
+    ok(!$clone2,"[$vm_name] domain $clone_name must be removed") or return;
+
+    $clone_name = new_domain_name();
+    $clone = $domain->clone(user => $usera, name => $clone_name);
+    $usera->revoke($user,'remove_clone_all');
+
+    eval { $clone->remove($user); };
+    like($@,qr'.');
+    $clone2 = rvd_back->search_domain($clone_name);
+    ok($clone2,"[$vm_name] domain $clone_name shouldn't be removed") or return;
+
+    $clone->remove($usera);
+    $domain->remove($usera);
+}
+
 ##########################################################
 
 test_defaults();
@@ -295,5 +339,7 @@ test_shutdown_all('Void');
 test_remove('Void');
 test_remove_clone('Void');
 #test_remove_all('Void');
+
+test_remove_clone_all('Void');
 
 done_testing();
