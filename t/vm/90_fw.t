@@ -103,18 +103,27 @@ sub test_fw_domain_stored {
 sub test_chain {
     my $vm_name = shift;
 
-    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
+    my ($local_ip, $local_port, $remote_ip, $expected_count) = @_;
     my $ipt = open_ipt();
 
-    my ($rule_num , $chain_rules) 
-        = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, 'ACCEPT'
-                              , {normalize => 1 , d_port => $local_port });
+    my @rule = find_ip_rule(
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $local_ip,
+              , jump => 'ACCEPT'
+    );
 
-    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
-        if $enabled;
-    ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip -> $local_ip: $local_port"
-                        .", got $rule_num ")
-        if !$enabled;
+    is(scalar(@rule),$expected_count) or do {
+        my ($rv, $out, $errs) = $ipt->run_ipt_cmd("/sbin/iptables -n -L $CHAIN");
+        warn join("\n",@$out);
+        exit;
+    };
+    ok($rule[0],"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
+        if $expected_count;
+
+    ok(!$rule[0],"[$vm_name] Expecting no rule for $remote_ip -> $local_ip: $local_port"
+                        .", got ".Dumper(\@rule))
+        if !$expected_count;
 
 }
 
@@ -202,6 +211,40 @@ sub test_jump {
     $out = `iptables -L INPUT -n`;
     ok(grep(/^RAVADA /, split(/\n/,$out)),"Expecting RAVADA jump in $out");
 }
+
+sub test_new_ip {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '1.1.1.1';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my @rule = find_ip_rule(
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    is(scalar @rule,1);
+
+    my $remote_ip2 = '1.1.1.1';
+    $domain->start( user => user_admin, remote_ip => $remote_ip2);
+
+    @rule = find_ip_rule(
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    is(scalar @rule,0);
+
+
+
+}
 #######################################################
 
 remove_old_domains();
@@ -238,6 +281,8 @@ for my $vm_name (qw( Void KVM )) {
 
         my $domain2 = test_create_domain($vm_name);
         test_fw_domain_stored($vm_name, $domain2->name);
+
+        test_new_ip($vm);
 
         test_jump($vm_name, $domain2->name);
     };
