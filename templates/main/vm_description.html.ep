@@ -11,6 +11,9 @@
                     <label for="description">This information will be available to the users.</label>
                     <br/>
                     <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
+                    <script>
+                        CKEDITOR.replace( 'editor' );
+                    </script>
                 </div>
             </div>
             <div class="row">
