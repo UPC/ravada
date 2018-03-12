@@ -9,6 +9,8 @@
 - Add rich text editing in description tab [\#562]
 - External IP / dns name  [\#571]
 - Need internal id for monitoring VMs [\#575]
+- Allow virtual machines auto-start [\#589]
+- Server monitoring support [\#567]
 
 **Fixed bugs:**
 
