@@ -223,27 +223,50 @@ sub test_new_ip {
 
     my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
 #    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
-    my @rule = find_ip_rule(
+    my %test_args= (
            remote_ip => $remote_ip
         , local_port => $local_port
           , local_ip =>  $vm->ip,
               , jump => 'ACCEPT'
     );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+    my @rule = find_ip_rule(%test_args);
     is(scalar @rule,1);
 
-    my $remote_ip2 = '1.1.1.1';
-    $domain->start( user => user_admin, remote_ip => $remote_ip2);
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1) or return;
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
 
-    @rule = find_ip_rule(
-           remote_ip => $remote_ip
-        , local_port => $local_port
-          , local_ip =>  $vm->ip,
-              , jump => 'ACCEPT'
-    );
+    $domain->open_iptables( user => user_admin);
+    @rule = find_ip_rule(%test_args);
     is(scalar @rule,0);
 
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
 
+    $domain->open_iptables( user => user_admin, remote_ip => $remote_ip);
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
 
+    my $remote_ip2 = '2.2.2.2';
+    $domain->open_iptables( user => user_admin, remote_ip => $remote_ip2);
+
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    $test_args{remote_ip} = $remote_ip2;
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1);
+
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
 }
 #######################################################
 
