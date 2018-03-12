@@ -1244,8 +1244,6 @@ sub _remove_iptables {
 
     my $args = {@_};
 
-    confess "Missing user=>\$user" if !$args->{user};
-
     my $ipt_obj = _obj_iptables();
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -1326,7 +1324,7 @@ sub _add_iptable {
 
     my $remote_ip = $args{remote_ip} or return;
 
-    my $user = $args{user};
+    my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
     my $display = $self->display($user);
@@ -1373,9 +1371,18 @@ sub open_iptables {
     my $self = shift;
 
     my %args = @_;
-    my $user = Ravada::Auth::SQL->search_by_id($args{uid});
+    my $uid = delete $args{uid};
+    my $user = delete $args{user};
+
+    confess "ERROR: Supply either uid or user"  if !$uid && !$user;
+
+    $user = Ravada::Auth::SQL->search_by_id($uid)   if $uid;
+    confess "ERROR: User ".$user->name." not uid $uid"
+        if $uid && $user->id != $uid;
     $args{user} = $user;
     delete $args{uid};
+
+    $self->_remove_iptables();
     $self->_add_iptable(%args);
 }
 
@@ -1452,17 +1459,20 @@ sub _active_iptables {
     my $self = shift;
     my $user = shift;
 
-    confess "Missing \$user" if !$user;
-
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,iptables FROM iptables "
+    my $sql
+        = "SELECT id,iptables FROM iptables "
         ." WHERE "
         ."    id_domain=?"
-        ."    AND id_user=? "
-        ."    AND time_deleted IS NULL"
-        ." ORDER BY time_req DESC "
-    );
-    $sth->execute($self->id, $user->id);
+        ."    AND time_deleted IS NULL";
+
+    $sql .= "    AND id_user=? "    if $user;
+    $sql .= " ORDER BY time_req DESC ";
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    if ($user) {
+        $sth->execute($self->id, $user->id);
+    } else {
+        $sth->execute($self->id);
+    }
     my @iptables;
     while (my ($id, $iptables) = $sth->fetchrow) {
         push @iptables, [ $id, decode_json($iptables)];
