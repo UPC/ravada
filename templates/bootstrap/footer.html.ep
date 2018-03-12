@@ -2,7 +2,7 @@
     <div class="container ">
       <div class="row">
           <br>
-          <a href="https://www.upc.edu/"><img src="http://www.upc.edu/content/assets/images/logoUPC.png"></a>
+          <a href="https://www.upc.edu/"><img src="https://www.upc.edu/content/assets/images/logoUPC.png"></a>
           <a href="https://ravada.upc.edu/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
           <a href="https://github.com/UPC/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
           <a href="https://github.com/UPC/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg"></a>
