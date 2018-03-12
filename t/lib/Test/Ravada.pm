@@ -42,6 +42,8 @@ sub create_domain {
     my $user = (shift or $USER_ADMIN);
     my $id_iso = (shift or 'Alpine');
 
+    $vm_name = 'KVM' if $vm_name eq 'qemu';
+
     if ( $id_iso && $id_iso !~ /^\d+$/) {
         my $iso_name = $id_iso;
         $id_iso = search_id_iso($iso_name);
@@ -50,7 +52,7 @@ sub create_domain {
     confess "Missing id_iso" if !defined $id_iso;
 
     my $vm = rvd_back()->search_vm($vm_name);
-    ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
+    ok($vm,"Expecting VM $vm_name") or return;
 
     my $name = new_domain_name();
 
@@ -457,31 +459,33 @@ sub find_ip_rule {
     my $remote_ip = delete $args{remote_ip};
     my $local_ip = delete $args{local_ip};
     my $local_port= delete $args{local_port};
-    my $jump = (delete $args{jump} or 'ACCEPT');
+    my $jump = ( delete $args{jump} or 'ACCEPT');
 
     die "ERROR: Unknown args ".Dumper(\%args)  if keys %args;
 
     my $iptables = _iptables_list();
-        $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
+    $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
     $local_ip .= "/32"  if defined $local_ip && $local_ip !~ m{/};
 
     my @found;
 
     my $count = 0;
     for my $line (@{$iptables->{filter}}) {
-        my %args = @$line;
-        next if $args{A} ne $CHAIN;
+        my %line= @$line;
+        next if $line{A} ne $CHAIN;
+        $line{s} = '0.0.0.0/0'  if !exists $line{s} && $line{p} =~ m/.cp$/;
         $count++;
-        if(exists $args{j} && defined $jump         && $args{j} eq $jump
-           && exists $args{s} && defined $remote_ip && $args{s} eq $remote_ip
-           && exists $args{d} && defined $local_ip  && $args{d} eq $local_ip
-           && exists $args{dport} && defined $local_port && $args{dport} eq $local_port) {
+        if((!defined $jump || ( exists $line{j} && $line{j} eq $jump ))
+           && ( !defined $remote_ip || (exists $line{s} && $line{s} eq $remote_ip ))
+           && ( !defined $local_ip || ( exists $line{d} && $line{d} eq $local_ip ))
+           && ( !defined $local_port || ( exists $line{dport} && $line{dport} eq $local_port)))
+        {
 
             push @found,($count);
         }
     }
+    return if !scalar@found || !defined $found[0];
     return @found   if wantarray;
-    return if !scalar@found;
     return $found[0];
 }
 
