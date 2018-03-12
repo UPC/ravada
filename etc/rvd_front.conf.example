@@ -11,8 +11,8 @@
   ,group => 'ravada'
   ,secrets => ['changeme1','changeme2']
   ,login_custom => ''
-  ,footer => ''
-  ,monitoring => ''
+  ,footer => '/bootstrap/footer'
+  ,monitoring => 0
   ,guide => ''
   ,guide_custom => ''
   ,session_timeout => 5*60
