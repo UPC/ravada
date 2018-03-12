@@ -24,5 +24,6 @@
   <%= $csssnip %>
 % }
   </style>
+  <script src="https://cdn.ckeditor.com/4.8.0/standard/ckeditor.js"></script>
 
 </head>
