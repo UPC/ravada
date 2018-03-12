@@ -51,6 +51,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
+                                                    ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               }
@@ -443,6 +444,16 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/autostart/#id/#value' => sub {
+    my $c = shift;
+    my $req = Ravada::Request->domain_autostart(
+        id_domain => $c->stash('id')
+           ,value => $c->stash('value')
+             ,uid => $USER->id
+    );
+    return $c->render(json => { request => $req->id});
+};
+
 get '/machine/display/#id' => sub {
     my $c = shift;
 
@@ -593,6 +604,12 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+any '/admin/monitoring' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/monitoring');
+};
+
 any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
@@ -636,11 +653,11 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
             if ($c->param('password') eq $c->param('conf_password')) {
-                eval { 
-                    $USER->change_password($c->param('password')); 
+                eval {
+                    $USER->change_password($c->param('password'));
                     _logged_in($c);
                 };
                 if ($@ =~ /Password too small/) {
@@ -909,21 +926,21 @@ sub admin {
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
-
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
-            if scalar @$list_domains
+            if defined $CONFIG_FRONT->{admin}->{hide_clones}
+                && scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
+        $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
         # count clones from list_domains grepping those that have id_base
         $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
     }
-    $c->render(template => 'main/admin_'.$page);
-
+    $c->render( template => 'main/admin_'.$page);
 };
 
 sub new_machine {
@@ -1254,20 +1271,20 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
+
    if($username) {
        my @list_users = Ravada::Auth::SQL::list_all_users();
        warn join(", ", @list_users);
-      
+
        if (grep {$_ eq $username} @list_users) {
-           push @error,("Username already exists, please choose another one"); 
+           push @error,("Username already exists, please choose another one");
            $c->render(template => 'bootstrap/new_user',error => \@error);
        }
        else {

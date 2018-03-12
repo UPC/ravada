@@ -57,6 +57,7 @@ sub BUILD {
     }
     $self->_set_default_info();
     $self->set_memory($args->{memory}) if $args->{memory};
+    $self->_store( autostart => 0);
 }
 
 sub name { 
@@ -479,4 +480,14 @@ sub clean_swap_volumes {
 sub hybernate { confess "Not supported"; }
 
 sub type { 'Void' }
+
+sub autostart {
+    my $self = shift;
+    my $value = shift;
+
+    if (defined $value) {
+        $self->_store(autostart => $value);
+    }
+    return $self->_value('autostart');
+}
 1;
