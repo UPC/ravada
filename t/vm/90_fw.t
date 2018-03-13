@@ -280,6 +280,12 @@ sub test_new_ip {
         if scalar @rule_drop == 1 && scalar @rule == 1;
 
     $domain->remove(user_admin);
+
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
 }
 
 sub test_localhost {
