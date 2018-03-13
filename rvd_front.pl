@@ -106,6 +106,7 @@ hook before_routes => sub {
   $version =~ s/-/_/g;
   $c->stash(version => $version);
   my $url = $c->req->url->to_abs->path;
+  my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
                 '/js/ravada.js'
@@ -117,6 +118,7 @@ hook before_routes => sub {
             ,_anonymous => undef
             ,_user => undef
             ,monitoring => $CONFIG_FRONT->{monitoring}
+            ,host => $host
             );
 
   return access_denied($c)
