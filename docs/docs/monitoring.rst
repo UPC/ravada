@@ -27,6 +27,37 @@ or execute this on a terminal:
     # bash <(curl -Ss https://my-netdata.io/kickstart-static64.sh)
 Linux 64bit, pre-built static binary installation for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
  
+Apache config for netdata with SSL
+----------------------------------
+
+In ``/opt/netdata/etc/netdata/netdata.conf`` netdata configuration add:
+
+::
+
+    [web]
+    default port = 19998
+
+and adding a new virtualhost for port 19999 in ``/etc/apache2/sites-available/default-ssl.conf``
+
+::
+
+    <VirtualHost *:19999>
+                ProxyRequests Off
+                ProxyPreserveHost On
+                ProxyPass / http://localhost:19998/ keepalive=On
+                ProxyPassReverse / http://localhost:19998/
+
+                ErrorLog ${APACHE_LOG_DIR}/error.log
+                CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+                SSLEngine on
+                SSLCertificateFile      /etc/ssl/certs/server.crt
+                SSLCertificateKeyFile /etc/ssl/private/server.key
+                SSLCertificateChainFile /etc/ssl/certs/ca.crt
+   </VirtualHost>
+
+Thanks to `@jlopezramos <https://github.com/jlopezramos>`_ for this contribution.
+
 Enable monitoring
 -----------------
 
