@@ -698,6 +698,7 @@ sub _pre_remove_domain {
     $self->pre_remove();
     $self->_allow_remove(@_);
     $self->pre_remove();
+    $self->_remove_iptables();
 }
 
 sub _after_remove_domain {
