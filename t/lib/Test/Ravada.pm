@@ -506,10 +506,6 @@ sub find_ip_rule {
     return $found[0];
 }
 
-<<<<<<< HEAD
-||||||| parent of 3c08db62... [#202] start and stop domains internally
-
-=======
 sub shutdown_domain_internal($domain) {
     if ($domain->type eq 'KVM') {
         $domain->domain->destroy();
@@ -530,6 +526,4 @@ sub start_domain_internal($domain) {
     }
 }
 
-
->>>>>>> 3c08db62... [#202] start and stop domains internally
 1;
