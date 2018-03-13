@@ -1341,6 +1341,16 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
+    if ($remote_ip eq '127.0.0.1') {
+         @iptables_arg = ($local_ip
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+
+        $self->_log_iptable(iptables => \@iptables_arg, @_);
+
+    }
     @iptables_arg = ( '0.0.0.0/0'
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
