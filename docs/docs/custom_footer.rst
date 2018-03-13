@@ -1,7 +1,7 @@
 Create a custom footer template
 ==============================
 
-If you need custom footer template create one and save it in ``usr/share/ravada/templates/main/custom/``, e.g. ``custom/custom_footer.html.ep``
+If you need custom footer template create one and save it in ``/usr/share/ravada/templates/main/custom/``, e.g. ``custom/custom_footer.html.ep``
 
 Configuration
 -------------
@@ -9,7 +9,7 @@ Configuration
 Add your template in ``/etc/rvd_front.conf``
 
 .. warning ::
-   Check that rvd_front.conf exists. If you work on a Development release you have an example here ``etc/rvd_front.conf.example``.
+   Check that rvd_front.conf exists. If you work on a Development release you have an example here ``/etc/rvd_front.conf.example``.
    
 .. warning :: Do not include the extension file ``.html.ep`` in the path. E.g. ``custom_footer.html.ep`` -> ``custom_footer``
 
