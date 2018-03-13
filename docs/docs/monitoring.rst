@@ -61,7 +61,7 @@ Thanks to `@jlopezramos <https://github.com/jlopezramos>`_ for this contribution
 Enable monitoring
 -----------------
 
-In ``/etc/rvd_front.conf``:
+Monitoring is disabled by default. Add in ``/etc/rvd_front.conf`` file:
 
 ::
 
