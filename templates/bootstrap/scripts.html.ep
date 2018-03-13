@@ -19,7 +19,7 @@
 
 % if ($monitoring) {
 <script>var netdataNoBootstrap = true;</script>
-<script type="text/javascript" src="http://<%= $host %>:19999/dashboard.js"></script>
+<script type="text/javascript" src="https://<%= $host %>:19999/dashboard.js"></script>
 % }
 
 % foreach my $jslink (@$js) {
