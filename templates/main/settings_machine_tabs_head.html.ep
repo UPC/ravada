@@ -19,7 +19,7 @@
 %   if ( $USER->can_remove ) {
         <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
 %   }
-% if ($monitoring) {
+% if ( $monitoring && $USER->is_admin ) {
     <li class="nav"><a href="#monitoring" data-toggle="tab">System overview</a></li>
 %   }
 </ul>
