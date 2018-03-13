@@ -111,6 +111,7 @@ hook before_routes => sub {
 
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
+  my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
                 '/js/ravada.js'
@@ -124,6 +125,7 @@ hook before_routes => sub {
             ,footer=> $CONFIG_FRONT->{footer}
             ,monitoring => $CONFIG_FRONT->{monitoring}
             ,guide => $CONFIG_FRONT->{guide}
+            ,host => $host
             );
 
   return access_denied($c)
