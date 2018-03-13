@@ -298,7 +298,7 @@ sub test_localhost {
     $domain->start( user => user_admin, remote_ip => $remote_ip);
 
     my ($local_ip, $local_port) = $domain->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
-    is($local_ip, $remote_ip);
+    is($local_ip, $vm->ip);
 #    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
     my %test_args= (
            remote_ip => $remote_ip
@@ -310,15 +310,31 @@ sub test_localhost {
         ,remote_ip => '0.0.0.0/0'
         ,jump => 'DROP'
     );
-    my @rule = find_ip_rule(%test_args);
-    is(scalar @rule,1);
+    my @rule_localhost = find_ip_rule(%test_args);
+    is(scalar @rule_localhost,1);
+
+    my @rule_ip = find_ip_rule(%test_args, remote_ip => $local_ip);
+    is(scalar @rule_ip,1);
 
     my @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,1) or return;
-    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
-        if scalar @rule_drop == 1 && scalar @rule == 1;
+    ok($rule_drop[0] > $rule_localhost[0],Dumper(\@rule_localhost,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule_localhost == 1;
+
+    ok($rule_drop[0] > $rule_ip[0],Dumper(\@rule_ip,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule_ip== 1;
 
     $domain->remove(user_admin);
+
+    @rule_localhost = find_ip_rule(%test_args);
+    is(scalar @rule_localhost,0);
+
+    @rule_ip = find_ip_rule(%test_args);
+    is(scalar @rule_ip,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
+
 }
 
 #######################################################
