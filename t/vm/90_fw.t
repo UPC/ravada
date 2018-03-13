@@ -267,7 +267,49 @@ sub test_new_ip {
 
     ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
         if scalar @rule_drop == 1 && scalar @rule == 1;
+
+    $domain->remove(user_admin);
+
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
 }
+
+sub test_localhost {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '127.0.0.1';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ($local_ip, $local_port) = $domain->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
+    is($local_ip, $remote_ip);
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $local_ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+    my @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1) or return;
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
+
+    $domain->remove(user_admin);
+}
+
 #######################################################
 
 remove_old_domains();
@@ -306,6 +348,7 @@ for my $vm_name (qw( Void KVM )) {
         test_fw_domain_stored($vm_name, $domain2->name);
 
         test_new_ip($vm);
+        test_localhost($vm);
 
         test_jump($vm_name, $domain2->name);
     };
