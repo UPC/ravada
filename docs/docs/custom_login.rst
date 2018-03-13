@@ -1,7 +1,7 @@
 Create a custom login template
 ==============================
 
-If you need custom login template create one and save it in ``templates/main/custom``, e.g. ``custom\_login.html.ep``
+If you need custom login template create one and save it in ``/usr/share/ravada/templates/main/custom``, e.g. ``custom\_login.html.ep``
 
 Configuration
 -------------
