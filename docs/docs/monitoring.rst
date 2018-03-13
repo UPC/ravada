@@ -56,7 +56,7 @@ and adding a new virtualhost for port 19999 in ``/etc/apache2/sites-available/de
                 SSLCertificateChainFile /etc/ssl/certs/ca.crt
    </VirtualHost>
    
-.. warning ::  Be careful with self-signed certificates. The browser needs to accept the certificate. We recommend the use of `Let's Encrypt <https://letsencrypt.org/>`_ better.
+.. warning ::  Be careful with self-signed certificates. The browser needs to accept the certificate. We recommend the use of `Let's Encrypt <https://letsencrypt.org/>`_ or your trusted SSL provider.
 
 Thanks to `@jlopezramos <https://github.com/jlopezramos>`_ for this contribution.
 
