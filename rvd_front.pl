@@ -961,8 +961,8 @@ sub new_machine {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
-                .".It can only contain words and numbers.")
-            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9]+$/;
+                .".It can only contain alphabetic, numbers, undercores and dashes.")
+            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9_-]+$/;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -1322,7 +1322,7 @@ sub register {
  #   if($c ->param('submit')) {
  #       push @error,("Name is mandatory")   if !$c->param('username');
  #       push @error,("Invalid username '".$c->param('username')."'"
- #               .".It can only contain words and numbers.")
+ #               .".It can only contain alphabetic, numbers, undercores and dashes.")
  #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
  #       if (!@error) {
  #           Ravada::Auth::SQL::add_user($username, $password,0);
