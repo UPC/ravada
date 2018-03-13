@@ -30,7 +30,7 @@ Linux 64bit, pre-built static binary installation for any Linux distro, any kern
 Apache config for netdata with SSL
 ----------------------------------
 
-In ``/opt/netdata/etc/netdata/netdata.conf`` netdata configuration add:
+In ``/opt/netdata/etc/netdata/netdata.conf`` add:
 
 ::
 
@@ -55,6 +55,8 @@ and adding a new virtualhost for port 19999 in ``/etc/apache2/sites-available/de
                 SSLCertificateKeyFile /etc/ssl/private/server.key
                 SSLCertificateChainFile /etc/ssl/certs/ca.crt
    </VirtualHost>
+   
+.. warning ::  Be careful with self-signed certificates. The browser needs to accept the certificate. We recommend the use of `Let's Encrypt <https://letsencrypt.org/>`_ better.
 
 Thanks to `@jlopezramos <https://github.com/jlopezramos>`_ for this contribution.
 
