@@ -677,6 +677,21 @@ this state when it is next started.
 
 sub hybernate {
     my $self = shift;
+    $self->hibernate(@_);
+}
+
+=head2 hibernate
+
+Take a snapshot of the domain's state and save the information to a
+managed save location. The domain will be automatically restored with
+this state when it is next started.
+
+    $domain->hibernate();
+
+=cut
+
+sub hibernate {
+    my $self = shift;
     $self->domain->managed_save();
 }
 
