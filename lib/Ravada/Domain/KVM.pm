@@ -689,7 +689,7 @@ this state when it is next started.
 
 sub hybernate {
     my $self = shift;
-    $self->hibernate();
+    $self->hibernate(@_);
 }
 
 =head2 hybernate
