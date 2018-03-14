@@ -980,8 +980,8 @@ sub new_machine {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
-                .".It can only contain words and numbers.")
-            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9]+$/;
+                .".It can only contain alphabetic, numbers, undercores and dashes.")
+            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9_-]+$/;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -1354,10 +1354,7 @@ sub register {
        }
    }
    $c->render(template => 'bootstrap/new_user');
-
-
 }
-
 
 sub manage_machine {
     my $c = shift;

@@ -61,7 +61,7 @@
             <div class="col-lg-9">
                 <input class="form-control" ng-model="name" type="text"
                     name="name" required=""
-                    ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
+                    ng-pattern ="/^[a-zA-Z0-9_-]+$/"
                     ng-change="validate_new_name()"
                 >
             </div>
@@ -157,7 +157,7 @@
                     <strong><%=l 'Error' %></strong> <%=l 'A machine with that name already exists.' %>
             </div>
             <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
-                    <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, dashes and points.' %>
+                    <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
             </div>
         </div>
       
