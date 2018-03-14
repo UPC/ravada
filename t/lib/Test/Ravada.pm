@@ -8,6 +8,9 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada;
 use Ravada::Auth::SQL;
 
