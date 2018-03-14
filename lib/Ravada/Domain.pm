@@ -1160,9 +1160,9 @@ sub _post_shutdown {
     my $self = shift;
 
     my %arg = @_;
-    my $timeout = $arg{timeout};
+    my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables(@_);
+    $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')    if !$self->is_volatile && !$self->is_active;
     $self->_remove_temporary_machine(@_);
     if ($self->id_base) {
