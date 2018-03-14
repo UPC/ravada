@@ -177,6 +177,34 @@ sub test_chain {
 
 }
 
+sub test_fw_domain_down {
+    my $vm_name = shift;
+
+    my $domain = create_domain($vm_name);
+    $domain->start(user => user_admin, remote_ip => '1.1.1.1');
+
+    my $req = Ravada::Request->shutdown_domain(
+               uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->error , '');
+
+    $domain->start(user => user_admin, remote_ip => '1.1.1.1')  if !$domain->is_active;
+
+    $req = Ravada::Request->force_shutdown_domain(
+               uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->error , '');
+
+
+    $domain->remove(user_admin);
+}
+
 #######################################################
 
 remove_old_domains();
@@ -215,6 +243,7 @@ for my $vm_name (qw( Void KVM )) {
         test_fw_domain($vm_name, $domain_name);
         test_fw_domain_pause($vm_name, $domain_name);
 
+        test_fw_domain_down($vm_name);
     };
 }
 flush_rules() if !$>;
