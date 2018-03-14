@@ -698,7 +698,7 @@ sub _pre_remove_domain {
     $self->pre_remove();
     $self->_allow_remove(@_);
     $self->pre_remove();
-    $self->_remove_iptables();
+    $self->_remove_iptables()   if $self->is_known();
 }
 
 sub _after_remove_domain {
@@ -1096,7 +1096,6 @@ sub _post_shutdown {
 
     $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(%arg);
-    $self->_data(status => 'shutdown')    if !$self->is_volatile && !$self->is_active;
     if ($self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1164,6 +1163,7 @@ sub _remove_iptables {
 
     my $user = delete $args{user};
     my $port = delete $args{port};
+    delete $args{force};
 
     confess "ERROR: Unknown args ".Dumper(%args)    if keys %args;
 
