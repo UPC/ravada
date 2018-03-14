@@ -1103,9 +1103,11 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = delete $arg{timeout};
 
-    $self->_remove_temporary_machine(@_);
     $self->_remove_iptables(%arg);
-    if ($self->id_base) {
+    $self->_data(status => 'shutdown')
+        if $self->is_known && !$self->is_volatile && !$self->is_active;
+    $self->_remove_temporary_machine(@_);
+    if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
             sleep 1;
@@ -1184,9 +1186,10 @@ sub _remove_iptables {
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
     );
-    my @iptables = $self->_active_iptables(id_domain => $self->id);
-    push @iptables, ( $self->_active_iptables(user => $user) )  if $user;
-    push @iptables, ( $self->_active_iptables(port => $port) )  if $port;
+    my @iptables;
+    push @iptables, ( $self->_active_iptables(id_domain => $self->id))  if $self->is_known();
+    push @iptables, ( $self->_active_iptables(user => $user) )          if $user;
+    push @iptables, ( $self->_active_iptables(port => $port) )          if $port;
 
     for my $row (@iptables) {
         my ($id, $iptables) = @$row;
@@ -1198,6 +1201,7 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
+    return if !$self->is_known || !$self->is_volatile;
     my %args = @_;
     my $user;
 
