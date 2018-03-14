@@ -337,6 +337,41 @@ sub test_localhost {
 
 }
 
+sub test_shutdown_internal {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '1.1.1.1';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ( $local_port ) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+    shutdown_domain_internal($domain);
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+        local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+
+    my $domain2 = create_domain($vm->type);
+    my $remote_ip2 = '2.2.2.2';
+    $domain->start( user => user_admin, remote_ip => $remote_ip2);
+
+    my @rule = find_ip_rule(%test_args);
+    is(scalar(@rule) , 1);
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar(@rule_drop) , 1);
+
+    $domain->remove(user_admin);
+}
+
 #######################################################
 
 remove_old_domains();
@@ -376,6 +411,8 @@ for my $vm_name (qw( Void KVM )) {
 
         test_new_ip($vm);
         test_localhost($vm);
+
+        test_shutdown_internal($vm);
 
         test_jump($vm_name, $domain2->name);
     };
