@@ -361,6 +361,48 @@ sub test_shutdown_internal {
     $domain->remove(user_admin);
 }
 
+sub test_hibernate {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '3.3.3.3';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+    my @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    my @active_iptables = $domain->_active_iptables( id_domain => $domain->id);
+    is(scalar @active_iptables,2) or exit;
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1) or return;
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
+
+    $domain->hibernate( user_admin );
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0) or exit;
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
+
+    $domain->remove(user_admin);
+}
+
 #######################################################
 
 remove_old_domains();
@@ -402,6 +444,8 @@ for my $vm_name (qw( Void KVM )) {
         test_localhost($vm);
 
         test_shutdown_internal($vm);
+
+        test_hibernate($vm);
 
         test_jump($vm_name, $domain2->name);
     };

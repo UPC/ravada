@@ -56,6 +56,7 @@ sub get_info($self) {
      return decode_json($info);
 }
 sub hybernate           { confess "TODO" }
+sub hibernate           { confess "TODO" }
 
 sub internal_id($self) { return $self->_data('internal_id')}
 
