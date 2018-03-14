@@ -1244,7 +1244,9 @@ sub _remove_iptables {
     my $user = delete $args{user};
     my $port = delete $args{port};
 
-    confess "ERROR: Unknown args ".Dumper(%args)    if keys %args;
+    delete $args{request};
+
+    confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
     my $ipt_obj = _obj_iptables();
 
