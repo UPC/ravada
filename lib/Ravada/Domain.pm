@@ -1163,9 +1163,9 @@ sub _post_shutdown {
     my $self = shift;
 
     my %arg = @_;
-    my $timeout = $arg{timeout};
+    my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables(@_);
+    $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')    if !$self->is_volatile && !$self->is_active;
     $self->_remove_temporary_machine(@_);
     if ($self->id_base) {
@@ -1242,8 +1242,12 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
+    my %args = @_;
 
-    my $args = {@_};
+    my $user = delete $args{user};
+    my $port = delete $args{port};
+
+    confess "ERROR: Unknown args ".Dumper(%args)    if keys %args;
 
     my $ipt_obj = _obj_iptables();
 
@@ -1251,7 +1255,11 @@ sub _remove_iptables {
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
     );
-    for my $row ($self->_active_iptables($args->{user})) {
+    my @iptables = $self->_active_iptables(id_domain => $self->id);
+    push @iptables, ( $self->_active_iptables(user => $user) )  if $user;
+    push @iptables, ( $self->_active_iptables(port => $port) )  if $port;
+
+    for my $row (@iptables) {
         my ($id, $iptables) = @$row;
         $ipt_obj->delete_ip_rule(@$iptables);
         $sth->execute(Ravada::Utils::now(), $id);
@@ -1330,6 +1338,8 @@ sub _add_iptable {
 
     my $display = $self->display($user);
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
+    $self->_remove_iptables( port => $local_port );
+
     my $local_ip = $self->_vm->ip;
 
     my $ipt_obj = _obj_iptables();
@@ -1468,25 +1478,46 @@ sub _log_iptable {
 
 sub _active_iptables {
     my $self = shift;
-    my $user = shift;
+
+    my %args = @_;
+
+    my      $port = delete $args{port};
+    my      $user = delete $args{user};
+    my   $id_user = delete $args{id_user};
+    my $id_domain = delete $args{id_domain};
+
+    confess "ERROR: User id (".$user->id." is not $id_user "
+        if $user && $id_user && $user->id ne $id_user;
+
+    confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+
+    $id_user = $user->id if $user;
+
+    my @sql_fields;
 
     my $sql
         = "SELECT id,iptables FROM iptables "
-        ." WHERE "
-        ."    id_domain=?"
-        ."    AND time_deleted IS NULL";
+        ." WHERE time_deleted IS NULL";
 
-    $sql .= "    AND id_user=? "    if $user;
+    if ( $id_user ) {
+        $sql .= "    AND id_user=? ";
+        push @sql_fields,($id_user);
+    }
+
+    if ( $id_domain ) {
+        $sql .= "    AND id_domain=? ";
+        push @sql_fields,($id_domain);
+    }
+
     $sql .= " ORDER BY time_req DESC ";
     my $sth = $$CONNECTOR->dbh->prepare($sql);
-    if ($user) {
-        $sth->execute($self->id, $user->id);
-    } else {
-        $sth->execute($self->id);
-    }
+    $sth->execute(@sql_fields);
+
     my @iptables;
     while (my ($id, $iptables) = $sth->fetchrow) {
-        push @iptables, [ $id, decode_json($iptables)];
+        my $iptables_data = decode_json($iptables);
+        next if $port && $iptables_data->[5]->{d_port} ne $port;
+        push @iptables, [ $id, $iptables_data ];
     }
     return @iptables;
 }
