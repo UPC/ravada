@@ -71,6 +71,7 @@ requires 'set_max_mem';
 
 requires 'autostart';
 requires 'hybernate';
+requires 'hibernate';
 
 ##########################################################
 
@@ -142,6 +143,9 @@ before 'pause' => \&_allow_manage;
 
 before 'hybernate' => \&_allow_manage;
  after 'hybernate' => \&_post_pause;
+
+before 'hibernate' => \&_allow_manage;
+ after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
@@ -1070,9 +1074,14 @@ sub _copy_clone($self, %args) {
 
 sub _post_pause {
     my $self = shift;
-    my $user = shift;
 
-    $self->_remove_iptables(user => $user);
+    $self->_data(status => 'paused');
+    $self->_remove_iptables();
+}
+
+sub _post_hibernate($self, $user) {
+    $self->_data(status => 'hibernated');
+    $self->_remove_iptables();
 }
 
 sub _pre_shutdown {
