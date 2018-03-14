@@ -1311,40 +1311,30 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
- #   if($c ->param('submit')) {
- #       push @error,("Name is mandatory")   if !$c->param('username');
- #       push @error,("Invalid username '".$c->param('username')."'"
- #               .".It can only contain alphabetic, numbers, undercores and dashes.")
- #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
- #       if (!@error) {
- #           Ravada::Auth::SQL::add_user($username, $password,0);
- #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
- #       }
 
-#    }
-#    $c->stash(errors => \@error);
-#    push @{$c->stash->{js}}, '/js/admin.js';
-#    $c->render(template => 'bootstrap/new_user_control'
-#        , name => $c->param('username')
-#)    
-    
-   if ($username) {
-       Ravada::Auth::SQL::add_user(name => $username, password => $password);
-       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+   if($username) {
+       my @list_users = Ravada::Auth::SQL::list_all_users();
+       warn join(", ", @list_users);
+
+       if (grep {$_ eq $username} @list_users) {
+           push @error,("Username already exists, please choose another one");
+           $c->render(template => 'bootstrap/new_user',error => \@error);
+       }
+       else {
+           #username don't exists
+           Ravada::Auth::SQL::add_user(name => $username, password => $password);
+           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+       }
    }
    $c->render(template => 'bootstrap/new_user');
-
-
 }
-
 
 sub manage_machine {
     my $c = shift;
