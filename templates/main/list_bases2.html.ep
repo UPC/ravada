@@ -128,7 +128,7 @@
 %= include 'bootstrap/scripts'
 </div>
 
-%= include 'bootstrap/footer'
+%= include $footer
 %= include 'bootstrap/messages'
 </body>
 </html>

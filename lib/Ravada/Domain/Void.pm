@@ -478,6 +478,7 @@ sub clean_swap_volumes {
 }
 
 sub hybernate { confess "Not supported"; }
+sub hibernate { confess "Not supported"; }
 
 sub type { 'Void' }
 

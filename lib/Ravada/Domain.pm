@@ -71,6 +71,7 @@ requires 'set_max_mem';
 
 requires 'autostart';
 requires 'hybernate';
+requires 'hibernate';
 
 ##########################################################
 
@@ -142,6 +143,9 @@ before 'pause' => \&_allow_manage;
 
 before 'hybernate' => \&_allow_manage;
  after 'hybernate' => \&_post_pause;
+
+before 'hibernate' => \&_allow_manage;
+ after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
@@ -698,6 +702,7 @@ sub _pre_remove_domain {
     $self->pre_remove();
     $self->_allow_remove(@_);
     $self->pre_remove();
+    $self->_remove_iptables()   if $self->is_known();
 }
 
 sub _after_remove_domain {
@@ -1069,9 +1074,12 @@ sub _copy_clone($self, %args) {
 
 sub _post_pause {
     my $self = shift;
-    my $user = shift;
 
-    $self->_remove_iptables(user => $user);
+    $self->_remove_iptables();
+}
+
+sub _post_hibernate($self, $user) {
+    $self->_remove_iptables();
 }
 
 sub _pre_shutdown {
@@ -1091,11 +1099,11 @@ sub _post_shutdown {
     my $self = shift;
 
     my %arg = @_;
-    my $timeout = $arg{timeout};
+    my $timeout = delete $arg{timeout};
 
-    $self->_remove_temporary_machine(@_);
-    $self->_remove_iptables(@_);
-    if ($self->id_base) {
+    $self->_remove_iptables(%arg);
+#    $self->_remove_temporary_machine(@_);
+    if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
             sleep 1;
@@ -1158,10 +1166,15 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
+    my %args = @_;
 
-    my $args = {@_};
+    my $user = delete $args{user};
+    my $port = delete $args{port};
+    delete $args{force};
+    delete $args{request};
+    delete $args{name};
 
-    confess "Missing user=>\$user" if !$args->{user};
+    confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
     my $ipt_obj = _obj_iptables();
 
@@ -1169,7 +1182,12 @@ sub _remove_iptables {
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
     );
-    for my $row ($self->_active_iptables($args->{user})) {
+    my @iptables;
+    push @iptables, ( $self->_active_iptables(id_domain => $self->id))  if $self->is_known();
+    push @iptables, ( $self->_active_iptables(user => $user) )          if $user;
+    push @iptables, ( $self->_active_iptables(port => $port) )          if $port;
+
+    for my $row (@iptables) {
         my ($id, $iptables) = @$row;
         $ipt_obj->delete_ip_rule(@$iptables);
         $sth->execute(Ravada::Utils::now(), $id);
@@ -1179,6 +1197,7 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
+    return if !$self->is_known || !$self->is_volatile;
     my %args = @_;
     my $user;
 
@@ -1217,11 +1236,13 @@ sub _add_iptable {
 
     my $remote_ip = $args{remote_ip} or return;
 
-    my $user = $args{user};
+    my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
     my $display = $self->display($user);
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
+    $self->_remove_iptables( port => $local_port );
+
     my $local_ip = $self->_vm->ip;
 
     my $ipt_obj = _obj_iptables();
@@ -1236,6 +1257,16 @@ sub _add_iptable {
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
+    if ($remote_ip eq '127.0.0.1') {
+         @iptables_arg = ($local_ip
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+
+        $self->_log_iptable(iptables => \@iptables_arg, @_);
+
+    }
     @iptables_arg = ( '0.0.0.0/0'
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
@@ -1264,9 +1295,18 @@ sub open_iptables {
     my $self = shift;
 
     my %args = @_;
-    my $user = Ravada::Auth::SQL->search_by_id($args{uid});
+    my $uid = delete $args{uid};
+    my $user = delete $args{user};
+
+    confess "ERROR: Supply either uid or user"  if !$uid && !$user;
+
+    $user = Ravada::Auth::SQL->search_by_id($uid)   if $uid;
+    confess "ERROR: User ".$user->name." not uid $uid"
+        if $uid && $user->id != $uid;
     $args{user} = $user;
     delete $args{uid};
+
+    $self->_remove_iptables();
     $self->_add_iptable(%args);
 }
 
@@ -1341,22 +1381,46 @@ sub _log_iptable {
 
 sub _active_iptables {
     my $self = shift;
-    my $user = shift;
 
-    confess "Missing \$user" if !$user;
+    my %args = @_;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,iptables FROM iptables "
-        ." WHERE "
-        ."    id_domain=?"
-        ."    AND id_user=? "
-        ."    AND time_deleted IS NULL"
-        ." ORDER BY time_req DESC "
-    );
-    $sth->execute($self->id, $user->id);
+    my      $port = delete $args{port};
+    my      $user = delete $args{user};
+    my   $id_user = delete $args{id_user};
+    my $id_domain = delete $args{id_domain};
+
+    confess "ERROR: User id (".$user->id." is not $id_user "
+        if $user && $id_user && $user->id ne $id_user;
+
+    confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+
+    $id_user = $user->id if $user;
+
+    my @sql_fields;
+
+    my $sql
+        = "SELECT id,iptables FROM iptables "
+        ." WHERE time_deleted IS NULL";
+
+    if ( $id_user ) {
+        $sql .= "    AND id_user=? ";
+        push @sql_fields,($id_user);
+    }
+
+    if ( $id_domain ) {
+        $sql .= "    AND id_domain=? ";
+        push @sql_fields,($id_domain);
+    }
+
+    $sql .= " ORDER BY time_req DESC ";
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(@sql_fields);
+
     my @iptables;
     while (my ($id, $iptables) = $sth->fetchrow) {
-        push @iptables, [ $id, decode_json($iptables)];
+        my $iptables_data = decode_json($iptables);
+        next if $port && $iptables_data->[5]->{d_port} ne $port;
+        push @iptables, [ $id, $iptables_data ];
     }
     return @iptables;
 }
@@ -1631,7 +1695,7 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    my ($type) = $self =~ m{.*::(.*)};
+    my ($type) = ref($self) =~ m{.*::(.*)};
     return $type;
 }
 
