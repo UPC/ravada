@@ -1075,12 +1075,10 @@ sub _copy_clone($self, %args) {
 sub _post_pause {
     my $self = shift;
 
-    $self->_data(status => 'paused');
     $self->_remove_iptables();
 }
 
 sub _post_hibernate($self, $user) {
-    $self->_data(status => 'hibernated');
     $self->_remove_iptables();
 }
 
@@ -1104,9 +1102,7 @@ sub _post_shutdown {
     my $timeout = delete $arg{timeout};
 
     $self->_remove_iptables(%arg);
-    $self->_data(status => 'shutdown')
-        if $self->is_known && !$self->is_volatile && !$self->is_active;
-    $self->_remove_temporary_machine(@_);
+#    $self->_remove_temporary_machine(@_);
     if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1175,8 +1171,8 @@ sub _remove_iptables {
     my $user = delete $args{user};
     my $port = delete $args{port};
     delete $args{force};
-
     delete $args{request};
+    delete $args{name};
 
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 

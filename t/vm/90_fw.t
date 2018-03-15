@@ -376,6 +376,7 @@ sub test_hibernate {
     my $vm = shift;
 
     my $domain = create_domain($vm->type);
+    return if !$domain->can_hybernate;
 
     my $remote_ip = '3.3.3.3';
 

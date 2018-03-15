@@ -195,7 +195,7 @@ sub test_fw_domain_down {
 
     my $req = Ravada::Request->shutdown_domain(
                uid => user_admin->id
-        ,id_domain => $domain->id
+        ,name => $domain->name
     );
 
     rvd_back->_process_all_requests_dont_fork();
@@ -205,7 +205,7 @@ sub test_fw_domain_down {
 
     $req = Ravada::Request->force_shutdown_domain(
                uid => user_admin->id
-        ,id_domain => $domain->id
+        ,name => $domain->name
     );
 
     rvd_back->_process_all_requests_dont_fork();
