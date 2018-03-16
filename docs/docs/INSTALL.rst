@@ -94,13 +94,13 @@ Create the database:
 
 ::
 
-    $ mysqladmin -u root -p create ravada
+    $ sudo mysqladmin -u root -p create ravada
 
 Grant all permissions on this database to the *rvd_user*:
 
 ::
 
-    $ mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
+    $ sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
 
 Config file
 ~~~~~~~~~~~
