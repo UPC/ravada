@@ -56,6 +56,9 @@ sub test_autostart_base($vm_name) {
 
     is($domain->autostart,1);
 
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->autostart, 1) or exit;
+
     $domain->remove(user_admin);
 }
 
@@ -67,6 +70,9 @@ sub test_autostart_prepare_base($vm_name) {
     $domain->prepare_base(user_admin);
     is($domain->autostart,0);
 
+    my $domain2 = Ravada::Domain->open( $domain->id );
+    is($domain2->autostart, 0);
+
     $domain->remove(user_admin);
 }
 
@@ -75,6 +81,11 @@ sub test_autostart_denied($vm_name) {
     my $jimmy= create_user("jimmy$domain",$$,0);
     eval { $domain->autostart(1, $jimmy) };
     like($@,qr/not allowed/i);
+
+    my $domain2 = Ravada::Domain->open( $domain->id );
+    is($domain2->autostart, 0);
+
+    $domain->remove(user_admin);
 }
 
 sub test_autostart_req($vm_name) {
@@ -89,7 +100,39 @@ sub test_autostart_req($vm_name) {
     is($req->error, '');
 
     is($domain->autostart, 1);
+
+    my $domain2 = Ravada::Domain->open( $domain->id );
+    is($domain2->autostart, 1);
+
+    $domain->remove(user_admin);
 }
+
+sub test_autostart_front($vm_name) {
+    my $domain = create_domain($vm_name);
+    is($domain->autostart, 0);
+
+    my $domain_f = Ravada::Front::Domain->new(id => $domain->id);
+    is($domain_f->autostart, 0);
+
+    $domain->autostart(1, user_admin);
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->autostart,1,"[$vm_name] Expecting autostart on domain ".$domain->name) or exit;
+
+    $domain_f = Ravada::Front::Domain->new(id => $domain->id);
+    is($domain_f->autostart, 1);
+
+    $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->autostart,1);
+
+    $domain_f = Ravada::Front::Domain->new(id => $domain->id);
+    is($domain_f->autostart, 1);
+
+    $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->autostart,1);
+
+    $domain->remove(user_admin);
+}
+
 #######################################################################
 
 clean();
@@ -115,6 +158,8 @@ for my $vm_name ( 'Void', 'KVM' ) {
         test_autostart_prepare_base($vm_name);
         test_autostart_req($vm_name);
         test_autostart_denied($vm_name);
+        test_autostart_front($vm_name);
+
     }
 }
 
