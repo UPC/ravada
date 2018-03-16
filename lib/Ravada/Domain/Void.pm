@@ -39,18 +39,21 @@ sub BUILD {
     mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
+    my $drivers = {};
     if ($args->{id_base}) {
         my $base = Ravada::Domain->open($args->{id_base});
 
         confess "ERROR: Wrong base ".ref($base)." ".$base->type
                 ."for domain in vm ".$self->_vm->type
             if $base->type ne $self->_vm->type;
-        my $drivers = $base->_value('drivers');
-        $self->_store(drivers => $drivers );
+        $drivers = $base->_value('drivers');
     }
-    $self->_set_default_info();
+    if ( ! -e $self->_config_file ) {
+        $self->_set_default_info();
+        $self->_store( autostart => 0 );
+        $self->_store( drivers => $drivers );
+    }
     $self->set_memory($args->{memory}) if $args->{memory};
-    $self->_store( autostart => 0);
 }
 
 sub name { 
@@ -84,6 +87,7 @@ sub remove {
     my $self = shift;
 
     $self->remove_disks();
+    unlink $self->_config_file();
 }
 
 sub is_hibernated {

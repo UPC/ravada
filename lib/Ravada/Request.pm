@@ -67,7 +67,9 @@ our %VALID_ARG = (
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download);
+    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+            autostart_domain
+    );
 
 our $CONNECTOR;
 

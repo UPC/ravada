@@ -38,6 +38,7 @@ sub BUILD($self, $arg) {
         if $self->is_volatile && ! $self->is_active;
 }
 
+sub autostart($self )    { return $self->_data('autostart') }
 sub _do_force_shutdown  { confess "TODO" }
 sub add_volume          { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }

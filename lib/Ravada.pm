@@ -816,6 +816,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
     $self->_upgrade_table('domains','start_time','int DEFAULT 0');
     $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+    $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
