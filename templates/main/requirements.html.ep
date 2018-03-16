@@ -14,16 +14,16 @@
                     <div class="panel-heading">
                         <hr>
                             <h2 class="text-center"><%=l 'Requirements' %></h2>
-								                <i class="fa fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><br><p> <%=l 'For spice redirection you\'ll need to install' %><a target=_blank href="https://virt-manager.org/download/"> VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br>
+								                <i class="fab fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><br><p> <%=l 'For spice redirection you\'ll need to install' %><a target=_blank href="https://virt-manager.org/download/"> VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br>
                                 <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %> <i><b>sudo apt-get install virt-viewer</b></i></p><br>
 
-                                <i class="fa fa-windows  fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><br><p> <%=l 'You\'ll need to install' %>
+                                <i class="fab fa-windows fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><br><p> <%=l 'You\'ll need to install' %>
                                     <a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i> </a>
                                     , <%=l 'e.g. VirtViewer v5.0-256, and USB drivers (' %><a href="https://www.spice-space.org/download/windows/usbdk/UsbDk_1.0.19_x64.msi">64 <i class="fa fa-download" aria-hidden="true"></i> </a><%=l 'or' %><a href="https://www.spice-space.org/download/windows/usbdk/UsbDk_1.0.19_x86.msi"> 32 <i class="fa fa-download" aria-hidden="true"></i> </a><%=l 'bits) in your computer.' %></p>
                                 <p><%=l 'Be aware that in Windows, spice redirection is not automatically. It\'s necessary associate protocol with the app.' %><br>
                                 <%=l 'To make this possible, download' %><a target=_blank href="https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/spice.reg"> spice.reg <i class="fa fa-download" aria-hidden="true"></i></a> <%=l 'or copy the following lines in an ASCII file and save with extension .reg, then execute the file.' %><br>
                                 <p><%=l 'For more information, check ' %><a target=_blank href="http://ravada.readthedocs.io/en/latest/docs/windows_clients.html"><%=l 'the Windows Clients documentation' %></a>.</p><br>
-                                <i class="fa fa-apple fa-3x " aria-hidden="true"> OS X</i>&copy;<br><br><p> <%=l 'For spice redirection you\'ll need to install' %> <a target=_blank href="http://people.freedesktop.org/~teuf/spice-gtk-osx/dmg/0.5.7/RemoteViewer-0.5.7-1.dmg">RemoteViewer <i class="fa fa-download" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br></p>
+                                <i class="fab fa-apple fa-3x " aria-hidden="true"> OS X</i>&copy;<br><br><p> <%=l 'For spice redirection you\'ll need to install' %> <a target=_blank href="http://people.freedesktop.org/~teuf/spice-gtk-osx/dmg/0.5.7/RemoteViewer-0.5.7-1.dmg">RemoteViewer <i class="fa fa-download" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br></p>
                     </div>
                 </div>
             </div>
