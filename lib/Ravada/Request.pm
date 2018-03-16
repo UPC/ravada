@@ -55,6 +55,7 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
+    ,autostart_domain => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -66,7 +67,9 @@ our %VALID_ARG = (
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download);
+    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+            autostart_domain
+    );
 
 our $CONNECTOR;
 
@@ -891,6 +894,26 @@ sub clone {
     );
 }
 
+=head2 domain_autostart
+
+Sets the autostart flag on a domain
+
+=cut
+
+sub domain_autostart {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('autostart_domain', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    return _new_request($self
+        , command => 'domain_autostart'
+        , args => $args
+    );
+}
 sub AUTOLOAD {
     my $self = shift;
 

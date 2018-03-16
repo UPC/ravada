@@ -59,6 +59,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
+                                                    ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               }
@@ -469,6 +470,16 @@ get '/machine/public/#id' => sub {
 get '/machine/public/#id/#value' => sub {
     my $c = shift;
     return machine_is_public($c);
+};
+
+get '/machine/autostart/#id/#value' => sub {
+    my $c = shift;
+    my $req = Ravada::Request->domain_autostart(
+        id_domain => $c->stash('id')
+           ,value => $c->stash('value')
+             ,uid => $USER->id
+    );
+    return $c->render(json => { request => $req->id});
 };
 
 get '/machine/display/#id' => sub {
@@ -962,9 +973,11 @@ sub admin {
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
-            if scalar @$list_domains
+            if defined $CONFIG_FRONT->{admin}->{hide_clones}
+                && scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
+        $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
         # count clones from list_domains grepping those that have id_base
         $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
 

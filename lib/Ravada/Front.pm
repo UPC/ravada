@@ -219,6 +219,7 @@ sub list_domains {
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{autostart} = $domain->autostart;
         }
         delete $row->{spice_password};
         push @domains, ($row);

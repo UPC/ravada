@@ -112,7 +112,7 @@
             
 %=      include 'bootstrap/requests'
 
-        <table class="table table-striped admin-cont-body" border="0">
+        <table class="table table-striped admin-cont-body" border="1">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"
@@ -141,6 +141,9 @@
                        title="<%=l 'Show/Hide clones' %>">
                        <%=l 'Base' %></span></th>
                     <th class="lgMachToggle"><%=l 'Public'%></th>
+%                   if ($autostart) {
+                        <th class="lgMachToggle"><%=l 'Autostart'%></th>
+%                   }
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
                       <i class="fas fa-exchange-alt fa-rotate-90"
@@ -174,6 +177,9 @@
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="<%=l 'Make private'%>">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
+%                       if ($autostart) {
+                            <td></td>
+%                       }
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                         <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
@@ -212,14 +218,6 @@
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                         </a>
-%			if ($_user->can_screenshot){
-                        <a type="button" class="btn btn-primary btn-sm"
-                         ng-click="action('machine','screenshot',machine.id)"
-                         ng-disabled="!machine.is_active"
-                         title="<%=l 'Screenshot' %>">
-                         <i class="fa fa-camera" aria-hidden="true"></i>
-                       </a>
-%			}
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
@@ -249,8 +247,13 @@
                       </td>
                       <td class="lgMachToggle">
                           <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="set_public(child.id,0)" title="Make private">
-
-                           <input type="checkbox" ng-hide="{{child.is_public}} || {{child.is_volatile}}" ng-click="set_public(child.id,1)" title="Make public"></td>
+                           <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
+%                   if ($autostart) {
+                        <td class="lgMachToggle">
+                            <input type="checkbox" checked ng-show="{{child.autostart}}" ng-click="set_autostart(child.id, 0)" title="Disable Autostart">
+                            <input type="checkbox" ng-hide="{{child.autostart}}" ng-click="set_autostart(child.id, 1)" title="Enable Autostart">
+                        </td>
+%                   }
                       <td class="lgMachActions">
                           <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
@@ -284,12 +287,6 @@
                            title="<%=l 'View' %>">
                             <i class="fa fa-desktop"></i>
                           </a>
-                          <a type="button" class="btn btn-primary btn-sm"
-                           ng-click="action('machine','screenshot',child.id)"
-                           ng-disabled="!child.is_active"
-                           title="<%=l 'Screenshot' %>">
-                           <i class="fa fa-camera" aria-hidden="true"></i>
-                         </a>
                         </div>
                         <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine locked by' %><a href="/request/{{child.is_locked}}.html"> <%=l 'process' %></a></div>
                       </td>

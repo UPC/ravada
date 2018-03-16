@@ -816,6 +816,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
     $self->_upgrade_table('domains','start_time','int DEFAULT 0');
     $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+    $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
@@ -2091,6 +2092,15 @@ sub _cmd_refresh_storage($self, $request) {
     $vm->refresh_storage();
 }
 
+sub _cmd_domain_autostart($self, $request ) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->autostart($request->args('value'), $user);
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -2118,6 +2128,7 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
+,domain_autostart=> \&_cmd_domain_autostart
 
     );
     return $methods{$cmd};
