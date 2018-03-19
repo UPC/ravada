@@ -65,7 +65,7 @@ SKIP: {
 
     my $domain = test_create_domain($vm_name);
     $domain->is_public(1);
-    my $clone = $domain->clone(user => $USER, name => new_domain_name());
+    my $clone = $domain->clone(user => user_admin , name => new_domain_name());
 
     ok($clone);
     my @volumes = $clone->list_volumes();

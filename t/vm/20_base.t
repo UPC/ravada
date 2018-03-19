@@ -110,7 +110,7 @@ sub test_prepare_base {
     test_files_base($domain,0);
     $domain->shutdown_now($USER)    if $domain->is_active();
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@, $@);
     ok($domain->is_base);
     is($domain->is_active(),0);
@@ -136,17 +136,17 @@ sub test_prepare_base {
     $domain->shutdown(user => $USER)    if $domain->is_active;
 
     # We can't prepare base if already prepared
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     like($@, qr'.');
     is($domain->is_base,1);
 
     # So we remove the base
-    eval { $domain->remove_base( $USER) };
+    eval { $domain->remove_base( user_admin ) };
     is($@,'');
     is($domain->is_base,0);
 
     # And prepare again
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     is($@,'');
     is($domain->is_base,1);
 
@@ -155,7 +155,7 @@ sub test_prepare_base {
     my $domain_clone;
     eval { $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
-        ,id_owner => $USER->id
+        ,id_owner => user_admin->id
         ,id_base => $domain->id
         ,vm => $vm_name
         );

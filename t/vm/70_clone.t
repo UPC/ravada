@@ -110,7 +110,7 @@ sub test_description {
     my $vm = rvd_back->search_vm($vm_name) or return;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base(user_admin);
     $domain->is_public(1);
     my $clone = $vm->create_domain(
              name => new_domain_name()

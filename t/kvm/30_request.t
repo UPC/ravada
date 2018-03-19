@@ -26,7 +26,7 @@ sub test_req_prepare_base {
     my $domain0 =  $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
 
-    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => $USER->id);
+    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => user_admin->id);
     $RAVADA->_process_all_requests_dont_fork();
 
     ok($req->status('done'),"Request should be done, it is".$req->status);
@@ -48,7 +48,7 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove($USER) };
+        eval { $domain->remove( user_admin ) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
         for my $file ( $domain->list_files_base ) {
@@ -92,7 +92,7 @@ sub test_req_clone {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_base => $domain_father->id
-       ,id_owner => $USER->id
+       ,id_owner => user_admin->id
         ,vm => $BACKEND
     );
     ok($req);

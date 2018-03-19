@@ -118,7 +118,7 @@ sub test_remove_clone {
     my $usera = create_user("admin_rm$$","bar",'is admin');
 
     my $domain = create_domain($vm_name, $user);
-    $domain->prepare_base($user);
+    $domain->prepare_base($usera);
     ok($domain->is_base) or return;
 
     my $clone = $domain->clone(user => $usera,name => new_domain_name());
@@ -167,7 +167,7 @@ sub test_shutdown_clone {
 
 
     my $domain = create_domain($vm_name, $user);
-    $domain->prepare_base($user);
+    $domain->prepare_base($usera);
     ok($domain->is_base) or return;
 
     my $clone = $domain->clone(user => $usera,name => new_domain_name());
@@ -337,7 +337,7 @@ sub test_prepare_base {
     eval{ $domain->prepare_base($user) };
     like($@,qr'.');
     is($domain->is_base,0);
-    $domain->remove();
+    $domain->remove($usera);
 
     $domain = create_domain($vm_name, $user);
 
@@ -346,9 +346,11 @@ sub test_prepare_base {
     eval{ $domain->prepare_base($user) };
     is($@,'');
     is($domain->is_base,1);
+    $domain->is_public(1);
 
     my $clone;
     eval { $clone = $domain->clone(user=>$user, name => new_domain_name) };
+    is($@, '');
     ok($clone);
 
     $usera->revoke($user,'create_base');
@@ -358,11 +360,11 @@ sub test_prepare_base {
     like($@,qr'.');
     is($clone->is_base,0);
 
-    $domain->remove($usera);
     $clone->remove($usera);
+    $domain->remove($usera);
 
-    $user->remove();
     $usera->remove();
+    $user->remove();
 
 }
 

@@ -416,7 +416,7 @@ for my $vm_name (qw( Void KVM )) {
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
         $domain->is_public(1);
-        my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
+        my $clone1 = $domain->clone( user=>user_admin, name=>new_domain_name );
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
         $clone1->shutdown_now($USER);

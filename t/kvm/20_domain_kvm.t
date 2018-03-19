@@ -148,7 +148,7 @@ sub test_new_domain_iso {
 
 sub test_prepare_base {
     my $domain = shift;
-    $domain->prepare_base($USER);
+    $domain->prepare_base(user_admin);
 
     my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
