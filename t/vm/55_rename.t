@@ -136,7 +136,7 @@ sub test_clone_domain {
 
     $domain->shutdown_now($USER);
     $domain->is_public(1);
-    my $clone = $domain->clone(name => $clone_name, user=>$USER);
+    my $clone = $domain->clone(name => $clone_name, user=>user_admin );
     ok($clone) or return;
     return $clone_name;
 }

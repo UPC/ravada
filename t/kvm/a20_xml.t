@@ -86,12 +86,12 @@ SKIP: {
         is(scalar @volumes_clone2, 1);
     }
 
-    $clone->remove($USER);
-    $clone2->remove($USER);
-    $domain->remove_base($USER);
+    $clone->remove( user_admin );
+    $clone2->remove( user_admin );
+    $domain->remove_base( user_admin );
 
     my $clone3;
-    eval  { $clone3 = $domain->clone(user => $USER, name => new_domain_name()) };
+    eval  { $clone3 = $domain->clone(user => user_admin , name => new_domain_name()) };
     is($@,'');
     ok($clone3,"Expecting a clone , got ".($clone3 or 'UNDEF'));
 
