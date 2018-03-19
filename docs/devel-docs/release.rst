@@ -140,4 +140,5 @@ Publish
 -------
 
 -  Tweet it
+-  Mail it in google group ravada@groups.google.com
 -  Change the release in branch master README.md
