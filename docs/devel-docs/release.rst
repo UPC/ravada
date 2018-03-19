@@ -122,6 +122,7 @@ Upload the file to our repo and change the number at:
 
     $ git checkout gh-pages
     $ gvim docs/docs/INSTALL.md
+    $ gvim index.html
     $ git commit -a
     $ git push
 
@@ -139,5 +140,4 @@ Publish
 -------
 
 -  Tweet it
--  Change the release in gh-pages
--  Change the release in README.md
+-  Change the release in branch master README.md
