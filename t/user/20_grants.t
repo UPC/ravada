@@ -342,6 +342,10 @@ sub test_prepare_base {
     $domain = create_domain($vm_name, $user);
 
     $usera->grant($user,'create_base');
+
+    is($user->is_operator, 1);
+    is($user->can_list_own_machines, 1);
+
     is($user->can_create_base,1);
     eval{ $domain->prepare_base($user) };
     is($@,'');
@@ -368,6 +372,26 @@ sub test_prepare_base {
 
 }
 
+sub test_frontend {
+    my $vm_name = shift;
+
+    my $user = create_user("oper_pb$$","bar");
+    my $usera = create_user("admin_pb$$","bar",1);
+
+    my $domain = create_domain($vm_name, $usera );
+    $domain->prepare_base( $usera );
+    $domain->is_public( $usera );
+
+    my $clone = $domain->clone( user => $user, name => new_domain_name );
+
+    my $list_machines = rvd_front->list_domains( id_owner => $user->id );
+    is (scalar @$list_machines, 1 );
+    ok($list_machines->[0]->{name} eq $clone->name);
+
+    $clone->remove( $usera );
+    $domain->remove( $usera );
+}
+
 ##########################################################
 
 test_defaults();
@@ -386,5 +410,6 @@ test_remove_clone('Void');
 test_remove_clone_all('Void');
 
 test_prepare_base('Void');
+test_frontend('Void');
 
 done_testing();
