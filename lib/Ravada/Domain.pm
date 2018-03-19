@@ -305,11 +305,16 @@ sub _around_add_volume {
     return $self->$orig(%args);
 }
 
-sub _pre_prepare_base {
-    my $self = shift;
-    my ($user, $request) = @_;
+sub _pre_prepare_base($self, $user, $request = undef ) {
 
     $self->_allowed($user);
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->id_owner);
+    confess "User ".$user->name." [".$user->id."] not allowed to prepare base ".$self->domain
+        ." owned by ".($owner->name or '<UNDEF>')."\n"
+            unless $user->is_admin || (
+                $self->id_owner == $user->id && $user->can_create_base());
+
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them 
@@ -774,11 +779,11 @@ It is not expected to run by itself, the remove function calls it before proceed
 
 sub pre_remove { }
 
-sub _pre_remove_domain {
-    my $self = shift;
+sub _pre_remove_domain($self, $user=undef) {
+
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove(@_);
+    $self->_allow_remove($user);
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
