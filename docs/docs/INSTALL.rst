@@ -90,6 +90,8 @@ It is required a database for internal use. In this examples we call it *ravada*
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
 In this stage the system wants you to set a password for the sql connection.
 
+.. Warning:: If installing ravada on Ubuntu 18 or newer you should enter your user's password instead of mysql's root password.
+
 Create the database:
 
 ::
