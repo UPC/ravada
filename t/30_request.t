@@ -169,7 +169,7 @@ sub test_req_create_base {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name") && do {
-        $domain->prepare_base($USER);
+        $domain->prepare_base(user_admin);
         ok($domain && $domain->is_base,"Domain $name should be base");
     };
     return $domain;

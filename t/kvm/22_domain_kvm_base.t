@@ -129,7 +129,7 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base(user_admin) };
     is($@,'') or exit;
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");

@@ -281,8 +281,23 @@ get '/iso_file.json' => sub {
 get '/list_machines.json' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
-    $c->render(json => $RAVADA->list_domains);
+    return access_denied($c) unless _logged_in($c)
+        && ( $USER->can_list_own_machines()
+            || $USER->is_admin()
+        );
+
+    my @args;
+    if ( !$USER->can_list_machines ) {
+        my $domains = $RAVADA->list_domains( id_owner => $USER->id );
+        for my $domain ( @$domains ) {
+            next if !$domain->{id_base};
+            my $base = $RAVADA->list_domains( id => $domain->{id_base} );
+            push @$domains, (@$base);
+        }
+        return $c->render( json => $domains );
+    }
+
+    return $c->render( json => $RAVADA->list_domains );
 };
 
 get '/list_bases_anonymous.json' => sub {

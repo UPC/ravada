@@ -189,7 +189,7 @@ sub test_drivers_clone {
         _domain_shutdown($domain);
         is($domain->get_driver($type), $option->{value}) or next;
         $domain->remove_base($USER);
-        $domain->prepare_base($USER);
+        $domain->prepare_base( user_admin );
         $domain->is_public(1);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         is($domain->get_driver($type), $option->{value}) or next;

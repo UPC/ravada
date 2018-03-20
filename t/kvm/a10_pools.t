@@ -112,7 +112,7 @@ sub test_remove_domain {
 
 sub test_base {
     my $domain = shift;
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base( user_admin ) };
     is($@,'',"Prepare base") or exit;
 
     my @files_base = $domain->list_files_base();
@@ -126,7 +126,7 @@ sub test_base {
 
     isnt($path0,$path1);
 
-    $domain->remove_base($USER);
+    $domain->remove_base( user_admin );
 
     for my $file (@files_base) {
         ok(!-e $file,"Expecting volume $file doesn't exist, got : ".(-e $file or 0));

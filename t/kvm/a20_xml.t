@@ -65,7 +65,7 @@ SKIP: {
 
     my $domain = test_create_domain($vm_name);
     $domain->is_public(1);
-    my $clone = $domain->clone(user => $USER, name => new_domain_name());
+    my $clone = $domain->clone(user => user_admin , name => new_domain_name());
 
     ok($clone);
     my @volumes = $clone->list_volumes();
@@ -86,12 +86,12 @@ SKIP: {
         is(scalar @volumes_clone2, 1);
     }
 
-    $clone->remove($USER);
-    $clone2->remove($USER);
-    $domain->remove_base($USER);
+    $clone->remove( user_admin );
+    $clone2->remove( user_admin );
+    $domain->remove_base( user_admin );
 
     my $clone3;
-    eval  { $clone3 = $domain->clone(user => $USER, name => new_domain_name()) };
+    eval  { $clone3 = $domain->clone(user => user_admin , name => new_domain_name()) };
     is($@,'');
     ok($clone3,"Expecting a clone , got ".($clone3 or 'UNDEF'));
 

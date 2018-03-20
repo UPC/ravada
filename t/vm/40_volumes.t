@@ -102,7 +102,7 @@ sub test_prepare_base {
     my @volumes = $domain->list_volumes();
 #    diag("[$vm_name] preparing base for domain ".$domain->name);
     my @img;
-    eval {@img = $domain->prepare_base( $USER) };
+    eval {@img = $domain->prepare_base( user_admin ) };
     is($@,'');
 #    diag("[$vm_name] ".Dumper(\@img));
 
