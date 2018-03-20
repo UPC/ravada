@@ -190,7 +190,7 @@ sub test_req_prepare_base {
         ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
         $req = Ravada::Request->prepare_base(
             id_domain => $domain->id
-            ,uid => $USER->id
+            ,uid => user_admin->id
         );
         ok($req);
         ok($req->status);
