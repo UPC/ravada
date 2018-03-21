@@ -16,7 +16,7 @@ use_ok('Ravada');
 
 my @VMS = vm_names();
 init($test->connector);
-my $USER = create_user("foo","bar");
+my $USER = user_admin();
 
 #######################################################
 sub test_spice {

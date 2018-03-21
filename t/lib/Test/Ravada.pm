@@ -163,7 +163,7 @@ sub init {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
     %ARG_CREATE_DOM = (
-      KVM => [ id_iso => search_id_iso('Alpine') ]
+      KVM => [ ]
       ,Void => []
     );
 }
@@ -411,7 +411,7 @@ sub search_id_iso {
     );
     $sth->execute("$name%");
     my ($id) = $sth->fetchrow;
-    die "There is no iso called $name%" if !$id;
+    confess "There is no iso called $name%" if !$id;
     return $id;
 }
 

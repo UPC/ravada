@@ -337,7 +337,7 @@ sub test_prepare_base {
     my $user = create_user("oper_pb$$","bar");
     my $usera = create_user("admin_pb$$","bar",1);
 
-    my $domain = create_domain($vm_name, $user);
+    my $domain = create_domain($vm_name, $usera);
     is($domain->is_base,0) or return;
 
     eval{ $domain->prepare_base($user) };
@@ -345,7 +345,7 @@ sub test_prepare_base {
     is($domain->is_base,0);
     $domain->remove($usera);
 
-    $domain = create_domain($vm_name, $user);
+    my $clone0 = $domain->clone( user => $user, name => new_domain_name());
 
     $usera->grant($user,'create_base');
 
@@ -353,10 +353,10 @@ sub test_prepare_base {
     is($user->can_list_own_machines, 1);
 
     is($user->can_create_base,1);
-    eval{ $domain->prepare_base($user) };
+    eval{ $clone0->prepare_base($user) };
     is($@,'');
-    is($domain->is_base,1);
-    $domain->is_public(1);
+    is($clone0->is_base,1);
+    $clone0->is_public(1);
 
     my $clone;
     eval { $clone = $domain->clone(user=>$user, name => new_domain_name) };
@@ -466,43 +466,6 @@ sub test_create_domain {
     $user->remove();
     $usera->remove();
     diag("done  test create");
-}
-
-sub test_grant_clone {
-    my $vm_name = shift;
-
-    my $vm = rvd_back->search_vm($vm_name);
-
-    my $user = create_user("oper_c$$","bar");
-    is($user->can_clone,1) or return;
-
-    my $usera = create_user("admin_c$$","bar",1);
-    is($usera->can_clone,1);
-    my $domain = create_domain($vm_name, $usera);
-    $domain->prepare_base($usera);
-    ok($domain->is_base);
-    is($domain->is_public,0) or return;
-
-    my $clone_name = new_domain_name();
-    my $clone;
-    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
-    like($@,qr(.));
-
-    my $clone2 = $vm->search_domain($clone_name);
-    is($clone2,undef);
-
-    $domain->is_public(1);
-    is($domain->is_public,1) or return;
-    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
-    is($@,'');
-    ok($clone,"Expecting $clone_name exists");
-
-    $clone2 = $vm->search_domain($clone_name);
-    ok($clone2,"Expecting $clone_name exists");
-
-    $clone->remove($usera);
-    $domain->remove($usera);
-
 }
 
 sub test_grant_clone {

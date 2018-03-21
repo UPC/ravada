@@ -602,7 +602,7 @@ sub _update_domain_drivers_options($self) {
 sub _update_table($self, $table, $field, $data) {
 
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %$data) {
+    for my $name (sort keys %$data) {
         my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;

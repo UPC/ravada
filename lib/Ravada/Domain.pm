@@ -214,7 +214,7 @@ sub open($class, $id) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my $vm = $vm0->new( readonly => 1);
+    my $vm = $vm0->new( );
 
     return $vm->search_domain($row->{name});
 }
@@ -773,19 +773,11 @@ It is not expected to run by itself, the remove function calls it before proceed
 
 sub pre_remove { }
 
-<<<<<<< HEAD
 sub _pre_remove_domain($self, $user=undef) {
 
     eval { $self->id };
     $self->pre_remove();
     $self->_allow_remove($user) if $self->is_known();
-=======
-sub _pre_remove_domain($self,$user) {
-    eval { $self->id };
-    $self->pre_remove();
-    $self->_allow_remove($user)    if $self->{_data};
->>>>>>> [#231] create_domain permission
-    $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
 

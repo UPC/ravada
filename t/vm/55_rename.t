@@ -19,7 +19,7 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 init($test->connector, $FILE_CONFIG);
 
-my $USER = create_user("foo","bar");
+my $USER = user_admin();
 
 
 #######################################################################

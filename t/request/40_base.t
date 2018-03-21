@@ -17,7 +17,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 init($test->connector, 't/etc/ravada.conf');
 
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 rvd_back();
 my $ID_ISO = search_id_iso('Alpine');

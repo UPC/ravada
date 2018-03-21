@@ -18,7 +18,7 @@ my $RVD_BACK = rvd_back($test->connector);
 my $RVD_FRONT= rvd_front($test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = user_admin();
 
 #########################################################################
 
