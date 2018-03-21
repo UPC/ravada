@@ -1,4 +1,4 @@
-# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.13-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE) [![Documentation Status](https://readthedocs.org/projects/ravada/badge/?version=latest)](http://ravada.readthedocs.io/en/latest/?badge=latest) [![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/upc/ravada)
+# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.14-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE) [![Documentation Status](https://readthedocs.org/projects/ravada/badge/?version=latest)](http://ravada.readthedocs.io/en/latest/?badge=latest) [![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/upc/ravada)
 
 
 ## Remote Virtual Desktops Manager

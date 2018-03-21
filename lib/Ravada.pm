@@ -822,6 +822,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('domains','id_vm','int default null');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -2099,6 +2100,89 @@ sub _cmd_domain_autostart($self, $request ) {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     my $domain = $self->search_domain_by_id($id_domain);
     $domain->autostart($request->args('value'), $user);
+}
+
+sub _cmd_refresh_vms($self, $request=undef) {
+
+    my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
+    $self->_refresh_down_domains($active_domain, $active_vm);
+
+    $self->_clean_requests('refresh_vms', $request);
+}
+
+sub _clean_requests($self, $command, $request=undef) {
+    my $query = "DELETE FROM requests "
+        ." WHERE command=? "
+        ."   AND status='requested'";
+
+    if ($request) {
+        confess "Wrong request" if !ref($request) || ref($request) !~ /Request/;
+        $query .= "   AND id <> ?";
+    }
+    my $sth = $CONNECTOR->dbh->prepare($query);
+
+    if ($request) {
+        $sth->execute($command, $request->id);
+    } else {
+        $sth->execute($command);
+    }
+}
+
+sub _refresh_active_domains($self, $request=undef) {
+    my $id_domain;
+    $id_domain = $request->defined_arg('id_domain')  if $request;
+
+    my %active_domain;
+    my %active_vm;
+    for my $vm ($self->list_vms) {
+        if ( !$vm->is_active ) {
+            $active_vm{$vm->id} = 0;
+            $vm->disconnect();
+            next;
+        }
+        $active_vm{$vm->id} = 1;
+        if ($id_domain) {
+            my $domain = $vm->search_domain_by_id($id_domain);
+            $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
+         } else {
+            for my $domain ($vm->list_domains( active => 1)) {
+                next if $active_domain{$domain->id};
+                $self->_refresh_active_domain($vm, $domain, \%active_domain);
+            }
+        }
+    }
+    return \%active_domain, \%active_vm;
+}
+
+sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
+    my $is_active = $domain->is_active();
+
+    my $status = 'shutdown';
+    if ( $is_active ) {
+        $status = 'active';
+        $domain->_data(id_vm => $vm->id)    if $domain->_data('id_vm') != $vm->id;
+    }
+    $domain->_set_data(status => $status);
+    $active_domain->{$domain->id} = $is_active;
+
+}
+
+sub _refresh_down_domains($self, $active_domain, $active_vm) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, id_vm FROM domains WHERE status='active'"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+        next if exists $active_domain->{$id_domain};
+        my $domain = Ravada::Domain->open($id_domain);
+        if (defined $id_vm && !$active_vm->{$id_vm}) {
+            $domain->_set_data(status => 'shutdown');
+        } else {
+            my $status = 'shutdown';
+            $status = 'active' if $domain->is_active;
+            $domain->_set_data(status => $status);
+        }
+    }
 }
 
 sub _req_method {
