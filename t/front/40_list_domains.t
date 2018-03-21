@@ -62,15 +62,20 @@ sub test_list_domains {
     ok($domain->is_active,"Domain should be active, got ".$domain->is_active);
     $list_domains = rvd_front->list_domains();
     is($list_domains->[0]->{remote_ip},undef);
+    is($list_domains->[0]->{is_active}, 1, Dumper($list_domains->[0]));
 
-    $domain->shutdown_now($USER);
+    shutdown_domain_internal($domain);
     ok(!$domain->is_active,"Domain should not be active, got ".$domain->is_active);
+
+    $list_domains = rvd_front->list_domains();
+    is($list_domains->[0]->{is_active}, 0, Dumper($list_domains->[0]));
 
     my $remote_ip = '99.88.77.66';
     $domain->start(user => $USER, remote_ip => $remote_ip);
     ok($domain->is_active,"Domain should be active, got ".$domain->is_active);
     $list_domains = rvd_front->list_domains();
     is($list_domains->[0]->{remote_ip}, $remote_ip);
+    is($list_domains->[0]->{is_active}, 1);
 }
 
 #########################################################
