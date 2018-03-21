@@ -209,6 +209,7 @@ sub list_domains {
         }
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
+        $row->{is_active} = 0;
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
