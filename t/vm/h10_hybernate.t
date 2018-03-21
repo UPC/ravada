@@ -16,7 +16,7 @@ use_ok('Ravada');
 
 my $RVD_BACK = rvd_back($test->connector);
 my @VMS = vm_names();
-my $USER = create_user("foo","bar",1);
+my $USER = create_user("foo","bar",0 );
 user_admin->grant($USER,'create_domain');
 
 sub test_hybernate {

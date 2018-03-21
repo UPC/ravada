@@ -15,6 +15,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 use_ok('Ravada');
 
 my $RVD_BACK = rvd_back($test->connector);
+
 my $USER = create_user("foo","bar");
 user_admin->grant($USER,'create_domain');
 

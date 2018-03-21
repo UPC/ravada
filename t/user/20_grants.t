@@ -474,6 +474,7 @@ sub test_grant_clone {
     my $vm = rvd_back->search_vm($vm_name);
 
     my $user = create_user("oper_c$$","bar");
+
     is($user->can_clone,1) or return;
 
     my $usera = create_user("admin_c$$","bar",1);
