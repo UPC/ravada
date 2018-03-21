@@ -1152,7 +1152,7 @@ sub _match_file($self, $url, $file_re) {
         die $@;
     }
 
-    return unless $res->code == 200 || $res->code == 301;
+    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
 
     my $dom= $res->dom;
 
@@ -1851,6 +1851,11 @@ sub ping($self) {
     return 0 if !$self->vm;
     eval { $self->vm->list_defined_networks };
     return 1 if !$@;
+    return 0;
+}
+
+sub is_active($self) {
+    return 1 if $self->vm;
     return 0;
 }
 
