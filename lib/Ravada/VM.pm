@@ -136,6 +136,15 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    my $base;
+    my $id_base = delete $args{id_base};
+    $base = Ravada::Domain->open($id_base)  if $id_base;
+
+    confess "ERROR: User ".$owner->name." not allowed to create machines"
+        unless $owner->is_admin || $owner->can_create_machine()
+            || ( $base && $base->is_public() &&  $owner->can_clone );
 
     $self->_pre_create_domain(@_);
 
