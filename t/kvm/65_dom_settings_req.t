@@ -15,7 +15,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 init($test->connector, $FILE_CONFIG);
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 our $TIMEOUT_SHUTDOWN = 10;
 
 our %SKIP_DEFAULT_VALUE = map { $_ => 1 } qw(image jpeg playback streaming zlib);

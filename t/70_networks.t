@@ -19,7 +19,7 @@ my $rvd_back = rvd_back( $test->connector , 't/etc/ravada.conf');
 my $RVD_FRONT = rvd_front( $test->connector , 't/etc/ravada.conf');
 
 my $vm = $rvd_back->search_vm('Void');
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 ########################################################################3
 

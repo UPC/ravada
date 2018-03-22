@@ -19,7 +19,7 @@ my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
 my $REMOTE_VIEWER = `which remote-viewer`;
 chomp $REMOTE_VIEWER;
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 
 ##############################################################
