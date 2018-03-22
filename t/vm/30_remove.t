@@ -19,7 +19,7 @@ my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = user_admin();
 
 #######################################################################33
 
@@ -159,7 +159,7 @@ sub touch_mtime {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (@VMS) {
+for my $vm_name (sort keys %ARG_CREATE_DOM) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";

@@ -20,7 +20,7 @@ my $RVD_FRONT= rvd_front($TEST_SQL->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $TEST_SQL->connector);
 
 my @VMS = ('KVM');
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 #############################################################################
 

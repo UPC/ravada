@@ -347,8 +347,8 @@ sub is_operator {
         || $self->can_shutdown_clone()
 	|| $self->can_hibernate_clone
 	|| $self->can_change_settings_clones()
-        || $self->can_remove_clone()
-        || $self->can_create_base();
+	|| $self->can_shutdown_clone()
+        || $self->can_remove_clone();
 }
 
 =head2 can_list_own_machines
@@ -638,8 +638,10 @@ sub grant($self,$user,$permission,$value=1) {
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
             .Dumper(\@perms);
     }
-
-    return 0 if !$value && !$user->can_do($permission);
+    confess "ERROR: user not object"
+        if !ref($user);
+    return 0 if defined $value && !$value
+             && defined $user->can_do($permission) && $user->can_do($permission) == 0;
 
     my $value_sql = $user->can_do($permission);
     return $value if defined $value_sql && $value_sql eq $value;

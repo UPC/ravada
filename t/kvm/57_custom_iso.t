@@ -15,7 +15,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 init($test->connector, $FILE_CONFIG);
 
-my $USER = create_user('foo','bar');
+my $USER = user_admin();
 
 #########################################################################
 #

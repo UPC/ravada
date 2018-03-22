@@ -21,6 +21,7 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
 my $USER = create_user("foo","bar");
+user_admin->grant($USER,'create_domain');
 
 my $DISPLAY_IP = '99.1.99.1';
 

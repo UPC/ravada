@@ -16,7 +16,7 @@ use_ok('Ravada');
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 
 my $RAVADA = rvd_back($test->connector , 't/etc/ravada.conf');
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
     my $vm = $RAVADA->search_vm('kvm');
@@ -107,7 +107,7 @@ sub test_new_domain_iso {
     my $active = shift;
     
     my $vm = rvd_back()->search_vm($BACKEND);
-    my $iso = $vm->_search_iso(1);
+    my $iso = $vm->_search_iso(search_id_iso('Alpine'));
     my $name = new_domain_name();
 
     test_remove_domain($name);

@@ -16,7 +16,8 @@ use_ok('Ravada');
 
 my $RVD_BACK = rvd_back($test->connector);
 my @VMS = vm_names();
-my $USER = create_user("foo","bar",1);
+my $USER = create_user("foo","bar",0 );
+user_admin->grant($USER,'create_domain');
 
 sub test_hybernate {
     my $vm_name = shift;
@@ -43,9 +44,11 @@ sub test_hybernate_clone {
     my ($vm_name, $domain) = @_;
 
     $domain->is_public(1);
-    my $clone = $domain->clone(name => new_domain_name(), user => $USER);
+    $domain->prepare_base(user_admin) if !$domain->is_base;
+    my $clone = $domain->clone(name => new_domain_name(), user => $USER );
 
     eval {$clone->start($USER)  if !$clone->is_active };
+    is($@,'');
     is($clone->is_active,1) or return;
 
     eval { $clone->hybernate($USER) };

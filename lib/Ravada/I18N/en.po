@@ -422,3 +422,68 @@ msgstr ""
 
 msgid "monitoring"
 msgstr ""
+
+msgid "Permissions"
+msgstr ""
+
+msgid "can change the settings of owned virtual machines."
+msgstr ""
+
+msgid "can change the settings of any virtual machines."
+msgstr ""
+
+msgid ""
+"can change the settings of any virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+
+msgid "can clone public virtual machines."
+msgstr ""
+
+msgid "can clone any virtual machine."
+msgstr ""
+
+msgid "can create bases."
+msgstr ""
+
+msgid "can create virtual machines."
+msgstr ""
+
+msgid "can grant permissions to other users"
+msgstr ""
+
+msgid "can hibernate any virtual machine."
+msgstr ""
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "can hibernate any clone."
+msgstr ""
+
+msgid "can remove any virtual machines owned by the user."
+msgstr ""
+
+msgid "can remove any virtual machine."
+msgstr ""
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "can remove any clone."
+msgstr ""
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+
+msgid "can take a screenshot of any virtual machine."
+msgstr ""
+
+msgid "can shutdown any virtual machine."
+msgstr ""
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "Submit Query"
+msgstr "" 

@@ -184,7 +184,39 @@ sub BUILD {
     my $self = shift;
     $self->_init_connector();
     $self->is_known();
+}
 
+=head2 open
+
+Open a domain
+
+Argument: id
+
+Returns: Domain object read only
+
+=cut
+
+sub open($class, $id) {
+
+    my $row;
+
+    if (ref($class)) {
+        $row = $class->_select_domain_db ( id => $id );
+    } else {
+        my $self = {};
+        bless $self,$class;
+        $row = $self->_select_domain_db ( id => $id );
+    }
+    confess "ERROR: Unknown domain id=$id"
+        if !$row || !$row->{id};
+
+    my $vm0 = {};
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm0, $vm_class;
+
+    my $vm = $vm0->new( );
+
+    return $vm->search_domain($row->{name});
 }
 
 sub _vm_connect {
@@ -254,7 +286,6 @@ sub _allow_manage {
 }
 
 sub _allow_remove($self, $user) {
-
     confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
@@ -533,43 +564,6 @@ sub _data($self, $field, $value=undef) {
     return $self->{_data}->{$field};
 }
 
-=head2 open
-
-Open a domain
-
-Argument: id
-
-Returns: Domain object read only
-
-=cut
-
-sub open($class, $id) {
-    confess "Missing id"    if !defined $id;
-
-    my $self = {};
-
-    if (ref($class)) {
-        $self = $class;
-    } else {
-        bless $self,$class
-    }
-
-    my $row = $self->_select_domain_db ( id => $id );
-
-    die "ERROR: Domain not found id=$id\n"
-        if !keys %$row;
-
-    my $vm0 = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm0, $vm_class;
-
-    my @ro = ();
-    @ro = (readonly => 1 ) if $>;
-    my $vm = $vm0->new( @ro );
-
-    return $vm->search_domain($row->{name});
-}
-
 =head2 is_known
 
 Returns if the domain is known in Ravada.
@@ -783,8 +777,7 @@ sub _pre_remove_domain($self, $user=undef) {
 
     eval { $self->id };
     $self->pre_remove();
-    $self->_allow_remove($user);
-    $self->pre_remove();
+    $self->_allow_remove($user) if $self->is_known();
     $self->_remove_iptables()   if $self->is_known();
 }
 

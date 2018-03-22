@@ -15,7 +15,7 @@ my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my @VMS = vm_names();
 init($test->connector);
-my $USER = create_user("foo","bar");
+my $USER = user_admin();
 my $DISPLAY_IP = '99.1.99.1';
 
 our $TIMEOUT_SHUTDOWN = 10;

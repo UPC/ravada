@@ -14,7 +14,7 @@ use_ok('Ravada');
 
 my @VMS = vm_names();
 init($test->connector);
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 our $TIMEOUT_SHUTDOWN = 10;
 

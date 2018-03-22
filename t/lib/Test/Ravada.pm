@@ -32,6 +32,7 @@ create_domain
     clean_remote
     start_node shutdown_node
     start_domain_internal   shutdown_domain_internal
+    %ARG_CREATE_DOM
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -42,10 +43,7 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
-our %ARG_CREATE_DOM = (
-    KVM => []
-    ,Void => []
-);
+our %ARG_CREATE_DOM;
 
 sub user_admin {
     return $USER_ADMIN;
@@ -81,7 +79,12 @@ sub create_domain {
 
     my $name = new_domain_name();
 
-    my %arg_create = (id_iso => $id_iso);
+    ok($ARG_CREATE_DOM{$vm_name}) or do {
+        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
+        return;
+    };
+    my %arg_create = @{$ARG_CREATE_DOM{$vm_name}};
+    $arg_create{id_iso} = $id_iso if $id_iso;
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
@@ -91,7 +94,7 @@ sub create_domain {
            );
     };
     is($@,'');
-
+    confess "Failed create_domain " if !$domain;
     return $domain;
 
 }
@@ -159,6 +162,10 @@ sub init {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
+    %ARG_CREATE_DOM = (
+      KVM => [ ]
+      ,Void => []
+    );
 }
 
 sub _remove_old_domains_vm {
@@ -396,12 +403,15 @@ sub clean {
 
 sub search_id_iso {
     my $name = shift;
+
+    confess "No initialized"    if !$CONNECTOR;
+
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
     $sth->execute("$name%");
     my ($id) = $sth->fetchrow;
-    die "There is no iso called $name%" if !$id;
+    confess "There is no iso called $name%" if !$id;
     return $id;
 }
 

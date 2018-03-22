@@ -189,7 +189,8 @@
                     </td>
                     <td class="lgMachToggle">
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
-%              if ($_user-> can_clone){
+%              if ($USER -> can_clone){
+                      <div ng-hide="{{machine.is_locked}}">
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
                          ng-disabled="machine.is_active"
@@ -218,6 +219,14 @@
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                         </a>
+%			if ($_user->can_screenshot){
+                        <a type="button" class="btn btn-primary btn-sm"
+                         ng-click="action('machine','screenshot',machine.id)"
+                         ng-disabled="!machine.is_active"
+                         title="<%=l 'Screenshot' %>">
+                         <i class="fa fa-camera" aria-hidden="true"></i>
+                       </a>
+%			}
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
