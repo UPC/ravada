@@ -2160,7 +2160,9 @@ sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
     my $status = 'shutdown';
     if ( $is_active ) {
         $status = 'active';
-        $domain->_data(id_vm => $vm->id)    if $domain->_data('id_vm') != $vm->id;
+        $domain->_data(id_vm => $vm->id)
+            if !defined$domain->_data('id_vm')
+                || $domain->_data('id_vm') != $vm->id;
     }
     $domain->_set_data(status => $status);
     $active_domain->{$domain->id} = $is_active;
