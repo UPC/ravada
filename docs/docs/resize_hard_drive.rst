@@ -44,3 +44,5 @@ Finally, fix permissions
 ::
   chown libvirt-qemu:kvm /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
   chmod 600 /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
+
+SDP
