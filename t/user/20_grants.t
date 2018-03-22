@@ -514,7 +514,7 @@ sub test_grant_clone {
     $usera->remove();
 }
 
-sub test_create_domain {
+sub test_create_domain2 {
     my $vm_name = shift;
 
     my $vm = rvd_back->search_vm($vm_name);
@@ -567,5 +567,6 @@ test_remove_clone_all('Void');
 test_prepare_base('Void');
 test_frontend('Void');
 test_create_domain('Void');
+test_create_domain2('Void');
 
 done_testing();
