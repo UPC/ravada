@@ -6,7 +6,7 @@ INSERT INTO grant_types(name,description) VALUES('remove',"can remove any virtua
 INSERT INTO grant_types(name,description) VALUES('screenshot',"can take a screenshot of any virtual machine owned by the user.");
 
 /* managers should be allowed these */
-INSERT INTO grant_types(name,description) VALUES('create_domain',"can create virtual machines.");
+INSERT INTO grant_types(name,description) VALUES('create_machine',"can create virtual machines.");
 INSERT INTO grant_types(name,description) VALUES('create_base',"can create bases.");
 
 /* managers should be allowed these */

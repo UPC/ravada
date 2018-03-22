@@ -41,7 +41,7 @@ sub test_defaults {
     ok(!$user->can_grant);
 
     ok(!$user->can_create_base);
-    ok(!$user->can_create_domain);
+    ok(!$user->can_create_machine);
     ok(!$user->can_remove_all);
     ok(!$user->can_remove_clone_all);
 
