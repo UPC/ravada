@@ -1247,11 +1247,14 @@ sub show_link {
 
 sub _message_timeout {
     my $domain = shift;
-    my $msg_timeout = "in ".int($domain->run_timeout / 60 )
-        ." minutes.";
+    my $msg_timeout = '';
 
-    for my $request ( $domain->list_requests ) {
-        if ( $request->command eq 'shutdown' ) {
+    if (int ($domain->run_timeout / 60 )) {
+        $msg_timeout = "in ".int($domain->run_timeout / 60 )." minutes.";
+    }
+
+    for my $request ( $domain->list_all_requests ) {
+        if ( $request->command =~ 'shutdown' ) {
             my $t1 = Time::Piece->localtime($request->at_time);
             my $t2 = localtime();
 
