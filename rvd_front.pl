@@ -103,10 +103,12 @@ init();
 
 hook before_routes => sub {
   my $c = shift;
+  $USER = undef;
 
   my $version = $RAVADA->version();
   $version =~ s/-/_/g;
   $c->stash(version => $version);
+
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
@@ -135,6 +137,7 @@ hook before_routes => sub {
         && !_logged_in($c);
 
     _logged_in($c)  if $url =~ m{^/requirements};
+
 };
 
 
