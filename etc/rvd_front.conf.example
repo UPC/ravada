@@ -19,6 +19,7 @@
   ,login_bg_file => 'img/custom/background.jpg'
   ,login_message => 'Acme VDI service'
   ,monitoring => 0
+  ,guide_custom => ''
   ,session_timeout => 5*60
   ,session_timeout_admin => 15*60
 };
