@@ -1460,6 +1460,9 @@ sub settings_machine {
 
     for my $option (qw(description run_timeout)) {
         if ( defined $c->param($option) ) {
+            return access_denied($c)
+                if $option eq 'run_timeout' && !$USER->is_admin;
+
             my $value = $c->param($option);
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);
