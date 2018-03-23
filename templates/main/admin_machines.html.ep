@@ -162,6 +162,7 @@
                         ng-cloak>{{machine.name}}</b></a>
                     </td>
                     <td class="lgMachToggle">
+%                       if ($_user->can_create_base ) {
                         <i ng-show="{{machine.has_clones}}" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked
@@ -172,13 +173,16 @@
                                ng-show="can_prepare_base(machine)"
                             ng-click="action('machine','prepare',machine.id)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
+%                       }
                     </td>
                     <td class="lgMachToggle">
+%                       if ($_user->can_create_base ) {
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="<%=l 'Make private'%>">
 
                          <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
 %                       if ($autostart) {
                             <td></td>
+%                       }
 %                       }
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
@@ -234,6 +238,7 @@
                           <span style="color:gray">[ Cloned ]</span>
                       </td>
                       <td class="lgMachToggle">
+%                       if ($_user->can_create_base ) {
                           <i ng-show="{{child.has_clones}}" class="fa fa-check" aria-hidden="true"
                           title ="Cannot remove base, machine has clones" ng-cloak></i>
                           <input type="checkbox" checked
@@ -244,8 +249,10 @@
                                  ng-show="!{{child.is_base}} && !{{child.is_locked}} && !{{child.is_volatile}}"
                               ng-click="action('machine','prepare',child.id)"
                               title ="Prepare base" ng-cloak>
+%                       }
                       </td>
                       <td class="lgMachToggle">
+%                       if ($_user->can_create_base ) {
                           <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="set_public(child.id,0)" title="Make private">
                            <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
 %                   if ($autostart) {
@@ -254,6 +261,7 @@
                             <input type="checkbox" ng-hide="{{child.autostart}}" ng-click="set_autostart(child.id, 1)" title="Enable Autostart">
                         </td>
 %                   }
+%                       }
                       <td class="lgMachActions">
                           <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
