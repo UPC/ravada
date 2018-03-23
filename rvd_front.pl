@@ -230,7 +230,7 @@ any '/admin/(#type)' => sub {
 
 any '/new_machine' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER->can_create_domain;
+    return access_denied($c)    if !$USER->can_create_machine;
     return new_machine($c);
 };
 
