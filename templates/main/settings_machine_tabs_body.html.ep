@@ -24,7 +24,7 @@
       % }
     </div>
 % }
-% if ($USER->can_change_settings) {
+% if ($USER->can_change_settings && !$domain->is_base ) {
     <div class="tab-pane fade" id="screenshot">
       %= include 'main/vm_screenshot'
     </div>
