@@ -77,29 +77,8 @@
 
 
     <!-- Footer -->
-  <footer class="footer">
-        <center><div class="container text-center">
-          <div class="row">
-              <p><font size= "3" face = "Montserrat"> Ravada is a free to use, open source VDI project.</font></p>
-              <a href="https://www.upc.edu/"><img src="http://www.upc.edu/content/assets/images/logoUPC.png"></a>
-              <a href="https://ravada.upc.edu/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
-              <a href="https://github.com/UPC/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
-              <a href="https://github.com/UPC/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg"></a>
-          </div>
-        </div>
-       </center>
-       <br>
-         <div class="footer-below">
-            <div class="container text-center">
-                <div class="row">
-                    <p><div class="col-lg-12">
-                      <font face = "Montserrat">Copyright &copy; RavadaVDI 2017</font>
-                    </div></p>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     %= include 'bootstrap/scripts'
+    %= include $footer
 </body>
 </html>
