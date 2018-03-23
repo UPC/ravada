@@ -14,7 +14,9 @@
 %       }
         <ul class="nav nav-tabs" id="myTab">
             <li class="nav active"><a href="#fromtemplate" data-toggle="tab"><%=l 'From Template' %></a></li>
+%           if ( $_user->is_admin ) {
             <li class="nav" ng-show="base"><a href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
+%           }
         </ul>
         <div class="tab-content">
 %=          include 'ng-templates/new_machine_template'

@@ -110,6 +110,8 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
+  $USER = undef;
+
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
@@ -139,11 +141,12 @@ hook before_routes => sub {
   }
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements|request|robots.txt)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
     _logged_in($c)  if $url =~ m{^/requirements};
+
 };
 
 
@@ -230,7 +233,7 @@ any '/admin/(#type)' => sub {
 
 any '/new_machine' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER->can_create_domain;
+    return access_denied($c)    if !$USER->can_create_machine;
     return new_machine($c);
 };
 
