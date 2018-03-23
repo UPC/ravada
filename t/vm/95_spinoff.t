@@ -21,7 +21,7 @@ my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 my $DISPLAY_IP = '99.1.99.1';
 

@@ -41,7 +41,7 @@ sub test_defaults {
     ok(!$user->can_grant);
 
     ok(!$user->can_create_base);
-    ok(!$user->can_create_domain);
+    ok(!$user->can_create_machine);
     ok(!$user->can_remove_all);
     ok(!$user->can_remove_clone_all);
 
@@ -117,6 +117,7 @@ sub test_remove_clone {
     my $user = create_user("oper_rm$$","bar");
     my $usera = create_user("admin_rm$$","bar",'is admin');
 
+    $usera->grant($user, 'create_machine');
     my $domain = create_domain($vm_name, $user);
     $domain->prepare_base($usera);
     ok($domain->is_base) or return;
@@ -165,7 +166,7 @@ sub test_shutdown_clone {
     ok($usera->is_operator);
     ok($usera->is_admin);
 
-
+    $usera->grant($user, 'create_machine');
     my $domain = create_domain($vm_name, $user);
     $domain->prepare_base($usera);
     ok($domain->is_base) or return;
@@ -216,6 +217,7 @@ sub test_remove {
     ok(!$user->is_admin);
 
     user_admin()->revoke($user,'remove');
+    user_admin()->grant($user,'create_machine');
 
     is($user->can_remove,0) or return;
 
@@ -331,6 +333,8 @@ sub test_prepare_base {
     my $user = create_user("oper_pb$$","bar");
     my $usera = create_user("admin_pb$$","bar",1);
 
+    $usera->grant($user, 'create_machine');
+
     my $domain = create_domain($vm_name, $user);
     is($domain->is_base,0) or return;
 
@@ -392,6 +396,157 @@ sub test_frontend {
     $domain->remove( $usera );
 }
 
+sub test_create_domain {
+    my $vm_name = shift;
+
+    diag("test create domain");
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_cr$$","bar");
+    my $usera = create_user("admin_cr$$","bar",1);
+
+    my $base = create_domain($vm_name);
+    $base->prepare_base($usera);
+    $base->is_public(1);
+
+    $usera->revoke($user,'create_machine');
+    is($user->can_create_machine, undef) or return;
+    is($user->can_clone,1) or return;
+
+    my $domain_name = new_domain_name();
+
+    my %create_args = (
+            id_iso => search_id_iso('debian')
+            ,id_owner => $user->id
+            ,name => $domain_name
+   );
+
+    my $domain;
+    eval { $domain = $vm->create_domain(%create_args)};
+    like($@,qr'not allowed'i);
+
+    my $domain2 = $vm->search_domain($domain_name);
+    ok(!$domain2);
+    eval { $domain2->remove($usera)    if $domain2 };
+    is($@,'');
+
+    my $clone;
+    my $clone_name = new_domain_name();
+    eval { $clone = $base->clone(name => $clone_name, user => $user) };
+    is($@,'');
+    ok($clone, "Expecting can clone, but not create");
+
+    eval { $clone->remove($usera)    if $clone };
+    is($@,'');
+
+    $usera->grant($user,'create_machine');
+    is($user->can_create_machine,1) or return;
+
+    $domain_name = new_domain_name();
+    $create_args{name} = $domain_name;
+    eval { $domain = $vm->create_domain(%create_args)};
+    is($@,'');
+
+    my $domain3 = $vm->search_domain($domain_name);
+    ok($domain3);
+
+
+    eval { $domain3->remove($usera)  if $domain3 };
+    is($@,'');
+
+    eval { $domain->remove($usera)   if $domain };
+    is($@,'');
+
+    eval { $base->remove($usera)   if $domain };
+    is($@,'');
+
+    $user->remove();
+    $usera->remove();
+    diag("done  test create");
+}
+
+sub test_grant_clone {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_c$$","bar");
+
+    is($user->can_clone,1) or return;
+
+    my $usera = create_user("admin_c$$","bar",1);
+    is($usera->can_clone,1);
+    my $domain = create_domain($vm_name, $usera);
+    $domain->prepare_base($usera);
+    ok($domain->is_base);
+    is($domain->is_public,0) or return;
+
+    my $clone_name = new_domain_name();
+    my $clone;
+    eval { $clone = $domain->clone(name => $clone_name, user => $user)};
+    like($@,qr(.));
+
+    my $clone2 = $vm->search_domain($clone_name);
+    is($clone2,undef);
+
+    $domain->is_public(1);
+    is($domain->is_public,1) or return;
+
+    $clone_name = new_domain_name();
+    my $cloneb;
+    eval { $cloneb = $domain->clone(name => $clone_name, user => $user)};
+    is($@,'');
+    ok($cloneb,"Expecting $clone_name exists");
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok($clone2,"Expecting $clone_name exists");
+
+    $clone->remove($usera)  if $clone;
+    $cloneb->remove($usera) if $cloneb;
+
+    eval { $domain->remove($usera) };
+    is($@,'',"Remove base domain");
+
+    $user->remove();
+    $usera->remove();
+}
+
+sub test_create_domain2 {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_c$$","bar");
+    my $usera = create_user("admin_c$$","bar",1);
+
+    is($user->can_create_machine, undef) or return;
+
+    my $domain_name = new_domain_name();
+    my $domain;
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id )};
+    like($@,qr'not allowed');
+
+    my $domain2 = $vm->search_domain($domain_name);
+    ok(!$domain2);
+    $domain2->remove($usera)    if $domain2;
+
+    $usera->grant($user, 'create_machine');
+    is($user->can_create_machine,1) or return;
+
+    $domain_name = new_domain_name();
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id)};
+    is($@,'');
+
+    my $domain3 = $vm->search_domain($domain_name);
+    ok($domain3);
+    $domain3->remove(user_admin)    if $domain3;
+    $domain2->remove(user_admin)    if $domain2;
+    $domain->remove(user_admin)    if $domain;
+
+    $user->remove();
+    $usera->remove();
+}
 ##########################################################
 
 test_defaults();
@@ -411,5 +566,7 @@ test_remove_clone_all('Void');
 
 test_prepare_base('Void');
 test_frontend('Void');
+test_create_domain('Void');
+test_create_domain2('Void');
 
 done_testing();

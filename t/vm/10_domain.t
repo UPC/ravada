@@ -22,7 +22,7 @@ my $RVD_BACK;
 eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
 ok($RVD_BACK) or exit;
 
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 ok($USER);
 
 ##########################################################

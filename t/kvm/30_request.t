@@ -192,7 +192,7 @@ sub test_force_kvm {
 
 #########################################################################
 eval { $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf') };
-$USER = create_user('foo','bar')    if $RAVADA;
+$USER = create_user('foo','bar', 1)    if $RAVADA;
 
 ok($RAVADA,"I can't launch a new Ravada");# or exit;
 
