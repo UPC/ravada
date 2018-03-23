@@ -96,7 +96,7 @@
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
-% 		if ($_user->can_create_domain){
+% 		if ($_user->can_create_machine){
                 <h2>
                     <a type="button" class="btn btn-success" href="/new_machine.html">
                         <b><%=l 'New Machine' %></b>
