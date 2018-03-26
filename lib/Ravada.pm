@@ -1642,6 +1642,7 @@ sub _execute {
         my $fm = Parallel::ForkManager->new($request->requests_limit('priority'));
         $self->{fork_manager} = $fm;
     }
+    $self->{fork_manager}->reap_finished_children;
     my $pid = $self->{fork_manager}->start;
     die "I can't fork" if !defined $pid;
 
@@ -1787,19 +1788,6 @@ sub _wait_requests {
     return 1;
 }
 
-sub _wait_pids_nohang {
-    my $self = shift;
-    return if !keys %{$self->{pids}};
-
-    for my $pid ( keys %{$self->{pids}}) {
-        my $kid = waitpid($pid , WNOHANG);
-        next if !$kid;
-        $self->_set_req_done($pid);
-        $self->_delete_pid($pid);
-    }
-
-}
-
 sub _set_req_done {
     my $self = shift;
     my $pid = shift;
@@ -1809,27 +1797,6 @@ sub _set_req_done {
 
     my $req = Ravada::Request->open($id_request);
     $req->status('done')    if $req->status =~ /working/i;
-}
-
-sub _wait_pids {
-    my $self = shift;
-    my $request = shift;
-
-    $request->status('waiting for other tasks')
-        if $request && $request->status !~ /waiting/i;
-
-    for my $pid ( keys %{$self->{pids}}) {
-        $request->status("waiting for pid $pid")
-            if $request && $request->status !~ /waiting/i;
-
-#        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
-        my $kid = waitpid($pid,0);
-#        warn "Found $kid";
-        $self->_set_req_done($pid);
-
-        $self->_delete_pid($kid);
-        return if $kid  == $pid;
-    }
 }
 
 sub _cmd_remove {
@@ -2244,6 +2211,18 @@ sub _cmd_set_base_vm {
 sub _cmd_cleanup($self, $request) {
     $self->enforce_limits( request => $request);
     $self->_clean_requests('cleanup', $request);
+    $self->_wait_pids($request);
+}
+
+sub _wait_pids($self) {
+    $self->{fork_manager}->reap_finished_children   if $self->{fork_manager};
+    my $procs = `ps -eo "pid cmd"`;
+    for my $line (split /\n/, $procs ) {
+        my ($pid, $cmd) = $line =~ m{\s*(\d+)\s+.*(rvd_back).*defunct};
+        next if !$pid;
+        next if $cmd !~ /rvd_back/;
+        my $kid = waitpid($pid , WNOHANG);
+    }
 }
 
 sub _req_method {
@@ -2341,7 +2320,13 @@ sub vm($self) {
     $sth->execute();
     my @vms;
     while ( my ($id) = $sth->fetchrow()) {
-        push @vms, ( Ravada::VM->open($id));
+        my $vm = Ravada::VM->open($id);
+        eval { $vm->vm };
+        if ( $@ ) {
+            warn $@;
+            next;
+        }
+        push @vms, ( $vm );
     };
     return [@vms] if @vms;
     return $self->_create_vms();
@@ -2435,6 +2420,10 @@ sub _enforce_limits_active {
             }
         }
     }
+}
+
+sub DESTROY($self) {
+    $self->{fork_manager}->reap_finished_children   if $self->{fork_manager}
 }
 
 =head2 version
