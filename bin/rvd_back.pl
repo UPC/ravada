@@ -132,7 +132,6 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
-    clean_old_requests();
 
     my $ravada = Ravada->new( %CONFIG );
 
@@ -163,9 +162,10 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm if $vm->is_local && $vm->ping;
         }
+        $ravada->_wait_children();
     }
+    clean_old_requests();
     for (;;) {
         do_start();
     }
