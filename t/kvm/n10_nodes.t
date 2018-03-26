@@ -498,16 +498,16 @@ sub test_shutdown_internal( $node ) {
 
     start_domain_internal($clone);
     is($clone->is_active,1);
+    is($clone->status,'active');
 
     shutdown_domain_internal($clone);
+    is($clone->status,'active');
     _write_in_volumes($clone);
 
     Ravada::Request->refresh_vms();
 
-    rvd_back->_process_all_requests_dont_fork(1);
-    is($clone->is_active,1);
-
-    $clone_local->start(user_admin);
+    rvd_back->_process_all_requests_dont_fork();
+    is($clone->is_active,0);
 
     for my $file ($clone_local->list_volumes) {
         my $md5 = _md5($file, $vm);
@@ -926,7 +926,7 @@ sub test_shutdown($node) {
         diag("SKIPPED: I can't test shutdown of ".$node->type." nodes");
     }
     is($clone->is_active,0,"[".$clone->type."] Expecting clone ".$clone->name." inactive") or return;
-    is($clone->_data('status'),'active',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
+    is($clone->_data('status'),'shutdown',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
 
