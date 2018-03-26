@@ -278,6 +278,10 @@ sub _start_preconditions{
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
+        if ( !$self->is_local && !$self->_vm->ping ) {
+            my $vm_local = $self->_vm->new( host => 'localhost' );
+            $self->_set_vm($vm_local, 1);
+        }
         $self->_balance_vm();
         $self->rsync()  if !$self->_vm->readonly && !$self->_vm->is_local;
     }
