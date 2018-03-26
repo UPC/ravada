@@ -42,6 +42,7 @@ create_domain
     start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
+    remote_node
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -760,20 +761,12 @@ sub shutdown_node($node) {
     };
     sleep 2 if !$node->ping;
 
-    my $max_wait = 30;
-    for ( 1 .. $max_wait ) {
+    my $max_wait = 120;
+    for ( 1 .. $max_wait / 2 ) {
         diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
         last if !$node->ping;
         sleep 1;
     }
-    return if !$node->ping;
-    $node->run_command("init 0");
-    for ( 1 .. $max_wait ) {
-        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
-        last if !$node->ping;
-        sleep 1;
-    }
-
     is($node->ping,0);
 }
 
@@ -871,6 +864,65 @@ sub _clean_file_config {
         unlink $FILE_CONFIG_TMP or warn "$! $FILE_CONFIG_TMP";
         $CONFIG = $DEFAULT_CONFIG;
     }
+}
+
+sub remote_node($vm_name) {
+    my $remote_config = remote_config($vm_name);
+    SKIP: {
+        if (!keys %$remote_config) {
+            my $msg = "skipped, missing the remote configuration for $vm_name in the file "
+            .$Test::Ravada::FILE_CONFIG_REMOTE;
+            diag($msg);
+            skip($msg,10);
+        }
+        return _do_remote_node($vm_name, $remote_config);
+    }
+}
+
+sub _do_remote_node($vm_name, $remote_config) {
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $node;
+    my @list_nodes0 = rvd_front->list_vms;
+
+    eval { $node = $vm->new(%{$remote_config}) };
+    ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($remote_config
+).", got :'"
+        .($@ or '')."'") or return;
+    ok($node) or return;
+
+    is($node->type,$vm->type) or return;
+
+    is($node->host,$remote_config->{host});
+    is($node->name,$remote_config->{name}) or return;
+
+    eval { $node->ping };
+    is($@,'',"[$vm_name] ping ".$node->name);
+
+    if ( $node->ping && !$node->_connect_ssh() ) {
+        my $ssh;
+        for ( 1 .. 60 ) {
+            $ssh = $node->_connect_ssh();
+            last if $ssh;
+            sleep 1;
+            diag("I can ping node ".$node->name." but I can't connect to ssh");
+        }
+        if (! $ssh ) {
+            shutdown_node($node);
+        }
+    }
+    start_node($node)   if !$node->is_active();
+
+    clean_remote_node($node);
+
+    eval { $node->vm };
+    is($@,'')   or return;
+    ok($node->id) or return;
+    is($node->is_active,1) or return;
+
+    ok(!$node->is_local,"[$vm_name] node remote");
+
+    return $node;
 }
 
 sub DESTROY {
