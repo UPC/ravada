@@ -163,7 +163,7 @@ sub start {
         for my $vm (@{$ravada->vm}) {
             $vm->id;
         }
-        $ravada->_wait_children();
+        $ravada->_wait_pids();
     }
     clean_old_requests();
     for (;;) {

@@ -1642,6 +1642,7 @@ sub _execute {
         my $fm = Parallel::ForkManager->new($request->requests_limit('priority'));
         $self->{fork_manager} = $fm;
     }
+    $self->{fork_manager}->reap_finished_children;
     my $pid = $self->{fork_manager}->start;
     die "I can't fork" if !defined $pid;
 
@@ -2210,10 +2211,11 @@ sub _cmd_set_base_vm {
 sub _cmd_cleanup($self, $request) {
     $self->enforce_limits( request => $request);
     $self->_clean_requests('cleanup', $request);
-    $self->_wait_children($request);
+    $self->_wait_pids($request);
 }
 
-sub _wait_children($self) {
+sub _wait_pids($self) {
+    $self->{fork_manager}->reap_finished_children   if $self->{fork_manager};
     my $procs = `ps -eo "pid cmd"`;
     for my $line (split /\n/, $procs ) {
         my ($pid, $cmd) = $line =~ m{\s*(\d+)\s+.*(rvd_back).*defunct};
