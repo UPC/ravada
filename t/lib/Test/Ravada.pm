@@ -748,6 +748,8 @@ sub shutdown_node($node) {
 
     diag("shutdown node ".$node->type." ".$node->name);
     if ($node->is_active) {
+        $node->run_command("service lightdm stop");
+        $node->run_command("service gdm stop");
         for my $domain ($node->list_domains()) {
             diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
