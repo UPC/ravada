@@ -485,6 +485,38 @@ sub test_already_started_hibernated($vm_name, $node) {
     $base->remove(user_admin);
 }
 
+# Test it shuts down and syncs back
+sub test_shutdown_internal( $node ) {
+    my ($base, $clone) = _create_clone($node);
+    my $vm = rvd_back->search_vm($node->type);
+
+    is($vm->is_local, 1);
+
+    my $clone_local = $vm->search_domain($clone->name);
+    is($clone_local->_vm->is_local, 1);
+    is($clone_local->is_active, 0);
+
+    start_domain_internal($clone);
+    is($clone->is_active,1);
+    is($clone->status,'active');
+
+    shutdown_domain_internal($clone);
+    is($clone->status,'active');
+    _write_in_volumes($clone);
+
+    Ravada::Request->refresh_vms();
+
+    rvd_back->_process_all_requests_dont_fork();
+    is($clone->is_active,0);
+
+    for my $file ($clone_local->list_volumes) {
+        my $md5 = _md5($file, $vm);
+        my $md5_remote = _md5($file, $node);
+        is( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" )
+                or exit;
+    }
+
+}
 
 sub _create_clone($node) {
 
@@ -894,7 +926,7 @@ sub test_shutdown($node) {
         diag("SKIPPED: I can't test shutdown of ".$node->type." nodes");
     }
     is($clone->is_active,0,"[".$clone->type."] Expecting clone ".$clone->name." inactive") or return;
-    is($clone->_data('status'),'active',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
+    is($clone->_data('status'),'shutdown',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
 
@@ -1038,6 +1070,8 @@ SKIP: {
     };
     test_bases_node($vm_name, $node);
 
+    test_shutdown_internal($node);
+
     test_sync_base($vm_name, $node);
     test_sync_back($node);
 
@@ -1078,6 +1112,7 @@ SKIP: {
     test_node_inactive($vm_name, $node);
 
     start_node($node);
+
     clean_remote_node($node);
     clean_remote_node($vm);
     remove_node($node);

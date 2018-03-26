@@ -177,6 +177,8 @@ after 'migrate' => \&_post_migrate;
 
 around 'get_info' => \&_around_get_info;
 
+around 'is_active' => \&_around_is_active;
+
 ##################################################
 #
 
@@ -276,6 +278,10 @@ sub _start_preconditions{
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
+        if ( !$self->is_local && !$self->_vm->ping ) {
+            my $vm_local = $self->_vm->new( host => 'localhost' );
+            $self->_set_vm($vm_local, 1);
+        }
         $self->_balance_vm();
         $self->rsync()  if !$self->_vm->readonly && !$self->_vm->is_local;
     }
@@ -1380,6 +1386,19 @@ sub _post_shutdown {
 
 }
 
+sub _around_is_active($orig, $self) {
+    my $is_active = $self->$orig();
+    return $is_active if $self->readonly
+        || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
+
+    #TODO check hibernated machines status
+    my $status = 'shutdown';
+    $status = 'active'  if $is_active;
+    $self->status($status);
+
+    return $is_active;
+}
+
 sub _around_shutdown_now {
     my $orig = shift;
     my $self = shift;
@@ -2092,7 +2111,7 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
     $request->status("working") if $request;
     # TODO check if domain is running on remote , then return
     my $ssh = $node->_connect_ssh();
-    die "No Connection to ".$node->host if !$ssh;
+    confess "No Connection to ".$node->host if !$ssh;
 #    This does nothing and doesn't fail
 #
 #    for my $file ( $self->list_volumes()) {
@@ -2217,17 +2236,20 @@ sub set_base_vm($self, %args) {
     my $value = delete $args{value};
     my $user  = delete $args{user};
     my $vm    = delete $args{vm};
+    my $node  = delete $args{node};
     my $request = delete $args{request};
 
-    confess "ERROR: Unknown arguments, valid are id_vm, value, user and vm "
+    confess "ERROR: Unknown arguments, valid are id_vm, value, user, node and vm "
         .Dumper(\%args) if keys %args;
 
     confess "ERROR: Supply either id_vm or vm argument"
-        if (!$id_vm && !$vm) || ($id_vm && $vm);
+        if (!$id_vm && !$vm && !$node) || ($id_vm && $vm) || ($id_vm && $node)
+            || ($vm && $node);
 
     confess "ERROR: user required"  if !$user;
 
     $request->status("working") if $request;
+    $vm = $node if $node;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
 
     $value = 1 if !defined $value;
@@ -2252,6 +2274,10 @@ sub set_base_vm($self, %args) {
         $self->rsync($vm, $request);
     }
     return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub migrate_base($self, %args) {
+    return $self->set_base_vm(%args);
 }
 
 =head2 remove_base_vm
@@ -2360,5 +2386,24 @@ Returns if the domain is volatile, so it will disappear on shutdown
 
 sub is_volatile($self, $value=undef) {
     return $self->_data('is_volatile', $value);
+}
+
+sub status($self, $value=undef) {
+
+    my %valid_value = map { $_ => 1 } qw(active shutdown);
+
+    my $old_value = $self->_data('status');
+
+    return $old_value   if !defined $value;
+
+    confess "ERROR: invalid value '$value'" if !$valid_value{$value};
+
+    return $value if defined $value && $value eq $old_value;
+    $self->_data('status',$value);
+
+    if ($value eq 'shutdown' && $old_value eq 'active') {
+        $self->_post_shutdown();
+    }
+    return $value;
 }
 1;

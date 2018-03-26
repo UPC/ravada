@@ -266,7 +266,7 @@ sub _connect_ssh($self, $disconnect=0) {
 }
 
 sub _ssh_channel($self) {
-    my $ssh = $self->_connect_ssh();
+    my $ssh = $self->_connect_ssh() or confess "ERROR: Cant connect to SSH in ".$self->host;
     my $ssh_channel;
     for ( 1 .. 5 ) {
         $ssh_channel = $ssh->channel();
