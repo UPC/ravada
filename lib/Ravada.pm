@@ -2318,7 +2318,13 @@ sub vm($self) {
     $sth->execute();
     my @vms;
     while ( my ($id) = $sth->fetchrow()) {
-        push @vms, ( Ravada::VM->open($id));
+        my $vm = Ravada::VM->open($id);
+        eval { $vm->vm };
+        if ( $@ ) {
+            warn $@;
+            next;
+        }
+        push @vms, ( $vm );
     };
     return [@vms] if @vms;
     return $self->_create_vms();
