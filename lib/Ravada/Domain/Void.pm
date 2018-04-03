@@ -96,6 +96,7 @@ sub remove {
 }
 
 sub can_hibernate { return 1; }
+sub can_hybernate { return 1; }
 
 sub is_hibernated {
     my $self = shift;
@@ -516,6 +517,7 @@ sub clean_swap_volumes {
 sub hybernate {
     my $self = shift;
     $self->_store(is_hibernated => 1);
+    $self->_store(is_active => 0);
 }
 
 sub hibernate {
