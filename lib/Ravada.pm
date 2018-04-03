@@ -997,7 +997,7 @@ sub _create_vm {
     );
 
     my @vms = ();
-    my $err = "Valid VMS : ".join(" , ", sort keys %VALID_VM).".";
+    my $err = '';
 
     for my $vm_name (keys %VALID_VM) {
         my $vm;
@@ -1006,7 +1006,7 @@ sub _create_vm {
         $err.= $@ if $@;
         push @vms,$vm if $vm;
     }
-    die "No VMs found: $err\n" if $self->warn_error && !@vms;
+    die "No VMs found: $err\n" if $self->warn_error && !@vms && $err;
 
     return [@vms, $self->_list_remote_vms];
 
