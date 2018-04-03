@@ -1622,7 +1622,7 @@ sub _add_iptable {
     my $local_ip = $self->_vm->ip;
 
     $self->_open_port($user, $remote_ip, $local_ip, $local_port);
-    $self->_close_port($user, '0.0.0.0', $local_ip, $local_port);
+    $self->_close_port($user, '0.0.0.0/0', $local_ip, $local_port);
 
 }
 
@@ -1691,21 +1691,6 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
         );
         $self->_log_iptable(iptables => \@iptables_arg, user => $user,remote_ip => $local_ip);
     }
-    @iptables_arg = ( '0.0.0.0/0'
-                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
-                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-
-    $self->_vm->iptables(
-            A => $IPTABLES_CHAIN
-            ,m=> 'tcp'
-            ,p => 'tcp'
-            ,s => '0.0.0.0/0'
-            ,d => $local_ip
-            ,dport => $local_port
-            ,j => 'DROP'
-    );
-
-    $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => '0.0.0.0/0');
 }
 
 sub _close_port($self, $user, $remote_ip, $local_ip, $local_port) {
