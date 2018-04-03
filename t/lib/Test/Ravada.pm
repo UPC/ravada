@@ -537,6 +537,7 @@ sub remove_qemu_pools {
     }
     if  ( !$vm ) {
         $VM_VALID{'KVM'} = 0;
+        return;
     }
 
     my $base = base_pool_name();
