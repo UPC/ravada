@@ -26,6 +26,8 @@ my $NAT_IP = 'www.example.com';
 my $REMOTE_IP = '9.9.9.9';
 
 my $CHAIN = 'RAVADA';
+
+my @VMS= vm_names();
 ##################################################################################
 
 sub _search_other_ip($ip) {
@@ -79,15 +81,23 @@ sub test_nat($vm_name) {
     my $display_ip = _search_other_ip( $ip );
     isnt($display_ip, $ip);
     like($display_ip, qr{\d+\.\d+\.\d+\.\d+});
+    my $domain_name = $domain->name;
+    $domain = rvd_back->search_domain($domain->name);
+    ok($domain,"[$vm_name] Expecting the domain $domain_name") or exit;
 
     my $file_config = "/tmp/config_display.yml";
-    DumpFile($file_config,{ display_ip => $display_ip });
-    my $rvd_back = rvd_back($test->connector, $file_config);
+    DumpFile($file_config,{ display_ip => $display_ip, vm => \@VMS });
+    my $rvd_back = Ravada->new(
+            connector => $test->connector
+                , config => $file_config
+                , warn_error => 0
+    );
 
     is($rvd_back->display_ip, $display_ip);
     is($rvd_back->search_vm($vm_name)->ip, $display_ip);
 
     $domain = $rvd_back->search_domain($domain->name);
+    ok($domain,"[$vm_name] Expecting the domain $domain_name") or exit;
     $domain->start(user => user_admin, remote_ip => $REMOTE_IP );
 
     eval { $display = $domain->display(user_admin)};
@@ -112,8 +122,12 @@ sub test_nat($vm_name) {
     #--------------------------------------------------------------------------------
     # Now with Nat
     #
-    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP });
-    $rvd_back = rvd_back($test->connector, $file_config);
+    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => \@VMS });
+    $rvd_back = Ravada->new(
+            connector => $test->connector
+                , config => $file_config
+                , warn_error => 0
+    );
 
     is($rvd_back->nat_ip, $NAT_IP);
     is($rvd_back->search_vm($vm_name)->nat_ip, $NAT_IP);
@@ -137,9 +151,10 @@ sub test_nat($vm_name) {
     test_chain($vm_name, local_ip =>  $display_ip, local_port => $port, remote_ip => '0.0.0.0/0'
         , jump => 'DROP', enabled => 0, msg => 'nat');
 
+    $domain->remove(user_admin);
+
     unlink($file_config);
 
-    rvd_back($test->connector, $FILE_CONFIG);
 }
 
 sub test_chain($vm_name, %args) {
@@ -172,14 +187,15 @@ sub test_chain($vm_name, %args) {
 clean();
 flush_rules();
 
-for my $vm_name ( 'Void', 'KVM' ) {
+for my $vm_name ( @VMS ) {
 
     my $vm;
 
-    eval { $vm = rvd_back->search_vm($vm_name) };
+    init( $test->connector , $FILE_CONFIG );
+    { $vm = rvd_back->search_vm($vm_name) };
 
     SKIP: {
-        my $msg = "SKIPPED test: No $vm_name VM found ";
+        my $msg = "SKIPPED test: No $vm_name VM found ".($@ or '');
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
@@ -188,6 +204,7 @@ for my $vm_name ( 'Void', 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        diag("Testing NAT name with $vm_name");
         test_nat($vm_name);
     }
 }
