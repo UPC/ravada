@@ -2480,8 +2480,8 @@ sub _enforce_limits_active {
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
             }
-            if ($domain->can_hybernate) {
-                $domain->hybernate($USER_DAEMON);
+            if ($domain->can_hibernate) {
+                $domain->hibernate($USER_DAEMON);
             } else {
                 $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
             }
