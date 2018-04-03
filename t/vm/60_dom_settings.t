@@ -15,7 +15,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 init($test->connector, $FILE_CONFIG);
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 our $TIMEOUT_SHUTDOWN = 10;
 
 my %HAS_NOT_VALUE = map { $_ => 1 } qw(image jpeg zlib playback streaming);
@@ -189,7 +189,7 @@ sub test_drivers_clone {
         _domain_shutdown($domain);
         is($domain->get_driver($type), $option->{value}) or next;
         $domain->remove_base($USER);
-        $domain->prepare_base($USER);
+        $domain->prepare_base( user_admin );
         $domain->is_public(1);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         is($domain->get_driver($type), $option->{value}) or next;

@@ -19,7 +19,7 @@ use_ok('Ravada');
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 sub test_new_domain {
     my $vm = shift;

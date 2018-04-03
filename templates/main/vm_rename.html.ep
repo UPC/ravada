@@ -28,7 +28,7 @@
                              ng-click="rename(showmachine.id, showmachine.name)">
                                 Rename
                     </button>
-                    <input type="reset" value="Cancel" onclick = "location='http://127.0.0.1:3000/admin/machines'"/>
+                    <input type="reset" value="Cancel" onclick = "location='/admin/machines'"/>
                     <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">
@@ -36,7 +36,7 @@
                               </label>
                               <label ng-show="new_name_invalid"
                                class="control-label" for="new_name">
-                               This name is invalid. It can only contain words and numbers 
+                               This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
                                and must start by a letter.
                               </label>
                     </div>

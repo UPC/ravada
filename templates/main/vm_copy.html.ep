@@ -5,7 +5,7 @@
     <form class="form-inline" method="post" action="/machine/copy">
         <div class="row">
             <div class="col-md-2">
-                <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
+                <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}-copy">
                     <label class="control-label"
                         for="copy_name_{{showmachine.id}}"><%=l 'Name' %></label>
             </div>
@@ -26,9 +26,9 @@
                 <input class="form-control" name="copy_ram" type="text" size="3" value="1">
             </div>
         </div>
-        <input type="submit" class="btn btn-default"
-            ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
+        <input type="submit" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
         >
+		
         <button type="reset">Cancel</button>
     </form>
                         <div class="form-group has-error">
@@ -38,7 +38,7 @@
                               </label>
                               <label ng-show="new_name_invalid"
                                class="control-label" for="new_name">
-                               This name is invalid. It can only contain words and numbers
+                               This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
                                and must start by a letter.
                               </label>
                     </div>

@@ -16,10 +16,13 @@
 %   if ($USER->can_clone_all){
         <li class="nav"><a href="#copy" data-toggle="tab">Copy</a></li>
 %   }
-%   if ( $USER->can_remove ) {
+%   if ( $USER->can_remove || $USER->can_remove_clone_all ) {
         <li class="nav"><a href="#remove" data-toggle="tab">Remove Machine</a></li>
 %   }
 %   if ($USER->is_admin && $domain->is_base) {
         <li class="nav"><a href="#base" data-toggle="tab">Base</a></li>
+%   }
+% if ( $monitoring && $USER->is_admin ) {
+    <li class="nav"><a href="#monitoring" data-toggle="tab">System overview</a></li>
 %   }
 </ul>

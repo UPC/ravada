@@ -130,3 +130,18 @@ msgstr "Os campos do contrasinal non son iguais"
 
 msgid "Some of the password's fields are empty"
 msgstr "Algúns dos campos do contrasinal están baleiros"
+
+msgid "Galician"
+msgstr "Galego"
+
+msgid "French"
+msgstr "Francés"
+
+msgid "Indonesian"
+msgstr "Indonesio"
+
+msgid "Persian"
+msgstr "Persa"
+
+msgid "Japanese"
+msgstr "Xaponés"

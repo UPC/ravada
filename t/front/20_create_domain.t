@@ -24,7 +24,7 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 my %CREATE_ARGS = (
     Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
@@ -165,6 +165,11 @@ for my $vm_name ('Void','KVM','LXC') {
     my $domain_front3 = Ravada::Front::Domain->new( id => $domain->id);
     is($domain_front3->id, $domain->id);
     is($domain_front3->{_vm}, undef);
+    ok($domain->internal_id,"[$vm_name] Expecting an internal id , got ".($domain->internal_id or ''));
+    if ($domain->type =~ /kvm/i) {
+        my $domain_back = rvd_back->search_domain($domain->name);
+        is($domain->internal_id, $domain_back->domain->get_id);
+    }
 
     test_remove_domain($name);
 }

@@ -259,7 +259,7 @@ for my $vm_name (qw( Void KVM )) {
     my $vm_ok;
     eval {
         my $ravada = Ravada->new(@ARG_RVD);
-        $USER = create_user("foo","bar")    if !$USER;
+        $USER = create_user("foo","bar", 1)    if !$USER;
 
         my $vm = $ravada->search_vm($vm_name)  if $ravada;
 

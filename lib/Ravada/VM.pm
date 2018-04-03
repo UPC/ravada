@@ -51,6 +51,7 @@ requires 'disconnect';
 requires 'import_domain';
 
 requires 'is_alive';
+requires 'is_active';
 ############################################################
 
 has 'host' => (
@@ -288,6 +289,19 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    my $base;
+    my $id_base = delete $args{id_base};
+    $base = Ravada::Domain->open($id_base)  if $id_base;
+
+    confess "ERROR: User ".$owner->name." is not allowed to create machines"
+        unless $owner->is_admin
+            || $owner->can_create_machine()
+            || ($base && $owner->can_clone);
+
+    confess "ERROR: Base ".$base->name." is private"
+        if !$owner->is_admin && $base && !$base->is_public();
 
     $self->_pre_create_domain(@_);
 
@@ -295,8 +309,7 @@ sub _around_create_domain {
 
     $domain->add_volume_swap( size => $args{swap})  if $args{swap};
 
-    if ($args{id_base}) {
-        my $base = $self->search_domain_by_id($args{id_base});
+    if ($id_base) {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
     }
@@ -420,6 +433,16 @@ sub ip {
         ." This virtual machine won't be available from the network.";
 
     return '127.0.0.1';
+}
+
+=head2 nat_ip
+
+Returns the IP of the VM when it is in a NAT environment
+
+=cut
+
+sub nat_ip($self) {
+    return Ravada::nat_ip();
 }
 
 sub _interface_ip {

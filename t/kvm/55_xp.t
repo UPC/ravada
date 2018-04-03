@@ -107,7 +107,7 @@ sub test_clone_domain {
     my $clone;
     $domain->shutdown_now($USER)    if $domain->is_active;
     $domain->is_public(1);
-    eval {$clone = $domain->clone(name => $clone_name, user => $USER) };
+    eval {$clone = $domain->clone(name => $clone_name, user => user_admin ) };
 
     ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
 
@@ -135,7 +135,7 @@ sub test_clone_domain {
         is($controller_clone[$n]->toString, $controller_base[$n]->toString) or last;
     }
 
-    eval {$clone->start($USER) };
+    eval {$clone->start(user_admin) };
     ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
 
 }

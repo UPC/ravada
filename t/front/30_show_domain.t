@@ -21,7 +21,7 @@ my $RVD_FRONT = Ravada::Front->new(
     , backend => $RVD_BACK
 );
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 my %CREATE_ARGS = (
      KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }

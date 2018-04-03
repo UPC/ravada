@@ -1208,7 +1208,7 @@ sub _match_file($self, $url, $file_re) {
         die $@;
     }
 
-    return unless $res->code == 200 || $res->code == 301;
+    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
 
     my $dom= $res->dom;
 
@@ -1932,6 +1932,11 @@ sub list_storage_pools($self) {
         map { $_->get_name }
         grep { $_-> is_active }
         $self->vm->list_storage_pools();
+}
+
+sub is_active($self) {
+    return 1 if $self->vm;
+    return 0;
 }
 
 1;

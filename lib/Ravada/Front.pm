@@ -233,6 +233,7 @@ sub list_domains {
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
             $row->{node} = $domain->_vm->name if $domain->_vm;
+            $row->{autostart} = $domain->autostart;
         }
         delete $row->{spice_password};
         lock_hash(%$row);

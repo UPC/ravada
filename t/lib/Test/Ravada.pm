@@ -13,6 +13,9 @@ use YAML qw(LoadFile);
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada;
 use Ravada::Auth::SQL;
 use Ravada::Domain::Void;
@@ -28,6 +31,7 @@ require Exporter;
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name
 create_domain
     test_chain_prerouting
+    find_ip_rule
     search_id_iso
     flush_rules open_ipt
     arg_create_dom
@@ -83,6 +87,8 @@ sub create_domain {
     my $vm_name = shift;
     my $user = (shift or $USER_ADMIN);
     my $id_iso = (shift or 'Alpine');
+
+    $vm_name = 'KVM' if $vm_name eq 'qemu';
 
     if ( $id_iso && $id_iso !~ /^\d+$/) {
         my $iso_name = $id_iso;
@@ -862,6 +868,76 @@ sub hibernate_domain_internal($domain) {
     } else {
         confess "ERROR: I don't know how to hibernate internal domain of type ".$domain->type;
     }
+}
+
+sub _iptables_list {
+    my ($in, $out, $err);
+    run3(['/sbin/iptables-save'], \$in, \$out, \$err);
+    my ( %tables, $ret );
+
+    my ($current_table);
+    for my $line (split /\n/, $out) {
+        chomp $line;
+
+        next if ( $line eq "COMMIT" );
+        next if ( $line =~ m/^#/ );
+        next if ( $line =~ m/^:/ );
+
+        if ( $line =~ m/^\*([a-z]+)$/ ) {
+            $current_table = $1;
+            $tables{$current_table} = [];
+            next;
+        }
+
+        #my @parts = grep { ! /^\s+$/ && ! /^$/ } split (/(\-\-?[^\s]+\s[^\s]+)/i, $line);
+        my @parts = grep { !/^\s+$/ && !/^$/ } split( /^\-\-?|\s+\-\-?/i, $line );
+
+        my @option = ();
+        for my $part (@parts) {
+            my ( $key, $value ) = split( /\s/, $part, 2 );
+            push( @option, $key => $value );
+        }
+
+        push( @{ $ret->{$current_table} }, \@option );
+
+    }
+
+    return $ret;
+}
+
+sub find_ip_rule {
+    my %args = @_;
+    my $remote_ip = delete $args{remote_ip};
+    my $local_ip = delete $args{local_ip};
+    my $local_port= delete $args{local_port};
+    my $jump = ( delete $args{jump} or 'ACCEPT');
+
+    die "ERROR: Unknown args ".Dumper(\%args)  if keys %args;
+
+    my $iptables = _iptables_list();
+    $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
+    $local_ip .= "/32"  if defined $local_ip && $local_ip !~ m{/};
+
+    my @found;
+
+    my $count = 0;
+    for my $line (@{$iptables->{filter}}) {
+        my %line= @$line;
+        next if $line{A} ne $CHAIN;
+        $line{s} = '0.0.0.0/0'  if !exists $line{s} && $line{p} =~ m/.cp$/;
+        $count++;
+        if((!defined $jump || ( exists $line{j} && $line{j} eq $jump ))
+           && ( !defined $remote_ip || (exists $line{s} && $line{s} eq $remote_ip ))
+           && ( !defined $local_ip || ( exists $line{d} && $line{d} eq $local_ip ))
+           && ( !defined $local_port || ( exists $line{dport} && $line{dport} eq $local_port)))
+        {
+
+            push @found,($count);
+        }
+    }
+    return if !scalar@found || !defined $found[0];
+    return @found   if wantarray;
+    return $found[0];
 }
 
 sub shutdown_domain_internal($domain) {

@@ -1,29 +1,37 @@
 
         <div class="panel-body nav--danger">
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
-
                 <div class="panel-heading">
                     This virtual machine can't be removed because it
                     has {{showmachine.has_clones}} clones.
+                    <ul>
+%                   for my $clone (sort @$list_clones) {
+                        <li><%= $clone %></li>
+%                   }
+                    </ul>
                 </div>
             </div>
+
             <div ng-show="!domain_remove_done">
-                <a ng-show="showmachine.has_clones>0" type="button" class="btn btn-danger"
+                <h2 class="Subhead-heading">
+                    Danger Zone
+                </h2>
+                 <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
+ %              if ($USER->can_remove_clone_all) {
+                    <a ng-show="showmachine.has_clones > 0" type="button" class="btn btn-danger"
                               ng-click="domain_remove_clones=1"
                           >
                           <%=l 'Remove Clones' %>
-                </a>
-                <h2 class="Subhead-heading">
-                Danger Zone
-                </h2>
-                    <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
-                    <a type="button" class="btn btn-danger"
+                    </a>
+%               }
+%               if (($USER->can_remove_clone_all && $domain->id_base != 0) || $domain->id_base == 0) { 
+                <a type="button" class="btn btn-danger"
                               ng-hide="showmachine.has_clones > 0"
                               ng-click="domain_remove=1"
-                            >
-                            <%=l 'Delete this machine' %>
-                    </a>
-                    <input type="button" value="Cancel" onclick = "location='http://127.0.0.1:3000/admin/machines'"/>
+                          >
+                          <%=l 'Remove' %>
+                </a>
+%              }
             </div>
 
             <div ng-show="domain_remove">
@@ -36,11 +44,11 @@
                             ng-click="domain_remove=0"
                         >No</a>
                         <a type="button" class="btn btn-warning"
-                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;"
+                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;" onclick = "location='/'"
                             >Yes, remove {{showmachine.name}}</a>
            </div><!-- del domain remove -->
 
-            <div ng-show="domain_remove_clones">
+           <div ng-show="domain_remove_clones">
                         <b>Danger</b>.
                         This will remove all the {{showmachine.has_clones}} clones of the
                         machine <i><%= $domain->name %></i>.
@@ -51,6 +59,7 @@
                         >No</a>
                         <a type="button" class="btn btn-warning"
                             ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;"
+                        <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
                             >Yes, remove all the clones</a>
            </div><!-- del domain remove clones-->
 

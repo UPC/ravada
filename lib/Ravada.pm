@@ -159,6 +159,26 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
+        mate_artful => {
+                    name => 'Ubuntu Mate Artful'
+            ,description => 'Ubuntu Mate 17.10.1 (Artful) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+                ,min_disk_size => '10'
+        },
+        mate_xenial => {
+                    name => 'Ubuntu Mate Xenial'
+            ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'yakkety64-amd64.xml'
+             ,xml_volume => 'yakkety64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+                ,min_disk_size => '10'
+        },
         alpine_37 => {
                     name => 'Alpine 3.7'
             ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
@@ -168,6 +188,7 @@ sub _update_isos {
                     ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
                 ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
                 ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+                ,min_disk_size => '10'
         }
         ,artful => {
                     name => 'Ubuntu Artful Aardvark'
@@ -176,8 +197,9 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.10/'
-                ,file_re => ,'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => ,'$url/MD5SUMS'
+                ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '10'
         }
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
@@ -186,8 +208,9 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/17.04/'
-                ,file_re => ,'ubuntu-17.04.*desktop-amd64.iso'
-                ,md5_url => ,'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
+                ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
+                ,min_disk_size => '10'
         }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
@@ -199,6 +222,7 @@ sub _update_isos {
         ,file_re => 'linuxmint-18.1-mate-64bit.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+            ,min_disk_size => '10'
 
         }
         ,fedora => {
@@ -209,6 +233,7 @@ sub _update_isos {
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
         }
         ,fedora_26 => {
             name => 'Fedora 26'
@@ -218,6 +243,7 @@ sub _update_isos {
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
         }
         ,fedora_27 => {
             name => 'Fedora 27'
@@ -227,6 +253,7 @@ sub _update_isos {
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
         }
         ,xubuntu_artful => {
             name => 'Xubuntu Artful Aardvark'
@@ -238,6 +265,7 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_artful.iso'
+            ,min_disk_size => '10'
         }
         ,xubuntu_zesty => {
             name => 'Xubuntu Zesty Zapus'
@@ -249,6 +277,7 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_zesty_mini.iso'
+            ,min_disk_size => '10'
         }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
@@ -258,6 +287,7 @@ sub _update_isos {
             ,xml_volume => 'yakkety64-volume.xml'
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
             ,rename_file => 'xubuntu_xenial_mini.iso'
+            ,min_disk_size => '10'
         }
        ,lubuntu_aardvark => {
             name => 'Lubuntu Artful Aardvark'
@@ -266,6 +296,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
         }
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
@@ -275,6 +306,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
         }
         ,debian_jessie_32 => {
             name =>'Debian Jessie 32 bits'
@@ -284,6 +316,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
         }
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
@@ -293,6 +326,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
         }
         ,debian_stretch => {
             name =>'Debian Stretch 64 bits'
@@ -302,6 +336,7 @@ sub _update_isos {
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
         }
         ,windows_7 => {
           name => 'Windows 7'
@@ -309,6 +344,7 @@ sub _update_isos {
             .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -316,6 +352,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -323,6 +360,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '3'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -330,6 +368,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_12.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
         ,windows_8 => {
           name => 'Windows 8.1'
@@ -337,6 +376,7 @@ sub _update_isos {
           .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
+          ,min_disk_size => '21'
         }
     );
 
@@ -756,6 +796,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
+    $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
 
     $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -774,10 +815,13 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('domains','start_time','int DEFAULT 0');
     $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
+    $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
+    $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('domains','id_vm','int default null');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -818,10 +862,18 @@ Returns the default display IP read from the config file
 =cut
 
 sub display_ip {
-
     my $ip = $CONFIG->{display_ip};
-
     return $ip if $ip;
+}
+
+=head2 nat_ip
+
+Returns the IP for NATed environments
+
+=cut
+
+sub nat_ip {
+    return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
 }
 
 sub _init_config {
@@ -945,7 +997,7 @@ sub _create_vm {
     );
 
     my @vms = ();
-    my $err;
+    my $err = "Valid VMS : ".join(" , ", sort keys %VALID_VM).".";
 
     for my $vm_name (keys %VALID_VM) {
         my $vm;
@@ -1046,9 +1098,11 @@ sub create_domain {
     eval { $domain = $vm->create_domain(@create_args) };
     die $@ if $@ && !$request;
     my $error = $@;
-    $request->error($error) if $request && $error;
-    if ($error =~ /has \d+ requests/) {
-        $request->status('retry');
+    if ( $request ) {
+        $request->error($error) if $error;
+        if ($error =~ /has \d+ requests/) {
+            $request->status('retry');
+        }
     }
     return $domain;
 }
@@ -1240,6 +1294,7 @@ sub list_domains {
     }
     return @domains;
 }
+
 
 =head2 list_domains_data
 
@@ -2100,6 +2155,15 @@ sub _cmd_refresh_storage($self, $request) {
     $vm->refresh_storage();
 }
 
+sub _cmd_domain_autostart($self, $request ) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->autostart($request->args('value'), $user);
+}
+
 sub _cmd_refresh_vms($self, $request=undef) {
 
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
@@ -2158,7 +2222,9 @@ sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
     my $status = 'shutdown';
     if ( $is_active ) {
         $status = 'active';
-        $domain->_data(id_vm => $vm->id)    if $domain->_data('id_vm') != $vm->id;
+        $domain->_data(id_vm => $vm->id)
+            if !defined$domain->_data('id_vm')
+                || $domain->_data('id_vm') != $vm->id;
     }
     $domain->_set_data(status => $status);
     $active_domain->{$domain->id} = $is_active;
@@ -2256,6 +2322,7 @@ sub _req_method {
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_vms => \&_cmd_refresh_vms
+,domain_autostart=> \&_cmd_domain_autostart
 
     );
     return $methods{$cmd};

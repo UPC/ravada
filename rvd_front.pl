@@ -11,7 +11,6 @@ use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
-
 use Mojo::Home;
 #####
 #my $self->plugin('I18N');
@@ -54,9 +53,14 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_header => 'Welcome'
                                               ,login_message => ''
                                               ,secrets => ['changeme0']
+                                              ,guide => 0
                                               ,login_custom => ''
+                                              ,footer => 'bootstrap/footer'
+                                              ,monitoring => 0
+                                              ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
+                                                    ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               }
@@ -107,8 +111,11 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
+  $USER = undef;
+
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
+  my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
                 '/js/ravada.js'
@@ -119,6 +126,10 @@ hook before_routes => sub {
             ,_logged_in => undef
             ,_anonymous => undef
             ,_user => undef
+            ,footer=> $CONFIG_FRONT->{footer}
+            ,monitoring => $CONFIG_FRONT->{monitoring}
+            ,guide => $CONFIG_FRONT->{guide}
+            ,host => $host
             );
 
   return access_denied($c)
@@ -131,11 +142,12 @@ hook before_routes => sub {
   }
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements|request|robots.txt)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
     _logged_in($c)  if $url =~ m{^/requirements};
+
 };
 
 
@@ -209,10 +221,6 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/admin' => sub {
-  my $c = shift;
-  $c->redirect_to("/admin/machines")
-};
 any '/admin/(#type)' => sub {
   my $c = shift;
 
@@ -226,7 +234,7 @@ any '/admin/(#type)' => sub {
 
 any '/new_machine' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER->can_create_domain;
+    return access_denied($c)    if !$USER->can_create_machine;
     return new_machine($c);
 };
 
@@ -277,9 +285,24 @@ get '/iso_file.json' => sub {
 get '/list_machines.json' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
+    return access_denied($c) unless _logged_in($c)
+        && ( $USER->can_list_own_machines()
+            || $USER->is_admin()
+        );
+
+    my @args;
+    if ( !$USER->can_list_machines ) {
+        my $domains = $RAVADA->list_domains( id_owner => $USER->id );
+        for my $domain ( @$domains ) {
+            next if !$domain->{id_base};
+            my $base = $RAVADA->list_domains( id => $domain->{id_base} );
+            push @$domains, (@$base);
+        }
+        return $c->render( json => $domains );
+    }
+
     my $req = Ravada::Request->refresh_vms();
-    $c->render(json => $RAVADA->list_domains);
+    return $c->render( json => $RAVADA->list_domains );
 };
 
 get '/list_bases_anonymous.json' => sub {
@@ -369,14 +392,19 @@ get '/machine/shutdown/(:id).(:type)' => sub {
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)       if !$USER -> can_remove();
+	return access_denied($c)       if (!$USER -> can_remove());
         return remove_machine($c);
 };
 
 any '/machine/remove_clones/(:id).(:type)' => sub {
-        my $c = shift;
-	return access_denied($c)	if !$USER ->can_remove_clone();
-        return remove_clones($c);
+    my $c = shift;
+
+    # TODO : call to $domain->_allow_remove();
+	return access_denied($c)
+        unless
+            $USER -> can_remove_clone_all()
+	        || $USER ->can_remove_clone();
+    return remove_clones($c);
 };
 
 get '/machine/prepare/(:id).(:type)' => sub {
@@ -467,6 +495,16 @@ get '/machine/public/#id' => sub {
 get '/machine/public/#id/#value' => sub {
     my $c = shift;
     return machine_is_public($c);
+};
+
+get '/machine/autostart/#id/#value' => sub {
+    my $c = shift;
+    my $req = Ravada::Request->domain_autostart(
+        id_domain => $c->stash('id')
+           ,value => $c->stash('value')
+             ,uid => $USER->id
+    );
+    return $c->render(json => { request => $req->id});
 };
 
 get '/machine/display/#id' => sub {
@@ -628,6 +666,12 @@ any '/settings' => sub {
     $c->render(template => 'main/settings');
 };
 
+any '/admin/monitoring' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/monitoring');
+};
+
 any '/auto_view/(#value)/' => sub {
     my $c = shift;
     my $value = $c->stash('value');
@@ -671,28 +715,22 @@ sub user_settings {
     if ($c->param('button_click')) {
         if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
             push @errors,("Some of the password's fields are empty");
-        } 
+        }
         else {
-            my $comp_password = $USER->compare_password($c->param('current_password'));
-            if ($comp_password) {
-                if ($c->param('password') eq $c->param('conf_password')) {
-                    eval {
-                        $USER->change_password($c->param('password'));
-                        _logged_in($c);
-                    };
-                    if ($@ =~ /Password too small/) {
-                        push @errors,("New Password is too small");
-                    }
-                    else {
-                        $changed_pass = 1;
-                    };
+            if ($c->param('password') eq $c->param('conf_password')) {
+                eval {
+                    $USER->change_password($c->param('password'));
+                    _logged_in($c);
+                };
+                if ($@ =~ /Password too small/) {
+                    push @errors,("Password too small")
                 }
                 else {
-                    push @errors,("Password fields aren't equal");
+                    $changed_pass = 1;
                 }
             }
             else {
-                push @errors, ("Invalid Current Password");
+                    push @errors,("Password fields aren't equal")
             }
         }
     }
@@ -834,8 +872,9 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
+                      ,monitoring => $CONFIG_FRONT->{monitoring}
+                      ,guide => $CONFIG_FRONT->{guide}
     );
-
 }
 
 sub logout {
@@ -883,6 +922,12 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
+
+    if ($CONFIG_FRONT->{guide_custom}) {
+        push @{$c->stash->{js}}, $CONFIG_FRONT->{guide_custom};
+    } else {
+        push @{$c->stash->{js}}, '/js/ravada_guide.js';
+    }
     return $c->render(
         template => 'main/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)
@@ -954,21 +999,21 @@ sub admin {
     if ($page eq 'machines') {
         Ravada::Request->refresh_vms();
         $c->stash(hide_clones => 0 );
-
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
-            if scalar @$list_domains
+            if defined $CONFIG_FRONT->{admin}->{hide_clones}
+                && scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
+        $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
         # count clones from list_domains grepping those that have id_base
         $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
     }
-    $c->render(template => 'main/admin_'.$page);
-
+    $c->render( template => 'main/admin_'.$page);
 };
 
 sub new_machine {
@@ -977,8 +1022,8 @@ sub new_machine {
     if ($c->param('submit')) {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
-                .".It can only contain words and numbers.")
-            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9]+$/;
+                .".It can only contain alphabetic, numbers, undercores and dashes.")
+            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9_-]+$/;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -1002,6 +1047,7 @@ sub req_new_domain {
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
+
     my %args = (
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -1216,11 +1262,14 @@ sub show_link {
 sub _message_timeout {
     my $domain = shift;
     return '' if !$domain->run_timeout;
-    my $msg_timeout = "in ".int($domain->run_timeout / 60 )
-        ." minutes.";
+    my $msg_timeout = '';
 
-    for my $request ( $domain->list_requests ) {
-        if ( $request->command eq 'shutdown' ) {
+    if (int ($domain->run_timeout / 60 )) {
+        $msg_timeout = "in ".int($domain->run_timeout / 60 )." minutes.";
+    }
+
+    for my $request ( $domain->list_all_requests ) {
+        if ( $request->command =~ 'shutdown' ) {
             my $t1 = Time::Piece->localtime($request->at_time);
             my $t2 = localtime();
 
@@ -1328,40 +1377,30 @@ sub make_admin {
 }
 
 sub register {
-    
+
     my $c = shift;
-    
+
     my @error = ();
-       
+
     my $username = $c->param('username');
     my $password = $c->param('password');
-   
- #   if($c ->param('submit')) {
- #       push @error,("Name is mandatory")   if !$c->param('username');
- #       push @error,("Invalid username '".$c->param('username')."'"
- #               .".It can only contain words and numbers.")
- #           if $c->param('username') && $c->param('username') !~ /^[a-zA-Z0-9]+$/;
- #       if (!@error) {
- #           Ravada::Auth::SQL::add_user($username, $password,0);
- #           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
- #       }
 
-#    }
-#    $c->stash(errors => \@error);
-#    push @{$c->stash->{js}}, '/js/admin.js';
-#    $c->render(template => 'bootstrap/new_user_control'
-#        , name => $c->param('username')
-#)    
-    
-   if ($username) {
-       Ravada::Auth::SQL::add_user(name => $username, password => $password);
-       return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+   if($username) {
+       my @list_users = Ravada::Auth::SQL::list_all_users();
+       warn join(", ", @list_users);
+
+       if (grep {$_ eq $username} @list_users) {
+           push @error,("Username already exists, please choose another one");
+           $c->render(template => 'bootstrap/new_user',error => \@error);
+       }
+       else {
+           #username don't exists
+           Ravada::Auth::SQL::add_user(name => $username, password => $password);
+           return $c->render(template => 'bootstrap/new_user_ok' , username => $username);
+       }
    }
    $c->render(template => 'bootstrap/new_user');
-
-
 }
-
 
 sub manage_machine {
     my $c = shift;
@@ -1448,6 +1487,7 @@ sub settings_machine {
     }
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
+        , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path);
 }
 

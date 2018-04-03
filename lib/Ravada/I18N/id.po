@@ -365,3 +365,18 @@ msgstr "Bisa mematikan klon dari mesin virtual yang dimiliki oleh user."
 
 msgid "Submit Query"
 msgstr "Kirim Query"
+
+msgid "Galician"
+msgstr "Galaksi"
+
+msgid "French"
+msgstr "Perancis"
+
+msgid "Indonesian"
+msgstr "Bahasa Indonesia"
+
+msgid "Persian"
+msgstr "Persia"
+
+msgid "Japanese"
+msgstr "Jepang"

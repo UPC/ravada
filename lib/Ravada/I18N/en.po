@@ -419,3 +419,6 @@ msgid ""
 "can change the settings of all virtual machines "
 "cloned from one base owned by the user."
 msgstr ""
+
+msgid "monitoring"
+msgstr ""

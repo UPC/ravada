@@ -16,7 +16,7 @@ use_ok('Ravada');
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 
 my $RAVADA = rvd_back($test->connector , 't/etc/ravada.conf');
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
     my $vm = $RAVADA->search_vm('kvm');
@@ -148,7 +148,7 @@ sub test_new_domain_iso {
 
 sub test_prepare_base {
     my $domain = shift;
-    $domain->prepare_base($USER);
+    $domain->prepare_base(user_admin);
 
     my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);

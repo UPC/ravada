@@ -385,3 +385,18 @@ msgstr "peut éteindre les clones des machines virtuelles appartenant à l'utili
 
 msgid "Submit Query"
 msgstr "Soumettre la requête"
+
+msgid "Galician"
+msgstr "Galicien"
+
+msgid "French"
+msgstr "Français"
+
+msgid "Indonesian"
+msgstr "Indonésien"
+
+msgid "Persian"
+msgstr "Persan"
+
+msgid "Japanese"
+msgstr "Japonais"

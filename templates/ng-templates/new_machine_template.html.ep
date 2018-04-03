@@ -23,7 +23,7 @@
                         name ="id_iso"
                         ng-model="id_iso"
                         ng-options="item.name for item in images track by item.id"
-                        ng-change="iso_file = change_iso(id_iso.device)"
+                        ng-change="iso_file = change_iso(id_iso)"
                         required=""
                     ></select>
                     <div ng-show="id_iso.description">
@@ -49,6 +49,7 @@
                             ng-model="iso_file"
                             ng-options="item for item in isos track by item"
                             required=""
+
                         ></select>
                     </div>
                 </div>
@@ -60,7 +61,7 @@
             <div class="col-lg-9">
                 <input class="form-control" ng-model="name" type="text"
                     name="name" required=""
-                    ng-pattern ="/^[a-zA-Z0-9_.-]+$/"
+                    ng-pattern ="/^[a-zA-Z0-9_-]+$/"
                     ng-change="validate_new_name()"
                 >
             </div>
@@ -78,19 +79,22 @@
         </div>
 
         <div class="form-group row" ng-if="backend == 'KVM'">
-            <label for="disk" class="col-lg-3 control-label"><%=l 'Disk Size: (GB)' %></label>            
+            <label for="disk" class="col-lg-3 control-label"><%=l 'Disk Size: (GB)' %></label>     
             <div class="col-lg-2">
                 <input class="slider form-control" ng-model="ddsize" type="range" name="disk"
-                    min="1" max="100" value="20" required="">
+                    min="{{min_size}}" max="100" required="">
             </div>{{ddsize}}
-            <a ng-show="!seeswap"
-                ng-click="show_swap()"
-                class="label label-primary"
-                align="right">Add swap</a>
-            <a ng-show="seeswap"
-                ng-click="show_swap()"
-                class="label label-primary"
-                align="right">Remove swap</a>
+              <a ng-show="!seeswap"
+                  ng-click="show_swap()"
+                  class="label label-primary"
+                  align="right">Add swap</a>
+              <a ng-show="seeswap"
+                  ng-click="show_swap()"
+                  class="label label-primary"
+                  align="right">Remove swap</a>
+              <div ng-show="showMinSize">
+                <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
+            </div>  
         </div>
         <div class="form-group row" ng-show="seeswap" ng-if="backend == 'KVM'">
             <label for="swap" class="col-lg-3 control-label"><%=l 'Swap Size: (GB)' %></label>
@@ -153,7 +157,7 @@
                     <strong><%=l 'Error' %></strong> <%=l 'A machine with that name already exists.' %>
             </div>
             <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
-                    <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, dashes and points.' %>
+                    <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
             </div>
         </div>
       

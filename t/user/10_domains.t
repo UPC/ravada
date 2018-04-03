@@ -42,6 +42,8 @@ sub test_create_domain {
     my $vm = Ravada::VM::Void->new();
     ok($vm,"I can't connect void VM");
 
+    user_admin->grant($user, 'create_machine' );
+
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id);
 

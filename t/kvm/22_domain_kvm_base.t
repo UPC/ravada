@@ -23,7 +23,7 @@ my ($DOMAIN_NAME) = new_domain_name();
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 $DOMAIN_NAME_SON =~ s/base_//;
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
     my $vm = $RAVADA->search_vm('KVM');
@@ -130,7 +130,7 @@ sub test_prepare_base {
 
     ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
 
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base(user_admin) };
     is($@,'') or exit;
 
     my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");

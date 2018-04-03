@@ -11,6 +11,7 @@ CREATE TABLE `iso_images` (
   `md5_url` varchar(255),
   `sha256_url` varchar(255),
   `device` varchar(255),
+  `min_disk_size` int(11),
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 );

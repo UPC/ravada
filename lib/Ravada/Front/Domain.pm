@@ -47,6 +47,7 @@ sub open($self, $id) {
     return $self->new(id => $id);
 }
 
+sub autostart($self )    { return $self->_data('autostart') }
 sub _do_force_shutdown  { confess "TODO" }
 sub add_volume          { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }
@@ -65,6 +66,9 @@ sub get_info($self) {
      return decode_json($info);
 }
 sub hybernate           { confess "TODO" }
+sub hibernate           { confess "TODO" }
+
+sub internal_id($self) { return $self->_data('internal_id')}
 
 sub is_active($self) {
     return 1 if $self->_data('status') eq 'active';

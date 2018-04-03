@@ -440,3 +440,21 @@ msgid ""
 msgstr ""
 "किसी भी वर्चुअल मशीन की सेटिंग बदल सकते हैं"
 "उपयोगकर्ता द्वारा स्वामित्व वाले एक आधार से क्लोन किया गया।"
+
+msgid "Galician"
+msgstr "गैलिशियन्"
+
+msgid "French"
+msgstr "फ्रेंच"
+
+msgid "Indonesian"
+msgstr "इंडोनेशियाई"
+
+msgid "Persian"
+msgstr "फ़ारसी"
+
+msgid "Hindi"
+msgstr "हिंदी"
+
+msgid "Japanese"
+msgstr "जापानी"

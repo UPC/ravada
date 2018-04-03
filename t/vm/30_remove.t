@@ -19,7 +19,7 @@ my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 #######################################################################33
 
@@ -68,7 +68,7 @@ sub test_remove_domain_base {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base( user_admin );
     eval { $domain->remove($USER) };
     ok(!$@,$@);
 
@@ -82,17 +82,17 @@ sub test_dont_remove_father {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base( user_admin );
     $domain->is_public(1);
 
     my $name_clone = new_domain_name();
 
     my $clone = rvd_back()->create_domain( name => $name_clone
-            ,id_owner => $USER->id
+            ,id_owner => user_admin->id
             ,id_base => $domain->id
             ,vm => $vm_name
     );
-    eval { $domain->remove($USER) };
+    eval { $domain->remove( user_admin ) };
     ok($@ && $@ =~ /has.*clone/i , "Domain with clones should not be removed ".($@ or ''));
 
     my $domain_found = rvd_back()->search_domain($domain->name);
@@ -104,11 +104,11 @@ sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@, $@);
     ok($domain->is_base);
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already prepared and file haven't changed "
         .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
@@ -118,7 +118,7 @@ sub test_prepare_base {
 
     touch_mtime($disk);
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@,"Trying to prepare base again failed, it should have worked. ");
     ok($domain->is_base);
 
@@ -126,20 +126,20 @@ sub test_prepare_base {
 
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
-        ,id_owner => $USER->id
+        ,id_owner => user_admin->id
         ,id_base => $domain->id
         ,vm => $vm_name
     );
     ok($domain_clone);
     touch_mtime($disk);
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok($@ && $@ =~ /has \d+ clones/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
-    $domain_clone->remove($USER);
+    $domain_clone->remove( user_admin );
 
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base);
 }

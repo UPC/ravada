@@ -19,7 +19,7 @@ my $rvd_back = rvd_back( $test->connector , 't/etc/ravada.conf');
 my $RVD_FRONT = rvd_front( $test->connector , 't/etc/ravada.conf');
 
 my $vm = $rvd_back->search_vm('Void');
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 ########################################################################3
 
@@ -188,7 +188,7 @@ my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name
             , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
-$domain->prepare_base($USER);
+$domain->prepare_base(user_admin);
 $domain->is_public(1);
 
 my $net = Ravada::Network->new(address => '127.0.0.1/32');

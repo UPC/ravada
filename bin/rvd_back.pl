@@ -133,6 +133,8 @@ sub do_start {
     my $cnt_error = 0;
 
 
+    my $t_refresh = 0;
+
     my $ravada = Ravada->new( %CONFIG );
 
     my $t0_cleanup = 0;

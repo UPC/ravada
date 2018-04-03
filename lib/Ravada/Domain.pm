@@ -74,7 +74,9 @@ requires 'get_info';
 requires 'set_memory';
 requires 'set_max_mem';
 
+requires 'autostart';
 requires 'hybernate';
+requires 'hibernate';
 
 #remote methods
 requires 'migrate';
@@ -151,6 +153,9 @@ before 'pause' => \&_allow_manage;
 before 'hybernate' => \&_allow_manage;
  after 'hybernate' => \&_post_hibernate;
 
+before 'hibernate' => \&_allow_manage;
+ after 'hibernate' => \&_post_hibernate;
+
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
 
@@ -179,6 +184,7 @@ around 'get_info' => \&_around_get_info;
 
 around 'is_active' => \&_around_is_active;
 
+around 'autostart' => \&_around_autostart;
 ##################################################
 #
 
@@ -394,12 +400,15 @@ sub _allow_remove($self, $user) {
     confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
-        if !$user->can_remove();
+        if (!$user->can_remove());
 
     $self->_check_has_clones() if $self->is_known();
-    if ($self->is_known() && $user->can_remove_clone() && $self->id_base) {
+    if ( $self->is_known
+        && $self->id_base
+        && ($user->can_remove_clone() || $user->can_remove_clone_all())
+    ) {
         my $base = $self->open($self->id_base);
-        return if $base->id_owner == $user->id;
+        return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
     $self->_allowed($user);
 
@@ -439,11 +448,16 @@ sub _around_add_volume {
     return $self->$orig(%args);
 }
 
-sub _pre_prepare_base {
-    my $self = shift;
-    my ($user, $request) = @_;
+sub _pre_prepare_base($self, $user, $request = undef ) {
 
     $self->_allowed($user);
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->id_owner);
+    confess "User ".$user->name." [".$user->id."] not allowed to prepare base ".$self->domain
+        ." owned by ".($owner->name or '<UNDEF>')."\n"
+            unless $user->is_admin || (
+                $self->id_owner == $user->id && $user->can_create_base());
+
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them 
@@ -486,7 +500,26 @@ sub _post_prepare_base {
 
     $self->_remove_id_base();
     $self->_set_base_vm_db($self->_vm->id,1);
+    $self->autostart(0,$user);
 };
+
+sub _around_autostart($orig, $self, @arg) {
+    my ($value, $user) = @arg;
+    $self->_allowed($user) if defined $value;
+    confess "ERROR: Autostart can't be activated on base ".$self->name
+        if $value && $self->is_base;
+
+    confess "ERROR: You can't set autostart on readonly domains"
+        if defined $value && $self->readonly;
+    my $autostart = 0;
+    my @orig_args = ();
+    push @orig_args, ( $value) if defined $value;
+    if ( $self->$orig(@orig_args) ) {
+        $autostart = 1;
+    }
+    $self->_data(autostart => $autostart)   if defined $value;
+    return $autostart;
+}
 
 sub _check_has_clones {
     my $self = shift;
@@ -590,7 +623,7 @@ sub _around_display($orig,$self,$user) {
 
 sub _around_get_info($orig, $self) {
     my $info = $self->$orig();
-    if (ref($self) =~ /^Ravada::Domain/) {
+    if (ref($self) =~ /^Ravada::Domain/ && $self->is_known()) {
         $self->_data(info => encode_json($info));
     }
     return $info;
@@ -850,9 +883,9 @@ sub _display_file_spice($self,$user) {
         "fullscreen=1\n"
         ."title=".$self->name." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
+        ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=1\n"
-        ."usb-filter=-1,-1,-1,-1,0\n";
+        ."delete-this-file=1\n";
 
     $ret .=";" if !$self->tls;
     $ret .= "tls-ciphers=DEFAULT\n"
@@ -896,6 +929,12 @@ sub _insert_db {
     }
     $sth->finish;
 
+    $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set internal_id=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->internal_id, $self->id);
+    $sth->finish;
 }
 
 =head2 pre_remove
@@ -916,7 +955,7 @@ sub _pre_remove_domain($self, $user, @) {
     $self->pre_remove();
     $self->_allow_remove($user);
     $self->pre_remove();
-#    warn "remove ".$self->name." 1\n";
+    $self->_remove_iptables()   if $self->is_known();
 }
 
 sub _after_remove_domain {
@@ -1318,12 +1357,12 @@ sub _post_pause {
     my $user = shift;
 
     $self->_data(status => 'paused');
-    $self->_remove_iptables(user => $user);
+    $self->_remove_iptables();
 }
 
 sub _post_hibernate($self, $user) {
     $self->_data(status => 'hibernated');
-    $self->_remove_iptables(user => $user);
+    $self->_remove_iptables();
 }
 
 sub _pre_shutdown {
@@ -1350,20 +1389,19 @@ sub _post_shutdown {
     my $self = shift;
 
     my %arg = @_;
-    my $timeout = $arg{timeout};
+    my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables(@_);
-
+    $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')
-        if $self->is_known
-        && !$self->is_volatile
-        && !$self->is_active;
-
-    if ($self->id_base() && !$self->is_removed && !$self->is_volatile && !$self->is_active ) {
-        $self->clean_swap_volumes(@_)
-    }
+        if $self->is_known && !$self->is_volatile && !$self->is_active;
     $self->_remove_temporary_machine(@_);
-    $self->_remove_iptables(@_);
+    if ($self->is_known && $self->id_base) {
+        for ( 1 ..  5 ) {
+            last if !$self->is_active;
+            sleep 1;
+        }
+        $self->clean_swap_volumes(@_) if !$self->is_active;
+    }
 
     if (defined $timeout && !$self->is_removed) {
         if ($timeout<2 && !$self->is_removed && $self->is_active) {
@@ -1450,10 +1488,14 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
+    my %args = @_;
 
-    my $args = {@_};
+    my $user = delete $args{user};
+    my $port = delete $args{port};
 
-#    confess "Missing user=>\$user" if !$args->{user};
+    delete $args{request};
+
+    confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
     my $ipt_obj = _obj_iptables();
 
@@ -1461,9 +1503,13 @@ sub _remove_iptables {
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
     );
+    my @iptables;
+    push @iptables, ( $self->_active_iptables(id_domain => $self->id))  if $self->is_known();
+    push @iptables, ( $self->_active_iptables(user => $user) )          if $user;
+    push @iptables, ( $self->_active_iptables(port => $port) )          if $port;
 
     my %rule;
-    for my $row ($self->_active_iptables($args->{user})) {
+    for my $row (@iptables) {
         my ($id, $id_vm, $iptables) = @$row;
         next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
@@ -1485,7 +1531,7 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
-    return if !$self->is_volatile;
+    return if !$self->is_known || !$self->is_volatile;
     my %args = @_;
 
     return if !$self->is_known();
@@ -1532,6 +1578,8 @@ sub _post_start {
     $sth->execute(time, $self->id);
     $sth->finish;
 
+    $self->_data('internal_id',$self->internal_id);
+
     $self->_add_iptable(@_);
     $self->_update_id_vm();
 
@@ -1564,11 +1612,14 @@ sub _add_iptable {
 
     my $remote_ip = $args{remote_ip} or return;
 
-    my $user = $args{user};
+    my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
     my $display = $self->display($user);
-    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+    my ($local_port) = $display =~ m{\w+://.*:(\d+)};
+    $self->_remove_iptables( port => $local_port );
+
+    my $local_ip = $self->_vm->ip;
 
     $self->_open_port($user, $remote_ip, $local_ip, $local_port);
     $self->_close_port($user, '0.0.0.0', $local_ip, $local_port);
@@ -1624,6 +1675,37 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
 
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
+    if ($remote_ip eq '127.0.0.1') {
+         @iptables_arg = ($local_ip
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+        $self->_vm->iptables(
+                A => $IPTABLES_CHAIN
+                ,m=> 'tcp'
+                ,p => 'tcp'
+                ,s => $local_ip
+                ,d => $local_ip
+                ,dport => $local_port
+                ,j => $jump
+        );
+        $self->_log_iptable(iptables => \@iptables_arg, user => $user,remote_ip => $local_ip);
+    }
+    @iptables_arg = ( '0.0.0.0/0'
+                        ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
+                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+
+    $self->_vm->iptables(
+            A => $IPTABLES_CHAIN
+            ,m=> 'tcp'
+            ,p => 'tcp'
+            ,s => '0.0.0.0/0'
+            ,d => $local_ip
+            ,dport => $local_port
+            ,j => 'DROP'
+    );
+
+    $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => '0.0.0.0/0');
 }
 
 sub _close_port($self, $user, $remote_ip, $local_ip, $local_port) {
@@ -1648,9 +1730,18 @@ sub open_iptables {
     my $self = shift;
 
     my %args = @_;
-    my $user = Ravada::Auth::SQL->search_by_id($args{uid});
+    my $uid = delete $args{uid};
+    my $user = delete $args{user};
+
+    confess "ERROR: Supply either uid or user"  if !$uid && !$user;
+
+    $user = Ravada::Auth::SQL->search_by_id($uid)   if $uid;
+    confess "ERROR: User ".$user->name." not uid $uid"
+        if $uid && $user->id != $uid;
     $args{user} = $user;
     delete $args{uid};
+
+    $self->_remove_iptables();
     $self->_add_iptable(%args);
 }
 
@@ -1684,8 +1775,9 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-        $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
 	}
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
@@ -1726,27 +1818,48 @@ sub _log_iptable {
 
 }
 
-sub _active_iptables($self, $user=undef) {
+sub _active_iptables {
+    my $self = shift;
 
-    my @sql_args = ($self->id);
+    my %args = @_;
+
+    my      $port = delete $args{port};
+    my      $user = delete $args{user};
+    my   $id_user = delete $args{id_user};
+    my $id_domain = delete $args{id_domain};
+
+    confess "ERROR: User id (".$user->id." is not $id_user "
+        if $user && $id_user && $user->id ne $id_user;
+
+    confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+
+    $id_user = $user->id if $user;
+
+    my @sql_fields;
+
     my $sql
-        ="SELECT id, id_vm, iptables FROM iptables "
-        ." WHERE "
-        ."    id_domain=? ";
-    if ($user) {
-        $sql .= "    AND id_user=? ";
-        push @sql_args,($user->id);
-    }
-    $sql .=
-         "    AND time_deleted IS NULL"
-        ." ORDER BY time_req DESC ";
+        = "SELECT id, id_vm, iptables FROM iptables "
+        ." WHERE time_deleted IS NULL";
 
+    if ( $id_user ) {
+        $sql .= "    AND id_user=? ";
+        push @sql_fields,($id_user);
+    }
+
+    if ( $id_domain ) {
+        $sql .= "    AND id_domain=? ";
+        push @sql_fields,($id_domain);
+    }
+
+    $sql .= " ORDER BY time_req DESC ";
     my $sth = $$CONNECTOR->dbh->prepare($sql);
-    $sth->execute(@sql_args);
+    $sth->execute(@sql_fields);
 
     my @iptables;
-    while (my ( $id, $id_vm, $iptables ) = $sth->fetchrow) {
-        push @iptables, [ $id, $id_vm, decode_json($iptables)];
+    while (my ($id, $id_vm, $iptables) = $sth->fetchrow) {
+        my $iptables_data = decode_json($iptables);
+        next if $port && $iptables_data->[5]->{d_port} ne $port;
+        push @iptables, [ $id, $id_vm, $iptables_data ];
     }
     return @iptables;
 }
@@ -2405,5 +2518,16 @@ sub status($self, $value=undef) {
         $self->_post_shutdown();
     }
     return $value;
+}
+
+=head2 internal_id
+
+Returns the internal id of this domain as found in its Virtual Manager connection
+
+=cut
+
+sub internal_id {
+    my $self = shift;
+    return $self->id;
 }
 1;

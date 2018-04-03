@@ -21,7 +21,7 @@ my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 my $DISPLAY_IP = '99.1.99.1';
 
@@ -56,7 +56,7 @@ sub test_clone {
     my ($vm_name, $domain) = @_;
 
     $domain->is_public(1);
-    my $clone = $domain->clone(name => new_domain_name(), user => $USER);
+    my $clone = $domain->clone(name => new_domain_name(), user => user_admin );
     ok($clone);
 
     return $clone;
@@ -80,11 +80,11 @@ sub test_prepare_base {
 
     test_files_base($domain,0);
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@, $@);
     ok($domain->is_base);
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
         ."prepared and file haven't changed "
         .". Error: ".($@ or '<UNDEF>'));
