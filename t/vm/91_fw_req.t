@@ -90,7 +90,7 @@ sub test_fw_domain{
         );
         ok($req);
         ok($req->status);
-        rvd_back->process_requests();
+        rvd_back->_process_all_requests_dont_fork();
         wait_request($req);
 
         is($req->status,'done');
