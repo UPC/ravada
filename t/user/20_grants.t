@@ -387,10 +387,31 @@ sub test_frontend {
     $domain->is_public( $usera );
 
     my $clone = $domain->clone( user => $user, name => new_domain_name );
+    is($user->can_list_machines, 0);
+    is($user->can_list_own_machines, 0);
+
+    $usera->grant($user, 'create_base');
+    is($user->can_list_machines, 0);
+    is($user->can_list_own_machines, 1);
 
     my $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 1 );
     ok($list_machines->[0]->{name} eq $clone->name);
+
+    $usera->revoke($user, 'create_base');
+    is($user->can_list_machines, 0);
+    is($user->can_list_own_machines, 0);
+
+    $usera->grant($user, 'create_machine');
+    is($user->can_list_machines, 0);
+    is($user->can_list_own_machines, 1);
+
+    $list_machines = rvd_front->list_domains( id_owner => $user->id );
+    is (scalar @$list_machines, 1 );
+
+    create_domain($vm_name, $user);
+    $list_machines = rvd_front->list_domains( id_owner => $user->id );
+    is (scalar @$list_machines, 2 );
 
     $clone->remove( $usera );
     $domain->remove( $usera );
