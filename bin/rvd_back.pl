@@ -136,12 +136,18 @@ sub do_start {
 
     start_process_longs() if !$NOFORK;
 
+    my $t_refresh = 0;
+
     my $ravada = Ravada->new( %CONFIG );
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
         $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
         $ravada->enforce_limits();
+        if ( time - $t_refresh > 60 ) {
+            $ravada->_cmd_refresh_vms();
+            $t_refresh = time;
+        }
         sleep 1 if time - $t0 <1;
     }
 }

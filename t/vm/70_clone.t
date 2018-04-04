@@ -20,7 +20,7 @@ my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 ###############################################################################
 
@@ -59,20 +59,20 @@ sub test_clone {
                 my $name_clone = new_domain_name();
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
                 $base->is_public(1);
-                eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
+                eval { $clone1 = $base->clone(name => $name_clone, user => user_admin ) };
                 ok(!$@,"Expecting error='', got='".($@ or '')."'")
                         or die Dumper($base->list_requests);
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
     is($clone1->description,undef);
-                $clone1->shutdown_now($USER) if $clone1->is_active();
-                eval { $clone1->start($USER) };
+                $clone1->shutdown_now( user_admin ) if $clone1->is_active();
+                eval { $clone1->start( user_admin ) };
                 is($@,'');
                 ok($clone1->is_active);
 
                 my $clone1b = $RVD_FRONT->search_domain($name_clone);
                 ok($clone1b,"Expecting new cloned domain ".$name_clone);
-                $clone1->shutdown_now($USER) if $clone1->is_active;
+                $clone1->shutdown_now( user_admin ) if $clone1->is_active;
                 ok(!$clone1->is_active);
     is($clone1b->description,undef,"[$vm_name] description for "
             .$clone1b->name);
@@ -82,10 +82,10 @@ sub test_clone {
 sub test_mess_with_bases {
     my ($vm_name, $base, $clones) = @_;
     for my $clone (@$clones) {
-        $clone->force_shutdown($USER)   if $clone->is_active;
+        $clone->force_shutdown( user_admin )   if $clone->is_active;
         ok($clone->id_base,"Expecting clone has id_base , got "
                 .($clone->id_base or '<UNDEF>'));
-        $clone->prepare_base($USER);
+        $clone->prepare_base( user_admin );
     }
 
     for my $clone (@$clones) {
@@ -110,7 +110,7 @@ sub test_description {
     my $vm = rvd_back->search_vm($vm_name) or return;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base(user_admin);
     $domain->is_public(1);
     my $clone = $vm->create_domain(
              name => new_domain_name()
@@ -118,7 +118,7 @@ sub test_description {
         ,id_owner => $USER->id
     );
     is($clone->description, undef);
-    $clone->prepare_base($USER);
+    $clone->prepare_base( user_admin );
     is($clone->description, $domain->description);
     $clone->remove($USER);
 }

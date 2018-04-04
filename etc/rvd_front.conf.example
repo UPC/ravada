@@ -7,11 +7,17 @@
       templates => '/usr/share/ravada/templates'
         ,public => '/usr/share/ravada/public'
   }
+  ,admin => {
+      hide_clones => 15
+      , autostart => 0
+  }
   ,user => 'ravada'
   ,group => 'ravada'
   ,secrets => ['changeme1','changeme2']
   ,login_custom => ''
   ,footer => '/bootstrap/footer'
+  ,login_bg_file => 'img/custom/background.jpg'
+  ,login_message => 'Acme VDI service'
   ,monitoring => 0
   ,guide => ''
   ,guide_custom => ''

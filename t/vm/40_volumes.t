@@ -24,7 +24,7 @@ my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
 
 my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 #######################################################################33
 
 sub test_create_domain {
@@ -102,7 +102,7 @@ sub test_prepare_base {
     my @volumes = $domain->list_volumes();
 #    diag("[$vm_name] preparing base for domain ".$domain->name);
     my @img;
-    eval {@img = $domain->prepare_base( $USER) };
+    eval {@img = $domain->prepare_base( user_admin ) };
     is($@,'');
 #    diag("[$vm_name] ".Dumper(\@img));
 

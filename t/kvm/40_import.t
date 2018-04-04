@@ -20,7 +20,7 @@ my $RVD_FRONT= rvd_front($TEST_SQL->connector, $FILE_CONFIG);
 my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $TEST_SQL->connector);
 
 my @VMS = ('KVM');
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 #############################################################################
 
@@ -100,11 +100,11 @@ sub test_import_spinoff {
     my $vm = rvd_back->search_vm('kvm');
     my $domain = test_create_domain($vm_name,$vm);
     $domain->is_public(1);
-    my $clone = $domain->clone(name => new_domain_name(), user => $USER);
+    my $clone = $domain->clone(name => new_domain_name(), user => user_admin );
     ok($clone);
     ok($domain->is_base,"Expecting base") or return;
 
-    $clone->remove($USER);
+    $clone->remove( user_admin );
 
     for my $volume ( $domain->list_disks ) {
         my $info = `qemu-img info $volume`;

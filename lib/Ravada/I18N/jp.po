@@ -260,7 +260,7 @@ msgstr ""
 msgid "You'll need to install"
 msgstr ""
 
-msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgid "and USB drivers ("
 msgstr ""
 
 msgid ""

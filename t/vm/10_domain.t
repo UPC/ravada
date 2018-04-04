@@ -22,7 +22,7 @@ my $RVD_BACK;
 eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
 ok($RVD_BACK) or exit;
 
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 ok($USER);
 
 ##########################################################
@@ -215,7 +215,7 @@ sub test_remove_domain {
     ok($domain0, "[$vm_name] Domain ".$domain->name." should be there in ".ref $domain);
 
 
-    eval { $domain->remove($USER) };
+    eval { $domain->remove( user_admin ) };
     ok(!$@ , "[$vm_name] Error removing domain ".$domain->name." ".ref($domain).": $@") or exit;
 
     my $domain2 = rvd_back()->search_domain($domain->name);
@@ -416,7 +416,7 @@ for my $vm_name (qw( Void KVM )) {
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
         $domain->is_public(1);
-        my $clone1 = $domain->clone(user=>$USER,name=>new_domain_name);
+        my $clone1 = $domain->clone( user=>user_admin, name=>new_domain_name );
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
         $clone1->shutdown_now($USER);

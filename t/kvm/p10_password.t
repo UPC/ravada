@@ -16,7 +16,7 @@ use_ok('Ravada');
 
 my @VMS = vm_names();
 init($test->connector);
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 #######################################################
 
@@ -191,7 +191,7 @@ sub test_any_network_password_hybernate{
     my $password = $domain->spice_password();
     is($password, undef ,"Expecting no password, got '".($password or '')."'");
 
-    $domain->hybernate($USER);
+    $domain->hibernate($USER);
     is($domain->is_active(),0);
     is($domain->is_hibernated(),1,"Domain should be hybernated");
 

@@ -349,7 +349,37 @@ sub is_operator {
 	|| $self->can_change_settings_clones()
         || $self->can_remove_clone()
         || $self->can_remove_clone_all()
+        || $self->can_create_base()
+        || $self->can_create_machine();
 }
+
+=head2 can_list_own_machines
+
+Returns true if the user can list her own virtual machines at the web frontend
+
+=cut
+
+sub can_list_own_machines {
+    my $self = shift;
+    return 1
+        if $self->can_create_base()
+            || $self->can_create_machine
+        ;
+    return 0;
+}
+
+=head2 can_list_machines
+
+Returns true if the user can list all the virtual machines at the web frontend
+
+=cut
+
+sub can_list_machines {
+    my $self = shift;
+    return 1 if $self->is_admin();
+    return 0;
+}
+
 
 =head2 is_external
 

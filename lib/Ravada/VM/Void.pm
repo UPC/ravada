@@ -175,6 +175,8 @@ sub refresh_storage {}
 
 sub ping { return 1 }
 
+sub is_active { return 1 }
+
 #########################################################################3
 
 1;

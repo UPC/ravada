@@ -17,7 +17,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 init($test->connector, 't/etc/ravada.conf');
 
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 rvd_back();
 my $ID_ISO = search_id_iso('Alpine');
@@ -190,7 +190,7 @@ sub test_req_prepare_base {
         ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
         $req = Ravada::Request->prepare_base(
             id_domain => $domain->id
-            ,uid => $USER->id
+            ,uid => user_admin->id
         );
         ok($req);
         ok($req->status);

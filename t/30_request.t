@@ -23,7 +23,7 @@ my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 init($test->connector, 't/etc/ravada.conf');
 
 my $RVD_BACK = rvd_back();# $test->connector , 't/etc/ravada.conf');
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 $RVD_BACK = undef;
 
 my @ARG_CREATE_DOM = (
@@ -169,7 +169,7 @@ sub test_req_create_base {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name") && do {
-        $domain->prepare_base($USER);
+        $domain->prepare_base(user_admin);
         ok($domain && $domain->is_base,"Domain $name should be base");
     };
     return $domain;

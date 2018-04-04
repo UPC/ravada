@@ -59,6 +59,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
+                                                    ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               }
@@ -109,6 +110,8 @@ init();
 hook before_routes => sub {
   my $c = shift;
 
+  $USER = undef;
+
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
@@ -138,11 +141,12 @@ hook before_routes => sub {
   }
   return login($c)
     if
-        $url !~ m{^/(anonymous|login|logout|requirements|request|robots.txt)}
+        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
         && $url !~ m{^/(css|font|img|js)}
         && !_logged_in($c);
 
     _logged_in($c)  if $url =~ m{^/requirements};
+
 };
 
 
@@ -229,7 +233,7 @@ any '/admin/(#type)' => sub {
 
 any '/new_machine' => sub {
     my $c = shift;
-    return access_denied($c)    if !$USER->can_create_domain;
+    return access_denied($c)    if !$USER->can_create_machine;
     return new_machine($c);
 };
 
@@ -280,8 +284,23 @@ get '/iso_file.json' => sub {
 get '/list_machines.json' => sub {
     my $c = shift;
 
-    return access_denied($c) if !_logged_in($c) || !$USER->is_admin();
-    $c->render(json => $RAVADA->list_domains);
+    return access_denied($c) unless _logged_in($c)
+        && ( $USER->can_list_own_machines()
+            || $USER->is_admin()
+        );
+
+    my @args;
+    if ( !$USER->can_list_machines ) {
+        my $domains = $RAVADA->list_domains( id_owner => $USER->id );
+        for my $domain ( @$domains ) {
+            next if !$domain->{id_base};
+            my $base = $RAVADA->list_domains( id => $domain->{id_base} );
+            push @$domains, (@$base);
+        }
+        return $c->render( json => $domains );
+    }
+
+    return $c->render( json => $RAVADA->list_domains );
 };
 
 get '/list_bases_anonymous.json' => sub {
@@ -469,6 +488,16 @@ get '/machine/public/#id' => sub {
 get '/machine/public/#id/#value' => sub {
     my $c = shift;
     return machine_is_public($c);
+};
+
+get '/machine/autostart/#id/#value' => sub {
+    my $c = shift;
+    my $req = Ravada::Request->domain_autostart(
+        id_domain => $c->stash('id')
+           ,value => $c->stash('value')
+             ,uid => $USER->id
+    );
+    return $c->render(json => { request => $req->id});
 };
 
 get '/machine/display/#id' => sub {
@@ -962,9 +991,11 @@ sub admin {
         my $list_domains = $RAVADA->list_domains();
 
         $c->stash(hide_clones => 1 )
-            if scalar @$list_domains
+            if defined $CONFIG_FRONT->{admin}->{hide_clones}
+                && scalar @$list_domains
                         > $CONFIG_FRONT->{admin}->{hide_clones};
 
+        $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
         # count clones from list_domains grepping those that have id_base
         $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
 
@@ -1219,11 +1250,14 @@ sub show_link {
 
 sub _message_timeout {
     my $domain = shift;
-    my $msg_timeout = "in ".int($domain->run_timeout / 60 )
-        ." minutes.";
+    my $msg_timeout = '';
 
-    for my $request ( $domain->list_requests ) {
-        if ( $request->command eq 'shutdown' ) {
+    if (int ($domain->run_timeout / 60 )) {
+        $msg_timeout = "in ".int($domain->run_timeout / 60 )." minutes.";
+    }
+
+    for my $request ( $domain->list_all_requests ) {
+        if ( $request->command =~ 'shutdown' ) {
             my $t1 = Time::Piece->localtime($request->at_time);
             my $t2 = localtime();
 
