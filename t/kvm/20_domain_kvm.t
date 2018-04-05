@@ -295,6 +295,7 @@ sub test_prepare_import {
 ################################################################
 
 my $vm;
+clean();
 
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
@@ -321,4 +322,5 @@ test_domain_by_name();
 test_prepare_import();
 
 };
+clean();
 done_testing();
