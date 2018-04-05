@@ -263,7 +263,6 @@ sub remote_config_nodes {
 sub _remove_old_domains_vm {
     my $vm_name = shift;
 
-    return if !$VM_VALID{$vm_name};
 
     my $domain;
 
@@ -272,6 +271,7 @@ sub _remove_old_domains_vm {
     if (ref($vm_name)) {
         $vm = $vm_name;
     } else {
+        return if !$VM_VALID{$vm_name};
         eval {
         my $rvd_back=rvd_back();
         return if !$rvd_back;
@@ -422,6 +422,8 @@ sub _remove_old_disks_void($node=undef){
 
 sub _remove_old_disks_void_remote($node) {
     confess "Remote node must be defined"   if !defined $node;
+    return if !$node->ping;
+
     my $cmd = "rm -rfv ".$node->dir_img."/".base_domain_name().'_*';
     $node->run_command($cmd);
 }
@@ -738,6 +740,7 @@ sub open_ipt {
 
 sub _domain_node($node) {
     my $vm = rvd_back->search_vm('KVM','localhost');
+    ok($vm) or die Dumper(rvd_back->_create_vm);
     my $domain = $vm->search_domain($node->name);
     $domain = rvd_back->import_domain(name => $node->name
             ,user => user_admin->name
@@ -761,7 +764,7 @@ sub hibernate_node($node) {
     $node->disconnect;
 
     my $domain_node = _domain_node($node);
-    $domain_node->hibernate( user => user_admin);
+    $domain_node->hibernate( user_admin );
 
     my $max_wait = 30;
     my $ping;
@@ -804,6 +807,7 @@ sub shutdown_node($node) {
 
 sub start_node($node) {
 
+    confess "Undefined node"    if !defined $node;
     diag("start node ".$node->type." ".$node->name);
     confess "Undefined node " if!$node;
 
