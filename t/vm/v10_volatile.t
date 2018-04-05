@@ -171,7 +171,8 @@ sub test_volatile_auto_kvm {
     rvd_back->_refresh_volatile_domains();
     my $domain_f;
     $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
-    ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
+    ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown "
+        .Dumper($domain_f)) or exit;
 
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
