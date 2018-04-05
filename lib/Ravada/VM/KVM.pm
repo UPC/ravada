@@ -1934,9 +1934,4 @@ sub list_storage_pools($self) {
         $self->vm->list_storage_pools();
 }
 
-sub is_active($self) {
-    return 1 if $self->vm;
-    return 0;
-}
-
 1;

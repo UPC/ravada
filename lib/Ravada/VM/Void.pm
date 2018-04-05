@@ -270,7 +270,6 @@ sub is_alive($self) {
     return 0 if !$self->vm;
     return 1;
 }
-sub is_active { return 1 }
 
 #########################################################################3
 

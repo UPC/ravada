@@ -51,7 +51,6 @@ requires 'disconnect';
 requires 'import_domain';
 
 requires 'is_alive';
-requires 'is_active';
 ############################################################
 
 has 'host' => (
@@ -89,6 +88,8 @@ before 'list_domains' => \&_pre_list_domains;
 before 'create_volume' => \&_connect;
 
 around 'import_domain' => \&_around_import_domain;
+
+around 'ping' => \&_around_ping;
 
 #############################################################
 #
@@ -534,10 +535,7 @@ sub id {
     return $_[0]->_data('id');
 }
 
-sub _data {
-    my $self = shift;
-    my $field = shift or confess "Missing field name";
-    my $value = shift;
+sub _data($self, $field, $value=undef) {
     if (defined $value) {
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
@@ -718,6 +716,15 @@ sub ping($self, $option=undef) {
     return 1 if $p->ping($self->host);
 
     return 0;
+}
+
+sub _around_ping($orig, $self, $option=undef) {
+
+    my $ping = $self->$orig($option);
+    $self->_cached_active($ping);
+    $self->_cached_active_time(time);
+
+    return $ping;
 }
 
 =head2 is_active

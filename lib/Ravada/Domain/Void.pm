@@ -514,15 +514,13 @@ sub clean_swap_volumes {
     }
 }
 
-sub hybernate {
-    my $self = shift;
+sub hybernate($self, $user) {
     $self->_store(is_hibernated => 1);
     $self->_store(is_active => 0);
 }
 
-sub hibernate {
-    my $self= shift;
-    $self->hybernate( @_ );
+sub hibernate($self, $user) {
+    $self->hybernate( $user );
 }
 
 sub type { 'Void' }

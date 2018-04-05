@@ -899,14 +899,17 @@ sub _init_config {
 sub _init_config_vm {
 
     for my $vm ( @{$CONFIG->{vm}} ) {
-        warn "$vm not available in this system.\n".($ERROR_VM{$vm})
-            if !$VALID_VM{$vm} && $0 !~ /\.t$/;
+        die "$vm not available in this system.\n".($ERROR_VM{$vm})
+            if !exists $VALID_VM{$vm} || !$VALID_VM{$vm};
     }
 
     for my $vm ( keys %VALID_VM ) {
         delete $VALID_VM{$vm}
-            if !grep /^$vm$/,@{$CONFIG->{vm}};
+            if exists $VALID_VM{$vm}
+                && !grep /^$vm$/,@{$CONFIG->{vm}};
     }
+
+    lock_hash(%VALID_VM);
 
     @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
