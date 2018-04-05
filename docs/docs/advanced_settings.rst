@@ -59,8 +59,10 @@ First check the id field of the Virtual Manager in the table *vms*, then
 set a default *storage_pool* like this:
 
 ::
+
     $ mysql -u rvd_user -p ravada
     mysql> select * from vms;
     mysql> UPDATE vms set storage_pool='pool2' where id=*id*;
 
+Then restart rvd_back running *systemctl restart rvd_back*.
 
