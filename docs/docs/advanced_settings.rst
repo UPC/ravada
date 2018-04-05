@@ -48,3 +48,19 @@ You must enable the auto-start column at the frontend configuration file at
 Reboot the frontend and auto-start can be setted at the machine list
 page in admin.
 
+Choosing Storage Pool
+---------------------
+
+When creating virtual machines, Ravada chooses the storage pool with more free space
+available. If you want to force another, change the settings updating the table *vms*
+in the database like this.
+
+First check the id field of the Virtual Manager in the table *vms*, then
+set a default *storage_pool* like this:
+
+::
+    $ mysql -u rvd_user -p ravada
+    mysql> select * from vms;
+    mysql> UPDATE vms set storage_pool='pool2' where id=*id*;
+
+
