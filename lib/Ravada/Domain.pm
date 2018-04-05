@@ -2206,6 +2206,8 @@ Argument: Ravada::VM
 =cut
 
 sub rsync($self, $node=$self->_vm, $request=undef) {
+    confess "ERROR: don't sync to local node" if $node->is_local;
+
     $request->status("working") if $request;
     # TODO check if domain is running on remote , then return
     my $ssh = $node->_connect_ssh();
@@ -2239,6 +2241,7 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
     }
     if ($rsync->err) {
         $request->status("done",join(" ",@{$rsync->err}))   if $request;
+        die $rsync->err;
     }
     $node->refresh_storage_pools();
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
