@@ -68,6 +68,8 @@ our %VM_VALID = ( KVM => 1
     ,Void => 0
 );
 
+our $RVD_BACK;
+
 sub user_admin {
     return $USER_ADMIN;
 }
@@ -152,6 +154,7 @@ sub new_pool_name {
 
 sub rvd_back {
     my ($connector, $config) = @_;
+    return $RVD_BACK if defined $RVD_BACK && !defined $connector && !defined $config;
     init($connector,$config,0)    if $connector;
 
     my $rvd = Ravada->new(
@@ -164,6 +167,7 @@ sub rvd_back {
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
+    $RVD_BACK = $rvd;
     return $rvd;
 }
 
