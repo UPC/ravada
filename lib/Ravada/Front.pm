@@ -230,6 +230,24 @@ sub list_domains {
     return \@domains;
 }
 
+=head2 list_clones
+  Returns a list of the domains that are clones as a listref
+
+      my $clones = $rvd_front->list_clones();
+=cut
+
+sub list_clones {
+  my $self = shift;
+  my %args = @_;
+  
+  my $domains = list_domains();
+  my @clones;
+  for (@$domains ) {
+    if($_->{id_base}) { push @clones, ($_); }
+  }
+  return \@clones;
+}
+
 sub _remove_domain_db($self, $id) {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($id);

@@ -155,6 +155,32 @@ sub test_remove_clone {
     $usera->remove();
 }
 
+sub test_view_clones {
+    my $vm_name = shift;
+    my $user = create_user("oper_rm$$","bar");
+    ok(!$user->is_operator);
+    ok(!$user->is_admin);
+    my $usera = create_user("admin_rm$$","bar",'is admin');
+    ok($usera->is_operator);
+    ok($usera->is_admin);
+    
+    my $domain = create_domain($vm_name, $usera);
+    $domain->prepare_base($usera);
+    ok($domain->is_base) or return;
+    
+    my $clones;
+    eval{ $clones = rvd_front->list_clones() };
+    is(scalar @$clones,0) or return;
+    
+    my $clone = $domain->clone(user => $usera,name => new_domain_name());
+    eval{ $clones = rvd_front->list_clones() };
+    is(scalar @$clones, 1) or return;
+    
+    $clone->prepare_base($usera);
+    eval{ $clones = rvd_front->list_clones() };
+    is(scalar @$clones, 0) or return;
+}
+
 sub test_shutdown_clone {
     my $vm_name = shift;
 
@@ -592,5 +618,6 @@ test_prepare_base('Void');
 test_frontend('Void');
 test_create_domain('Void');
 test_create_domain2('Void');
+test_view_clones('Void');
 
 done_testing();
