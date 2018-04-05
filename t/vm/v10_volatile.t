@@ -96,6 +96,8 @@ sub test_volatile {
     my $clone3 = $vm->search_domain($name);
     is($clone3->is_volatile,1,"[$vm_name] Expecting is_volatile");
 
+    my @volumes = $clone->list_volumes();
+
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
@@ -112,6 +114,10 @@ sub test_volatile {
     ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed");
 
     $name = undef;
+
+        for my $file ( @volumes ) {
+            ok(! -e $file,"[$vm_name] Expecting volume $file removed");
+        }
     }
 
     # now a normal clone
@@ -162,6 +168,8 @@ sub test_volatile_auto_kvm {
     my $spice_password = $clone->spice_password();
     like($spice_password,qr(..+));
 
+    my @volumes = $clone->list_volumes();
+
     $clone->domain->destroy();
     $clone=undef;
 
@@ -186,6 +194,10 @@ sub test_volatile_auto_kvm {
 
     my $domains_f = rvd_front->list_domains();
     ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed");
+
+    for my $file ( @volumes ) {
+        ok(! -e $file,"[$vm_name] Expecting volume $file removed");
+    }
 
     my $clone2;
     eval {
