@@ -1,5 +1,5 @@
-Install Ravada
-==============
+Install Ravada on Fedora
+========================
 
 Requirements
 ------------

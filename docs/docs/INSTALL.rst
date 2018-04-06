@@ -7,7 +7,8 @@ Requirements
 OS
 --
 
-Ravada works in any Linux distribution but we only support the package for `Ubuntu <https://www.ubuntu.com/download/>`_ server.
+Ravada works in any Linux distribution but we only support the package for `Ubuntu <https://www.ubuntu.com/download/>`_ server
+and `RedHat Fedora <https://getfedora.org/es/>`_ server.
 
 Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
