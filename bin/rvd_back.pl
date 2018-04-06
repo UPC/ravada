@@ -13,6 +13,7 @@ use Ravada;
 use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
 
+
 my $help;
 
 my ($DEBUG, $ADD_USER );
@@ -27,6 +28,7 @@ my $NOFORK;
 my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
 my $START = 1;
+my $TEST_LDAP;
 
 my $URL_ISOS;
 
@@ -34,6 +36,7 @@ my $URL_ISOS;
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username]"
+        ." [--test-ldap] "
         ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
@@ -52,6 +55,7 @@ GetOptions (       help => \$help
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
              ,'config=s'=> \$FILE_CONFIG
+            ,'test-ldap'=> \$TEST_LDAP
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
         ,'make-admin=s' => \$MAKE_ADMIN_USER
@@ -242,6 +246,26 @@ sub set_url_isos {
     }
 }
 
+sub test_ldap {
+    my $rvd_back = Ravada->new(%CONFIG);
+    eval { Ravada::Auth::LDAP::_init_ldap_admin() };
+    die "No LDAP connection, error: $@\n" if $@;
+    print "Connection to LDAP ok\n";
+    print "login: ";
+    my $name=<STDIN>;
+    chomp $name;
+    print "password: ";
+    my $password = <STDIN>;
+    chomp $password;
+    my $ok= Ravada::Auth::login( $name, $password);
+    if ($ok) {
+        print "LOGIN OK\n";
+    } else {
+        print "LOGIN FAILED\n";
+    }
+    exit;
+}
+
 sub DESTROY {
     return if !$PID_LONGS;
     warn "Killing pid: $PID_LONGS";
@@ -261,6 +285,7 @@ import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
 make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
+test_ldap                           if $TEST_LDAP;
 
 if ($START) {
     die "Already started" if Proc::PID::File->running( name => 'rvd_back');
