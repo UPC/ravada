@@ -53,11 +53,11 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
     $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
     $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
- 
+
 Then install the ravada package, it will show some errors, it is ok, keep reading.
- 
+
 ::
- 
+
     $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.14_all.deb
     $ sudo dpkg -i ravada_0.2.14_all.deb
 
@@ -69,11 +69,22 @@ them running:
     $ sudo apt-get update
     $ sudo apt-get -f install
 
+Fedora
+------
+
+You can install ravada using the 'dnf' package manager by enabling the 'eclipseo/ravada' private repository.
+
+::
+
+    $ sudo dnf corp enable eclipseo/ravada
+    $ sudo dnf install ravada
+
+
 Mysql Database
 --------------
 
-MySQL server
-~~~~~~~~~~~~
+MySQL server (Ubuntu)
+~~~~~~~~~~~~~~~~~~~~~
 .. Warning::  MySql required minimum version 5.6
 
 It is required a MySQL server, it can be installed in another host or in
@@ -82,6 +93,22 @@ the same one as the ravada package.
 ::
 
     $ sudo apt-get install mysql-server
+
+MySQL server (Fedora)
+~~~~~~~~~~~~~~~~~~~~~
+It is required a MySQL server, in Fedora we use MariaDB server. It can be
+installed in another host or in the same as the ravada package.
+
+::
+
+    $ sudo dnf install mariadb mariadb-server
+
+And don't forget to enable and start the server process:
+
+::
+
+    $ sudo systemctl enable mariadb.service
+    $ sudo systemctl start mariadb.service
 
 MySQL database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -177,4 +204,3 @@ let us know if you need `assistance <http://ravada.upc.edu/#help>`__.
 
 There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
 admins may face.
-
