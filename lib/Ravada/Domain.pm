@@ -1339,6 +1339,7 @@ sub _remove_temporary_machine {
                 if $req;
 
         if ($self->is_removed) {
+            $self->remove_disks();
             $self->_after_remove_domain();
         } else {
             $self->remove($user);
