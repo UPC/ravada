@@ -1,5 +1,5 @@
-Install Ravada
-==============
+Install Ravada on Fedora
+========================
 
 Requirements
 ------------
@@ -7,10 +7,7 @@ Requirements
 OS
 --
 
-Ravada works in any Linux distribution but we only support the package for `Ubuntu <https://www.ubuntu.com/download/>`_ server
-and `RedHat Fedora <https://getfedora.org/es/>`_ server.
-
-Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
+Ravada works in any Linux distribution.
 
 Hardware
 --------
@@ -36,53 +33,31 @@ Install Ravada
 Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
 if you are only upgrading Ravada from a previous version already installed.
 
-Ubuntu
+Fedora
 ------
 
-We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__.
-
-*libmojolicious-plugin-renderfile-perl* package is available only in recent Ubuntus. Try  this first:
+You can install ravada using the 'dnf' package manager by enabling the 'eclipseo/ravada' private repository.
 
 ::
 
-    $ sudo apt-get install libmojolicious-plugin-renderfile-perl
-
-**Only if it fails** download our own package:
-
-::
-
-    $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-
-Then install the ravada package, it will show some errors, it is ok, keep reading.
-
-::
-
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.14_all.deb
-    $ sudo dpkg -i ravada_0.2.14_all.deb
-
-The last command will show a warning about missing dependencies. Install
-them running:
-
-::
-
-    $ sudo apt-get update
-    $ sudo apt-get -f install
-
-Mysql Database
---------------
+    $ sudo dnf corp enable eclipseo/ravada
+    $ sudo dnf install ravada
 
 MySQL server
 ~~~~~~~~~~~~
-.. Warning::  MySql required minimum version 5.6
-
-It is required a MySQL server, it can be installed in another host or in
-the same one as the ravada package.
+It is required a MySQL server, in Fedora we use MariaDB server. It can be
+installed in another host or in the same as the ravada package.
 
 ::
 
-    $ sudo apt-get install mysql-server
+    $ sudo dnf install mariadb mariadb-server
+
+And don't forget to enable and start the server process:
+
+::
+
+    $ sudo systemctl enable mariadb.service
+    $ sudo systemctl start mariadb.service
 
 MySQL database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
