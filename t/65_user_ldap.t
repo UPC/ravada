@@ -214,6 +214,8 @@ sub test_user_bind {
 
     ok($mcnulty,($@ or "ldap login failed ")) or return;
 
+    is($mcnulty->{_auth}, 'bind');
+
     unlink $file_config_bind;
 
     $ravada = Ravada->new(config => $file_config
@@ -231,6 +233,7 @@ sub _init_config {
             admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
             ,base => "dc=example,dc=com"
             ,admin_group => $ADMIN_GROUP
+            ,auth => 'match'
         }
     };
     delete $config->{ldap}->{admin_group}   if !$with_admin;
