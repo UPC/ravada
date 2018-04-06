@@ -9,7 +9,7 @@ Welcome to Ravada VDI documentation
 ===================================
 
 The chances are you're here because you've been searching for free Virtual Desktop Infraestructure (VDI) documentation.
-Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you 
+Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you
 do want to start your VDI project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
 
 `Ravada VDI`_ is an open-source project that allows users to connect to a virtual desktop. So it is a VDI broker.
@@ -56,6 +56,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
 
    docs/INSTALL
+   docs/INSTALL_Fedora
    docs/production
    docs/INSTALL_devel
    docs/Ubuntu_Installation
