@@ -114,8 +114,9 @@ sub test_volatile {
 
     $name = undef;
 
+        $vm->refresh_storage_pools();
         for my $file ( @volumes ) {
-            ok(! -e $file,"[$vm_name] Expecting volume $file removed");
+            ok(! -e $file,"[$vm_name] Expecting no volume $file removed") or BAIL_OUT();
         }
     }
 
@@ -158,7 +159,7 @@ sub test_volatile_auto_kvm {
           user => $user
         , name => $name
     );
-    is($clone->is_active,1,"[$vm_name] Expecting clone active");
+    is( $clone->is_active, 1,"[$vm_name] volatile domains should clone started" );
     $clone->start($user)                if !$clone->is_active;
 
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
