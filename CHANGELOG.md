@@ -10,3 +10,4 @@
 
 - Wrong rules in iptables [\#597]
 - Ubuntu 16.04 ISO fails to download [\#596]
+- Hardcoded footer in start.html.ep [\#630]
