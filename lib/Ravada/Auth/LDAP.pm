@@ -21,6 +21,9 @@ use Net::LDAP::Entry;
 use Net::LDAP::Util qw(escape_filter_value);
 use Net::Domain qw(hostdomain);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Ravada::Auth::SQL;
 
 with 'Ravada::Auth::User';
@@ -278,7 +281,37 @@ sub add_to_group {
 
 =cut
 
-sub login {
+sub login($self) {
+    my $user_ok;
+    $user_ok = $self->_login_bind()     unless $$CONFIG->{ldap}->{auth} eq 'match';
+    $user_ok = $self->_login_match()    if !$user_ok && $LDAP_ADMIN;
+
+    $self->_check_user_profile($self->name)   if $user_ok;
+    return $user_ok;
+}
+
+sub _login_bind {
+    my $self = shift;
+
+    my ($username, $password) = ($self->name , $self->password);
+    my $base = $$CONFIG->{ldap}->{base}
+        or confess "ERROR: Missing base in ldap entry in config file";
+
+    my $ldap = _init_ldap();
+
+    my $dn = "cn=$username,$base";
+    my $mesg = $ldap->bind($dn, password => $password);
+    if ( !$mesg->code() ) {
+        $self->{_auth} = 'bind';
+        return 1;
+    }
+    warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn"
+            if $mesg->code;
+
+    return 0;
+}
+
+sub _login_match {
     my $self = shift;
     my ($username, $password) = ($self->name , $self->password);
 
@@ -300,7 +333,9 @@ sub login {
         last if $user_ok;
     }
 
-    $self->_check_user_profile($username)   if $user_ok;
+    if ($user_ok) {
+        $self->{_auth} = 'match';
+    }
 
     return $user_ok;
 }
@@ -385,16 +420,16 @@ sub _init_ldap_admin {
     } else {
         confess "ERROR: Missing ldap section in config file ".Dumper($$CONFIG)."\n"
     }
-    confess "ERROR: Missing ldap -> admin_user -> dn "
-        if !$dn;
+    return if !$dn;
     $LDAP_ADMIN = _connect_ldap($dn, $pass) ;
     return $LDAP_ADMIN;
 }
 
 sub _init_ldap {
-    return if $LDAP;
+    return $LDAP if $LDAP;
 
     $LDAP = _connect_ldap();
+    return $LDAP;
 }
 
 =head2 is_admin
@@ -437,6 +472,8 @@ LDAP init, don't call, does nothing
 =cut
 
 sub init {
+    $LDAP = undef;
+    $LDAP_ADMIN = undef;
 }
 
 1;
