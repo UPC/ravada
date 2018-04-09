@@ -45,13 +45,19 @@ Now verify that the image format is QCOW2:
         refcount bits: 16
         corrupt: false
 
-2.  # virt-sparsify -v Win7-QCOW2.qcow2 Win7-QCOW2-sparsi.qcow2
+2.  The virt-sparsify command-line tool can be used to make a virtual machine disk (or any disk image) sparse. This is also known as thin-provisioning. Free disk space on the disk image is converted to free space on the host. 
+
+::
+
+    # virt-sparsify -v Win7-QCOW2.qcow2 Win7-QCOW2-sparsi.qcow2
 
 .. note :: 
         The virtual machine must be shutdown before using virt-sparsify.
         In a worst case scenario, virt-sparsify may require up to twice the virtual size of the source disk image. One for the temporary copy and one for the destination image.
         If you use the --in-place option, large amounts of temporary space are not needed.
-        
+
+Disk size now is 60G, below you can see that reduze image size in 30GB.
+
 ::
 
     # qemu-img info Win7-QCOW2-sparsi.qcow2
@@ -65,8 +71,6 @@ Now verify that the image format is QCOW2:
         lazy refcounts: false
         refcount bits: 16
         corrupt: false
-
-In this situation you can see that reduze size in 30GB.
 
 Now it would be advisable to let Windows do a CHKDSK, do not interrupt it.
 Finally, you need to install the `Spice guest-tools<https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_.
