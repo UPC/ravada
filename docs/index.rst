@@ -57,6 +57,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
 
    docs/INSTALL
    docs/INSTALL_Fedora
+   docs/INSTALL_Script
    docs/production
    docs/INSTALL_devel
    docs/Ubuntu_Installation
