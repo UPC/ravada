@@ -283,8 +283,11 @@ sub add_to_group {
 
 sub login($self) {
     my $user_ok;
-    $user_ok = $self->_login_bind()     unless $$CONFIG->{ldap}->{auth} eq 'match';
-    $user_ok = $self->_login_match()    if !$user_ok && $LDAP_ADMIN;
+    $user_ok = $self->_login_bind()
+        if !exists $$CONFIG->{ldap}->{auth}
+            || !$$CONFIG->{ldap}->{auth}
+            || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
+    $user_ok = $self->_login_match()    if !$user_ok;
 
     $self->_check_user_profile($self->name)   if $user_ok;
     return $user_ok;
