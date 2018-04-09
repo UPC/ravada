@@ -259,7 +259,7 @@ sub test_ldap {
     chomp $password;
     my $ok= Ravada::Auth::login( $name, $password);
     if ($ok) {
-        print "LOGIN OK\n";
+        print "LOGIN OK $ok->{_auth}\n";
     } else {
         print "LOGIN FAILED\n";
     }
