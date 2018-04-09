@@ -15,10 +15,10 @@ In the following case you can see that it's RAW format. Although the extension o
 ::
 
     # qemu-img info Win7.qcow2 
-    image: Win7.qcow2
-    file format: raw
-    virtual size: 90G (96636764160 bytes)
-    disk size: 90G
+    image: Win7.qcow2
+    file format: raw
+    virtual size: 90G (96636764160 bytes)
+    disk size: 90G
 
 STEPS TO FOLLOW
 ---------------
@@ -32,7 +32,7 @@ STEPS TO FOLLOW
 Now verify that the image format is QCOW2:
 
 ::
-cuenta
+
     # qemu-img info Win7-QCOW2.qcow2
     image: Win7-QCOW2.qcow2
     file format: qcow2
