@@ -736,6 +736,12 @@ sub can_change_settings($self, $id_domain=undef) {
     return 0;
 }
 
+sub grants($self) {
+    $self->_load_grants()   if !$self->{_grant};
+    return () if !$self->{_grant};
+    return %{$self->{_grant}};
+}
+
 sub AUTOLOAD($self) {
 
     my $name = $AUTOLOAD;
