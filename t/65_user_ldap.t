@@ -198,7 +198,6 @@ sub test_user_bind {
     my $file_config = shift;
 
     my $config = LoadFile($file_config);
-    delete $config->{ldap}->{admin_user};
     $config->{ldap}->{auth} = 'bind';
 
     my $file_config_bind = "/var/tmp/ravada_test_ldap_bind_$$.conf";
