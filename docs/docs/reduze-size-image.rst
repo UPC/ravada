@@ -32,7 +32,7 @@ STEPS TO FOLLOW
 Now verify that the image format is QCOW2:
 
 ::
-cuenta
+
     # qemu-img info Win7-QCOW2.qcow2
     image: Win7-QCOW2.qcow2
     file format: qcow2
