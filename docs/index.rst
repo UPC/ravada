@@ -65,6 +65,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/convert_from_virtualbox
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
+   docs/reduze-size-image
    docs/resize_hard_drive
    docs/resize_hard_drive_linux_machine
    docs/ldap_local
