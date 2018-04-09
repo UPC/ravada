@@ -29,7 +29,7 @@ STEPS TO FOLLOW
 
     # qemu-img convert -p -f raw Win7.qcow2 -O qcow2 Win7-QCOW2.qcow2
 
-Now verify that the image format is QCOW2:
+Now verify that the image format is QCOW2, and it's 26GB smaller.
 
 ::
 
