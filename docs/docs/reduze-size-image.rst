@@ -34,16 +34,16 @@ Now verify that the image format is QCOW2:
 ::
 cuenta
     # qemu-img info Win7-QCOW2.qcow2
-        image: Win7-QCOW2.qcow2
-        file format: qcow2
-        virtual size: 90G (96636764160 bytes)
-        disk size: 64G
-        cluster_size: 65536
-        Format specific information:
-            compat: 1.1
-            lazy refcounts: false
-            refcount bits: 16
-            corrupt: false
+    image: Win7-QCOW2.qcow2
+    file format: qcow2
+    virtual size: 90G (96636764160 bytes)
+    disk size: 64G
+    cluster_size: 65536
+    Format specific information:
+        compat: 1.1
+        lazy refcounts: false
+        refcount bits: 16
+        corrupt: false
 
 2.  # virt-sparsify -v Win7-QCOW2.qcow2 Win7-QCOW2-sparsi.qcow2
 
@@ -54,17 +54,17 @@ cuenta
         
 ::
 
-    # qemu-img info Win7-QCOW2-sparsi.qcow2 
-        image: Win7-QCOW2-sparsi.qcow2
-        file format: qcow2
-        virtual size: 90G (96636764160 bytes)
-        disk size: 60G
-        cluster_size: 65536
-        Format specific information:
-            compat: 1.1
-            lazy refcounts: false
-            refcount bits: 16
-            corrupt: false
+    # qemu-img info Win7-QCOW2-sparsi.qcow2
+    image: Win7-QCOW2-sparsi.qcow2
+    file format: qcow2
+    virtual size: 90G (96636764160 bytes)
+    disk size: 60G
+    cluster_size: 65536
+    Format specific information:
+        compat: 1.1
+        lazy refcounts: false
+        refcount bits: 16
+        corrupt: false
 
 In this situation you can see that reduze size in 30GB.
 
