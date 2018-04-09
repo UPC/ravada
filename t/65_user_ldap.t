@@ -194,6 +194,36 @@ sub test_manage_group {
 
 }
 
+sub test_user_bind {
+    my $file_config = shift;
+
+    my $config = LoadFile($file_config);
+    $config->{ldap}->{auth} = 'bind';
+
+    my $file_config_bind = "/var/tmp/ravada_test_ldap_bind_$$.conf";
+    DumpFile($file_config_bind, $config);
+    my $ravada = Ravada->new(config => $file_config_bind
+        , connector => $test->connector);
+
+    Ravada::Auth::LDAP::init();
+
+    my $mcnulty;
+    eval { $mcnulty = Ravada::Auth::LDAP->new(name => 'jimmy.mcnulty',password => 'jameson') };
+    is($@,'');
+
+    ok($mcnulty,($@ or "ldap login failed ")) or return;
+
+    is($mcnulty->{_auth}, 'bind');
+
+    unlink $file_config_bind;
+
+    $ravada = Ravada->new(config => $file_config
+        , connector => $test->connector);
+
+    Ravada::Auth::LDAP::_init_ldap_admin();
+
+}
+
 sub _init_config {
     my ($file_config, $with_admin) = @_;
     return if -e $file_config;
@@ -202,6 +232,7 @@ sub _init_config {
             admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
             ,base => "dc=example,dc=com"
             ,admin_group => $ADMIN_GROUP
+            ,auth => 'match'
         }
     };
     delete $config->{ldap}->{admin_group}   if !$with_admin;
@@ -234,6 +265,8 @@ SKIP: {
 
             test_add_group();
             test_manage_group($with_admin);
+
+            test_user_bind($file_config);
 
             remove_users();
         };
