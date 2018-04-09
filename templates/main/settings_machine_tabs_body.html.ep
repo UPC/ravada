@@ -10,7 +10,7 @@
   % }
 </div>
 
-% if ($USER->can_change_settings ) {
+% if ($USER->can_change_settings($domain->id) ) {
     <div class="tab-pane fade" id="options">
         %= include 'main/vm_options'
     </div>

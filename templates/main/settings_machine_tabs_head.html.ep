@@ -1,7 +1,7 @@
 <ul class="nav nav-tabs" id="myTab">
     <li class="nav active"><a href="#description" data-toggle="tab">Description</a></li>
     <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
-%   if ($USER->can_change_settings ) {
+%   if ($USER->can_change_settings($domain->id) ) {
         <li class="nav"><a href="#options" data-toggle="tab">Options</a></li>
 %   }
 %   if ($USER->can_change_settings && $domain->drivers) {
