@@ -10,6 +10,9 @@ use Test::SQL::Data;
 use lib 't/lib';
 use Test::Ravada;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
@@ -568,6 +571,46 @@ sub test_create_domain2 {
     $user->remove();
     $usera->remove();
 }
+
+sub test_change_settings($vm_name) {
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_cs$$","bar");
+    my $usera = create_user("admin_cs$$","bar",1);
+
+    # settings grant on fresh users ###########################################
+
+    is($user->can_change_settings(), 1);
+    is($usera->can_change_settings(), 1);
+
+    is($user->can_change_settings_all(), undef);
+    is($usera->can_change_settings_all(), 1);
+
+    is($user->can_change_settings_clones(), undef);
+    is($usera->can_change_settings_clones(), 1);
+
+    # settings grant on domain owned by admin ##################################
+
+    my $domain = create_domain($vm_name, $usera);
+
+    is($user->can_change_settings($domain->id), 0);
+    is($usera->can_change_settings($domain->id), 1);
+
+    # settings grant on clone owned by user ##################################
+
+    $domain->prepare_base($usera);
+    $domain->is_public(1);
+    my $clone = $domain->clone( name => new_domain_name, user => $user );
+
+    is($user->can_change_settings($clone->id), 1);
+    is($usera->can_change_settings($clone->id), 1);
+
+    $user->remove();
+    $usera->remove();
+
+}
+
 ##########################################################
 
 test_defaults();
@@ -575,6 +618,10 @@ test_admin();
 test_grant();
 
 test_operator();
+
+my $vm_name = 'Void';
+
+test_change_settings($vm_name);
 
 test_shutdown_clone('Void');
 test_shutdown_all('Void');
