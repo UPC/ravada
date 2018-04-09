@@ -73,5 +73,5 @@ Disk size now is 60G, below you can see that reduze image size in 30GB.
         corrupt: false
 
 Now it would be advisable to let Windows do a CHKDSK, do not interrupt it.
-Finally, you need to install the `Spice guest-tools<https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_.
+Finally, you need to install the `Spice guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_.
 This improves features of the VM, such as the screen settings, it adjusts automatically, etc.
