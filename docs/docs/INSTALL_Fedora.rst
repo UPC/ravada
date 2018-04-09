@@ -40,7 +40,7 @@ You can install ravada using the 'dnf' package manager by enabling the 'eclipseo
 
 ::
 
-    $ sudo dnf corp enable eclipseo/ravada
+    $ sudo dnf copr enable eclipseo/ravada
     $ sudo dnf install ravada
 
 MySQL server
@@ -56,7 +56,7 @@ And don't forget to enable and start the server process:
 
 ::
 
-    $ sudo systemctl enable mariadb.service
+    $ sudo systemctl enable --now mariadb.service
     $ sudo systemctl start mariadb.service
 
 MySQL database and user
@@ -90,7 +90,7 @@ example.
 
 ::
 
-    $ sudo vi /etc/ravada.conf
+    $ sudoedit /etc/ravada.conf
     db:
       user: rvd_user
       password: changeme
