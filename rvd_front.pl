@@ -339,7 +339,6 @@ get '/machine/info/(:id).(:type)' => sub {
 
 any '/machine/settings/(:id).(:type)' => sub {
    	 my $c = shift;
-	 return access_denied($c)     if !$USER->can_change_settings();
 	 return settings_machine($c);
 };
 
@@ -1423,12 +1422,7 @@ sub settings_machine {
     my ($domain) = _search_requested_machine($c);
 
     return access_denied($c)    if !$domain;
-
-    return access_denied($c)
-        unless $USER->is_admin
-        || $domain->id_owner == $USER->id;
-
-    return $c->render("Domain not found")   if !$domain;
+	return access_denied($c)    if !$USER->can_change_settings($domain->id);
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
