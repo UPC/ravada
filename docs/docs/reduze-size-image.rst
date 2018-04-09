@@ -45,7 +45,11 @@ Now verify that the image format is QCOW2:
         refcount bits: 16
         corrupt: false
 
-2.  # virt-sparsify -v Win7-QCOW2.qcow2 Win7-QCOW2-sparsi.qcow2
+2.  The virt-sparsify command-line tool can be used to make a virtual machine disk (or any disk image) sparse. This is also known as thin-provisioning. Free disk space on the disk image is converted to free space on the host. 
+
+::
+
+    # virt-sparsify -v Win7-QCOW2.qcow2 Win7-QCOW2-sparsi.qcow2
 
 .. note :: 
         The virtual machine must be shutdown before using virt-sparsify.
