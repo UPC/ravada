@@ -39,6 +39,8 @@ if you are only upgrading Ravada from a previous version already installed.
 Ubuntu
 ------
 
+.. note:: Ubuntu 16.04 (xenial) rename the VM doesn't work. This functionality is included in more updated libraries that it does not include this distro. For example 17.10 (artful) or laters. Remember that this month (April 2018) will be available the 18.04 LTS (bionic).
+
 We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
