@@ -35,6 +35,7 @@ sub init {
             Ravada::Auth::LDAP::init($config); 
             $LDAP = 1;
         };
+        warn $@ if $@;
     } else {
         $LDAP = 0;
     }
@@ -59,10 +60,6 @@ sub login {
         };
         warn $@ if $@ && $LDAP && !$quiet;
         return $login_ok if $login_ok;
-    }
-
-    if ($@ =~ /I can't connect/i) {
-        $LDAP = 0 if !defined $LDAP;
     }
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }

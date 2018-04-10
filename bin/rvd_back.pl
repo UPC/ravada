@@ -175,6 +175,8 @@ sub add_user {
 sub add_user_ldap {
     my $login = shift;
 
+    my $ravada = Ravada->new( %CONFIG);
+
     print "password : ";
     my $password = <STDIN>;
     chomp $password;
@@ -279,7 +281,7 @@ sub DESTROY {
 
 #################################################################
 add_user($ADD_USER)                 if $ADD_USER;
-add_user($ADD_USER_LDAP)            if $ADD_USER_LDAP;
+add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
 change_password()                   if $CHANGE_PASSWORD;
 import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
 make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;

@@ -310,14 +310,14 @@ sub _login_bind {
     my $self = shift;
 
     my ($username, $password) = ($self->name , $self->password);
-    my $base = $$CONFIG->{ldap}->{base}
-        or confess "ERROR: Missing base in ldap entry in config file";
 
     my $ldap = _init_ldap();
 
+    my $found = 0;
     for my $user (search_user( name => $self->name , field => 'uid' )
                 ,search_user( name => $self->name, field => 'cn')) {
         my $dn = $user->dn;
+        $found++;
         my $mesg = $ldap->bind($dn, password => $password);
         if ( !$mesg->code() ) {
             $self->{_auth} = 'bind';
@@ -326,6 +326,7 @@ sub _login_bind {
         warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn"
             if $Ravada::DEBUG && $mesg->code;
     }
+    warn "ERROR: No $username found in LDAP" if !$found;
     return 0;
 }
 
