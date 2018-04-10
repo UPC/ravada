@@ -247,7 +247,7 @@ sub _remove_old_disks_kvm {
         ." after refresh storage pool") or return;
     opendir my $ls,$dir_img or return;
     while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
+        next if $disk !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
 
         $disk = "$dir_img/$disk";
         next if ! -f $disk;
