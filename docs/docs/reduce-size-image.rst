@@ -56,7 +56,7 @@ Now verify that the image format is QCOW2, and it's 26GB smaller.
         In a worst case scenario, virt-sparsify may require up to twice the virtual size of the source disk image. One for the temporary copy and one for the destination image.
         If you use the --in-place option, large amounts of temporary space are not needed.
 
-Disk size now is 60G, below you can see that reduze image size in 30GB.
+Disk size now is 60G, below you can see that reduce image size in 30GB.
 
 ::
 
