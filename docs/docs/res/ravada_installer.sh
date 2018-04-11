@@ -35,7 +35,7 @@ if [[ $OS = *"Ubuntu"* && $VER > '16.04' ]]; then
   echo "Downloading..."
   sudo apt-get install libmojolicious-plugin-renderfile-perl -y &> /dev/null
 
-  wget http://infoteleco.upc.edu/img/debian/ravada_0.2.13_all.deb &> /dev/null
+  wget http://infoteleco.upc.edu/img/debian/ravada_latest.deb &> /dev/null
   sudo dpkg -i ravada_0.2.13_all.deb &> /dev/null
   echo "Installing Dependencies..."
   sudo apt-get update -y &> /dev/null
