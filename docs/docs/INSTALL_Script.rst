@@ -32,7 +32,7 @@ Install Ravada
 --------------
 
 Only use this script if you are going to install Ravada on a fresh OS.
-Download the script :download:`here <res/ravada_install.sh>`.
+Download the script :download:`here <res/ravada_install.sh>`_ .
 
 Instructions
 ------------
@@ -50,18 +50,18 @@ Instructions
 4 - The script will download and install ravada.
 
 5 - The script will start installing MySQL server, and will ask you for a password,
- it is higly recomended to NOT leave it blank!
+it is higly recomended to NOT leave it blank!
 
 6 - The script will create a MySQL user for ravada and will ask you for a password,
 don't leave it blanck!
 
-7 - The script will launch the ravada web user creator, and will ask you for the
- username, the password and if it is admin.
+7 - The script will launch the ravada web user creator, and will ask you for the username,
+the password and if it is admin.
 
 8 - That's it, you have installed ravada successfully.
 
 Issues
 ------
 
-If you experiment any unexpected behaviour, don't wait to report it to us `here <https://github.com/UPC/ravada/issues>`.
-Alternatively, you can `install it manually <http://ravada.readthedocs.io/en/latest/docs/INSTALL.html>`.
+If you experiment any unexpected behaviour, don't wait to report it to us `here <https://github.com/UPC/ravada/issues>`_ .
+Alternatively, you can `install it manually <http://ravada.readthedocs.io/en/latest/docs/INSTALL.html>`_ .
