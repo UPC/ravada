@@ -53,7 +53,7 @@
     };
 
     function swSupForm() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -63,8 +63,8 @@
 
 
     function addUserFormCrtl($scope, $http, request){
-               
-       
+
+
     };
 
     function swNewMach() {
@@ -101,7 +101,7 @@
                     $scope.host_restore = 0;
                     $http.get( '/machine/hybernate/'+machineId+'.json');
                     window.location.reload();
-                } 
+                }
 
             };
 
@@ -117,7 +117,7 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-            
+
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
@@ -169,7 +169,7 @@
                   $scope.fail_page_msg = true;
               }
           };
-          
+
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
@@ -223,9 +223,11 @@
             }
           };
           $scope.set_public = function(machineId, value) {
+            if (value) value=1;
+            else value=0;
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-          
+
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
@@ -319,13 +321,13 @@
 
 	$scope.add_user = function() {
             $http.get('/users/register')
-            
+
         };
 
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
-        $scope.stateChanged = function(id,userid) { 
+        $scope.stateChanged = function(id,userid) {
            if($scope.checkbox[id]) { //if it is checked
                 $http.get('/users/make_admin/' + userid + '.json')
                 location.reload();
@@ -339,7 +341,7 @@
     };
 
     function swListUsers() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
@@ -378,7 +380,7 @@
 
         //here you should access the backend, to check if username exists
         //and return a promise
-        //here we're using $q and $timeout to mimic a backend call 
+        //here we're using $q and $timeout to mimic a backend call
         //that will resolve after 1 sec
 
             var defer = $q.defer();

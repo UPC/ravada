@@ -106,10 +106,10 @@
                         class="fa fa-check" aria-hidden="true"></i>
                     </a>
                 </h2>
-%		}		     
+%		}
             </div>
         </div>
-            
+
 %=      include 'bootstrap/requests'
 
         <table class="table table-striped admin-cont-body" border="1">
@@ -177,9 +177,27 @@
                     </td>
                     <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
-                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="<%=l 'Make private'%>">
+                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="$('#modal_{{machine.id}}').modal({show:true})" title="<%=l 'Make private'%>">
 
-                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
+                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="$('#modal_{{machine.id}}').modal({show:true})" title="<%=l 'Make public' %>"></td>
+
+                         <div class="modal fade" tabindex="-1" role="dialog" id="modal_{{machine.id}}">
+                           <div class="modal-dialog" role="document">
+                             <div class="modal-content">
+                               <div class="modal-header">
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                 <h4 class="modal-title">Changing Public State</h4>
+                               </div>
+                               <div class="modal-body">
+                                 <p>Do you want to change the Public state of {{machine.name}} to {{!machine.is_public}}?</p>
+                               </div>
+                               <div class="modal-footer">
+                                 <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+                                 <button type="button" class="btn btn-primary" ng-click="set_public(machine.id,!machine.is_public)">Yes</button>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
 %                       if ($autostart) {
                             <td></td>
 %                       }
