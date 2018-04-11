@@ -370,7 +370,7 @@ get '/machine/view/(:id).(:type)' => sub {
 };
 
 get '/machine/clone/(:id).(:type)' => sub {
-    my $c = shift;      
+    my $c = shift;
     return access_denied($c)	     if !$USER->can_clone();
     return clone_machine($c);
 };
@@ -1347,7 +1347,8 @@ sub _search_requested_machine {
         if !$id;
 
     my $domain = $RAVADA->search_domain_by_id($id) or do {
-        $c->stash( error => "Unknown domain id=$id");
+        #$c->stash( error => "Unknown domain id=$id");
+        $c->stash( error => "This machine didn't exist. Probably it has been deleted recently.");
         return;
     };
 
@@ -1662,7 +1663,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    
+
 
     my $id_base= $c->param('id_base');
 
