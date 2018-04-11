@@ -156,12 +156,9 @@ sub search_user {
     );
 
     return if $mesg->code == 32;
-    if ( !$retry && (
-             $mesg->code == $STATUS_DISCONNECTED 
-             || $mesg->code == $STATUS_EOF
-            )
-     ) {
-         warn "LDAP disconnected Retrying ! [$retry]";# if $Ravada::DEBUG;
+    if ( $retry <= 1 && $mesg->code ) {
+         warn "LDAP error ".$mesg->code." ".$mesg->error."."
+            ."Retrying ! [$retry]";# if $Ravada::DEBUG;
          $LDAP_ADMIN = undef;
          sleep ($retry + 1);
          _init_ldap_admin();
@@ -311,7 +308,7 @@ sub _login_bind {
 
     my ($username, $password) = ($self->name , $self->password);
 
-    my $ldap = _init_ldap();
+    my $ldap = _init_ldap_admin();
 
     my $found = 0;
     for my $user (search_user( name => $self->name , field => 'uid' )
