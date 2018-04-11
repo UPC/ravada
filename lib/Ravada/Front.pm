@@ -59,6 +59,7 @@ sub BUILD {
     if ($self->connector) {
         $CONNECTOR = $self->connector;
     } else {
+        Ravada::_init_config($self->config()) if $self->config;
         $CONNECTOR = Ravada::_connect_dbh();
     }
     Ravada::_init_config($self->config()) if $self->config;
