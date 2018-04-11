@@ -1,11 +1,11 @@
-Reduze the image size after cloning phisical PC
-===============================================
+Reduce the image size after cloning a physical PC
+=================================================
 
 Things to keep in mind when we have a cloned image of Windows from a physical PC.
 
 
 .. note :: 
-    During these tasks, it is aware that it adversely affects the performance of the server. Avoid making them on a Ravada server in production.
+    During these tasks, be aware that it affects the performance of the server. Avoid making them on a Ravada server in production.
 
 Check the image format
 ----------------------
@@ -72,6 +72,6 @@ Disk size now is 60G, below you can see that reduze image size in 30GB.
         refcount bits: 16
         corrupt: false
 
-Now it would be advisable to let Windows do a CHKDSK, do not interrupt it.
+Now it is advisable to let Windows do a CHKDSK, do not interrupt it.
 Finally, you need to install the `Spice guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_.
 This improves features of the VM, such as the screen settings, it adjusts automatically, etc.
