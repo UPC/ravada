@@ -37,6 +37,15 @@ In ``/opt/netdata/etc/netdata/netdata.conf`` add:
     [web]
     default port = 19998
 
+In ``/etc/apache2/ports.conf`` add:
+
+::
+
+    <IfModule ssl_module>
+        Listen 443
+        Listen 19999
+    </IfModule>
+
 and adding a new virtualhost for port 19999 in ``/etc/apache2/sites-available/default-ssl.conf``
 
 ::
