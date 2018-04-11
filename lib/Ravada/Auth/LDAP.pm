@@ -156,7 +156,7 @@ sub search_user {
     );
 
     return if $mesg->code == 32;
-    if ( $retry <= 1 && $mesg->code ) {
+    if ( $retry <= 2 && $mesg->code ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]";# if $Ravada::DEBUG;
          $LDAP_ADMIN = undef;
@@ -166,7 +166,6 @@ sub search_user {
                 name => $username
               ,field => $field
               ,retry => ++$retry
-               ,ldap => $ldap
          );
     }
 
