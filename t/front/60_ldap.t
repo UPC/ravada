@@ -39,11 +39,13 @@ sub test_ldap {
     ok(!$login_ok,"Expecting no login with SQL");
 
     delete $Ravada::CONFIG->{ldap}->{auth};
+    $login_ok = undef;
     eval { $login_ok = Ravada::Auth::LDAP->new( %$USER_DATA ); };
     is($@, '');
     ok($login_ok,"Expecting login with $USER_DATA->{name}");
 
     $Ravada::CONFIG->{ldap}->{auth} = 'bind';
+    $login_ok = undef;
     eval { $login_ok = Ravada::Auth::LDAP->new( %$USER_DATA ); };
     is($@, '');
     ok($login_ok,"Expecting login with $USER_DATA->{name}");
@@ -51,6 +53,7 @@ sub test_ldap {
         if $login_ok;
 
     $Ravada::CONFIG->{ldap}->{auth} = 'match';
+    $login_ok = undef;
     eval { $login_ok = Ravada::Auth::LDAP->new( %$USER_DATA ); };
     is($@, '');
     ok($login_ok,"Expecting login with $USER_DATA->{name}");
