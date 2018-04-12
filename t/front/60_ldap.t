@@ -68,7 +68,7 @@ sub test_ldap {
 my $file_test_data= "t/etc/front_ldap_60.conf";
 SKIP: {
     my $ok = 1;
-    $USER_DATA = LoadFile($file_test_data);
+    $USER_DATA = LoadFile($file_test_data)  if -e $file_test_data;
     if (!-e $file_test_data || !$USER_DATA->{name} || !$USER_DATA->{password}) {
         my $config = {
             name => 'ldap.cn', password => '****'
