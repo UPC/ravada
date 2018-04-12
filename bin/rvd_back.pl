@@ -55,6 +55,7 @@ GetOptions (       help => \$help
                  ,debug => \$DEBUG
               ,'no-fork'=> \$NOFORK
              ,'config=s'=> \$FILE_CONFIG
+           ,'hibernated'=> \$HIBERNATED
             ,'test-ldap'=> \$TEST_LDAP
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
@@ -248,6 +249,235 @@ sub set_url_isos {
     }
 }
 
+sub list {
+    my $all = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        next if !$all && !$domain->is_active && !$domain->is_hibernated;
+        $found++;
+        print $domain->name."\t";
+        if ($domain->is_active) {
+            print "active";
+        } elsif ($domain->is_hibernated) {
+            print "hibernated";
+        } else {
+            print "down";
+        }
+        print "\n";
+    }
+    print "$found machines found.\n";
+}
+
+sub hibernate {
+    my $domain_name = shift;
+    my $all = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ( ($all && $domain->is_active)
+                || ($domain_name && $domain->name eq $domain_name)) {
+            $found++;
+            if (!$domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n";
+                next;
+            }
+            if ($domain->can_hibernate) {
+                $domain->hibernate();
+                $down++;
+            } else {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." can't hibernate because it is not supported in ".$domain->type
+                    ." domains."
+                    ."\n";
+            }
+        }
+    }
+    print "$down machines hibernated.\n";
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$all && !$found;
+}
+
+sub start_domain {
+    my $domain_name = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $up= 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ($domain->name eq $domain_name) {
+            $found++;
+            if ($domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already up.\n";
+                next;
+            }
+            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            if ($@) {
+                warn $@;
+                next;
+            }
+            print $domain->name." started.\n"
+                if $domain->is_active;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$found;
+}
+
+sub shutdown_domain {
+    my $domain_name = shift;
+    my ($all,$hibernated) = @_;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ((defined $domain_name && $domain->name eq $domain_name)
+            || ($hibernated && $domain->is_hibernated)
+            || $all ){
+            $found++;
+            if (!$domain->is_active && !$domain->is_hibernated) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n"
+                        if !$all;
+                next;
+            }
+            if ($domain->is_hibernated) {
+                $domain->start(user => $Ravada::USER_DAEMON);
+            }
+            $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 60);
+            print "Shutting down ".$domain->name.".\n";
+            $down++;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if $domain_name && !$found;
+    print "$down domains shut down.\n";
+}
+
+sub list {
+    my $all = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        next if !$all && !$domain->is_active && !$domain->is_hibernated;
+        $found++;
+        print $domain->name."\t";
+        if ($domain->is_active) {
+            print "active";
+        } elsif ($domain->is_hibernated) {
+            print "hibernated";
+        } else {
+            print "down";
+        }
+        print "\n";
+    }
+    print "$found machines found.\n";
+}
+
+sub hibernate {
+    my $domain_name = shift;
+    my $all = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ( ($all && $domain->is_active)
+                || ($domain_name && $domain->name eq $domain_name)) {
+            $found++;
+            if (!$domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n";
+                next;
+            }
+            if ($domain->can_hibernate) {
+                $domain->hibernate();
+                $down++;
+            } else {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." can't hibernate because it is not supported in ".$domain->type
+                    ." domains."
+                    ."\n";
+            }
+        }
+    }
+    print "$down machines hibernated.\n";
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$all && !$found;
+}
+
+sub start_domain {
+    my $domain_name = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $up= 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ($domain->name eq $domain_name) {
+            $found++;
+            if ($domain->is_active) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already up.\n";
+                next;
+            }
+            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            if ($@) {
+                warn $@;
+                next;
+            }
+            print $domain->name." started.\n"
+                if $domain->is_active;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if !$found;
+}
+
+sub shutdown_domain {
+    my $domain_name = shift;
+    my ($all,$hibernated) = @_;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+
+    my $down = 0;
+    my $found = 0;
+    for my $domain ($rvd_back->list_domains) {
+        if ((defined $domain_name && $domain->name eq $domain_name)
+            || ($hibernated && $domain->is_hibernated)
+            || $all ){
+            $found++;
+            if (!$domain->is_active && !$domain->is_hibernated) {
+                warn "WARNING: Virtual machine ".$domain->name
+                    ." is already down.\n"
+                        if !$all;
+                next;
+            }
+            if ($domain->is_hibernated) {
+                $domain->start(user => $Ravada::USER_DAEMON);
+            }
+            $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 60);
+            print "Shutting down ".$domain->name.".\n";
+            $down++;
+        }
+    }
+    warn "ERROR: Domain $domain_name not found.\n"
+        if $domain_name && !$found;
+    print "$down domains shut down.\n";
+}
+
+>>>>>>> 70c989fd... fixed wrong merge
 sub test_ldap {
     my $rvd_back = Ravada->new(%CONFIG);
     eval { Ravada::Auth::LDAP::_init_ldap_admin() };
