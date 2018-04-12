@@ -7,6 +7,7 @@ use locale ':not_characters';
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
+use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Time::Piece;
@@ -131,6 +132,7 @@ hook before_routes => sub {
             ,host => $host
             );
 
+  return handle_proxy($c)   if $url =~ m{^/netdata/};
   return access_denied($c)
     if $url =~ /(screenshot|\.json)/
     && !_logged_in($c);
@@ -149,6 +151,29 @@ hook before_routes => sub {
 
 };
 
+sub handle_proxy {
+    my $c = shift;
+    my $url = $c->req->url->to_abs->path;
+    my $host = $c->req->url->to_abs->host;
+
+    my ($ip,$path,$file, $extension)
+        = $url =~ m{^/netdata/};
+    #return access_denied($c)    if !$path || $path =~ m{\?};
+    #return access_denied($c)    if $path =~ m{\?};
+    #return access_denied($c)    if !$file || $file =~ m{\?};
+
+    my $ua = Mojo::UserAgent->new();
+    #my $url_req = "https://$host:19999/";
+    my $url_req = "https://$host:19999/";
+    my $tx = $ua->get($url_req);
+    if ( my $res = $tx->success) {
+#This is the final url /netdata/#menu_system_submenu_cpu;theme=slate
+        return $c->render(data => $tx->res->body);
+    } else {
+        warn $url_req." ".Dumper($tx->error);
+        return $c->render(data => "$url_req ".$tx->error);
+    }
+}
 
 ############################################################################3
 
