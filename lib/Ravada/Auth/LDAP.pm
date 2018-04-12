@@ -155,8 +155,9 @@ sub search_user {
     attrs  => ['*']
     );
 
-    return if $mesg->code == 32;
-    if ( $retry <= 2 && $mesg->code ) {
+    warn "LDAP rety ".$mesg->code." ".$mesg->error if $retry;
+
+    if ( $retry <= 3 && $mesg->code ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]";# if $Ravada::DEBUG;
          $LDAP_ADMIN = undef;
@@ -299,6 +300,7 @@ sub login($self) {
     $user_ok = $self->_login_match()    if !$user_ok;
 
     $self->_check_user_profile($self->name)   if $user_ok;
+    $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
     return $user_ok;
 }
 
@@ -307,14 +309,12 @@ sub _login_bind {
 
     my ($username, $password) = ($self->name , $self->password);
 
-    my $ldap = _init_ldap_admin();
-
     my $found = 0;
     for my $user (search_user( name => $self->name , field => 'uid' )
                 ,search_user( name => $self->name, field => 'cn')) {
         my $dn = $user->dn;
         $found++;
-        my $mesg = $ldap->bind($dn, password => $password);
+        my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
         if ( !$mesg->code() ) {
             $self->{_auth} = 'bind';
             return 1;
@@ -330,6 +330,7 @@ sub _login_match {
     my $self = shift;
     my ($username, $password) = ($self->name , $self->password);
 
+    $LDAP_ADMIN = undef;
     _init_ldap_admin();
     my $user_ok;
 
@@ -367,10 +368,11 @@ sub _match_password {
     my $self = shift;
     my $user = shift;
     my $password = shift or die "ERROR: Missing password for ".$user->get_value('cn'); # We won't allow empty passwords
+    confess "ERROR: Wrong entry ".$user->dump
+        if !scalar($user->attributes);
 
-    _init_ldap_admin();
-
-    die "No userPassword for ".$user->get_value('uid')
+    die "ERROR: No userPassword for ".$user->get_value('uid')
+            .Dumper($user)
         if !$user->get_value('userPassword');
     my $password_ldap = $user->get_value('userPassword');
 
