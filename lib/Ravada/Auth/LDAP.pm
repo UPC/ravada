@@ -155,11 +155,11 @@ sub search_user {
     attrs  => ['*']
     );
 
-    warn "LDAP rety ".$mesg->code." ".$mesg->error if $retry;
+    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
     if ( $retry <= 3 && $mesg->code ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
-            ."Retrying ! [$retry]";# if $Ravada::DEBUG;
+            ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
          sleep ($retry + 1);
          _init_ldap_admin();
@@ -241,18 +241,34 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
-    my $name = $args{name} or confess "Missing group name";
-    my $base = ( $args{base} or "ou=groups,"._dc_base() );
-    my $ldap = ( $args{ldap} or $LDAP or $LDAP_ADMIN );
+    my $name = delete $args{name} or confess "Missing group name";
+    my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
+    my $ldap = ( delete $args{ldap} or _init_ldap_admin());
+    my $retry =( delete $args{retry} or 0);
+
+    confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
+    confess "ERROR: I can't connect to LDAP " if!$ldap;
 
     $name = escape_filter_value($name);
+
 
     my $mesg = $ldap ->search (
         filter => "cn=$name"
          ,base => $base
     );
-    if ($mesg->code){
-        die "ERROR searching for group $name at $base :".$mesg->code." ".$mesg->error;
+    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
+
+    if ( $retry <= 3 && $mesg->code){
+        warn "LDAP error ".$mesg->code." ".$mesg->error."."
+            ."Retrying ! [$retry]"  if $retry;
+         $LDAP_ADMIN = undef;
+         sleep ($retry + 1);
+         _init_ldap_admin();
+         return search_group (
+                name => $name
+               ,base => $base
+              ,retry => ++$retry
+         );
     }
     my @entries = $mesg->entries;
 
@@ -322,7 +338,6 @@ sub _login_bind {
         warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn"
             if $Ravada::DEBUG && $mesg->code;
     }
-    warn "ERROR: No $username found in LDAP" if !$found;
     return 0;
 }
 
