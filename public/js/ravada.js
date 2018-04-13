@@ -321,7 +321,7 @@
 
 	$scope.add_user = function() {
             $http.get('/users/register')
-
+            
         };
 
         $scope.checkbox = [];
@@ -380,7 +380,7 @@
 
         //here you should access the backend, to check if username exists
         //and return a promise
-        //here we're using $q and $timeout to mimic a backend call
+        //here we're using $q and $timeout to mimic a backend call 
         //that will resolve after 1 sec
 
             var defer = $q.defer();
