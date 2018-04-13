@@ -1920,4 +1920,8 @@ sub internal_id {
     return $self->id;
 }
 
+sub volatile_clones($self, $value=undef) {
+    return $self->_data('volatile_clones', $value);
+}
+
 1;
