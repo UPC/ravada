@@ -327,7 +327,7 @@
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
-        $scope.stateChanged = function(id,userid) {
+        $scope.stateChanged = function(id,userid) { 
            if($scope.checkbox[id]) { //if it is checked
                 $http.get('/users/make_admin/' + userid + '.json')
                 location.reload();
@@ -341,7 +341,7 @@
     };
 
     function swListUsers() {
-
+	
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
