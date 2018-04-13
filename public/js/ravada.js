@@ -101,7 +101,7 @@
                     $scope.host_restore = 0;
                     $http.get( '/machine/hybernate/'+machineId+'.json');
                     window.location.reload();
-                }
+                } 
 
             };
 
@@ -341,7 +341,7 @@
     };
 
     function swListUsers() {
-
+       
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
