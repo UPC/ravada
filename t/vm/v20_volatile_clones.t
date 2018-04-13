@@ -40,6 +40,10 @@ sub test_volatile_clone {
 
     is($clone->is_active, 1) && do {
 
+        my $clonef = Ravada::Front::Domain->open($clone->id);
+        ok($clonef);
+        is($clonef->is_active, 1);
+
         $clone->shutdown_now(user_admin);
 
         my $clone2 = $vm->search_domain($clone->name);
@@ -47,7 +51,7 @@ sub test_volatile_clone {
 
     };
 
-    $clone->remove(user_admin);
+    $clone->remove(user_admin)  if !$clone->is_removed;
     $domain->remove(user_admin);
 }
 
