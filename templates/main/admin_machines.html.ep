@@ -167,21 +167,43 @@
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked
                                ng-show="can_remove_base(machine)"
-                            ng-click="action('machine','remove_base',machine.id)"
+                            ng-click="$('#mb_{{machine.id}}').model({show:true})"
                             title ="<%=l 'Remove base' %>" ng-cloak>
                         <input type="checkbox"
                                ng-show="can_prepare_base(machine)"
-                            ng-click="action('machine','prepare',machine.id)"
+                            ng-click="$('#mb_{{machine.id}}').model({show:true})"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
+                        
+                        <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
+                           <div class="modal-dialog" role="document">
+                             <div class="modal-content">
+                               <div class="modal-header">
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                 <h4 class="modal-title">Changing Base State</h4>
+                               </div>
+                               <div class="modal-body" ng-show="can_remove_base(machine)">
+                                 <p>Do you want to remove the Base of {{machine.name}}?</p>
+                               </div>
+                               <div class="modal-body" ng-show="can_prepare_base(machine)">
+                                 <p>Do you want to prepare the Base of {{machine.name}}?</p>
+                               </div>
+                               <div class="modal-footer">
+                                 <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+                                 <button type="button" class="btn btn-primary" ng-click="action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)">Yes</button>
+                                 <button type="button" class="btn btn-primary" ng-click="action('machine','prepare',machine.id)" ng-show="can_prepare_base(machine)">Yes</button>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
 %                       }
                     </td>
                     <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
-                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="$('#modal_{{machine.id}}').modal({show:true})" title="<%=l 'Make private'%>">
+                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="$('#mp_{{machine.id}}').modal({show:true})" title="<%=l 'Make private'%>">
 
-                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="$('#modal_{{machine.id}}').modal({show:true})" title="<%=l 'Make public' %>"></td>
+                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="$('#mp_{{machine.id}}').modal({show:true})" title="<%=l 'Make public' %>"></td>
 
-                         <div class="modal fade" tabindex="-1" role="dialog" id="modal_{{machine.id}}">
+                         <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{machine.id}}">
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
                                <div class="modal-header">
