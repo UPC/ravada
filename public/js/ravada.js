@@ -53,7 +53,7 @@
     };
 
     function swSupForm() {
-
+  
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -63,8 +63,8 @@
 
 
     function addUserFormCrtl($scope, $http, request){
-
-
+               
+       
     };
 
     function swNewMach() {
@@ -117,7 +117,7 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-
+            
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
@@ -169,7 +169,7 @@
                   $scope.fail_page_msg = true;
               }
           };
-
+          
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
@@ -227,7 +227,7 @@
             else value=0;
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-
+          
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
@@ -341,7 +341,7 @@
     };
 
     function swListUsers() {
-       
+  
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
