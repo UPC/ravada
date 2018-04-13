@@ -53,7 +53,7 @@
     };
 
     function swSupForm() {
-  
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -341,7 +341,7 @@
     };
 
     function swListUsers() {
-  
+      
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
