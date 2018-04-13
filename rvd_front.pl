@@ -370,7 +370,7 @@ get '/machine/view/(:id).(:type)' => sub {
 };
 
 get '/machine/clone/(:id).(:type)' => sub {
-    my $c = shift;
+    my $c = shift;    
     return access_denied($c)	     if !$USER->can_clone();
     return clone_machine($c);
 };
