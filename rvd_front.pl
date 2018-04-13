@@ -1663,7 +1663,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-
+    
 
     my $id_base= $c->param('id_base');
 
