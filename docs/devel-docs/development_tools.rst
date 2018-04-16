@@ -12,7 +12,7 @@ We use `Transifex`_ to provide a cleaner and easy to use interface for translato
 Then we build documentation and host it in `Read the Docs`_ for you.
 
 .. _Perl: https://www.perl.org/
-.. _TDD: http://showmetheco.de/articles/2011/11/tdd-best-practices-in-perl.html
+.. _TDD: https://web.archive.org/web/20150919154234/http://showmetheco.de/articles/2011/11/tdd-best-practices-in-perl.html
 .. _More about why we love Perl...: https://www.perl.org/about.html
 .. _Mojolicious: http://www.mojolicious.org/
 .. _Mysql: https://www.mysql.com/
