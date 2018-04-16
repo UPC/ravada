@@ -327,7 +327,7 @@ sub _update_isos {
             ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
-            ,xml => 'jessie-amd64.xml'
+            ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
