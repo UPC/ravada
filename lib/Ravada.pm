@@ -889,8 +889,11 @@ sub _init_config {
 
     die "ERROR: Format error in config file $file\n$@"  if $@;
 
-    $CONFIG->{vm} = [] if !$CONFIG->{vm};
-
+    if ( !$CONFIG->{vm} ) {
+        my %default_vms = %VALID_VM;
+        delete $default_vms{Void};
+        $CONFIG->{vm} = [keys %default_vms];
+    }
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
@@ -906,6 +909,8 @@ sub _init_config_vm {
     for my $vm ( keys %VALID_VM ) {
         delete $VALID_VM{$vm}
             if exists $VALID_VM{$vm}
+                && exists $CONFIG->{vm}
+                && scalar @{$CONFIG->{vm}}
                 && !grep /^$vm$/,@{$CONFIG->{vm}};
     }
 
@@ -1320,7 +1325,7 @@ sub list_domains_data($self, %args ) {
         push @values,( $args{$field});
     }
     $where = " WHERE $where " if $where;
-    my $query = "SELECT * FROM DOMAINS $where ORDER BY name";
+    my $query = "SELECT * FROM domains $where ORDER BY name";
     my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
