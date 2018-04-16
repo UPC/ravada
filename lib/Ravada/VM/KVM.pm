@@ -631,6 +631,7 @@ sub _domain_create_common {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $is_volatile = delete $args{is_volatile};
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "ERROR: User id $id_owner doesn't exist";
 
@@ -645,7 +646,7 @@ sub _domain_create_common {
     my $dom;
 
     eval {
-        if ($user->is_temporary) {
+        if ($user->is_temporary || $is_volatile ) {
             $dom = $self->vm->create_domain($xml->toString());
         } else {
             $dom = $self->vm->define_domain($xml->toString());
@@ -794,7 +795,7 @@ sub _domain_create_from_base {
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args);
+        = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password);
     return $domain;

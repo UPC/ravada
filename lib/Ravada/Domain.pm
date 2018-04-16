@@ -176,7 +176,10 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
 
+around 'is_active' => \&_around_is_active;
+
 around 'autostart' => \&_around_autostart;
+
 ##################################################
 #
 
@@ -1222,6 +1225,22 @@ sub _post_shutdown {
     }
 }
 
+sub _around_is_active($orig, $self) {
+    my $is_active = $self->$orig();
+    return $is_active if $self->readonly
+        || !$self->is_known
+        || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
+
+    #TODO check hibernated machines status
+    my $status = 'shutdown';
+    $status = 'active'  if $is_active;
+    $self->_data(status => $status);
+
+    $self->display(Ravada::Utils::user_daemon())    if $is_active;
+
+    return $is_active;
+}
+
 sub _around_shutdown_now {
     my $orig = shift;
     my $self = shift;
@@ -1920,4 +1939,11 @@ sub internal_id {
     return $self->id;
 }
 
+sub volatile_clones($self, $value=undef) {
+    return $self->_data('volatile_clones', $value);
+}
+
+sub status($self, $value=undef) {
+    return $self->_data('status', $value);
+}
 1;

@@ -34,8 +34,12 @@ sub BUILD($self, $arg) {
     my $id = $arg->{id} or confess "ERROR: id required";
     my $ret = $self->_select_domain_db( id => $id);
 
-    die "ERROR: Domain '".$self->name." not found "
-        if $self->is_volatile && ! $self->is_active;
+#    confess "ERROR: Domain '".$self->name." not found "
+#        if $self->is_volatile && ! $self->is_active;
+}
+
+sub open($self, $id) {
+    return Ravada::Front::Domain->new( id => $id );
 }
 
 sub autostart($self )    { return $self->_data('autostart') }
@@ -89,14 +93,6 @@ sub remove              { confess "TODO" }
 sub rename              { confess "TODO" }
 sub resume              { confess "TODO" }
 sub screenshot          { confess "TODO" }
-
-sub search_domain($self,$name) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
-    $sth->execute($name);
-    my ($id) = $sth->fetchrow;
-    $sth->finish;
-    return Ravada::Front::Domain->new(id => $id);
-}
 
 sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }
