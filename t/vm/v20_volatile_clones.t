@@ -41,13 +41,18 @@ sub test_volatile_clone {
 
     is($clone->is_active, 1) && do {
 
+#        like($clone->display(user_admin),qr'\w+://');
+
         my $clonef = Ravada::Front::Domain->open($clone->id);
         ok($clonef);
+        isa_ok($clonef, 'Ravada::Front::Domain');
         is($clonef->is_active, 1);
 
-        $clonef = rvd_front->search_domain($clone->name);
+        $clonef = rvd_front->search_domain($clone_name);
         ok($clonef);
-        is($clonef->is_active, 1);
+        isa_ok($clonef, 'Ravada::Front::Domain');
+        is($clonef->is_active, 1,"[".$vm->type."] expecting active $clone_name") or exit;
+        like($clonef->display(user_admin),qr'\w+://');
 
         $clone->shutdown_now(user_admin);
 
