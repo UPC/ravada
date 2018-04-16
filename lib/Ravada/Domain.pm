@@ -1939,9 +1939,24 @@ sub internal_id {
     return $self->id;
 }
 
+=head2 volatile_clones
+
+Allows or disables the volatile clones option. If enabled, clones from this
+virtual machine will be removed on shutdown
+
+=cut
+
 sub volatile_clones($self, $value=undef) {
     return $self->_data('volatile_clones', $value);
 }
+
+
+=head2 status
+
+Returns the status of the virtual machine as a string.
+Allowed values are: active, down, hibernated and paused
+
+=cut
 
 sub status($self, $value=undef) {
     return $self->_data('status', $value);
