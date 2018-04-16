@@ -44,6 +44,11 @@ sub test_volatile_clone {
         ok($clonef);
         is($clonef->is_active, 1);
 
+        $clonef = rvd_front->search_domain($clone->name);
+        ok($clonef);
+        is($clonef->is_active, 1);
+
+
         $clone->shutdown_now(user_admin);
 
         my $clone2 = $vm->search_domain($clone->name);

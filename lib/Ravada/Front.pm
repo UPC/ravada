@@ -597,7 +597,11 @@ sub search_domain {
 
     my $name = shift;
 
-    return Ravada::Front::Domain->search_domain($name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
+
+    return Ravada::Front::Domain->open($id);
 
 }
 
