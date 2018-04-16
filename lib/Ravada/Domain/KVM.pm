@@ -492,6 +492,7 @@ Returns whether the domain is running or not
 
 sub is_active {
     my $self = shift;
+    return 0 if $self->is_removed;
     return ( $self->domain->is_active or 0);
 }
 
