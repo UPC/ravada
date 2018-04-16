@@ -2111,6 +2111,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_down_domains($active_domain, $active_vm);
 
     $self->_clean_requests('refresh_vms', $request);
+    $self->_refresh_volatile_domains();
 }
 
 sub _clean_requests($self, $command, $request=undef) {
@@ -2186,6 +2187,22 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
             $domain->_set_data(status => $status);
+        }
+    }
+}
+
+sub _refresh_volatile_domains($self) {
+   my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, id_vm FROM domains WHERE is_volatile=1"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        if ( !$domain || $domain->status eq 'down') {
+            $domain->remove($USER_DAEMON)   if $domain;
+            my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+            $sth_del->execute($id_domain);
+            $sth_del->finish;
         }
     }
 }
