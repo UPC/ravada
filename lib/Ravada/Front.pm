@@ -601,7 +601,7 @@ sub search_domain {
     $sth->execute($name);
     my ($id) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
 
-    return Ravada::Front::Domain->open($id);
+    return Ravada::Front::Domain->new(id => $id);
 
 }
 
