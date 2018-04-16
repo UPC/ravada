@@ -250,20 +250,13 @@ sub _remove_old_disks_kvm {
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
-    my $dir_img;
-    eval { $dir_img = $vm->dir_img() };
-    return if !$dir_img;
-
     $vm->_refresh_storage_pools();
 
-    opendir my $ls,$dir_img or return;
-    while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
-
-        $disk = "$dir_img/$disk";
-        next if ! -f $disk;
-
-        unlink $disk or next;#warn "I can't remove $disk";
+    for my $pool( $vm->vm->list_all_storage_pools ) {
+        for my $volume  ( $pool->list_volumes ) {
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
+            $volume->delete();
+        }
     }
     $vm->storage_pool->refresh();
 }
