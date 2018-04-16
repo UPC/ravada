@@ -2332,7 +2332,8 @@ sub _enforce_limits_active {
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
 
-        my @domains_user = sort { $a->start_time <=> $b->start_time }
+        my @domains_user = sort { $a->start_time <=> $b->start_time
+                                    || $a->id <=> $b->id }
                         @{$domains{$id_user}};
 
 #        my @list = map { $_->name => $_->start_time } @domains_user;
@@ -2342,7 +2343,7 @@ sub _enforce_limits_active {
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
             }
-            if ($domain->can_hybernate) {
+            if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);
             } else {
                 $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
