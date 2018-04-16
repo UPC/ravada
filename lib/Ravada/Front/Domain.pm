@@ -34,8 +34,12 @@ sub BUILD($self, $arg) {
     my $id = $arg->{id} or confess "ERROR: id required";
     my $ret = $self->_select_domain_db( id => $id);
 
-    confess "ERROR: Domain '".$self->name." not found "
-        if $self->is_volatile && ! $self->is_active;
+#    confess "ERROR: Domain '".$self->name." not found "
+#        if $self->is_volatile && ! $self->is_active;
+}
+
+sub open($self, $id) {
+    return Ravada::Front::Domain->new( id => $id );
 }
 
 sub autostart($self )    { return $self->_data('autostart') }
