@@ -82,8 +82,12 @@ GetOptions (       help => \$help
               ,'no-fork'=> \$NOFORK
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
+<<<<<<< HEAD
            ,'hibernated'=> \$HIBERNATED
+||||||| parent of 888856ec... [#649] test LDAP from CLI
+=======
             ,'test-ldap'=> \$TEST_LDAP
+>>>>>>> 888856ec... [#649] test LDAP from CLI
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
            ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
@@ -337,6 +341,7 @@ sub set_url_isos {
     }
 }
 
+<<<<<<< HEAD
 sub list {
     my $all = shift;
     my $rvd_back = Ravada->new(%CONFIG);
@@ -451,6 +456,8 @@ sub shutdown_domain {
     print "$down domains shut down.\n";
 }
 
+||||||| parent of 888856ec... [#649] test LDAP from CLI
+=======
 sub test_ldap {
     my $rvd_back = Ravada->new(%CONFIG);
     eval { Ravada::Auth::LDAP::_init_ldap_admin() };
@@ -471,6 +478,7 @@ sub test_ldap {
     exit;
 }
 
+>>>>>>> 888856ec... [#649] test LDAP from CLI
 sub DESTROY {
     return if !$PID_LONGS;
     warn "Killing pid: $PID_LONGS";
