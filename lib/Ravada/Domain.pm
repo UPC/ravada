@@ -520,6 +520,7 @@ sub _data($self, $field, $value=undef) {
 
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
+
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains set $field=? WHERE id=?"
         );
@@ -1959,6 +1960,8 @@ Allowed values are: active, down, hibernated and paused
 =cut
 
 sub status($self, $value=undef) {
+    confess "ERROR: the status can't be updated on read only mode."
+        if $self->readonly;
     return $self->_data('status', $value);
 }
 1;
