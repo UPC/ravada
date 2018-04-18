@@ -116,7 +116,7 @@ sub test_volatile {
 
         $vm->refresh_storage_pools();
         for my $file ( @volumes ) {
-            ok(! -e $file,"[$vm_name] Expecting no volume $file removed") or BAIL_OUT();
+            ok(! -e $file,"[$vm_name] Expecting volume $file removed") or BAIL_OUT();
         }
     }
 
@@ -159,6 +159,9 @@ sub test_volatile_auto_kvm {
           user => $user
         , name => $name
     );
+    my $clone_extra = Ravada::Domain->open($clone->id);
+    ok($clone_extra->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
+
     is( $clone->is_active, 1,"[$vm_name] volatile domains should clone started" );
     $clone->start($user)                if !$clone->is_active;
 
