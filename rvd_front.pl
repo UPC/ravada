@@ -291,12 +291,12 @@ get '/list_machines.json' => sub {
 
     my @args;
     if ( !$USER->can_list_machines ) {
-        my $domains = $RAVADA->list_domains( id_owner => $USER->id );
-        for my $domain ( @$domains ) {
-            next if !$domain->{id_base};
-            my $base = $RAVADA->list_domains( id => $domain->{id_base} );
-            push @$domains, (@$base);
-        }
+      my $domains = $RAVADA->list_domains( id_owner => $USER->id );
+            for my $domain ( @$domains ) {
+                next if !$domain->{id_base};
+                my $base = $RAVADA->list_domains( id => $domain->{id_base} );
+                push @$domains, (@$base);
+            } 
         return $c->render( json => $domains );
     }
 
@@ -339,7 +339,9 @@ get '/machine/info/(:id).(:type)' => sub {
 
 any '/machine/settings/(:id).(:type)' => sub {
    	 my $c = shift;
-	 return access_denied($c)     if !$USER->can_change_settings();
+	 return access_denied($c)  unless ( $USER->can_change_settings() || 
+                                      $USER->can_remove_clone_all
+                                    );
 	 return settings_machine($c);
 };
 
@@ -1421,12 +1423,11 @@ sub manage_machine {
 sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
-
     return access_denied($c)    if !$domain;
-
     return access_denied($c)
-        unless $USER->is_admin
-        || $domain->id_owner == $USER->id;
+        unless ($USER->is_admin
+        || $domain->id_owner == $USER->id
+        || ($USER->can_remove_clone_all && $domain->is_base == '0'));
 
     return $c->render("Domain not found")   if !$domain;
 

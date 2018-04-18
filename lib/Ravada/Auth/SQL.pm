@@ -392,7 +392,7 @@ Returns true if the user can list all the virtual machines at the web frontend
 
 sub can_list_machines {
     my $self = shift;
-    return 1 if $self->is_admin();
+    return 1 if $self->is_admin() || $self->can_remove_clone_all;
     return 0;
 }
 
