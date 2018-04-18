@@ -40,9 +40,9 @@ Example:
 
 ::
 
-    fix: active virtual machines can''t be started
+    fix: active virtual machines can not be started
 
-    When a virtual machine is already active, don't try to start it and return
+    When a virtual machine is already active, do not try to start it and return
 
     #77
 
