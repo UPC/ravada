@@ -21,16 +21,32 @@ to call the branch with the number of the issue and a short text, ie:
 Commit Message
 --------------
 
-All the commits come from an issue, so add it at the very beggining of
-the message with brackets , a dash, and the number of the issue.
+We use conventional commits guideline as specified in https://conventionalcommits.org/
+Each commit must be for a reason, and we should have an issue for that, so we decided
+to add the issue number in the footer.
+
+Definition:
+
+::
+
+    <type>[optional scope]: <description>
+    
+    [optional body]
+    
+    footer #issue
+
+
 Example:
 
 ::
 
-    [#44] Fixed flux capacitor leak
+    fix: active virtual machines can't be started
 
-More guidelines for commit messages here:
-http://chris.beams.io/posts/git-commit/
+    When a virtual machine is already active, don't try to start it and return
+
+    #77
+
+
 
 Show the branch in the message
 ------------------------------
