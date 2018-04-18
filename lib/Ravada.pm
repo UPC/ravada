@@ -2514,8 +2514,13 @@ sub _clean_volatile_machines($self, %args) {
 
     my $sth_remove = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
     for my $domain ( $self->list_domains_data( is_volatile => 1 )) {
-        my $domain_real = Ravada::Domain->open( $domain->{id});
-        next if $domain_real && $domain_real->is_active;
+        my $domain_real = Ravada::Domain->open(
+            id => $domain->{id}
+            ,_force => 1
+        );
+        next if $domain_real->domain && $domain_real->is_active;
+        $domain_real->_post_shutdown();
+        $domain_real->remove($USER_DAEMON);
 
         $sth_remove->execute($domain->{id});
     }
