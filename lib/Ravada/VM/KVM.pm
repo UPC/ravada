@@ -427,23 +427,25 @@ Returns true or false if domain exists.
 
 =cut
 
-sub search_domain {
-    my $self = shift;
-    my $name = shift or confess "Missing name";
+sub search_domain($self, $name, $force=undef) {
 
     $self->connect();
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
     confess $@ if $@;
 
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
+    my $dom;
+    eval { $dom = $self->vm->get_domain_by_name($name); };
+    return if !$dom && !$force;
 
         my $domain;
 
+        my @domain = ( );
+        @domain = ( domain => $dom ) if $dom;
         eval {
             $domain = Ravada::Domain::KVM->new(
-                domain => $dom
+                @domain
+                ,name => $name
                 ,readonly => $self->readonly
                 ,_vm => $self
             );
@@ -652,6 +654,7 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password)
         if $spice_password;
+    $domain->xml_description();
 
     return $domain;
 }
@@ -829,6 +832,7 @@ sub _domain_create_from_base {
         = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password);
+    $domain->xml_description();
     return $domain;
 }
 
