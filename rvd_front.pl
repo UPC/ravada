@@ -1458,7 +1458,7 @@ sub settings_machine {
         }
     }
 
-    for my $option (qw(description run_timeout)) {
+    for my $option (qw(description run_timeout volatile_clones)) {
         if ( defined $c->param($option) ) {
             my $value = $c->param($option);
             $value *= 60 if $option eq 'run_timeout';
