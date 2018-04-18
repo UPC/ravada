@@ -1347,7 +1347,8 @@ sub _search_requested_machine {
         if !$id;
 
     my $domain = $RAVADA->search_domain_by_id($id) or do {
-        $c->stash( error => "Unknown domain id=$id");
+        #$c->stash( error => "Unknown domain id=$id");
+        $c->stash( error => "This machine doesn't exist. Probably it has been deleted recently.");
         return;
     };
 

@@ -6,6 +6,7 @@ blib
 pm_to_blib
 t/.db
 t/etc/ravada_ldap*.conf
+t/etc/front_ldap*.conf
 hypnotoad.pid
 log
 rvd_front.conf

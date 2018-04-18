@@ -63,6 +63,8 @@ sub BUILD {
         Ravada::_init_config($self->config()) if $self->config;
         $CONNECTOR = Ravada::_connect_dbh();
     }
+    Ravada::_init_config($self->config()) if $self->config;
+    Ravada::Auth::init($Ravada::CONFIG);
     $CONNECTOR->dbh();
 }
 
@@ -597,7 +599,11 @@ sub search_domain {
 
     my $name = shift;
 
-    return Ravada::Front::Domain->search_domain($name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
+
+    return Ravada::Front::Domain->new(id => $id);
 
 }
 

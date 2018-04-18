@@ -217,19 +217,25 @@ sub _remove_old_domains_kvm {
     my $base_name = base_domain_name();
     for my $domain ( $vm->vm->list_all_domains ) {
         next if $domain->get_name !~ /^$base_name/;
+        my $domain_name = $domain->get_name;
         eval { 
             $domain->shutdown();
             sleep 1; 
-            $domain->destroy() if $domain->is_active;
+            eval { $domain->destroy() if $domain->is_active };
+            warn $@ if $@;
         }
             if $domain->is_active;
-        warn "WARNING: error $@ trying to shutdown ".$domain->get_name if $@;
+        warn "WARNING: error $@ trying to shutdown ".$domain_name
+            if $@ && $@ !~ /error code: 42,/;
 
-        $domain->managed_save_remove()
-            if $domain->has_managed_save_image();
+        eval {
+            $domain->managed_save_remove()
+                if $domain->has_managed_save_image();
+        };
+        warn $@ if $@ && $@ !~ /error code: 42,/;
 
         eval { $domain->undefine };
-        warn $@ if $@;
+        warn $@ if $@ && $@ !~ /error code: 42,/;
     }
 }
 
@@ -258,7 +264,7 @@ sub _remove_old_disks_kvm {
 
     opendir my $ls,$dir_img or return;
     while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
+        next if $disk !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
 
         $disk = "$dir_img/$disk";
         next if ! -f $disk;

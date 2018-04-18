@@ -327,7 +327,7 @@ sub _update_isos {
             ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
-            ,xml => 'jessie-amd64.xml'
+            ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
@@ -823,6 +823,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
+    $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -2110,6 +2111,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_down_domains($active_domain, $active_vm);
 
     $self->_clean_requests('refresh_vms', $request);
+    $self->_refresh_volatile_domains();
 }
 
 sub _clean_requests($self, $command, $request=undef) {
@@ -2185,6 +2187,22 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
             $domain->_set_data(status => $status);
+        }
+    }
+}
+
+sub _refresh_volatile_domains($self) {
+   my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, id_vm FROM domains WHERE is_volatile=1"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        if ( !$domain || $domain->status eq 'down') {
+            $domain->remove($USER_DAEMON)   if $domain;
+            my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+            $sth_del->execute($id_domain);
+            $sth_del->finish;
         }
     }
 }
@@ -2331,7 +2349,8 @@ sub _enforce_limits_active {
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
 
-        my @domains_user = sort { $a->start_time <=> $b->start_time }
+        my @domains_user = sort { $a->start_time <=> $b->start_time
+                                    || $a->id <=> $b->id }
                         @{$domains{$id_user}};
 
 #        my @list = map { $_->name => $_->start_time } @domains_user;
@@ -2341,7 +2360,7 @@ sub _enforce_limits_active {
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
             }
-            if ($domain->can_hybernate) {
+            if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);
             } else {
                 $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
