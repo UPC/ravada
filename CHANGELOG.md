@@ -4,6 +4,7 @@
 **Implemented enhancements:**
 
 LDAP authentication with binding [\#649]
+ Server monitoring support [\#567]
 
 **Fixed bugs:**
 
