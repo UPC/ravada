@@ -859,8 +859,6 @@ sub _after_remove_domain {
 sub _remove_domain_db {
     my $self = shift;
 
-    return if !$self->is_known();
-
     $self->_select_domain_db or return;
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
