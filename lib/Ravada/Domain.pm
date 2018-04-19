@@ -833,6 +833,7 @@ sub pre_remove { }
 sub _pre_remove_domain($self, $user=undef) {
 
     eval { $self->id };
+    warn $@ if $@;
     $self->pre_remove();
     $self->_allow_remove($user);
     $self->pre_remove();
@@ -841,6 +842,11 @@ sub _pre_remove_domain($self, $user=undef) {
 
 sub _after_remove_domain {
     my $self = shift;
+    my ($user, $cascade) = @_;
+
+    $self->_remove_iptables(user => $user);
+    $self->_remove_domain_cascade($user)   if !$cascade;
+
     if ($self->is_base) {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
