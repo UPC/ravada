@@ -3,11 +3,8 @@
 
 **Implemented enhancements:**
 
-- Allow virtual machines auto-start [\#589]
-- Server monitoring support [\#567]
+LDAP authentication with binding [\#649]
 
 **Fixed bugs:**
 
-- Wrong rules in iptables [\#597]
-- Ubuntu 16.04 ISO fails to download [\#596]
-- Hardcoded footer in start.html.ep [\#630]
+Windows Virt release is old at the requirements page [\#631]
