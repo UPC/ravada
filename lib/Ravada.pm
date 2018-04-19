@@ -889,8 +889,11 @@ sub _init_config {
 
     die "ERROR: Format error in config file $file\n$@"  if $@;
 
-    $CONFIG->{vm} = [] if !$CONFIG->{vm};
-
+    if ( !$CONFIG->{vm} ) {
+        my %default_vms = %VALID_VM;
+        delete $default_vms{Void};
+        $CONFIG->{vm} = [keys %default_vms];
+    }
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
@@ -906,6 +909,8 @@ sub _init_config_vm {
     for my $vm ( keys %VALID_VM ) {
         delete $VALID_VM{$vm}
             if exists $VALID_VM{$vm}
+                && exists $CONFIG->{vm}
+                && scalar @{$CONFIG->{vm}}
                 && !grep /^$vm$/,@{$CONFIG->{vm}};
     }
 
@@ -1303,24 +1308,32 @@ sub list_domains {
 
 List all domains in raw format. Return a list of id => { name , id , is_active , is_base }
 
-   my $list = $ravada->list_domains_data();
+   my @list = $ravada->list_domains_data();
 
-   $c->render(json => $list);
+   $c->render(json => @list);
 
 =cut
 
-sub list_domains_data {
-    my $self = shift;
+sub list_domains_data($self, %args ) {
     my @domains;
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT * FROM domains ORDER BY name"
-    );
-    $sth->execute;
+
+    my $where = '';
+    my @values;
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " $field = ? ";
+        push @values,( $args{$field});
+    }
+    $where = " WHERE $where " if $where;
+    my $query = "SELECT * FROM domains $where ORDER BY name";
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
         lock_hash(%$row);
         push @domains,($row);
     }
     $sth->finish;
+    return @domains if wantarray;
     return \@domains;
 }
 
@@ -2279,6 +2292,7 @@ sub _cmd_set_base_vm {
 
 sub _cmd_cleanup($self, $request) {
     $self->enforce_limits( request => $request);
+    $self->_clean_volatile_machines( request => $request);
     $self->_clean_requests('cleanup', $request);
     $self->_wait_pids($request);
 }
@@ -2489,6 +2503,26 @@ sub _enforce_limits_active {
                 $domain->shutdown(timeout => $timeout, user => $USER_DAEMON );
             }
         }
+    }
+}
+
+sub _clean_volatile_machines($self, %args) {
+    my $request = delete $args{request};
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my $sth_remove = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
+    for my $domain ( $self->list_domains_data( is_volatile => 1 )) {
+        my $domain_real = Ravada::Domain->open(
+            id => $domain->{id}
+            ,_force => 1
+        );
+        next if $domain_real->domain && $domain_real->is_active;
+        $domain_real->_post_shutdown();
+        $domain_real->remove($USER_DAEMON);
+
+        $sth_remove->execute($domain->{id});
     }
 }
 

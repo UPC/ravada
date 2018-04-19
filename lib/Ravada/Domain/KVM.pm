@@ -26,7 +26,7 @@ with 'Ravada::Domain';
 has 'domain' => (
       is => 'rw'
     ,isa => 'Sys::Virt::Domain'
-    ,required => 1
+    ,required => 0
 );
 
 has '_vm' => (
@@ -72,8 +72,14 @@ Returns the name of the domain
 
 sub name {
     my $self = shift;
-    $self->{_name} = $self->domain->get_name if !$self->{_name};
-    return $self->{_name};
+    return $self->{_name}           if $self->{_name};
+    return $self->{_data}->{name}   if $self->{_data};
+
+    $self->{_name} = $self->domain->get_name if $self->domain;
+
+    return $self->{_name}   if $self->{_name};
+
+    confess "ERROR: Unknown domain name";
 }
 
 =head2 list_disks
@@ -88,13 +94,7 @@ sub list_disks {
     my $self = shift;
     my @disks = ();
 
-    my $doc = $self->{_doc};
-    if (!$doc) {
-        $doc = XML::LibXML->load_xml(string
-                             => $self->domain->get_xml_description);
-        $self->{_doc} = $doc;
-
-    }
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
@@ -109,6 +109,21 @@ sub list_disks {
     return @disks;
 }
 
+sub xml_description($self) {
+    return $self->_data_extra('xml')    if !$self->domain;
+
+    my $xml;
+    eval {
+        $xml = $self->domain->get_xml_description();
+        $self->_data_extra('xml', $xml);
+    };
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
+    if ( $@ ) {
+        return $self->_data_extra('xml');
+    }
+    return $xml;
+}
+
 =head2 remove_disks
 
 Remove the volume files of the domain
@@ -119,8 +134,6 @@ sub remove_disks {
     my $self = shift;
 
     my $removed = 0;
-
-    return if !$self->is_known();# || $self->is_removed;
 
     my $id;
     eval { $id = $self->id };
@@ -137,7 +150,7 @@ sub remove_disks {
         $removed++;
 
     }
-
+    return if $self->is_removed;
     warn "WARNING: No disk files removed for ".$self->domain->get_name."\n"
             .Dumper([$self->list_disks])
         if !$removed && $0 !~ /\.t$/;
@@ -154,9 +167,8 @@ Cleanup operations executed before removing this domain
 
 sub pre_remove_domain {
     my $self = shift;
-    warn "Domain::KVM - pre_remove domain 1";
+    $self->xml_description();
     $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
-    warn "Domain::KVM - pre_remove domain 2";
 }
 
 sub _vol_remove {
@@ -197,11 +209,11 @@ sub remove {
         $self->list_disks();
     }
 
-    if ($self->domain->is_active) {
+    if ($self->domain && $self->domain->is_active) {
         $self->_do_force_shutdown();
     }
 
-    eval { $self->domain->undefine() };
+    eval { $self->domain->undefine()    if $self->domain };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     $self->remove_disks();
@@ -244,7 +256,7 @@ sub _disk_device {
     my $with_target = shift;
 
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description)
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description)
         or die "ERROR: $!\n";
 
     my @img;
@@ -279,8 +291,7 @@ sub _disk_device {
 sub _disk_devices_xml {
     my $self = shift;
 
-    my $doc = XML::LibXML->load_xml(string => $self->domain
-                                        ->get_xml_description)
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description)
         or die "ERROR: $!\n";
 
     my @devices;
@@ -481,7 +492,7 @@ Returns the display URI
 
 sub display($self, $user) {
 
-    my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my $xml = XML::LibXML->load_xml(string => $self->xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
 
@@ -505,6 +516,7 @@ Returns whether the domain is running or not
 
 sub is_active {
     my $self = shift;
+    confess "ERROR: No domain known"    if !$self->domain;
     return ( $self->domain->is_active or 0);
 }
 
@@ -1625,7 +1637,8 @@ In KVM it removes saved images.
 
 sub pre_remove {
     my $self = shift;
-    $self->domain->managed_save_remove if $self->domain->has_managed_save_image;
+    $self->domain->managed_save_remove
+        if $self->domain && $self->domain->has_managed_save_image;
 }
 
 sub _check_uuid($self, $doc, $node) {
@@ -1676,6 +1689,7 @@ sub migrate($self, $node) {
 
 sub is_removed($self) {
     my $is_removed = 0;
+    return 1 if !$self->domain;
     eval { $self->domain->get_xml_description};
     return 1 if $@ && $@ =~ /libvirt error code: 42/;
     die $@ if $@;
