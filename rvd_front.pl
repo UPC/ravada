@@ -1368,6 +1368,14 @@ sub make_admin {
     return $c->render(inline => "1");
 }
 
+sub no_first_time {
+	my $c = shift;
+	return login($c) if !_logged_in($c);
+	my $id = $c->stash('id');
+	Ravada::Auth::SQL::no_first_time($id);
+	return $c->render(inline => "0");
+}
+
 sub register {
 
     my $c = shift;

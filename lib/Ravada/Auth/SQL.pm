@@ -767,4 +767,12 @@ sub AUTOLOAD {
     return $self->can_do($permission)  if $permission;
 }
 
+sub no_first_time($self, $id) {
+    my $sth = $$CON->dbh->prepare(
+            "UPDATE users SET is_first_time=0 WHERE id=?");
+
+    $sth->execute($id);
+    $sth->finish;
+}
+
 1;

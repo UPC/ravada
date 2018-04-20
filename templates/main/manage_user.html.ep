@@ -8,7 +8,7 @@ ment">
     <div class="page-header">
         <div class="panel panel-default">
              <div class="panel-heading">
-                 <h2><%=l 'User' %><%= $user->name %></h2>
+                 <h2><%=l 'User ' %><%= $user->name %></h2>
              </div> <!-- del panel heading-->
         </div>
         <ul class="nav nav-tabs" id="myTab">
