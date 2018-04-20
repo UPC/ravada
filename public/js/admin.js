@@ -51,7 +51,7 @@ ravadaApp.directive("solShowMachine", swMach)
             });
       };
       $scope.name_duplicated = false;
-    
+
       $scope.ddsize=20;
       $scope.swapsize={value:1};
       $scope.ramSize=1;
@@ -96,7 +96,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.seeswap = !($scope.seeswap);
       };
 
-    
+
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
       });
@@ -192,6 +192,9 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.cancel_modal=function(){
       $scope.modalOpened=false;
     }
+    $scope.refresh_machines=function() {
+      $scope.getMachines();
+    }
 
     //On load code
     $scope.modalOpened=false;
@@ -243,5 +246,5 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.getMessages();
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
-  
+
 }());
