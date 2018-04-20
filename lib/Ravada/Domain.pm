@@ -31,7 +31,7 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
-our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout volatile_clones );
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
 
 _init_connector();
 
