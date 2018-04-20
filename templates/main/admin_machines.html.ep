@@ -302,10 +302,10 @@
                                  <h4 class="modal-title">Changing Base State</h4>
                                </div>
                                <div class="modal-body" ng-show="can_remove_base(child)">
-                                 <p>Do you want to remove the Base of {{child.name}}?</p>
+                                 <p><%l 'Are you sure you want to remove the Base of' %> {{child.name}}?</p>
                                </div>
                                <div class="modal-body" ng-show="can_prepare_base(child)">
-                                 <p>Do you want to prepare the Base of {{child.name}}?</p>
+                                 <p><%l 'Are you sure you want to prepare the Base of' %> {{child.name}}?</p>
                                </div>
                                <div class="modal-footer">
                                  <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()">No</button>
@@ -330,7 +330,7 @@
                                  <h4 class="modal-title">Changing Public State</h4>
                                </div>
                                <div class="modal-body">
-                                 <p>Do you want to change the Public state of {{child.name}} to {{(child.is_public==0)}}?</p>
+                                 <p><%l 'Are you sure you want to change the Public state of' %> {{child.name}} to {{(child.is_public==0)}}?</p>
                                </div>
                                <div class="modal-footer">
                                  <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()">No</button>
