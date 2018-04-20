@@ -110,6 +110,7 @@ Adds a new user in the SQL database. Returns nothing.
            , password => $pass
            , is_admin => 0
        , is_temporary => 0
+      , is_first_time => 0
     );
 
 =cut
@@ -124,8 +125,9 @@ sub add_user {
     my $is_admin = ($args{is_admin} or 0);
     my $is_temporary= ($args{is_temporary} or 0);
     my $is_external= ($args{is_external} or 0);
+    my $is_first_time= ($args{is_first_time} or 0);
 
-    delete @args{'name','password','is_admin','is_temporary','is_external'};
+    delete @args{'name','password','is_admin','is_temporary','is_external','is_first_time'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
@@ -133,8 +135,8 @@ sub add_user {
 
     my $sth;
     eval { $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary, is_external)"
-            ." VALUES(?,?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external,is_first_time)"
+            ." VALUES(?,?,?,?,?,?)");
     };
     confess $@ if $@;
     if ($password) {
@@ -142,7 +144,7 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external,$is_first_time);
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
@@ -426,6 +428,19 @@ sub is_temporary{
     return $self->{_data}->{is_temporary};
 }
 
+=head2 is_first_time
+
+Returns false if the user has not logged in ever
+
+    my $is = $user->is_first_time;
+
+=cut
+
+
+sub is_first_time{
+    my $self = shift;
+    return $self->{_data}->{is_first_time};
+}
 
 =head2 id
 
