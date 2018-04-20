@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
-<div id="wrapper">
-%= include 'bootstrap/navigation'
-<script>
-    $_anonymous=<%= ($_anonymous or 0) %>;
-</script>
 % my $public_bases = 0;
 % my $private_bases = 0;
 % for my $machine(@$machines) {
@@ -16,7 +10,16 @@
 %       $private_bases++;
 %   }
 % }
-
+% if ( $guide and $public_bases ) {
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" onload="startIntro();">
+% } else {
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
+% }
+<div id="wrapper">
+%= include 'bootstrap/navigation'
+<script>
+    $_anonymous=<%= ($_anonymous or 0) %>;
+</script>
 
 <div id="page-wrapper">
 
@@ -27,9 +30,6 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h2><%=l 'Choose a Machine to Start' %></h2>
-%       if ( $guide and $public_bases ) {
-            <a class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
-%           }
 %           if ($user->is_admin && $public_bases && $private_bases) {
             <div ng-cloak>
                 <a ng-click="toggle_only_public()" class="label label-primary"

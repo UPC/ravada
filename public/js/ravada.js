@@ -122,7 +122,6 @@
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
             };
-            $scope.startIntro = startIntro;
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
