@@ -154,6 +154,12 @@ sub test_nat($vm_name) {
     $domain->remove(user_admin);
 
     unlink($file_config);
+    $rvd_back = Ravada->new(
+            connector => $test->connector
+                , config => $FILE_CONFIG
+                , warn_error => 0
+    );
+
 
 }
 
@@ -206,10 +212,10 @@ for my $vm_name ( @VMS ) {
 
         diag("Testing NAT name with $vm_name");
         test_nat($vm_name);
+        flush_rules();
     }
 }
 
 clean();
-flush_rules();
 
 done_testing();
