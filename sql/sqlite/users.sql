@@ -6,7 +6,7 @@ CREATE TABLE `users` (
 ,  `is_admin` integer DEFAULT 0
 ,  `is_temporary` integer DEFAULT 0
 ,  `is_external` integer DEFAULT 0
-,  `is_first_time` integer DEFAULT 0
+,  `is_first_time` integer DEFAULT 1
 ,  `language` char(3) DEFAULT NULL
 ,  UNIQUE (`name`)
 );

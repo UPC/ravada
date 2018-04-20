@@ -12,7 +12,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada = Ravada->new(connector => $test->connector, config => 't/etc/ravada.conf');
 
-Ravada::Auth::SQL::add_user(name => 'root', password => 'root', is_admin => 1, is_first_time => 1);
+Ravada::Auth::SQL::add_user(name => 'root', password => 'root', is_admin => 1, is_first_time => 0);
 
 Ravada::Auth::enable_LDAP(0);
 
@@ -60,7 +60,7 @@ Ravada::Auth::SQL::add_user(name => 'mcnulty', password => 'jameson');
     ok($user3,"No user returned from Ravada::Auth::login");
     ok(ref $user3 && ref($user3) eq 'Ravada::Auth::SQL');
     ok(!$user3->is_admin,"User ".$user3->name." should not be admin ".Dumper($user3->{_data}));
-    ok(!$user3->is_first_time,"User ".$user3->name." should be the first time login ".Dumper($user3->{_data}));
+    ok($user3->is_first_time,"User ".$user3->name." should be the first time login ".Dumper($user3->{_data}));
 
 }
     

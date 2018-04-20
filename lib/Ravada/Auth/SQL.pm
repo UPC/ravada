@@ -110,7 +110,7 @@ Adds a new user in the SQL database. Returns nothing.
            , password => $pass
            , is_admin => 0
        , is_temporary => 0
-      , is_first_time => 0
+      , is_first_time => 1
     );
 
 =cut
@@ -125,7 +125,7 @@ sub add_user {
     my $is_admin = ($args{is_admin} or 0);
     my $is_temporary= ($args{is_temporary} or 0);
     my $is_external= ($args{is_external} or 0);
-    my $is_first_time= ($args{is_first_time} or 0);
+    my $is_first_time= ($args{is_first_time} or 1);
 
     delete @args{'name','password','is_admin','is_temporary','is_external','is_first_time'};
 

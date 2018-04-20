@@ -10,7 +10,7 @@
 %       $private_bases++;
 %   }
 % }
-% if ( $guide and $public_bases ) {
+% if ( $guide and $public_bases and $user->is_first_time ) {
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" onload="startIntro();">
 % } else {
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
