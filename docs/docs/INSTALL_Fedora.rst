@@ -33,14 +33,13 @@ Install Ravada
 Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
 if you are only upgrading Ravada from a previous version already installed.
 
-Fedora
+Fedora and EPEL7
 ------
 
-You can install ravada using the 'dnf' package manager by enabling the 'eclipseo/ravada' private repository.
+You can install ravada using the 'dnf' package manager.
 
 ::
 
-    $ sudo dnf copr enable eclipseo/ravada
     $ sudo dnf install ravada
 
 MySQL server
