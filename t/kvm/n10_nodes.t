@@ -105,11 +105,6 @@ sub test_node {
 
     clean_remote_node($node);
 
-    if ($vm_name eq 'KVM') {
-        my @domains = $node->vm->list_all_domains();
-        is(scalar @domains , 0,"[".$node->name."] expecting no domains") or BAIL_OUT();
-
-    }
     { $node->vm };
     is($@,'')   or return;
 
@@ -655,6 +650,7 @@ sub test_bases_node {
     eval { is($domain->base_in_vm($node->id), 0) };
     like($@,qr'is not a base');
 
+    user_admin->mark_all_messages_read();
     my $req = Ravada::Request->set_base_vm(
                 uid => user_admin->id
              ,id_vm => $vm->id
@@ -664,6 +660,8 @@ sub test_bases_node {
     is($req->status,'done') or die Dumper($req);
     is($req->error,'');
     is($domain->base_in_vm($vm->id), 1);
+
+    is(scalar user_admin->unread_messages , 2, Dumper(user_admin->unread_messages));
 
     $req = Ravada::Request->remove_base_vm(
                 uid => user_admin->id
@@ -926,6 +924,42 @@ sub test_sync_back($node) {
     $domain->remove(user_admin);
 }
 
+sub test_migrate_back($node) {
+    diag("Testing migrate back from remote non shared storage node");
+    my $vm = rvd_back->search_vm($node->type, 'localhost');
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),1);
+
+    my $clone = $domain->clone( name => new_domain_name(), user => user_admin );
+    $clone->migrate($node);
+    eval { $clone->start(user_admin) };
+    is(''.$@,'',"[".$node->type."] expecting no error starting ".$clone->name) or exit;
+    is($clone->_vm->host, $node->host);
+
+    _write_in_volumes($clone);
+
+    shutdown_domain_internal($clone);
+
+    warn "going to migrate back to ".$vm->name;
+    eval { $clone->migrate($vm) };
+    is($@, '');
+
+    for my $file ($clone->list_volumes) {
+        my $md5 = _md5($file, $vm);
+        my $md5_remote = _md5($file, $node);
+        is( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" ) or exit;
+    }
+
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+}
+
 sub test_shutdown($node) {
 
     my $vm = rvd_back->search_vm($node->type, 'localhost');
@@ -1101,6 +1135,8 @@ SKIP: {
     test_status($node);
     test_bases_node($vm_name, $node);
 
+    test_migrate_back($node);
+
     test_sync_base($vm_name, $node);
     test_sync_back($node);
 
@@ -1141,6 +1177,7 @@ SKIP: {
 
     start_node($node);
 
+    NEXT:
     clean_remote_node($node);
     clean_remote_node($vm);
     remove_node($node);
