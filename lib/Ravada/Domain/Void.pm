@@ -526,13 +526,11 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node) {
-    my $rsync = File::Rsync->new(update => 1);
-    for my $file ( $self->_config_file , $self->list_volumes, $self->list_files_base ) {
-        my ($path) = $file =~ m{(.*)/};
-        $node->run_command("/bin/mkdir","-p", $path);
-        $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
-        die $rsync->err if $rsync->err;
-    }
+    $self->rsync(
+           node => $node
+        , files => [$self->_config_file ]
+    );
+    $self->rsync($node);
 
 }
 
