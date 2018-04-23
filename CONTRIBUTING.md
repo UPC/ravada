@@ -88,7 +88,7 @@ Refers to the extent, subject matter or contextual information about your change
 
 Example for a (optional scope):
 
-    feat:point_right:(parser):point_left:: add ability to parse arrays
+    feat(parser): add ability to parse arrays
 
 ### 4.3 Header: Description
 
