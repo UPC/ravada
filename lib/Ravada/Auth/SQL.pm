@@ -345,9 +345,10 @@ sub is_operator {
     my $self = shift;
     return $self->is_admin()
         || $self->can_shutdown_clone()
-	|| $self->can_hibernate_clone
+	|| $self->can_hibernate_clone()
 	|| $self->can_change_settings_clones()
         || $self->can_remove_clone()
+        || $self->can_remove_clone_all()
         || $self->can_create_base()
         || $self->can_create_machine();
 }
@@ -362,10 +363,26 @@ sub can_list_own_machines {
     my $self = shift;
     return 1
         if $self->can_create_base()
-            || $self->can_create_machine
+            || $self->can_create_machine()
+            || $self->can_remove_clone_all()
         ;
     return 0;
 }
+
+=head2 can_list_clones
+
+Returns true if the user can list all machines that are clones and its bases
+
+=cut
+
+sub can_list_clones {
+    my $self = shift;
+    return 1 if $self->is_admin()
+                || $self->can_remove_clone_all();
+    return 0;
+  
+}
+
 
 =head2 can_list_machines
 
@@ -375,7 +392,7 @@ Returns true if the user can list all the virtual machines at the web frontend
 
 sub can_list_machines {
     my $self = shift;
-    return 1 if $self->is_admin();
+    return 1 if $self->is_admin() || $self->can_remove_clone_all;
     return 0;
 }
 
