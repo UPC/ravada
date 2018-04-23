@@ -293,6 +293,8 @@
         $scope.copy_password= function() {
                     $scope.view_password=1;
                     var copyTextarea = document.querySelector('.js-copytextarea');
+              if (copyTextarea) {
+
                     copyTextarea.select();
                     try {
                         var successful = document.execCommand('copy');
@@ -301,6 +303,8 @@
                     } catch (err) {
                         console.log('Oops, unable to copy');
                     }
+
+              }
         };
 
     };
