@@ -771,6 +771,7 @@ get '/iso/download/(#id).json' => sub {
 
     return $c->render(json => {request => $req->id});
 };
+
 ###################################################
 
 sub _init_error {
@@ -874,7 +875,6 @@ sub login {
 
 sub logout {
     my $c = shift;
-
     $USER = undef;
     $c->session(expires => 1);
     $c->session(login => undef);
@@ -917,14 +917,15 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
-	if ( $CONFIG_FRONT->{guide} ) {
+    if ( $CONFIG_FRONT->{guide} ) {
 	    if ($CONFIG_FRONT->{guide_custom}) {
 			push @{$c->stash->{js}}, $CONFIG_FRONT->{guide_custom};
 		} else {
 			push @{$c->stash->{js}}, '/js/ravada_guide.js';
 	    }
     }
-	return $c->render(
+
+    return $c->render(
         template => 'main/list_bases2'
         ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER
@@ -1373,7 +1374,7 @@ sub no_first_time {
 	return login($c) if !_logged_in($c);
 	my $id = $c->stash('id');
 	Ravada::Auth::SQL::no_first_time($id);
-	return $c->render(inline => "0");
+	return $c->render(inline => "1");
 }
 
 sub register {

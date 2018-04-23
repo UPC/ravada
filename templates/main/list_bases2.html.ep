@@ -12,7 +12,6 @@
 % }
 % if ( $guide and $public_bases and $user->is_first_time ) {
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" onload="startIntro();">
-% #set is_first_time -> 1
 % } else {
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
 % }

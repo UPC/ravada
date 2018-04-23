@@ -47,6 +47,8 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <ul class="dropdown-menu">
                         <li><a href="/requirements"><i class="fa fa-cogs"></i>&nbsp;<%=l 'Requirements' %></a></li>
                         <li role="separator" class="divider"></li>
+                        <li><a class="btn btn-large btn-success" href="/" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a></li>
+                        <li role="separator" class="divider"></li>
                         <li><a href="/about"><i class="fa fa-info-circle"></i>&nbsp;<%=l 'About' %></a></li>
                     </ul>
                 </li>
