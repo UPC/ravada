@@ -339,6 +339,7 @@ sub _balance_vm($self) {
     $sth->execute($self->_vm->type);
     my %vm_list;
     for my $vm ($self->_vm->list_nodes) {
+        next if !$vm->is_active();
         next if !$vm->is_active || $vm->free_memory < $MIN_FREE_MEMORY;
         $vm_list{$vm->id} = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
     }
@@ -351,7 +352,7 @@ sub _balance_vm($self) {
 
             my $vm_free = Ravada::VM->open($id);
 
-            $self->migrate($vm_free)    if !$vm_free->is_local;
+            $self->migrate($vm_free);
             return $id;
         }
     }
@@ -2235,34 +2236,48 @@ sub type {
 
 Synchronizes the volume data to a remote node.
 
-Argument: Ravada::VM
+Arguments: ( node => $node, request => $request, files => \@files )
+
+=over
+
+=item * node => Ravada::VM
+
+=item * request => Ravada::Request ( optional )
+
+=item * files => listref of files ( optional )
+
+=back
+
+When files is not specified it syncs the volumes and base volumes if any
 
 =cut
 
-sub rsync($self, $node=$self->_vm, $request=undef) {
-    confess "ERROR: don't sync to local node" if $node->is_local;
+sub rsync($self, @args) {
+
+    my %args;
+    if (scalar(@args) == 1 ) {
+        $args{node} = $args[0];
+    } else {
+        %args = @args;
+    }
+    my    $node = ( delete $args{node} or $self->_vm );
+    my   $files = delete $args{files};
+    my $request = delete $args{request};
+
+    confess "ERROR: Unkown args ".Dumper(\%args)    if keys %args;
 
     $request->status("working") if $request;
     # TODO check if domain is running on remote , then return
-    my $ssh = $node->_connect_ssh();
-    confess "No Connection to ".$node->host if !$ssh;
-#    This does nothing and doesn't fail
-#
-#    for my $file ( $self->list_volumes()) {
-#        warn "sending $file\n";
-#        my $ret = $ssh2->scp_put($file, $file);
-#        warn Dumper($ret);
-#        die $ssh2->die_with_error   if !$ret;
-#        warn $ssh2->error   if $ssh2->error;
-#    }
-
-
-# TODO: waiting for latest SFTP Foreign in Ubuntu debian package
-#    my $sftp = Net::SFTP::Foreign->new(
-#        ssh2 => $ssh2,
-#        ,backend => 'Net_SSH2'
-#    );
-#    $sftp->die_on_error("Unable to establish SFTP connection");
+    if ($node->is_local ) {
+        confess "Node ".$node->name." and current vm ".$self->_vm->name
+                ." are both local "
+                    if $self->_vm->is_local;
+        $self->_vm->_connect_ssh()
+            or confess "No Connection to ".$node->host;
+    } else {
+        $node->_connect_ssh()
+            or confess "No Connection to ".$self->_vm->host;
+    }
     my @files_base;
     if ($self->is_base) {
         push @files_base,($self->list_files_base);
@@ -2271,7 +2286,13 @@ sub rsync($self, $node=$self->_vm, $request=undef) {
     for my $file ( $self->list_volumes(), @files_base) {
         $request->status("syncing","Tranferring $file to ".$node->host)
             if $request;
-        $rsync->exec(src => $file, dest => 'root@'.$node->host.":".$file );
+        my $src = $file;
+        my $dst = 'root@'.$node->host.":".$file;
+        if ($node->is_local) {
+            $src = 'root@'.$self->_vm->host.":".$file;
+            $dst = $file;
+        }
+        $rsync->exec(src => $src, dest => $dst);
     }
     if ($rsync->err) {
         $request->status("done",join(" ",@{$rsync->err}))   if $request;
@@ -2406,7 +2427,7 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        $self->rsync($vm, $request);
+        $self->rsync(node => $vm, request => $request);
     }
     return $self->_set_base_vm_db($vm->id, $value);
 }
