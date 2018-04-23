@@ -422,3 +422,12 @@ msgstr ""
 
 msgid "monitoring"
 msgstr ""
+
+msgid "Are you sure you want to remove the base of"
+msgstr ""
+
+msgid "Are you sure you want to prepare the base of"
+msgstr ""
+
+msgid "Are you sure you want to change the Public state of"
+msgstr ""
