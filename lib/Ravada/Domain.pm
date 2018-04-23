@@ -292,7 +292,7 @@ sub _start_preconditions{
             $self->_set_vm($vm_local, 1);
         }
         $self->_balance_vm();
-        $self->rsync()  if !$self->_vm->readonly && !$self->_vm->is_local;
+        $self->rsync()  if !$self->_vm->is_local();
     }
 }
 
@@ -2266,8 +2266,15 @@ sub rsync($self, @args) {
 
     confess "ERROR: Unkown args ".Dumper(\%args)    if keys %args;
 
+    if (!$files ) {
+        my @files_base;
+        if ($self->is_base) {
+            push @files_base,($self->list_files_base);
+        }
+        $files = [ $self->list_volumes(), @files_base ];
+    }
+
     $request->status("working") if $request;
-    # TODO check if domain is running on remote , then return
     if ($node->is_local ) {
         confess "Node ".$node->name." and current vm ".$self->_vm->name
                 ." are both local "
@@ -2278,12 +2285,8 @@ sub rsync($self, @args) {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
     }
-    my @files_base;
-    if ($self->is_base) {
-        push @files_base,($self->list_files_base);
-    }
     my $rsync = File::Rsync->new(update => 1);
-    for my $file ( $self->list_volumes(), @files_base) {
+    for my $file ( @$files ) {
         $request->status("syncing","Tranferring $file to ".$node->host)
             if $request;
         my $src = $file;
@@ -2299,7 +2302,6 @@ sub rsync($self, @args) {
         die $rsync->err;
     }
     $node->refresh_storage_pools();
-    $self->_set_base_vm_db($node->id,1) if $self->is_base;
 }
 
 sub _rsync_volumes_back($self, $request=undef) {

@@ -178,7 +178,7 @@ sub test_domain {
     is($base->_vm->host, 'localhost');
 
     $base->prepare_base(user_admin);
-    $base->rsync($node);
+    $base->migrate_base(node => $node, user => user_admin);
     my $clone = $base->clone(name => new_domain_name
         ,user => user_admin
     );
@@ -333,7 +333,7 @@ sub test_sync_base {
     eval { $clone->migrate($node); };
     like($@, qr'.');
 
-    eval { $base->rsync($node); };
+    eval { $base->migrate_base(user => user_admin, vm => $node); };
     is(''.$@,'');
 
     is($base->base_in_vm($node->id),1,"Expecting domain ".$base->id
@@ -355,7 +355,7 @@ sub test_sync_base {
 
     my $clone3 = $node->search_domain($clone2->name);
     ok($clone3,"[$vm_name] expecting ".$clone2->name." found in "
-                .$node->host) or return;
+                .$node->host) or exit;
 
     my $domains = rvd_front->list_domains();
     my ($clone_f) = grep { $_->{name} eq $clone2->name } @$domains;
@@ -528,6 +528,8 @@ sub _create_clone($node) {
 
     my $vm =rvd_back->search_vm($node->type);
     is($vm->is_local,1);
+    is($node->is_local,0);
+
     my $base = create_domain($vm->type);
     $base->shutdown_now(user_admin) if $base->is_active;
 
@@ -945,7 +947,6 @@ sub test_migrate_back($node) {
 
     shutdown_domain_internal($clone);
 
-    warn "going to migrate back to ".$vm->name;
     eval { $clone->migrate($vm) };
     is($@, '');
 
@@ -1051,7 +1052,7 @@ sub test_status($node) {
     diag("[".$node->type."] testing domain status in front");
     my ($base, $clone)= _create_clone($node);
 
-    $clone->migrate($node);
+    $clone->migrate($node)  if $node->id ne $clone->_vm->id;
 
     is($clone->_vm->host, $node->host);
 
@@ -1102,7 +1103,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('KVM', 'Void' ) {
+for my $vm_name ('Void', 'KVM' ) {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -1132,6 +1133,7 @@ SKIP: {
         remove_node($node);
         next;
     };
+    is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
     test_status($node);
     test_bases_node($vm_name, $node);
 

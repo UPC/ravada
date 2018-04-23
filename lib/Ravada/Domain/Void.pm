@@ -530,7 +530,7 @@ sub migrate($self, $node) {
            node => $node
         , files => [$self->_config_file ]
     );
-    $self->rsync();
+    $self->rsync($node);
 
 }
 
