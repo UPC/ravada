@@ -45,13 +45,7 @@ msgstr ""
 msgid "Clone"
 msgstr ""
 
-msgid "Can't prepare base, remove base or delete. Machine has"
-msgstr ""
-
 msgid "Clone/s"
-msgstr ""
-
-msgid "New"
 msgstr ""
 
 msgid "Users List"
@@ -100,6 +94,24 @@ msgid "Spanish"
 msgstr ""
 
 msgid "Catalan"
+msgstr ""
+
+msgid "Galician"
+msgstr ""
+
+msgid "French"
+msgstr ""
+
+msgid "Hindi"
+msgstr ""
+
+msgid "Indonesian"
+msgstr ""
+
+msgid "Persian"
+msgstr ""
+
+msgid "Japanese"
 msgstr ""
 
 msgid "New Password:"
@@ -192,28 +204,19 @@ msgstr ""
 msgid "Messages"
 msgstr ""
 
+msgid "messages"
+msgstr ""
+
 msgid "Admin tools"
 msgstr ""
 
 msgid "Remove base"
 msgstr ""
 
-msgid "Public"
-msgstr ""
-
-msgid "New Base"
-msgstr ""
-
 msgid "Restore"
 msgstr ""
 
 msgid "Hibernate"
-msgstr ""
-
-msgid "Action"
-msgstr ""
-
-msgid "Will remove all the contents of the machine"
 msgstr ""
 
 msgid "Are you sure?"
@@ -237,23 +240,23 @@ msgstr ""
 msgid "Show/hide clones"
 msgstr ""
 
-msgid "For Spice redirection you'll need to install"
+msgid "For Spice redirection you\'ll need to install"
 msgstr ""
 
-msgid "on your computer."
+msgid "in your computer."
 msgstr ""
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
-msgid "You'll need to install"
+msgid "You\'ll need to install"
 msgstr ""
 
 msgid "and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It's "
+"Be aware that in Windows, Spice redirection is not automatic. It\'s "
 "necessary to associate protocol with the app."
 msgstr ""
 
@@ -284,9 +287,6 @@ msgid "Password"
 msgstr ""
 
 msgid "Start session"
-msgstr ""
-
-msgid "Login with Intranet UPC's username."
 msgstr ""
 
 msgid "bits) in your computer."
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Machine name is required."
 msgstr ""
 
-msgid "Machine name can't exceed 20 characters."
+msgid "Machine name can\'t exceed 20 characters."
 msgstr ""
 
 msgid "Backend selection is required."
@@ -430,4 +430,124 @@ msgid "Are you sure you want to prepare the base of"
 msgstr ""
 
 msgid "Are you sure you want to change the Public state of"
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "There are no public bases available in this system."
+msgstr ""
+
+msgid "There are no machines available in this system."
+msgstr ""
+
+msgid "Create one."
+msgstr ""
+
+msgid "not public"
+msgstr ""
+
+msgid "User Settings"
+msgstr ""
+
+msgid "Create a new account"
+msgstr ""
+
+msgid "Username"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Confirm Password"
+msgstr ""
+
+msgid "Hide Private"
+msgstr ""
+
+msgid "Show All"
+msgstr ""
+
+msgid "Shutting down ..."
+msgstr ""
+
+msgid "It may take a couple of minutes."
+msgstr ""
+
+msgid "Hybernating ..."
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Options"
+msgstr ""
+
+msgid "Drivers"
+msgstr ""
+
+msgid "Graphics"
+msgstr ""
+
+msgid "Remove Machine"
+msgstr ""
+
+msgid "System overview"
+msgstr ""
+
+msgid "Danger Zone"
+msgstr ""
+
+msgid "Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+
+msgid "Danger"
+msgstr ""
+
+msgid "This will remove all the contents of the machine"
+msgstr ""
+
+msgid "This action can\'t be undone"
+msgstr ""
+
+msgid "Are you sure ?"
+msgstr ""
+
+msgid "Yes, remove"
+msgstr ""
+
+msgid "Virtual machine"
+msgstr ""
+
+msgid "removed"
+msgstr ""
+
+msgid "This will remove all the"
+msgstr ""
+
+msgid "clones of the machine"
+msgstr ""
+
+msgid "Yes, remove all the clones"
+msgstr ""
+
+msgid "This virtual machine can\'t be removed because it has"
+msgstr ""
+
+msgid "clones"
+msgstr ""
+
+msgid "This machine has not Graphics parameters!"
+msgstr ""
+
+msgid "recommended"
+msgstr ""
+
+msgid "to"
+msgstr ""
+
+msgid "Changing Public State"
 msgstr ""

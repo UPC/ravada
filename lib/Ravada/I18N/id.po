@@ -56,9 +56,6 @@ msgstr "Tidak Bisa Mempersiapkan Basis, Buang Basis atau Hapus. Mesin telah"
 msgid "Clone/s"
 msgstr "Klon/s"
 
-msgid "NEW"
-msgstr "BARU"
-
 msgid "Users List"
 msgstr "Daftar Pengguna"
 

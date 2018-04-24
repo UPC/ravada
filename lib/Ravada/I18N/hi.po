@@ -54,9 +54,6 @@ msgstr "आधार तैयार नहीं कर सकते, आधा
 msgid "Clone/s"
 msgstr "क्लोन"
 
-msgid "NEW"
-msgstr "नया"
-
 msgid "Users List"
 msgstr "उपयोगकर्ता की सूची"
 
