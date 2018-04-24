@@ -3,7 +3,7 @@ package Ravada::Auth;
 use warnings;
 use strict;
 
-our $LDAP;
+our $LDAP_OK;
 
 use Ravada::Auth::SQL;
 
@@ -12,15 +12,6 @@ use Ravada::Auth::SQL;
 Ravada::Auth - Authentication library for Ravada users
 
 =cut
-
-eval { 
-    require Ravada::Auth::LDAP; 
-};
-if ($@) {
-    warn $@;
-    $LDAP = 0;
-}
-warn "LDAP loaded=".($LDAP or '<UNDEF>')    if $Ravada::DEBUG;
 
 =head2 init
 
@@ -31,12 +22,14 @@ Initializes the submodules
 sub init {
     my ($config, $db_con) = @_;
     if ($config->{ldap}) {
-        eval { 
+        eval {
+            require Ravada::Auth::LDAP;
             Ravada::Auth::LDAP::init($config); 
-            $LDAP = 1;
+            $LDAP_OK = 1;
         };
+        warn $@ if $@;
     } else {
-        $LDAP = 0;
+        $LDAP_OK = 0;
     }
 #    Ravada::Auth::SQL::init($config, $db_con);
 }
@@ -53,35 +46,31 @@ sub login {
     my ($name, $pass, $quiet) = @_;
 
     my $login_ok;
-    if (!defined $LDAP || $LDAP) {
+    if (!defined $LDAP_OK || $LDAP_OK) {
         eval {
             $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
         };
-        warn $@ if $@ && $LDAP && !$quiet;
+        warn $@ if $@ && $LDAP_OK && !$quiet;
         return $login_ok if $login_ok;
-    }
-
-    if ($@ =~ /I can't connect/i) {
-        $LDAP = 0 if !defined $LDAP;
     }
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
-=head2 LDAP
+=head2 enable_LDAP
 
 Sets or get LDAP support.
 
-    Ravada::Auth::LDAP(0);
+    Ravada::Auth::enable_LDAP(0);
 
-    print "LDAP is supported" if Ravada::Auth::LDAP();
+    print "LDAP is supported" if Ravada::Auth::enable_LDAP();
 
 =cut
 
-sub LDAP {
+sub enable_LDAP {
     my $value = shift;
-    return $LDAP if !defined $value;
+    return $LDAP_OK if !defined $value;
 
-    $LDAP = $value;
+    $LDAP_OK = $value;
     return $value;
 }
 1;

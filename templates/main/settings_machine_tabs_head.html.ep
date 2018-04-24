@@ -1,6 +1,10 @@
 <ul class="nav nav-tabs" id="myTab">
+%   if ($USER->can_change_settings ) {
     <li class="nav active"><a href="#description" data-toggle="tab">Description</a></li>
+%   }
+%   if ($USER->can_change_settings ) {
     <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
+%   }
 %   if ($USER->can_change_settings($domain->id) ) {
         <li class="nav"><a href="#options" data-toggle="tab">Options</a></li>
 %   }
@@ -10,7 +14,7 @@
 %   if ($USER->can_change_settings && !$domain->is_base) {
         <li class="nav"><a href="#screenshot" data-toggle="tab">Screenshot</a></li>
 %   }
-%   if ($domain->drivers) {
+%   if ($domain->drivers && $USER->can_change_settings) {
         <li class="nav"><a href="#graphics" data-toggle="tab">Graphics</a></li>
 %   }
 %   if ($USER->can_clone_all){

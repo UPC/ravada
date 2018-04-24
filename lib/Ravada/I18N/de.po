@@ -247,8 +247,8 @@ msgstr "Suche in deiner Distribution (Debian/Ubuntu)"
 msgid "You'll need to install"
 msgstr "Suchen Sie in Ihrer Distribution, z.B. in Debian / Ubuntu mit"
 
-msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
-msgstr "z.B. VirtViewer v5.0-256 und USB-Treiber ("
+msgid "and USB drivers ("
+msgstr "und USB-Treiber ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It's "

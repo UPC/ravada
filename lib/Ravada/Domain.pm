@@ -176,7 +176,10 @@ after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
 
+around 'is_active' => \&_around_is_active;
+
 around 'autostart' => \&_around_autostart;
+
 ##################################################
 #
 
@@ -517,6 +520,7 @@ sub _data($self, $field, $value=undef) {
 
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
+
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains set $field=? WHERE id=?"
         );
@@ -1222,6 +1226,22 @@ sub _post_shutdown {
     }
 }
 
+sub _around_is_active($orig, $self) {
+    my $is_active = $self->$orig();
+    return $is_active if $self->readonly
+        || !$self->is_known
+        || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
+
+    #TODO check hibernated machines status
+    my $status = 'shutdown';
+    $status = 'active'  if $is_active;
+    $self->_data(status => $status);
+
+    $self->display(Ravada::Utils::user_daemon())    if $is_active;
+
+    return $is_active;
+}
+
 sub _around_shutdown_now {
     my $orig = shift;
     my $self = shift;
@@ -1920,4 +1940,28 @@ sub internal_id {
     return $self->id;
 }
 
+=head2 volatile_clones
+
+Allows or disables the volatile clones option. If enabled, clones from this
+virtual machine will be removed on shutdown
+
+=cut
+
+sub volatile_clones($self, $value=undef) {
+    return $self->_data('volatile_clones', $value);
+}
+
+
+=head2 status
+
+Returns the status of the virtual machine as a string.
+Allowed values are: active, down, hibernated and paused
+
+=cut
+
+sub status($self, $value=undef) {
+    confess "ERROR: the status can't be updated on read only mode."
+        if $self->readonly;
+    return $self->_data('status', $value);
+}
 1;

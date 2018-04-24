@@ -287,8 +287,8 @@ msgstr ""
 msgid "You'll need to install"
 msgstr "نیاز به نضب کردن برنامه دارید"
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
-msgstr "VirtViewer v5.0-25به عنوان مثال "
+msgid "e.g. VirtViewer in your computer."
+msgstr "VirtViewer عنوان مثال "
 
 msgid "To make this possible, download"
 msgstr "به این منظور دانلود یا کپی کنید"

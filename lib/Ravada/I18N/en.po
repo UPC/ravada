@@ -249,7 +249,7 @@ msgstr ""
 msgid "You'll need to install"
 msgstr ""
 
-msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
+msgid "and USB drivers ("
 msgstr ""
 
 msgid ""
@@ -421,4 +421,13 @@ msgid ""
 msgstr ""
 
 msgid "monitoring"
+msgstr ""
+
+msgid "Are you sure you want to remove the base of"
+msgstr ""
+
+msgid "Are you sure you want to prepare the base of"
+msgstr ""
+
+msgid "Are you sure you want to change the Public state of"
 msgstr ""

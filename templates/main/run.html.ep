@@ -13,7 +13,7 @@
 %               if ($description || $domain->run_timeout) {
                     <div class="panel-body">
                         <div class="alert alert-info">
-                            <%= $description %>
+                            <%== $description %>
 %                           if ($description && $domain->run_timeout) {
                                 <hr>
 %                           }

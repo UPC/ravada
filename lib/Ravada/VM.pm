@@ -161,7 +161,8 @@ sub _around_create_domain {
             if defined $base->run_timeout();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)    if $user->is_temporary();
+    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
+    $domain->start($owner)      if $domain->is_volatile && ! $domain->is_active;
 
     $domain->get_info();
 

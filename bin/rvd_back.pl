@@ -13,6 +13,7 @@ use Ravada;
 use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
 
+
 my $help;
 
 my ($DEBUG, $ADD_USER );
@@ -28,6 +29,7 @@ my $NOFORK;
 my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
 my $START = 1;
+my $TEST_LDAP;
 
 my $URL_ISOS;
 my $ALL;
@@ -44,6 +46,7 @@ my $IMPORT_DOMAIN_OWNER;
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
+        ." [--test-ldap] "
         ." [-X] [start|stop|status]"
         ."\n"
         ." --add-user : adds a new db user\n"
@@ -80,6 +83,7 @@ GetOptions (       help => \$help
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
            ,'hibernated'=> \$HIBERNATED
+            ,'test-ldap'=> \$TEST_LDAP
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
            ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
@@ -218,6 +222,8 @@ sub add_user {
 
 sub add_user_ldap {
     my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
 
     print "password : ";
     my $password = <STDIN>;
@@ -445,6 +451,26 @@ sub shutdown_domain {
     print "$down domains shut down.\n";
 }
 
+sub test_ldap {
+    my $rvd_back = Ravada->new(%CONFIG);
+    eval { Ravada::Auth::LDAP::_init_ldap_admin() };
+    die "No LDAP connection, error: $@\n" if $@;
+    print "Connection to LDAP ok\n";
+    print "login: ";
+    my $name=<STDIN>;
+    chomp $name;
+    print "password: ";
+    my $password = <STDIN>;
+    chomp $password;
+    my $ok= Ravada::Auth::login( $name, $password);
+    if ($ok) {
+        print "LOGIN OK $ok->{_auth}\n";
+    } else {
+        print "LOGIN FAILED\n";
+    }
+    exit;
+}
+
 sub DESTROY {
     return if !$PID_LONGS;
     warn "Killing pid: $PID_LONGS";
@@ -463,13 +489,14 @@ sub DESTROY {
 my $rvd_back = Ravada->new(%CONFIG);
 
 add_user($ADD_USER)                 if $ADD_USER;
-add_user($ADD_USER_LDAP)            if $ADD_USER_LDAP;
+add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
 change_password()                   if $CHANGE_PASSWORD;
 import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
 import_vbox($IMPORT_VBOX)           if $IMPORT_VBOX;
 make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
+test_ldap                           if $TEST_LDAP;
 
 list($ALL)                          if $LIST;
 hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;

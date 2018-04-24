@@ -275,8 +275,8 @@ msgstr "Busca en tu distro, p.e. en Debian/Ubuntu con"
 msgid "You'll need to install"
 msgstr "Necesitarás instalar"
 
-msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
-msgstr "p.e. VirtViewer v5.0-256, y USB drivers ("
+msgid "and USB drivers ("
+msgstr "y los drivers USB ("
 
 msgid "or"
 msgstr "o"
@@ -550,3 +550,12 @@ msgstr "Persa"
 
 msgid "Japanese"
 msgstr "Japonés"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Estás seguro de querer eliminar la base de"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Estás seguro de querer convertir en base a"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Estás seguro de querer cambiar el estado publico de"

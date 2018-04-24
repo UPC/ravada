@@ -291,12 +291,12 @@ get '/list_machines.json' => sub {
 
     my @args;
     if ( !$USER->can_list_machines ) {
-        my $domains = $RAVADA->list_domains( id_owner => $USER->id );
-        for my $domain ( @$domains ) {
-            next if !$domain->{id_base};
-            my $base = $RAVADA->list_domains( id => $domain->{id_base} );
-            push @$domains, (@$base);
-        }
+      my $domains = $RAVADA->list_domains( id_owner => $USER->id );
+            for my $domain ( @$domains ) {
+                next if !$domain->{id_base};
+                my $base = $RAVADA->list_domains( id => $domain->{id_base} );
+                push @$domains, (@$base);
+            } 
         return $c->render( json => $domains );
     }
 
@@ -339,7 +339,7 @@ get '/machine/info/(:id).(:type)' => sub {
 
 any '/machine/settings/(:id).(:type)' => sub {
    	 my $c = shift;
-	 return settings_machine($c);
+     return settings_machine($c);
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
@@ -1346,7 +1346,8 @@ sub _search_requested_machine {
         if !$id;
 
     my $domain = $RAVADA->search_domain_by_id($id) or do {
-        $c->stash( error => "Unknown domain id=$id");
+        #$c->stash( error => "Unknown domain id=$id");
+        $c->stash( error => "This machine doesn't exist. Probably it has been deleted recently.");
         return;
     };
 
@@ -1420,9 +1421,8 @@ sub manage_machine {
 sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
-
     return access_denied($c)    if !$domain;
-	return access_denied($c)    if !$USER->can_change_settings($domain->id);
+  	return access_denied($c)    if !$USER->can_change_settings($domain->id);
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
