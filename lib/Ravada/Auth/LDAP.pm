@@ -155,13 +155,11 @@ sub search_user {
     attrs  => ['*']
     );
 
-    return if $mesg->code == 32;
-    if ( !$retry && (
-             $mesg->code == $STATUS_DISCONNECTED 
-             || $mesg->code == $STATUS_EOF
-            )
-     ) {
-         warn "LDAP disconnected Retrying ! [$retry]";# if $Ravada::DEBUG;
+    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
+
+    if ( $retry <= 3 && $mesg->code ) {
+         warn "LDAP error ".$mesg->code." ".$mesg->error."."
+            ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
          sleep ($retry + 1);
          _init_ldap_admin();
@@ -169,7 +167,6 @@ sub search_user {
                 name => $username
               ,field => $field
               ,retry => ++$retry
-               ,ldap => $ldap
          );
     }
 
@@ -244,18 +241,34 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
-    my $name = $args{name} or confess "Missing group name";
-    my $base = ( $args{base} or "ou=groups,"._dc_base() );
-    my $ldap = ( $args{ldap} or $LDAP or $LDAP_ADMIN );
+    my $name = delete $args{name} or confess "Missing group name";
+    my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
+    my $ldap = ( delete $args{ldap} or _init_ldap_admin());
+    my $retry =( delete $args{retry} or 0);
+
+    confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
+    confess "ERROR: I can't connect to LDAP " if!$ldap;
 
     $name = escape_filter_value($name);
+
 
     my $mesg = $ldap ->search (
         filter => "cn=$name"
          ,base => $base
     );
-    if ($mesg->code){
-        die "ERROR searching for group $name at $base :".$mesg->code." ".$mesg->error;
+    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
+
+    if ( $retry <= 3 && $mesg->code){
+        warn "LDAP error ".$mesg->code." ".$mesg->error."."
+            ."Retrying ! [$retry]"  if $retry;
+         $LDAP_ADMIN = undef;
+         sleep ($retry + 1);
+         _init_ldap_admin();
+         return search_group (
+                name => $name
+               ,base => $base
+              ,retry => ++$retry
+         );
     }
     my @entries = $mesg->entries;
 
@@ -303,6 +316,7 @@ sub login($self) {
     $user_ok = $self->_login_match()    if !$user_ok;
 
     $self->_check_user_profile($self->name)   if $user_ok;
+    $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
     return $user_ok;
 }
 
@@ -310,15 +324,13 @@ sub _login_bind {
     my $self = shift;
 
     my ($username, $password) = ($self->name , $self->password);
-    my $base = $$CONFIG->{ldap}->{base}
-        or confess "ERROR: Missing base in ldap entry in config file";
 
-    my $ldap = _init_ldap();
-
+    my $found = 0;
     for my $user (search_user( name => $self->name , field => 'uid' )
                 ,search_user( name => $self->name, field => 'cn')) {
         my $dn = $user->dn;
-        my $mesg = $ldap->bind($dn, password => $password);
+        $found++;
+        my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
         if ( !$mesg->code() ) {
             $self->{_auth} = 'bind';
             return 1;
@@ -333,6 +345,7 @@ sub _login_match {
     my $self = shift;
     my ($username, $password) = ($self->name , $self->password);
 
+    $LDAP_ADMIN = undef;
     _init_ldap_admin();
     my $user_ok;
 
@@ -370,10 +383,11 @@ sub _match_password {
     my $self = shift;
     my $user = shift;
     my $password = shift or die "ERROR: Missing password for ".$user->get_value('cn'); # We won't allow empty passwords
+    confess "ERROR: Wrong entry ".$user->dump
+        if !scalar($user->attributes);
 
-    _init_ldap_admin();
-
-    die "No userPassword for ".$user->get_value('uid')
+    die "ERROR: No userPassword for ".$user->get_value('uid')
+            .Dumper($user)
         if !$user->get_value('userPassword');
     my $password_ldap = $user->get_value('userPassword');
 

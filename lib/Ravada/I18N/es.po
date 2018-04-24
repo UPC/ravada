@@ -550,3 +550,12 @@ msgstr "Persa"
 
 msgid "Japanese"
 msgstr "Japonés"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Estás seguro de querer eliminar la base de"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Estás seguro de querer convertir en base a"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Estás seguro de querer cambiar el estado publico de"
