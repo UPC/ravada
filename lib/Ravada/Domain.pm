@@ -16,6 +16,7 @@ use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
+use IPC::Run3 qw(run3);
 use Sys::Statistics::Linux;
 use IPTables::ChainMgr;
 
@@ -1964,4 +1965,43 @@ sub status($self, $value=undef) {
         if $self->readonly;
     return $self->_data('status', $value);
 }
+
+sub client_status($self, $force=0) {
+    return if !$self->is_active;
+    return if !$self->remote_ip;
+
+    return $self->_data('client_status')    if $self->readonly;
+
+    my $time_checked = time - $self->_data('client_status_time_checked');
+    if ( $time_checked < 10 && !$force ) {
+        return $self->_data('client_status');
+    }
+
+    my $status = $self->_client_connection_status();
+    $self->_data('client_status', $status);
+    $self->_data('client_status_time_checked', time );
+
+    return $status;
+}
+
+sub _client_connection_status($self) {
+    #TODO: this should be run in the VM
+    #       in develop release VM->run_command does exists
+    my $display = $self->display(Ravada::Utils::user_daemon());
+    my ($ip, $port) = $display =~ m{\w+://(.*):(\d+)};
+    die "No ip in $display" if !$ip;
+
+    my @cmd = ("netstat", "-tan");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    my @out = split(/\n/,$out);
+    for my $line (@out) {
+        my @netstat_info = split(/\s+/,$line);
+        if ( $netstat_info[3] eq $ip.":".$port ) {
+            return 'connected' if $netstat_info[5] eq 'ESTABLISHED';
+        }
+    }
+    return 'disconnected';
+}
+
 1;

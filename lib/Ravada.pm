@@ -825,6 +825,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
 
+    $self->_upgrade_table('domains','client_status','varchar(32)');
+    $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
+
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
 }
@@ -2344,6 +2347,7 @@ sub _enforce_limits_active {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
+        $domain->client_status();
         push @{$domains{$domain->id_owner}},$domain;
     }
     for my $id_user(keys %domains) {
