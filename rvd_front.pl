@@ -1464,6 +1464,10 @@ sub settings_machine {
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
+        }elsif ( $option eq 'volatile_clones' ) {
+            my $value = '0';
+            $domain->set_option($option, $value);
+            $c->stash(message => "\U$option changed!");
         }
     }
 

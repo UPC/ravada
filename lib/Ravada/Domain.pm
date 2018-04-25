@@ -43,7 +43,6 @@ requires 'is_active';
 requires 'is_hibernated';
 requires 'is_paused';
 requires 'is_removed';
-requires 'is_volatile_clones';
 
 requires 'start';
 requires 'shutdown';
@@ -1890,6 +1889,8 @@ sub set_option($self, $option, $value) {
         $self->description($value);
     } elsif ($option eq 'run_timeout') {
         $self->run_timeout($value);
+    } elsif ($option eq 'volatile_clones') {
+        $self->volatile_clones($value); 
     } else {
         confess "ERROR: Unknown option '$option'";
     }

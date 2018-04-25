@@ -101,11 +101,6 @@ sub is_paused {
     return $self->_value('is_paused');
 }
 
-sub is_volatile_clones {
-    my $self = shift;
-    return $self ->_value('volatile_clones');
-}
-
 sub _store {
     my $self = shift;
 
