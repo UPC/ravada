@@ -1460,6 +1460,7 @@ sub open_iptables {
     $args{user} = $user;
     delete $args{uid};
 
+    $self->_data('client_status','connecting...');
     $self->_remove_iptables();
     $self->_add_iptable(%args);
 }
