@@ -40,10 +40,11 @@ Our code uses the `AGPL`_ license and it is `available on GitHub`_.
 Ravada VDI documentation
 ------------------------
 
-The main documentation for the site is divided into two main sections:
+The main documentation for the site is divided into three main sections:
 
 * :ref:`user-docs`
 * :ref:`feature-docs`
+* :ref:`guest-docs`
 
 Do you feel like giving us a hand? Here you have all the information you need as *a developer*:
 
@@ -66,9 +67,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/convert_from_virtualbox
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
-   docs/reduce-size-image
-   docs/resize_hard_drive
-   docs/resize_hard_drive_linux_machine
    docs/ldap_local
    docs/new_kvm_template
    docs/new_iso_image
@@ -78,7 +76,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/update
    docs/windows_clients
    docs/change_windows_driver_to_virtio
-   docs/config_console
    docs/migrate_manual
    docs/Kiosk_mode
 
@@ -102,6 +99,18 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/translations
    docs/monitoring
    docs/guide
+
+.. _guest-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Guest VM section
+   
+   docs/resize_hard_drive
+   docs/resize_hard_drive_linux_machine
+   docs/config_console
+   docs/reduce-size-image
+
 
 .. _about-docs:
 
