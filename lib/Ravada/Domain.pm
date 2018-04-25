@@ -34,6 +34,8 @@ our $IPTABLES_CHAIN = 'RAVADA';
 
 our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
 
+our $TIME_CACHE_NETSTAT = 10; # seconds to cache netstat data output
+
 _init_connector();
 
 requires 'name';
@@ -1973,28 +1975,40 @@ sub client_status($self, $force=0) {
     return $self->_data('client_status')    if $self->readonly;
 
     my $time_checked = time - $self->_data('client_status_time_checked');
-    if ( $time_checked < 10 && !$force ) {
+    if ( $time_checked < $TIME_CACHE_NETSTAT && !$force ) {
         return $self->_data('client_status');
     }
 
-    my $status = $self->_client_connection_status();
+    my $status = $self->_client_connection_status( $force );
     $self->_data('client_status', $status);
     $self->_data('client_status_time_checked', time );
 
     return $status;
 }
 
-sub _client_connection_status($self) {
+sub _run_netstat($self, $force=undef) {
+    if (!$force && $self->_vm->{_netstat}
+        && ( time - $self->_vm->{_netstat_time} < $TIME_CACHE_NETSTAT+1 ) ) {
+        return $self->_vm->{_netstat};
+    }
+    my @cmd = ("netstat", "-tan");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    $self->_vm->{_netstat} = $out;
+    $self->_vm->{_netstat_time} = time;
+
+    return $out;
+}
+
+sub _client_connection_status($self, $force=undef) {
     #TODO: this should be run in the VM
     #       in develop release VM->run_command does exists
     my $display = $self->display(Ravada::Utils::user_daemon());
     my ($ip, $port) = $display =~ m{\w+://(.*):(\d+)};
     die "No ip in $display" if !$ip;
 
-    my @cmd = ("netstat", "-tan");
-    my ($in, $out, $err);
-    run3(\@cmd, \$in, \$out, \$err);
-    my @out = split(/\n/,$out);
+    my $netstat_out = $self->_run_netstat($force);
+    my @out = split(/\n/,$netstat_out);
     for my $line (@out) {
         my @netstat_info = split(/\s+/,$line);
         if ( $netstat_info[3] eq $ip.":".$port ) {
