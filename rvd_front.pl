@@ -339,10 +339,7 @@ get '/machine/info/(:id).(:type)' => sub {
 
 any '/machine/settings/(:id).(:type)' => sub {
    	 my $c = shift;
-	 return access_denied($c)  unless ( $USER->can_change_settings() || 
-                                      $USER->can_remove_clone_all
-                                    );
-	 return settings_machine($c);
+     return settings_machine($c);
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
@@ -1425,12 +1422,7 @@ sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
-    return access_denied($c)
-        unless ($USER->is_admin
-        || $domain->id_owner == $USER->id
-        || ($USER->can_remove_clone_all && $domain->is_base == '0'));
-
-    return $c->render("Domain not found")   if !$domain;
+  	return access_denied($c)    if !$USER->can_change_settings($domain->id);
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
@@ -1462,6 +1454,9 @@ sub settings_machine {
 
     for my $option (qw(description run_timeout)) {
         if ( defined $c->param($option) ) {
+            return access_denied($c)
+                if $option eq 'run_timeout' && !$USER->is_admin;
+
             my $value = $c->param($option);
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);

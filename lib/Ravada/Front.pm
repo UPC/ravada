@@ -189,7 +189,8 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile FROM domains ";
+    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile, client_status"
+                ." FROM domains ";
 
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -222,6 +223,8 @@ sub list_domains {
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{remote_ip} = $domain->client_status
+                if $domain->client_status && $domain->client_status ne 'connected';
             $row->{autostart} = $domain->autostart;
         }
         delete $row->{spice_password};

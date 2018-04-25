@@ -113,7 +113,7 @@
 
 %=      include 'bootstrap/requests'
 
-        <table class="table table-striped admin-cont-body" border="1">
+        <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"
@@ -353,7 +353,7 @@
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
                           <span style="float:right;" ng-show="{{!child.is_active && !child.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
                           <span style="float:right;" ng-show="{{child.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                          <br><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{child.remote_ip}}</span>
+                          <br/><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{child.remote_ip}}</span>
                       </td>
                       <td class="lgMachToggle">
 

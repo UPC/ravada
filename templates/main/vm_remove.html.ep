@@ -1,6 +1,11 @@
 
         <div class="panel-body nav--danger">
+            <h2 class="Subhead-heading">
+                    Danger Zone
+            </h2>
+            <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
+
                 <div class="panel-heading">
                     <%=l 'This virtual machine can\'t be removed because it has' %> {{showmachine.has_clones}} <%=l 'clones' %>.
                     <ul>
@@ -12,11 +17,7 @@
             </div>
 
             <div ng-show="!domain_remove_done">
-                <h2 class="Subhead-heading">
-                    <%=l 'Danger Zone' %>
-                </h2>
-                 <span class="text"><%=l 'Once you delete the machine, there is no going back. Please be certain.' %></span><br>
- %              if ($USER->can_remove_clone_all) {
+%              if ($USER->can_remove_clone_all) {
                     <a ng-show="showmachine.has_clones > 0" type="button" class="btn btn-danger"
                               ng-click="domain_remove_clones=1"
                           >
