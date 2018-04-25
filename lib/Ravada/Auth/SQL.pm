@@ -739,8 +739,27 @@ sub list_permissions($self) {
     return @list;
 }
 
-sub AUTOLOAD {
-    my $self = shift;
+sub can_change_settings($self, $id_domain=undef) {
+    if (!defined $id_domain) {
+        return $self->can_do("change_settings");
+    }
+    return 1 if $self->can_change_settings_all();
+
+    return 0 if !$self->can_change_settings();
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    return 1 if $self->id == $domain->id_owner;
+
+    return 0;
+}
+
+sub grants($self) {
+    $self->_load_grants()   if !$self->{_grant};
+    return () if !$self->{_grant};
+    return %{$self->{_grant}};
+}
+
+sub AUTOLOAD($self) {
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;

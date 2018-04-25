@@ -5,13 +5,13 @@
 %   if ($USER->can_change_settings ) {
     <li class="nav"><a href="#rename" data-toggle="tab">Rename</a></li>
 %   }
-%   if ($USER->can_change_settings ) {
+%   if ($USER->can_change_settings($domain->id) ) {
         <li class="nav"><a href="#options" data-toggle="tab">Options</a></li>
 %   }
 %   if ($USER->can_change_settings && $domain->drivers) {
         <li class="nav"><a href="#drivers" data-toggle="tab">Drivers</a></li>
 %   }
-%   if ($USER->can_change_settings) {
+%   if ($USER->can_change_settings && !$domain->is_base) {
         <li class="nav"><a href="#screenshot" data-toggle="tab">Screenshot</a></li>
 %   }
 %   if ($domain->drivers && $USER->can_change_settings) {

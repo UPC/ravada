@@ -21,7 +21,8 @@
                     </div>
                     <div class="col-md-2">
                         <input name="run_timeout" type="text"
-%                           my $timeout = int($domain->run_timeout / 60);
+%                           my $timeout = '';
+%                           $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
 %                           $timeout = '' if $timeout eq '0';
                             value="<%= $timeout %>" size="5">
                     </div>
