@@ -240,7 +240,7 @@ msgstr ""
 msgid "Show/hide clones"
 msgstr ""
 
-msgid "For Spice redirection you\'ll need to install"
+msgid "For Spice redirection you'll need to install"
 msgstr ""
 
 msgid "in your computer."
@@ -249,14 +249,14 @@ msgstr ""
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
-msgid "You\'ll need to install"
+msgid "You'll need to install"
 msgstr ""
 
 msgid "and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It\'s "
+"Be aware that in Windows, Spice redirection is not automatic. It's "
 "necessary to associate protocol with the app."
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Machine name is required."
 msgstr ""
 
-msgid "Machine name can\'t exceed 20 characters."
+msgid "Machine name can't exceed 20 characters."
 msgstr ""
 
 msgid "Backend selection is required."
@@ -456,9 +456,6 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
-msgid "Password"
-msgstr ""
-
 msgid "Confirm Password"
 msgstr ""
 
@@ -510,7 +507,7 @@ msgstr ""
 msgid "This will remove all the contents of the machine"
 msgstr ""
 
-msgid "This action can\'t be undone"
+msgid "This action can't be undone"
 msgstr ""
 
 msgid "Are you sure ?"
@@ -534,7 +531,7 @@ msgstr ""
 msgid "Yes, remove all the clones"
 msgstr ""
 
-msgid "This virtual machine can\'t be removed because it has"
+msgid "This virtual machine can't be removed because it has"
 msgstr ""
 
 msgid "clones"

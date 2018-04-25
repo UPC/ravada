@@ -202,9 +202,6 @@ msgstr "usuarios"
 msgid "messages"
 msgstr "mensajes"
 
-msgid "Admin tools"
-msgstr "Herramientas de admin"
-
 msgid "Remove base"
 msgstr "Elimina base"
 
@@ -254,16 +251,7 @@ msgid "User Settings"
 msgstr "Configuración de usuario"
 
 msgid "For spice redirection you'll need to install"
-msgstr "Para redirección a spice necesitarás instalar"
-
-msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Busca en tu distribución, p.e. Debian/Ubuntu con"
-
-msgid "For spice redirection you'll need to install"
 msgstr "Para la redirección de spice, necesitarás instalar"
-
-msgid "in your computer."
-msgstr "en tu computadora."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Busca en tu distro, p.e. en Debian/Ubuntu con"
@@ -281,14 +269,8 @@ msgstr "o"
 msgid "bits) in your computer."
 msgstr "bits) en tu ordenador."
 
-msgid "Be aware that in Windows, spice redirection is not automatically. It\'s necessary associate protocol with the app."
-msgstr "Atención a que en Windows, la redirección spice no es automàtica. Es necesario asociar el protocolo con la app."
-
 msgid "To make this possible, download"
 msgstr "Para hacer esto posible, descarga"
-
-msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
-msgstr "o copia las linias siguientes en un documento ASCII y guárdalo con extensión .reg, después ejécutalo."
 
 msgid "For more information, check "
 msgstr "Para más información, revisa "
@@ -301,15 +283,6 @@ msgstr "en tu ordenador."
 
 msgid "Admin tools"
 msgstr "Herramientas de administración"
-
-msgid "machines"
-msgstr "máquinas"
-
-msgid "users"
-msgstr "usuarios"
-
-msgid "messages"
-msgstr "mensajes"
 
 msgid "Virtual Machines"
 msgstr "Máquinas Virtuales"
@@ -332,12 +305,6 @@ msgstr "Buscar"
 msgid "Register"
 msgstr "Registrar"
 
-msgid "Subject"
-msgstr "Asunto"
-
-msgid "Date"
-msgstr "Fecha"
-
 msgid "There are no public bases available in this system."
 msgstr "No hay bases públicas disponibles en este sistema."
 
@@ -350,21 +317,12 @@ msgstr "no pública"
 msgid "Create one."
 msgstr "Crea una."
 
-msgid "Error!"
-msgstr "Error!"
-
-msgid "Backend no available!"
-msgstr " Backend no disponible!"
-
 msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "
 "necessary associate protocol with the app."
 msgstr ""
 "Se consciente que en Windows, redirección con spice no es automático. Es "
 "necesario asociar el protocolo con la app"
-
-msgid "To make this possible, download"
-msgstr "Para hacer esto posible, descarga"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
@@ -382,9 +340,6 @@ msgstr "Bienvenido"
 msgid "It is required a viewer to run the virtual machines."
 msgstr "Se requiere de un visor para arrancar la máquina virtual."
 
-msgid "Virtual Machines"
-msgstr "Máquinas Virtuales"
-
 msgid "user"
 msgstr "usuario"
 
@@ -396,9 +351,6 @@ msgstr "Iniciar sesión"
 
 msgid "Login with Intranet UPC's username."
 msgstr "Conectarse con el usuario de la Intranet de la UPC"
-
-msgid "bits) in your computer."
-msgstr "bits) en tu computadora."
 
 msgid "Permissions"
 msgstr "Permisos"
