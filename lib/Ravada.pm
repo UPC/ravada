@@ -672,7 +672,6 @@ sub _update_grants($self) {
 }
 
 sub _enable_grants($self) {
-    return;
     my $sth = $CONNECTOR->dbh->prepare(
         "UPDATE grant_types set enabled=0"
     );
