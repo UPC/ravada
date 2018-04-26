@@ -173,7 +173,8 @@ sub test_view_clones {
     
     my $clones;
     eval{ $clones = rvd_front->list_clones() };
-    is(scalar @$clones,0) or return;
+    is($@,'');
+    is(scalar @$clones,0, Dumper($clones)) or return;
     
     my $clone = $domain->clone(user => $usera,name => new_domain_name());
     eval{ $clones = rvd_front->list_clones() };
@@ -634,6 +635,9 @@ sub test_change_settings($vm_name) {
 
     is($user->can_change_settings($clone->id), 1);
     is($usera->can_change_settings($clone->id), 1);
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 
     $user->remove();
     $usera->remove();

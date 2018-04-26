@@ -554,18 +554,22 @@ sub can_do($self, $grant) {
 }
 
 sub _load_grants($self) {
-    my $sth = $$CON->dbh->prepare(
-        "SELECT gt.name, gu.allowed"
+    my $sth;
+    eval { $sth= $$CON->dbh->prepare(
+        "SELECT gt.name, gu.allowed, gt.enabled"
         ." FROM grant_types gt LEFT JOIN grants_user gu "
         ."      ON gt.id = gu.id_grant "
         ."      AND gu.id_user=?"
     );
     $sth->execute($self->id);
-    my ($name, $allowed);
-    $sth->bind_columns(\($name, $allowed));
+    };
+    confess $@ if $@;
+    my ($name, $allowed, $enabled);
+    $sth->bind_columns(\($name, $allowed, $enabled));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = $allowed;# or undef);
+        $self->{_grant}->{$name} = $allowed     if $enabled;
+        $self->{_grant_disabled}->{$name} = !$enabled;
     }
     $sth->finish;
 }
@@ -654,6 +658,10 @@ Grant an user a specific permission, or revoke it
 =cut
 
 sub grant($self,$user,$permission,$value=1) {
+
+    confess "ERROR: permission '$permission' disabled "
+        if $self->{_grant_disabled}->{$permission};
+
     if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
         my @perms = $self->list_permissions();
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"

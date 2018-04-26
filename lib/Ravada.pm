@@ -132,8 +132,8 @@ sub BUILD {
 
     $self->_create_tables();
     $self->_upgrade_tables();
-    $self->_init_user_daemon();
     $self->_update_data();
+    $self->_init_user_daemon();
 }
 
 sub _init_user_daemon {
@@ -651,10 +651,59 @@ sub _update_data {
 
     $self->_remove_old_isos();
     $self->_update_isos();
+
+    $self->_update_grants();
+    $self->_enable_grants();
     $self->_update_user_grants();
+
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
     $self->_update_old_qemus();
+
+}
+
+sub _update_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+                 "UPDATE grant_types"
+                ." SET name='create_machine' "
+                ." WHERE name = 'create_domain'"
+    );
+    $sth->execute();
+}
+
+sub _enable_grants($self) {
+    return;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=0"
+    );
+    my @grants = (
+        'change_settings','clone', 'create_base', 'create_machine'
+        ,'grant'
+        ,'hibernate_clone'
+        ,'remove_clone', 'remove_clone_all'
+        ,'screenshot', 'shutdown_clone'
+    );
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
+    $sth->execute;
+    my %grant_exists;
+    while (my ($id, $name) = $sth->fetchrow ) {
+        $grant_exists{$name} = $id;
+    }
+
+    $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=1 WHERE name=?"
+    );
+    my %done;
+    for my $name ( @grants ) {
+        die "Duplicate grant $name "    if $done{$name};
+        die "Permission $name doesn't exist at table grant_types"
+                ."\n".Dumper(\%grant_exists)
+            if !$grant_exists{$name};
+
+        $sth->execute($name);
+
+    }
 }
 
 sub _update_old_qemus($self) {
@@ -830,6 +879,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
+
+    $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
 }
 
