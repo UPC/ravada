@@ -438,7 +438,7 @@ get '/machine/pause/(:id).(:type)' => sub {
 
 get '/machine/hybernate/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)   if !$USER ->can_hibernate_all();
+	return access_denied($c)   if !$USER ->is_admin();
         return hybernate_machine($c);
 };
 
