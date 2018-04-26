@@ -17,7 +17,7 @@
 %   if ($domain->drivers && $USER->can_change_settings) {
         <li class="nav"><a href="#graphics" data-toggle="tab"><%=l 'Graphics' %></a></li>
 %   }
-%   if ($USER->can_clone_all){
+%   if ($USER->is_admin){
         <li class="nav"><a href="#copy" data-toggle="tab"><%=l 'Copy' %></a></li>
 %   }
 %   if ( $USER->can_remove || $USER->can_remove_clone_all ) {
