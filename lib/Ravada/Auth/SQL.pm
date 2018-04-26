@@ -345,9 +345,9 @@ sub is_operator {
     my $self = shift;
     return $self->is_admin()
         || $self->can_shutdown_clone()
-	|| $self->can_hibernate_clone()
+#	|| $self->can_hibernate_clone()
 	|| $self->can_change_settings_clones()
-        || $self->can_remove_clone()
+#        || $self->can_remove_clone()
         || $self->can_remove_clone_all()
         || $self->can_create_base()
         || $self->can_create_machine();
@@ -584,7 +584,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'clone');
     $self->grant($user, 'change_settings');
     $self->grant($user, 'remove');
-    $self->grant($user, 'screenshot');
+#    $self->grant($user, 'screenshot');
 }
 
 =head2 grant_operator_permissions
@@ -618,6 +618,7 @@ Grant an user all the permissions
 sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
             "SELECT name FROM grant_types "
+            ." WHERE enabled=1"
     );
     $sth->execute();
     while ( my ($name) = $sth->fetchrow) {
@@ -721,7 +722,9 @@ sub list_all_permissions($self) {
     return if !$self->is_admin;
 
     my $sth = $$CON->dbh->prepare(
-        "SELECT * FROM grant_types ORDER BY name"
+        "SELECT * FROM grant_types"
+        ." WHERE enabled=1 "
+        ." ORDER BY name "
     );
     $sth->execute;
     my @list;
