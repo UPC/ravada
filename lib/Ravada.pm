@@ -2184,8 +2184,8 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         next if exists $active_domain->{$id_domain};
-        my $domain = Ravada::Domain->open($id_domain);
-        if (defined $id_vm && !$active_vm->{$id_vm}) {
+        my $domain = Ravada::Domain->open($id_domain) or next;
+        if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
         } else {
             my $status = 'shutdown';
