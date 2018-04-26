@@ -671,17 +671,32 @@ sub _update_grants($self) {
     $sth->execute();
 }
 
+sub _null_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT count(*) FROM grant_types "
+            ." WHERE enabled = NULL "
+        );
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+
+    exit if !$count && $self->{_null}++;
+    return $count;
+}
+
 sub _enable_grants($self) {
+
+    return if $self->_null_grants();
+
     my $sth = $CONNECTOR->dbh->prepare(
         "UPDATE grant_types set enabled=0"
     );
     $sth->execute;
     my @grants = (
-        'change_settings','clone', 'create_base', 'create_machine'
+        'change_settings',  'change_settings_all',  'change_settings_clones'
+        ,'clone',           'clone_all',            'create_base', 'create_machine'
         ,'grant'
-        ,'hibernate_clone'
-        ,'remove_clone', 'remove_clone_all'
-        ,'screenshot', 'shutdown_clone'
+        ,'manage_users'
+        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'shutdown_all',    'shutdown_clone'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -696,7 +711,6 @@ sub _enable_grants($self) {
     );
     my %done;
     for my $name ( sort @grants ) {
-        warn "enabling $name";
         die "Duplicate grant $name "    if $done{$name};
         die "Permission $name doesn't exist at table grant_types"
                 ."\n".Dumper(\%grant_exists)
@@ -705,6 +719,7 @@ sub _enable_grants($self) {
         $sth->execute($name);
 
     }
+
 }
 
 sub _update_old_qemus($self) {
