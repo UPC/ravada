@@ -675,6 +675,7 @@ sub _enable_grants($self) {
     my $sth = $CONNECTOR->dbh->prepare(
         "UPDATE grant_types set enabled=0"
     );
+    $sth->execute;
     my @grants = (
         'change_settings','clone', 'create_base', 'create_machine'
         ,'grant'
@@ -694,7 +695,8 @@ sub _enable_grants($self) {
         "UPDATE grant_types set enabled=1 WHERE name=?"
     );
     my %done;
-    for my $name ( @grants ) {
+    for my $name ( sort @grants ) {
+        warn "enabling $name";
         die "Duplicate grant $name "    if $done{$name};
         die "Permission $name doesn't exist at table grant_types"
                 ."\n".Dumper(\%grant_exists)
