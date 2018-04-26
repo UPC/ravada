@@ -1,21 +1,21 @@
 <div class="panel panel-default">
     <div class="panel-heading">
-        <h3><%=l 'Please enter the following information to create the account.' =%></h3>
+        <h3><%=l 'Please enter the following information to create the account.' %></h3>
     </div>
     <div class="panel-body">
            <form name="new_userForm" role="form" method="post" action="/users/register" novalidate>
             <div class="from-group">
-                <label for="username">Username</label>
+                <label for="username"><%=l 'Username' %></label>
                 <input class="form-control" ng-model="username" placeholder="Enter Username" type="text" ng-maxlength="20" ng-minlength="5" name="username" ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="username" required=""><br/>
             </div>
 
             <div class="from-group">
-                <label for="password">Password</label>
+                <label for="password"><%=l 'Password' %></label>
                 <input class="form-control" ng-model="password" placeholder="Enter Password" type="password" ng-maxlength="20" ng-minlength="5" name="password" ng-pattern="/^[a-zA-Z0-9]*$/" id="password" required=""><br/>
             </div>
 
             <div class="from-group">
-                <label for="password">Confirm Password</label>
+                <label for="password"><%=l 'Confirm Password' %></label>
                 <input class="form-control" ng-model="cpassword" placeholder="Confirm Password" type="password" ng-maxlength="20" ng-minlength="5" name="cpassword" ng-pattern="/^[a-zA-Z0-9]*$/" id="confirm_password" onkeyup="checkPass(); return false;" required><span id="confirmMessage" class="confirmMessage"></span><br/>
             </div> <body>
 

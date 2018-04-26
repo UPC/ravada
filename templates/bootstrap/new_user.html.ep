@@ -11,7 +11,7 @@
            <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2><%= l 'Create a new account' %>
+                        <h2><%=l 'Create a new account' %>
                         </h2>
                     </div>
                     %= include '/ng-templates/new_user'

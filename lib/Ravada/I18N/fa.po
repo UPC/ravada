@@ -61,9 +61,6 @@ msgstr "عدم توانایی در آماده سازی پایگاه"
 msgid "Clone/s"
 msgstr "همسان ها"
 
-msgid "NEW"
-msgstr "جدید"
-
 msgid "Users List"
 msgstr "لیست کاربرها"
 

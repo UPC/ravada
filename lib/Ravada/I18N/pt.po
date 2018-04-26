@@ -54,9 +54,6 @@ msgstr "Não é possível Preparar Base, Remover Base ou Deletar. A Máquina tem
 msgid "Clone/s"
 msgstr "Clone/s"
 
-msgid "NEW"
-msgstr "NOVO"
-
 msgid "Users List"
 msgstr "Lista de Usuários"
 

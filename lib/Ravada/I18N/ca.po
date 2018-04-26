@@ -56,9 +56,6 @@ msgstr "No es pot preparar o eliminar la base. La màquina te"
 msgid "Clone/s"
 msgstr "clon/s"
 
-msgid "NEW"
-msgstr "NOUS"
-
 msgid "Users List"
 msgstr "Llista d'usuaris"
 
@@ -373,12 +370,6 @@ msgstr "Registrar"
 msgid "Search"
 msgstr "Cerca"
 
-msgid "Admin tools"
-msgstr "Eines d'administració"
-
-msgid "Admin tools"
-msgstr "Eines d'administració"
-
 msgid "There are no public bases available in this system."
 msgstr "No hi ha bases públiques disponibles en aquest sistema."
 
@@ -546,4 +537,4 @@ msgid "Are you sure you want to prepare the base of"
 msgstr "Estàs segur de voler fer base a"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr "Estàs segur de voler canviar l'estat Public de "
+msgstr "Estàs segur de voler canviar l'estat Public de"
