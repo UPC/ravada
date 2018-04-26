@@ -18,6 +18,9 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $CONFIG_FILE = 't/etc/ravada_ldap_1.conf';
 
+init($test->connector, $CONFIG_FILE);
+rvd_back();
+
 my $RVD_FRONT;
 my $USER_DATA;
 
