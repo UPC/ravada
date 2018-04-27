@@ -7,7 +7,7 @@ provide a cleaner and easy to use interface for translators.
 New entries must be added in the ``en.po`` file.
 Because it is the basis of the other language files.
 
-.. Warning:: Please don't add new entries in .po files directly. Use `Transifex <https://www.transifex.com/ravada/ravada/>`__ instead.
+.. Warning:: Please don't add new entries in other .po files directly. Use `Transifex <https://www.transifex.com/ravada/ravada/>`__ instead.
 
 The language files are stored `here <https://github.com/UPC/ravada/tree/master/lib/Ravada/I18N/>`_ in lib/Ravada/I18N.
 
