@@ -133,4 +133,5 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/run
    devel-docs/test
    devel-docs/create_test
+   devel-docs/documentation
    docs/spice_tls
