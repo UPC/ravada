@@ -256,7 +256,6 @@ msgstr "Para la redirección de spice, necesitarás instalar"
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Busca en tu distro, p.e. en Debian/Ubuntu con"
 
-
 msgid "You'll need to install"
 msgstr "Necesitarás instalar"
 
@@ -343,8 +342,14 @@ msgstr "Se requiere de un visor para arrancar la máquina virtual."
 msgid "user"
 msgstr "usuario"
 
+msgid "User"
+msgstr "Usuario"
+
 msgid "password"
 msgstr "contraseña"
+
+msgid "Password"
+msgstr "Contraseña"
 
 msgid "Start session"
 msgstr "Iniciar sesión"
@@ -508,3 +513,30 @@ msgstr "Estás seguro de querer convertir en base a"
 
 msgid "Are you sure you want to change the Public state of"
 msgstr "Estás seguro de querer cambiar el estado publico de"
+
+msgid "Version"
+msgstr "Versión"
+
+msgid "Authors"
+msgstr "Autores"
+
+msgid "Development"
+msgstr "Desarrollo"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "A continuación esta la lista de tecnologias usadas en este proyecto:"
+
+msgid "The code is available on "
+msgstr "El codigo está disponible en "
+
+msgid "The code is "
+msgstr "El codigo está "
+
+msgid "License"
+msgstr "Licència"
+
+msgid "is admin"
+msgstr "es administrador"
+
+msgid "Add new user"
+msgstr "Añadir usuari nuevo"
