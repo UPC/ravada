@@ -264,7 +264,7 @@ sub _allow_remove($self, $user) {
     confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
-        unless $user->can_remove() || $user->is_admin;
+        unless $user->can_remove_machine($self);
 
     $self->_check_has_clones() if $self->is_known();
     if ( $self->is_known
@@ -274,7 +274,6 @@ sub _allow_remove($self, $user) {
         my $base = $self->open($self->id_base);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
-    $self->_allowed($user);
 
 }
 
@@ -469,7 +468,7 @@ sub _allowed {
     my $err = $@;
 
     confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
-        ." owned by ".($id_owner or '<UNDEF>')."\n".Dumper($self)
+        ." owned by ".($id_owner or '<UNDEF>')
             if (defined $id_owner && $id_owner != $user->id );
 
     confess $err if $err;

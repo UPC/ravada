@@ -764,6 +764,34 @@ sub can_change_settings($self, $id_domain=undef) {
     return 0;
 }
 
+sub can_remove_clones($self, $id_domain) {
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    confess "ERROR: domain is not a base "  if !$domain->id_base;
+
+    return 1 if $self->can_remove_clone_all();
+
+    return 0 if !$self->can_remove_clone();
+
+    my $base = Ravada::Front::Domain->open($domain->id_base);
+    return 1 if $base->id_owner == $self->id;
+    return 0;
+}
+
+sub can_remove_machine($self, $domain) {
+    return 1 if $self->can_remove_all();
+    return 0 if !$self->can_remove();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    if ( $domain->id_owner == $self->id ) {
+        return 1 if $self->can_do("remove");
+    }
+
+    return $self->can_remove_clones($domain->id) if $domain->id_base;
+    return 0;
+}
+
 sub grants($self) {
     $self->_load_grants()   if !$self->{_grant};
     return () if !$self->{_grant};
