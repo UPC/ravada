@@ -18,16 +18,13 @@ msgstr ""
 msgid "Ravada broker"
 msgstr ""
 
-msgid "Machine name"
+msgid "Machine Name"
 msgstr ""
 
 msgid "Tools"
 msgstr ""
 
-msgid "Machines list"
-msgstr ""
-
-msgid "Choose a machine to start"
+msgid "Choose a Machine to Start"
 msgstr ""
 
 msgid "Start"
@@ -75,7 +72,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-msgid "New machine"
+msgid "New Machine"
 msgstr ""
 
 msgid "I want to change my password"
@@ -114,6 +111,9 @@ msgstr ""
 msgid "Japanese"
 msgstr ""
 
+msgid "German"
+msgstr ""
+
 msgid "New Password:"
 msgstr ""
 
@@ -123,10 +123,10 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-msgid "Your language has been successfully changed"
+msgid "Your language has been changed successfully"
 msgstr ""
 
-msgid "Your password has been successfully changed"
+msgid "Your password has been changed successfully"
 msgstr ""
 
 msgid "Password is too short"
@@ -198,7 +198,13 @@ msgstr ""
 msgid "Machines"
 msgstr ""
 
+msgid "machines"
+msgstr ""
+
 msgid "Users"
+msgstr ""
+
+msgid "users"
 msgstr ""
 
 msgid "Messages"
@@ -237,7 +243,10 @@ msgstr ""
 msgid "Cannot remove base, machine has clones"
 msgstr ""
 
-msgid "Show/hide clones"
+msgid "show clones"
+msgstr ""
+
+msgid "hide clones"
 msgstr ""
 
 msgid "For Spice redirection you'll need to install"
@@ -547,4 +556,58 @@ msgid "to"
 msgstr ""
 
 msgid "Changing Public State"
+msgstr ""
+
+msgid "action"
+msgstr ""
+
+msgid "Grants"
+msgstr ""
+
+msgid "public"
+msgstr ""
+
+msgid "New Base"
+msgstr ""
+
+msgid "Version"
+msgstr ""
+
+msgid "Authors"
+msgstr ""
+
+msgid "Development"
+msgstr ""
+
+msgid "Below are listed the technologies used in this project:"
+msgstr ""
+
+msgid "The code is available on "
+msgstr ""
+
+msgid "The code is "
+msgstr ""
+
+msgid "License"
+msgstr ""
+
+msgid "Machine locked by"
+msgstr ""
+
+msgid "This Machine is a base"
+msgstr ""
+
+msgid "Cloned"
+msgstr ""
+
+msgid "is admin"
+msgstr ""
+
+msgid "Add new user"
+msgstr ""
+
+msgid "Register"
+msgstr ""
+
+msgid "Current Password:"
 msgstr ""
