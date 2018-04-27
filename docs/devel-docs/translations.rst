@@ -9,6 +9,8 @@ Because it is the basis of the other language files.
 
 .. Warning:: Please don't add new entries in other .po files directly. Use `Transifex <https://www.transifex.com/ravada/ravada/>`__ instead.
 
+.. image:: ../img/translate.png
+
 The language files are stored `here <https://github.com/UPC/ravada/tree/master/lib/Ravada/I18N/>`_ in lib/Ravada/I18N.
 
 Before uploading the changes check if there are repeated msgid.
