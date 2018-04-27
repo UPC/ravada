@@ -33,7 +33,6 @@ eval {
     $VALID_VM{KVM} = 1;
 };
 $ERROR_VM{KVM} = $@;
-warn $@;
 
 eval {
     require Ravada::VM::Void and do {
