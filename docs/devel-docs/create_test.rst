@@ -41,6 +41,8 @@ So we edit a new file called *30_remove.t* in the directory *ravada/t*.
 
     #!perl
     
+    use strict;
+    use warnings;
     use Test::More;
     use Test::SQL::Data;
     
@@ -95,6 +97,8 @@ Now the test file is like this:
 
     #!perl
     
+    use strict;
+    use warnings;
     use Test::More;
     use Test::SQL::Data;
     
@@ -159,6 +163,8 @@ has been removed.
 
     #!perl
     
+    use strict;
+    use warnings;
     use Test::More;
     use Test::SQL::Data;
     
