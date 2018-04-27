@@ -31,6 +31,7 @@
                                 <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
                                 <option <%= $c->param("tongue") eq 'gl' ? "selected" : "" %> value="gl" ><%=l 'Galician' %></option>
                                 <option <%= $c->param("tongue") eq 'fr' ? "selected" : "" %> value="fr" ><%=l 'French' %></option>
+                                <option <%= $c->param("tongue") eq 'pt' ? "selected" : "" %> value="pt" ><%=l 'Portuguese' %></option>
                                 <option <%= $c->param("tongue") eq 'hi' ? "selected" : "" %> value="hi" ><%=l 'Hindi' %></option>
                                 <option <%= $c->param("tongue") eq 'id' ? "selected" : "" %> value="id" ><%=l 'Indonesian' %></option>
                                 <option <%= $c->param("tongue") eq 'fa' ? "selected" : "" %> value="fa" ><%=l 'Persian' %></option>
