@@ -1459,12 +1459,12 @@ sub settings_machine {
     }
 
     for my $option (qw(description run_timeout volatile_clones)) {
-        if ( defined $c->param($option) ) {
+        if ( defined $c->param($option) && defined $c->param("submitbtn") ) {
             my $value = $c->param($option);
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
-        }elsif ( $option eq 'volatile_clones' ) {
+        }elsif ( $option eq 'volatile_clones' && defined $c->param("submitbtn") ) {
             my $value = '0';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");

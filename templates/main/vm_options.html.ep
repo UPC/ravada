@@ -43,7 +43,7 @@
                 Clones created from this machine will be removed on shutdown.
             </div>
         </div>
-        <input type="submit">
+        <input type="submit" name="submitbtn">
         <button type="reset" >Cancel</button>
     </form>
 </div><!-- of form-group -->
