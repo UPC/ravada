@@ -533,10 +533,10 @@ msgid "The code is "
 msgstr "El codigo está "
 
 msgid "License"
-msgstr "Licència"
+msgstr "Licéncia"
 
 msgid "is admin"
 msgstr "es administrador"
 
 msgid "Add new user"
-msgstr "Añadir usuari nuevo"
+msgstr "Añadir usuario nuevo"
