@@ -42,6 +42,8 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
+our $RVD_BACK;
+
 our %ARG_CREATE_DOM = (
     KVM => []
     ,Void => []
@@ -122,6 +124,8 @@ sub new_pool_name {
 
 sub rvd_back {
     my ($connector, $config) = @_;
+
+    return $RVD_BACK            if $RVD_BACK && !$connector && !$config;
     init($connector,$config,0)    if $connector;
 
     my $rvd = Ravada->new(
@@ -133,6 +137,7 @@ sub rvd_back {
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
+    $RVD_BACK = $rvd;
     return $rvd;
 }
 
@@ -157,6 +162,7 @@ sub init {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
+    rvd_back()  if !$RVD_BACK;
 }
 
 sub _remove_old_domains_vm {
