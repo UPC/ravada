@@ -145,3 +145,47 @@ Run each one of these commands in a separate terminal
     $ sudo ./bin/rvd_back.pl
 
 Now you must be able to reach ravada at the location http://your.ip:3000/
+
+If you wish to create a script to automatize the start and shutdown of the ravada server, you can use these two bash scripts:
+
+start_ravada.sh:
+
+::
+
+    #!/bin/bash
+    #script to initialize ravada server
+    
+    display_usage()
+    {
+	echo "./start_ravada 1 (messages not prompting to terminal)
+	echo "./start_ravada 0 (prompts enables to this terminal)
+    }
+
+    if [ $# -eq 0 ]
+    then
+	display_usage
+    	exit 1
+    else
+	SHOW_MESSAGES=$1
+	if [ $SHOW_MESSAGES -eq 1 ]
+	then
+	    morbo ./rvd_front.pl > /dev/null 2>&1 &
+	    sudo ./bin/rvd_back.pl > /dev/null 2>&1 &
+	else
+	    morbo ./rvd_front.pl &
+	    sudo ./bin/rvd_back.pl &
+	fi
+	echo "Server initialized succesfully."
+    fi
+
+shutdown_ravada.sh:
+
+::
+
+    #!/bin/bash
+    #script to shutdown the ravada server
+
+    sudo kill -15 $(pidof './rvd_front.pl')
+    sudo kill -15 $(pidof -x 'rvd_back.pl')
+    echo "Server closed succesfully"
+    
