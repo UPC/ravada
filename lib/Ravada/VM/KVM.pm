@@ -1591,7 +1591,27 @@ sub _xml_add_usb_uhci3 {
 
 }
 
-
+sub _xml_add_guest_agent {
+    my $self = shift;
+    my $devices = shift;
+    
+    return if _search_xml(
+                            xml => $devices
+                            ,name => 'channel'
+                            ,type => 'unix'
+    );
+    
+    my $channel = $devices->addNewChild(undef,"channel");
+    $channel->setAttribute(type => 'unix');
+    
+    my $source = $channel->addNewChild(undef,'source');
+    $source->setAttribute(mode => 'bind');
+    
+    my $target = $channel->addNewChild(undef,'taregt');
+    $taregt->setAttribute(type => 'virtio');
+    $target->setAttribute(name => 'org.qemu.guest_agent.0');
+    
+}
 
 sub _xml_remove_cdrom {
     my $doc = shift;
