@@ -54,6 +54,8 @@ sub test_volatile_clone {
         is($clonef->is_active, 1,"[".$vm->type."] expecting active $clone_name") or exit;
         like($clonef->display(user_admin),qr'\w+://');
 
+        my $list = rvd_front->list_domains();
+
         $clone->shutdown_now(user_admin);
 
         eval { $clone->is_active };
@@ -87,8 +89,9 @@ sub test_enforce_limits {
 
     my $user = create_user("limit$$",'bar');
 
+    my $clone_name = new_domain_name();
     my $clone = $domain->clone(
-        name => new_domain_name
+        name => $clone_name
         ,user => $user
     );
 
@@ -114,6 +117,19 @@ sub test_enforce_limits {
         or exit;
     is($clone2->is_active,1 );
 
+    my $clone0_2 = $vm->search_domain($clone_name);
+    is($clone0_2, undef);
+    $clone0_2 = rvd_back->search_domain($clone_name);
+    is($clone0_2, undef);
+
+    my $clone0_f;
+    eval { $clone0_f = rvd_front->search_domain($clone_name) };
+    is($clone0_f, undef);
+
+    my $list_domains = rvd_front->list_domains();
+    ($clone0_f) = grep { $_->{name} eq $clone_name } @$list_domains;
+    is($clone0_f, undef);
+
     eval { $clone2->remove(user_admin) };
     is(''.$@,'');
 
@@ -124,6 +140,17 @@ sub test_enforce_limits {
     $user->remove();
 }
 
+sub test_internal_shutdown {
+    my $vm = shift;
+    my $domain = create_domain($vm->type);
+    $domain->is_volatile(1);
+    $domain->start(user_admin);
+    my $domain_name = $domain->name;
+
+    shutdown_domain_internal($domain);
+
+    rvd_back->_cmd_refresh_vms();
+}
 
 ######################################################################3
 clean();
@@ -143,10 +170,10 @@ for my $vm_name ( vm_names() ) {
 
         test_volatile_clone($vm);
         test_enforce_limits($vm);
+        test_internal_shutdown($vm);
     }
 }
 
-warn "cleaning";
 clean();
 
 done_testing();

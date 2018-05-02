@@ -301,6 +301,12 @@ msgstr "Usuario"
 msgid "Password"
 msgstr "Contraseña"
 
+msgid "password"
+msgstr "contraseña"
+
+msgid "Password"
+msgstr "Contraseña"
+
 msgid "Start session"
 msgstr "Iniciar sesión"
 

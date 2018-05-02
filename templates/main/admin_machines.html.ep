@@ -245,7 +245,7 @@
                          <i class="fa fa-play"></i>
                         </a>
 %				}
-%		if ($_user-> can_hibernate_all){
+%		if ($_user->is_admin){
                         <a type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hybernate',machine.id)"
                          ng-disabled="!machine.is_active"

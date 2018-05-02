@@ -345,9 +345,9 @@ sub is_operator {
     my $self = shift;
     return $self->is_admin()
         || $self->can_shutdown_clone()
-	|| $self->can_hibernate_clone()
+#	|| $self->can_hibernate_clone()
 	|| $self->can_change_settings_clones()
-        || $self->can_remove_clone()
+#        || $self->can_remove_clone()
         || $self->can_remove_clone_all()
         || $self->can_create_base()
         || $self->can_create_machine();
@@ -554,18 +554,22 @@ sub can_do($self, $grant) {
 }
 
 sub _load_grants($self) {
-    my $sth = $$CON->dbh->prepare(
-        "SELECT gt.name, gu.allowed"
+    my $sth;
+    eval { $sth= $$CON->dbh->prepare(
+        "SELECT gt.name, gu.allowed, gt.enabled"
         ." FROM grant_types gt LEFT JOIN grants_user gu "
         ."      ON gt.id = gu.id_grant "
         ."      AND gu.id_user=?"
     );
     $sth->execute($self->id);
-    my ($name, $allowed);
-    $sth->bind_columns(\($name, $allowed));
+    };
+    confess $@ if $@;
+    my ($name, $allowed, $enabled);
+    $sth->bind_columns(\($name, $allowed, $enabled));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = $allowed;# or undef);
+        $self->{_grant}->{$name} = $allowed     if $enabled;
+        $self->{_grant_disabled}->{$name} = !$enabled;
     }
     $sth->finish;
 }
@@ -580,7 +584,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'clone');
     $self->grant($user, 'change_settings');
     $self->grant($user, 'remove');
-    $self->grant($user, 'screenshot');
+#    $self->grant($user, 'screenshot');
 }
 
 =head2 grant_operator_permissions
@@ -614,6 +618,7 @@ Grant an user all the permissions
 sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
             "SELECT name FROM grant_types "
+            ." WHERE enabled=1"
     );
     $sth->execute();
     while ( my ($name) = $sth->fetchrow) {
@@ -654,6 +659,10 @@ Grant an user a specific permission, or revoke it
 =cut
 
 sub grant($self,$user,$permission,$value=1) {
+
+    confess "ERROR: permission '$permission' disabled "
+        if $self->{_grant_disabled}->{$permission};
+
     if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
         my @perms = $self->list_permissions();
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
@@ -713,7 +722,9 @@ sub list_all_permissions($self) {
     return if !$self->is_admin;
 
     my $sth = $$CON->dbh->prepare(
-        "SELECT * FROM grant_types ORDER BY name"
+        "SELECT * FROM grant_types"
+        ." WHERE enabled=1 "
+        ." ORDER BY name "
     );
     $sth->execute;
     my @list;

@@ -264,7 +264,7 @@ sub _allow_remove($self, $user) {
     confess "ERROR: Undefined user" if !defined $user;
 
     die "ERROR: remove not allowed for user ".$user->name
-        if (!$user->can_remove());
+        unless $user->can_remove() || $user->is_admin;
 
     $self->_check_has_clones() if $self->is_known();
     if ( $self->is_known
@@ -1946,8 +1946,8 @@ sub internal_id {
 
 =head2 volatile_clones
 
-Allows or disables the volatile clones option. If enabled, clones from this
-virtual machine will be removed on shutdown
+Enables or disables a domain volatile clones feature. Volatile clones are
+removed when shut down
 
 =cut
 
@@ -1955,11 +1955,23 @@ sub volatile_clones($self, $value=undef) {
     return $self->_data('volatile_clones', $value);
 }
 
-
 =head2 status
 
-Returns the status of the virtual machine as a string.
-Allowed values are: active, down, hibernated and paused
+Sets or gets the status of a virtual machine
+
+  $machine->status('active');
+
+Valid values are:
+
+=over
+
+=item * active
+
+=item * down
+
+=item * hibernated
+
+=back
 
 =cut
 
