@@ -54,7 +54,7 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-msgid "Available machines"
+msgid "Available Machines"
 msgstr ""
 
 msgid "Help"
@@ -249,7 +249,7 @@ msgstr ""
 msgid "hide clones"
 msgstr ""
 
-msgid "For Spice redirection you'll need to install"
+msgid "For Spice redirection you will need to install"
 msgstr ""
 
 msgid "in your computer."
@@ -258,14 +258,14 @@ msgstr ""
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
-msgid "You'll need to install"
+msgid "You will need to install"
 msgstr ""
 
 msgid "and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It's "
+"Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
 
@@ -432,10 +432,10 @@ msgstr ""
 msgid "monitoring"
 msgstr ""
 
-msgid "Are you sure you want to remove the base of"
+msgid "Are you sure you want to remove the Base of"
 msgstr ""
 
-msgid "Are you sure you want to prepare the base of"
+msgid "Are you sure you want to prepare the Base of"
 msgstr ""
 
 msgid "Are you sure you want to change the Public state of"
@@ -558,6 +558,9 @@ msgstr ""
 msgid "Changing Public State"
 msgstr ""
 
+msgid "Changing Base State"
+msgstr ""
+
 msgid "action"
 msgstr ""
 
@@ -611,3 +614,10 @@ msgstr ""
 
 msgid "Current Password:"
 msgstr ""
+
+msgid "For more information, check"
+msgstr ""
+
+msgid "the Windows Clients documentation"
+msgstr ""
+
