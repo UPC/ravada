@@ -1,0 +1,6 @@
+ravada (0.2.5-1) unstable; urgency=medium
+
+  * New package for Debian Stretch (Closes: #1)  
+
+ -- Ernesto Crespo <ecrespo@gmail.com>  Wed, 02 May 2018 08:26:15 -0400
+
