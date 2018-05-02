@@ -4,7 +4,7 @@
     <form class="form-inline" action="<%= $action %>" method="post">
         <div class="row">
                     <div class="col-md-2">
-                        <label class="control-label" for="ram">Memory</label>
+                        <label class="control-label" for="ram"><%=l 'Memory' %></label>
                     </div>
                     <div class="col-md-2">
                         <input class="form-control" type="text" name="ram" size="5" disabled
@@ -12,7 +12,7 @@
                     </div>
                     <div class="col-md-6">
                         <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
-                                MB available.
+                                <%=l 'MB available' %>.
                     </div>
        </div>
        <div class="row">
@@ -26,10 +26,10 @@
 %                           $timeout = '' if $timeout eq '0';
                             value="<%= $timeout %>" size="5">
                     </div>
-                    <div class="col-md-6">The machine will shutdown after these minutes</div>
+                    <div class="col-md-6"><%=l 'The machine will shutdown after these minutes' %></div>
         </div>
         <input type="submit">
-        <button type="reset" >Cancel</button>
+        <button type="reset" ><%=l 'Cancel' %></button>
     </form>
 </div><!-- of form-group -->
 </div><!-- of panel-body -->
