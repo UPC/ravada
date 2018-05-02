@@ -171,6 +171,25 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
         },
+        mate_bionic => {
+                    name => 'Ubuntu Mate Bionic 64 bits'
+            ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
+        mate_bionic_i386 => {
+                    name => 'Ubuntu Mate Bionic 32 bits'
+            ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
+                   ,arch => 'i386'
+                    ,xml => 'bionic-i386.xml'
+             ,xml_volume => 'bionic32-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
+
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
@@ -201,6 +220,18 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
           ,min_disk_size => '9'
         }
+        ,bionic=> {
+                    name => 'Ubuntu Bionic Beaver'
+            ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/18.04/'
+                ,file_re => 'ubuntu-18.04.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
+        }
+
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
             ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
