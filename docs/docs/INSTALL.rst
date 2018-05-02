@@ -39,23 +39,16 @@ if you are only upgrading Ravada from a previous version already installed.
 Ubuntu
 ------
 
-.. note:: Ubuntu 16.04 (xenial) rename the VM doesn't work. This functionality is included in more updated libraries that it does not include this distro. For example 17.10 (artful) or laters. Remember that this month (April 2018) will be available the 18.04 LTS (bionic).
+.. note:: We only provide support for Ubuntu 18.04 LTS (bionic).
 
 We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-*libmojolicious-plugin-renderfile-perl* package is available only in recent Ubuntus. Try  this first:
+Install *libmojolicious-plugin-renderfile-perl* package:
 
 ::
 
     $ sudo apt-get install libmojolicious-plugin-renderfile-perl
-
-.. warning:: **Only if it fails** download our own package:
-    
-    ::
-
-        $ wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-        $ sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
 
 Then install the ravada package, it will show some errors, it is ok, keep reading.
 
@@ -93,7 +86,7 @@ It is required a database for internal use. In this examples we call it *ravada*
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
 In this stage the system wants you to set a password for the sql connection.
 
-.. Warning:: If installing ravada on Ubuntu 18 or newer you should enter your user's password instead of mysql's root password.
+.. Warning:: When installing MySQL you wont be asked for a password, you can set a password for the root user in MySQL via *mysql_secure_installation* or type your user's password when it ask's you for a password.
 
 Create the database:
 
@@ -132,33 +125,6 @@ When asked if this user is admin answer *yes*.
 ::
 
     $ sudo /usr/sbin/rvd_back --add-user user.name
-
-Firewall (Optional)
--------------------
-
-The server must be able to send *DHCP* packets to its own virtual interface.
-
-KVM should be using a virtual interface for the NAT domnains. Look what is the address range and add it to your *iptables* configuration.
-
-First we try to find out what is the new internal network:
-
-::
-
-    $  sudo route -n
-    ...
-    192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
-
-So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
-
-::
-
-    sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
-
-To confirm that the configuration was updated, check it with:
-
-::
-
-    sudo iptables -S
 
 Client
 ------

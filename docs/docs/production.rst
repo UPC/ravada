@@ -6,18 +6,6 @@ Ravada has two daemons that must run on the production server:
 -  rvd\_back : must run as root and manages the virtual machines
 -  rvd\_front : is the web frontend that sends requests to the backend
 
-Configuration (Optional)
-------------------------
-
-The frontend has a secret passphrase that should be changed. Cookies and
-user session rely on this. You can have many passphrases that get
-rotated to improve security even more.
-
-Change the file /etc/rvd\_front.conf line *secrets* like this:
-
-::
-
-    , secrets => ['my secret 1', 'my secret 2' ]
 
 System services
 ---------------
@@ -50,7 +38,7 @@ Start
     $ sudo systemctl start rvd_front
 
 Status
-~~~~
+~~~~~~
 You should check if the daemons started right the very first time with the status command. See troubleshooting frequently problems if it failed to start.
 
 ::

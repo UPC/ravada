@@ -60,6 +60,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL_Fedora
    docs/INSTALL_Script
    docs/production
+   docs/recomendations
    docs/INSTALL_devel
    docs/Ubuntu_Installation
    docs/add_kvm_storage_pool
