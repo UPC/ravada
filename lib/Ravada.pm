@@ -2350,6 +2350,7 @@ sub search_vm {
     die $@ if $@;
 
     for my $vm (@vms) {
+        $vm->connect    if !$vm->vm;
         return $vm if ref($vm) eq $class;
     }
     return;

@@ -285,22 +285,17 @@ get '/list_machines.json' => sub {
     my $c = shift;
 
     return access_denied($c) unless _logged_in($c)
-        && ( $USER->can_list_own_machines()
-            || $USER->is_admin()
+        && (
+            $USER->can_list_machines
+            || $USER->can_list_own_machines()
+            || $USER->can_list_clones()
+            || $USER->can_list_clones_from_own_base()
         );
 
-    my @args;
-    if ( !$USER->can_list_machines ) {
-      my $domains = $RAVADA->list_domains( id_owner => $USER->id );
-            for my $domain ( @$domains ) {
-                next if !$domain->{id_base};
-                my $base = $RAVADA->list_domains( id => $domain->{id_base} );
-                push @$domains, (@$base);
-            } 
-        return $c->render( json => $domains );
-    }
+    return $c->render( json => $RAVADA->list_domains )  if $USER->can_list_machines;
 
-    return $c->render( json => $RAVADA->list_domains );
+    return $c->render( json => $RAVADA->list_machines($USER) );
+
 };
 
 get '/list_bases_anonymous.json' => sub {
@@ -389,7 +384,7 @@ get '/machine/shutdown/(:id).(:type)' => sub {
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)       if (!$USER -> can_remove());
+    return access_denied($c)       if !$USER->can_remove_machine($c->stash('id'));
         return remove_machine($c);
 };
 
@@ -1422,7 +1417,7 @@ sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
-  	return access_denied($c)    if !$USER->can_change_settings($domain->id);
+  	return access_denied($c)    if !$USER->can_manage_machine($domain->id);
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);

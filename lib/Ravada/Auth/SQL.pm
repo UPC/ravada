@@ -347,7 +347,7 @@ sub is_operator {
         || $self->can_shutdown_clone()
 #	|| $self->can_hibernate_clone()
 	|| $self->can_change_settings_clones()
-#        || $self->can_remove_clone()
+        || $self->can_remove_clone()
         || $self->can_remove_clone_all()
         || $self->can_create_base()
         || $self->can_create_machine();
@@ -383,6 +383,11 @@ sub can_list_clones {
   
 }
 
+sub can_list_clones_from_own_base($self) {
+    return 1 if $self->can_remove_clone || $self->can_remove_clone_all;
+    return 0;
+}
+
 
 =head2 can_list_machines
 
@@ -392,7 +397,7 @@ Returns true if the user can list all the virtual machines at the web frontend
 
 sub can_list_machines {
     my $self = shift;
-    return 1 if $self->is_admin() || $self->can_remove_clone_all;
+    return 1 if $self->is_admin() || $self->can_remove_all;
     return 0;
 }
 
@@ -764,11 +769,56 @@ sub can_change_settings($self, $id_domain=undef) {
     return 0;
 }
 
+sub can_manage_machine($self, $domain) {
+    $domain = Ravada::Front::Domain->open($domain)  if !ref $domain;
+
+    return 1 if $self->can_change_settings
+        && $domain->id_owner == $self->id;
+
+    return 1 if $self->can_remove_clone_all
+        && $domain->id_base;
+
+    if ( $self->can_remove_clone && $domain->id_base ) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+    return 0;
+}
+
+sub can_remove_clones($self, $id_domain) {
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    confess "ERROR: domain is not a base "  if !$domain->id_base;
+
+    return 1 if $self->can_remove_clone_all();
+
+    return 0 if !$self->can_remove_clone();
+
+    my $base = Ravada::Front::Domain->open($domain->id_base);
+    return 1 if $base->id_owner == $self->id;
+    return 0;
+}
+
+sub can_remove_machine($self, $domain) {
+    return 1 if $self->can_remove_all();
+    return 0 if !$self->can_remove();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    if ( $domain->id_owner == $self->id ) {
+        return 1 if $self->can_do("remove");
+    }
+
+    return $self->can_remove_clones($domain->id) if $domain->id_base;
+    return 0;
+}
+
 sub grants($self) {
     $self->_load_grants()   if !$self->{_grant};
     return () if !$self->{_grant};
     return %{$self->{_grant}};
 }
+
 
 sub AUTOLOAD($self) {
 
