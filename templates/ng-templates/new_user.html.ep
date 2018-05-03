@@ -6,7 +6,7 @@
            <form name="new_userForm" role="form" method="post" action="/users/register" novalidate>
             <div class="from-group">
                 <label for="username">Username</label>
-                <input class="form-control" ng-model="username" placeholder="Enter Username" type="text" ng-maxlength="20" ng-minlength="5" name="username" ng-pattern="/^[a-zA-Z_.-]*$/" id="username" required=""><br/>
+                <input class="form-control" ng-model="username" placeholder="Enter Username" type="text" ng-maxlength="20" ng-minlength="5" name="username" ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="username" required=""><br/>
             </div>
 
             <div class="from-group">
