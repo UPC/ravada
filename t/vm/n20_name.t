@@ -170,7 +170,7 @@ sub test_chain($vm_name, %args) {
 ##################################################################################
 
 clean();
-flush_rules();
+flush_rules()   if !$>;
 
 for my $vm_name ( 'Void', 'KVM' ) {
 
@@ -180,7 +180,7 @@ for my $vm_name ( 'Void', 'KVM' ) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $vm_name =~ /kvm/i && $>) {
+        if ($vm && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
@@ -193,6 +193,6 @@ for my $vm_name ( 'Void', 'KVM' ) {
 }
 
 clean();
-flush_rules();
+flush_rules()   if !$>;
 
 done_testing();

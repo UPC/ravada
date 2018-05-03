@@ -160,7 +160,7 @@ sub test_chain($vm_name, %args) {
     my $msg2 = "[$vm_name]";
     $msg2 = "[$vm_name - $msg]" if $msg;
     ok($rule_num,"$msg2 Expecting rule for $remote_ip -> $local_ip: $local_port $jump")
-            or exit
+            or confess
         if $enabled;
     ok(!$rule_num,"$msg2 Expecting no rule for $remote_ip -> $local_ip: $local_port"
                         .", found at $rule_num ")
@@ -170,7 +170,7 @@ sub test_chain($vm_name, %args) {
 ##################################################################################
 
 clean();
-flush_rules();
+flush_rules()   if !$>;
 
 for my $vm_name ( 'Void', 'KVM' ) {
 
@@ -180,7 +180,7 @@ for my $vm_name ( 'Void', 'KVM' ) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $vm_name =~ /kvm/i && $>) {
+        if ($vm && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
@@ -193,6 +193,6 @@ for my $vm_name ( 'Void', 'KVM' ) {
 }
 
 clean();
-flush_rules();
+flush_rules()   if !$>;
 
 done_testing();
