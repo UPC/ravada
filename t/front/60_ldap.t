@@ -78,6 +78,15 @@ SKIP: {
         $ok = 0;
     } else {
         lock_hash(%$USER_DATA);
+        $RVD_FRONT = Ravada::Front->new(
+            config => $CONFIG_FILE
+            ,connector => $test->connector
+        );
+        my $ldap;
+        eval { $ldap = Ravada::Auth::LDAP::_connect_ldap() };
+        warn $@ if $@;
+        $ok = $ldap;
+
     }
     if (!-e $CONFIG_FILE ) {
         warn "SKIPPED: To test Front LDAP create the file $CONFIG_FILE with\n"

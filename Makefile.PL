@@ -33,6 +33,6 @@ WriteMakefile(
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
-  clean     => {FILES => 't/.db' }
+  clean     => {FILES => 't/.db /var/tmp/rvd_void' }
 
 );
