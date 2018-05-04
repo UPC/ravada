@@ -75,6 +75,8 @@ sub test_create_domain {
     $vm->default_storage_pool_name($pool_name);
     is($vm->default_storage_pool_name($pool_name), $pool_name) or exit;
 
+    is($vm->storage_pool->get_name, $pool_name) or exit;
+
     my $name = new_domain_name();
 
     ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
