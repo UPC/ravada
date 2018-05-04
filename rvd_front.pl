@@ -1180,7 +1180,7 @@ sub show_link {
     my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
     my $description = $domain->description;
     if (!$description && $domain->id_base) {
-        my $base = Ravada::Domain->open($domain->id_base);
+        my $base = $RAVADA->search_domain_by_id($domain->id_base);
         $description = $base->description();
     }
     $c->stash(description => $description);
