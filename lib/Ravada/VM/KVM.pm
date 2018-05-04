@@ -1608,8 +1608,8 @@ sub _xml_add_guest_agent {
     my $source = $channel->addNewChild(undef,'source');
     $source->setAttribute(mode => 'bind');
     
-    my $target = $channel->addNewChild(undef,'taregt');
-    $taregt->setAttribute(type => 'virtio');
+    my $target = $channel->addNewChild(undef,'target');
+    $target->setAttribute(type => 'virtio');
     $target->setAttribute(name => 'org.qemu.guest_agent.0');
     
 }
