@@ -129,7 +129,7 @@
                         <div style="float:right">
                             <a ng-show="hide_clones" ng-click="hideClones()"
                               class="label label-primary"
-                              align="right">show clones</a>
+                              align="right"><%=l 'show clones' %></a>
                             <a ng-show="!hide_clones" ng-click="hideClones()"
                               class="label label-primary"
                               align="right"><%=l 'hide clones' %></a>
@@ -180,7 +180,7 @@
                              <div class="modal-content">
                                <div class="modal-header">
                                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                 <h4 class="modal-title">Changing Base State</h4>
+                                 <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
                                </div>
                                <div class="modal-body" ng-show="can_remove_base(machine)">
                                  <p><%=l 'Are you sure you want to remove the base of' %> {{machine.name}}?</p>
@@ -189,9 +189,9 @@
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()">No</button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)" data-dismiss="modal">Yes</button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',machine.id)" ng-show="can_prepare_base(machine)" data-dismiss="modal">Yes</button>
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',machine.id)" ng-show="can_prepare_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
@@ -216,7 +216,7 @@
                                </div>
                                <div class="modal-footer">
                                  <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public==0)" data-dismiss="modal">Yes</button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
@@ -299,7 +299,7 @@
                              <div class="modal-content">
                                <div class="modal-header">
                                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                 <h4 class="modal-title">Changing Base State</h4>
+                                 <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
                                </div>
                                <div class="modal-body" ng-show="can_remove_base(child)">
                                  <p><%=l 'Are you sure you want to remove the Base of' %> {{child.name}}?</p>
@@ -308,9 +308,9 @@
                                  <p><%=l 'Are you sure you want to prepare the Base of' %> {{child.name}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()">No</button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',child.id)" ng-show="can_remove_base(child)" data-dismiss="modal">Yes</button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',child.id)" ng-show="can_prepare_base(child)" data-dismiss="modal">Yes</button>
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',child.id)" ng-show="can_remove_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',child.id)" ng-show="can_prepare_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
@@ -333,8 +333,8 @@
                                  <p><%=l 'Are you sure you want to change the Public state of' %> {{child.name}} to {{(child.is_public==0)}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()">No</button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(child.id, child.is_public==0)" data-dismiss="modal">Yes</button>
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(child.id, child.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>

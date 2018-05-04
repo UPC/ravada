@@ -54,7 +54,7 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-msgid "Available machines"
+msgid "Available Machines"
 msgstr ""
 
 msgid "Help"
@@ -249,7 +249,7 @@ msgstr ""
 msgid "hide clones"
 msgstr ""
 
-msgid "For Spice redirection you'll need to install"
+msgid "For Spice redirection you will need to install"
 msgstr ""
 
 msgid "in your computer."
@@ -258,14 +258,14 @@ msgstr ""
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
-msgid "You'll need to install"
+msgid "You will need to install"
 msgstr ""
 
 msgid "and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It's "
+"Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
 
@@ -432,10 +432,10 @@ msgstr ""
 msgid "monitoring"
 msgstr ""
 
-msgid "Are you sure you want to remove the base of"
+msgid "Are you sure you want to remove the Base of"
 msgstr ""
 
-msgid "Are you sure you want to prepare the base of"
+msgid "Are you sure you want to prepare the Base of"
 msgstr ""
 
 msgid "Are you sure you want to change the Public state of"
@@ -463,9 +463,6 @@ msgid "Create a new account"
 msgstr ""
 
 msgid "Username"
-msgstr ""
-
-msgid "Confirm Password"
 msgstr ""
 
 msgid "Hide Private"
@@ -525,7 +522,7 @@ msgstr ""
 msgid "Yes, remove"
 msgstr ""
 
-msgid "Virtual machine"
+msgid "Virtual Machine"
 msgstr ""
 
 msgid "removed"
@@ -556,6 +553,9 @@ msgid "to"
 msgstr ""
 
 msgid "Changing Public State"
+msgstr ""
+
+msgid "Changing Base State"
 msgstr ""
 
 msgid "action"
@@ -611,3 +611,79 @@ msgstr ""
 
 msgid "Current Password:"
 msgstr ""
+
+msgid "For more information, check"
+msgstr ""
+
+msgid "the Windows Clients documentation"
+msgstr ""
+
+msgid "It is programmed in"
+msgstr ""
+
+msgid "with perl framework"
+msgstr ""
+
+msgid "and"
+msgstr ""
+
+msgid "Memory"
+msgstr ""
+
+msgid "MB available"
+msgstr ""
+
+msgid "The machine will shutdown after these minutes"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Please enter the following information to create the account"
+msgstr ""
+
+msgid "Enter Username"
+msgstr ""
+
+msgid "Enter Password"
+msgstr ""
+
+msgid "Confirm Password"
+msgstr ""
+
+msgid "Username is required"
+msgstr ""
+
+msgid "Username can not exceed 20 characters"
+msgstr ""
+
+msgid "Username must be at least 5 characters"
+msgstr ""
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+
+msgid "Password is required"
+msgstr ""
+
+msgid "Password can not exceed 20 characters"
+msgstr ""
+
+msgid "Password must be at least 5 characters"
+msgstr ""
+
+msgid "Password can only contain words and numbers"
+msgstr ""
+
+msgid "Confirm Password is required"
+msgstr ""
+
+msgid "Confirm Password can not exceed 20 characters"
+msgstr ""
+
+msgid "Confirm Password must be at least 5 characters"
+msgstr ""
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr ""
+
