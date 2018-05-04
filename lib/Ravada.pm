@@ -1068,7 +1068,7 @@ sub _create_vm {
     );
 
     my @vms = ();
-    my $err='';
+    my $err;
 
     for my $vm_name (keys %VALID_VM) {
         my $vm;
