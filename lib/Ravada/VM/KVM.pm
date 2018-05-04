@@ -642,6 +642,7 @@ sub _domain_create_common {
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
+    $self->_xml_add_guest_agent($xml);
 
     my $dom;
 
