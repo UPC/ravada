@@ -492,6 +492,7 @@ get '/machine/display/#id' => sub {
 any '/users/register' => sub {
 
        my $c = shift;
+       return access_denied($c) if !$USER->is_admin();
        return register($c);
 };
 
@@ -1278,15 +1279,6 @@ sub _search_requested_machine {
 
     return ($domain,$type) if wantarray;
     return $domain;
-}
-
-sub make_admin {
-    my $c = shift;
-    return login($c) if !_logged_in($c);
-    my $id = $c->stash('id');
-
-    Ravada::Auth::SQL::make_admin($id);
-    return $c->render(inline => "1");
 }
 
 sub register {
