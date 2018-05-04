@@ -54,7 +54,7 @@ msgstr "Nom"
 msgid "Log Out"
 msgstr "Sortir"
 
-msgid "Available machines"
+msgid "Available Machines"
 msgstr "Màquines disponibles"
 
 msgid "Help"
@@ -223,7 +223,7 @@ msgid "Restore"
 msgstr "Restaura"
 
 msgid "Hibernate"
-msgstr "Hivernar"
+msgstr "Hiverna"
 
 msgid "Are you sure?"
 msgstr "Estas segur/a?"
@@ -249,8 +249,8 @@ msgstr "veure clons"
 msgid "hide clones"
 msgstr "amaga els clons"
 
-msgid "For Spice redirection you'll need to install"
-msgstr "Per a la redirecció d'Spice, haureu d'instal·lar"
+msgid "For Spice redirection you will need to install"
+msgstr "Per a la redirecció Spice haurà d'instal·lar-se"
 
 msgid "in your computer."
 msgstr "al teu ordinador."
@@ -258,15 +258,15 @@ msgstr "al teu ordinador."
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Cerca a la teva distribució, p.e. en Debia/Ubuntu amb"
 
-msgid "You'll need to install"
-msgstr "Necessitaràs instal·lar"
+msgid "You will need to install"
+msgstr "Haureu d'instal·lar"
 
 msgid "and USB drivers ("
 msgstr "i els drivers USB ("
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It's necessary"
-" to associate protocol with the app."
+"Be aware that in Windows, Spice redirection is not automatic. It is "
+"necessary to associate protocol with the app."
 msgstr ""
 "Tingueu en compte que a Windows, la redirecció Spice no és automàtica. Cal "
 "associar el protocol amb l'aplicació."
@@ -449,11 +449,11 @@ msgstr ""
 msgid "monitoring"
 msgstr "monitorització"
 
-msgid "Are you sure you want to remove the base of"
-msgstr "Estàs segur de voler eliminar la base de"
+msgid "Are you sure you want to remove the Base of"
+msgstr "Esteu segur que voleu eliminar la Base de"
 
-msgid "Are you sure you want to prepare the base of"
-msgstr "Estàs segur de voler fer base a"
+msgid "Are you sure you want to prepare the Base of"
+msgstr "Esteu segur que voleu preparar la Base de"
 
 msgid "Are you sure you want to change the Public state of"
 msgstr "Estàs segur de voler canviar l'estat Public de"
@@ -481,9 +481,6 @@ msgstr "Crear un compte nou"
 
 msgid "Username"
 msgstr "Nom d'usuari"
-
-msgid "Confirm Password"
-msgstr "Confirma Contrasenya:"
 
 msgid "Hide Private"
 msgstr "Oculta privades"
@@ -543,7 +540,7 @@ msgstr "Estàs segur?"
 msgid "Yes, remove"
 msgstr "Si, esborra"
 
-msgid "Virtual machine"
+msgid "Virtual Machine"
 msgstr "Màquina Virtual"
 
 msgid "removed"
@@ -575,6 +572,9 @@ msgstr "per"
 
 msgid "Changing Public State"
 msgstr "Canvi d'estat públic"
+
+msgid "Changing Base State"
+msgstr "Canvi d'estat Base"
 
 msgid "action"
 msgstr "acció"
@@ -630,3 +630,81 @@ msgstr "Registrar"
 
 msgid "Current Password:"
 msgstr "Contrasenya Actual:"
+
+msgid "For more information, check"
+msgstr "Per més informació, revisa"
+
+msgid "the Windows Clients documentation"
+msgstr "la documentació dels clients de Windows"
+
+msgid "It is programmed in"
+msgstr "Està programat amb"
+
+msgid "with perl framework"
+msgstr "amb framework Perl"
+
+msgid "and"
+msgstr "i"
+
+msgid "Memory"
+msgstr "Memòria"
+
+msgid "MB available"
+msgstr "MB disponible"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "La màquina s'apagarà després d'aquests minuts"
+
+msgid "Cancel"
+msgstr "cancel·lar"
+
+msgid "Please enter the following information to create the account"
+msgstr "Introduïu la informació següent per crear el compte"
+
+msgid "Enter Username"
+msgstr "Introduïu el nom d'usuari"
+
+msgid "Enter Password"
+msgstr "Introduir la contrasenya"
+
+msgid "Confirm Password"
+msgstr "Confirma Contrasenya:"
+
+msgid "Username is required"
+msgstr "El nom d'usuari és obligatori"
+
+msgid "Username can not exceed 20 characters"
+msgstr "El nom d'usuari no pot superar els 20 caràcters"
+
+msgid "Username must be at least 5 characters"
+msgstr "El nom d'usuari ha de tenir com a mínim 5 caràcters"
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+"El nom d'usuari només pot contenir paraules, números, guions, punts i guions"
+" baixos"
+
+msgid "Password is required"
+msgstr "Es requereix contrasenya"
+
+msgid "Password can not exceed 20 characters"
+msgstr "La contrasenya no pot superar els 20 caràcters"
+
+msgid "Password must be at least 5 characters"
+msgstr "La contrasenya ha de tenir com a mínim 5 caràcters"
+
+msgid "Password can only contain words and numbers"
+msgstr "La contrasenya només pot contenir paraules i números"
+
+msgid "Confirm Password is required"
+msgstr "Cal confirmar la contrasenya"
+
+msgid "Confirm Password can not exceed 20 characters"
+msgstr "La confirmació de la contrasenya no pot superar els 20 caràcters"
+
+msgid "Confirm Password must be at least 5 characters"
+msgstr "La confirmació de la contrasenya ha de tenir com a mínim 5 caràcters"
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr ""
+"La confirmació de la contrasenya només pot contenir paraules i números"
