@@ -98,8 +98,9 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
 
+    my $path = $vm->_storage_path($pool_name);
     for my $volume ( $domain->list_volumes ) {
-        like($volume,qr{^/var/tmp});
+        like($volume,qr{^$path});
     }
 
     return $domain;
@@ -194,6 +195,31 @@ sub test_volumes_in_two_pools {
 
 }
 
+sub test_prepare_base {
+    my ($vm_name, $domain, $pool_name) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    $vm->default_storage_pool_name($pool_name);
+    my $path = $vm->_storage_path($pool_name);
+
+    diag("Testing files from base in $path");
+    $domain->prepare_base(user_admin);
+    my @volumes = ($domain->list_files_base, $domain->list_volumes);
+    is(@volumes,2);
+    for my $volume ( @volumes ) {
+        like($volume,qr{^$path}, $volume);
+    }
+
+    $domain->remove_base(user_admin);
+    my @volumes = ($domain->list_files_base, $domain->list_volumes);
+    is(@volumes,1);
+    for my $volume (@volumes) {
+        like($volume,qr{^$path}, $volume);
+    }
+
+}
+
 sub test_default_pool {
     my $vm_name = shift;
     my $pool_name = shift or confess "Missing pool_name";
@@ -223,11 +249,14 @@ SKIP: {
 
     skip($msg,10)   if !$vm;
 
-    my $pool_name = create_pool($vm_name);
+    my $pool2 = create_pool($vm_name);
 
-    my $domain = test_create_domain($vm_name, $pool_name);
-    test_remove_domain($vm_name, $domain);
-    test_default_pool($vm_name,$pool_name);
+    for my $pool_name ('default', $pool2 ) {
+        my $domain = test_create_domain($vm_name, $pool_name);
+        test_prepare_base($vm_name, $domain, $pool_name);
+        test_remove_domain($vm_name, $domain);
+        test_default_pool($vm_name,$pool_name);
+    }
 
     test_volumes_in_two_pools($vm_name);
 }
