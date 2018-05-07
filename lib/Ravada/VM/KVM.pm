@@ -335,6 +335,9 @@ sub dir_img {
 }
 
 sub _storage_path($self, $storage) {
+    $storage = $self->vm->get_storage_pool_by_name($storage)
+        or confess "ERROR: Unknown storage pool $storage"
+            if !ref($storage);
     my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
