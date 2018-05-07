@@ -33,9 +33,9 @@
 %           if ($user->is_admin && $public_bases && $private_bases) {
             <div ng-cloak>
                 <a ng-click="toggle_only_public()" class="label label-primary"
-                  align="right" ng-show="!only_public">Hide Private</a>
+                  align="right" ng-show="!only_public"><%=l 'Hide Private' %></a>
                 <a ng-click="toggle_only_public()" class="label label-primary"
-                  align="right" ng-show="only_public">Show All</a>
+                  align="right" ng-show="only_public"><%=l 'Show All' %></a>
 %           }
             </div>
 
@@ -97,7 +97,7 @@
 
 %                   }
 %                   if ( $machine->{id_clone}) {
-%			if ($user->can_change_settings){
+%			if ($user->can_change_settings || $user->can_change_settings_all){
                         <a align="right" href="/machine/settings/<%= $machine->{id_clone} %>.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
 %      							}
                     <div ng-show="host_restore == <%= $machine->{id_clone} %>">
@@ -112,12 +112,12 @@
                             ><%=l 'Yes' %></a>
                     </div>
                     <div ng-show="host_shutdown == <%= $machine->{id_clone} %>">
-                            <b>Shutting down ... </b>
-                            It may take a couple of minutes.
+                            <b><%=l 'Shutting down ...' %></b>
+                            <%=l 'It may take a couple of minutes.' %>
                     </div>
                     <div ng-show="host_hybernate== <%= $machine->{id_clone} %>">
-                            <b>Hybernating ... </b>
-                            It may take a couple of minutes.
+                            <b><%=l 'Hybernating ...' %></b>
+                            <%=l 'It may take a couple of minutes.' %>
                     </div>
 
 %                   }

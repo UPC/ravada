@@ -223,6 +223,8 @@
             }
           };
           $scope.set_public = function(machineId, value) {
+            if (value) value=1;
+            else value=0;
             $http.get("/machine/public/"+machineId+"/"+value);
           };
           
@@ -293,6 +295,8 @@
         $scope.copy_password= function() {
                     $scope.view_password=1;
                     var copyTextarea = document.querySelector('.js-copytextarea');
+              if (copyTextarea) {
+
                     copyTextarea.select();
                     try {
                         var successful = document.execCommand('copy');
@@ -301,6 +305,8 @@
                     } catch (err) {
                         console.log('Oops, unable to copy');
                     }
+
+              }
         };
 
     };

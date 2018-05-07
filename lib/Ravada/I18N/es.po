@@ -1,35 +1,30 @@
 # Translators:
-# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
-# Joel Alarcón <joelalju100@gmail.com>, 2017
-# Omar Brid <omarbr6@gmail.com>, 2018
+# Fernando Verdugo, 2017
+# Alexander Salas Bastidas <alexander.salas@gmail.com>, 2018
+# Jan Fontanet Castillo <jan2_@hotmail.es>, 2018
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2018-01-24 12:21+0300\n"
-"Last-Translator: Omar Brid <omarbr6@gmail.com>, 2018\n"
+"PO-Revision-Date: 2017-05-02 16:20+0200\n"
+"Last-Translator: Jan Fontanet Castillo <jan2_@hotmail.es>, 2018\n"
 "Language-Team: Spanish (https://www.transifex.com/ravada/teams/70385/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Broker Ravada"
 
 msgid "Machine Name"
 msgstr "Nombre de la máquina"
 
 msgid "Tools"
 msgstr "Herramientas"
-
-msgid "Machines List"
-msgstr "Lista de máquinas"
-
-msgid "Users"
-msgstr "Usuarios"
 
 msgid "Choose a Machine to Start"
 msgstr "Elige una máquina para iniciar"
@@ -49,14 +44,8 @@ msgstr "Preparar base"
 msgid "Clone"
 msgstr "Clonar"
 
-msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "No se puede preparar o eliminar la base. La máquina tiene"
-
 msgid "Clone/s"
 msgstr "clon/es"
-
-msgid "NEW"
-msgstr "NUEVOS"
 
 msgid "Users List"
 msgstr "Lista de usuarios"
@@ -67,7 +56,7 @@ msgstr "Nombre"
 msgid "Log Out"
 msgstr "Salir"
 
-msgid "Available Machines"
+msgid "Available machines"
 msgstr "Máquinas disponibles"
 
 msgid "Help"
@@ -79,11 +68,8 @@ msgstr "Requerimientos"
 msgid "About"
 msgstr "Info"
 
-msgid "Messages"
-msgstr "Mensajes"
-
-msgid "Mark all as Read"
-msgstr "Marcar como leídos"
+msgid "Mark all as read"
+msgstr "Marcar todo como leído"
 
 msgid "Settings"
 msgstr "Preferencias"
@@ -109,6 +95,27 @@ msgstr "Español"
 msgid "Catalan"
 msgstr "Catalán"
 
+msgid "Galician"
+msgstr "Gallego"
+
+msgid "French"
+msgstr "Francés"
+
+msgid "Hindi"
+msgstr "Hindi"
+
+msgid "Indonesian"
+msgstr "Indonesio"
+
+msgid "Persian"
+msgstr "Persa"
+
+msgid "Japanese"
+msgstr "Japonés"
+
+msgid "German"
+msgstr "Aleman"
+
 msgid "New Password:"
 msgstr "Nueva Contraseña:"
 
@@ -124,17 +131,14 @@ msgstr "Su idioma ha sido cambiado con éxito"
 msgid "Your password has been changed successfully"
 msgstr "Su contraseña ha sido cambiada con éxito"
 
-msgid "Password too small"
-msgstr "Contraseña demasiado pequeña"
+msgid "Password is too short"
+msgstr "Contraseña demasiado corta"
 
-msgid "Password fields aren't equal"
-msgstr "Los campos de la contraseña no son iguales"
+msgid "Password fields do not match"
+msgstr "Los campos de contraseña no coinciden"
 
-msgid "Some of the password's fields are empty"
-msgstr "Algunos de los campos de la contraseña están vacíos"
-
-msgid "Public"
-msgstr "Público"
+msgid "Some of the password fields are empty"
+msgstr "Algún campo de contraseña esta vacío"
 
 msgid "Status"
 msgstr "Estado"
@@ -142,16 +146,13 @@ msgstr "Estado"
 msgid "Actions"
 msgstr "Acciones"
 
-msgid "Machines"
-msgstr "Máquinas"
-
 msgid "Down"
 msgstr "Parada"
 
 msgid "Running"
 msgstr "En marcha"
 
-msgid "ShutDown"
+msgid "Shutdown"
 msgstr "Apagar"
 
 msgid "Screenshot"
@@ -160,11 +161,11 @@ msgstr "Captura de pantalla"
 msgid "Paused"
 msgstr "Pausado"
 
-msgid "Machine locked by requested"
+msgid "Machine locked by request"
 msgstr "Máquina bloqueada por"
 
-msgid "process"
-msgstr "proceso"
+msgid "Process"
+msgstr "Proceso"
 
 msgid "Copy"
 msgstr "Copia"
@@ -175,8 +176,8 @@ msgstr "¡Error!"
 msgid "Error"
 msgstr "Error"
 
-msgid "Backend no available!"
-msgstr "¡Backend no disponible!"
+msgid "Backend not available!"
+msgstr "Backend no disponible!"
 
 msgid "Subject"
 msgstr "Asunto"
@@ -184,53 +185,47 @@ msgstr "Asunto"
 msgid "Date"
 msgstr "Fecha"
 
-msgid "Mark as Read"
-msgstr "Marcar como leído"
+msgid "Mark as read"
+msgstr "Marca como leído"
 
-msgid "Mark as UnRead"
-msgstr "Marcar como no leído"
+msgid "Mark as unread"
+msgstr "Marca como no leído"
 
-msgid "No message to show!"
-msgstr "¡No hay mensaje por mostrar!"
+msgid "No messages to show"
+msgstr "No hay mensajes para mostrar"
 
 msgid "Admin"
 msgstr "Admin"
 
+msgid "Machines"
+msgstr "Máquinas"
+
 msgid "machines"
 msgstr "máquinas"
 
+msgid "Users"
+msgstr "Usuarios"
+
 msgid "users"
 msgstr "usuarios"
+
+msgid "Messages"
+msgstr "Mensajes"
 
 msgid "messages"
 msgstr "mensajes"
 
 msgid "Admin tools"
-msgstr "Herramientas de admin"
+msgstr "Herramientas de administración"
 
 msgid "Remove base"
 msgstr "Elimina base"
 
-msgid "public"
-msgstr "pública"
-
 msgid "Restore"
 msgstr "Restaura"
 
-msgid "Hybernate"
-msgstr "Hiberna"
-
-msgid "Shutdown"
-msgstr "Apagar"
-
-msgid "action"
-msgstr "acción"
-
-msgid "New Base"
-msgstr "Nueva Base"
-
-msgid "will remove all the contents of the machine"
-msgstr "borrará todo el contenido de la máquina"
+msgid "Hibernate"
+msgstr "Hibernar"
 
 msgid "Are you sure?"
 msgstr "Estás seguro/a?"
@@ -250,27 +245,20 @@ msgstr "Preferencias de la máquina"
 msgid "Cannot remove base, machine has clones"
 msgstr "No se puede borrar la base, la máquina tiene clones"
 
-msgid "Show/Hide clones"
-msgstr "Ver/Esconde clones"
+msgid "show clones"
+msgstr "muestra clones"
 
-msgid "User Settings"
-msgstr "Configuración de usuario"
+msgid "hide clones"
+msgstr "esconde clones"
 
-msgid "For spice redirection you'll need to install"
-msgstr "Para redirección a spice necesitarás instalar"
-
-msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Busca en tu distribución, p.e. Debian/Ubuntu con"
-
-msgid "For spice redirection you'll need to install"
+msgid "For Spice redirection you'll need to install"
 msgstr "Para la redirección de spice, necesitarás instalar"
 
 msgid "in your computer."
-msgstr "en tu computadora."
+msgstr "en tu ordenador."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Busca en tu distro, p.e. en Debian/Ubuntu con"
-
 
 msgid "You'll need to install"
 msgstr "Necesitarás instalar"
@@ -278,90 +266,9 @@ msgstr "Necesitarás instalar"
 msgid "and USB drivers ("
 msgstr "y los drivers USB ("
 
-msgid "or"
-msgstr "o"
-
-msgid "bits) in your computer."
-msgstr "bits) en tu ordenador."
-
-msgid "Be aware that in Windows, spice redirection is not automatically. It\'s necessary associate protocol with the app."
-msgstr "Atención a que en Windows, la redirección spice no es automàtica. Es necesario asociar el protocolo con la app."
-
-msgid "To make this possible, download"
-msgstr "Para hacer esto posible, descarga"
-
-msgid "or copy the following lines in an ASCII file and save with extension .reg, then execute the file."
-msgstr "o copia las linias siguientes en un documento ASCII y guárdalo con extensión .reg, después ejécutalo."
-
-msgid "For more information, check "
-msgstr "Para más información, revisa "
-
-msgid "the Windows Clients documentation"
-msgstr "la documentación de Windows Clients"
-
-msgid "in your computer."
-msgstr "en tu ordenador."
-
-msgid "Admin tools"
-msgstr "Herramientas de administración"
-
-msgid "machines"
-msgstr "máquinas"
-
-msgid "users"
-msgstr "usuarios"
-
-msgid "messages"
-msgstr "mensajes"
-
-msgid "Virtual Machines"
-msgstr "Máquinas Virtuales"
-
-msgid "hide clones"
-msgstr "esconder clones"
-
-msgid "This Machine is a base"
-msgstr "Esta Máquina es base"
-
-msgid "Machine locked by"
-msgstr "Máquina bloqueada por"
-
-msgid "Cloned"
-msgstr "Clonada"
-
-msgid "Search"
-msgstr "Buscar"
-
-msgid "Register"
-msgstr "Registrar"
-
-msgid "Subject"
-msgstr "Asunto"
-
-msgid "Date"
-msgstr "Fecha"
-
-msgid "There are no public bases available in this system."
-msgstr "No hay bases públicas disponibles en este sistema."
-
-msgid "There are no machines available in this system."
-msgstr "No hay máquinas disponibles en este sistema."
-
-msgid "not public"
-msgstr "no pública"
-
-msgid "Create one."
-msgstr "Crea una."
-
-msgid "Error!"
-msgstr "Error!"
-
-msgid "Backend no available!"
-msgstr " Backend no disponible!"
-
 msgid ""
-"Be aware that in Windows, spice redirection is not automatically. It's "
-"necessary associate protocol with the app."
+"Be aware that in Windows, Spice redirection is not automatic. It's necessary"
+" to associate protocol with the app."
 msgstr ""
 "Se consciente que en Windows, redirección con spice no es automático. Es "
 "necesario asociar el protocolo con la app"
@@ -373,8 +280,8 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"o copia las siguientes líneas en un archivo ASCII y guarda con la extensión .reg, "
-"luego ejecuta el archivo."
+"o copia las siguientes líneas en un archivo ASCII y guarda con la extensión "
+".reg, luego ejecuta el archivo."
 
 msgid "Login"
 msgstr "Conéctate"
@@ -382,26 +289,29 @@ msgstr "Conéctate"
 msgid "Welcome"
 msgstr "Bienvenido"
 
-msgid "It is required a viewer to run the virtual machines."
-msgstr "Se requiere de un visor para arrancar la máquina virtual."
+msgid "A viewer is required to run the virtual machines."
+msgstr "Se precisa de un visualizador para encender la máquina virtual."
 
 msgid "Virtual Machines"
 msgstr "Máquinas Virtuales"
 
-msgid "user"
-msgstr "usuario"
+msgid "User"
+msgstr "Usuario"
+
+msgid "Password"
+msgstr "Contraseña"
 
 msgid "password"
 msgstr "contraseña"
 
+msgid "Password"
+msgstr "Contraseña"
+
 msgid "Start session"
 msgstr "Iniciar sesión"
 
-msgid "Login with Intranet UPC's username."
-msgstr "Conectarse con el usuario de la Intranet de la UPC"
-
 msgid "bits) in your computer."
-msgstr "bits) en tu computadora."
+msgstr "bits) en tu ordenador."
 
 msgid "Permissions"
 msgstr "Permisos"
@@ -455,7 +365,9 @@ msgid "can remove any clone."
 msgstr "puede quitar cualquier clon."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr "puede tomar una captura de pantalla de cualquier máquina virtual en posesión del usuario"
+msgstr ""
+"puede tomar una captura de pantalla de cualquier máquina virtual en posesión"
+" del usuario"
 
 msgid "can take a screenshot of any virtual machine."
 msgstr "puede tomar una captura de pantalla de cualquier máquina virtual."
@@ -481,8 +393,12 @@ msgstr "Backend"
 msgid "Select Template"
 msgstr "Selecciona Plantilla"
 
-msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
-msgstr "Esta imagen ISO no está ya descargada. Puede tardar bastantes minutos, incluso horas hasta que el archivo sea recuperado de Internet."
+msgid ""
+"This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is fetched from the Internet."
+msgstr ""
+"Esta imagen ISO no se ha descargado todavía. Pueden pasar algunos minutos, "
+"incluso horas, hasta que el archivo se obtenga de Internet."
 
 msgid "Download now"
 msgstr "Descargar ahora"
@@ -520,33 +436,204 @@ msgstr "Hace falta seleccionar una plantilla."
 msgid "A machine with that name already exists."
 msgstr "Una máquina con ese nombre ya existe."
 
-msgid "The machine name must contain only alphabetic, numbers, dashes and points."
-msgstr "El nombre de la máquina debe contener solo carácteres alfanuméricos, líneas y puntos."
+msgid ""
+"The machine name is only allowed to consist of alphabetic characters, "
+"numbers, dashes and points."
+msgstr ""
+"El nombre de la máquina solo puede contener caracteres alfabéticos, números,"
+" guiones y puntos."
 
 msgid "Create"
 msgstr "Crear"
 
 msgid ""
-"can change the settings of any virtual machines "
-"cloned from one base owned by the user."
+"can change the settings of all virtual machines cloned from one base owned "
+"by the user."
 msgstr ""
-"puede cambiar los ajustes de cualquier máquina virtual clonada de una base "
-"propiedad del usuario."
+"puede cambiar la configuración de todas las máquinas virtuales clonadas "
+"desde una base propiedad del usuario."
+
+msgid "monitoring"
+msgstr "monitorización"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Estás seguro de querer eliminar la base de"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Estás seguro de querer convertir en base a"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Estás seguro de querer cambiar el estado publico de"
+
+msgid "Search"
+msgstr "Buscar"
+
+msgid "There are no public bases available in this system."
+msgstr "No hay bases públicas disponibles en este sistema."
+
+msgid "There are no machines available in this system."
+msgstr "No hay máquinas disponibles en este sistema."
+
+msgid "Create one."
+msgstr "Crea una."
+
+msgid "not public"
+msgstr "no pública"
+
+msgid "User Settings"
+msgstr "Configuración de usuario"
+
+msgid "Create a new account"
+msgstr "Crear una cuenta nueva"
+
+msgid "Username"
+msgstr "Nombre de usuario"
+
+msgid "Confirm Password"
+msgstr "Confirmar Contraseña"
+
+msgid "Hide Private"
+msgstr "Esconder Privadas"
+
+msgid "Show All"
+msgstr "Mostrar Todo"
+
+msgid "Shutting down ..."
+msgstr "Apagando ..."
+
+msgid "It may take a couple of minutes."
+msgstr "Puede tardar un par de minutos."
+
+msgid "Hybernating ..."
+msgstr "Hibernando ..."
+
+msgid "Description"
+msgstr "Descripción"
+
+msgid "Rename"
+msgstr "Renombrar"
+
+msgid "Options"
+msgstr "Opciones"
+
+msgid "Drivers"
+msgstr "Controladores"
+
+msgid "Graphics"
+msgstr "Gráficos"
+
+msgid "Remove Machine"
+msgstr "Eliminar Máquina"
+
+msgid "System overview"
+msgstr "Resumen del sistema"
+
+msgid "Danger Zone"
+msgstr "Zona Peligrosa"
+
+msgid ""
+"Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+"Una vez que eliminas la máquina, no hay marcha atrás. Por favor, asegurate."
+
+msgid "Danger"
+msgstr "Peligro"
+
+msgid "This will remove all the contents of the machine"
+msgstr "Esto borrará todo el contenido de la máquina"
+
+msgid "This action can't be undone"
+msgstr "Esta acción no puede deshacerse"
+
+msgid "Are you sure ?"
+msgstr "Estás seguro?"
+
+msgid "Yes, remove"
+msgstr "Sí, eliminar"
+
+msgid "Virtual machine"
+msgstr "Máquina virtual"
+
+msgid "removed"
+msgstr "eliminado"
+
+msgid "This will remove all the"
+msgstr "Esto eliminará todo"
+
+msgid "clones of the machine"
+msgstr "clones de la máquina"
+
+msgid "Yes, remove all the clones"
+msgstr "Sí, eliminar todos los clones"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Esta máquina virtual no se puede eliminar porque tiene"
+
+msgid "clones"
+msgstr "clones"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "¡Esta máquina no tiene parámetros Gráficos!"
+
+msgid "recommended"
+msgstr "recomendado"
+
+msgid "to"
+msgstr "a"
+
+msgid "Changing Public State"
+msgstr "Cambio de Estado Público"
+
+msgid "action"
+msgstr "acción"
+
+msgid "Grants"
+msgstr "Permisos"
+
+msgid "public"
+msgstr "público"
+
+msgid "New Base"
+msgstr "Nueva Base"
+
+msgid "Version"
+msgstr "Versión"
+
+msgid "Authors"
+msgstr "Autores"
+
+msgid "Development"
+msgstr "Desarrollo"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "A continuación está la lista de tecnologías usadas en este proyecto:"
+
+msgid "The code is available on "
+msgstr "El código está disponible en "
+
+msgid "The code is "
+msgstr "El código está"
+
+msgid "License"
+msgstr "Licencia"
+
+msgid "Machine locked by"
+msgstr "Máquina bloqueada por"
+
+msgid "This Machine is a base"
+msgstr "Esta máquina es una base"
+
+msgid "Cloned"
+msgstr "Clonada"
+
+msgid "is admin"
+msgstr "es administrador"
+
+msgid "Add new user"
+msgstr "Añadir nuevo usuario"
+
+msgid "Register"
+msgstr "Registrar"
 
 msgid "Current Password:"
-msgstr "Constraseña Actual:"
-
-msgid "Galician"
-msgstr "Gallego"
-
-msgid "French"
-msgstr "Francés"
-
-msgid "Indonesian"
-msgstr "Indonesio"
-
-msgid "Persian"
-msgstr "Persa"
-
-msgid "Japanese"
-msgstr "Japonés"
+msgstr "Contraseña actual:"

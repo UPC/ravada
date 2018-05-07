@@ -76,11 +76,15 @@ Returns a list of the base domains as a listref
 
 =cut
 
-sub list_bases {
-    my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, is_base FROM domains where is_base=1");
-    $sth->execute();
-    
+sub list_bases($self, %args) {
+    $args{is_base} = 1;
+    my $query = "SELECT name, id, is_base FROM domains "
+        ._where(%args)
+        ." ORDER BY name";
+
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(map { $args{$_} } sort keys %args);
+
     my @bases = ();
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain;
@@ -160,6 +164,28 @@ sub list_machines_user {
     return \@list;
 }
 
+sub list_machines($self, $user) {
+    return $self->list_domains() if $user->can_list_machines;
+
+    if ($user->can_remove_clone()) {
+        my $machines = $self->list_bases( id_owner => $user->id );
+        for my $base (@$machines) {
+            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+        }
+        return $machines;
+    }
+    if ($user->can_remove_clone_all()) {
+        my $machines = $self->list_bases( );
+        for my $base (@$machines) {
+            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+        }
+        return $machines;
+
+    }
+    return $self->list_clones() if $user->can_list_clones;
+    return [];
+}
+
 =pod
 
 sub search_clone_data {
@@ -189,16 +215,13 @@ sub list_domains {
     my $self = shift;
     my %args = @_;
 
-    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile FROM domains ";
+    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile, client_status"
+                ." FROM domains "
+                ._where(%args)
+                ." ORDER BY name";
 
-    my $where = '';
-    for my $field ( sort keys %args ) {
-        $where .= " AND " if $where;
-        $where .= " $field=?"
-    }
-    $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY name");
+    my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
@@ -222,6 +245,8 @@ sub list_domains {
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{remote_ip} = $domain->client_status
+                if $domain->client_status && $domain->client_status ne 'connected';
             $row->{autostart} = $domain->autostart;
         }
         delete $row->{spice_password};
@@ -230,6 +255,33 @@ sub list_domains {
     $sth->finish;
 
     return \@domains;
+}
+sub _where(%args) {
+    my $where = '';
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " $field=?"
+    }
+    $where = "WHERE $where" if $where;
+    return $where;
+}
+
+=head2 list_clones
+  Returns a list of the domains that are clones as a listref
+
+      my $clones = $rvd_front->list_clones();
+=cut
+
+sub list_clones {
+  my $self = shift;
+  my %args = @_;
+  
+  my $domains = list_domains();
+  my @clones;
+  for (@$domains ) {
+    if($_->{id_base}) { push @clones, ($_); }
+  }
+  return \@clones;
 }
 
 sub _remove_domain_db($self, $id) {
@@ -359,7 +411,7 @@ Returns a reference to a list of the ISOs known by the system
 sub iso_file {
     my $self = shift;
     my $vm = $self->search_vm('KVM');
-    my @isos = $vm->search_volume_path_re(qr(.*\.iso$)); 
+    my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
     #TODO remove path from device
     return \@isos;
 }

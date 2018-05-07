@@ -18,16 +18,13 @@ msgstr ""
 msgid "Ravada broker"
 msgstr ""
 
-msgid "Machine name"
+msgid "Machine Name"
 msgstr ""
 
 msgid "Tools"
 msgstr ""
 
-msgid "Machines list"
-msgstr ""
-
-msgid "Choose a machine to start"
+msgid "Choose a Machine to Start"
 msgstr ""
 
 msgid "Start"
@@ -45,13 +42,7 @@ msgstr ""
 msgid "Clone"
 msgstr ""
 
-msgid "Can't prepare base, remove base or delete. Machine has"
-msgstr ""
-
 msgid "Clone/s"
-msgstr ""
-
-msgid "New"
 msgstr ""
 
 msgid "Users List"
@@ -63,7 +54,7 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-msgid "Available machines"
+msgid "Available Machines"
 msgstr ""
 
 msgid "Help"
@@ -81,7 +72,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-msgid "New machine"
+msgid "New Machine"
 msgstr ""
 
 msgid "I want to change my password"
@@ -102,6 +93,27 @@ msgstr ""
 msgid "Catalan"
 msgstr ""
 
+msgid "Galician"
+msgstr ""
+
+msgid "French"
+msgstr ""
+
+msgid "Hindi"
+msgstr ""
+
+msgid "Indonesian"
+msgstr ""
+
+msgid "Persian"
+msgstr ""
+
+msgid "Japanese"
+msgstr ""
+
+msgid "German"
+msgstr ""
+
 msgid "New Password:"
 msgstr ""
 
@@ -111,10 +123,10 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-msgid "Your language has been successfully changed"
+msgid "Your language has been changed successfully"
 msgstr ""
 
-msgid "Your password has been successfully changed"
+msgid "Your password has been changed successfully"
 msgstr ""
 
 msgid "Password is too short"
@@ -186,10 +198,19 @@ msgstr ""
 msgid "Machines"
 msgstr ""
 
+msgid "machines"
+msgstr ""
+
 msgid "Users"
 msgstr ""
 
+msgid "users"
+msgstr ""
+
 msgid "Messages"
+msgstr ""
+
+msgid "messages"
 msgstr ""
 
 msgid "Admin tools"
@@ -198,22 +219,10 @@ msgstr ""
 msgid "Remove base"
 msgstr ""
 
-msgid "Public"
-msgstr ""
-
-msgid "New Base"
-msgstr ""
-
 msgid "Restore"
 msgstr ""
 
 msgid "Hibernate"
-msgstr ""
-
-msgid "Action"
-msgstr ""
-
-msgid "Will remove all the contents of the machine"
 msgstr ""
 
 msgid "Are you sure?"
@@ -234,26 +243,29 @@ msgstr ""
 msgid "Cannot remove base, machine has clones"
 msgstr ""
 
-msgid "Show/hide clones"
+msgid "show clones"
 msgstr ""
 
-msgid "For Spice redirection you'll need to install"
+msgid "hide clones"
 msgstr ""
 
-msgid "on your computer."
+msgid "For Spice redirection you will need to install"
+msgstr ""
+
+msgid "in your computer."
 msgstr ""
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
-msgid "You'll need to install"
+msgid "You will need to install"
 msgstr ""
 
 msgid "and USB drivers ("
 msgstr ""
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It's "
+"Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
 
@@ -284,9 +296,6 @@ msgid "Password"
 msgstr ""
 
 msgid "Start session"
-msgstr ""
-
-msgid "Login with Intranet UPC's username."
 msgstr ""
 
 msgid "bits) in your computer."
@@ -422,3 +431,259 @@ msgstr ""
 
 msgid "monitoring"
 msgstr ""
+
+msgid "Are you sure you want to remove the Base of"
+msgstr ""
+
+msgid "Are you sure you want to prepare the Base of"
+msgstr ""
+
+msgid "Are you sure you want to change the Public state of"
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "There are no public bases available in this system."
+msgstr ""
+
+msgid "There are no machines available in this system."
+msgstr ""
+
+msgid "Create one."
+msgstr ""
+
+msgid "not public"
+msgstr ""
+
+msgid "User Settings"
+msgstr ""
+
+msgid "Create a new account"
+msgstr ""
+
+msgid "Username"
+msgstr ""
+
+msgid "Hide Private"
+msgstr ""
+
+msgid "Show All"
+msgstr ""
+
+msgid "Shutting down ..."
+msgstr ""
+
+msgid "It may take a couple of minutes."
+msgstr ""
+
+msgid "Hybernating ..."
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Options"
+msgstr ""
+
+msgid "Drivers"
+msgstr ""
+
+msgid "Graphics"
+msgstr ""
+
+msgid "Remove Machine"
+msgstr ""
+
+msgid "System overview"
+msgstr ""
+
+msgid "Danger Zone"
+msgstr ""
+
+msgid "Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+
+msgid "Danger"
+msgstr ""
+
+msgid "This will remove all the contents of the machine"
+msgstr ""
+
+msgid "This action can't be undone"
+msgstr ""
+
+msgid "Are you sure ?"
+msgstr ""
+
+msgid "Yes, remove"
+msgstr ""
+
+msgid "Virtual Machine"
+msgstr ""
+
+msgid "removed"
+msgstr ""
+
+msgid "This will remove all the"
+msgstr ""
+
+msgid "clones of the machine"
+msgstr ""
+
+msgid "Yes, remove all the clones"
+msgstr ""
+
+msgid "This virtual machine can't be removed because it has"
+msgstr ""
+
+msgid "clones"
+msgstr ""
+
+msgid "This machine has not Graphics parameters!"
+msgstr ""
+
+msgid "recommended"
+msgstr ""
+
+msgid "to"
+msgstr ""
+
+msgid "Changing Public State"
+msgstr ""
+
+msgid "Changing Base State"
+msgstr ""
+
+msgid "action"
+msgstr ""
+
+msgid "Grants"
+msgstr ""
+
+msgid "public"
+msgstr ""
+
+msgid "New Base"
+msgstr ""
+
+msgid "Version"
+msgstr ""
+
+msgid "Authors"
+msgstr ""
+
+msgid "Development"
+msgstr ""
+
+msgid "Below are listed the technologies used in this project:"
+msgstr ""
+
+msgid "The code is available on "
+msgstr ""
+
+msgid "The code is "
+msgstr ""
+
+msgid "License"
+msgstr ""
+
+msgid "Machine locked by"
+msgstr ""
+
+msgid "This Machine is a base"
+msgstr ""
+
+msgid "Cloned"
+msgstr ""
+
+msgid "is admin"
+msgstr ""
+
+msgid "Add new user"
+msgstr ""
+
+msgid "Register"
+msgstr ""
+
+msgid "Current Password:"
+msgstr ""
+
+msgid "For more information, check"
+msgstr ""
+
+msgid "the Windows Clients documentation"
+msgstr ""
+
+msgid "It is programmed in"
+msgstr ""
+
+msgid "with perl framework"
+msgstr ""
+
+msgid "and"
+msgstr ""
+
+msgid "Memory"
+msgstr ""
+
+msgid "MB available"
+msgstr ""
+
+msgid "The machine will shutdown after these minutes"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Please enter the following information to create the account"
+msgstr ""
+
+msgid "Enter Username"
+msgstr ""
+
+msgid "Enter Password"
+msgstr ""
+
+msgid "Confirm Password"
+msgstr ""
+
+msgid "Username is required"
+msgstr ""
+
+msgid "Username can not exceed 20 characters"
+msgstr ""
+
+msgid "Username must be at least 5 characters"
+msgstr ""
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+
+msgid "Password is required"
+msgstr ""
+
+msgid "Password can not exceed 20 characters"
+msgstr ""
+
+msgid "Password must be at least 5 characters"
+msgstr ""
+
+msgid "Password can only contain words and numbers"
+msgstr ""
+
+msgid "Confirm Password is required"
+msgstr ""
+
+msgid "Confirm Password can not exceed 20 characters"
+msgstr ""
+
+msgid "Confirm Password must be at least 5 characters"
+msgstr ""
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr ""
+

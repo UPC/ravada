@@ -113,7 +113,7 @@
 
 %=      include 'bootstrap/requests'
 
-        <table class="table table-striped admin-cont-body" border="1">
+        <table class="table table-striped admin-cont-body" border="0">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"
@@ -129,7 +129,7 @@
                         <div style="float:right">
                             <a ng-show="hide_clones" ng-click="hideClones()"
                               class="label label-primary"
-                              align="right">show clones</a>
+                              align="right"><%=l 'show clones' %></a>
                             <a ng-show="!hide_clones" ng-click="hideClones()"
                               class="label label-primary"
                               align="right"><%=l 'hide clones' %></a>
@@ -168,19 +168,62 @@
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
                         <input type="checkbox" checked
                                ng-show="can_remove_base(machine)"
-                            ng-click="action('machine','remove_base',machine.id)"
+                            ng-click="open_modal('mb_',machine)"
                             title ="<%=l 'Remove base' %>" ng-cloak>
                         <input type="checkbox"
                                ng-show="can_prepare_base(machine)"
-                            ng-click="action('machine','prepare',machine.id)"
+                            ng-click="open_modal('mb_',machine)"
                             title ="<%=l 'Prepare base' %>" ng-cloak>
+                        
+                        <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
+                           <div class="modal-dialog" role="document">
+                             <div class="modal-content">
+                               <div class="modal-header">
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                 <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
+                               </div>
+                               <div class="modal-body" ng-show="can_remove_base(machine)">
+                                 <p><%=l 'Are you sure you want to remove the base of' %> {{machine.name}}?</p>
+                               </div>
+                               <div class="modal-body" ng-show="can_prepare_base(machine)">
+                                 <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
+                               </div>
+                               <div class="modal-footer">
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',machine.id)" ng-show="can_prepare_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
 %                       }
                     </td>
                     <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
-                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="set_public(machine.id,0)" title="<%=l 'Make private'%>">
+                        <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="open_modal('mp_',machine)" title="<%=l 'Make private'%>" ng-cloak>
 
-                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="set_public(machine.id,1)" title="<%=l 'Make public' %>"></td>
+                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="open_modal('mp_',machine)" title="<%=l 'Make public' %>" ng-cloak>
+                       
+                        <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{machine.id}}">
+                           <div class="modal-dialog" role="document">
+                             <div class="modal-content">
+                               <div class="modal-header">
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                 <h4 class="modal-title"><%=l 'Changing Public State' %></h4>
+                               </div>
+                               <div class="modal-body">
+                                 <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{(machine.is_public==0)}}?</p>
+                               </div>
+                               <div class="modal-footer">
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                       </td>
+
+                         
 %                       if ($autostart) {
                             <td></td>
 %                       }
@@ -202,7 +245,7 @@
                          <i class="fa fa-play"></i>
                         </a>
 %				}
-%		if ($_user-> can_hibernate_all){
+%		if ($_user->is_admin){
                         <a type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hybernate',machine.id)"
                          ng-disabled="!machine.is_active"
@@ -244,18 +287,60 @@
                           title ="Cannot remove base, machine has clones" ng-cloak></i>
                           <input type="checkbox" checked
                                  ng-show="{{child.is_base}} && !{{child.has_clones}} && !{{child.is_locked}}"
-                              ng-click="action('machine','remove_base',child.id)"
+                              ng-click="open_modal('mb_',child)"
                               title ="Remove base" ng-cloak>
                           <input type="checkbox"
                                  ng-show="!{{child.is_base}} && !{{child.is_locked}} && !{{child.is_volatile}}"
-                              ng-click="action('machine','prepare',child.id)"
+                              ng-click="open_modal('mb_',child)"
                               title ="Prepare base" ng-cloak>
+                              
+                          <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{child.id}}">
+                           <div class="modal-dialog" role="document">
+                             <div class="modal-content">
+                               <div class="modal-header">
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                 <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
+                               </div>
+                               <div class="modal-body" ng-show="can_remove_base(child)">
+                                 <p><%=l 'Are you sure you want to remove the Base of' %> {{child.name}}?</p>
+                               </div>
+                               <div class="modal-body" ng-show="can_prepare_base(child)">
+                                 <p><%=l 'Are you sure you want to prepare the Base of' %> {{child.name}}?</p>
+                               </div>
+                               <div class="modal-footer">
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',child.id)" ng-show="can_remove_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',child.id)" ng-show="can_prepare_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
 %                       }
                       </td>
                       <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
-                          <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="set_public(child.id,0)" title="Make private">
-                           <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="set_public(child.id,1)" title="Make public"></td>
+                          <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="open_modal('mp_',child)" title="Make private">
+                           <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="open_modal('mp_',child)" title="Make public">
+                        
+                          <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{child.id}}">
+                           <div class="modal-dialog" role="document">
+                             <div class="modal-content">
+                               <div class="modal-header">
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                 <h4 class="modal-title">Changing Public State</h4>
+                               </div>
+                               <div class="modal-body">
+                                 <p><%=l 'Are you sure you want to change the Public state of' %> {{child.name}} to {{(child.is_public==0)}}?</p>
+                               </div>
+                               <div class="modal-footer">
+                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(child.id, child.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                        
+                        </td>
 %                   if ($autostart) {
                         <td class="lgMachToggle">
                             <input type="checkbox" checked ng-show="{{child.autostart}}" ng-click="set_autostart(child.id, 0)" title="Disable Autostart">
@@ -268,7 +353,7 @@
                           <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
                           <span style="float:right;" ng-show="{{!child.is_active && !child.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
                           <span style="float:right;" ng-show="{{child.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                          <br><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{child.remote_ip}}</span>
+                          <br/><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{child.remote_ip}}</span>
                       </td>
                       <td class="lgMachToggle">
 

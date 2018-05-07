@@ -132,8 +132,8 @@ sub BUILD {
 
     $self->_create_tables();
     $self->_upgrade_tables();
-    $self->_init_user_daemon();
     $self->_update_data();
+    $self->_init_user_daemon();
 }
 
 sub _init_user_daemon {
@@ -161,6 +161,7 @@ sub _update_user_grants {
         my $user = Ravada::Auth::SQL->search_by_id($id);
         next if $user->name() eq $USER_DAEMON_NAME;
 
+        next if $user->grants();
         $USER_DAEMON->grant_user_permissions($user);
         $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }
@@ -650,10 +651,75 @@ sub _update_data {
 
     $self->_remove_old_isos();
     $self->_update_isos();
+
+    $self->_update_grants();
+    $self->_enable_grants();
     $self->_update_user_grants();
+
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
     $self->_update_old_qemus();
+
+}
+
+sub _update_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+                 "UPDATE grant_types"
+                ." SET name='create_machine' "
+                ." WHERE name = 'create_domain'"
+    );
+    $sth->execute();
+}
+
+sub _null_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT count(*) FROM grant_types "
+            ." WHERE enabled = NULL "
+        );
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+
+    exit if !$count && $self->{_null}++;
+    return $count;
+}
+
+sub _enable_grants($self) {
+
+    return if $self->_null_grants();
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=0"
+    );
+    $sth->execute;
+    my @grants = (
+        'change_settings',  'change_settings_all',  'change_settings_clones'
+        ,'clone',           'clone_all',            'create_base', 'create_machine'
+        ,'grant'
+        ,'manage_users'
+        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'shutdown_all',    'shutdown_clone'
+    );
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
+    $sth->execute;
+    my %grant_exists;
+    while (my ($id, $name) = $sth->fetchrow ) {
+        $grant_exists{$name} = $id;
+    }
+
+    $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=1 WHERE name=?"
+    );
+    my %done;
+    for my $name ( sort @grants ) {
+        die "Duplicate grant $name "    if $done{$name};
+        die "Permission $name doesn't exist at table grant_types"
+                ."\n".Dumper(\%grant_exists)
+            if !$grant_exists{$name};
+
+        $sth->execute($name);
+
+    }
+
 }
 
 sub _update_old_qemus($self) {
@@ -825,7 +891,12 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
 
+    $self->_upgrade_table('domains','client_status','varchar(32)');
+    $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
+
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
+
+    $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
 }
 
@@ -2180,8 +2251,8 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         next if exists $active_domain->{$id_domain};
-        my $domain = Ravada::Domain->open($id_domain);
-        if (defined $id_vm && !$active_vm->{$id_vm}) {
+        my $domain = Ravada::Domain->open($id_domain) or next;
+        if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
         } else {
             my $status = 'shutdown';
@@ -2279,6 +2350,7 @@ sub search_vm {
     die $@ if $@;
 
     for my $vm (@vms) {
+        $vm->connect    if !$vm->vm;
         return $vm if ref($vm) eq $class;
     }
     return;
@@ -2344,6 +2416,7 @@ sub _enforce_limits_active {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
+        $domain->client_status();
         push @{$domains{$domain->id_owner}},$domain;
     }
     for my $id_user(keys %domains) {

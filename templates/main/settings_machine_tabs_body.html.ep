@@ -1,3 +1,4 @@
+% if ($USER->can_change_settings($domain->id)) {
 <div class="tab-pane fade in active" id="description">
     %= include 'main/vm_description'
 </div>
@@ -10,12 +11,11 @@
   % }
 </div>
 
-% if ($USER->can_change_settings ) {
     <div class="tab-pane fade" id="options">
         %= include 'main/vm_options'
     </div>
 % }
-% if ($USER->can_change_settings && $domain->drivers) {
+% if ($USER->can_change_settings($domain->id) && $domain->drivers) {
     <div class="tab-pane fade" id="drivers">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
@@ -24,7 +24,7 @@
       % }
     </div>
 % }
-% if ($USER->can_change_settings) {
+% if ($USER->can_change_settings($domain->id) && !$domain->is_base ) {
     <div class="tab-pane fade" id="screenshot">
       %= include 'main/vm_screenshot'
     </div>
@@ -42,12 +42,12 @@
     %= include 'main/vm_copy'
 </div>
 
-% if ( $USER->can_remove || $USER->can_remove_clone_all) {
+% if ( $USER->can_remove_machine($domain->id)) {
     <div class="tab-pane fade" id="remove" >
         %= include 'main/vm_remove'
     </div>
 % }
-% if ( ($domain->internal_id) =>1 ) {
+% if ( $monitoring && $USER->is_admin && $domain->internal_id >= 1 ) {
     <div class="tab-pane fade" id="monitoring">
         %= include 'main/vm_monitoring'
     </div>

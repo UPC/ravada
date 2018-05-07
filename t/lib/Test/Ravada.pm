@@ -42,6 +42,8 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
+our $RVD_BACK;
+
 our %ARG_CREATE_DOM = (
     KVM => []
     ,Void => []
@@ -122,6 +124,8 @@ sub new_pool_name {
 
 sub rvd_back {
     my ($connector, $config) = @_;
+
+    return $RVD_BACK            if $RVD_BACK && !$connector && !$config;
     init($connector,$config,0)    if $connector;
 
     my $rvd = Ravada->new(
@@ -129,11 +133,11 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
-    $rvd->_update_isos();
     $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
+    $RVD_BACK = $rvd;
     return $rvd;
 }
 
@@ -155,10 +159,10 @@ sub init {
 
     $Ravada::CONNECTOR = $CONNECTOR if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
-    $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
+    rvd_back()  if !$RVD_BACK;
 }
 
 sub _remove_old_domains_vm {
@@ -256,20 +260,13 @@ sub _remove_old_disks_kvm {
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
-    my $dir_img;
-    eval { $dir_img = $vm->dir_img() };
-    return if !$dir_img;
-
     $vm->_refresh_storage_pools();
 
-    opendir my $ls,$dir_img or return;
-    while (my $disk = readdir $ls) {
-        next if $disk !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
-
-        $disk = "$dir_img/$disk";
-        next if ! -f $disk;
-
-        unlink $disk or next;#warn "I can't remove $disk";
+    for my $pool( $vm->vm->list_all_storage_pools ) {
+        for my $volume  ( $pool->list_volumes ) {
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
+            $volume->delete();
+        }
     }
     $vm->storage_pool->refresh();
 }

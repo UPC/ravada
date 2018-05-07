@@ -1,14 +1,12 @@
 # Translators:
-# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
-# Joel Alarcón <joelalju100@gmail.com>, 2017
-# Omar Brid <omarbr6@gmail.com>, 2018
+# Fernando Verdugo, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2018-01-24 12:13+0200\n"
-"Last-Translator: Omar Brid <omarbr6@gmail.com>, 2017\n"
+"PO-Revision-Date: 2017-05-02 16:20+0200\n"
+"Last-Translator: Fernando Verdugo, 2017\n"
 "Language-Team: Catalan (https://www.transifex.com/ravada/teams/70385/ca/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -18,19 +16,13 @@ msgstr ""
 "X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Broker Ravada"
 
 msgid "Machine Name"
 msgstr "Nom de la màquina"
 
 msgid "Tools"
 msgstr "Eines"
-
-msgid "Machines List"
-msgstr "Llistat de màquines"
-
-msgid "Users"
-msgstr "Usuaris"
 
 msgid "Choose a Machine to Start"
 msgstr "Tria una màquina per iniciar"
@@ -50,14 +42,8 @@ msgstr "Preparar base"
 msgid "Clone"
 msgstr "Clonar"
 
-msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "No es pot preparar o eliminar la base. La màquina te"
-
 msgid "Clone/s"
 msgstr "clon/s"
-
-msgid "NEW"
-msgstr "NOUS"
 
 msgid "Users List"
 msgstr "Llista d'usuaris"
@@ -68,7 +54,7 @@ msgstr "Nom"
 msgid "Log Out"
 msgstr "Sortir"
 
-msgid "Available Machines"
+msgid "Available machines"
 msgstr "Màquines disponibles"
 
 msgid "Help"
@@ -80,11 +66,8 @@ msgstr "Requeriments"
 msgid "About"
 msgstr "Info"
 
-msgid "Messages"
-msgstr "Missatges"
-
-msgid "Mark all as Read"
-msgstr "Marca com a llegit"
+msgid "Mark all as read"
+msgstr "Marca tot com a llegit"
 
 msgid "Settings"
 msgstr "Preferències"
@@ -110,6 +93,27 @@ msgstr "Espanyol"
 msgid "Catalan"
 msgstr "Català"
 
+msgid "Galician"
+msgstr "Gallec"
+
+msgid "French"
+msgstr "Francès"
+
+msgid "Hindi"
+msgstr "Hindi"
+
+msgid "Indonesian"
+msgstr "Indonès"
+
+msgid "Persian"
+msgstr "Persa"
+
+msgid "Japanese"
+msgstr "Japonès"
+
+msgid "German"
+msgstr "Alemany"
+
 msgid "New Password:"
 msgstr "Nova Contrasenya:"
 
@@ -125,17 +129,14 @@ msgstr "El seu idioma ha sigut canviat correctament"
 msgid "Your password has been changed successfully"
 msgstr "La seva contrasenya ha sigut canviada correctament"
 
-msgid "Password too small"
-msgstr "Contrasenya massa petita"
+msgid "Password is too short"
+msgstr "La contrasenya és massa curta"
 
-msgid "Password fields aren't equal"
-msgstr "Els camps de la contrasenya no son iguals"
+msgid "Password fields do not match"
+msgstr "Els camps de contrasenya no coincideixen"
 
-msgid "Some of the password's fields are empty"
-msgstr "Algún dels camps de la contrasenya és buida"
-
-msgid "Public"
-msgstr "Públic"
+msgid "Some of the password fields are empty"
+msgstr "Alguns dels camps de la contrasenya estan buits"
 
 msgid "Status"
 msgstr "Estat"
@@ -143,16 +144,13 @@ msgstr "Estat"
 msgid "Actions"
 msgstr "Accions"
 
-msgid "Machines"
-msgstr "Màquines"
-
 msgid "Down"
 msgstr "Aturada"
 
 msgid "Running"
 msgstr "En marxa"
 
-msgid "ShutDown"
+msgid "Shutdown"
 msgstr "Atura"
 
 msgid "Screenshot"
@@ -161,11 +159,11 @@ msgstr "Captura de pantalla"
 msgid "Paused"
 msgstr "Pausat"
 
-msgid "Machine locked by requested"
-msgstr "Màquina bloquejada per"
+msgid "Machine locked by request"
+msgstr "Màquina bloquejada per petició"
 
-msgid "process"
-msgstr " procés"
+msgid "Process"
+msgstr "Procés"
 
 msgid "Copy"
 msgstr "Còpia"
@@ -176,8 +174,8 @@ msgstr "Error!"
 msgid "Error"
 msgstr "Error"
 
-msgid "Backend no available!"
-msgstr " Backend no disponible!"
+msgid "Backend not available!"
+msgstr "El backend no està disponible."
 
 msgid "Subject"
 msgstr "Assumpte"
@@ -185,23 +183,32 @@ msgstr "Assumpte"
 msgid "Date"
 msgstr "Data"
 
-msgid "Mark as Read"
-msgstr "Marca com a llegit"
+msgid "Mark as read"
+msgstr "Marca com llegit"
 
-msgid "Mark as UnRead"
+msgid "Mark as unread"
 msgstr "Marca com a no llegit"
 
-msgid "No message to show!"
-msgstr "No hi ha missatges per mostrar!"
+msgid "No messages to show"
+msgstr "No hi ha missatges per mostrar"
 
 msgid "Admin"
 msgstr "Administrador"
 
+msgid "Machines"
+msgstr "Màquines"
+
 msgid "machines"
 msgstr "màquines"
 
+msgid "Users"
+msgstr "Usuaris"
+
 msgid "users"
 msgstr "usuaris"
+
+msgid "Messages"
+msgstr "Missatges"
 
 msgid "messages"
 msgstr "missatges"
@@ -212,26 +219,11 @@ msgstr "Eines d'administrador"
 msgid "Remove base"
 msgstr "Esborra base"
 
-msgid "public"
-msgstr "públic"
-
-msgid "New Base"
-msgstr "Nova Base"
-
 msgid "Restore"
 msgstr "Restaura"
 
-msgid "Hybernate"
-msgstr "Hiverna"
-
-msgid "Shutdown"
-msgstr "Atura"
-
-msgid "action"
-msgstr "acció"
-
-msgid "will remove all the contents of the machine"
-msgstr "esborrarà tot el contigut de la màquina"
+msgid "Hibernate"
+msgstr "Hivernar"
 
 msgid "Are you sure?"
 msgstr "Estas segur/a?"
@@ -251,11 +243,14 @@ msgstr "Preferències de la màquina"
 msgid "Cannot remove base, machine has clones"
 msgstr "No es pot esborrar la base, la màquina té clons"
 
-msgid "Show/Hide clones"
-msgstr "Veure/Amaga clons"
+msgid "show clones"
+msgstr "veure clons"
 
-msgid "For spice redirection you'll need to install"
-msgstr "Per redirigir spice necessitaràs instal·lar"
+msgid "hide clones"
+msgstr "amaga els clons"
+
+msgid "For Spice redirection you'll need to install"
+msgstr "Per a la redirecció d'Spice, haureu d'instal·lar"
 
 msgid "in your computer."
 msgstr "al teu ordinador."
@@ -270,10 +265,10 @@ msgid "and USB drivers ("
 msgstr "i els drivers USB ("
 
 msgid ""
-"Be aware that in Windows, spice redirection is not automatically. It's "
-"necessary associate protocol with the app."
+"Be aware that in Windows, Spice redirection is not automatic. It's necessary"
+" to associate protocol with the app."
 msgstr ""
-"Recordeu que en Windows, la redirecció de spice no és automàtica. Cal "
+"Tingueu en compte que a Windows, la redirecció Spice no és automàtica. Cal "
 "associar el protocol amb l'aplicació."
 
 msgid "To make this possible, download"
@@ -283,8 +278,8 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"o copia les següents línies en un arxiu ASCII, desa'l amb l'extensió .reg, i "
-"a continuació, executa l'arxiu."
+"o copia les següents línies en un arxiu ASCII, desa'l amb l'extensió .reg, i"
+" a continuació, executa l'arxiu."
 
 msgid "Login"
 msgstr "Accedir"
@@ -292,20 +287,11 @@ msgstr "Accedir"
 msgid "Welcome"
 msgstr "Benvingut"
 
-msgid "It is required a viewer to run the virtual machines."
-msgstr "Es necessita un visor per executar les màquines virtuals."
+msgid "A viewer is required to run the virtual machines."
+msgstr "Es requereix un visor per executar les màquines virtuals."
 
 msgid "Virtual Machines"
 msgstr "Màquines Virtuals"
-
-msgid "user"
-msgstr "usuari"
-
-msgid "password"
-msgstr "contrasenya"
-
-msgid "Permissions"
-msgstr "Permissos"
 
 msgid "User"
 msgstr "Usuari"
@@ -316,83 +302,11 @@ msgstr "Contrasenya"
 msgid "Start session"
 msgstr "Inicieu la Sessió"
 
-msgid "Login with Intranet UPC's username."
-msgstr "Identifiqueu-vos amb el nom d'usuari de la Intranet UPC."
-
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
 
-msgid "For more information, check "
-msgstr "Per a més informació, reviseu "
-
-msgid "the Windows Clients documentation"
-msgstr "la documentació de Windows Clients"
-
-msgid "Version"
-msgstr "Versió"
-
-msgid "Authors"
-msgstr "Autors"
-
-msgid "Development"
-msgstr "Desenvolupament"
-
-msgid "Below are listed the technologies used in this project:"
-msgstr "A continuació hi ha la llista de tecnologies usades en aquest projecte:"
-
-msgid "The code is available on "
-msgstr "El codi està disponible a "
-
-msgid "The code is "
-msgstr "El codi està "
-
-msgid "License"
-msgstr "Licència"
-
-msgid "hide clones"
-msgstr "amaga els clons"
-
-msgid "Machine locked by"
-msgstr "Màquina bloquejada per"
-
-msgid "This Machine is a base"
-msgstr "Aquesta màquina és una base"
-
-msgid "Cloned"
-msgstr "Clonada"
-
-msgid "is admin"
-msgstr "és administrador"
-
-msgid "Add new user"
-msgstr "Afegeix nou usuari"
-
-msgid "Register"
-msgstr "Registrar"
-
-msgid "Search"
-msgstr "Cerca"
-
-msgid "Admin tools"
-msgstr "Eines d'administració"
-
-msgid "Admin tools"
-msgstr "Eines d'administració"
-
-msgid "There are no public bases available in this system."
-msgstr "No hi ha bases públiques disponibles en aquest sistema."
-
-msgid "There are no machines available in this system."
-msgstr "No hi ha màquines disponibles en aquest sistema."
-
-msgid "Create one."
-msgstr "Crea'n una."
-
-msgid "not public"
-msgstr "no pública"
-
-msgid "User Settings"
-msgstr "Configuració d'usuari"
+msgid "Permissions"
+msgstr "Permissos"
 
 msgid "can change the settings of owned virtual machines."
 msgstr "pot canviar les preferències de les seves màquines virtuals"
@@ -425,7 +339,8 @@ msgid "can hibernate any virtual machine."
 msgstr "pot hibernar qualsevol màquina virtual."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "pot hibernar clons des de qualsevol màquina virtual propietat de l'usuari."
+msgstr ""
+"pot hibernar clons des de qualsevol màquina virtual propietat de l'usuari."
 
 msgid "can hibernate any clone."
 msgstr "pot hibernar qualsevol clon."
@@ -443,7 +358,9 @@ msgid "can remove any clone."
 msgstr "pot borrar qualsevol clon."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr "pot realitzar una captura de pantalla de qualsevol màquina virtual propietat de l'usuari."
+msgstr ""
+"pot realitzar una captura de pantalla de qualsevol màquina virtual propietat"
+" de l'usuari."
 
 msgid "can take a screenshot of any virtual machine."
 msgstr "pot realitzar una captura de pantalla de qualsevol màquina virtual."
@@ -469,8 +386,12 @@ msgstr "Backend"
 msgid "Select Template"
 msgstr "Escull una plantilla"
 
-msgid "This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet."
-msgstr "Aquesta imatge ISO encara no ha estat descarregada. Pot trigar molts minuts, fins i tot hores, fins que l'arxiu hagi sigut extret de l'Internet."
+msgid ""
+"This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is fetched from the Internet."
+msgstr ""
+"Aquesta imatge ISO encara no s'ha descarregat. Pot trigar uns quants minuts,"
+" inclús hores fins que es descarregui l'arxiu des d'Internet."
 
 msgid "Download now"
 msgstr "Descarrega ara"
@@ -508,33 +429,204 @@ msgstr "Fa falta seleccionar una plantilla."
 msgid "A machine with that name already exists."
 msgstr "Una màquina amb aquest nom ja existeix."
 
-msgid "The machine name must contain only alphabetic, numbers, dashes and points."
-msgstr "El nom de la màquina ha de tindre nomès caràcters alfanumèrics, línies i punts."
+msgid ""
+"The machine name is only allowed to consist of alphabetic characters, "
+"numbers, dashes and points."
+msgstr ""
+"El nom de la màquina només permet caràcters alfabètics, números, guions i "
+"punts."
 
 msgid "Create"
 msgstr "Crear"
 
 msgid ""
-"can change the settings of any virtual machines "
-"cloned from one base owned by the user."
+"can change the settings of all virtual machines cloned from one base owned "
+"by the user."
 msgstr ""
-"pot canviar les preferències de qualsevol màquina virtual "
-"clonat d'una base propietat de l'usuari."
+"pot canviar la configuració de totes les màquines virtuals clonades d'una "
+"base propietat de l'usuari."
+
+msgid "monitoring"
+msgstr "monitorització"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Estàs segur de voler eliminar la base de"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Estàs segur de voler fer base a"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Estàs segur de voler canviar l'estat Public de"
+
+msgid "Search"
+msgstr "Cerca"
+
+msgid "There are no public bases available in this system."
+msgstr "No hi ha bases públiques disponibles en aquest sistema."
+
+msgid "There are no machines available in this system."
+msgstr "No hi ha màquines disponibles en aquest sistema."
+
+msgid "Create one."
+msgstr "Crea'n una."
+
+msgid "not public"
+msgstr "no pública"
+
+msgid "User Settings"
+msgstr "Configuració d'usuari"
+
+msgid "Create a new account"
+msgstr "Crear un compte nou"
+
+msgid "Username"
+msgstr "Nom d'usuari"
+
+msgid "Confirm Password"
+msgstr "Confirma Contrasenya:"
+
+msgid "Hide Private"
+msgstr "Oculta privades"
+
+msgid "Show All"
+msgstr "Mostra tot"
+
+msgid "Shutting down ..."
+msgstr "Apagant ..."
+
+msgid "It may take a couple of minutes."
+msgstr "Pot trigar un parell de minuts."
+
+msgid "Hybernating ..."
+msgstr "Hivernant ..."
+
+msgid "Description"
+msgstr "Descripció"
+
+msgid "Rename"
+msgstr "Canviar el nom"
+
+msgid "Options"
+msgstr "Opcions"
+
+msgid "Drivers"
+msgstr "Drivers"
+
+msgid "Graphics"
+msgstr "Gràfics"
+
+msgid "Remove Machine"
+msgstr "Esborrar màquina"
+
+msgid "System overview"
+msgstr "Visió del sistema"
+
+msgid "Danger Zone"
+msgstr "Zona perillosa"
+
+msgid ""
+"Once you delete the machine, there is no going back. Please be certain."
+msgstr "Una vegada elimineu la màquina, no hi ha retorn. Tingueu cura."
+
+msgid "Danger"
+msgstr "Perill"
+
+msgid "This will remove all the contents of the machine"
+msgstr "Això eliminarà tots els continguts de la màquina"
+
+msgid "This action can't be undone"
+msgstr "Aquesta acció no es pot desfer"
+
+msgid "Are you sure ?"
+msgstr "Estàs segur?"
+
+msgid "Yes, remove"
+msgstr "Si, esborra"
+
+msgid "Virtual machine"
+msgstr "Màquina Virtual"
+
+msgid "removed"
+msgstr "esborrat"
+
+msgid "This will remove all the"
+msgstr "Això esborrarà tots els"
+
+msgid "clones of the machine"
+msgstr "clons de la màquina"
+
+msgid "Yes, remove all the clones"
+msgstr "Si, esborra tots els clons"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Aquesta màquina virtual no es pot eliminar perquè té"
+
+msgid "clones"
+msgstr "clons"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "Aquesta màquina no té paràmetres gràfics!"
+
+msgid "recommended"
+msgstr "recomanat"
+
+msgid "to"
+msgstr "per"
+
+msgid "Changing Public State"
+msgstr "Canvi d'estat públic"
+
+msgid "action"
+msgstr "acció"
+
+msgid "Grants"
+msgstr "Permissos"
+
+msgid "public"
+msgstr "públic"
+
+msgid "New Base"
+msgstr "Nova Base"
+
+msgid "Version"
+msgstr "Versió"
+
+msgid "Authors"
+msgstr "Autors"
+
+msgid "Development"
+msgstr "Desenvolupament"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr ""
+"A continuació hi ha la llista de tecnologies usades en aquest projecte:"
+
+msgid "The code is available on "
+msgstr "El codi està disponible a "
+
+msgid "The code is "
+msgstr "El codi està "
+
+msgid "License"
+msgstr "Llicència"
+
+msgid "Machine locked by"
+msgstr "Màquina bloquejada per"
+
+msgid "This Machine is a base"
+msgstr "Aquesta màquina és una base"
+
+msgid "Cloned"
+msgstr "Clonada"
+
+msgid "is admin"
+msgstr "és administrador"
+
+msgid "Add new user"
+msgstr "Afegeix nou usuari"
+
+msgid "Register"
+msgstr "Registrar"
 
 msgid "Current Password:"
 msgstr "Contrasenya Actual:"
-
-msgid "Galician"
-msgstr "Gallec"
-
-msgid "French"
-msgstr "Francès"
-
-msgid "Indonesian"
-msgstr "Indonès"
-
-msgid "Persian"
-msgstr "Persa"
-
-msgid "Japanese"
-msgstr "Japonès"

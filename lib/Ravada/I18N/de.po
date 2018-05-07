@@ -49,9 +49,6 @@ msgstr "Basis kann nicht vorbereitet werden, entferne oder lösche die Basis"
 msgid "Clone/s"
 msgstr "Klone"
 
-msgid "New"
-msgstr "Neu"
-
 msgid "Users List"
 msgstr "Benutzerliste"
 

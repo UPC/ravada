@@ -118,7 +118,7 @@
                     <strong><%=l "Error" %></strong> <%=l 'Machine name is required.' %>
                 </div>
                 <div ng-show="new_machineForm.name.$error.maxlength" class="alert alert-warning fade in">
-                    <strong><%=l 'Error' %></strong> <%=l "Machine name can't exceed 20 characters." %>
+                    <strong><%=l 'Error' %></strong> <%=l "Machine name can\'t exceed 20 characters." %>
                 </div>
             </div>
             <div ng-show="new_machineForm.$submitted || new_machineForm.backend.$touched">
