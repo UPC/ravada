@@ -32,7 +32,7 @@ Install Ravada
 --------------
 
 Only use this script if you are going to install Ravada on a fresh OS.
-Download the script :download:`here <res/ravada_install.sh>`_ .
+Download the script :download:`here <res/ravada_install.sh>` .
 
 Instructions
 ------------
