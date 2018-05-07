@@ -145,12 +145,16 @@ sub _load_storage_pool {
     my $vm_pool;
     my $available;
 
+    if (defined $self->default_storage_pool_name) {
+        return( $self->vm->get_storage_pool_by_name($self->default_storage_pool_name)
+            or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
+    }
+
     for my $pool ($self->vm->list_storage_pools) {
+        warn $pool->get_name;
         my $info = $pool->get_info();
         next if defined $available
-                && $info->{available} <= $available
-                && !( defined $self->default_storage_pool_name
-                        && $pool->get_name eq $self->default_storage_pool_name);
+                && $info->{available} <= $available;
 
         my $doc = $XML->load_xml(string => $pool->get_xml_description);
 
@@ -332,6 +336,17 @@ sub dir_img {
     return $dir;
 }
 
+sub _storage_path($self, $storage) {
+    my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
+
+    my $dir = $xml->findnodes('/pool/target/path/text()');
+    die "I can't find /pool/target/path in ".$xml->toString
+        if !$dir;
+
+    return $dir;
+
+}
+
 sub _create_default_pool {
     my $self = shift;
     my $vm = shift;
@@ -485,11 +500,17 @@ sub create_volume {
     confess "Wrong arrs " if scalar @_ % 2;
     my %args = @_;
 
-    my ($name, $file_xml, $size, $capacity, $allocation, $swap, $path)
-        = @args{qw(name xml size capacity allocation swap path)};
+    my $name = delete $args{name}       or confess "ERROR: Missing volume name";
+    my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
-    confess "Missing volume name"   if !$name;
-    confess "Missing xml template"  if !$file_xml;
+    my $size        = delete $args{size};
+    my $swap        =(delete $args{swap} or 0);
+    my $target      = delete $args{target};
+    my $capacity    = delete $args{capacity};
+    my $allocation  = delete $args{allocation};
+
+    confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+
     confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
     confess "Capacity and size are the same, give only one of them"
         if defined $capacity && defined $size;
@@ -504,7 +525,15 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $img_file = ($path or $self->_volume_path(@_));
+    my $storage_pool = $self->storage_pool();
+
+    my $img_file = $self->_volume_path(
+        target => $target
+        , swap => $swap
+        , name => $name
+        , storage => $storage_pool
+    );
+
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
@@ -529,11 +558,14 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
-    my $target = $args{target};
-    my $dir_img = $self->dir_img();
+    my $swap     =(delete $args{swap} or 0);
+    my $target   = delete $args{target};
+    my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
+    my $filename = $args{name}  or confess "ERROR: Missing name";
+
+    my $dir_img = $self->_storage_path($storage);
     my $suffix = ".img";
-    $suffix = ".SWAP.img"   if $args{swap};
-    my $filename = $args{name};
+    $suffix = ".SWAP.img"   if $swap;
     $filename .= "-$target" if $target;
     my (undef, $img_file) = tempfile($filename."-XXXX"
         ,DIR => $dir_img
@@ -565,7 +597,6 @@ sub _domain_create_from_iso {
         if $self->search_domain($args{name});
 
     my $vm = $self->vm;
-    my $storage = $self->storage_pool;
     my $iso = $self->_search_iso($args{id_iso} , $iso_file);
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
