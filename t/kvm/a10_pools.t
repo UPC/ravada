@@ -137,7 +137,8 @@ sub test_base {
     my ($path0) = $files_base[0] =~ m{(.*)/};
     my ($path1) = $files_base[1] =~ m{(.*)/};
 
-    isnt($path0,$path1);
+    # base files are always created in the default storage pool
+    is($path0,$path1);
 
     $domain->remove_base($USER);
 
@@ -212,11 +213,29 @@ sub test_prepare_base {
     }
 
     $domain->remove_base(user_admin);
-    my @volumes = ($domain->list_files_base, $domain->list_volumes);
+    @volumes = ($domain->list_files_base, $domain->list_volumes);
     is(@volumes,1);
     for my $volume (@volumes) {
         like($volume,qr{^$path}, $volume);
     }
+
+}
+
+sub test_base_in_other_pool {
+    my ($vm_name, $domain, $pool_name, $pools) = @_;
+    my ($other_pool)= grep { $_ ne $pool_name } @$pools;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    $vm->default_storage_pool_name($other_pool);
+
+    my $domain2 = $vm->search_domain($domain->name);
+    $domain2->prepare_base(user_admin);
+
+    my $path = $vm->_storage_path($other_pool);
+    for my $volume ( $domain->list_files_base) {
+        like($volume,qr{^$path}, $volume);
+    }
+
 
 }
 
@@ -249,16 +268,20 @@ SKIP: {
 
     skip($msg,10)   if !$vm;
 
-    my $pool2 = create_pool($vm_name);
+    my @pools = ( 'default', create_pool($vm_name));
 
-    for my $pool_name ('default', $pool2 ) {
+    for my $pool_name ( @pools ) {
         my $domain = test_create_domain($vm_name, $pool_name);
         test_prepare_base($vm_name, $domain, $pool_name);
+
+        test_base_in_other_pool($vm_name, $domain, $pool_name, \@pools);
+
         test_remove_domain($vm_name, $domain);
         test_default_pool($vm_name,$pool_name);
     }
 
     test_volumes_in_two_pools($vm_name);
+
 }
 
 clean();

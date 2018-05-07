@@ -303,9 +303,10 @@ sub _create_qcow_base {
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
         my $base_img = $file_img;
+        my $dir_img = $self->_vm->dir_img();
 
         my @cmd;
-        $base_img =~ s{\.\w+$}{\.ro.qcow2};
+        $base_img =~ s{.*/(.*)\.\w+$}{$dir_img/$1\.ro.qcow2};
 
         die "ERROR: base image already exists '$base_img'" if -e $base_img;
 
