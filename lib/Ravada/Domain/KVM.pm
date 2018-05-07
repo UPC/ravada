@@ -111,12 +111,13 @@ sub list_disks {
 }
 
 sub xml_description($self) {
-    return $self->_data_extra('xml')    if !$self->domain;
+    return $self->_data_extra('xml')    if !$self->domain && $self->is_known;
 
+    confess "ERROR: KVM domain not available"   if !$self->domain;
     my $xml;
     eval {
         $xml = $self->domain->get_xml_description();
-        $self->_data_extra('xml', $xml);
+        $self->_data_extra('xml', $xml) if $self->is_known;
     };
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
     if ( $@ ) {
@@ -135,11 +136,6 @@ sub remove_disks {
     my $self = shift;
 
     my $removed = 0;
-
-    my $id;
-    eval { $id = $self->id };
-    return if $@ && $@ =~ /No DB info/i;
-    die $@ if $@;
 
     $self->_vm->connect();
     for my $file ($self->list_disks) {
@@ -213,7 +209,7 @@ sub remove {
     eval { $self->domain->undefine()    if $self->domain };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 
-    eval { $self->remove_disks(); };
+    eval { $self->remove_disks() if $self->is_known };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
@@ -224,7 +220,7 @@ sub remove {
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    eval { $self->domain->undefine() };
+    eval { $self->domain->undefine()    if $self->domain };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 

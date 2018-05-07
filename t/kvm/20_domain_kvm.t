@@ -54,7 +54,7 @@ sub test_remove_domain_by_name {
 
     my $domain = $RAVADA->search_domain($name, 1);
     die "I can't remove old domain $name"
-        if $domain;
+        if $domain->domain;
 
 }
 

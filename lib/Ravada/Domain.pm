@@ -832,10 +832,8 @@ sub pre_remove { }
 
 sub _pre_remove_domain($self, $user=undef) {
 
-    eval { $self->id };
-    warn $@ if $@;
-    $self->pre_remove();
     $self->_allow_remove($user);
+    $self->list_disks() if $self->is_known || $self->domain;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
@@ -845,12 +843,12 @@ sub _after_remove_domain {
     my ($user, $cascade) = @_;
 
     $self->_remove_iptables(user => $user);
-    $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_base) {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
     }
+    $self->_remove_temporary_machine(user => $user);
     return if !$self->{_data};
     $self->_remove_base_db();
     $self->_remove_domain_db();
@@ -1376,7 +1374,8 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
-    return if !$self->is_known || !$self->is_volatile;
+    return if !$self->is_volatile;
+
     my %args = @_;
     my $user = delete $args{user} or confess "ERROR: Missing user";
 
@@ -1390,10 +1389,9 @@ sub _remove_temporary_machine {
                 if $req;
 
         if ($self->is_removed) {
-            $self->remove_disks();
-            $self->_after_remove_domain();
+            $self->remove_disks()           if $self->is_known;
         } else {
-            $self->remove($user)    if $user->is_temporary;
+            $self->remove($user);
         }
 }
 
@@ -1685,7 +1683,11 @@ Returns if the domain is volatile, so it will be removed on shutdown
 =cut
 
 sub is_volatile($self, $value=undef) {
-    return $self->_set_data('is_volatile', $value);
+    return $self->{_is_volatile} if exists $self->{_is_volatile};
+
+    my $is_volatile = $self->_data('is_volatile', $value);
+    $self->{_is_volatile} = $is_volatile;
+    return $is_volatile;
 }
 
 =head2 run_timeout
@@ -1957,6 +1959,11 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
+    if (!$self->is_known) {
+        my $type = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
+        confess "Unknown type from ".ref($self) if !$type;
+        return $type;
+    }
     confess "Unknown vm ".Dumper($self->{_data})
         if !$self->_data('vm');
     return $self->_data('vm');

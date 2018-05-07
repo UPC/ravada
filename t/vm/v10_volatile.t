@@ -100,8 +100,16 @@ sub test_volatile {
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
+    # test out of the DB
+    my $sth = $test->connector->dbh->prepare("SELECT id,name FROM domains WHERE name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    ok(!$row,"Expecting no domain info in the DB, found ".Dumper($row))    or exit;
+
+    # search for the removed domain
     my $domain2 = $vm->search_domain($name);
-    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
+    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown\n"
+        .Dumper($domain2)) or exit;
 
     is(rvd_front->domain_exists($name),0,"[$vm_name] Expecting domain removed after shutdown")
         or exit;
@@ -114,7 +122,7 @@ sub test_volatile {
 
     $name = undef;
 
-        $vm->refresh_storage_pools();
+        $vm->refresh_storage();
         for my $file ( @volumes ) {
             ok(! -e $file,"[$vm_name] Expecting volume $file removed") or BAIL_OUT();
         }
@@ -189,7 +197,7 @@ sub test_volatile_auto_kvm {
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
 
-    rvd_back->_cmd_refresh_vms();
+    rvd_back->_cmd_refresh_storage();
 
     my $sth = $test->connector->dbh->prepare("SELECT * FROM domains where name=?");
     $sth->execute($name);
@@ -201,7 +209,7 @@ sub test_volatile_auto_kvm {
         or exit;
 
     for my $file ( @volumes ) {
-        ok(! -e $file,"[$vm_name] Expecting volume $file removed");
+        ok(! -e $file,"[$vm_name] Expecting volume $file removed") or exit;
     }
 
     my $clone2;

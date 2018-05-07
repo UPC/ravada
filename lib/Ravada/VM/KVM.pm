@@ -454,7 +454,7 @@ sub search_domain($self, $name, $force=undef) {
         if ($domain) {
             return $domain;
         }
-    }
+
     return;
 }
 
