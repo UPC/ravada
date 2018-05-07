@@ -312,7 +312,23 @@ sub _update_isos {
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
             ,rename_file => 'xubuntu_xenial_mini.iso'
         }
-       ,lubuntu_aardvark => {
+        ,lubuntu_bionic_64 => {
+             name => 'Lubuntu Bionic Beaver 64 bits'
+             ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
+             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
+             ,md5_url => '$url/MD5SUMS'
+             ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+         }
+         ,lubuntu_bionic_32 => {
+             name => 'Lubuntu Bionic Beaver 32 bits'
+             ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
+             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
+             ,md5_url => '$url/MD5SUMS'
+             ,xml => 'bionic-i386.xml'
+             ,xml_volume => 'bionic32-volume.xml'
+        }
+        ,lubuntu_aardvark => {
             name => 'Lubuntu Artful Aardvark'
             ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
@@ -828,7 +844,7 @@ sub _connect_dbh {
     my $host = $CONFIG->{db}->{host};
 
     my $data_source = "DBI:$driver:$db";
-    $data_source = "DBI:$driver:database=$db;host=$host"    
+    $data_source = "DBI:$driver:database=$db;host=$host"
         if $host && $host ne 'localhost';
 
     my $con;
@@ -879,7 +895,7 @@ sub _init_config {
 
     die "ERROR: Format error in config file $file\n$@"  if $@;
 
-    $LIMIT_PROCESS = $CONFIG->{limit_process} 
+    $LIMIT_PROCESS = $CONFIG->{limit_process}
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
 }
@@ -1373,7 +1389,7 @@ sub process_requests {
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id_request);
 
-        if ( ($long_commands && 
+        if ( ($long_commands &&
                 (!$short_commands && !$LONG_COMMAND{$req->command}))
             ||(!$long_commands && $LONG_COMMAND{$req->command})
         ) {
@@ -1524,7 +1540,7 @@ sub _execute {
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ( $pid == 0 ) {
-        $self->_do_execute_command($sub, $request) 
+        $self->_do_execute_command($sub, $request)
     } else {
         $self->_add_pid($pid, $request->id);
     }
@@ -1590,8 +1606,8 @@ sub _cmd_screenshot {
 sub _cmd_copy_screenshot {
     my $self = shift;
     my $request = shift;
-    
-    my $id_domain = $request->args('id_domain');  
+
+    my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $id_base = $domain->id_base;
@@ -1602,11 +1618,11 @@ sub _cmd_copy_screenshot {
     } else {
 
         my $base_screenshot = $domain->file_screenshot();
-    
-        $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
-        $base->_post_screenshot($base_screenshot);  
 
-        copy($domain->file_screenshot, $base_screenshot); 
+        $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
+        $base->_post_screenshot($base_screenshot);
+
+        copy($domain->file_screenshot, $base_screenshot);
     }
 }
 
@@ -2114,7 +2130,7 @@ sub import_domain {
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
     die "ERROR: unknown user '$user_name'" if !$user || !$user->id;
-    
+
     my $domain;
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
