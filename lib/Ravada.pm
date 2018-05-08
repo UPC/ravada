@@ -789,7 +789,6 @@ sub _create_table {
     $sth->finish;
     return if keys %$info;
 
-    warn "INFO: creating table $table\n";
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
     my $sql = join " ",<$in>;
@@ -2270,7 +2269,6 @@ sub _refresh_volatile_domains($self) {
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
-            warn "refreshing $name down";
             $domain->_post_shutdown(user => $USER_DAEMON);
             $domain->remove($USER_DAEMON);
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");

@@ -436,7 +436,10 @@ sub search_domain($self, $name, $force=undef) {
 
     my $dom;
     eval { $dom = $self->vm->get_domain_by_name($name); };
-    return if !$dom && !$force;
+    if (!$dom) {
+        return if !$force;
+        return if !$self->_domain_in_db($name);
+    }
 
         my $domain;
 
@@ -457,7 +460,6 @@ sub search_domain($self, $name, $force=undef) {
 
     return;
 }
-
 
 =head2 list_domains
 

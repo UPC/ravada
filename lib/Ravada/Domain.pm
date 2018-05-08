@@ -619,8 +619,7 @@ Returns if the domain is known in Ravada.
 
 sub is_known {
     my $self = shift;
-    return 0 if !$self->domain;
-    return $self->_select_domain_db(name => $self->name);
+    return ( $self->_select_domain_db(name => $self->name) or 0);
 }
 
 =head2 start_time
@@ -833,6 +832,7 @@ sub pre_remove { }
 sub _pre_remove_domain($self, $user=undef) {
 
     $self->_allow_remove($user);
+    $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks() if $self->is_known || $self->domain;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
@@ -848,7 +848,6 @@ sub _after_remove_domain {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
     }
-    $self->_remove_temporary_machine(user => $user);
     return if !$self->{_data};
     $self->_remove_base_db();
     $self->_remove_domain_db();
@@ -858,10 +857,19 @@ sub _remove_domain_db {
     my $self = shift;
 
     $self->_select_domain_db or return;
+
+    my $id = $self->id;
+    my $type = $self->type;
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
-    $sth->execute($self->id);
+    $sth->execute($id);
     $sth->finish;
+
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains_".lc($type)
+        ." WHERE id=?");
+    $sth->execute($id);
+    $sth->finish;
+
 }
 
 sub _remove_files_base {
@@ -1252,7 +1260,6 @@ sub _post_shutdown {
     $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
-    $self->_remove_temporary_machine(@_);
     if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1274,6 +1281,7 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+    $self->_remove_temporary_machine(@_);
 }
 
 sub _around_is_active($orig, $self) {
@@ -1383,16 +1391,11 @@ sub _remove_temporary_machine {
         my $req= $args{request};
         $req->status(
             "removing"
-            ,"Removing domain ".$self->name." after shutdown"
-            ." because user "
-            .$user->name." is temporary")
+            ,"Removing volatile machine ".$self->name)
                 if $req;
 
-        if ($self->is_removed) {
-            $self->remove_disks()           if $self->is_known;
-        } else {
-            $self->remove($user);
-        }
+    $self->remove($user);
+
 }
 
 sub _post_resume {
@@ -1683,11 +1686,21 @@ Returns if the domain is volatile, so it will be removed on shutdown
 =cut
 
 sub is_volatile($self, $value=undef) {
-    return $self->{_is_volatile} if exists $self->{_is_volatile};
+    return $self->{_is_volatile} if exists $self->{_is_volatile}    && !defined $value;
 
-    my $is_volatile = $self->_data('is_volatile', $value);
+    my $is_volatile = 0;
+    if ($self->is_known) {
+        $is_volatile = $self->_data('is_volatile', $value);
+    } elsif ($self->domain) {
+        $is_volatile = $self->is_persistent();
+    }
     $self->{_is_volatile} = $is_volatile;
     return $is_volatile;
+}
+
+sub is_persistent($self) {
+    return !$self->{_is_volatile} if exists $self->{_is_volatile};
+    return 0;
 }
 
 =head2 run_timeout
@@ -1960,7 +1973,7 @@ Returns the virtual machine type as a string.
 sub type {
     my $self = shift;
     if (!$self->is_known) {
-        my $type = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
+        my ($type) = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
         confess "Unknown type from ".ref($self) if !$type;
         return $type;
     }

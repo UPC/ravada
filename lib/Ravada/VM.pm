@@ -247,6 +247,14 @@ sub search_domain_by_id {
     return $self->search_domain($name);
 }
 
+sub _domain_in_db($self, $name) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id) =$sth->fetchrow;
+    return $id;
+}
+
 =head2 ip
 
 Returns the external IP this for this VM

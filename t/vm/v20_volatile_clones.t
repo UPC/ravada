@@ -122,6 +122,8 @@ sub test_enforce_limits {
     $clone0_2 = rvd_back->search_domain($clone_name);
     is($clone0_2, undef);
 
+    rvd_back->_refresh_volatile_domains();
+
     my $clone0_f;
     eval { $clone0_f = rvd_front->search_domain($clone_name) };
     is($clone0_f, undef);

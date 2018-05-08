@@ -202,11 +202,11 @@ sub remove {
         $self->list_disks();
     }
 
-    if ($self->domain && $self->domain->is_active) {
+    if (!$self->is_removed && $self->domain && $self->domain->is_active) {
         $self->_do_force_shutdown();
     }
 
-    eval { $self->domain->undefine()    if $self->domain };
+    eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     eval { $self->remove_disks() if $self->is_known };
@@ -222,6 +222,7 @@ sub remove {
 
     eval { $self->domain->undefine()    if $self->domain };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
+
 }
 
 
@@ -515,6 +516,16 @@ sub is_active {
     my $self = shift;
     return 0 if $self->is_removed;
     return ( $self->domain->is_active or 0);
+}
+
+=head2 is_persistent
+
+Returns wether the domain has a persistent configuration file
+
+=cut
+
+sub is_persistent($self) {
+    return $self->domain->is_persistent;
 }
 
 =head2 start
@@ -1625,6 +1636,7 @@ In KVM it removes saved images.
 
 sub pre_remove {
     my $self = shift;
+    return if $self->is_removed;
     $self->domain->managed_save_remove
         if $self->domain && $self->domain->has_managed_save_image;
 }
