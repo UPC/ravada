@@ -28,3 +28,13 @@ Also, ISOs that were downloaded from Ravada can also be found in this directory.
 
 
 If you want to include a KVM templated instead, use this `guide <http://ravada.readthedocs.io/en/latest/docs/new_kvm_template.html>`_ .
+
+
+If you need the xml or the volume (for when you wanna add a new template), you can extract them via virsh using the following commands:
+
+::
+
+    $ sudo virsh pool-list #in order to see the list of available pools
+    $ sudo virsh vol-list default #in order to see the list of volumes available
+    $ sudo virsh vol-dumpxml --pool default name_of_the_existing_machine.qcow2 #obtain the dump of a selected volume
+    $ sudo virsh dumpxml name_of_the_existing_machine #obtain the xml of a existing selected machine
