@@ -1347,6 +1347,8 @@ sub _remove_temporary_machine {
 }
 
 sub _post_resume {
+    my $self = shift;
+    $self->post_resume_aux;
     return _post_start(@_);
 }
 
@@ -1380,10 +1382,17 @@ sub _post_start {
         );
 
     }
-    my $time = time();
-    $self->domain->set_time($time, 0, 0);
     $self->get_info();
+    
 }
+
+=head2 post_resume_aux
+
+Method after resume
+
+=cut
+
+sub post_resume_aux {}
 
 sub _add_iptable {
     my $self = shift;

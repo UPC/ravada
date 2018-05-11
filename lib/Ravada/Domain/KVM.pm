@@ -461,6 +461,17 @@ sub _post_remove_base_domain {
     $sth->execute($self->id);
 }
 
+
+sub post_resume_aux($self) {
+    my $time = time();
+    eval {
+        $self->domain->set_time($time, 0, 0);
+    };
+    if ($@) {
+        die $@ if $@ !~ /libivrt error /;
+    }
+}
+
 =head2 display
 
 Returns the display URI
