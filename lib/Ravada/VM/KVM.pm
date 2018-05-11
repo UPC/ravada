@@ -1594,7 +1594,9 @@ sub _xml_add_usb_uhci3 {
 
 sub _xml_add_guest_agent {
     my $self = shift;
-    my $devices = shift;
+    my $doc = shift;
+    
+    my ($devices) = $doc->findnodes('/domain/devices');
     
     return if _search_xml(
                             xml => $devices
