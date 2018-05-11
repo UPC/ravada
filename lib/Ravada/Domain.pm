@@ -1380,6 +1380,8 @@ sub _post_start {
         );
 
     }
+    my $time = time();
+    $self->domain->set_time($time, 0, 0);
     $self->get_info();
 }
 

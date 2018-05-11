@@ -620,8 +620,6 @@ Resumes a paused the domain
 
 sub resume {
     my $self = shift;
-    my $time = localtime;
-    $self->domain->set_time($time, 0, 0);
     return $self->domain->resume();
 }
 
