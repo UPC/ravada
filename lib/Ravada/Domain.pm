@@ -1348,7 +1348,6 @@ sub _remove_temporary_machine {
 
 sub _post_resume {
     my $self = shift;
-    $self->post_resume_aux;
     return _post_start(@_);
 }
 
@@ -1383,7 +1382,7 @@ sub _post_start {
 
     }
     $self->get_info();
-    
+    $self->post_resume_aux;
 }
 
 =head2 post_resume_aux

@@ -470,6 +470,7 @@ sub post_resume_aux($self) {
     if ($@) {
         die $@ if $@ !~ /libivrt error /;
     }
+    warn "set time ".($@ or '');  # <---- temporal debug
 }
 
 =head2 display
