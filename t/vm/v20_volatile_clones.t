@@ -56,12 +56,21 @@ sub test_volatile_clone {
 
         my $list = rvd_front->list_domains();
 
+        my @volumes = $clone->list_volumes();
+
+        my $req = Ravada::Request->shutdown_domain( id_domain => $clone->id
+                ,uid => user_admin->id
+            );
         $clone->shutdown_now(user_admin);
 
         eval { $clone->is_active };
         is(''.$@,'');
 
         is($clone->is_removed, 1);
+
+        for my $vol (@volumes) {
+            ok( ! -e $vol,"Expecting $vol removed");
+        }
 
         my $clone2 = $vm->search_domain($clone_name);
         ok(!$clone2, "[".$vm->type."] volatile clone should be removed on shutdown");
@@ -71,6 +80,10 @@ sub test_volatile_clone {
         my $row = $sth->fetchrow_hashref;
         is($row,undef);
 
+        eval { rvd_back->_process_all_requests_dont_fork() };
+        is($@,'');
+        is($req->status,'done');
+        is($req->error, undef);
     };
 
     $clone->remove(user_admin)  if !$clone->is_removed;
@@ -122,7 +135,7 @@ sub test_enforce_limits {
     $clone0_2 = rvd_back->search_domain($clone_name);
     is($clone0_2, undef);
 
-    rvd_back->_refresh_volatile_domains();
+    rvd_back->_cmd_refresh_vms();
 
     my $clone0_f;
     eval { $clone0_f = rvd_front->search_domain($clone_name) };
@@ -145,13 +158,39 @@ sub test_enforce_limits {
 sub test_internal_shutdown {
     my $vm = shift;
     my $domain = create_domain($vm->type);
-    $domain->is_volatile(1);
-    $domain->start(user_admin);
-    my $domain_name = $domain->name;
+    $domain->volatile_clones(1);
 
-    shutdown_domain_internal($domain);
+    $domain->prepare_base(user_admin);
+    $domain->is_public(1);
+
+    my $clone_name = new_domain_name();
+    my $user = create_user('Roland','Pryzbylewski');
+    my $clone = $domain->clone( user => $user , name => $clone_name);
+
+    my @volumes = $clone->list_volumes();
+
+    shutdown_domain_internal($clone);
 
     rvd_back->_cmd_refresh_vms();
+
+    my $clone0_f;
+    eval { $clone0_f = rvd_front->search_domain($clone_name) };
+    is($clone0_f, undef);
+
+    my $list_domains = rvd_front->list_domains();
+    ($clone0_f) = grep { $_->{name} eq $clone_name } @$list_domains;
+    is($clone0_f, undef);
+
+    for my $vol ( @volumes ) {
+        ok(!-e $vol,"Expecting $vol removed");
+    }
+
+    my $domain2 = rvd_back->search_domain($clone_name);
+    ok(!$domain2,"[".$vm->type."] expecting domain $clone_name removed");
+
+    $domain2->remove(user_admin)    if $domain2;
+
+    $user->remove();
 }
 
 ######################################################################3
