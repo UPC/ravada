@@ -1185,9 +1185,9 @@ sub _match_file($self, $url, $file_re) {
     my $res;
     for ( 1 .. 10 ) {
         eval { $res = $self->_web_user_agent->get($url)->res(); };
-        last if !$@;
+        last if !$@ && $res && defined $res->code;
         next if $@ && $@ =~ /timeout/i;
-        die $@;
+        die $@ if $@;
     }
 
     return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
