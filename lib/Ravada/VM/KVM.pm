@@ -427,23 +427,28 @@ Returns true or false if domain exists.
 
 =cut
 
-sub search_domain {
-    my $self = shift;
-    my $name = shift or confess "Missing name";
+sub search_domain($self, $name, $force=undef) {
 
     $self->connect();
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
     confess $@ if $@;
 
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
+    my $dom;
+    eval { $dom = $self->vm->get_domain_by_name($name); };
+    if (!$dom) {
+        return if !$force;
+        return if !$self->_domain_in_db($name);
+    }
 
         my $domain;
 
+        my @domain = ( );
+        @domain = ( domain => $dom ) if $dom;
         eval {
             $domain = Ravada::Domain::KVM->new(
-                domain => $dom
+                @domain
+                ,name => $name
                 ,readonly => $self->readonly
                 ,_vm => $self
             );
@@ -452,10 +457,9 @@ sub search_domain {
         if ($domain) {
             return $domain;
         }
-    }
+
     return;
 }
-
 
 =head2 list_domains
 
@@ -652,6 +656,7 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password)
         if $spice_password;
+    $domain->xml_description();
 
     return $domain;
 }
@@ -829,6 +834,7 @@ sub _domain_create_from_base {
         = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password);
+    $domain->xml_description();
     return $domain;
 }
 
@@ -1179,9 +1185,9 @@ sub _match_file($self, $url, $file_re) {
     my $res;
     for ( 1 .. 10 ) {
         eval { $res = $self->_web_user_agent->get($url)->res(); };
-        last if !$@;
+        last if !$@ && $res && defined $res->code;
         next if $@ && $@ =~ /timeout/i;
-        die $@;
+        die $@ if $@;
     }
 
     return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
