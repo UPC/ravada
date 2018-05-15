@@ -508,9 +508,11 @@ Returns the id of  the domain
     my $id = $domain->id();
 =cut
 
-sub id {
-    return $_[0]->_data('id');
-
+sub id($self) {
+    return $self->{_id} if exists $self->{_id};
+    my $id = $_[0]->_data('id');
+    $self->{_id} = $id;
+    return $id;
 }
 
 
@@ -849,6 +851,7 @@ sub _after_remove_domain {
         $self->_remove_files_base();
     }
     return if !$self->{_data};
+    $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_domain_db();
 }
@@ -870,6 +873,20 @@ sub _remove_domain_db {
     $sth->execute($id);
     $sth->finish;
 
+}
+
+sub _finish_requests_db {
+    my $self = shift;
+
+    $self->_select_domain_db or return;
+
+    my $id = $self->id;
+    my $type = $self->type;
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests "
+        ." SET status='done' "
+        ." WHERE id_domain=? AND status == 'requested' ");
+    $sth->execute($id);
+    $sth->finish;
 }
 
 sub _remove_files_base {
