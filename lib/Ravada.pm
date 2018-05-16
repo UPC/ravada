@@ -281,6 +281,28 @@ sub _update_isos {
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
         }
+        ,kubuntu_64 => {
+            name => 'Kubuntu Bionic Beaver 64 bits'
+            ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
+            ,file_re => 'kubuntu-18.04-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_bionic_64.iso'
+        }
+        ,kubuntu_32 => {
+            name => 'Kubuntu Bionic Beaver 32 bits'
+            ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
+            ,arch => 'i386'
+            ,xml => 'bionic-i386.xml'
+            ,xml_volume => 'bionic32-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
+            ,file_re => 'kubuntu-18.04-desktop-i386.iso'
+            ,rename_file => 'kubuntu_bionic_32.iso'
+        }
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
