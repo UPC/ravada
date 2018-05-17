@@ -193,6 +193,102 @@ sub test_internal_shutdown {
     $user->remove();
 }
 
+sub test_old_machine {
+    my $vm = shift;
+    my $domain = create_domain($vm->type);
+    $domain->volatile_clones(1);
+
+    $domain->prepare_base(user_admin);
+    $domain->is_public(1);
+
+    my $clone_name = new_domain_name();
+    my $user = create_user('Roland','Pryzbylewski');
+    my $clone = $domain->clone( user => $user , name => $clone_name);
+
+    my $sth = $test->connector->dbh->prepare("DELETE FROM domains_kvm");
+    $sth->execute();
+
+    $sth = $test->connector->dbh->prepare("DELETE FROM domains_void ");
+    $sth->execute();
+
+    my $clone2 = Ravada::Domain->open($clone->id);
+    is($clone2->name, $clone_name);
+    ok($clone2->is_known);
+    ok($clone2->is_known_extra,"Expecting extra on $clone_name") or exit;
+
+    shutdown_domain_internal($clone);
+
+    eval { $clone2->remove(user_admin) };
+    is($@,'',"Expecting no error on remove $clone_name");
+
+    $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2);
+
+    eval { $domain->remove(user_admin) };
+    is($@,'',"Expecting no error on remove ".$domain->name);
+
+    my $base2 = $vm->search_domain($domain->name);
+    ok(!$base2);
+
+    $user->remove();
+    $clone->remove(user_admin)  if !$clone->is_removed;
+    $domain->remove(user_admin);
+}
+
+sub test_old_machine_req {
+    my $vm = shift;
+    my $domain = create_domain($vm->type);
+    $domain->volatile_clones(1);
+
+    $domain->prepare_base(user_admin);
+    $domain->is_public(1);
+
+    my $clone_name = new_domain_name();
+    my $user = create_user('Roland','Pryzbylewski');
+    my $clone = $domain->clone( user => $user , name => $clone_name);
+
+    my $sth = $test->connector->dbh->prepare("DELETE FROM domains_kvm");
+    $sth->execute();
+    $sth->finish;
+
+    $sth = $test->connector->dbh->prepare("DELETE FROM domains_void ");
+    $sth->execute();
+    $sth->finish;
+
+    my $clone_noextra = $vm->search_domain($clone_name);
+    is($clone_noextra->is_known_extra, 1
+        ,"[".$vm->type."] Expecting clone extra in $clone_name") or exit;
+
+    shutdown_domain_internal($clone);
+
+    my $req = Ravada::Request->remove_domain(
+        name => $clone->name
+        ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork();
+    is($req->status,'done');
+    is($req->error,'');
+
+    my $clone2 = $vm->search_domain($clone_name);
+    ok(!$clone2);
+
+    $req = Ravada::Request->remove_domain(
+        name => $domain->name
+        ,uid => user_admin->id
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req->status,'done');
+    is($req->error,'');
+
+    my $base2 = $vm->search_domain($domain->name);
+    ok(!$base2);
+
+    $user->remove();
+    $clone->remove(user_admin)  if !$clone->is_removed;
+    $domain->remove(user_admin);
+}
+
 ######################################################################3
 clean();
 
@@ -209,9 +305,13 @@ for my $vm_name ( vm_names() ) {
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
 
+        test_old_machine($vm);
+        test_old_machine_req($vm);
+
         test_volatile_clone($vm);
         test_enforce_limits($vm);
         test_internal_shutdown($vm);
+
     }
 }
 
