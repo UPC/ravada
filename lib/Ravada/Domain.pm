@@ -190,10 +190,13 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $self->{_name} = $args->{name} if exists $args->{name};
+    my $name;
+    $name = $args->{name}               if exists $args->{name};
+    $name = $args->{domain}->get_name   if !$name && $args->{domain};
+
+    $self->{_name} = $name  if $name;
 
     $self->_init_connector();
-    $self->is_known();
 
 }
 
@@ -559,6 +562,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
 }
 
 sub _data_extra($self, $field, $value=undef) {
+    $self->_insert_db_extra()   if !$self->is_known_extra();
     return $self->_data($field, $value, "domains_".lc($self->type));
 }
 
@@ -610,6 +614,7 @@ sub open($class, @args) {
     my $vm = $vm0->new( @ro );
 
     my $domain = $vm->search_domain($row->{name}, $force);
+    $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
     return $domain;
 }
 
@@ -621,7 +626,15 @@ Returns if the domain is known in Ravada.
 
 sub is_known {
     my $self = shift;
-    return ( $self->_select_domain_db(name => $self->name) or 0);
+    return 1    if $self->_select_domain_db(name => $self->name);
+    return 0;
+}
+
+sub is_known_extra {
+    my $self = shift;
+    return 1 if $self->_select_domain_db( id_domain => $self->id
+                , _table => "domains_".lc($self->type));
+    return 0;
 }
 
 =head2 start_time
@@ -812,7 +825,11 @@ sub _insert_db {
     $sth->execute($self->internal_id, $self->id);
     $sth->finish;
 
-    $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domains_".lc($self->type)
+    $self->_insert_db_extra();
+}
+
+sub _insert_db_extra($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domains_".lc($self->type)
         ." ( id_domain ) VALUES (?) ");
     $sth->execute($self->id);
     $sth->finish;
@@ -835,7 +852,8 @@ sub _pre_remove_domain($self, $user=undef) {
 
     $self->_allow_remove($user);
     $self->is_volatile()        if $self->is_known || $self->domain;
-    $self->list_disks() if $self->is_known || $self->domain;
+    $self->list_disks()         if ($self->is_known && $self->is_known_extra)
+                                    || $self->domain ;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }

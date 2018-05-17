@@ -64,7 +64,6 @@ our %SET_DRIVER_SUB = (
 
 ##################################################
 
-
 =head2 name
 
 Returns the name of the domain
@@ -1651,6 +1650,7 @@ sub is_removed($self) {
 }
 
 sub internal_id($self) {
+    confess "ERROR: Missing internal domain"    if !$self->domain;
     return $self->domain->get_id();
 }
 

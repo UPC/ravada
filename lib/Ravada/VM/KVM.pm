@@ -440,11 +440,14 @@ sub search_domain($self, $name, $force=undef) {
         return if !$force;
         return if !$self->_domain_in_db($name);
     }
+    return if !$force && !$self->_domain_in_db($name);
 
         my $domain;
 
         my @domain = ( );
         @domain = ( domain => $dom ) if $dom;
+        @domain = ( id_owner => $Ravada::USER_DAEMON->id)
+            if $force && !$self->_domain_in_db($name);
         eval {
             $domain = Ravada::Domain::KVM->new(
                 @domain
@@ -455,6 +458,7 @@ sub search_domain($self, $name, $force=undef) {
         };
         warn $@ if $@;
         if ($domain) {
+            $domain->xml_description()  if $dom && $domain->is_known();
             return $domain;
         }
 
@@ -469,23 +473,19 @@ Returns a list of the created domains
 
 =cut
 
-sub list_domains {
-    my $self = shift;
+sub list_domains($self, %args) {
 
-    confess "Missing vm" if !$self->vm;
+    my $active = delete $args{active} or 0;
+
+    confess "ERROR: Unknown arguments ".Dumper(\%args)  if keys %args;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains WHERE vm = ?");
+    $sth->execute('KVM');
     my @list;
-    my @domains = $self->vm->list_all_domains();
-    for my $name (@domains) {
-        my $domain ;
-        my $id;
-        $domain = Ravada::Domain::KVM->new(
-                          domain => $name
-                        ,_vm => $self
-        );
-        next if !$domain->is_known();
-        $id = $domain->id();
-        warn $@ if $@ && $@ !~ /No DB info/i;
-        push @list,($domain) if $domain && $id;
+    while ( my ($id) = $sth->fetchrow) {
+        my $domain = Ravada::Domain->open($id);
+        next if !$domain || $active && !$domain->is_active;
+        push @list,($domain);
     }
     return @list;
 }
@@ -654,6 +654,7 @@ sub _domain_create_from_iso {
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+
     $domain->_set_spice_password($spice_password)
         if $spice_password;
     $domain->xml_description();
@@ -706,6 +707,7 @@ sub _domain_create_common {
               _vm => $self
          , domain => $dom
         , storage => $self->storage_pool
+       , id_owner => $id_owner
     );
     return ($domain, $spice_password);
 }
