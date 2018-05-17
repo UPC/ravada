@@ -44,6 +44,21 @@
                 Clones created from this machine will be removed on shutdown.
             </div>
         </div>
+%   if ($USER->is_admin){
+        <div class="row">
+                     <div class="col-md-4">
+                         <label class="control-label" for="new_owner">Owner</label>
+                     </div>
+                     <div class="col-md-2">
+                        <select id="new_owner" name="new_owner" >
+%       for my $user (@$list_users) {
+                          <option <%= $user->{id} eq $actual_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
+%        }
+                        </select>
+                     </div>
+                     <div class="col-md-6"><%=l 'Select who the owner of the machine is.' %></div>
+         </div>
+%   }
         <input type="submit" name="submitbtn">
         <button type="reset" >Cancel</button>
     </form>
