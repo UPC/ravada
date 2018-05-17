@@ -115,7 +115,9 @@ sub base_pool_name {
 }
 
 sub new_domain_name {
-    return base_domain_name()."_".$CONT++;
+    my $cont = $CONT++;
+    $cont = "0$cont"    if length($cont)<2;
+    return base_domain_name()."_".$cont;
 }
 
 sub new_pool_name {
