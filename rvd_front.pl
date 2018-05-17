@@ -1417,6 +1417,7 @@ sub settings_machine {
     my $actual_owner = $domain->id_owner;
     if ($c->param("new_owner") && $actual_owner != $c->param("new_owner")) {
        my $req_change = Ravada::Request->change_owner(uid => $c->param("new_owner"), id_domain => $domain->id);
+       $actual_owner = $c->param("new_owner");
     }
 
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
