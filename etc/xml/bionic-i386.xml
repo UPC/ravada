@@ -1,5 +1,5 @@
 <domain type='kvm' id='3'>
-  <name>kubuntu32</name>
+  <name>bionic32</name>
   <uuid>bbe91d30-f768-4b7c-a021-2ea55fd10077</uuid>
   <memory unit='KiB'>1048576</memory>
   <currentMemory unit='KiB'>1048576</currentMemory>
