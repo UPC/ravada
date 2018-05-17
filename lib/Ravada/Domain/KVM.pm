@@ -139,7 +139,7 @@ sub remove_disks {
     $self->_vm->connect();
     for my $file ($self->list_disks) {
         if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->domain->get_name."\n"
+            warn "WARNING: $file already removed for ".$self->name."\n"
                 if $0 !~ /.t$/;
             next;
         }
@@ -1269,7 +1269,6 @@ sub _find_base {
     run3(\@cmd,\$in, \$out, \$err);
 
     my ($base) = $out =~ m{^backing file: (.*)}mi;
-    die "No base for $file in $out" if !$base;
 
     return $base;
 }
