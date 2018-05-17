@@ -902,7 +902,7 @@ sub _finish_requests_db {
     my $type = $self->type;
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET status='done' "
-        ." WHERE id_domain=? AND status == 'requested' ");
+        ." WHERE id_domain=? AND status = 'requested' ");
     $sth->execute($id);
     $sth->finish;
 }
