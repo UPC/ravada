@@ -350,7 +350,8 @@ sub is_operator {
         || $self->can_remove_clone()
         || $self->can_remove_clone_all()
         || $self->can_create_base()
-        || $self->can_create_machine();
+        || $self->can_create_machine
+        || $self->can_list_machines;
 }
 
 =head2 can_list_own_machines
@@ -384,7 +385,8 @@ sub can_list_clones {
 }
 
 sub can_list_clones_from_own_base($self) {
-    return 1 if $self->can_remove_clone || $self->can_remove_clone_all;
+    return 1 if $self->can_remove_clone || $self->can_remove_clone_all
+        || $self->can_shutdown_clone;
     return 0;
 }
 
@@ -397,7 +399,9 @@ Returns true if the user can list all the virtual machines at the web frontend
 
 sub can_list_machines {
     my $self = shift;
-    return 1 if $self->is_admin() || $self->can_remove_all;
+    return 1 if $self->is_admin()
+            || $self->can_remove_all || $self->can_remove_clone_all
+            || $self->can_shutdown_all;
     return 0;
 }
 
@@ -810,6 +814,22 @@ sub can_remove_machine($self, $domain) {
     }
 
     return $self->can_remove_clones($domain->id) if $domain->id_base;
+    return 0;
+}
+
+sub can_shutdown_machine($self, $domain) {
+
+    return 1 if $self->can_shutdown_all();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    return 1 if $self->id == $domain->id_owner;
+
+    if ($domain->id_base && $self->can_shutdown_clone()) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+
     return 0;
 }
 

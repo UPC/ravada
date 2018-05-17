@@ -147,13 +147,13 @@ before 'prepare_base' => \&_pre_prepare_base;
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
-before 'pause' => \&_allow_manage;
+before 'pause' => \&_allow_shutdown;
  after 'pause' => \&_post_pause;
 
-before 'hybernate' => \&_allow_manage;
+before 'hybernate' => \&_allow_shutdown;
  after 'hybernate' => \&_post_hibernate;
 
-before 'hibernate' => \&_allow_manage;
+before 'hibernate' => \&_allow_shutdown;
  after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
@@ -279,18 +279,18 @@ sub _allow_remove($self, $user) {
 
 sub _allow_shutdown {
     my $self = shift;
-    my %args = @_;
+    my %args;
 
+    if (scalar @_ == 1 ) {
+        $args{user} = shift;
+    } else {
+        %args = @_;
+    }
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
-    if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = Ravada::Domain->open($self->id_base);
-        return if $base->id_owner == $user->id;
-    } elsif($user->can_shutdown_all) {
-        return;
-    } else {
-        $self->_allow_manage_args(user => $user);
-    }
+    confess "User ".$user->name." [".$user->id."] not allowed to shutdown ".$self->name
+        ." owned by ".($self->id_owner or '<UNDEF>')
+            if !$user->can_shutdown_machine($self->id);
 }
 
 sub _around_add_volume {
@@ -1177,6 +1177,9 @@ sub _post_hibernate($self, $user) {
 
 sub _pre_shutdown {
     my $self = shift;
+
+    confess "ERROR: Missing arguments"  if scalar(@_) % 2;
+
     my %arg = @_;
 
     my $user = delete $arg{user};
@@ -1249,6 +1252,7 @@ sub _around_shutdown_now {
     my $self = shift;
     my $user = shift;
 
+    $self->_pre_shutdown(user => $user);
     if ($self->is_active) {
         $self->$orig($user);
     }
