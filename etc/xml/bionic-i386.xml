@@ -1,6 +1,6 @@
-<domain type='kvm' id='2'>
-  <name>generic32</name>
-  <uuid>6b550689-7de5-4b6e-854a-e03b6cc86587</uuid>
+<domain type='kvm' id='3'>
+  <name>kubuntu32</name>
+  <uuid>bbe91d30-f768-4b7c-a021-2ea55fd10077</uuid>
   <memory unit='KiB'>1048576</memory>
   <currentMemory unit='KiB'>1048576</currentMemory>
   <vcpu placement='static'>1</vcpu>
@@ -8,7 +8,9 @@
     <partition>/machine</partition>
   </resource>
   <os>
-    <type arch='i686' machine='pc-i440fx-bionic'>hvm</type>
+    <type arch='x86_64' machine='pc-i440fx-bionic'>hvm</type>
+    <boot dev='cdrom'/>
+    <boot dev='hd'/>
   </os>
   <features>
     <acpi/>
@@ -37,22 +39,20 @@
     <emulator>/usr/bin/kvm-spice</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
-      <source file='/var/lib/libvirt/images/generic32.qcow2'/>
+      <source file='/var/lib/libvirt/images/kubuntu32.qcow2'/>
       <backingStore/>
       <target dev='hda' bus='ide'/>
       <alias name='ide0-0-0'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
-      <boot order='1'/>
     </disk>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
-      <source file='/var/lib/libvirt/images/lubuntu-18.04-desktop-i386.iso'/>
+      <source file='/var/lib/libvirt/images/kubuntu_bionic_32.iso'/>
       <backingStore/>
-      <target dev='hdb' bus='ide' tray='open'/>
+      <target dev='hdb' bus='ide'/>
       <readonly/>
       <alias name='ide0-0-1'/>
       <address type='drive' controller='0' bus='0' target='0' unit='1'/>
-      <boot order='2'/>
     </disk>
     <controller type='usb' index='0' model='ich9-ehci1'>
       <alias name='usb'/>
@@ -85,7 +85,7 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
     </controller>
     <interface type='network'>
-      <mac address='52:54:00:c1:4d:73'/>
+      <mac address='52:54:00:f6:09:a4'/>
       <source network='default' bridge='virbr0'/>
       <target dev='vnet0'/>
       <model type='rtl8139'/>
@@ -93,14 +93,14 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>
     <serial type='pty'>
-      <source path='/dev/pts/5'/>
+      <source path='/dev/pts/3'/>
       <target type='isa-serial' port='0'>
         <model name='isa-serial'/>
       </target>
       <alias name='serial0'/>
     </serial>
-    <console type='pty' tty='/dev/pts/5'>
-      <source path='/dev/pts/5'/>
+    <console type='pty' tty='/dev/pts/3'>
+      <source path='/dev/pts/3'/>
       <target type='serial' port='0'/>
       <alias name='serial0'/>
     </console>
@@ -142,8 +142,8 @@
     </memballoon>
   </devices>
   <seclabel type='dynamic' model='apparmor' relabel='yes'>
-    <label>libvirt-6b550689-7de5-4b6e-854a-e03b6cc86587</label>
-    <imagelabel>libvirt-6b550689-7de5-4b6e-854a-e03b6cc86587</imagelabel>
+    <label>libvirt-bbe91d30-f768-4b7c-a021-2ea55fd10077</label>
+    <imagelabel>libvirt-bbe91d30-f768-4b7c-a021-2ea55fd10077</imagelabel>
   </seclabel>
   <seclabel type='dynamic' model='dac' relabel='yes'>
     <label>+64055:+130</label>

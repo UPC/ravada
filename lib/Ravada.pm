@@ -367,6 +367,7 @@ sub _update_isos {
          ,lubuntu_bionic_32 => {
              name => 'Lubuntu Bionic Beaver 32 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
+             ,arch => 'i386'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
              ,md5_url => '$url/MD5SUMS'
              ,xml => 'bionic-i386.xml'
