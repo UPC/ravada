@@ -525,6 +525,7 @@ sub start {
 
 sub _pre_shutdown_domain {
     my $self = shift;
+
     my ($state, $reason) = $self->domain->get_state();
 
     if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN 
@@ -539,6 +540,7 @@ sub _pre_shutdown_domain {
 
     $self->domain->managed_save_remove()
         if $self->domain->has_managed_save_image();
+
 }
 
 =head2 shutdown
@@ -598,7 +600,6 @@ sub _do_force_shutdown {
 
     eval { $self->domain->destroy   };
     warn $@ if $@;
-
 }
 
 
@@ -621,7 +622,8 @@ Resumes a paused the domain
 
 sub resume {
     my $self = shift;
-    return $self->domain->resume();
+    eval { $self->domain->resume() };
+    die $@ if $@ && $@ !~ /libvirt error code: 55/;
 }
 
 
