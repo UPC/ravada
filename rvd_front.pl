@@ -1127,12 +1127,13 @@ sub provision {
     if ($domain) {
         my $count = 2;
         my $name2;
-        while ($domain && $domain->is_base) {
-            $name2 = "$name-$count";
-            $domain = $RAVADA->search_domain($name2);
-            $count++;
+        for (;;) {
+            last if !$domain || !$domain->is_base;
+            $name2 = "$name-".$count++;
+            $domain = undef;
+            eval { $domain = $RAVADA->search_domain($name2) };
+            die $@ if $@ && $@ !~ /Unknown domain/i;
         }
-        return $domain if $domain;
         $name = $name2;
     }
 
