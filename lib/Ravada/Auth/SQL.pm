@@ -386,7 +386,8 @@ sub can_list_clones {
 
 sub can_list_clones_from_own_base($self) {
     return 1 if $self->can_remove_clone || $self->can_remove_clone_all
-        || $self->can_shutdown_clone;
+        || $self->can_shutdown_clone
+        || $self->can_change_settings_clones;
     return 0;
 }
 
@@ -560,6 +561,22 @@ sub can_do($self, $grant) {
 
     confess "Unknown permission '$grant'\n" if !exists $self->{_grant}->{$grant};
     return $self->{_grant}->{$grant};
+}
+
+sub can_do_domain($self, $grant, $domain) {
+    my %valid_grant = map { $_ => 1 } qw(change_settings );
+    confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
+
+    return 0 if !$self->can_do($grant);
+
+    return 1 if $self->can_do("${grant}_all");
+    return 1 if $domain->id_owner == $self->id;
+
+    if ($self->can_do("${grant}_clones") && $domain->id_base) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+    return 0;
 }
 
 sub _load_grants($self) {
@@ -759,6 +776,8 @@ sub list_permissions($self) {
     return @list;
 }
 
+=pod
+
 sub can_change_settings($self, $id_domain=undef) {
     if (!defined $id_domain) {
         return $self->can_do("change_settings");
@@ -773,11 +792,12 @@ sub can_change_settings($self, $id_domain=undef) {
     return 0;
 }
 
+=cut
+
 sub can_manage_machine($self, $domain) {
     $domain = Ravada::Front::Domain->open($domain)  if !ref $domain;
 
-    return 1 if $self->can_change_settings
-        && $domain->id_owner == $self->id;
+    return 1 if $self->can_change_settings($domain);
 
     return 1 if $self->can_remove_clone_all
         && $domain->id_base;
@@ -840,7 +860,7 @@ sub grants($self) {
 }
 
 
-sub AUTOLOAD($self) {
+sub AUTOLOAD($self, $domain=undef) {
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
@@ -849,7 +869,10 @@ sub AUTOLOAD($self) {
         if !ref($self) || $name !~ /^can_(.*)/;
 
     my ($permission) = $name =~ /^can_([a-z_]+)/;
-    return $self->can_do($permission)  if $permission;
+    return $self->can_do($permission)   if !$domain;
+
+    $domain = Ravada::Front::Domain->open($domain)      if !ref $domain;
+    return $self->can_do_domain($permission,$domain);
 }
 
 1;
