@@ -16,6 +16,9 @@ use Mojo::Home;
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
 #####
+#
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use lib 'lib';
 
@@ -328,7 +331,7 @@ get '/machine/info/(:id).(:type)' => sub {
     return access_denied($c) unless $USER->is_admin
                               || $domain->id_owner == $USER->id;
 
-    $c->render(json => $RAVADA->domain_info(id => $id));
+    $c->render(json => $domain->info($USER) );
 };
 
 any '/machine/settings/(:id).(:type)' => sub {
@@ -562,6 +565,10 @@ get '/request/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
 
+    if ($c->stash('type') eq 'json') {
+        my $request = Ravada::Request->open($id);
+        return $c->render(json => $request->info($USER));
+    }
     return _show_request($c,$id);
 };
 
@@ -939,16 +946,12 @@ sub quick_start_domain {
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
     my $domain_name = $base->name."-".$name;
-
     $domain_name =~ tr/[\.]/[\-]/;
+
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
+    $domain_name = $domain->name if $domain;
 
-    $domain = provision($c,  $id_base,  $domain_name)
-        if !$domain || $domain->is_base;
-
-    return show_failure($c, $domain_name) if !$domain;
-
-    return show_link($c,$domain);
+    return show_link2($c,provision_req($c, $id_base, $domain_name));
 
 }
 
@@ -1105,6 +1108,48 @@ sub base_id {
     return $base->id;
 }
 
+sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
+
+    if ( $RAVADA->domain_exists($name) ) {
+        my $domain = $RAVADA->search_domain($name);
+        if ( !$domain->is_base ) {
+            if ($domain->is_active) {
+                return Ravada::Request->open_iptables(
+                    uid => $USER->id
+                , id_domain => $domain->id
+                , remote_ip => _remote_ip($c)
+                );
+            }
+            return Ravada::Request->start_domain(
+                uid => $USER->id
+                , id_domain => $domain->id
+                , remote_ip => _remote_ip($c)
+            )
+        }
+        $name = _new_domain_name($name);
+    }
+    my @create_args = ( start => 1, remote_ip => _remote_ip($c));
+    push @create_args, ( memory => $ram ) if $ram;
+    push @create_args, (   disk => $disk) if $disk;
+    my $req = Ravada::Request->create_domain(
+             name => $name
+        , id_base => $id_base
+       , id_owner => $USER->id
+       ,@create_args
+    );
+
+}
+
+sub _new_domain_name {
+    my $name = shift;
+    my $count = 1;
+    my $name2;
+    for ( ;; ) {
+        $name2 = "$name-".++$count;
+        return $name2 if !$RAVADA->domain_exists($name2);
+    }
+}
+
 sub provision {
     my $c = shift;
     my $id_base = shift;
@@ -1160,6 +1205,16 @@ sub provision {
         $c->stash(error => "I dunno why but no domain $name");
     }
     return $domain;
+}
+
+sub show_link2($c, $request) {
+    my $domain;
+    if ( ref($request) =~ /Domain/ ) {
+        $domain = $request;
+        $request = undef;
+    }
+
+    return $c->render(template => 'main/run_request', request => $request, domain => $domain );
 }
 
 sub show_link {
