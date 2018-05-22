@@ -1409,7 +1409,7 @@ sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
-  	return access_denied($c)    if !$USER->can_manage_machine($domain->id);
+  	return access_denied($c)    if !($USER->can_manage_machine($domain->id) || $USER->is_admin);
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
