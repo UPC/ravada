@@ -791,6 +791,28 @@ sub _display_file_spice($self,$user) {
     return $ret;
 }
 
+=head2 info
+
+Return information about the domain.
+
+=cut
+
+sub info($self, $user) {
+    my $info = {
+        id => $self->id
+        ,name => $self->name
+        ,is_active => $self->is_active
+        ,spice_password => $self->spice_password
+        ,display_url => $self->display($user)
+    };
+    my $display = $self->display($user);
+    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+    $info->{display_ip} = $local_ip;
+    $info->{display_port} = $local_port;
+
+    return $info;
+}
+
 sub _insert_db {
     my $self = shift;
     my %field = @_;
@@ -1953,6 +1975,7 @@ sub list_requests {
         push @list,($req_data);
     }
     $sth->finish;
+    warn Dumper(\@list);
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
 }

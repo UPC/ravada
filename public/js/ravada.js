@@ -1,6 +1,14 @@
 
 
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
+            .config( [
+                '$compileProvider',
+                function( $compileProvider )
+                {
+                    $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|spice|mailto|chrome-extension):/);
+        // Angular before v1.2 uses $compileProvider.urlSanitizationWhitelist(...)
+                }
+            ])
             .directive("solShowSupportform", swSupForm)
             //TODO check if the next directive may be removed
             .directive("solShowNewmachine", swNewMach)
@@ -21,6 +29,7 @@
             .controller("singleMachinePage", singleMachinePageC)
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain",run_domain_ctrl)
+            .controller("run_domain_req",run_domain_req_ctrl)
 
 
 
@@ -283,6 +292,65 @@
 
     };
 
+    function run_domain_req_ctrl($scope, $http, $timeout, request ) {
+        $scope.get_domain_info = function() {
+            console.log("id_domain: "+$scope.id_domain);
+            if ($scope.id_domain) {
+                $http.get('/machine/info/'+$scope.id_domain+'.json').then(function(response) {
+                    $scope.domain = response.data;
+                    if ($scope.domain.spice_password) {
+                        var copyTextarea = document.querySelector('.js-copytextarea');
+                        copyTextarea.value = $scope.domain.spice_password;
+                        copyTextarea.length = 5;
+                    }
+                    console.log("is_active: "+$scope.domain.is_active);
+                });
+            }
+            $timeout(function() {
+                    $scope.get_domain_info();
+            },1000);
+
+        };
+        $scope.wait_request = function() {
+            console.log("id_request: "+$scope.id_request);
+            $scope.dots += '.';
+            if ($scope.id_request) {
+                $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
+                    if (response.data.status == 'done' ) {
+                        $scope.id_domain=response.data.id_domain;
+                        $scope.request=response.data;
+                        $scope.get_domain_info();
+                    }
+                });
+            }
+
+            if ( !$scope.id_domain ) {
+                $timeout(function() {
+                    $scope.wait_request();
+                },1000);
+            }
+        }
+        $scope.copy_password= function() {
+            $scope.view_password=1;
+            var copyTextarea = document.querySelector('.js-copytextarea');
+            if (copyTextarea) {
+
+                    copyTextarea.select();
+                    try {
+                        var successful = document.execCommand('copy');
+                        var msg = successful ? 'successful' : 'unsuccessful';
+                        console.log('Copying text command was ' + msg);
+                        $scope.password_clipboard=successful;
+                    } catch (err) {
+                        console.log('Oops, unable to copy');
+                    }
+
+            }
+        };
+
+        $scope.dots = '...';
+        $scope.wait_request();
+    };
     function run_domain_ctrl($scope, $http, request ) {
         $http.get('/auto_view').then(function(response) {
             $scope.auto_view = response.auto_view;
@@ -302,6 +370,7 @@
                         var successful = document.execCommand('copy');
                         var msg = successful ? 'successful' : 'unsuccessful';
                         console.log('Copying text command was ' + msg);
+                        $scope.password_clipboard=successful;
                     } catch (err) {
                         console.log('Oops, unable to copy');
                     }

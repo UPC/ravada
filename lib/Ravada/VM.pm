@@ -350,6 +350,9 @@ sub _check_require_base {
     my $id_owner = delete $args{id_owner}
         or confess "ERROR: id_owner required ";
 
+    delete $args{start};
+    delete $args{remote_ip};
+
     delete @args{'_vm','name','vm', 'memory','description'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
