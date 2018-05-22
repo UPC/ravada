@@ -27,6 +27,24 @@ ok($USER);
 
 ##########################################################
 
+sub test_change_owner {
+    my $vm_name = shift;
+    my $USER2 = create_user("foo2","bar2", 1);
+    my $name = new_domain_name();
+    my $id_iso = search_id_iso('Debian');
+    diag("Testing change owner");
+    my $domain = rvd_back->search_vm($vm_name)->create_domain(
+             name => $name
+          ,id_iso => $id_iso
+        ,id_owner => $USER->id
+        ,iso_file => '<NONE>'
+    );
+    is($USER->id, $domain->id_owner) or return;
+    my $req = Ravada::Request->change_owner(uid => $USER2->id, id_domain => $domain->id);
+    sleep(3); #we make sure that the sql has updated.
+    is($USER2->id, $domain->id_owner) or return;
+}
+
 sub test_vm_connect {
     my $vm_name = shift;
 
@@ -367,21 +385,6 @@ sub test_create_domain_nocd {
                         .($iso2->{device} or '<UNDEF>'));
 }
 
-sub test_change_owner {
-    my $vm_name = shift;
-    my $domain= shift;
-    my $USER2 = create_user("foo","bar", 1);
-    my $domain = rvd_back->search_vm($vm_name)->create_domain(
-             name => $name
-          ,id_iso => $id_iso
-        ,id_owner => $USER->id
-        ,iso_file => '<NONE>'
-    );
-    is($USER->id, $domain->id_owner) or return;
-
-    my $req = Ravada::Request->change_owner(uid => $c->param("new_owner"), id_domain => $domain->id);
-}
-
 sub select_iso {
     my $id = shift;
     my $sth = $test->connector->dbh->prepare("SELECT * FROM iso_images"
@@ -419,6 +422,7 @@ for my $vm_name (qw( Void KVM )) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS) or next;
+        test_change_owner($vm_name);
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
 
