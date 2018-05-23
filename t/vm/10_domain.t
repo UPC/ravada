@@ -41,7 +41,9 @@ sub test_change_owner {
     );
     is($USER->id, $domain->id_owner) or return;
     my $req = Ravada::Request->change_owner(uid => $USER2->id, id_domain => $domain->id);
-    sleep(3); #we make sure that the sql has updated.
+    rvd_back->_process_requests_dont_fork();
+
+    $domain = Ravada::Domain->open($domain->id);
     is($USER2->id, $domain->id_owner) or return;
 }
 
