@@ -30,6 +30,14 @@ Linux 64bit, pre-built static binary installation for any Linux distro, any kern
 Apache config for netdata with SSL
 ----------------------------------
 
+Enable SSL and proxy in apache:
+
+::
+
+    # a2enmod proxy_http proxy ssl
+    # a2ensite default-ssl
+
+
 In ``/opt/netdata/etc/netdata/netdata.conf`` add:
 
 ::
@@ -66,6 +74,13 @@ and adding a new virtualhost for port 19999 in ``/etc/apache2/sites-available/de
    </VirtualHost>
    
 .. warning ::  Be careful with self-signed certificates. The browser needs to accept the certificate. We recommend the use of `Let's Encrypt <https://letsencrypt.org/>`_ or your trusted SSL provider.
+
+Then restart netdata and apache:
+
+::
+
+    # systemctl restart apache2
+    # systemctl restart netdata
 
 Thanks to `@jlopezramos <https://github.com/jlopezramos>`_ for this contribution.
 
