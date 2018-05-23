@@ -370,7 +370,7 @@ get '/machine/clone/(:id).(:type)' => sub {
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
-      return access_denied($c)        if !$USER ->can_shutdown_machine($c->stash('id'));
+      return access_denied($c)        if !$USER ->can_shutdown($c->stash('id'));
 
         return shutdown_machine($c);
 };
@@ -427,7 +427,7 @@ get '/machine/pause/(:id).(:type)' => sub {
 get '/machine/hybernate/(:id).(:type)' => sub {
         my $c = shift;
           return access_denied($c)
-             unless $USER->is_admin() || $USER->can_shutdown_machine($c->stash('id'));
+             unless $USER->is_admin() || $USER->can_shutdown($c->stash('id'));
 
         return hybernate_machine($c);
 };

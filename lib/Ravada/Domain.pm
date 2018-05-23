@@ -269,7 +269,7 @@ sub _allow_remove($self, $user) {
     $self->_check_has_clones() if $self->is_known();
     if ( $self->is_known
         && $self->id_base
-        && ($user->can_remove_clone() || $user->can_remove_clone_all())
+        && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
         my $base = $self->open($self->id_base);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
@@ -290,7 +290,7 @@ sub _allow_shutdown {
 
     confess "User ".$user->name." [".$user->id."] not allowed to shutdown ".$self->name
         ." owned by ".($self->id_owner or '<UNDEF>')
-            if !$user->can_shutdown_machine($self->id);
+            if !$user->can_shutdown($self->id);
 }
 
 sub _around_add_volume {
@@ -1194,7 +1194,7 @@ sub _pre_shutdown {
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        $self->resume(user => $user);
+        $self->resume(user => Ravada::Utils::user_daemon);
     }
 }
 
