@@ -3,7 +3,7 @@
 
     <form class="form-inline" action="<%= $action %>" method="post">
         <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="control-label" for="ram"><%=l 'Memory' %></label>
                     </div>
                     <div class="col-md-2">
@@ -15,8 +15,9 @@
                                 <%=l 'MB available' %>.
                     </div>
        </div>
+%   if ($USER->is_admin){
        <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="control-label" for="timeout">Timeout</label>
                     </div>
                     <div class="col-md-2">
@@ -28,9 +29,11 @@
                     </div>
                     <div class="col-md-6"><%=l 'The machine will shutdown after these minutes' %></div>
         </div>
+%   }
+%   if ($USER->is_admin){
         <div class="row">
-            <div class="col-md-4">
-                <label class="control-label" for="volatile_clones">Enable Volatile Clones</label>
+            <div class="col-md-2">
+                <label class="control-label" for="volatile_clones">Volatile Clones</label>
             </div>
             <div class="col-md-2">
                 <input type="checkbox" name="volatile_clones"
@@ -44,9 +47,10 @@
                 Clones created from this machine will be removed on shutdown.
             </div>
         </div>
+%   }
 %   if ($USER->is_admin){
         <div class="row">
-                     <div class="col-md-4">
+                     <div class="col-md-2">
                          <label class="control-label" for="new_owner">Owner</label>
                      </div>
                      <div class="col-md-2">
@@ -56,11 +60,15 @@
 %        }
                         </select>
                      </div>
-                     <div class="col-md-6"><%=l 'Select who the owner of the machine is.' %></div>
+                     <div class="col-md-6"><%=l 'Change the owner of the machine' %></div>
          </div>
 %   }
+        <div class="row">
+            <div class="col-md-4">
         <input type="submit" name="submitbtn">
         <button type="reset" >Cancel</button>
+            </div>
+        </div>
     </form>
 </div><!-- of form-group -->
 </div><!-- of panel-body -->
