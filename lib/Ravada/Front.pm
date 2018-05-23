@@ -49,6 +49,13 @@ our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 our %VM;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
+###########################################################################
+#
+# method modifiers
+#
+
+around 'list_machines' => \&_around_list_machines;
+
 =head2 BUILD
 
 Internal constructor
@@ -78,7 +85,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases($self, %args) {
     $args{is_base} = 1;
-    my $query = "SELECT name, id, is_base FROM domains "
+    my $query = "SELECT name, id, is_base, id_owner FROM domains "
         ._where(%args)
         ." ORDER BY name";
 
@@ -91,6 +98,7 @@ sub list_bases($self, %args) {
         eval { $domain   = $self->search_domain($row->{name}) };
         next if !$domain;
         $row->{has_clones} = $domain->has_clones;
+        $row->{is_locked} = 0 if !exists $row->{is_locked};
         delete $row->{spice_password};
         push @bases, ($row);
     }
@@ -167,7 +175,7 @@ sub list_machines_user {
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines;
 
-    if ($user->can_remove_clone()) {
+    if ($user->can_remove_clone() || $user->can_shutdown_clone() ) {
         my $machines = $self->list_bases( id_owner => $user->id );
         for my $base (@$machines) {
             push @$machines,@{$self->list_domains( id_base => $base->{id} )};
@@ -184,6 +192,20 @@ sub list_machines($self, $user) {
     }
     return $self->list_clones() if $user->can_list_clones;
     return [];
+}
+
+sub _around_list_machines($orig, $self, $user) {
+    my $machines = $self->$orig($user);
+    for my $m (@$machines) {
+        $m->{can_shutdown} = $user->can_shutdown_machine($m->{id});
+
+        $m->{can_start} = 0;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+        $m->{can_view} = 0;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+    }
+    return $machines;
 }
 
 =pod
@@ -216,6 +238,7 @@ sub list_domains {
     my %args = @_;
 
     my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile, client_status"
+                    .", id_owner "
                 ." FROM domains "
                 ._where(%args)
                 ." ORDER BY name";

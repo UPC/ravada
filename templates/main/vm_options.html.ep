@@ -3,7 +3,7 @@
 
     <form class="form-inline" action="<%= $action %>" method="post">
         <div class="row">
-                    <div class="col-md-2">
+                    <div class="col-md-4">
                         <label class="control-label" for="ram"><%=l 'Memory' %></label>
                     </div>
                     <div class="col-md-2">
@@ -16,7 +16,7 @@
                     </div>
        </div>
        <div class="row">
-                    <div class="col-md-2">
+                    <div class="col-md-4">
                         <label class="control-label" for="timeout">Timeout</label>
                     </div>
                     <div class="col-md-2">
@@ -28,8 +28,24 @@
                     </div>
                     <div class="col-md-6"><%=l 'The machine will shutdown after these minutes' %></div>
         </div>
-        <input type="submit">
-        <button type="reset" ><%=l 'Cancel' %></button>
+        <div class="row">
+            <div class="col-md-4">
+                <label class="control-label" for="volatile_clones">Enable Volatile Clones</label>
+            </div>
+            <div class="col-md-2">
+                <input type="checkbox" name="volatile_clones"
+%               my $vclones = int($domain->is_volatile_clones);
+%               if ( $vclones ){
+                    checked
+%               }
+                value="1">
+            </div>
+            <div class="col-md-6">
+                Clones created from this machine will be removed on shutdown.
+            </div>
+        </div>
+        <input type="submit" name="submitbtn">
+        <button type="reset" >Cancel</button>
     </form>
 </div><!-- of form-group -->
 </div><!-- of panel-body -->

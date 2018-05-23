@@ -70,6 +70,8 @@ sub is_active($self) {
     return 0;
 }
 
+sub is_volatile_clones($self) { return $self->_data('volatile_clones')}
+
 sub is_hibernated($self) {
     return 1 if $self->_data('status') eq 'hibernated';
     return 0;

@@ -16,138 +16,118 @@ init($test->connector);
 
 ##############################################################################
 
-sub test_remove_admin {
+sub test_shutdown_admin {
     my $vm = shift;
 
     my $domain = create_domain($vm->type);
+    $domain->start(user_admin)  if !$domain->is_active();
 
-    is(user_admin->can_remove_machine($domain->id), 1);
-    $domain->remove( user_admin );
+    is(user_admin->can_shutdown_machine($domain->id), 1);
+    is($domain->is_active,1)    or return;
 
-    my $domain2 = $vm->search_domain( $domain->name );
-    ok(!$domain2,"[".$domain->type."] expecting domain already removed");
-
-}
-
-sub test_remove_own_clone {
-    my $vm = shift;
-
-    my $base = create_domain($vm->type);
-
-    $base->prepare_base( user_admin );
-    $base->is_public(1);
-
-    my $user = create_user("kevin.garvey","sleepwalk");
-    my $clone = $base->clone(
-          name => new_domain_name
-        , user => $user
-    );
-
-    # can remove by default
-    is($user->can_remove_machine($clone), 1);
-    $clone->remove( $user );
-
-    my $clone2 = $vm->search_domain( $clone->name );
-    ok(!$clone2,"[".$base->type."] expecting clone already removed");
-
-    $clone = $base->clone(
-          name => new_domain_name
-        , user => $user
-    );
-
-    # revoked grant can't remove
-    user_admin->revoke($user, 'remove');
-    is($user->can_remove_machine($clone), 0);
-
-    eval { $clone->remove( $user ); };
-    like($@,qr'.');
-
-    $clone2 = $vm->search_domain( $clone->name );
-    ok($clone2,"[".$base->type."] expecting clone not removed");
-
-    # grant remove again
-    user_admin->grant($user, 'remove');
-    is($user->can_remove_machine($clone), 1);
-
-    eval { $clone->remove( $user ); };
+    eval { $domain->shutdown( user => user_admin ) };
     is($@,'');
 
-    $clone2 = $vm->search_domain( $clone->name );
-    ok(!$clone2,"[".$base->type."] expecting clone removed");
+    $domain->start(user_admin)  if !$domain->is_active();
+    is($domain->is_active,1)    or return;
 
-    # done
+    $domain->shutdown_now( user_admin );
+    is($domain->is_active,0
+        ,"[".$domain->type."] expecting domain down");
+
+    $domain->remove(user_admin);
+}
+
+sub test_shutdown_own {
+    my $vm = shift;
+
+    my $user = create_user("kevin.garvey","sleepwalk");
+    user_admin->grant($user,'create_machine');
+
+    my $base = create_domain($vm->type, $user);
+    $base->start(user_admin)  if !$base->is_active();
+
+    # can shutdown by default
+    is($user->can_remove_machine($base), 1);
+    $base->shutdown_now( $user );
+
+    is($base->is_active,0,"[".$base->type."] expecting base down");
+
     $base->remove( user_admin );
-    my $base2 = $vm->search_domain( $base->name );
-    ok(!$base2,"[".$base->type."] expecting domain already removed");
 
     $user->remove();
 
 }
 
-sub test_remove_all {
+sub test_shutdown_all {
     my $vm = shift;
 
     my $base = create_domain($vm->type);
+    $base->start(user_admin)    if !$base->is_active;
+    is($base->is_active, 1) or BAIL_OUT();
 
     my $user = create_user("kevin.garvey","sleepwalk");
-    is($user->can_remove_machine($base), 0);
-    eval { $base->remove( $user ) };
+
+    is($user->can_shutdown_machine($base), 0);
+
+    eval { $base->shutdown_now( $user ) };
     like($@, qr'.');
 
-    my $base2 = $vm->search_domain( $base->name );
-    ok($base2,"[".$base->type."] expecting base not removed");
+    is($base->is_active, 1);
 
-    user_admin->grant($user, 'remove_all');
-    is($user->can_remove_machine($base), 1);
-    eval { $base->remove( $user ) };
+    user_admin->grant($user, 'shutdown_all');
+    is($user->can_shutdown_all,1);
+
+    $base->start(user_admin)    if !$base->is_active;
+
+    is($user->can_shutdown_machine($base), 1);
+    eval { $base->shutdown_now( $user ) };
     is($@, '');
 
-    $base2 = $vm->search_domain( $base->name );
-    ok(!$base2,"[".$base->type."] expecting base removed");
-
-    $base->remove( user_admin ) if $base2;
+    $base->remove( user_admin );# if $base2;
 
     $user->remove();
 
 }
 
-sub test_remove_others_clone {
+sub test_shutdown_clones_from_own_base {
     my $vm = shift;
-    my $base = create_domain($vm->type);
-
-    $base->prepare_base( user_admin );
-    $base->is_public(1);
 
     my $user = create_user("kevin.garvey","sleepwalk");
+
+    user_admin->grant($user, 'create_machine');
+    my $base = create_domain($vm->type, $user);
+    $base->start(user_admin)    if !$base->is_active;
+    is($base->is_active, 1) or BAIL_OUT();
+
     my $clone = $base->clone(
           name => new_domain_name
         , user => user_admin
     );
+    $clone->start(user_admin);
+    is($clone->is_active, 1);
 
-    is($user->can_remove_machine($clone), 0);
-    eval { $clone->remove( $user ) };
+    is($user->can_shutdown_machine($clone->id), 0);
 
-    my $clone2 = $vm->search_domain( $clone->name );
-    ok($clone2,"[".$base->type."] expecting clone already there");
+    user_admin->grant($user,'shutdown_clone');
 
-    user_admin->grant($user, 'remove_clone_all');
+    is($user->can_shutdown_machine($clone->id), 1);
+    is($user->is_operator,1);
 
-    is($user->can_remove_clone_all,1);
-    eval { $clone->remove($user)};
+    eval { $clone->shutdown_now($user)};
     is($@, '');
+    is($clone->is_active, 0);
 
-    $clone2 = $vm->search_domain( $clone->name );
-    ok(!$clone2,"[".$base->type."] expecting clone removed");
+    $clone->start(user_admin)     if !$clone->is_active;
+    eval { $clone->hibernate($user)};
+    is($@, '');
+    is($clone->is_hibernated, 1);
 
-    $clone->remove( user_admin )    if $clone2;
-    $base->remove( user_admin );
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 
     $user->remove();
 
-}
-
-sub test_remove_clones_from_own_base {
-    my $vm = shift;
 }
 
 sub test_list_all{
@@ -162,15 +142,34 @@ sub test_list_all{
           name => new_domain_name
         , user => user_admin
     );
+    $clone->start(user_admin)   if !$clone->is_active;
 
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_all');
+    user_admin->grant($user, 'shutdown_all');
     is($user->can_list_machines, 1);
+    is($user->is_operator, 1);
 
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 2);
+
+    for my $m (@$list) {
+        is($user->can_shutdown_machine($m->{id}) ,1);
+        next if !$m->{id_base};
+
+        my $machine = Ravada::Domain->open($m->{id});
+        $machine->start(user_admin)     if !$machine->is_active;
+
+        eval {$machine->shutdown_now($user)};
+        is($@,'');
+        is($machine->is_active, 0);
+
+        $machine->start(user_admin)     if !$machine->is_active;
+        eval {$machine->hibernate($user)};
+        is($@,'');
+        is($clone->is_hibernated, 1);
+    }
 
     $user->remove();
     $clone->remove(user_admin);
@@ -195,13 +194,15 @@ sub test_list_clones_from_own_base {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_clone');
+    user_admin->grant($user, 'shutdown_clone');
     is($user->can_list_machines, 0);
 
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 2) and do {
         is($list->[0]->{name}, $base->name);
         is($list->[1]->{name}, $clone->name, Dumper($list->[1]));
+        is($list->[1]->{can_start}, 0, );
+        is($list->[1]->{can_shutdown}, 1, );
     };
 
     $user->remove();
@@ -232,7 +233,7 @@ sub test_list_clones_from_own_base_2 {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_clone');
+    user_admin->grant($user, 'shutdown_clone');
     is($user->can_list_machines, 0);
 
     $list = rvd_front->list_machines($user);
@@ -263,60 +264,21 @@ sub test_list_clones_from_own_base_2 {
     };
 
     for my $m (@$list) {
-        is($user->can_manage_machine($m->{id}), 1);
         next if !$m->{id_base};
 
         my $machine = $vm->search_domain($m->{name});
-        eval { $machine->remove($user) };
-        is($@,'');
+        $machine->start(user_admin) if !$machine->is_active;
+        is($machine->is_active, 1);
 
-        my $machine_d = $vm->search_domain($machine->name);
-        ok(!$machine_d);
-        $machine->remove(user_admin)    if $machine_d;
+        eval { $machine->shutdown_now($user) };
+        is($@,'');
+        is($machine->is_active, 0);
+        $machine->remove(user_admin);
     }
 
     $user->remove();
     $base->remove(user_admin);
     $base2->remove(user_admin);
-}
-
-sub test_list_others_clone {
-    my $vm = shift;
-
-    my $base = create_domain($vm->type );
-
-    $base->prepare_base( user_admin );
-    $base->is_public(1);
-
-    my $user = create_user("kevin.garvey","sleepwalk");
-    my $clone = $base->clone(
-          name => new_domain_name
-        , user =>user_admin
-    );
-
-    my $list = rvd_front->list_machines($user);
-    is(scalar @$list , 0);
-
-    user_admin->grant($user, 'remove_clone_all');
-    is($user->can_list_machines, 1);
-
-    $list = rvd_front->list_machines($user);
-    is(scalar @$list , 2 ) and do {
-        is($list->[0]->{name}, $base->name);
-        is($list->[1]->{name}, $clone->name, Dumper($list->[1]));
-    };
-    is($user->can_manage_machine($base->id), 0);
-    is($user->can_manage_machine($clone->id), 1);
-
-    eval { $clone->remove($user) };
-    is($@ , '');
-
-    my $clone_d = $vm->search_domain($clone->name);
-    ok(!$clone_d);
-
-    $user->remove();
-    $clone->remove(user_admin)  if $clone_d;
-    $base->remove(user_admin);
 }
 
 sub test_list_clones_from_own_base_deny {
@@ -333,11 +295,12 @@ sub test_list_clones_from_own_base_deny {
           name => new_domain_name
         , user =>user_admin
     );
+    $clone->start(user_admin)   if !$clone->is_active;
 
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_clone');
+    user_admin->grant($user, 'shutdown_clone');
     is($user->can_list_machines, 0);
     is($user->can_list_clones_from_own_base, 1);
 
@@ -347,13 +310,12 @@ sub test_list_clones_from_own_base_deny {
     is($user->can_manage_machine($base->id), 0);
     is($user->can_manage_machine($clone->id), 0);
 
-    eval { $clone->remove($user)};
+    eval { $clone->shutdown_now($user)};
     like($@,qr'.');
-    my $clone_d = $vm->search_domain($clone->name);
-    ok($clone_d);
+    is($clone->is_active, 1);
 
     $user->remove();
-    $clone->remove(user_admin)  if $clone_d;
+    $clone->remove(user_admin);
     $base->remove(user_admin);
 }
 
@@ -379,19 +341,17 @@ for my $vm_name ( vm_names() ) {
         diag($msg)      if !$vm;
         skip $msg       if !$vm;
 
-        diag("Testing remove on $vm_name");
+        diag("Testing shutdown on $vm_name");
 
-        test_remove_admin($vm);
-        test_remove_all($vm);
-        test_remove_own_clone($vm);
-        test_remove_clones_from_own_base($vm);
-        test_remove_others_clone($vm);
+        test_shutdown_admin($vm);
+        test_shutdown_own($vm);
+        test_shutdown_all($vm);
+        test_shutdown_clones_from_own_base($vm);
 
         test_list_all($vm);
         test_list_clones_from_own_base($vm);
         test_list_clones_from_own_base_2($vm);
         test_list_clones_from_own_base_deny($vm);
-        test_list_others_clone($vm);
 
     }
 }

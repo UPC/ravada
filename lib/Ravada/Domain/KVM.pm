@@ -218,6 +218,8 @@ sub remove {
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
+    
+    $self->_post_remove_base_domain() if $self->is_base();
 
     eval { $self->domain->undefine()    if $self->domain };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;

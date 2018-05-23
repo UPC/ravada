@@ -290,9 +290,8 @@ get '/list_machines.json' => sub {
             || $USER->can_list_own_machines()
             || $USER->can_list_clones()
             || $USER->can_list_clones_from_own_base()
+            || $USER->is_admin()
         );
-
-    return $c->render( json => $RAVADA->list_domains )  if $USER->can_list_machines;
 
     return $c->render( json => $RAVADA->list_machines($USER) );
 
@@ -371,16 +370,10 @@ get '/machine/clone/(:id).(:type)' => sub {
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)        if !$USER ->can_shutdown_all();
+      return access_denied($c)        if !$USER ->can_shutdown_machine($c->stash('id'));
+
         return shutdown_machine($c);
 };
-
-get '/machine/shutdown/(:id).(:type)' => sub {
-        my $c = shift;
-	return access_denied($c)        if !$USER ->can_shutdown_all();
-        return shutdown_machine($c);
-};
-
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
@@ -433,7 +426,9 @@ get '/machine/pause/(:id).(:type)' => sub {
 
 get '/machine/hybernate/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)   if !$USER ->is_admin();
+          return access_denied($c)
+             unless $USER->is_admin() || $USER->can_shutdown_machine($c->stash('id'));
+
         return hybernate_machine($c);
 };
 
@@ -1439,13 +1434,17 @@ sub settings_machine {
         }
     }
 
-    for my $option (qw(description run_timeout)) {
-        if ( defined $c->param($option) ) {
+    for my $option (qw(description run_timeout volatile_clones)) {
+        if ( defined $c->param($option) && defined $c->param("submitbtn") ) {
             return access_denied($c)
                 if $option eq 'run_timeout' && !$USER->is_admin;
 
             my $value = $c->param($option);
             $value *= 60 if $option eq 'run_timeout';
+            $domain->set_option($option, $value);
+            $c->stash(message => "\U$option changed!");
+        }elsif ( $option eq 'volatile_clones' && defined $c->param("submitbtn") ) {
+            my $value = '0';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
         }
