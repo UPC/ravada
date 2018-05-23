@@ -216,5 +216,3 @@ A PR can only be merged into master by a maintainer if:
 
 Any maintainer is allowed to merge a PR if all of these conditions are
 met.
-
-Read https://developercertificate.org/.
