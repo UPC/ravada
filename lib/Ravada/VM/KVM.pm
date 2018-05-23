@@ -427,35 +427,43 @@ Returns true or false if domain exists.
 
 =cut
 
-sub search_domain {
-    my $self = shift;
-    my $name = shift or confess "Missing name";
+sub search_domain($self, $name, $force=undef) {
 
     $self->connect();
     my @all_domains;
     eval { @all_domains = $self->vm->list_all_domains() };
     confess $@ if $@;
 
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
+    my $dom;
+    eval { $dom = $self->vm->get_domain_by_name($name); };
+    if (!$dom) {
+        return if !$force;
+        return if !$self->_domain_in_db($name);
+    }
+    return if !$force && !$self->_domain_in_db($name);
 
         my $domain;
 
+        my @domain = ( );
+        @domain = ( domain => $dom ) if $dom;
+        @domain = ( id_owner => $Ravada::USER_DAEMON->id)
+            if $force && !$self->_domain_in_db($name);
         eval {
             $domain = Ravada::Domain::KVM->new(
-                domain => $dom
+                @domain
+                ,name => $name
                 ,readonly => $self->readonly
                 ,_vm => $self
             );
         };
         warn $@ if $@;
         if ($domain) {
+            $domain->xml_description()  if $dom && $domain->is_known();
             return $domain;
         }
-    }
+
     return;
 }
-
 
 =head2 list_domains
 
@@ -465,23 +473,19 @@ Returns a list of the created domains
 
 =cut
 
-sub list_domains {
-    my $self = shift;
+sub list_domains($self, %args) {
 
-    confess "Missing vm" if !$self->vm;
+    my $active = delete $args{active} or 0;
+
+    confess "ERROR: Unknown arguments ".Dumper(\%args)  if keys %args;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains WHERE vm = ?");
+    $sth->execute('KVM');
     my @list;
-    my @domains = $self->vm->list_all_domains();
-    for my $name (@domains) {
-        my $domain ;
-        my $id;
-        $domain = Ravada::Domain::KVM->new(
-                          domain => $name
-                        ,_vm => $self
-        );
-        next if !$domain->is_known();
-        $id = $domain->id();
-        warn $@ if $@ && $@ !~ /No DB info/i;
-        push @list,($domain) if $domain && $id;
+    while ( my ($id) = $sth->fetchrow) {
+        my $domain = Ravada::Domain->open($id);
+        next if !$domain || $active && !$domain->is_active;
+        push @list,($domain);
     }
     return @list;
 }
@@ -650,8 +654,10 @@ sub _domain_create_from_iso {
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+
     $domain->_set_spice_password($spice_password)
         if $spice_password;
+    $domain->xml_description();
 
     return $domain;
 }
@@ -701,6 +707,7 @@ sub _domain_create_common {
               _vm => $self
          , domain => $dom
         , storage => $self->storage_pool
+       , id_owner => $id_owner
     );
     return ($domain, $spice_password);
 }
@@ -829,6 +836,7 @@ sub _domain_create_from_base {
         = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password);
+    $domain->xml_description();
     return $domain;
 }
 
@@ -1179,9 +1187,9 @@ sub _match_file($self, $url, $file_re) {
     my $res;
     for ( 1 .. 10 ) {
         eval { $res = $self->_web_user_agent->get($url)->res(); };
-        last if !$@;
+        last if !$@ && $res && defined $res->code;
         next if $@ && $@ =~ /timeout/i;
-        die $@;
+        die $@ if $@;
     }
 
     return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
