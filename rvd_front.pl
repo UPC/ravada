@@ -364,7 +364,7 @@ get '/machine/view/(:id).(:type)' => sub {
 };
 
 get '/machine/clone/(:id).(:type)' => sub {
-    my $c = shift;      
+    my $c = shift;
     return access_denied($c)	     if !$USER->can_clone();
     return clone_machine($c);
 };
@@ -1409,10 +1409,16 @@ sub settings_machine {
     my $c = shift;
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
-  	return access_denied($c)    if !$USER->can_manage_machine($domain->id);
+  	return access_denied($c)    if !($USER->can_manage_machine($domain->id) || $USER->is_admin);
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
+    $c->stash(list_users => $RAVADA->list_users);
+    my $actual_owner = $domain->id_owner;
+    if ($c->param("new_owner") && $actual_owner != $c->param("new_owner")) {
+       my $req_change = Ravada::Request->change_owner(uid => $c->param("new_owner"), id_domain => $domain->id);
+       $actual_owner = $c->param("new_owner");
+    }
 
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
@@ -1460,7 +1466,8 @@ sub settings_machine {
     }
     return $c->render(template => 'main/settings_machine'
         , list_clones => [map { $_->{name} } $domain->clones]
-        , action => $c->req->url->to_abs->path);
+        , action => $c->req->url->to_abs->path
+        , actual_owner => $actual_owner);
 }
 
 sub _enable_buttons {
@@ -1650,7 +1657,7 @@ sub copy_machine {
     my $c = shift;
 
     return login($c) if !_logged_in($c);
-    
+
 
     my $id_base= $c->param('id_base');
 

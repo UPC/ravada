@@ -27,6 +27,24 @@ ok($USER);
 
 ##########################################################
 
+sub test_change_owner {
+    my $vm_name = shift;
+    my $USER2 = create_user("foo2","bar2", 1);
+    my $name = new_domain_name();
+    my $id_iso = search_id_iso('Debian');
+    diag("Testing change owner");
+    my $domain = rvd_back->search_vm($vm_name)->create_domain(
+             name => $name
+          ,id_iso => $id_iso
+        ,id_owner => $USER->id
+        ,iso_file => '<NONE>'
+    );
+    is($USER->id, $domain->id_owner) or return;
+    my $req = Ravada::Request->change_owner(uid => $USER2->id, id_domain => $domain->id);
+    sleep(3); #we make sure that the sql has updated.
+    is($USER2->id, $domain->id_owner) or return;
+}
+
 sub test_vm_connect {
     my $vm_name = shift;
 
@@ -291,7 +309,7 @@ sub test_screenshot_file {
 sub test_change_interface {
     my ($vm_name) = @_;
     return if $vm_name !~ /kvm/i;
-    
+
     my $domain = test_create_domain($vm_name);
 
     set_bogus_ip($domain);
@@ -308,7 +326,7 @@ sub set_bogus_ip {
                             => $domain->domain->get_xml_description) ;
     my @graphics = $doc->findnodes('/domain/devices/graphics');
     is(scalar @graphics,1) or return;
-    
+
     my $bogus_ip = '999.999.999.999';
     $graphics[0]->setAttribute('listen' => $bogus_ip);
 
@@ -316,7 +334,7 @@ sub set_bogus_ip {
     for my $child ( $graphics[0]->childNodes()) {
         $listen = $child if $child->getName() eq 'listen';
     }
-    ok($listen,"Expecting child node listen , got :'".($listen or '')) 
+    ok($listen,"Expecting child node listen , got :'".($listen or ''))
         or return;
 
     $listen->setAttribute('address' => $bogus_ip);
@@ -404,6 +422,7 @@ for my $vm_name (qw( Void KVM )) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS) or next;
+        test_change_owner($vm_name);
         test_vm_connect($vm_name);
         test_search_vm($vm_name);
 
