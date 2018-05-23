@@ -195,7 +195,7 @@ sub test_list_clones_from_own_base {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_clone');
+    user_admin->grant($user, 'remove_clones');
     is($user->can_list_machines, 0);
 
     $list = rvd_front->list_machines($user);
@@ -232,7 +232,7 @@ sub test_list_clones_from_own_base_2 {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_clone');
+    user_admin->grant($user, 'remove_clones');
     is($user->can_list_machines, 0);
 
     $list = rvd_front->list_machines($user);
@@ -337,7 +337,7 @@ sub test_list_clones_from_own_base_deny {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'remove_clone');
+    user_admin->grant($user, 'remove_clones');
     is($user->can_list_machines, 0);
     is($user->can_list_clones_from_own_base, 1);
 
