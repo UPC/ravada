@@ -468,7 +468,8 @@ sub post_resume_aux($self) {
         $self->domain->set_time($time, 0, 0);
     };
     if ($@) {
-        die $@ if $@ !~ /libivrt error /;
+        $@='' if $@ !~ /libvirt error code: 86 /;
+        die $@ if $@;
     }
 }
 
