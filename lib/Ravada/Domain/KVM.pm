@@ -17,6 +17,7 @@ use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
 use Sys::Virt::Stream;
+use Sys::Virt::Domain;
 use XML::LibXML;
 
 no warnings "experimental::signatures";
@@ -481,6 +482,18 @@ sub _post_remove_base_domain {
         "DELETE FROM base_xml WHERE id_domain=?"
     );
     $sth->execute($self->id);
+}
+
+
+sub post_resume_aux($self) {
+    my $time = time();
+    eval {
+        $self->domain->set_time($time, 0, 0);
+    };
+    if ($@) {
+        $@='' if $@ !~ /libvirt error code: 86 /;
+        die $@ if $@;
+    }
 }
 
 =head2 display

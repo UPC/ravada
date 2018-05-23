@@ -1439,7 +1439,8 @@ sub _remove_temporary_machine {
 }
 
 sub _post_resume {
-    return _post_start(@_);
+    my $self = shift;
+    return $self->_post_start(@_);
 }
 
 sub _post_start {
@@ -1473,7 +1474,16 @@ sub _post_start {
 
     }
     $self->get_info();
+    $self->post_resume_aux;
 }
+
+=head2 post_resume_aux
+
+Method after resume
+
+=cut
+
+sub post_resume_aux {}
 
 sub _add_iptable {
     my $self = shift;

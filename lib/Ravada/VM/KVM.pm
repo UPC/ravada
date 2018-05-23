@@ -679,6 +679,7 @@ sub _domain_create_common {
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
+    $self->_xml_add_guest_agent($xml);
 
     my $dom;
 
@@ -1630,7 +1631,29 @@ sub _xml_add_usb_uhci3 {
 
 }
 
-
+sub _xml_add_guest_agent {
+    my $self = shift;
+    my $doc = shift;
+    
+    my ($devices) = $doc->findnodes('/domain/devices');
+    
+    return if _search_xml(
+                            xml => $devices
+                            ,name => 'channel'
+                            ,type => 'unix'
+    );
+    
+    my $channel = $devices->addNewChild(undef,"channel");
+    $channel->setAttribute(type => 'unix');
+    
+    my $source = $channel->addNewChild(undef,'source');
+    $source->setAttribute(mode => 'bind');
+    
+    my $target = $channel->addNewChild(undef,'target');
+    $target->setAttribute(type => 'virtio');
+    $target->setAttribute(name => 'org.qemu.guest_agent.0');
+    
+}
 
 sub _xml_remove_cdrom {
     my $doc = shift;
