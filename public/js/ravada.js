@@ -294,8 +294,8 @@
 
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         $scope.get_domain_info = function() {
-            console.log("id_domain: "+$scope.id_domain);
             if ($scope.id_domain) {
+                var seconds = 1000;
                 $http.get('/machine/info/'+$scope.id_domain+'.json').then(function(response) {
                     $scope.domain = response.data;
                     if ($scope.domain.spice_password) {
@@ -303,12 +303,14 @@
                         copyTextarea.value = $scope.domain.spice_password;
                         copyTextarea.length = 5;
                     }
-                    console.log("is_active: "+$scope.domain.is_active);
+                    if ($scope.domain.is_active) {
+                        seconds = 5000;
+                    }
+                    $timeout(function() {
+                        $scope.get_domain_info();
+                    },seconds);
                 });
             }
-            $timeout(function() {
-                    $scope.get_domain_info();
-            },1000);
 
         };
         $scope.wait_request = function() {

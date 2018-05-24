@@ -774,6 +774,8 @@ sub can_change_settings($self, $id_domain=undef) {
 }
 
 sub can_manage_machine($self, $domain) {
+    return 1 if $self->is_admin;
+
     $domain = Ravada::Front::Domain->open($domain)  if !ref $domain;
 
     return 1 if $self->can_change_settings

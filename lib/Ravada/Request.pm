@@ -143,7 +143,9 @@ sub info {
     my $self = shift;
     my $user = shift;
     confess "USER ".$user->name." not authorized"
-        unless $user->is_admin || $user->id == $self->uid;
+        unless $user->is_admin
+            || ($self->defined_arg('uid') && $user->id == $self->args('uid'))
+            || ($self->defined_arg('id_owner') && $user->id == $self->args('id_owner'));
 
     return {
         status => $self->status
