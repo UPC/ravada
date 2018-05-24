@@ -306,7 +306,7 @@ sub shutdown_domain {
 
     my $args = _check_args('shutdown_domain', @_ );
 
-    $args->{timeout} = 10 if !exists $args->{timeout};
+    $args->{timeout} = 120 if !exists $args->{timeout};
 
     confess "ERROR: You must supply either id_domain or name ".Dumper($args)
         if !$args->{id_domain} && !$args->{name};
