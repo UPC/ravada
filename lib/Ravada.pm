@@ -711,7 +711,8 @@ sub _add_grant($self, $grant, $allowed) {
     $sth->execute;
 
     while (my ($id_user) = $sth->fetchrow ) {
-        $sth_insert->execute($id_user, $id_grant, $allowed);
+        eval { $sth_insert->execute($id_user, $id_grant, $allowed) };
+        die $@ if $@ && $@ !~/Duplicate entry /;
     }
 }
 
