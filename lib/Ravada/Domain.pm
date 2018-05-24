@@ -1862,7 +1862,6 @@ sub list_requests {
         push @list,($req_data);
     }
     $sth->finish;
-    warn Dumper(\@list);
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
 }

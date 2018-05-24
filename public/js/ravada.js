@@ -305,6 +305,7 @@
                     }
                     if ($scope.domain.is_active) {
                         seconds = 5000;
+                        $scope.redirect();
                     }
                     $timeout(function() {
                         $scope.get_domain_info();
@@ -314,7 +315,6 @@
 
         };
         $scope.wait_request = function() {
-            console.log("id_request: "+$scope.id_request);
             $scope.dots += '.';
             if ($scope.id_request) {
                 $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
@@ -349,8 +349,17 @@
 
             }
         };
+        $scope.redirect = function() {
+            if (!$scope.redirect_done) {
+                $timeout(function() {
+                    window.location.href="/logout";
+                }, 60000);
+                $scope.redirect_done = true;
+            }
+        }
 
         $scope.dots = '...';
+        $scope.redirect_done = false;
         $scope.wait_request();
     };
     function run_domain_ctrl($scope, $http, request ) {
