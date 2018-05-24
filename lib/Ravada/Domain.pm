@@ -782,8 +782,8 @@ sub _display_file_spice($self,$user) {
 
     $ret .=";"  if !$self->tls;
     $ret .="ca=CA\n"
-        ."toggle-fullscreen=shift+f11\n"
-        ."release-cursor=shift+f12\n"
+        ."release-cursor=shift+f11\n"
+        ."toggle-fullscreen=shift+f12\n"
         ."secure-attention=ctrl+alt+end\n";
     $ret .=";" if !$self->tls;
     $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
