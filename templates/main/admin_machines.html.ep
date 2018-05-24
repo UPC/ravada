@@ -3,7 +3,7 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div ng-controller="machinesPage" ng-init="hide_clones=<%= $hide_clones %>">
+    <div ng-controller="machinesPage" ng-init="hide_clones=<%= $hide_clones %>;check_netdata='<%= $check_netdata %>'" >
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
@@ -12,6 +12,7 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong><%=l 'Error!' %></strong><%=l 'Backend no available!' %>
       </div>
+%   if ($monitoring) {
     <div class="row">
       <div style="margin-right: 10px;" data-netdata="system.swap"
           data-dimensions="used"
@@ -93,6 +94,7 @@
                 data-points="duration.toString()"
                 role="application"></div>
       </div>
+%   }
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
             <div class="col-md-4" align="right">
