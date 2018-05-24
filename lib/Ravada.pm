@@ -80,7 +80,7 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -2302,6 +2302,10 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
             $domain->_set_data(status => $status);
+            for my $req ( $domain->list_requests ) {
+                next if $req->command !~ /shutdown/i;
+                $req->status('done');
+            }
         }
     }
 }
@@ -2317,6 +2321,10 @@ sub _refresh_volatile_domains($self) {
             $domain->_post_shutdown(user => $USER_DAEMON);
             $domain->remove($USER_DAEMON);
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+            $sth_del->execute($id_domain);
+            $sth_del->finish;
+
+            $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
         }
@@ -2466,6 +2474,9 @@ sub _enforce_limits_active {
     }
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
+
+        my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        next if $user->is_admin;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
