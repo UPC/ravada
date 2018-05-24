@@ -24,7 +24,7 @@ So we’ve found the second graphics card. Take a note of those IDs in the squar
 Configuration
 -------------
 
-To enable SR-IOV in the kernel add any of these following options for pass-through in '''/etc/default/grub'''
+To enable SR-IOV in the kernel add any of these following options for pass-through in ''/etc/default/grub''
 
 ::
 
@@ -36,7 +36,8 @@ To enable SR-IOV in the kernel add any of these following options for pass-throu
 Add pci-stubs in ''/etc/initramfs-tools/modules''.
 Then add these additional drivers to ''/etc/modules'':
 
-::	
+::
+
 	kvmgt
 	vfio
 	vfio_iommu_type1
