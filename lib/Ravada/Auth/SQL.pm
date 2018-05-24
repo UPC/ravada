@@ -332,7 +332,7 @@ Returns true if the user is admin.
 
 sub is_admin {
     my $self = shift;
-    return $self->{_data}->{is_admin};
+    return ($self->{_data}->{is_admin} or 0);
 }
 
 =head2 is_operator
@@ -663,7 +663,7 @@ Revoke all permissions from an user
 
 sub revoke_all_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
-            "SELECT name FROM grant_types "
+            "SELECT name FROM grant_types WHERE enabled=1"
     );
     $sth->execute();
     while ( my ($name) = $sth->fetchrow) {

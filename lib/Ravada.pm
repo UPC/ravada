@@ -834,7 +834,6 @@ sub _create_table {
     $sth->finish;
     return if keys %$info;
 
-    warn "INFO: creating table $table\n";
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
     my $sql = join " ",<$in>;
@@ -2201,10 +2200,10 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
-sub _cmd_refresh_storage($self, $request) {
+sub _cmd_refresh_storage($self, $request=undef) {
 
     my $vm;
-    if ($request->defined_arg('id_vm')) {
+    if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));
     } else {
         $vm = $self->search_vm('KVM');
@@ -2313,9 +2312,10 @@ sub _refresh_volatile_domains($self) {
     );
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
-        my $domain = Ravada::Domain->open($id_domain);
-        if ( !$domain || $domain->status eq 'down') {
-            $domain->remove($USER_DAEMON)   if $domain;
+        my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
+        if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
+            $domain->_post_shutdown(user => $USER_DAEMON);
+            $domain->remove($USER_DAEMON);
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
