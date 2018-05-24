@@ -151,7 +151,7 @@ sub list_machines_user {
                 );
             }
             $base{name_clone} = $clone->name;
-            $base{screenshot} = ( $clone->_data('file_screenshot') 
+            $base{screenshot} = ( $clone->_data('file_screenshot')
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id
@@ -198,7 +198,7 @@ sub search_clone_data {
     $sth->execute( map { $args{$_} } sort keys %args );
     my $row = $sth->fetchrow_hashref;
     return ( $row or {});
-        
+
 }
 
 =cut
@@ -223,7 +223,7 @@ sub list_domains {
 
     my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute(map { $args{$_} } sort keys %args);
-    
+
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain ;
@@ -275,7 +275,7 @@ sub _where(%args) {
 sub list_clones {
   my $self = shift;
   my %args = @_;
-  
+
   my $domains = list_domains();
   my @clones;
   for (@$domains ) {
@@ -448,13 +448,38 @@ Returns a reference to a list of the users
 sub list_users($self,$name=undef) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
-    
+
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
         push @users, ($row);
     }
     $sth->finish;
+
+    return \@users;
+}
+
+=head2 list_users_all
+
+Returns a reference to a list of all the users if the total <= 20.
+
+=cut
+
+sub list_users_all {
+    my @users = ();
+
+    my $sth_aux = $CONNECTOR->dbh->prepare("SELECT COUNT(*) FROM users");
+    $sth_aux->execute();
+    my ($row_aux) = $sth_aux->fetchrow();
+    $sth_aux->finish;
+    if ($row_aux <= 20) {
+        my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users");
+        $sth->execute();
+        while ( my $row = $sth->fetchrow_hashref) {
+            push @users, ($row);
+        }
+        $sth->finish;
+    }
 
     return \@users;
 }
@@ -479,7 +504,7 @@ Waits for a request for some seconds.
 
 =head3 Arguments
 
-=over 
+=over
 
 =item * request
 
@@ -814,7 +839,7 @@ sub list_bases_anonymous {
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, id_base, is_public FROM domains where is_base=1 AND is_public=1");
     $sth->execute();
-    
+
     my @bases = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if !$net->allowed_anonymous($row->{id});
@@ -826,7 +851,7 @@ sub list_bases_anonymous {
 
 }
 
-=head2 disconnect_vm 
+=head2 disconnect_vm
 
 Disconnects all the conneted VMs
 

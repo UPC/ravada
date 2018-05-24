@@ -980,6 +980,9 @@ sub admin {
         if ( $c->param('name') ) {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
+        else {
+            $c->stash(list_users => $RAVADA->list_users_all());
+        }
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
