@@ -24,7 +24,7 @@ So we’ve found the second graphics card. Take a note of those IDs in the squar
 Configuration
 -------------
 
-To enable SR-IOV in the kernel add any of these following options for pass-through in ''/etc/default/grub''
+To enable SR-IOV in the kernel add any of these following options for pass-through in ``/etc/default/grub``
 
 ::
 
@@ -33,8 +33,8 @@ To enable SR-IOV in the kernel add any of these following options for pass-throu
 	GRUB_CMDLINE_LINUX_DEFAULT="radeon.blacklist=1 quiet splash amd_iommu=on pci-stub.ids=1002:6608,1002:aab0"
 	GRUB_CMDLINE_LINUX_DEFAULT="radeon.blacklist=1 amdgpu.blacklist=1 quiet splash intel_iommu=on amd_iommu=on iommu=pt rd.driver.pre=vfio-pci video=efifb:off pci-stub.ids=1028:2120,1028:aab0"
 
-Add pci-stubs in ''/etc/initramfs-tools/modules''.
-Then add these additional drivers to ''/etc/modules'':
+Add pci-stubs in ``/etc/initramfs-tools/modules``.
+Then add these additional drivers to ``/etc/modules``:
 
 ::
 
@@ -44,7 +44,7 @@ Then add these additional drivers to ''/etc/modules'':
 	vfio_pci
 	vhost-net
 
-And update ''initramfs'': 
+And update ``initramfs``: 
 
 ::
 
