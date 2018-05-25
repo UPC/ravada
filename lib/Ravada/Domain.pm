@@ -18,6 +18,7 @@ use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
 use Sys::Statistics::Linux;
+use Time::Piece;
 use IPTables::ChainMgr;
 
 no warnings "experimental::signatures";
@@ -751,13 +752,37 @@ sub info($self, $user) {
         ,is_active => $self->is_active
         ,spice_password => $self->spice_password
         ,display_url => $self->display($user)
+        ,description => $self->description
+        ,msg_timeout => $self->_msg_timeout
     };
+    if (!$info->{description} && $self->id_base) {
+        my $base = Ravada::Front::Domain->open($self->id_base);
+        $info->{description} = $base->description;
+    }
     my $display = $self->display($user);
     my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
     $info->{display_ip} = $local_ip;
     $info->{display_port} = $local_port;
 
     return $info;
+}
+
+sub _msg_timeout($self) {
+    return undef if !$self->run_timeout;
+    my $msg_timeout;
+    if (int ($self->run_timeout / 60 )) {
+        $msg_timeout = "in ".int($self->run_timeout / 60 )." minutes.";
+    }
+
+    for my $request ( $self->list_all_requests ) {
+        if ( $request->command =~ 'shutdown' ) {
+            my $t1 = Time::Piece->localtime($request->at_time);
+            my $t2 = localtime();
+
+            $msg_timeout = " in ".($t1 - $t2)->pretty;
+        }
+    }
+    return $msg_timeout;
 }
 
 sub _insert_db {
