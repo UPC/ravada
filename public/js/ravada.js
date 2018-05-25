@@ -352,6 +352,7 @@
 
         $scope.dots = '...';
         $scope.wait_request();
+        $scope.view_clicked=false;
     };
     function run_domain_ctrl($scope, $http, request ) {
         $http.get('/auto_view').then(function(response) {
