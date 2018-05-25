@@ -446,7 +446,7 @@ Returns a reference to a list of the users
 =cut
 
 sub list_users($self,$name=undef) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ORDER BY name");
     $sth->execute();
 
     my @users = ();
@@ -473,7 +473,7 @@ sub list_users_all {
     my ($row_aux) = $sth_aux->fetchrow();
     $sth_aux->finish;
     if ($row_aux <= 20) {
-        my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users");
+        my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ORDER BY name");
         $sth->execute();
         while ( my $row = $sth->fetchrow_hashref) {
             push @users, ($row);
