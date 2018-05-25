@@ -925,16 +925,6 @@ sub render_machines_user {
     );
 }
 
-sub create_domain {
-    my ($c, $id_base, $domain_name, $ram, $disk) = @_;
-    return $c->redirect_to('/login') if !$USER;
-    my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
-    my $domain = provision($c,  $id_base,  $domain_name, $ram, $disk);
-    return show_failure($c, $domain_name) if !$domain;
-    return show_link($c,$domain);
-
-}
-
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
 
@@ -951,7 +941,7 @@ sub quick_start_domain {
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
     $domain_name = $domain->name if $domain;
 
-    return show_link2($c,provision_req($c, $id_base, $domain_name));
+    return run_request($c,provision_req($c, $id_base, $domain_name));
 
 }
 
@@ -1150,146 +1140,8 @@ sub _new_domain_name {
     }
 }
 
-sub provision {
-    my $c = shift;
-    my $id_base = shift;
-    my $name = shift or confess "Missing name";
-    my $ram = shift;
-    my $disk = shift;
-
-    die "Missing id_base "  if !defined $id_base;
-    die "Missing name "     if !defined $name;
-
-    my $domain;
-    $domain = $RAVADA->search_domain($name) if $RAVADA->domain_exists($name);
-    return $domain if $domain && !$domain->is_base;
-
-    if ($domain) {
-        my $count = 2;
-        my $name2;
-        while ($domain && $domain->is_base) {
-            $name2 = "$name-$count";
-            $domain = $RAVADA->search_domain($name2);
-            $count++;
-        }
-        return $domain if $domain;
-        $name = $name2;
-    }
-
-    my @create_args = ( memory => $ram ) if $ram;
-    push @create_args , ( disk => $disk) if $disk;
-    my $req = Ravada::Request->create_domain(
-             name => $name
-        , id_base => $id_base
-       , id_owner => $USER->id
-       ,@create_args
-    );
-    $RAVADA->wait_request($req, 60);
-
-    if ( $req->status ne 'done' ) {
-        $c->stash(error_title => "Request ".$req->command." ".$req->status());
-        $c->stash(error =>
-            "Domain provisioning request not finished, status='".$req->status."'.");
-
-        my $req_link = "/request/".$req->id.".html";
-        $req_link = "/anonymous$req_link"   if $USER->is_temporary;
-
-        $c->stash(link => $req_link);
-        $c->stash(link_msg => '');
-        return;
-    }
-    $domain = $RAVADA->search_domain($name);
-    if ( $req->error ) {
-        $c->stash(error => $req->error)
-    } elsif (!$domain) {
-        $c->stash(error => "I dunno why but no domain $name");
-    }
-    return $domain;
-}
-
-sub show_link2($c, $request) {
-    my $domain;
-    if ( ref($request) =~ /Domain/ ) {
-        $domain = $request;
-        $request = undef;
-    }
-
-    return $c->render(template => 'main/run_request', request => $request, domain => $domain );
-}
-
-sub show_link {
-    my $c = shift;
-    my $domain = shift or confess "Missing domain";
-
-    confess "Domain is not a ref $domain " if !ref $domain;
-
-    return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
-
-    my $req;
-    if ( !$domain->is_active ) {
-        $req = Ravada::Request->start_domain(
-                                         uid => $USER->id
-                                       ,name => $domain->name
-                                  ,remote_ip => _remote_ip($c)
-        );
-
-        $RAVADA->wait_request($req);
-        warn "ERROR: req id: ".$req->id." error:".$req->error if $req->error();
-
-        return $c->render(data => 'ERROR starting domain '
-                ."status:'".$req->status."' ( ".$req->error.")")
-            if $req->error
-                && $req->error !~ /already running/i
-                && $req->status ne 'waiting';
-
-        my $req_link = "/request/".$req->id.".html";
-        $req_link = "/anonymous$req_link"   if $USER->is_temporary;
-        return $c->redirect_to($req_link);
-#            if !$req->status eq 'done';
-    }
-    if ( $domain->is_paused) {
-        $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id
-                    , remote_ip => _remote_ip($c)
-        );
-
-        $RAVADA->wait_request($req);
-        warn "ERROR: ".$req->error if $req->error();
-
-        return $c->render(data => 'ERROR resuming domain '.$req->error)
-            if $req->error && $req->error !~ /already running/i;
-
-        return $c->redirect_to("/request/".$req->id.".html")
-            if !$req->status eq 'done';
-    }
-
-    my $uri = $domain->display($USER) if $domain->is_active;
-    if (!$uri) {
-        my $name = '';
-        $name = $domain->name if $domain;
-        $c->render(template => 'fail', name => $domain->name);
-        return;
-    }
-    _open_iptables($c,$domain)
-        if !$req;
-    my $uri_file = "/machine/display/".$domain->id;
-    $c->stash(url => $uri_file)  if $c->session('auto_view') && ! $domain->spice_password;
-    my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
-    my $description = $domain->description;
-    if (!$description && $domain->id_base) {
-        my $base = Ravada::Domain->open($domain->id_base);
-        $description = $base->description();
-    }
-    $c->stash(description => $description);
-    $c->stash(domain => $domain );
-    $c->render(template => 'main/run'
-                ,name => $domain->name
-                ,password => $domain->spice_password
-                ,url_display => $uri
-                ,url_display_file => $uri_file
-                ,display_ip => $display_ip
-                ,display_port => $display_port
-                ,description => $description
-                ,login => $c->session('login'));
+sub run_request($c, $request) {
+    return $c->render(template => 'main/run_request', request => $request );
 }
 
 sub _open_iptables {
@@ -1526,7 +1378,12 @@ sub view_machine {
     $domain =  _search_requested_machine($c) if !$domain;
     return $c->render(template => 'main/fail') if !$domain;
 
-    return show_link($c, $domain);
+    return run_request($c, Ravada::Request->start_domain(
+                    uid => $USER->id
+             ,id_domain => $domain->id
+            , remote_ip => _remote_ip($c)
+            )
+    );
 }
 
 sub clone_machine {
