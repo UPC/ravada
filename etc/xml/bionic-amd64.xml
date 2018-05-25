@@ -69,7 +69,7 @@
     <interface type='network'>
       <mac address='52:54:00:80:91:92'/>
       <source network='default'/>
-      <model type='rtl8139'/>
+      <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>
     <serial type='pty'>

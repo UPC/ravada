@@ -1,11 +1,11 @@
 <domain type='kvm'>
   <name>ubuntu32</name>
   <uuid>09418fe0-d69f-4e5a-8f2b-0b5c8795f361</uuid>
-  <memory unit='KiB'>2097152</memory>
-  <currentMemory unit='KiB'>2097152</currentMemory>
+  <memory unit='KiB'>1048576</memory>
+  <currentMemory unit='KiB'>1048576</currentMemory>
   <vcpu placement='static'>1</vcpu>
   <os>
-    <type arch='x86_64' machine='pc'>hvm</type>
+    <type arch='i686' machine='pc'>hvm</type>
   </os>
   <features>
     <acpi/>
@@ -69,7 +69,7 @@
     <interface type='network'>
       <mac address='52:54:00:ab:2f:19'/>
       <source network='default'/>
-      <model type='rtl8139'/>
+      <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>
     <serial type='pty'>
