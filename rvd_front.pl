@@ -1281,7 +1281,6 @@ sub show_link {
     }
     $c->stash(description => $description);
     $c->stash(domain => $domain );
-    $c->stash(msg_timeout => _message_timeout($domain));
     $c->render(template => 'main/run'
                 ,name => $domain->name
                 ,password => $domain->spice_password
@@ -1291,25 +1290,6 @@ sub show_link {
                 ,display_port => $display_port
                 ,description => $description
                 ,login => $c->session('login'));
-}
-
-sub _message_timeout {
-    my $domain = shift;
-    my $msg_timeout = '';
-
-    if (int ($domain->run_timeout / 60 )) {
-        $msg_timeout = "in ".int($domain->run_timeout / 60 )." minutes.";
-    }
-
-    for my $request ( $domain->list_all_requests ) {
-        if ( $request->command =~ 'shutdown' ) {
-            my $t1 = Time::Piece->localtime($request->at_time);
-            my $t2 = localtime();
-
-            $msg_timeout = " in ".($t1 - $t2)->pretty;
-        }
-    }
-    return $msg_timeout;
 }
 
 sub _open_iptables {
