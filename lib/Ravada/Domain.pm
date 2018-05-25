@@ -821,6 +821,7 @@ sub info($self, $user) {
 }
 
 sub _msg_timeout($self) {
+    return undef if !$self->run_timeout;
     my $msg_timeout;
     if (int ($self->run_timeout / 60 )) {
         $msg_timeout = "in ".int($self->run_timeout / 60 )." minutes.";
@@ -1999,7 +2000,6 @@ sub list_requests {
         push @list,($req_data);
     }
     $sth->finish;
-    warn Dumper(\@list);
     return scalar @list if !wantarray;
     return map { Ravada::Request->open($_->{id}) } @list;
 }
