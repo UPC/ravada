@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body role="document">
+    %= include 'bootstrap/navigation'
+    <div class="container theme-showcase" role="main"
+        ng-controller="run_domain_req"
+%           if ($domain ) {
+                ng-init="id_domain=<%= $domain->id %>"
+%           }
+%           if ($request ) {
+                ng-init="id_request=<%= $request->id %>"
+%           }
+    >
+    <div class="jumbotron">
+
+        <h2>Running {{domain.name}}</h2>
+
+
+<div ng-hide="request.status == 'done'">Waiting for machine to start {{dots}}</div>
+        <div ng-show="domain">
+            <ul ng-show="domain.is_active">
+                <li ng-show="domain.spice_password">
+                    <%=l 'The password for this virtual machine connection is :'%>
+                    <input
+                            ng-model="password"
+                            ng-click="copy_password()"
+                            type="text" class="js-copytextarea"
+                                        value="{{domain.spice_password}}"
+                    />
+                    <i ng-show="password_clipboard">copied to clipboard</i>
+                </li>
+
+                <li><b>Display URL :</b>
+                    <a ng-click="copy_password(); redirect()"
+                        href="{{domain.display_url}}">{{domain.display_url}}</a></li>
+                </li>
+                <li><b>Display IP :</b> 192.168.1.106</li>
+                <li><b>Display Port :</b> 5900</li>
+            </ul>
+             <a type="button" class="btn btn-success"
+                    ng-click="copy_password(); redirect()"
+                    ng-show="domain.is_active"
+                    href="/machine/display/{{domain.id}}">
+                 <b><%=l 'view'%></b></a> <i>Press SHIFT + F12 to exit</i>
+
+             <div ng-show="domain && request.status == 'done' && !domain.is_active">
+                 The machine has shut down. <button type="submit" onclick="location.reload('forceGet')">Start again</button>
+             </div>
+
+        </div>
+        <div class="panel-body">
+            <div class="alert alert-warning">
+                <%=l 'It is required a viewer to run the virtual machines.' %>
+                <a href="/requirements"><%=l 'Read more.' %></a>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+    %= include 'bootstrap/scripts'
+</body>
+</html>
