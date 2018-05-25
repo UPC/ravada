@@ -22,7 +22,7 @@ sub test_shutdown_admin {
     my $domain = create_domain($vm->type);
     $domain->start(user_admin)  if !$domain->is_active();
 
-    is(user_admin->can_shutdown_machine($domain->id), 1);
+    is(user_admin->can_shutdown($domain->id), 1);
     is($domain->is_active,1)    or return;
 
     eval { $domain->shutdown( user => user_admin ) };
@@ -49,6 +49,9 @@ sub test_shutdown_own {
 
     # can shutdown by default
     is($user->can_remove_machine($base), 1);
+    is($user->can_shutdown, 1);
+    is($user->can_shutdown($base), 1);
+
     $base->shutdown_now( $user );
 
     is($base->is_active,0,"[".$base->type."] expecting base down");
@@ -68,7 +71,7 @@ sub test_shutdown_all {
 
     my $user = create_user("kevin.garvey","sleepwalk");
 
-    is($user->can_shutdown_machine($base), 0);
+    is($user->can_shutdown($base), 0);
 
     eval { $base->shutdown_now( $user ) };
     like($@, qr'.');
@@ -80,7 +83,7 @@ sub test_shutdown_all {
 
     $base->start(user_admin)    if !$base->is_active;
 
-    is($user->can_shutdown_machine($base), 1);
+    is($user->can_shutdown($base), 1);
     eval { $base->shutdown_now( $user ) };
     is($@, '');
 
@@ -107,11 +110,11 @@ sub test_shutdown_clones_from_own_base {
     $clone->start(user_admin);
     is($clone->is_active, 1);
 
-    is($user->can_shutdown_machine($clone->id), 0);
+    is($user->can_shutdown($clone->id), 0);
 
-    user_admin->grant($user,'shutdown_clone');
+    user_admin->grant($user,'shutdown_clones');
 
-    is($user->can_shutdown_machine($clone->id), 1);
+    is($user->can_shutdown($clone->id), 1);
     is($user->is_operator,1);
 
     eval { $clone->shutdown_now($user)};
@@ -122,6 +125,10 @@ sub test_shutdown_clones_from_own_base {
     eval { $clone->hibernate($user)};
     is($@, '');
     is($clone->is_hibernated, 1);
+
+    eval { $clone->shutdown_now($user)};
+    is($@, '');
+    is($clone->is_active, 0);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -155,7 +162,7 @@ sub test_list_all{
     is(scalar @$list , 2);
 
     for my $m (@$list) {
-        is($user->can_shutdown_machine($m->{id}) ,1);
+        is($user->can_shutdown($m->{id}) ,1);
         next if !$m->{id_base};
 
         my $machine = Ravada::Domain->open($m->{id});
@@ -194,7 +201,7 @@ sub test_list_clones_from_own_base {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'shutdown_clone');
+    user_admin->grant($user, 'shutdown_clones');
     is($user->can_list_machines, 0);
 
     $list = rvd_front->list_machines($user);
@@ -233,14 +240,16 @@ sub test_list_clones_from_own_base_2 {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'shutdown_clone');
+    user_admin->grant($user, 'shutdown_clones');
     is($user->can_list_machines, 0);
 
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 3) and do {
         is($list->[0]->{name}, $base->name);
         is($list->[1]->{name}, $clone->name, Dumper($list->[1]));
+        is($list->[1]->{can_shutdown}, 1);
         is($list->[2]->{name}, $clone2->name, Dumper($list->[2]));
+        is($list->[2]->{can_shutdown}, 1);
     };
 
     #####################################################################3
@@ -300,7 +309,7 @@ sub test_list_clones_from_own_base_deny {
     my $list = rvd_front->list_machines($user);
     is(scalar @$list , 0);
 
-    user_admin->grant($user, 'shutdown_clone');
+    user_admin->grant($user, 'shutdown_clones');
     is($user->can_list_machines, 0);
     is($user->can_list_clones_from_own_base, 1);
 

@@ -175,9 +175,10 @@ sub list_machines_user {
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines;
 
-    if ($user->can_remove_clone() || $user->can_shutdown_clone() ) {
+    if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
         my $machines = $self->list_bases( id_owner => $user->id );
         for my $base (@$machines) {
+            confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
             push @$machines,@{$self->list_domains( id_base => $base->{id} )};
         }
         return $machines;
@@ -197,7 +198,7 @@ sub list_machines($self, $user) {
 sub _around_list_machines($orig, $self, $user) {
     my $machines = $self->$orig($user);
     for my $m (@$machines) {
-        $m->{can_shutdown} = $user->can_shutdown_machine($m->{id});
+        $m->{can_shutdown} = $user->can_shutdown($m->{id});
 
         $m->{can_start} = 0;
         $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;

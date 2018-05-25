@@ -80,7 +80,7 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -663,12 +663,57 @@ sub _update_data {
 }
 
 sub _update_grants($self) {
-    my $sth = $CONNECTOR->dbh->prepare(
-                 "UPDATE grant_types"
-                ." SET name='create_machine' "
-                ." WHERE name = 'create_domain'"
+
+    my %rename = (
+        create_domain => 'create_machine'
+        ,remove_clone => 'remove_clones'
+        ,shutdown_clone => 'shutdown_clones'
     );
-    $sth->execute();
+    for my $old ( keys %rename ) {
+        my $sth = $CONNECTOR->dbh->prepare(
+                 "UPDATE grant_types"
+                ." SET name=? "
+                ." WHERE name = ?"
+        );
+        $sth->execute($rename{$old}, $old);
+    }
+
+    $self->_add_grant('shutdown', 1);
+}
+
+sub _add_grant($self, $grant, $allowed) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM grant_types WHERE name=?"
+    );
+    $sth->execute($grant);
+    my ($id) = $sth->fetchrow();
+    $sth->finish;
+
+    return if $id;
+
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
+        ." VALUES (?,?)");
+    $sth->execute($grant,"can shutdown any virtual machine owned by the user");
+    $sth->finish;
+
+    return if !$allowed;
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
+    $sth->execute($grant);
+    my ($id_grant) = $sth->fetchrow;
+    $sth->finish;
+
+    my $sth_insert = $CONNECTOR->dbh->prepare(
+        "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users ");
+    $sth->execute;
+
+    while (my ($id_user) = $sth->fetchrow ) {
+        eval { $sth_insert->execute($id_user, $id_grant, $allowed) };
+        die $@ if $@ && $@ !~/Duplicate entry /;
+    }
 }
 
 sub _null_grants($self) {
@@ -695,8 +740,8 @@ sub _enable_grants($self) {
         ,'clone',           'clone_all',            'create_base', 'create_machine'
         ,'grant'
         ,'manage_users'
-        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
-        ,'shutdown_all',    'shutdown_clone'
+        ,'remove',          'remove_all',   'remove_clones',     'remove_clone_all'
+        ,'shutdown',        'shutdown_all',    'shutdown_clones'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -2257,6 +2302,10 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
             $domain->_set_data(status => $status);
+            for my $req ( $domain->list_requests ) {
+                next if $req->command !~ /shutdown/i;
+                $req->status('done');
+            }
         }
     }
 }
@@ -2272,6 +2321,10 @@ sub _refresh_volatile_domains($self) {
             $domain->_post_shutdown(user => $USER_DAEMON);
             $domain->remove($USER_DAEMON);
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+            $sth_del->execute($id_domain);
+            $sth_del->finish;
+
+            $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
         }
