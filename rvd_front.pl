@@ -65,6 +65,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               }
                                       ,file => $FILE_CONFIG
 };
+
 #####
 #####
 #####
@@ -126,7 +127,8 @@ hook before_routes => sub {
             ,_anonymous => undef
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
-            ,monitoring => $CONFIG_FRONT->{monitoring}
+            ,monitoring => 0
+            ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
             );
@@ -147,6 +149,12 @@ hook before_routes => sub {
 
     _logged_in($c)  if $url =~ m{^/requirements};
 
+    if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
+        if (!defined $c->session('monitoring')) {
+            $c->stash(check_netdata => "https://$host:19999/index.html");
+        }
+        $c->stash( monitoring => 1) if $c->session('monitoring');
+    }
 };
 
 
@@ -759,6 +767,23 @@ get '/iso/download/(#id).json' => sub {
 
     return $c->render(json => {request => $req->id});
 };
+
+###################################################
+#
+# session settings
+#
+get '/session/(#tag)/(#value)' => sub {
+    my $c = shift;
+    my %allowed = map { $_ => 1 } qw(monitoring);
+
+    my $tag = $c->stash('tag');
+    my $value = $c->stash('value');
+
+    return $c->render( json => { error => "Session $tag not allowed" }) if !$allowed{$tag};
+
+    $c->session($tag => $value);
+    return $c->render( json => { ok => "Session $tag set to $value " });
+};
 ###################################################
 
 sub _init_error {
@@ -855,7 +880,6 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
-                      ,monitoring => $CONFIG_FRONT->{monitoring}
                       ,guide => $CONFIG_FRONT->{guide}
     );
 }
