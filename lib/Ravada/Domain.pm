@@ -1343,9 +1343,7 @@ sub _around_shutdown_now {
     my $self = shift;
     my $user = shift;
 
-    $self->list_disks;
     $self->_pre_shutdown(user => $user);
-
     if ($self->is_active) {
         $self->$orig($user);
     }
