@@ -824,10 +824,7 @@ sub info($self, $user) {
 
 sub _msg_timeout($self) {
     return undef if !$self->run_timeout;
-    my $msg_timeout;
-    if (int ($self->run_timeout / 60 )) {
-        $msg_timeout = "in ".int($self->run_timeout / 60 )." minutes.";
-    }
+    my $msg_timeout = '';
 
     for my $request ( $self->list_all_requests ) {
         if ( $request->command =~ 'shutdown' ) {
@@ -1355,8 +1352,8 @@ sub _post_shutdown {
         $self->clean_swap_volumes(@_) if !$self->is_active;
     }
 
-    if (defined $timeout && !$self->is_removed) {
-        if ($timeout<2 && !$self->is_removed && $self->is_active) {
+    if (defined $timeout && !$self->is_removed && $self->is_active) {
+        if ($timeout<2) {
             sleep $timeout;
             $self->_data(status => 'shutdown')    if !$self->is_active;
             return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
