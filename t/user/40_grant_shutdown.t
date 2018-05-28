@@ -49,7 +49,6 @@ sub test_shutdown_own {
 
     # can shutdown by default
     is($user->can_remove_machine($base), 1);
-    is($user->can_shutdown, 1);
     is($user->can_shutdown($base), 1);
 
     $base->shutdown_now( $user );
