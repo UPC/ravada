@@ -812,10 +812,12 @@ sub info($self, $user) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         $info->{description} = $base->description;
     }
-    my $display = $self->display($user);
-    my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
-    $info->{display_ip} = $local_ip;
-    $info->{display_port} = $local_port;
+    if ($self->is_active) {
+        my $display = $self->display($user);
+        my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+        $info->{display_ip} = $local_ip;
+        $info->{display_port} = $local_port;
+    }
 
     return $info;
 }
