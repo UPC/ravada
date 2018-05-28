@@ -86,6 +86,12 @@ sub test_shutdown_all {
     eval { $base->shutdown_now( $user ) };
     is($@, '');
 
+    $base->start(user_admin)    if !$base->is_active;
+
+    is($user->can_shutdown($base), 1);
+    eval { $base->hibernate( $user ) };
+    is($@, '');
+
     $base->remove( user_admin );# if $base2;
 
     $user->remove();
