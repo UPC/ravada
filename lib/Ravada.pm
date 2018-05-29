@@ -1191,12 +1191,24 @@ sub create_domain {
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
     my $domain;
+    $request->status("creating")    if $request;
     eval { $domain = $vm->create_domain(@_) };
     my $error = $@;
     if ( $request ) {
         $request->error($error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
+        }
+        if (!$error && $request->defined_arg('start')) {
+            $request->status("starting");
+            eval {
+                my $user = Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+                $domain->start(
+                    user => $user
+                    ,remote_ip => $request->defined_arg('remote_ip')
+                )
+            };
+            $request->error($error) if $error;
         }
     }
     return $domain;
@@ -1822,6 +1834,7 @@ sub _cmd_create{
             .$request->args('name')."</a>"
             ." created."
         ;
+        $request->id_domain($domain->id);#    if !$request->args('id_domain');
         $request->status('done',$msg);
     }
 
@@ -2008,9 +2021,13 @@ sub _cmd_start {
     my $self = shift;
     my $request = shift;
 
-    my $name = $request->args('name');
+    my ($name, $id_domain);
+    $name = $request->defined_arg('name');
+    $id_domain = $request->defined_arg('id_domain');
 
-    my $domain = $self->search_domain($name);
+    my $domain;
+    $domain = $self->search_domain($name)               if $name;
+    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
     die "Unknown domain '$name'" if !$domain;
 
     my $uid = $request->args('uid');
@@ -2019,7 +2036,7 @@ sub _cmd_start {
     $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
-            .$request->args('name')."</a>"
+            .$domain->name."</a>"
             ." started"
         ;
     $request->status('done', $msg);

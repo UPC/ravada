@@ -18,6 +18,7 @@ use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
 use Sys::Statistics::Linux;
+use Time::Piece;
 use IPTables::ChainMgr;
 
 no warnings "experimental::signatures";
@@ -782,13 +783,58 @@ sub _display_file_spice($self,$user) {
 
     $ret .=";"  if !$self->tls;
     $ret .="ca=CA\n"
-        ."toggle-fullscreen=shift+f11\n"
-        ."release-cursor=shift+f12\n"
+        ."release-cursor=shift+f11\n"
+        ."toggle-fullscreen=shift+f12\n"
         ."secure-attention=ctrl+alt+end\n";
     $ret .=";" if !$self->tls;
     $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
 
     return $ret;
+}
+
+=head2 info
+
+Return information about the domain.
+
+=cut
+
+sub info($self, $user) {
+    my $info = {
+        id => $self->id
+        ,name => $self->name
+        ,is_active => $self->is_active
+        ,spice_password => $self->spice_password
+        ,display_url => $self->display($user)
+        ,description => $self->description
+        ,msg_timeout => $self->_msg_timeout
+    };
+    if (!$info->{description} && $self->id_base) {
+        my $base = Ravada::Front::Domain->open($self->id_base);
+        $info->{description} = $base->description;
+    }
+    if ($self->is_active) {
+        my $display = $self->display($user);
+        my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+        $info->{display_ip} = $local_ip;
+        $info->{display_port} = $local_port;
+    }
+
+    return $info;
+}
+
+sub _msg_timeout($self) {
+    return undef if !$self->run_timeout;
+    my $msg_timeout = '';
+
+    for my $request ( $self->list_all_requests ) {
+        if ( $request->command =~ 'shutdown' ) {
+            my $t1 = Time::Piece->localtime($request->at_time);
+            my $t2 = localtime();
+
+            $msg_timeout = " in ".($t1 - $t2)->pretty;
+        }
+    }
+    return $msg_timeout;
 }
 
 sub _insert_db {
@@ -1306,8 +1352,8 @@ sub _post_shutdown {
         $self->clean_swap_volumes(@_) if !$self->is_active;
     }
 
-    if (defined $timeout && !$self->is_removed) {
-        if ($timeout<2 && !$self->is_removed && $self->is_active) {
+    if (defined $timeout && !$self->is_removed && $self->is_active) {
+        if ($timeout<2) {
             sleep $timeout;
             $self->_data(status => 'shutdown')    if !$self->is_active;
             return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
