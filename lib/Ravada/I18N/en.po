@@ -689,15 +689,3 @@ msgstr ""
 
 msgid "This information will be available to the users"
 msgstr ""
-
-msgid "The machine will shutdown after these minutes"
-msgstr ""
-
-msgid "Volatile Clones"
-msgstr ""
-
-msgid "Owner"
-msgstr ""
-
-msgid "Change the owner of the machine"
-msgstr ""
