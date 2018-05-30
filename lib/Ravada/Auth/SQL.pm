@@ -351,7 +351,8 @@ sub is_operator {
         || $self->can_remove_clone_all()
         || $self->can_create_base()
         || $self->can_create_machine
-        || $self->can_list_machines;
+        || $self->can_list_machines
+        || $self->can_change_settings_all();
 }
 
 =head2 can_list_own_machines
@@ -402,7 +403,8 @@ sub can_list_machines {
     my $self = shift;
     return 1 if $self->is_admin()
             || $self->can_remove_all || $self->can_remove_clone_all
-            || $self->can_shutdown_all;
+            || $self->can_shutdown_all
+            || $self->can_change_settings_all();
     return 0;
 }
 
