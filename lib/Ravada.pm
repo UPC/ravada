@@ -953,7 +953,7 @@ sub _connect_dbh {
     my $host = $CONFIG->{db}->{host};
 
     my $data_source = "DBI:$driver:$db";
-    $data_source = "DBI:$driver:database=$db;host=$host"
+    $data_source = "DBI:$driver:database=$db;host=$host"    
         if $host && $host ne 'localhost';
 
     my $con;
@@ -1006,7 +1006,7 @@ sub _init_config {
 
     $CONFIG->{vm} = [] if !$CONFIG->{vm};
 
-    $LIMIT_PROCESS = $CONFIG->{limit_process}
+    $LIMIT_PROCESS = $CONFIG->{limit_process} 
         if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
@@ -1573,7 +1573,7 @@ sub process_requests {
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req = Ravada::Request->open($id_request);
 
-        if ( ($long_commands &&
+        if ( ($long_commands && 
                 (!$short_commands && !$LONG_COMMAND{$req->command}))
             ||(!$long_commands && $LONG_COMMAND{$req->command})
         ) {
@@ -1728,7 +1728,7 @@ sub _execute {
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ( $pid == 0 ) {
-        $self->_do_execute_command($sub, $request)
+        $self->_do_execute_command($sub, $request) 
     } else {
         $self->_add_pid($pid, $request->id);
     }
@@ -1756,7 +1756,7 @@ sub _do_execute_command {
     };
     my $err = ( $@ or '');
     $request->error($err);
-    $request->status('done')
+    $request->status('done') 
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
     exit;
@@ -1796,8 +1796,8 @@ sub _cmd_screenshot {
 sub _cmd_copy_screenshot {
     my $self = shift;
     my $request = shift;
-
-    my $id_domain = $request->args('id_domain');
+    
+    my $id_domain = $request->args('id_domain');  
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $id_base = $domain->id_base;
@@ -1808,11 +1808,11 @@ sub _cmd_copy_screenshot {
     } else {
 
         my $base_screenshot = $domain->file_screenshot();
-
+    
         $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
-        $base->_post_screenshot($base_screenshot);
+        $base->_post_screenshot($base_screenshot);  
 
-        copy($domain->file_screenshot, $base_screenshot);
+        copy($domain->file_screenshot, $base_screenshot); 
     }
 }
 
@@ -2228,17 +2228,6 @@ sub _cmd_refresh_storage($self, $request=undef) {
     $vm->refresh_storage();
 }
 
-sub _cmd_change_owner($self, $request) {
-    my $uid = $request->args('uid');
-    my $id_domain = $request->args('id_domain');
-    my $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE domains SET id_owner=?"
-        ." WHERE id=?"
-    );
-    $sth->execute($uid, $id_domain);
-    $sth->finish;
-}
-
 sub _cmd_domain_autostart($self, $request ) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
@@ -2387,7 +2376,6 @@ sub _req_method {
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
-,change_owner => \&_cmd_change_owner
 
     );
     return $methods{$cmd};
@@ -2464,7 +2452,7 @@ sub import_domain {
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
     die "ERROR: unknown user '$user_name'" if !$user || !$user->id;
-
+    
     my $domain;
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
