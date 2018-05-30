@@ -690,9 +690,6 @@ msgstr ""
 msgid "This information will be available to the users"
 msgstr ""
 
-msgid "The machine will shutdown after these minutes"
-msgstr ""
-
 msgid "Volatile Clones"
 msgstr ""
 
