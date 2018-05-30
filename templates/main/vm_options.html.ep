@@ -44,7 +44,7 @@
                 value="1">
             </div>
             <div class="col-md-6">
-                <%=l 'Clones created from this machine will be removed on shutdown. %>
+                <%=l 'Clones created from this machine will be removed on shutdown.' %>
             </div>
         </div>
 %   }
