@@ -183,6 +183,25 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
                 ,min_disk_size => '10'
         },
+        mate_bionic => {
+                    name => 'Ubuntu Mate Bionic 64 bits'
+            ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
+        mate_bionic_i386 => {
+                    name => 'Ubuntu Mate Bionic 32 bits'
+            ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
+                   ,arch => 'i386'
+                    ,xml => 'bionic-i386.xml'
+             ,xml_volume => 'bionic32-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
+
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
@@ -215,6 +234,18 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
           ,min_disk_size => '10'
         }
+        ,bionic=> {
+                    name => 'Ubuntu Bionic Beaver'
+            ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/18.04/'
+                ,file_re => 'ubuntu-18.04.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
+        }
+
         ,zesty => {
                     name => 'Ubuntu Zesty Zapus'
             ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
@@ -269,6 +300,50 @@ sub _update_isos {
             ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+        ,kubuntu_64 => {
+            name => 'Kubuntu Bionic Beaver 64 bits'
+            ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
+            ,file_re => 'kubuntu-18.04-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_bionic_64.iso'
+        }
+        ,kubuntu_32 => {
+            name => 'Kubuntu Bionic Beaver 32 bits'
+            ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
+            ,arch => 'i386'
+            ,xml => 'bionic-i386.xml'
+            ,xml_volume => 'bionic32-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
+            ,file_re => 'kubuntu-18.04-desktop-i386.iso'
+            ,rename_file => 'kubuntu_bionic_32.iso'
+        }
+        ,xubuntu_beaver_64 => {
+            name => 'Xubuntu Bionic Beaver 64 bits'
+            ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-amd64/current/images/netboot/'
+            ,file_re => 'mini.iso'
+            ,rename_file => 'xubuntu_bionic_64.iso'
+        }
+        ,xubuntu_beaver_32 => {
+            name => 'Xubuntu Bionic Beaver 32 bits'
+            ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
+            ,arch => 'amd64'
+            ,xml => 'bionic-i386.xml'
+            ,xml_volume => 'bionic32-volume.xml'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-i386/current/images/netboot/'
+            ,file_re => 'mini.iso'
+            ,rename_file => 'xubuntu_bionic_32.iso'
+        }
         ,xubuntu_artful => {
             name => 'Xubuntu Artful Aardvark'
             ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
@@ -303,7 +378,24 @@ sub _update_isos {
             ,rename_file => 'xubuntu_xenial_mini.iso'
             ,min_disk_size => '10'
         }
-       ,lubuntu_aardvark => {
+        ,lubuntu_bionic_64 => {
+             name => 'Lubuntu Bionic Beaver 64 bits'
+             ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
+             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
+             ,md5_url => '$url/MD5SUMS'
+             ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+         }
+         ,lubuntu_bionic_32 => {
+             name => 'Lubuntu Bionic Beaver 32 bits'
+             ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
+             ,arch => 'i386'
+             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
+             ,md5_url => '$url/MD5SUMS'
+             ,xml => 'bionic-i386.xml'
+             ,xml_volume => 'bionic32-volume.xml'
+        }
+        ,lubuntu_aardvark => {
             name => 'Lubuntu Artful Aardvark'
             ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
