@@ -842,6 +842,22 @@ sub can_remove_machine($self, $domain) {
     return 0;
 }
 
+sub can_shutdown_machine($self, $domain) {
+
+    return 1 if $self->can_shutdown_all();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    return 1 if $self->id == $domain->id_owner;
+
+    if ($domain->id_base && $self->can_shutdown_clone()) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+
+    return 0;
+}
+
 sub grants($self) {
     $self->_load_grants()   if !$self->{_grant};
     return () if !$self->{_grant};
