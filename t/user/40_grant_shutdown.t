@@ -49,7 +49,6 @@ sub test_shutdown_own {
 
     # can shutdown by default
     is($user->can_remove_machine($base), 1);
-    is($user->can_shutdown, 1);
     is($user->can_shutdown($base), 1);
 
     $base->shutdown_now( $user );
@@ -85,6 +84,12 @@ sub test_shutdown_all {
 
     is($user->can_shutdown($base), 1);
     eval { $base->shutdown_now( $user ) };
+    is($@, '');
+
+    $base->start(user_admin)    if !$base->is_active;
+
+    is($user->can_shutdown($base), 1);
+    eval { $base->hibernate( $user ) };
     is($@, '');
 
     $base->remove( user_admin );# if $base2;
