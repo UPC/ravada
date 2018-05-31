@@ -80,7 +80,7 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
 our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot ), keys %HUGE_COMMAND);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -663,12 +663,57 @@ sub _update_data {
 }
 
 sub _update_grants($self) {
-    my $sth = $CONNECTOR->dbh->prepare(
-                 "UPDATE grant_types"
-                ." SET name='create_machine' "
-                ." WHERE name = 'create_domain'"
+
+    my %rename = (
+        create_domain => 'create_machine'
+        ,remove_clone => 'remove_clones'
+        ,shutdown_clone => 'shutdown_clones'
     );
-    $sth->execute();
+    for my $old ( keys %rename ) {
+        my $sth = $CONNECTOR->dbh->prepare(
+                 "UPDATE grant_types"
+                ." SET name=? "
+                ." WHERE name = ?"
+        );
+        $sth->execute($rename{$old}, $old);
+    }
+
+    $self->_add_grant('shutdown', 1);
+}
+
+sub _add_grant($self, $grant, $allowed) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM grant_types WHERE name=?"
+    );
+    $sth->execute($grant);
+    my ($id) = $sth->fetchrow();
+    $sth->finish;
+
+    return if $id;
+
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
+        ." VALUES (?,?)");
+    $sth->execute($grant,"can shutdown any virtual machine owned by the user");
+    $sth->finish;
+
+    return if !$allowed;
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
+    $sth->execute($grant);
+    my ($id_grant) = $sth->fetchrow;
+    $sth->finish;
+
+    my $sth_insert = $CONNECTOR->dbh->prepare(
+        "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users ");
+    $sth->execute;
+
+    while (my ($id_user) = $sth->fetchrow ) {
+        eval { $sth_insert->execute($id_user, $id_grant, $allowed) };
+        die $@ if $@ && $@ !~/Duplicate entry /;
+    }
 }
 
 sub _null_grants($self) {
@@ -695,8 +740,8 @@ sub _enable_grants($self) {
         ,'clone',           'clone_all',            'create_base', 'create_machine'
         ,'grant'
         ,'manage_users'
-        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
-        ,'shutdown_all',    'shutdown_clone'
+        ,'remove',          'remove_all',   'remove_clones',     'remove_clone_all'
+        ,'shutdown',        'shutdown_all',    'shutdown_clones'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -789,7 +834,6 @@ sub _create_table {
     $sth->finish;
     return if keys %$info;
 
-    warn "INFO: creating table $table\n";
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
     my $sql = join " ",<$in>;
@@ -1147,12 +1191,24 @@ sub create_domain {
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
     my $domain;
+    $request->status("creating")    if $request;
     eval { $domain = $vm->create_domain(@_) };
     my $error = $@;
     if ( $request ) {
         $request->error($error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
+        }
+        if (!$error && $request->defined_arg('start')) {
+            $request->status("starting");
+            eval {
+                my $user = Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+                $domain->start(
+                    user => $user
+                    ,remote_ip => $request->defined_arg('remote_ip')
+                )
+            };
+            $request->error($error) if $error;
         }
     }
     return $domain;
@@ -1778,6 +1834,7 @@ sub _cmd_create{
             .$request->args('name')."</a>"
             ." created."
         ;
+        $request->id_domain($domain->id);#    if !$request->args('id_domain');
         $request->status('done',$msg);
     }
 
@@ -1964,9 +2021,13 @@ sub _cmd_start {
     my $self = shift;
     my $request = shift;
 
-    my $name = $request->args('name');
+    my ($name, $id_domain);
+    $name = $request->defined_arg('name');
+    $id_domain = $request->defined_arg('id_domain');
 
-    my $domain = $self->search_domain($name);
+    my $domain;
+    $domain = $self->search_domain($name)               if $name;
+    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
     die "Unknown domain '$name'" if !$domain;
 
     my $uid = $request->args('uid');
@@ -1975,7 +2036,7 @@ sub _cmd_start {
     $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
-            .$request->args('name')."</a>"
+            .$domain->name."</a>"
             ." started"
         ;
     $request->status('done', $msg);
@@ -2156,10 +2217,10 @@ sub _cmd_set_driver {
     $domain->set_driver_id($request->args('id_option'));
 }
 
-sub _cmd_refresh_storage($self, $request) {
+sub _cmd_refresh_storage($self, $request=undef) {
 
     my $vm;
-    if ($request->defined_arg('id_vm')) {
+    if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));
     } else {
         $vm = $self->search_vm('KVM');
@@ -2258,6 +2319,10 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
             $domain->_set_data(status => $status);
+            for my $req ( $domain->list_requests ) {
+                next if $req->command !~ /shutdown/i;
+                $req->status('done');
+            }
         }
     }
 }
@@ -2268,10 +2333,15 @@ sub _refresh_volatile_domains($self) {
     );
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
-        my $domain = Ravada::Domain->open($id_domain);
-        if ( !$domain || $domain->status eq 'down') {
-            $domain->remove($USER_DAEMON)   if $domain;
+        my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
+        if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
+            $domain->_post_shutdown(user => $USER_DAEMON);
+            $domain->remove($USER_DAEMON);
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+            $sth_del->execute($id_domain);
+            $sth_del->finish;
+
+            $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
         }

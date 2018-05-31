@@ -32,7 +32,7 @@ sub test_defaults {
 
     ok($user->can_remove);
 
-    ok(!$user->can_remove_clone);
+    ok(!$user->can_remove_clones);
 
 #    ok(!$user->can_clone_all);
     ok(!$user->can_change_settings_all);
@@ -105,7 +105,7 @@ sub test_operator {
     ok($usera->is_operator);
     ok($usera->is_admin);
 
-    $usera->grant($usero,'shutdown_clone');
+    $usera->grant($usero,'shutdown_clones');
     ok($usero->is_operator);
     ok(!$usero->is_admin);
 
@@ -132,8 +132,8 @@ sub test_remove_clone {
     eval { $clone2 = rvd_back->search_domain($clone->name) };
     ok($clone2, "Expecting ".$clone->name." not removed");
 
-    $usera->grant($user,'remove_clone');
-    is($user->can_remove_clone, 1);
+    $usera->grant($user,'remove_clones');
+    is($user->can_remove_clones, 1);
     eval { $clone->remove($user); };
     is($@,'');
 
@@ -143,7 +143,7 @@ sub test_remove_clone {
     # revoking remove clone permission
 
     $clone = $domain->clone(user => $usera,name => new_domain_name());
-    $usera->revoke($user,'remove_clone');
+    $usera->revoke($user,'remove_clones');
 
     eval { $clone->remove($user); };
     like($@,qr(.));
@@ -212,8 +212,8 @@ sub test_shutdown_clone {
 
     is($clone->is_active,1) or return;
 
-    $usera->grant($user,'shutdown_clone');
-    is($user->can_shutdown_clone,1);
+    $usera->grant($user,'shutdown_clones');
+    is($user->can_shutdown_clones,1);
 
     eval { $clone->shutdown_now($user); };
     is($@,'');
@@ -223,7 +223,7 @@ sub test_shutdown_clone {
     $clone->start($usera)   if !$clone->is_active;
     is($clone->is_active,1);
 
-    $usera->revoke($user,'shutdown_clone');
+    $usera->revoke($user,'shutdown_clones');
     eval { $clone->shutdown_now($user); };
     like($@,qr(.));
     is($clone->is_active,1);

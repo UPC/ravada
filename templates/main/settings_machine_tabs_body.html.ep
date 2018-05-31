@@ -47,7 +47,7 @@
         %= include 'main/vm_remove'
     </div>
 % }
-% if ( $monitoring && $USER->is_admin && $domain->internal_id >= 1 ) {
+% if ( $monitoring && $USER->is_admin && $domain->is_active ) {
     <div class="tab-pane fade" id="monitoring">
         %= include 'main/vm_monitoring'
     </div>

@@ -130,6 +130,7 @@ sub search_domain {
         eval { $id = $domain->id };
         warn $@ if $@;
         return if !defined $id;#
+        $domain->_insert_db_extra   if !$domain->is_known_extra();
         return $domain;
     }
     return;

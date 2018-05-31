@@ -18,6 +18,7 @@ use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
 use Sys::Statistics::Linux;
+use Time::Piece;
 use IPTables::ChainMgr;
 
 no warnings "experimental::signatures";
@@ -147,13 +148,13 @@ before 'prepare_base' => \&_pre_prepare_base;
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
 
-before 'pause' => \&_allow_manage;
+before 'pause' => \&_allow_shutdown;
  after 'pause' => \&_post_pause;
 
-before 'hybernate' => \&_allow_manage;
+before 'hybernate' => \&_allow_shutdown;
  after 'hybernate' => \&_post_hibernate;
 
-before 'hibernate' => \&_allow_manage;
+before 'hibernate' => \&_allow_shutdown;
  after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
@@ -188,8 +189,15 @@ around 'autostart' => \&_around_autostart;
 
 sub BUILD {
     my $self = shift;
+    my $args = shift;
+
+    my $name;
+    $name = $args->{name}               if exists $args->{name};
+    $name = $args->{domain}->get_name   if !$name && $args->{domain};
+
+    $self->{_name} = $name  if $name;
+
     $self->_init_connector();
-    $self->is_known();
 
 }
 
@@ -269,7 +277,7 @@ sub _allow_remove($self, $user) {
     $self->_check_has_clones() if $self->is_known();
     if ( $self->is_known
         && $self->id_base
-        && ($user->can_remove_clone() || $user->can_remove_clone_all())
+        && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
         my $base = $self->open($self->id_base);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
@@ -279,18 +287,18 @@ sub _allow_remove($self, $user) {
 
 sub _allow_shutdown {
     my $self = shift;
-    my %args = @_;
+    my %args;
 
+    if (scalar @_ == 1 ) {
+        $args{user} = shift;
+    } else {
+        %args = @_;
+    }
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
-    if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = Ravada::Domain->open($self->id_base);
-        return if $base->id_owner == $user->id;
-    } elsif($user->can_shutdown_all) {
-        return;
-    } else {
-        $self->_allow_manage_args(user => $user);
-    }
+    confess "User ".$user->name." [".$user->id."] not allowed to shutdown ".$self->name
+        ." owned by ".($self->id_owner or '<UNDEF>')
+            if !$user->can_shutdown($self->id);
 }
 
 sub _around_add_volume {
@@ -478,7 +486,7 @@ sub _allowed {
 sub _around_display($orig,$self,$user) {
     $self->_allowed($user);
     my $display = $self->$orig($user);
-    $self->_data(display => $display);
+    $self->_data(display => $display)   if !$self->readonly;
     return $display;
 }
 
@@ -504,17 +512,26 @@ Returns the id of  the domain
     my $id = $domain->id();
 =cut
 
-sub id {
-    return $_[0]->_data('id');
-
+sub id($self) {
+    return $self->{_id} if exists $self->{_id};
+    my $id = $_[0]->_data('id');
+    $self->{_id} = $id;
+    return $id;
 }
 
 
 ##################################################################################
 
-sub _data($self, $field, $value=undef) {
+sub _data($self, $field, $value=undef, $table='domains') {
 
     _init_connector();
+
+    my $data = "_data";
+    my $field_id = 'id';
+    if ($table ne 'domains' ) {
+        $data = "_data_$table";
+        $field_id = 'id_domain';
+    }
 
     if (defined $value) {
         confess "Domain ".$self->name." is not in the DB"
@@ -524,19 +541,30 @@ sub _data($self, $field, $value=undef) {
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
         my $sth = $$CONNECTOR->dbh->prepare(
-            "UPDATE domains set $field=? WHERE id=?"
+            "UPDATE $table set $field=? WHERE $field_id=?"
         );
         $sth->execute($value, $self->id);
         $sth->finish;
-        $self->{_data}->{$field} = $value;
+        $self->{$data}->{$field} = $value;
+        $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
     }
-    return $self->{_data}->{$field} if exists $self->{_data}->{$field};
-    $self->{_data} = $self->_select_domain_db( name => $self->name);
+    return $self->{$data}->{$field} if exists $self->{$data}->{$field};
 
-    confess "No DB info for domain ".$self->name    if !$self->{_data};
-    confess "No field $field in domains"            if !exists$self->{_data}->{$field};
+    my @field_select = ( name => $self->name );
+    @field_select = ( id_domain => $self->id )         if $table ne 'domains';
+    $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
-    return $self->{_data}->{$field};
+    confess "No DB info for domain @field_select in $table ".$self->name 
+        if ! exists $self->{$data};
+    confess "No field $field in $data @field_select ".Dumper($self->{$data})
+        if !exists $self->{$data}->{$field};
+
+    return $self->{$data}->{$field};
+}
+
+sub _data_extra($self, $field, $value=undef) {
+    $self->_insert_db_extra()   if !$self->is_known_extra();
+    return $self->_data($field, $value, "domains_".lc($self->type));
 }
 
 =head2 open
@@ -549,9 +577,22 @@ Returns: Domain object read only
 
 =cut
 
-sub open($class, $id) {
-    confess "Missing id"    if !defined $id;
+sub open($class, @args) {
+    my ($id) = @args;
+    my $readonly = 0;
+    my $id_vm;
+    my $force;
 
+    if (scalar @args > 1) {
+        my %args = @args;
+        $id = delete $args{id} or confess "ERROR: Missing field id";
+        $readonly = delete $args{readonly} if exists $args{readonly};
+        $id_vm = delete $args{id_vm};
+        $force = delete $args{_force};
+        confess "ERROR: Unknown fields ".join(",", sort keys %args)
+            if keys %args;
+    }
+    confess "Undefined id"  if !defined $id;
     my $self = {};
 
     if (ref($class)) {
@@ -573,7 +614,9 @@ sub open($class, $id) {
     @ro = (readonly => 1 ) if $>;
     my $vm = $vm0->new( @ro );
 
-    return $vm->search_domain($row->{name});
+    my $domain = $vm->search_domain($row->{name}, $force);
+    $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
+    return $domain;
 }
 
 =head2 is_known
@@ -584,7 +627,19 @@ Returns if the domain is known in Ravada.
 
 sub is_known {
     my $self = shift;
-    return $self->_select_domain_db(name => $self->name);
+    return 1    if $self->_select_domain_db(name => $self->name);
+    return 0;
+}
+
+sub is_known_extra {
+    my $self = shift;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains_".lc($self->type)
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    my ($id) = $sth->fetchrow;
+    return 1 if $id;
+    return 0;
 }
 
 =head2 start_time
@@ -614,15 +669,18 @@ sub _select_domain_db {
             %args = ( name => $self->name );
         }
     }
+    my $table = ( delete $args{_table} or 'domains');
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM domains WHERE ".join(",",map { "$_=?" } sort keys %args )
+        "SELECT * FROM $table WHERE ".join(",",map { "$_=?" } sort keys %args )
     );
     $sth->execute(map { $args{$_} } sort keys %args);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
 
-    $self->{_data} = $row;
+    my $data = "_data";
+    $data = "_data_$table" if $table ne 'domains';
+    $self->{$data} = $row;
 
     return $row if $row->{id};
 }
@@ -729,13 +787,59 @@ sub _display_file_spice($self,$user) {
 
     $ret .=";"  if !$self->tls;
     $ret .="ca=CA\n"
-        ."toggle-fullscreen=shift+f11\n"
-        ."release-cursor=shift+f12\n"
+        ."release-cursor=shift+f11\n"
+        ."toggle-fullscreen=shift+f12\n"
         ."secure-attention=ctrl+alt+end\n";
     $ret .=";" if !$self->tls;
     $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
 
     return $ret;
+}
+
+=head2 info
+
+Return information about the domain.
+
+=cut
+
+sub info($self, $user) {
+    my $info = {
+        id => $self->id
+        ,name => $self->name
+        ,is_active => $self->is_active
+        ,spice_password => $self->spice_password
+        ,display_url => $self->display($user)
+        ,description => $self->description
+        ,msg_timeout => ( $self->_msg_timeout or undef)
+        ,has_clones => ( $self->has_clones or undef)
+    };
+    if (!$info->{description} && $self->id_base) {
+        my $base = Ravada::Front::Domain->open($self->id_base);
+        $info->{description} = $base->description;
+    }
+    if ($self->is_active) {
+        my $display = $self->display($user);
+        my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
+        $info->{display_ip} = $local_ip;
+        $info->{display_port} = $local_port;
+    }
+
+    return $info;
+}
+
+sub _msg_timeout($self) {
+    return if !$self->run_timeout;
+    my $msg_timeout = '';
+
+    for my $request ( $self->list_all_requests ) {
+        if ( $request->command =~ 'shutdown' ) {
+            my $t1 = Time::Piece->localtime($request->at_time);
+            my $t2 = localtime();
+
+            $msg_timeout = " in ".($t1 - $t2)->pretty;
+        }
+    }
+    return $msg_timeout;
 }
 
 sub _insert_db {
@@ -771,6 +875,18 @@ sub _insert_db {
     );
     $sth->execute($self->internal_id, $self->id);
     $sth->finish;
+
+    $self->_insert_db_extra();
+}
+
+sub _insert_db_extra($self) {
+    return if !$self->is_known_extra();
+
+    my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domains_".lc($self->type)
+        ." ( id_domain ) VALUES (?) ");
+    $sth->execute($self->id);
+    $sth->finish;
+
 }
 
 =head2 pre_remove
@@ -787,20 +903,26 @@ sub pre_remove { }
 
 sub _pre_remove_domain($self, $user=undef) {
 
-    eval { $self->id };
-    $self->pre_remove();
     $self->_allow_remove($user);
+    $self->is_volatile()        if $self->is_known || $self->domain;
+    $self->list_disks()         if ($self->is_known && $self->is_known_extra)
+                                    || $self->domain ;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
 
 sub _after_remove_domain {
     my $self = shift;
+    my ($user, $cascade) = @_;
+
+    $self->_remove_iptables(user => $user);
+
     if ($self->is_base) {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
     }
     return if !$self->{_data};
+    $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_domain_db();
 }
@@ -808,12 +930,33 @@ sub _after_remove_domain {
 sub _remove_domain_db {
     my $self = shift;
 
-    return if !$self->is_known();
-
     $self->_select_domain_db or return;
+
+    my $id = $self->id;
+    my $type = $self->type;
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
-    $sth->execute($self->id);
+    $sth->execute($id);
+    $sth->finish;
+
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains_".lc($type)
+        ." WHERE id=?");
+    $sth->execute($id);
+    $sth->finish;
+
+}
+
+sub _finish_requests_db {
+    my $self = shift;
+
+    $self->_select_domain_db or return;
+
+    my $id = $self->id;
+    my $type = $self->type;
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests "
+        ." SET status='done' "
+        ." WHERE id_domain=? AND status = 'requested' ");
+    $sth->execute($id);
     $sth->finish;
 }
 
@@ -1177,6 +1320,9 @@ sub _post_hibernate($self, $user) {
 
 sub _pre_shutdown {
     my $self = shift;
+
+    confess "ERROR: Missing arguments"  if scalar(@_) % 2;
+
     my %arg = @_;
 
     my $user = delete $arg{user};
@@ -1191,8 +1337,9 @@ sub _pre_shutdown {
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        $self->resume(user => $user);
+        $self->resume(user => Ravada::Utils::user_daemon);
     }
+    $self->list_disks;
 }
 
 sub _post_shutdown {
@@ -1204,7 +1351,6 @@ sub _post_shutdown {
     $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
-    $self->_remove_temporary_machine(@_);
     if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1213,8 +1359,8 @@ sub _post_shutdown {
         $self->clean_swap_volumes(@_) if !$self->is_active;
     }
 
-    if (defined $timeout && !$self->is_removed) {
-        if ($timeout<2 && !$self->is_removed && $self->is_active) {
+    if (defined $timeout && !$self->is_removed && $self->is_active) {
+        if ($timeout<2) {
             sleep $timeout;
             $self->_data(status => 'shutdown')    if !$self->is_active;
             return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
@@ -1226,6 +1372,7 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+    $self->_remove_temporary_machine(@_);
 }
 
 sub _around_is_active($orig, $self) {
@@ -1249,6 +1396,7 @@ sub _around_shutdown_now {
     my $self = shift;
     my $user = shift;
 
+    $self->_pre_shutdown(user => $user);
     if ($self->is_active) {
         $self->$orig($user);
     }
@@ -1325,7 +1473,8 @@ sub _remove_iptables {
 sub _remove_temporary_machine {
     my $self = shift;
 
-    return if !$self->is_known || !$self->is_volatile;
+    return if !$self->is_volatile;
+
     my %args = @_;
     my $user = delete $args{user} or confess "ERROR: Missing user";
 
@@ -1333,20 +1482,16 @@ sub _remove_temporary_machine {
         my $req= $args{request};
         $req->status(
             "removing"
-            ,"Removing domain ".$self->name." after shutdown"
-            ." because user "
-            .$user->name." is temporary")
+            ,"Removing volatile machine ".$self->name)
                 if $req;
 
-        if ($self->is_removed) {
-            $self->_after_remove_domain();
-        } else {
-            $self->remove($user);
-        }
+    $self->remove($user);
+
 }
 
 sub _post_resume {
-    return _post_start(@_);
+    my $self = shift;
+    return $self->_post_start(@_);
 }
 
 sub _post_start {
@@ -1380,7 +1525,16 @@ sub _post_start {
 
     }
     $self->get_info();
+    $self->post_resume_aux;
 }
+
+=head2 post_resume_aux
+
+Method after resume
+
+=cut
+
+sub post_resume_aux {}
 
 sub _add_iptable {
     my $self = shift;
@@ -1633,7 +1787,21 @@ Returns if the domain is volatile, so it will be removed on shutdown
 =cut
 
 sub is_volatile($self, $value=undef) {
-    return $self->_set_data('is_volatile', $value);
+    return $self->{_is_volatile} if exists $self->{_is_volatile}    && !defined $value;
+
+    my $is_volatile = 0;
+    if ($self->is_known) {
+        $is_volatile = $self->_data('is_volatile', $value);
+    } elsif ($self->domain) {
+        $is_volatile = $self->is_persistent();
+    }
+    $self->{_is_volatile} = $is_volatile;
+    return $is_volatile;
+}
+
+sub is_persistent($self) {
+    return !$self->{_is_volatile} if exists $self->{_is_volatile};
+    return 0;
 }
 
 =head2 run_timeout
@@ -1907,6 +2075,13 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
+    if (!$self->is_known) {
+        my ($type) = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
+        confess "Unknown type from ".ref($self) if !$type;
+        return $type;
+    }
+    confess "Unknown vm ".Dumper($self->{_data})
+        if !$self->_data('vm');
     return $self->_data('vm');
 }
 
