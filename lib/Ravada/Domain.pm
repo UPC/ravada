@@ -880,7 +880,7 @@ sub _insert_db {
 }
 
 sub _insert_db_extra($self) {
-    return if !$self->is_known_extra();
+    return if $self->is_known_extra();
 
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domains_".lc($self->type)
         ." ( id_domain ) VALUES (?) ");
