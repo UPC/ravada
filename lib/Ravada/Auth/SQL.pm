@@ -352,7 +352,8 @@ sub is_operator {
         || $self->can_create_base()
         || $self->can_create_machine
         || $self->can_list_machines
-        || $self->can_change_settings_all();
+        || $self->can_change_settings_all()
+        || 0;
 }
 
 =head2 can_list_own_machines
