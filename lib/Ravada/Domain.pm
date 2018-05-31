@@ -633,8 +633,12 @@ sub is_known {
 
 sub is_known_extra {
     my $self = shift;
-    return 1 if $self->_select_domain_db( id_domain => $self->id
-                , _table => "domains_".lc($self->type));
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains_".lc($self->type)
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    my ($id) = $sth->fetchrow;
+    return 1 if $id;
     return 0;
 }
 
@@ -806,7 +810,8 @@ sub info($self, $user) {
         ,spice_password => $self->spice_password
         ,display_url => $self->display($user)
         ,description => $self->description
-        ,msg_timeout => $self->_msg_timeout
+        ,msg_timeout => ( $self->_msg_timeout or undef)
+        ,has_clones => ( $self->has_clones or undef)
     };
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
@@ -823,7 +828,7 @@ sub info($self, $user) {
 }
 
 sub _msg_timeout($self) {
-    return undef if !$self->run_timeout;
+    return if !$self->run_timeout;
     my $msg_timeout = '';
 
     for my $request ( $self->list_all_requests ) {
@@ -875,6 +880,8 @@ sub _insert_db {
 }
 
 sub _insert_db_extra($self) {
+    return if !$self->is_known_extra();
+
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domains_".lc($self->type)
         ." ( id_domain ) VALUES (?) ");
     $sth->execute($self->id);
@@ -1389,9 +1396,7 @@ sub _around_shutdown_now {
     my $self = shift;
     my $user = shift;
 
-    $self->list_disks;
     $self->_pre_shutdown(user => $user);
-
     if ($self->is_active) {
         $self->$orig($user);
     }
