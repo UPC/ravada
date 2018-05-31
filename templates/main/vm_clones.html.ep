@@ -1,0 +1,7 @@
+<div class="panel-body">
+<div class="form-group">
+
+    <form class="form-inline" action="<%= $action %>" method="post">
+    </form>
+</div>
+</div>
