@@ -383,7 +383,7 @@ sub remove_qemu_pools {
         diag("Removing ".$pool->get_name." storage_pool");
         $pool->destroy();
         eval { $pool->undefine() };
-        warn $@ if$@;
+        warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
 
