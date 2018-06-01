@@ -1519,6 +1519,7 @@ sub _xml_add_usb_xhci {
     $address->setAttribute(bus => '0x00');
     $address->setAttribute(slot => '0x07');
     $address->setAttribute(function => '0x0');
+    
 }
 
 sub _xml_add_usb_ehci1 {
