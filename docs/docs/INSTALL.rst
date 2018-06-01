@@ -54,8 +54,8 @@ Then install the ravada package, it will show some errors, it is ok, keep readin
 
 ::
 
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.15_all.deb
-    $ sudo dpkg -i ravada_0.2.15_all.deb
+    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.16_all.deb
+    $ sudo dpkg -i ravada_0.2.16_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
