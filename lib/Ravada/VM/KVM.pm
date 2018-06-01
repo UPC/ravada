@@ -150,7 +150,6 @@ sub _load_storage_pool {
     }
 
     for my $pool ($self->vm->list_storage_pools) {
-        warn $pool->get_name;
         my $info = $pool->get_info();
         next if defined $available
                 && $info->{available} <= $available;
