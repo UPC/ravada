@@ -107,6 +107,24 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.pingbe_fail = !response.data;
     });
     $scope.getMachines = function() {
+        if( $scope.check_netdata && $scope.check_netdata != "0" ) {
+            var url = $scope.check_netdata;
+            $scope.check_netdata = 0;
+            $http.get(url+"?"+Date()).then(function(response) {
+                if (response.status == 200 || response.status == 400 ) {
+                    $scope.monitoring=1;
+                    $http.get("/session/monitoring/1").then(function(response) {
+                        window.location.reload();
+                    });
+                } else {
+                    $scope.monitoring=0;
+                    $http.get("/session/monitoring/0");
+                }
+            }, function(response) {
+                $scope.monitoring=0;
+                $http.get("/session/monitoring/0");
+            });
+      }
       if(!$scope.modalOpened){
         $http.get("/requests.json").then(function(response) {
           $scope.requests=response.data;

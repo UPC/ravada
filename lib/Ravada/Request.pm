@@ -45,6 +45,8 @@ our %VALID_ARG = (
          ,memory => 2
            ,disk => 2
         ,network => 2
+      ,remote_ip => 2
+          ,start => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -57,7 +59,7 @@ our %VALID_ARG = (
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,autostart_domain => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
-    ,start_domain => {%$args_manage, remote_ip => 1 }
+    ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
@@ -69,7 +71,7 @@ our %VALID_ARG = (
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
-            autostart_domain
+            autostart_domain hibernate hybernate
     );
 
 our $CONNECTOR;
@@ -130,6 +132,27 @@ sub open {
 
     bless ($row, $class);
     return $row;
+}
+
+=head2 info
+
+Returns information of the request
+
+=cut
+
+sub info {
+    my $self = shift;
+    my $user = shift;
+    confess "USER ".$user->name." not authorized"
+        unless $user->is_admin
+            || ($self->defined_arg('uid') && $user->id == $self->args('uid'))
+            || ($self->defined_arg('id_owner') && $user->id == $self->args('id_owner'));
+
+    return {
+        status => $self->status
+        ,error => $self->error
+        ,id_domain => $self->id_domain
+    }
 }
 
 =head2 create_domain
@@ -202,10 +225,13 @@ sub start_domain {
 
     my $args = _check_args('start_domain', @_);
 
+    confess "ERROR: choose either id_domain or name "
+        if $args->{id_domain} && $args->{name};
+
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'start' , args => encode_json($args));
+    return $self->_new_request(command => 'start' , args => $args);
 }
 
 =head2 pause_domain
@@ -307,7 +333,7 @@ sub shutdown_domain {
 
     my $args = _check_args('shutdown_domain', @_ );
 
-    $args->{timeout} = 10 if !exists $args->{timeout};
+    $args->{timeout} = 120 if !exists $args->{timeout};
 
     confess "ERROR: You must supply either id_domain or name ".Dumper($args)
         if !$args->{id_domain} && !$args->{name};

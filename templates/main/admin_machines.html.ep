@@ -3,7 +3,7 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div ng-controller="machinesPage" ng-init="hide_clones=<%= $hide_clones %>">
+    <div ng-controller="machinesPage" ng-init="hide_clones=<%= $hide_clones %>;check_netdata='<%= $check_netdata %>'" >
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
@@ -237,35 +237,34 @@
                     </td>
                     <td class="lgMachToggle">
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
-%              if ($_user-> can_clone){
                         <a type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
                          ng-disabled="machine.is_active"
+                         ng-show="machine.can_start"
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
                         </a>
-%				}
-%		if ($_user->is_admin){
                         <a type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hybernate',machine.id)"
                          ng-disabled="!machine.is_active"
+                         ng-show="machine.can_shutdown"
                          title="<%=l 'Hybernate' %>">
                           <i class="fa fa-pause"></i>
                        </a>
-%				}
-%		if ($_user->can_shutdown_all){
                         <a type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
+                         ng-show="machine.can_shutdown"
                          title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
                        </a>
-%                        }
+%                   if ($_user->is_admin) {
                         <a type="button" class="btn btn-primary btn-sm"
                          ng-href="/machine/view/{{machine.id}}.html"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                         </a>
+%                   }
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
@@ -361,23 +360,27 @@
                           <a type="button" class="btn btn-success btn-sm"
                            ng-click="action('machine','start',child.id)"
                            ng-disabled="child.is_active"
+                           ng-show="child.can_start"
                            title="<%=l 'Start' %>">
                             <i class="fa fa-play"></i>
                           </a>
                           <a type="button" class="btn btn-warning btn-sm"
                             ng-click="action('machine','hybernate',child.id)"
                             ng-disabled="!child.is_active"
+                           ng-show="child.can_shutdown"
                             title="<%=l 'Hybernate' %>">
                             <i class="fa fa-pause"></i>
                           </a>
                           <a type="button" class="btn btn-danger btn-sm"
                            ng-click="action('machine','shutdown',child.id)"
                            ng-disabled="!child.is_active"
+                           ng-show="child.can_shutdown"
                            title="<%=l 'ShutDown' %>">
                             <i class="fa fa-power-off"></i>
                          </a>
                           <a type="button" class="btn btn-primary btn-sm"
                            ng-href="/machine/view/{{child.id}}.html"
+                           ng-show="child.can_view"
                            title="<%=l 'View' %>">
                             <i class="fa fa-desktop"></i>
                           </a>

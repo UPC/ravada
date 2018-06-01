@@ -16,6 +16,9 @@ use Mojo::Home;
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
 #####
+#
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use lib 'lib';
 
@@ -65,6 +68,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               }
                                       ,file => $FILE_CONFIG
 };
+
 #####
 #####
 #####
@@ -126,7 +130,8 @@ hook before_routes => sub {
             ,_anonymous => undef
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
-            ,monitoring => $CONFIG_FRONT->{monitoring}
+            ,monitoring => 0
+            ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
             );
@@ -147,6 +152,12 @@ hook before_routes => sub {
 
     _logged_in($c)  if $url =~ m{^/requirements};
 
+    if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
+        if (!defined $c->session('monitoring')) {
+            $c->stash(check_netdata => "https://$host:19999/index.html");
+        }
+        $c->stash( monitoring => 1) if $c->session('monitoring');
+    }
 };
 
 
@@ -290,9 +301,8 @@ get '/list_machines.json' => sub {
             || $USER->can_list_own_machines()
             || $USER->can_list_clones()
             || $USER->can_list_clones_from_own_base()
+            || $USER->is_admin()
         );
-
-    return $c->render( json => $RAVADA->list_domains )  if $USER->can_list_machines;
 
     return $c->render( json => $RAVADA->list_machines($USER) );
 
@@ -329,7 +339,7 @@ get '/machine/info/(:id).(:type)' => sub {
     return access_denied($c) unless $USER->is_admin
                               || $domain->id_owner == $USER->id;
 
-    $c->render(json => $RAVADA->domain_info(id => $id));
+    $c->render(json => $domain->info($USER) );
 };
 
 any '/machine/settings/(:id).(:type)' => sub {
@@ -371,16 +381,10 @@ get '/machine/clone/(:id).(:type)' => sub {
 
 get '/machine/shutdown/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)        if !$USER ->can_shutdown_all();
+    return access_denied($c)        if !$USER ->can_shutdown($c->stash('id'));
+
         return shutdown_machine($c);
 };
-
-get '/machine/shutdown/(:id).(:type)' => sub {
-        my $c = shift;
-	return access_denied($c)        if !$USER ->can_shutdown_all();
-        return shutdown_machine($c);
-};
-
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
@@ -433,7 +437,9 @@ get '/machine/pause/(:id).(:type)' => sub {
 
 get '/machine/hybernate/(:id).(:type)' => sub {
         my $c = shift;
-	return access_denied($c)   if !$USER ->is_admin();
+          return access_denied($c)
+             unless $USER->is_admin() || $USER->can_shutdown($c->stash('id'));
+
         return hybernate_machine($c);
 };
 
@@ -567,6 +573,10 @@ get '/request/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
 
+    if ($c->stash('type') eq 'json') {
+        my $request = Ravada::Request->open($id);
+        return $c->render(json => $request->info($USER));
+    }
     return _show_request($c,$id);
 };
 
@@ -764,6 +774,23 @@ get '/iso/download/(#id).json' => sub {
 
     return $c->render(json => {request => $req->id});
 };
+
+###################################################
+#
+# session settings
+#
+get '/session/(#tag)/(#value)' => sub {
+    my $c = shift;
+    my %allowed = map { $_ => 1 } qw(monitoring);
+
+    my $tag = $c->stash('tag');
+    my $value = $c->stash('value');
+
+    return $c->render( json => { error => "Session $tag not allowed" }) if !$allowed{$tag};
+
+    $c->session($tag => $value);
+    return $c->render( json => { ok => "Session $tag set to $value " });
+};
 ###################################################
 
 sub _init_error {
@@ -860,7 +887,6 @@ sub login {
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
-                      ,monitoring => $CONFIG_FRONT->{monitoring}
                       ,guide => $CONFIG_FRONT->{guide}
     );
 }
@@ -923,16 +949,6 @@ sub render_machines_user {
     );
 }
 
-sub create_domain {
-    my ($c, $id_base, $domain_name, $ram, $disk) = @_;
-    return $c->redirect_to('/login') if !$USER;
-    my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
-    my $domain = provision($c,  $id_base,  $domain_name, $ram, $disk);
-    return show_failure($c, $domain_name) if !$domain;
-    return show_link($c,$domain);
-
-}
-
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
 
@@ -944,16 +960,12 @@ sub quick_start_domain {
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
     my $domain_name = $base->name."-".$name;
-
     $domain_name =~ tr/[\.]/[\-]/;
+
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
+    $domain_name = $domain->name if $domain;
 
-    $domain = provision($c,  $id_base,  $domain_name)
-        if !$domain || $domain->is_base;
-
-    return show_failure($c, $domain_name) if !$domain;
-
-    return show_link($c,$domain);
+    return run_request($c,provision_req($c, $id_base, $domain_name));
 
 }
 
@@ -1110,156 +1122,50 @@ sub base_id {
     return $base->id;
 }
 
-sub provision {
-    my $c = shift;
-    my $id_base = shift;
-    my $name = shift or confess "Missing name";
-    my $ram = shift;
-    my $disk = shift;
+sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 
-    die "Missing id_base "  if !defined $id_base;
-    die "Missing name "     if !defined $name;
-
-    my $domain;
-    $domain = $RAVADA->search_domain($name) if $RAVADA->domain_exists($name);
-    return $domain if $domain && !$domain->is_base;
-
-    if ($domain) {
-        my $count = 2;
-        my $name2;
-        while ($domain && $domain->is_base) {
-            $name2 = "$name-$count";
-            $domain = $RAVADA->search_domain($name2);
-            $count++;
+    if ( $RAVADA->domain_exists($name) ) {
+        my $domain = $RAVADA->search_domain($name);
+        if ( !$domain->is_base ) {
+            if ($domain->is_active) {
+                return Ravada::Request->open_iptables(
+                    uid => $USER->id
+                , id_domain => $domain->id
+                , remote_ip => _remote_ip($c)
+                );
+            }
+            return Ravada::Request->start_domain(
+                uid => $USER->id
+                , id_domain => $domain->id
+                , remote_ip => _remote_ip($c)
+            )
         }
-        return $domain if $domain;
-        $name = $name2;
+        $name = _new_domain_name($name);
     }
-
-    my @create_args = ( memory => $ram ) if $ram;
-    push @create_args , ( disk => $disk) if $disk;
+    my @create_args = ( start => 1, remote_ip => _remote_ip($c));
+    push @create_args, ( memory => $ram ) if $ram;
+    push @create_args, (   disk => $disk) if $disk;
     my $req = Ravada::Request->create_domain(
              name => $name
         , id_base => $id_base
        , id_owner => $USER->id
        ,@create_args
     );
-    $RAVADA->wait_request($req, 60);
 
-    if ( $req->status ne 'done' ) {
-        $c->stash(error_title => "Request ".$req->command." ".$req->status());
-        $c->stash(error =>
-            "Domain provisioning request not finished, status='".$req->status."'.");
-
-        my $req_link = "/request/".$req->id.".html";
-        $req_link = "/anonymous$req_link"   if $USER->is_temporary;
-
-        $c->stash(link => $req_link);
-        $c->stash(link_msg => '');
-        return;
-    }
-    $domain = $RAVADA->search_domain($name);
-    if ( $req->error ) {
-        $c->stash(error => $req->error)
-    } elsif (!$domain) {
-        $c->stash(error => "I dunno why but no domain $name");
-    }
-    return $domain;
 }
 
-sub show_link {
-    my $c = shift;
-    my $domain = shift or confess "Missing domain";
-
-    confess "Domain is not a ref $domain " if !ref $domain;
-
-    return access_denied($c) if $USER->id != $domain->id_owner && !$USER->is_admin;
-
-    my $req;
-    if ( !$domain->is_active ) {
-        $req = Ravada::Request->start_domain(
-                                         uid => $USER->id
-                                       ,name => $domain->name
-                                  ,remote_ip => _remote_ip($c)
-        );
-
-        $RAVADA->wait_request($req);
-        warn "ERROR: req id: ".$req->id." error:".$req->error if $req->error();
-
-        return $c->render(data => 'ERROR starting domain '
-                ."status:'".$req->status."' ( ".$req->error.")")
-            if $req->error
-                && $req->error !~ /already running/i
-                && $req->status ne 'waiting';
-
-        my $req_link = "/request/".$req->id.".html";
-        $req_link = "/anonymous$req_link"   if $USER->is_temporary;
-        return $c->redirect_to($req_link);
-#            if !$req->status eq 'done';
+sub _new_domain_name {
+    my $name = shift;
+    my $count = 1;
+    my $name2;
+    for ( ;; ) {
+        $name2 = "$name-".++$count;
+        return $name2 if !$RAVADA->domain_exists($name2);
     }
-    if ( $domain->is_paused) {
-        $req = Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id
-                    , remote_ip => _remote_ip($c)
-        );
-
-        $RAVADA->wait_request($req);
-        warn "ERROR: ".$req->error if $req->error();
-
-        return $c->render(data => 'ERROR resuming domain '.$req->error)
-            if $req->error && $req->error !~ /already running/i;
-
-        return $c->redirect_to("/request/".$req->id.".html")
-            if !$req->status eq 'done';
-    }
-
-    my $uri = $domain->display($USER) if $domain->is_active;
-    if (!$uri) {
-        my $name = '';
-        $name = $domain->name if $domain;
-        $c->render(template => 'fail', name => $domain->name);
-        return;
-    }
-    _open_iptables($c,$domain)
-        if !$req;
-    my $uri_file = "/machine/display/".$domain->id;
-    $c->stash(url => $uri_file)  if $c->session('auto_view') && ! $domain->spice_password;
-    my ($display_ip, $display_port) = $uri =~ m{\w+://(\d+\.\d+\.\d+\.\d+):(\d+)};
-    my $description = $domain->description;
-    if (!$description && $domain->id_base) {
-        my $base = Ravada::Domain->open($domain->id_base);
-        $description = $base->description();
-    }
-    $c->stash(description => $description);
-    $c->stash(domain => $domain );
-    $c->stash(msg_timeout => _message_timeout($domain));
-    $c->render(template => 'main/run'
-                ,name => $domain->name
-                ,password => $domain->spice_password
-                ,url_display => $uri
-                ,url_display_file => $uri_file
-                ,display_ip => $display_ip
-                ,display_port => $display_port
-                ,description => $description
-                ,login => $c->session('login'));
 }
 
-sub _message_timeout {
-    my $domain = shift;
-    my $msg_timeout = '';
-
-    if (int ($domain->run_timeout / 60 )) {
-        $msg_timeout = "in ".int($domain->run_timeout / 60 )." minutes.";
-    }
-
-    for my $request ( $domain->list_all_requests ) {
-        if ( $request->command =~ 'shutdown' ) {
-            my $t1 = Time::Piece->localtime($request->at_time);
-            my $t2 = localtime();
-
-            $msg_timeout = " in ".($t1 - $t2)->pretty;
-        }
-    }
-    return $msg_timeout;
+sub run_request($c, $request) {
+    return $c->render(template => 'main/run_request', request => $request );
 }
 
 sub _open_iptables {
@@ -1503,7 +1409,12 @@ sub view_machine {
     $domain =  _search_requested_machine($c) if !$domain;
     return $c->render(template => 'main/fail') if !$domain;
 
-    return show_link($c, $domain);
+    return run_request($c, Ravada::Request->start_domain(
+                    uid => $USER->id
+             ,id_domain => $domain->id
+            , remote_ip => _remote_ip($c)
+            )
+    );
 }
 
 sub clone_machine {
