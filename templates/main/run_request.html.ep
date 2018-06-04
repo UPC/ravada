@@ -61,7 +61,9 @@
             </div>
             <div class="panel-body"
                 ng-show="domain && request.status == 'done' && !domain.is_active">
-                 The machine has shut down. <button type="submit" onclick="location.reload('forceGet')">Start again</button>
+                <div ng-show="request.error">{{request.error}}</div>
+                <div ng-show="request.error == ''">The machine has shut down.</div>
+                 <button type="submit" onclick="location.reload('forceGet')">Start again</button>
             </div>
 
         </div>
