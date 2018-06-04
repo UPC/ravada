@@ -898,6 +898,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
+    $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
 

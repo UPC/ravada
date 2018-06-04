@@ -1921,4 +1921,8 @@ sub is_active($self) {
     return 0;
 }
 
+sub free_memory($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    return ($info->{free} + $info->{buffers} + $info->{cached});
+}
 1;

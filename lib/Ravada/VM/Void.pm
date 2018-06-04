@@ -179,6 +179,7 @@ sub ping { return 1 }
 
 sub is_active { return 1 }
 
+sub free_memory { return 1000 * 1000}
 #########################################################################3
 
 1;

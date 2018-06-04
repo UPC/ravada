@@ -54,8 +54,6 @@ sub test_min_freemem {
     is($req->status, 'done');
     like($req->error, qr'memory'i);
 
-    diag($req->error);
-
     $domain->remove(user_admin);
 }
 #################################################################################
