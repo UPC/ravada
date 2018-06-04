@@ -1131,7 +1131,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 
     if ( $RAVADA->domain_exists($name) ) {
         my $domain = $RAVADA->search_domain($name);
-        if ( !$domain->is_base ) {
+        if ( $domain->id_owner == $USER->id && !$domain->is_base ) {
             if ($domain->is_active) {
                 return Ravada::Request->open_iptables(
                     uid => $USER->id
