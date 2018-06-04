@@ -66,3 +66,20 @@ set a default *storage_pool* like this:
 
 Then restart rvd_back running *systemctl restart rvd_back*.
 
+Chek free memory ( from v0.3 )
+------------------------------
+
+Before start the domain, free memory of the Virtual Manager can be checked.
+This feature is only available in the development release.
+
+First check the id field of the Virtual Manager in the table *vms*, then
+set the minimun of free available memory. In this example we require a
+minimun of 2 GB free:
+
+::
+
+    $ mysql -u rvd_user -p ravada
+    mysql> select * from vms;
+    mysql> update vms set min_free_memory=2000000 where id=*id*;
+
+
