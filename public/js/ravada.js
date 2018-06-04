@@ -95,22 +95,17 @@
                 setTimeout(function(){ }, 2000);
                 window.location.reload();
             };
-            $scope.action = function(machineId) {
-//                alert(machineId+" - "+$scope.host_action);
-                if ( $scope.host_action.indexOf('restore') !== -1 ) {
+            $scope.action = function(machineId, action) {
+                if ( action == 'restore' ) {
                     $scope.host_restore = machineId;
                     $scope.host_shutdown = 0;
-                } else if ($scope.host_action.indexOf('shutdown') !== -1) {
-                    $scope.host_shutdown = machineId;
+                } else if (action == 'shutdown' || action == 'hibernate') {
                     $scope.host_restore = 0;
-                    $http.get( '/machine/shutdown/'+machineId+'.json');
-                    window.location.reload();
-                }  else if ($scope.host_action.indexOf('hybernate') !== -1) {
-                    $scope.host_hybernate = machineId;
-                    $scope.host_restore = 0;
-                    $http.get( '/machine/hybernate/'+machineId+'.json');
-                    window.location.reload();
-                } 
+                    $scope.host_action = -1;
+                    $http.get( '/machine/'+action+'/'+machineId+'.json');
+                } else {
+                    alert("unknown action "+action);
+                }
 
             };
 
@@ -126,12 +121,15 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-            
+            $http.get('/list_machines_user.json').then(function(response) {
+                $scope.machines = response.data;
+            });
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
             };
             $scope.startIntro = startIntro;
+            $scope.host_action = 0;
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {

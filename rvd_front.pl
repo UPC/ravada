@@ -308,6 +308,11 @@ get '/list_machines.json' => sub {
 
 };
 
+get '/list_machines_user.json' => sub {
+    my $c = shift;
+    return $c->render( json => $RAVADA->list_machines_user($USER));
+};
+
 get '/list_bases_anonymous.json' => sub {
     my $c = shift;
 
@@ -943,7 +948,7 @@ sub render_machines_user {
         push @{$c->stash->{js}}, '/js/ravada_guide.js';
     }
     return $c->render(
-        template => 'main/list_bases2'
+        template => 'main/list_bases_ng'
         ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER
     );
