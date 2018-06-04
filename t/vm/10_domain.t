@@ -45,6 +45,7 @@ sub test_change_owner {
 
     $domain = Ravada::Domain->open($domain->id);
     is($USER2->id, $domain->id_owner) or return;
+    $USER2->remove();
 }
 
 sub test_vm_connect {
