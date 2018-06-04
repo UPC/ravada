@@ -689,3 +689,12 @@ msgstr ""
 
 msgid "This information will be available to the users"
 msgstr ""
+
+msgid "Volatile Clones"
+msgstr ""
+
+msgid "Owner"
+msgstr ""
+
+msgid "Change the owner of the machine"
+msgstr ""

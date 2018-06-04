@@ -66,6 +66,7 @@ our %VALID_ARG = (
     ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2, verbose => 2}
     ,refresh_storage => { id_vm => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
+    ,change_owner => {uid => 1, id_domain => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -744,7 +745,7 @@ sub copy_screenshot {
       ,id_domain => $args->{id_domain}
       ,args => $args
       );
-  
+
 }
 
 =head2 open_iptables
@@ -916,6 +917,32 @@ sub clone {
 
     return _new_request($self
         , command => 'clone'
+        , args =>$args
+    );
+}
+
+=head2 change_owner
+
+Changes the owner of a machine
+
+    my $req = Ravada::Request->change_owner(
+             ,uid => $user->id
+              id_domain => $domain->id
+    );
+
+=cut
+
+sub change_owner {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('change_owner', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return _new_request($self
+        , command => 'change_owner'
         , args =>$args
     );
 }
