@@ -440,7 +440,7 @@ get '/machine/pause/(:id).(:type)' => sub {
         return pause_machine($c);
 };
 
-get '/machine/hybernate/(:id).(:type)' => sub {
+get '/machine/hibernate/(:id).(:type)' => sub {
         my $c = shift;
           return access_denied($c)
              unless $USER->is_admin() || $USER->can_shutdown($c->stash('id'));

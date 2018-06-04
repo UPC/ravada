@@ -7,21 +7,11 @@
 <script>
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
-% my $public_bases = 0;
-% my $private_bases = 0;
-% for my $machine(@$machines) {
-%   if ($machine->{is_public}) {
-%       $public_bases++;
-%   } else {
-%       $private_bases++;
-%   }
-% }
 
-
-<div id="page-wrapper">
-
+<div id="page-wrapper" ng-controller="bases">
+%= include 'main/list_bases_ng_head'
     <!--MACHINES SELECTION-->
-<div class="page-header" ng-controller="bases">
+    <div class="panel-body">
     <div ng-repeat="machine in machines"
          class="col-sm-4"
                 ng-show="machine.is_public || (!machine.is_public && !only_public)">
@@ -59,69 +49,44 @@
                             ng-click="restore(machine.id_clone)"
                             ><%=l 'Yes' %></a>
                     </div>
-                 <a ng-show="machine.is_active && host_action != machine.id" class="btn btn-default"
-                                                ng-click="host_action=machine.id"
-                                                type="button"><%=l 'action'%> {{host_action}}</a>
+                 <a ng-show="machine.is_active && host_action != machine.id"
+                        class="btn btn-default"
+                        ng-click="host_action=machine.id;$parent.refresh=false"
+                        type="button"><%=l 'action'%></a>
                     <span
                             ng-show="host_action == machine.id && !host_restore"
                             >
-                        <a type="button" class="btn btn-default"
+                        <a type="button" class="btn btn-default btn-sm"
                             ng-click="host_restore=machine.id_clone"
                         ><%=l 'Restore' %></a>
-                        <a ng-show="machine.is_active" type="button" class="btn btn-default"
-                            ng-click="action(machine.id,'shutdown')"
+
+                        <a ng-show="machine.is_active" type="button"
+                                                       class="btn btn-default btn-sm"
+                            ng-click="action(machine.id_clone,'shutdown');host_action=-1"
                         ><%=l 'Shutdown'%></a>
-                        <a type="button" class="btn btn-default"><%=l 'Hibernate' %></a>
+
+                        <a ng-show="machine.is_active" type="button"
+                                                       class="btn btn-default btn-sm"
+                            ng-click="action(machine.id_clone,'hibernate');host_action=-1"
+                        ><%=l 'Hibernate' %></a>
+
                         <a type="button" class="label label-default"
                            ng-click="host_action=0"
-                           >X</a>
+                           ><span class="glyphicon glyphicon-arrow-left"></a>
                     </span>
 %			        if ($user->can_change_settings || $user->can_change_settings_all){
-                        <a ng-show="host_action != machine.id"
+                        <a ng-show="host_action != machine.id && host_restore != machine.id_clone"
                             align="right" href="/machine/settings/{{machine.id}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
 %                   }
 
             </div>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h2><%=l 'Choose a Machine to Start' %></h2>
-%       if ( $guide and $public_bases ) {
-            <a class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
-%           }
-%           if ($user->is_admin && $public_bases && $private_bases) {
-            <div ng-cloak>
-                <a ng-click="toggle_only_public()" class="label label-primary"
-                  align="right" ng-show="!only_public"><%=l 'Hide Private' %></a>
-                <a ng-click="toggle_only_public()" class="label label-primary"
-                  align="right" ng-show="only_public"><%=l 'Show All' %></a>
-%           }
-            </div>
-
-        </div>
-        <div class="panel-body">
-%       if (! $public_bases ) {
-            <div class="panel panel-warning">
-            <div class="panel-heading">
-%           if ($user && $user->is_admin) {
-                <%=l 'There are no public bases available in this system.' %>
-                <a href="/admin/machines"><%=l 'Create one.' %></a>
-%           } else {
-                <%=l 'There are no machines available in this system.' %>
-%           }
-            </div>
-            </div>
-%       }
-        </div>
-    </div>
-    </div>
-    </div>
-</div><!-- page header -->
+    </div><!-- panel body -->
 </div><!-- page wrapper -->
 %= include 'bootstrap/scripts'
 
-</div>
+</div><!-- wrapper -->
 
 <style>
 .introjs-tooltip {

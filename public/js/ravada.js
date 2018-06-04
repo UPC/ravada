@@ -85,17 +85,16 @@
 
     };
     // list machines
-        function mainpageCrtl($scope, $http, request, listMach) {
+        function mainpageCrtl($scope, $http, $timeout, request, listMach) {
             $scope.set_restore=function(machineId) {
                 $scope.host_restore = machineId;
             };
             $scope.restore= function(machineId){
                 var toGet = '/machine/remove/'+machineId+'.html?sure=yes';
                 $http.get(toGet);
-                setTimeout(function(){ }, 2000);
-                window.location.reload();
             };
             $scope.action = function(machineId, action) {
+                $scope.refresh = true;
                 if ( action == 'restore' ) {
                     $scope.host_restore = machineId;
                     $scope.host_shutdown = 0;
@@ -107,6 +106,21 @@
                     alert("unknown action "+action);
                 }
 
+            };
+
+            $scope.list_machines_user = function() {
+                var seconds = 5000;
+                if ($scope.refresh) {
+                    $http.get('/list_machines_user.json').then(function(response) {
+                        $scope.machines = response.data;
+                    });
+                } else {
+                    seconds = 60000;
+                    $scope.refresh = true;
+                }
+                $timeout(function() {
+                        $scope.list_machines_user();
+                }, seconds);
             };
 
             $url_list = "/list_bases.json";
@@ -121,15 +135,14 @@
                 $scope.pingbe_fail = !response.data;
 
             });
-            $http.get('/list_machines_user.json').then(function(response) {
-                $scope.machines = response.data;
-            });
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
             };
             $scope.startIntro = startIntro;
             $scope.host_action = 0;
+            $scope.refresh = true;
+            $scope.list_machines_user();
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
