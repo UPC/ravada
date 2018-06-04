@@ -1,0 +1,41 @@
+% my $public_bases = 0;
+% my $private_bases = 0;
+% for my $machine(@$machines) {
+%   if ($machine->{is_public}) {
+%       $public_bases++;
+%   } else {
+%       $private_bases++;
+%   }
+% }
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+    <h2><%=l 'Choose a Machine to Start' %></h2>
+%   if ( $guide and $public_bases ) {
+        <a class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
+%   }
+%   if ($user->is_admin && $public_bases && $private_bases) {
+        <div ng-cloak>
+            <a ng-click="toggle_only_public()" class="label label-primary"
+              align="right" ng-show="!only_public"><%=l 'Hide Private' %></a>
+            <a ng-click="toggle_only_public()" class="label label-primary"
+              align="right" ng-show="only_public"><%=l 'Show All' %></a>
+        </div>
+%   }
+
+    </div>
+%   if (! $public_bases ) {
+    <div class="panel-body">
+        <div class="panel panel-warning">
+        <div class="panel-heading">
+%           if ($user && $user->is_admin) {
+            <%=l 'There are no public bases available in this system.' %>
+            <a href="/admin/machines"><%=l 'Create one.' %></a>
+%           } else {
+            <%=l 'There are no machines available in this system.' %>
+%           }
+        </div>
+        </div>
+    </div>
+%   }
+</div>
