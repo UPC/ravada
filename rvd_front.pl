@@ -308,6 +308,11 @@ get '/list_machines.json' => sub {
 
 };
 
+get '/list_machines_user.json' => sub {
+    my $c = shift;
+    return $c->render( json => $RAVADA->list_machines_user($USER));
+};
+
 get '/list_bases_anonymous.json' => sub {
     my $c = shift;
 
@@ -435,7 +440,7 @@ get '/machine/pause/(:id).(:type)' => sub {
         return pause_machine($c);
 };
 
-get '/machine/hybernate/(:id).(:type)' => sub {
+get '/machine/hibernate/(:id).(:type)' => sub {
         my $c = shift;
           return access_denied($c)
              unless $USER->is_admin() || $USER->can_shutdown($c->stash('id'));
@@ -943,7 +948,7 @@ sub render_machines_user {
         push @{$c->stash->{js}}, '/js/ravada_guide.js';
     }
     return $c->render(
-        template => 'main/list_bases2'
+        template => 'main/list_bases_ng'
         ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER
     );
@@ -1126,7 +1131,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 
     if ( $RAVADA->domain_exists($name) ) {
         my $domain = $RAVADA->search_domain($name);
-        if ( !$domain->is_base ) {
+        if ( $domain->id_owner == $USER->id && !$domain->is_base ) {
             if ($domain->is_active) {
                 return Ravada::Request->open_iptables(
                     uid => $USER->id

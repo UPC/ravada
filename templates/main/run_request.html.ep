@@ -37,7 +37,7 @@
                             type="text" class="js-copytextarea"
                                         value="{{domain.spice_password}}"
                     />
-                    <i ng-show="password_clipboard">copied to clipboard</i>
+                    <i ng-show="password_clipboard"><%=l 'copied to clipboard' %></i>
                 </li>
 
                 <li><b>Display URL :</b>
@@ -53,10 +53,9 @@
                     ng-click="view_clicked=true; copy_password(); redirect();"
                     href="/machine/display/{{domain.id}}">
                         <b><%=l 'view'%></b></a>
-                <i>Press SHIFT + F12 to exit</i>
+                <i><%=l 'Press SHIFT + F12 to exit' %></i>
                 <br/>
-                <span ng-show="view_clicked">If you can't see the machine screen in a few seconds check for a file
-                    called <b>{{domain.id}}.vv</b> in your downloads folder.
+                <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %><b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
                 </span>
             </div>
             <div class="panel-body"
