@@ -2,8 +2,8 @@
 
 **Implemented enhancements:**
 
- Add support for Ubuntu Bionic 18.04 virtual machines [\#709]
+Add more than one USB devices in xml templates [\#733]
 
 **Fixed bugs:**
 
-Review register user form [\#715]
+Custom virtual machines fail [\#780]
