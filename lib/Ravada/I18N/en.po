@@ -698,3 +698,15 @@ msgstr ""
 
 msgid "Change the owner of the machine"
 msgstr ""
+
+msgid "Press SHIFT + F12 to exit"
+msgstr ""
+
+msgid "If you can not see the machine screen in a few seconds check for a file called"
+msgstr ""
+
+msgid "in your downloads folder."
+msgstr ""
+
+msgid "copied to clipboard"
+msgstr ""
