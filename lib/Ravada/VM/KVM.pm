@@ -1430,13 +1430,15 @@ sub _xml_modify_usb {
 #    $self->_xml_add_usb_uhci2($devices);
 #    $self->_xml_add_usb_uhci3($devices);
 
-    $self->_xml_add_usb_redirect($devices);
+    my $num_usb = 3;
+    $self->_xml_add_usb_redirect($devices, $num_usb);
 
 }
 
 sub _xml_add_usb_redirect {
     my $self = shift;
     my $devices = shift;
+    my $items = shift;
 
     my $dev=_search_xml(
           xml => $devices
@@ -1444,11 +1446,13 @@ sub _xml_add_usb_redirect {
         , bus => 'usb'
         ,type => 'spicevmc'
     );
-    return if $dev;
-
-    $dev = $devices->addNewChild(undef,'redirdev');
-    $dev->setAttribute( bus => 'usb');
-    $dev->setAttribute(type => 'spicevmc');
+    $items = $items - 1 if $dev;
+    
+    for (my $var = 0; $var < $items; $var++) {
+        $dev = $devices->addNewChild(undef,'redirdev');
+        $dev->setAttribute( bus => 'usb');
+        $dev->setAttribute(type => 'spicevmc');
+    }
 
 }
 
