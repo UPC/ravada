@@ -2388,6 +2388,8 @@ sub _req_method {
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
+,add_hardware => \&_cmd_add_hardware
+,remove_hardware => \&_cmd_remove_hardware
 
     );
     return $methods{$cmd};

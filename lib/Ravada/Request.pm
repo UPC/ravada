@@ -67,6 +67,8 @@ our %VALID_ARG = (
     ,refresh_storage => { id_vm => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
     ,change_owner => {uid => 1, id_domain => 1}
+    ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -819,6 +821,62 @@ sub set_driver {
              , args => encode_json($args)
     );
 
+}
+
+=head2 set_hardware
+
+    Sets hardware to a VM
+    
+    $domain->set_hardware(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,name_hardware => 'usb'
+    );
+    
+=cut
+
+sub set_hardware {
+    my $proto = shift;
+    my $class = ref($proto) || &proto;
+    
+    my $args = _check_args('set_hardware', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'set_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+
+=head2 remove_hardware
+
+    Removes hardware to a VM
+    
+    $domain->remove_hardware(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,name_hardware => 'usb'
+    );
+    
+=cut
+
+sub remove_hardware {
+    my $proto = shift;
+    my $class = ref($proto) || &proto;
+    
+    my $args = _check_args('remove_hardware', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'remove_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
 }
 
 =head2 hybernate

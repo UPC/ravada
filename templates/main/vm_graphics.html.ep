@@ -18,6 +18,7 @@
     <div class="row">
         <div class="col-md-6"></div><div class="col-md-1"><i><%=l 'recommended' %></i></div>
     </div>
+    <%= ref($domain) %>
     <form class="form-horizontal" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(image jpeg zlib playback streaming)) {
 %           my $driver = $domain->drivers($driver_name) or next;

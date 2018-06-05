@@ -1350,6 +1350,17 @@ sub settings_machine {
             push @reqs,($req2);
         }
     }
+    
+    for my $hardware (qw(usb)) {#add hardware here
+        if ( $c->param($hardware) ) {
+            my $req3 = Ravada::Request->set_hardware(uid => $USER->id
+                , id_domain => $domain->id
+                , name_hardware => $hardware
+            );
+            $c->stash(message => 'Changes will apply on next start');
+            push @reqs, ($req3);
+        }
+    }
 
     for my $option (qw(description run_timeout volatile_clones)) {
         if ( defined $c->param($option) && defined $c->param("submitbtn") ) {
