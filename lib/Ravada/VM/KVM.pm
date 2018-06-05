@@ -608,7 +608,7 @@ sub _domain_create_from_iso {
     my $device_cdrom;
 
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file;
+        if !$iso->{url} && !$args{iso_file} && !$iso->{device};
 
     if ($iso_file) {
         if ( $iso_file ne "<NONE>") {
@@ -900,7 +900,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
     confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
-        if !$iso->{md5} && !$iso->{sha256};
+        if $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
     if (! -e $device || ! -s $device) {
@@ -1126,6 +1126,11 @@ sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    if (!$row->{file_re} && !$row->{url} && $row->{device}) {
+         my ($file) = $row->{device} =~ m{.*/(.*)};
+         $row->{filename} = $file;
+         return;
+    }
     return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
