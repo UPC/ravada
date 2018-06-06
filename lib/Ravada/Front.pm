@@ -175,24 +175,36 @@ sub list_machines_user {
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines;
 
+    my @list = ();
     if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
         my $machines = $self->list_bases( id_owner => $user->id );
         for my $base (@$machines) {
             confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
             push @$machines,@{$self->list_domains( id_base => $base->{id} )};
         }
-        return $machines;
+        push @list,(@$machines);
     }
     if ($user->can_remove_clone_all()) {
         my $machines = $self->list_bases( );
         for my $base (@$machines) {
             push @$machines,@{$self->list_domains( id_base => $base->{id} )};
         }
-        return $machines;
+        push @list,(@$machines);
 
     }
-    return $self->list_clones() if $user->can_list_clones;
-    return [];
+    push @list,(@{$self->list_clones()}) if $user->can_list_clones;
+    if ($user->can_create_base) {
+        my $machines = $self->list_domains(id_owner => $user->id);
+        for my $clone (@$machines) {
+            next if !$clone->{id_base};
+            push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
+        }
+        push @list,(@$machines);
+    }
+    return [@list] if scalar @list < 2;
+
+    my %uniq = map { $_->{name} => $_ } @list;
+    return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
 sub _around_list_machines($orig, $self, $user) {
@@ -205,6 +217,9 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_view} = 0;
         $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
     }
     return $machines;
 }
