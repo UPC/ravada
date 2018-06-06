@@ -1670,7 +1670,7 @@ sub _set_controller_usb($self,$numero, $tipo="spicevmc") {
     
     if ( $numero > $count ) {
         my $missing = $numero-$count-1;
-        warn "-------------------->$missing usb will be created";
+        
         for my $i (0..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
