@@ -652,7 +652,9 @@ sub _update_data {
     $self->_remove_old_isos();
     $self->_update_isos();
 
-    $self->_update_grants();
+    $self->_rename_grants();
+    $self->_alias_grants();
+    $self->_add_grants();
     $self->_enable_grants();
     $self->_update_user_grants();
 
@@ -662,22 +664,50 @@ sub _update_data {
 
 }
 
-sub _update_grants($self) {
+sub _rename_grants($self) {
 
     my %rename = (
         create_domain => 'create_machine'
-        ,remove_clone => 'remove_clones'
-        ,shutdown_clone => 'shutdown_clones'
+    );
+    my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types"
+            ." WHERE name=?"
     );
     for my $old ( keys %rename ) {
+        $sth_old->execute($rename{$old});
+        next if $sth_old->fetchrow;
+
         my $sth = $CONNECTOR->dbh->prepare(
                  "UPDATE grant_types"
                 ." SET name=? "
                 ." WHERE name = ?"
         );
         $sth->execute($rename{$old}, $old);
+        warn "INFO: renaming grant $old to $rename{$old}\n";
     }
+}
 
+sub _alias_grants($self) {
+
+    my %alias= (
+        remove_clone => 'remove_clones'
+        ,shutdown_clone => 'shutdown_clones'
+    );
+
+    my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types_alias"
+            ." WHERE name=? AND alias=?"
+    );
+    while (my ($old, $new) =  each(%alias)) {
+        $sth_old->execute($old, $new);
+        return if $sth_old->fetch;
+        my $sth = $CONNECTOR->dbh->prepare(
+                 "INSERT INTO grant_types_alias (name,alias)"
+                 ." VALUES(?,?) "
+        );
+        $sth->execute($old, $new);
+    }
+}
+
+sub _add_grants($self) {
     $self->_add_grant('shutdown', 1);
 }
 
@@ -740,8 +770,8 @@ sub _enable_grants($self) {
         ,'clone',           'clone_all',            'create_base', 'create_machine'
         ,'grant'
         ,'manage_users'
-        ,'remove',          'remove_all',   'remove_clones',     'remove_clone_all'
-        ,'shutdown',        'shutdown_all',    'shutdown_clones'
+        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'shutdown',        'shutdown_all',    'shutdown_clone'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");

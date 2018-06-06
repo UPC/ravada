@@ -57,7 +57,8 @@ sub test_defaults {
     ok(!$user->can_manage_users);
 
     for my $perm (user_admin->list_permissions) {
-        if ( $perm =~ m{^(clone|change_settings|screenshot|remove)$}) {
+        $perm = $perm->[0];
+        if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown)$}) {
             is($user->can_do($perm),1,$perm);
         } else {
             is($user->can_do($perm),undef,$perm);
@@ -92,6 +93,25 @@ sub test_grant {
         user_admin()->revoke($user,$perm->{name});
         is($user->can_do($perm->{name}),0, $perm->{name});
 
+    }
+
+}
+
+sub test_alias {
+    my @list_permissions = user_admin->list_permissions;
+    my @list_all_permissions = user_admin->list_all_permissions;
+
+    my $sth = $test->connector->dbh->prepare("SELECT name, alias FROM grant_types_alias");
+    $sth->execute;
+    while ( my ($name, $alias) = $sth->fetchrow) {
+        eval { is(user_admin->can_do($name),1, $name) };
+        is($@,'',$name);
+
+        eval { is(user_admin->can_do($alias),1, $alias) };
+        is($@,'',$alias);
+
+        ok(grep({ $_->[0] eq $alias } @list_permissions), $alias);
+        ok(grep({ $_->{name} eq $alias } @list_all_permissions), $alias);
     }
 
 }
@@ -654,6 +674,8 @@ sub test_clone_all {
 test_defaults();
 test_admin();
 test_grant();
+
+test_alias();
 
 test_operator();
 

@@ -12,6 +12,7 @@ Ravada::Auth::SQL - SQL authentication library for Ravada
 use Carp qw(carp);
 
 use Ravada;
+use Ravada::Utils;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
@@ -152,35 +153,34 @@ sub add_user {
 
     my $user = Ravada::Auth::SQL->search_by_id($id_user);
 
-    # temporary allow grant permissions
-    my $id_grant = _search_id_grant('grant');
-
-    $sth = $$CON->dbh->prepare(
-            "INSERT INTO grants_user "
-            ." (id_grant, id_user, allowed)"
-            ." VALUES(?,?,1) "
-        );
-    $sth->execute($id_grant, $id_user);
-    $sth->finish;
-
-    $user->grant_user_permissions($user);
+    Ravada::Utils::user_daemon->grant_user_permissions($user);
     if (!$is_admin) {
-        $user->grant_user_permissions($user);
-        $user->revoke($user,'grant');
+        Ravada::Utils::user_daemon->grant_user_permissions($user);
         return $user;
     }
-    $user->grant_admin_permissions($user);
+    Ravada::Utils::user_daemon->grant_admin_permissions($user);
     return $user;
 }
 
-sub _search_id_grant {
-    my $type = shift;
-    my $sth = $$CON->dbh->prepare("SELECT id FROM grant_types WHERE name = ?");
-    $sth->execute($type);
+sub _search_id_grant($self, $type) {
+
+    return $self->{_grant_id}->{$type}
+        if exists $self->{_grant_id}->{$type};
+
+    $self->_load_grants();
+
+    my @names = $self->_grant_alternate_name($type);
+
+    my $sth = $$CON->dbh->prepare("SELECT id FROM grant_types WHERE "
+        .join( " OR ",  map { "name=?"}@names));
+    $sth->execute(@names);
     my ($id) = $sth->fetchrow;
     $sth->finish;
 
-    confess "Unknown grant $type"   if !$id;
+    confess "Unknown grant $type\n".Dumper($self->{_grant_alias}, $self->{_grant})   if !$id;
+
+    $self->{_grant_id}->{$type} = $id;
+
     return $id;
 }
 
@@ -558,11 +558,23 @@ Returns if the user is allowed to perform a privileged action
 =cut
 
 sub can_do($self, $grant) {
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
-
     $self->_load_grants();
 
-    confess "Unknown permission '$grant'\n" if !exists $self->{_grant}->{$grant};
+    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+        if $grant !~ /^[a-z_]+$/;
+
+    $grant = $self->_grant_alias($grant);
+
+    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+        if $grant !~ /^[a-z_]+$/;
+
+    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+
+    confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
+            ."Try removing the table grant_types and start rvd_back again:\n"
+            ."mysql> drop table grant_types;\n"
+            .Dumper($self->{_grant}, $self->{_grant_alias})
+        if !exists $self->{_grant}->{$grant};
     return $self->{_grant}->{$grant};
 }
 
@@ -583,6 +595,9 @@ sub can_do_domain($self, $grant, $domain) {
 }
 
 sub _load_grants($self) {
+    $self->_load_aliases();
+    return if exists $self->{_grant};
+
     my $sth;
     eval { $sth= $$CON->dbh->prepare(
         "SELECT gt.name, gu.allowed, gt.enabled"
@@ -597,10 +612,39 @@ sub _load_grants($self) {
     $sth->bind_columns(\($name, $allowed, $enabled));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = $allowed     if $enabled;
-        $self->{_grant_disabled}->{$name} = !$enabled;
+        my $grant_alias = $self->_grant_alias($name);
+        $self->{_grant}->{$grant_alias} = $allowed     if $enabled;
+        $self->{_grant_disabled}->{$grant_alias} = !$enabled;
     }
     $sth->finish;
+
+}
+
+sub _grant_alias($self, $name) {
+    my $alias = $name;
+    return $self->{_grant_alias}->{$name} if exists $self->{_grant_alias}->{$name};
+    return $name;# if exists $self->{_grant}->{$name};
+
+}
+
+sub _grant_alternate_name($self,$name_req) {
+    my %name = ( $name_req => 1);
+    while (my($name, $alias) = each %{$self->{_grant_alias}}) {
+        $name{$name} = 1 if $name_req eq $alias;
+        $name{$alias} = 1 if $name_req eq $name;
+    }
+    return keys %name;
+}
+
+sub _load_aliases($self) {
+    return if exists $self->{_grant_alias};
+
+    my $sth = $$CON->dbh->prepare("SELECT name,alias FROM grant_types_alias");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $self->{_grant_alias}->{$row->{name}} = $row->{alias};
+    }
+
 }
 
 =head2 grant_user_permissions
@@ -693,7 +737,7 @@ sub grant($self,$user,$permission,$value=1) {
     confess "ERROR: permission '$permission' disabled "
         if $self->{_grant_disabled}->{$permission};
 
-    if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
+    if ( !$self->can_grant() && $self->name ne Ravada::Utils::user_daemon->name ) {
         my @perms = $self->list_permissions();
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
             .Dumper(\@perms);
@@ -704,7 +748,8 @@ sub grant($self,$user,$permission,$value=1) {
     my $value_sql = $user->can_do($permission);
     return $value if defined $value_sql && $value_sql eq $value;
 
-    my $id_grant = _search_id_grant($permission);
+    $permission = $self->_grant_alias($permission);
+    my $id_grant = $self->_search_id_grant($permission);
     if (! defined $user->can_do($permission)) {
         my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
@@ -750,6 +795,7 @@ Returns a list of all the available permissions
 
 sub list_all_permissions($self) {
     return if !$self->is_admin;
+    $self->_load_grants();
 
     my $sth = $$CON->dbh->prepare(
         "SELECT * FROM grant_types"
@@ -759,6 +805,7 @@ sub list_all_permissions($self) {
     $sth->execute;
     my @list;
     while (my $row = $sth->fetchrow_hashref ) {
+        $row->{name} = $self->_grant_alias($row->{name});
         lock_hash(%$row);
         push @list,($row);
     }
@@ -772,6 +819,7 @@ Returns a list of all the permissions granted to the user
 =cut
 
 sub list_permissions($self) {
+    $self->_load_grants();
     my @list;
     for my $grant (sort keys %{$self->{_grant}}) {
         push @list , (  [$grant => $self->{_grant}->{$grant} ] )
@@ -862,7 +910,7 @@ sub can_shutdown_machine($self, $domain) {
 }
 
 sub grants($self) {
-    $self->_load_grants()   if !$self->{_grant};
+    $self->_load_grants();
     return () if !$self->{_grant};
     return %{$self->{_grant}};
 }
