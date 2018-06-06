@@ -823,29 +823,28 @@ sub set_driver {
 
 }
 
-=head2 set_hardware
+=head2 add_hardware
 
     Sets hardware to a VM
     
-    $domain->set_hardware(
+    $domain->add_hardware(
         id_domain => $domain->id
         ,uid => $USER->id
-        ,name_hardware => 'usb'
+        ,hardware => 'usb'
     );
     
 =cut
 
-sub set_hardware {
+sub add_hardware {
     my $proto = shift;
-    my $class = ref($proto) || &proto;
-    
-    my $args = _check_args('set_hardware', @_);
+    my $class = ref($proto) || $proto;
+    my $args = _check_args('add_hardware', @_);
     
     my $self = {};
     bless($self, $class);
     
     return $self->_new_request(
-        command => 'set_hardware'
+        command => 'add_hardware'
         ,id_domain => $args->{id_domain}
         ,args => encode_json($args)
     );
@@ -865,7 +864,7 @@ sub set_hardware {
 
 sub remove_hardware {
     my $proto = shift;
-    my $class = ref($proto) || &proto;
+    my $class = ref($proto) || $proto;
     
     my $args = _check_args('remove_hardware', @_);
     

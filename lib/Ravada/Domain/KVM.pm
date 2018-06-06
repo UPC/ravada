@@ -1645,35 +1645,50 @@ sub _set_driver_sound {
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
-
 }
 
 
-sub set_controller($self, $name, $tipo) {
+sub set_controller($self, $name, $numero) {
     my $sub = $SET_CONTROLLER_SUB{$name};
-    
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self,$tipo);
+    return $sub->($self,$numero);
 }
 #The only '$tipo' suported right now is 'spicevmc'
-sub _set_controller_usb($self, $tipo) {
+sub _set_controller_usb($self,$numero, $tipo="spicevmc") {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my ($devices) = $doc->findnodes('/domain/devices');
-    my $controller = $devices->addNewChild(undef,"redirdev");
-    $controller->setAttribute(bus => 'usb');
-    $controller->setAttribute(type => $tipo );
-    return $controller;
+    
+    my $count = 0;
+    for my $controller ($devices->findnodes('redirdev')) {
+        $count=$count+1;
+        if ($numero < $count) {
+            $devices->removeChild($controller);
+        }
+    }
+    
+    if ( $numero > $count ) {
+        my $missing = $numero-$count-1;
+        warn "-------------------->$missing usb will be created";
+        for my $i (0..$missing) {
+            my $controller = $devices->addNewChild(undef,"redirdev");
+            $controller->setAttribute(bus => 'usb');
+            $controller->setAttribute(type => $tipo );
+        } 
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
 }
 
-sub remove_controller($self, $name) {
+sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
     
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self);
+    return $sub->($self, $index);
 }
 
 sub _remove_controller_usb($self) {

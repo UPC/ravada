@@ -1351,11 +1351,13 @@ sub settings_machine {
         }
     }
     
-    for my $hardware (qw(usb)) {#add hardware here
+    for (qw(usb)) {#add hardware here
+        my $hardware = "hardware_$_";
         if ( $c->param($hardware) ) {
-            my $req3 = Ravada::Request->set_hardware(uid => $USER->id
+            my $req3 = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
-                , name_hardware => $hardware
+                , name => $hardware
+                , number => $c->param($hardware)
             );
             $c->stash(message => 'Changes will apply on next start');
             push @reqs, ($req3);
