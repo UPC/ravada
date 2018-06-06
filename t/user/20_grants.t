@@ -448,9 +448,17 @@ sub test_frontend {
     is($user->can_list_machines, 0);
     is($user->can_list_own_machines, 1);
 
-    my $list_machines = rvd_front->list_domains( id_owner => $user->id );
-    is (scalar @$list_machines, 1 );
-    ok($list_machines->[0]->{name} eq $clone->name);
+    my $list_domains = rvd_front->list_domains( id_owner => $user->id );
+    is (scalar @$list_domains, 1 );
+    ok($list_domains->[0]->{name} eq $clone->name);
+
+    my $list_machines = rvd_front->list_machines( $user );
+    is (scalar @$list_machines, 2 );
+    if (defined $list_machines->[1]) {
+        ok($list_machines->[1]->{name} eq $clone->name);
+        is($list_machines->[1]->{can_manage}, 1);
+        is($list_machines->[0]->{can_manage}, 0);
+    }
 
     $usera->revoke($user, 'create_base');
     is($user->can_list_machines, 0);
@@ -526,6 +534,7 @@ sub test_create_domain {
     my $domain3 = $vm->search_domain($domain_name);
     ok($domain3);
 
+    is($user->can_change_settings($domain3),1);
 
     eval { $domain3->remove($usera)  if $domain3 };
     is($@,'');

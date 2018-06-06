@@ -271,10 +271,10 @@ sub test_list_clones_from_own_base_2 {
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 5) and do {
         is($list->[0]->{name}, $base->name);
-        is($list->[1]->{name}, $base2->name);
-        is($list->[2]->{name}, $clone->name, Dumper($list->[2]));
-        is($list->[3]->{name}, $clone2->name, Dumper($list->[3]));
-        is($list->[4]->{name}, $clone3->name, Dumper($list->[4]));
+        is($list->[1]->{name}, $clone->name);
+        is($list->[2]->{name}, $clone2->name);
+        is($list->[3]->{name}, $base2->name);
+        is($list->[4]->{name}, $clone3->name);
     };
 
     for my $m (@$list) {
