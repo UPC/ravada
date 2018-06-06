@@ -136,6 +136,7 @@ sub list_machines_user {
 
     my @list;
     while ( $sth->fetch ) {
+        next if !$is_public && !$user->is_admin;
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
