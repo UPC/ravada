@@ -968,6 +968,7 @@ sub quick_start_domain {
     $domain_name =~ tr/[\.]/[\-]/;
 
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
+    warn "clone found ".$domain->name   if $domain;
     $domain_name = $domain->name if $domain;
 
     return run_request($c,provision_req($c, $id_base, $domain_name));
@@ -1131,7 +1132,8 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 
     if ( $RAVADA->domain_exists($name) ) {
         my $domain = $RAVADA->search_domain($name);
-        if ( $domain->id_owner == $USER->id && !$domain->is_base ) {
+        if ( $domain->id_owner == $USER->id
+                && $domain->id_base == $id_base && !$domain->is_base ) {
             if ($domain->is_active) {
                 return Ravada::Request->open_iptables(
                     uid => $USER->id
