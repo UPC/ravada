@@ -1400,9 +1400,9 @@ sub _around_is_active($orig, $self) {
         || !$self->is_known
         || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
 
-    #TODO check hibernated machines status
     my $status = 'shutdown';
     $status = 'active'  if $is_active;
+    $status = 'hibernated'  if !$is_active && $self->is_hibernated;
     $self->_data(status => $status);
 
     $self->display(Ravada::Utils::user_daemon())    if $is_active;

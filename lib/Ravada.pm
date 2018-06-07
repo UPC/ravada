@@ -2417,6 +2417,7 @@ sub _refresh_active_domains($self, $request=undef) {
          } else {
             for my $domain ($vm->list_domains( active => 1)) {
                 next if $active_domain{$domain->id};
+                next if $domain->is_hibernated;
                 $self->_refresh_active_domain($vm, $domain, \%active_domain);
             }
         }
@@ -2425,6 +2426,8 @@ sub _refresh_active_domains($self, $request=undef) {
 }
 
 sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
+    return if $domain->is_hibernated();
+
     my $is_active = $domain->is_active();
 
     my $status = 'shutdown';
@@ -2446,7 +2449,10 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         next if exists $active_domain->{$id_domain};
+
         my $domain = Ravada::Domain->open($id_domain) or next;
+        next if $domain->is_hibernated;
+
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
         } else {
