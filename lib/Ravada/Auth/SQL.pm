@@ -847,6 +847,15 @@ sub can_change_settings($self, $id_domain=undef) {
 
 =cut
 
+=head2 can_manage_machine
+
+The user can change settings, remove or change other things yet to be defined.
+Some changes require special permissions granted.
+
+Unlinke change_settings that any user is granted to his own machines by default.
+
+=cut
+
 sub can_manage_machine($self, $domain) {
     return 1 if $self->is_admin;
 

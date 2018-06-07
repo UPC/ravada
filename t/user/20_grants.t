@@ -370,6 +370,16 @@ sub test_remove_clone_all {
 
     $clone_name = new_domain_name();
     $clone = $domain->clone(user => $usera, name => $clone_name);
+
+    my $other_domain = create_domain($vm_name);
+    ok($other_domain);
+
+    is($user->is_admin, 0);
+    is($user->can_list_machines, 1);
+    my $list = rvd_front->list_machines($user);
+    is(scalar@$list,4);
+    ok( grep { $_->{name} eq $other_domain->name } @$list);
+
     $usera->revoke($user,'remove_clone_all');
 
     eval { $clone->remove($user); };

@@ -347,21 +347,9 @@ get '/machine/info/(:id).(:type)' => sub {
     $c->render(json => $domain->info($USER) );
 };
 
-any '/machine/settings/(:id).(:type)' => sub {
-   	 my $c = shift;
-     return settings_machine($c);
-};
-
 any '/machine/manage/(:id).(:type)' => sub {
-    my $c = shift;
-
-    my ($domain) = _search_requested_machine($c);
-    return access_denied($c)    if !$domain;
-
-    return access_denied($c) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id;
-
-    return manage_machine($c);
+   	 my $c = shift;
+     return manage_machine($c);
 };
 
 get '/machine/view/(:id).(:type)' => sub {
@@ -1292,42 +1280,10 @@ sub register {
 
 sub manage_machine {
     my $c = shift;
-    return login($c) if !_logged_in($c);
-
-    my ($domain) = _search_requested_machine($c);
-    if (!$domain) {
-        return $c->render(text => "Domain no found");
-    }
-    return access_denied($c)    if $domain->id_owner != $USER->id
-        && !$USER->is_admin;
-
-    Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)   if $c->param('shutdown');
-    Ravada::Request->start_domain( uid => $USER->id
-                                 ,name => $domain->name
-                           , remote_ip => _remote_ip($c)
-    )   if $c->param('start');
-    Ravada::Request->pause_domain(name => $domain->name, uid => $USER->id)
-        if $c->param('pause');
-
-    Ravada::Request->resume_domain(name => $domain->name, uid => $USER->id)   if $c->param('resume');
-
-    $c->stash(domain => $domain);
-
-    _enable_buttons($c, $domain);
-
-    $c->render( template => 'main/manage_machine');
-}
-
-sub settings_machine {
-    my $c = shift;
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
   	return access_denied($c)    if !($USER->can_manage_machine($domain->id)
-                                    || $USER->can_change_settings($domain->id)
                                     || $USER->is_admin
-                                    || $USER->can_remove_clone_all()
-                                    || $USER->can_remove_clone()
-                                    || $USER->can_clone_all()
     );
 
     $c->stash(domain => $domain);

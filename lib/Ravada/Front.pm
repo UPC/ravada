@@ -185,14 +185,22 @@ sub list_machines($self, $user) {
         }
         push @list,(@$machines);
     }
-    if ($user->can_remove_clone_all()) {
+
+=pod
+
+if ($user->can_remove_clone_all()) {
         my $machines = $self->list_bases( );
         for my $base (@$machines) {
-            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+            my $clones = $self->list_domains( id_base => $base->{id} );
+            next if !scalar @$clones;
+            push @list, ($base);
+            push @list, @{$clones};
         }
-        push @list,(@$machines);
 
     }
+
+=cut
+
     push @list,(@{$self->list_clones()}) if $user->can_list_clones;
     if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
         my $machines = $self->list_domains(id_owner => $user->id);
