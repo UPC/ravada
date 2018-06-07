@@ -94,7 +94,7 @@
                 $http.get(toGet);
             };
             $scope.action = function(machineId, action) {
-                $scope.refresh = true;
+                $scope.refresh = 2;
                 if ( action == 'restore' ) {
                     $scope.host_restore = machineId;
                     $scope.host_shutdown = 0;
@@ -109,14 +109,16 @@
             };
 
             $scope.list_machines_user = function() {
-                var seconds = 5000;
-                if ($scope.refresh) {
+                var seconds = 1000;
+                if ($scope.refresh <= 0) {
                     $http.get('/list_machines_user.json').then(function(response) {
                         $scope.machines = response.data;
+                    }, function error(response) {
+                        console.log(response.status);
                     });
+                    $scope.refresh = 5;
                 } else {
-                    seconds = 60000;
-                    $scope.refresh = true;
+                    $scope.refresh--;
                 }
                 $timeout(function() {
                         $scope.list_machines_user();
@@ -141,7 +143,7 @@
             };
             $scope.startIntro = startIntro;
             $scope.host_action = 0;
-            $scope.refresh = true;
+            $scope.refresh = 0;
             $scope.list_machines_user();
         };
 

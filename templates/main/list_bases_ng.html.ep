@@ -36,22 +36,22 @@
                    href="/machine/clone/{{machine.id}}.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
                 <a type="button" class="btn btn-danger"
                     ng-show="machine.id_clone && !machine.is_active"
-                    ng-click="host_restore=machine.id_clone"
+                    ng-click="host_restore=machine.id_clone; $parent.refresh=20"
                     ><strong><i class="fas fa-redo" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
                     <div ng-show="machine.id_clone && host_restore == machine.id_clone">
                         <b><%=l 'Restore' %></b> <%=l 'will remove all the contents of the machine' %>
                         <i><b>{{machine.name_clone}}</b></i>.
                         <%=l 'Are you sure?' %><br/>
                         <a type="button" class="btn btn-danger"
-                            ng-click="host_restore=0"
+                            ng-click="host_restore=0; host_action=0"
                         ><%=l 'No' %></a>
                         <a type="button" class="btn btn-warning"
-                            ng-click="restore(machine.id_clone)"
+                            ng-click="restore(machine.id_clone);host_restore=0;host_action=0"
                             ><%=l 'Yes' %></a>
                     </div>
                  <a ng-show="machine.is_active && host_action != machine.id"
                         class="btn btn-default"
-                        ng-click="host_action=machine.id;$parent.refresh=false"
+                        ng-click="host_action=machine.id;$parent.refresh=20"
                         type="button"><%=l 'action'%></a>
                     <span
                             ng-show="host_action == machine.id && !host_restore"
