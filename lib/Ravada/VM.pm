@@ -47,6 +47,8 @@ requires 'import_domain';
 requires 'ping';
 
 requires 'is_active';
+
+requires 'free_memory';
 ############################################################
 
 has 'host' => (
@@ -471,6 +473,18 @@ sub default_storage_pool_name {
     }
     return $self->_data('default_storage');
 }
+
+=head2 min_free_memory
+
+Returns the minimun free memory necessary to start a new virtual machine
+
+=cut
+
+sub min_free_memory {
+    my $self = shift;
+    return $self->_data('min_free_memory');
+}
+
 
 =head2 list_drivers
 

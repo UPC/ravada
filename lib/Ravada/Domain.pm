@@ -223,6 +223,7 @@ sub _start_preconditions{
         _allow_manage(@_);
     }
     $self->_check_free_memory();
+    $self->_check_free_vm_memory();
     _check_used_memory(@_);
 
 }
@@ -408,6 +409,24 @@ sub _check_free_memory{
     die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
             ." MB out of ".int($MIN_FREE_MEMORY/1024)." MB required." 
         if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
+}
+
+sub _check_free_vm_memory {
+    my $self = shift;
+
+    return if !$self->_vm->min_free_memory;
+    return if $self->_vm->free_memory > $self->_vm->min_free_memory;
+
+    die "ERROR: No free memory. Only "._gb($self->_vm->free_memory)." out of "
+        ._gb($self->_vm->min_free_memory)." GB required.\n";
+}
+
+sub _gb($mem=0) {
+    my $gb = $mem / 1024 / 1024 ;
+
+    $gb =~ s/(\d+\.\d).*/$1/;
+    return ($gb);
+
 }
 
 sub _check_used_memory {
@@ -1381,9 +1400,9 @@ sub _around_is_active($orig, $self) {
         || !$self->is_known
         || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
 
-    #TODO check hibernated machines status
     my $status = 'shutdown';
     $status = 'active'  if $is_active;
+    $status = 'hibernated'  if !$is_active && $self->is_hibernated;
     $self->_data(status => $status);
 
     $self->display(Ravada::Utils::user_daemon())    if $is_active;
