@@ -158,9 +158,9 @@
             <tbody>
                 <tr ng-repeat-start="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
-                        <a align="right" href="/machine/settings/{{machine.id}}.html"
-                                         ng-class="{disabled: !machine.can_change_settings}"
-                        title ="<%=l 'Machine settings' %>"><b
+                        <a align="right" href="/machine/manage/{{machine.id}}.html"
+                                         ng-class="{disabled: !machine.can_manage}"
+                        title ="<%=l 'Manage machine' %>"><b
                         ng-cloak>{{machine.name}}</b></a>
                     </td>
                     <td class="lgMachToggle">
@@ -276,9 +276,9 @@
                       <td class="lgMachName">
                           &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
-                          <a align="right" href="/machine/settings/{{child.id}}.html"
-                                         ng-class="{disabled: !child.can_change_settings}"
-                          title ="Machine settings"><i
+                          <a align="right" href="/machine/manage/{{child.id}}.html"
+                                         ng-class="{disabled: !child.can_manage}"
+                          title ="Manage machine"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
                           <span style="color:gray">[ Cloned ]</span>
                       </td>
