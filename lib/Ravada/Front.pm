@@ -188,7 +188,7 @@ sub list_machines($self, $user) {
     }
 
     push @list,(@{$self->list_clones()}) if $user->can_list_clones;
-    if ($user->can_create_base) {
+    if ($user->can_create_base || $user->can_create_machine) {
         my $machines = $self->list_domains(id_owner => $user->id);
         for my $clone (@$machines) {
             next if !$clone->{id_base};
