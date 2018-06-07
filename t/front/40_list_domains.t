@@ -77,6 +77,23 @@ sub test_list_domains {
     $list_domains = rvd_front->list_domains();
     is($list_domains->[0]->{remote_ip}, $remote_ip);
     is($list_domains->[0]->{is_active}, 1);
+    is($list_domains->[0]->{is_hibernated}, 0);
+
+    $domain->hibernate($USER);
+    is($domain->is_hibernated, 1);
+    is($domain->status, 'hibernated');
+
+    $list_domains = rvd_front->list_domains();
+    is($list_domains->[0]->{is_active}, 0);
+    is($list_domains->[0]->{is_hibernated}, 1);
+    is($list_domains->[0]->{status}, 'hibernated');
+
+    rvd_back->_cmd_refresh_vms();
+
+    $list_domains = rvd_front->list_domains();
+    is($list_domains->[0]->{is_active}, 0);
+    is($list_domains->[0]->{is_hibernated}, 1);
+    is($list_domains->[0]->{status}, 'hibernated');
 }
 
 sub test_list_bases {

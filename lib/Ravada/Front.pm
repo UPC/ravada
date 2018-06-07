@@ -278,7 +278,7 @@ sub list_domains {
         if ( $domain ) {
             $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = 1 if $domain->is_hibernated;
+            $row->{is_hibernated} = ( $domain->is_hibernated or 0);
             $row->{is_paused} = 1 if $domain->is_paused;
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
@@ -288,6 +288,15 @@ sub list_domains {
             $row->{remote_ip} = $domain->client_status
                 if $domain->client_status && $domain->client_status ne 'connected';
             $row->{autostart} = $domain->autostart;
+            if (!$row->{status} ) {
+                if ($row->{is_active}) {
+                    $row->{status} = 'active';
+                } elsif ($row->{is_hibernated}) {
+                    $row->{status} = 'hibernated';
+                } else {
+                    $row->{status} = 'down';
+                }
+            }
         }
         delete $row->{spice_password};
         push @domains, ($row);
