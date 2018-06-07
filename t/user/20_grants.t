@@ -505,6 +505,7 @@ sub test_create_domain {
             ,name => $domain_name
    );
 
+
     my $domain;
     eval { $domain = $vm->create_domain(%create_args)};
     like($@,qr'not allowed'i);
@@ -535,6 +536,9 @@ sub test_create_domain {
     ok($domain3);
 
     is($user->can_change_settings($domain3),1);
+
+    my $list_machines = rvd_front->list_machines($user);
+    is (scalar @$list_machines, 1 );
 
     eval { $domain3->remove($usera)  if $domain3 };
     is($@,'');

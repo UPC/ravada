@@ -183,6 +183,7 @@ sub test_list_clones_from_own_base {
 
     user_admin->grant($user,'create_machine');
     my $base = create_domain($vm->type, $user);
+    user_admin->revoke($user,'create_machine');
 
     $base->prepare_base( user_admin );
     $base->is_public(1);
@@ -215,6 +216,7 @@ sub test_list_clones_from_own_base_2 {
 
     user_admin->grant($user,'create_machine');
     my $base = create_domain($vm->type, $user);
+    user_admin->revoke($user,'create_machine');
 
     $base->prepare_base( user_admin );
     $base->is_public(1);
@@ -245,7 +247,9 @@ sub test_list_clones_from_own_base_2 {
     #####################################################################3
     #
     # another base
+    user_admin->grant($user,'create_machine');
     my $base2 = create_domain($vm->type, $user);
+    user_admin->revoke($user,'create_machine');
     $base2->prepare_base(user_admin);
     $base2->is_public(1);
 
