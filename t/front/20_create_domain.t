@@ -78,6 +78,23 @@ sub test_list_bases {
     ok(scalar @$bases == $expected,"Expecting '$expected' bases, got ".scalar @$bases);
 }
 
+sub test_domain_name {
+    my $vm_name = shift;
+
+    my $domain = create_domain($vm_name);
+    my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+    $sth->execute($domain->id);
+
+    my $id = $domain->id;
+
+    $domain = Ravada::Front::Domain->open($id);
+    eval {
+        $domain->name();
+    };
+    like($@,qr'Unknown domain');
+
+}
+
 ####################################################################
 #
 
@@ -156,6 +173,7 @@ for my $vm_name ('Void','KVM','LXC') {
 
 
     test_remove_domain($name);
+    test_domain_name($vm_name);
 }
 }
 
