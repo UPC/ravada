@@ -1379,6 +1379,7 @@ sub _post_shutdown {
     $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
+
     if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1404,6 +1405,7 @@ sub _post_shutdown {
 }
 
 sub _around_is_active($orig, $self) {
+    return 0 if $self->is_removed;
     my $is_active = $self->$orig();
     return $is_active if $self->readonly
         || !$self->is_known
