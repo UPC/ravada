@@ -1922,7 +1922,23 @@ sub is_active($self) {
 }
 
 sub free_memory($self) {
+    return $self->_free_memory_available();
+}
+
+# TODO: enable this check from free memory with a config flag
+#   though I don't think it would be suitable to use
+#   Insights welcome
+sub _free_memory_overcommit($self) {
     my $info = $self->vm->get_node_memory_stats();
     return ($info->{free} + $info->{buffers} + $info->{cached});
+}
+
+sub _free_memory_available($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    my $used = 0;
+    for my $domain ( $self->list_domains(active => 1) ) {
+        $used += $domain->domain->get_info->{memory};
+    }
+    return $info->{total} - $used;
 }
 1;
