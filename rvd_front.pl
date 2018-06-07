@@ -1303,6 +1303,9 @@ sub manage_machine {
   	return access_denied($c)    if !($USER->can_manage_machine($domain->id)
                                     || $USER->can_change_settings($domain->id)
                                     || $USER->is_admin
+                                    || $USER->can_remove_clone_all()
+                                    || $USER->can_remove_clone()
+                                    || $USER->can_clone_all()
     );
 
     $c->stash(domain => $domain);
