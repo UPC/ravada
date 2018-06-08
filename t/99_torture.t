@@ -270,7 +270,7 @@ sub _ping_backend {
             sleep 1;
             next;
         }
-        return 1 if $req->eror eq '';
+        return 1 if $req->error eq '';
 
         diag($req->error);
     }
