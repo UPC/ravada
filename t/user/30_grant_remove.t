@@ -169,6 +169,8 @@ sub test_list_all{
     user_admin->grant($user, 'remove_all');
     is($user->can_list_machines, 1);
 
+    is($user->can_manage_machine($base),1);
+
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 2);
 

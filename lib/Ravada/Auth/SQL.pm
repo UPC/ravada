@@ -863,6 +863,8 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_change_settings($domain);
 
+    return 1 if $self->can_remove_all;
+
     return 1 if $self->can_remove_clone_all
         && $domain->id_base;
 
