@@ -362,11 +362,20 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    if (my @requests = $base->list_requests) {
-        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
-                            ." requests.\n"
-            unless scalar @requests == 1 && $request
-                && $requests[0]->id eq $request->id;
+    if (my @requests0 = $base->list_requests) {
+        my @requests;
+        for my $r (@requests0) {
+            push @requests,($r) if $r->command ne 'clone';
+        }
+        confess "ERROR: Machine ".$base->name." has ".scalar(@requests)
+                            ." requests:".Dumper(\@requests)
+                .join(" , ",map { $_->command } @requests)
+                ."\n"
+            unless 
+                ! scalar @requests
+                || (scalar @requests == 1 && $request
+                    && $requests[0]->id eq $request->id
+                );
     }
 
 
