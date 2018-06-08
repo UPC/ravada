@@ -989,7 +989,7 @@ sub admin {
     }
     if ($page eq 'machines') {
         $c->stash(hide_clones => 0 );
-        my $list_domains = $RAVADA->list_domains();
+        my $list_domains = $RAVADA->list_machines($USER);
 
         $c->stash(hide_clones => 1 )
             if defined $CONFIG_FRONT->{admin}->{hide_clones}
