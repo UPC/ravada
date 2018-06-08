@@ -135,7 +135,10 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
-    $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
+    my $login= Ravada::Auth::SQL->new(name => 'admin',password => 'admin');
+    $USER_ADMIN = $login if $login;
+    $USER_ADMIN = create_user('admin','admin',1)
+        if !$USER_ADMIN && !$login;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
