@@ -54,7 +54,7 @@ sub install_debian {
 
     my @cmd = qw(virt-install
         --noautoconsole
-        --ram 1024
+        --ram 256
         --vcpus 1
         --os-type linux
         --os-variant debian9
@@ -92,9 +92,19 @@ sub install_debian {
     return $name;
 }
 
+sub test_create_new_clones {
+    my $vm_name = shift;
+    for my $domain ( rvd_back->list_domains ) {
+        next if $domain->name !~ /^99/;
+        next if !$domain->is_base || $domain->has_clones || $domain->list_requests;
+        test_create_clones($vm_name, $domain->name);
+    }
+}
+
 sub test_create_clones {
     my ($vm_name, $domain_name) = @_;
 
+    diag("create clones from $domain_name");
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
 
@@ -103,6 +113,10 @@ sub test_create_clones {
 
     for my $clone_data ( $domain->clones ) {
         my $clone = Ravada::Domain->open($clone_data->{id});
+        for my $subclone_data ( $clone->clones ) {
+            my $subclone = Ravada::Domain->open($clone_data->{id});
+            $subclone->remove(user_admin);
+        }
         $clone->remove(user_admin);
     }
 
@@ -113,10 +127,11 @@ sub test_create_clones {
 
     my @reqs;
     for my $n ( 1 .. $n_users ) {
-        my $user = Ravada::Auth::SQL->new(name => "user_$n");
-        $user = create_user("user_$n",$n)   if !$user || !$user->id;
+        my $user_name = "user-".$domain->id."-".$n;
+        my $user = Ravada::Auth::SQL->new(name => $user_name);
+        $user = create_user($user_name,$n)   if !$user || !$user->id;
 
-        my $clone_name = $domain->name."-user-$n";
+        my $clone_name = $domain->name."-".$user_name;
         my $clone = $vm->search_domain($clone_name);
         push @reqs,(Ravada::Request->remove_domain(
                         uid => user_admin->id
@@ -127,6 +142,7 @@ sub test_create_clones {
             name => $clone_name
             ,uid => $user->id
             ,id_domain => $domain->id
+            , ram => 1024 * 256
         );
         push @reqs,($req);
     }
@@ -138,7 +154,7 @@ sub test_restart {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    for my $count ( 1 .. 5 ) {
+    for my $count ( 1 .. 2 ) {
         my @reqs;
         diag("COUNT $count");
 
@@ -157,7 +173,7 @@ sub test_restart {
             push @domains,($domain);
         }
         _wait_requests(\@reqs);
-        sleep 30 - ( time - $t0 );
+        sleep 60 - ( time - $t0 );
         for my $domain (@domains) {
             push @reqs,( Ravada::Request->shutdown_domain(
                         id_domain => $domain->id
@@ -167,7 +183,7 @@ sub test_restart {
         }
         _wait_requests(\@reqs);
 
-        for ( ;; ) {
+        for ( 1 .. 60 ) {
             my $alive = 0;
             for my $domain ( @domains ) {
                 if ( $domain->is_active() ) {
@@ -181,6 +197,7 @@ sub test_restart {
             last if !$alive;
             diag("$alive domains alive");
             _process_requests();
+            sleep 1;
         }
     }
 }
@@ -226,15 +243,16 @@ sub test_make_clones_base {
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
 
-    my @reqs;
     for my $clone ($domain->clones) {
+        my @reqs;
         push @reqs,(Ravada::Request->prepare_base(
                     uid => user_admin->id
                     ,id_domain => $clone->{id}
                 )
         );
+        test_restart($vm_name, $domain_name);
+        test_create_new_clones($vm_name);
     }
-    _wait_requests(\@reqs);
 }
 
 sub _wait_requests {
@@ -256,8 +274,6 @@ sub _process_requests {
 sub _all_reqs_done {
     my $reqs = shift;
     for my $r (@$reqs) {
-        diag($r->id." ".$r->command." ".$r->status." "
-            .($r->error or '' ));
         return 0 if $r->status ne 'done';
     }
     return 1;
