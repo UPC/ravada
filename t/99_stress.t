@@ -16,24 +16,27 @@ my $RVD_BACK;
 
 #####################################################################3
 
-sub install_debian {
-    my $vm_name = shift;
+sub install_base {
+    my $vm = shift;
 
-    my $vm = $RVD_BACK->search_vm($vm_name);
     my $name = new_domain_name();
 
     my $id_iso = search_id_iso('debian%64');
     ok($id_iso) or BAIL_OUT;
 
+    my $old_domain = $vm->search_domain($name);
+
+    if ( $old_domain ) {
+        return $name if $vm->type eq 'Void';
+    }
+
     my $internal_domain;
     eval { $internal_domain = $vm->vm->get_domain_by_name($name) };
-
-    my $old_domain = $vm->search_domain($name);
     return $name if $old_domain && $internal_domain;
 
     if ($internal_domain) {
         rvd_back->import_domain(
-            vm => $vm_name
+            vm => $vm->type
             ,name => $name
             ,user => user_admin->name
         );
@@ -142,7 +145,7 @@ sub test_create_clones {
             name => $clone_name
             ,uid => $user->id
             ,id_domain => $domain->id
-            , ram => 1024 * 256
+            , memory => 1024 * 256
         );
         push @reqs,($req);
     }
@@ -295,7 +298,7 @@ sub _ping_backend {
 
 #####################################################################3
 
-for my $vm_name ( 'KVM' ) {
+for my $vm_name ( 'KVM', 'Void' ) {
     SKIP: {
         eval {
             $RVD_BACK= Ravada->new();
@@ -310,8 +313,11 @@ for my $vm_name ( 'KVM' ) {
         skip("Missing virt-install",10) if ! -e $virt_install;
 
         skip("ERROR: backend stopped")  if !_ping_backend();
-        
-        my $domain_name = install_debian($vm_name);
+
+        my $vm = $RVD_BACK->search_vm($vm_name);
+        ok($vm, "Expecting VM $vm_name not found")  or next;
+
+        my $domain_name = install_base($vm);
         test_create_clones($vm_name, $domain_name);
 
         test_restart($vm_name);
