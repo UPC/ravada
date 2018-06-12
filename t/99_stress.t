@@ -10,10 +10,17 @@ use IPC::Run3 qw(run3);
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada') or BAIL_OUT;
 
 my $RVD_BACK;
 
+my $DOMAIN_NAME_BASE;
+
+our %CHECKED;
+our %CLONE_N;
 #####################################################################3
 
 sub install_base {
@@ -67,6 +74,7 @@ sub install_base {
     my $preseed = getcwd."/t/preseed.cfg";
     ok(-e $preseed,"ERROR: Missing $preseed") or BAIL_OUT;
 
+    $DOMAIN_NAME_BASE = $name;
     push @cmd,('--extra-args', "'console=ttyS0,115200n8 serial'");
     push @cmd,('--initrd-inject',$preseed);
     push @cmd,('--name' => $name );
@@ -124,9 +132,11 @@ sub test_create_clones {
     }
 
     my $n_users = int($vm->free_memory / 1024 /1024) ;
+    $n_users = 3 if $n_users<3;
     diag("creating $n_users");
 
-    _wait_requests($domain->list_requests);
+    my @domain_reqs = $domain->list_requests;
+    _wait_requests([@domain_reqs], $vm) if scalar @domain_reqs;
 
     my @reqs;
     for my $n ( 1 .. $n_users ) {
@@ -134,22 +144,39 @@ sub test_create_clones {
         my $user = Ravada::Auth::SQL->new(name => $user_name);
         $user = create_user($user_name,$n)   if !$user || !$user->id;
 
-        my $clone_name = $domain->name."-".$user_name;
+        my $clone_name = new_clone_name($domain_name);
         my $clone = $vm->search_domain($clone_name);
         push @reqs,(Ravada::Request->remove_domain(
                         uid => user_admin->id
                  ,name => $clone_name
                 )
-        );
+        )   if $clone;
+
+        my $mem = 1024 * 128 if $n_users < 3 && $vm_name eq 'Void';
         my $req = Ravada::Request->clone(
             name => $clone_name
             ,uid => $user->id
             ,id_domain => $domain->id
             , memory => 1024 * 256
         );
+        diag("create $clone_name");
         push @reqs,($req);
     }
-    _wait_requests(\@reqs);
+    _wait_requests(\@reqs, $vm);
+}
+
+sub new_clone_name {
+    my $base_name = shift;
+
+    my $clone_name;
+    my $n = $CLONE_N{$base_name}++;
+    for ( ;; ) {
+        $n++;
+        $n = "0$n" if length($n)<2;
+        $clone_name = "$base_name-$n";
+
+        return $clone_name if !rvd_front->domain_exists($clone_name);
+    }
 }
 
 sub test_restart {
@@ -166,6 +193,7 @@ sub test_restart {
         for my $domain ( $vm->list_domains ) {
             next if $domain->is_base;
             next if $domain->name !~ /^99/;
+            next if $domain->list_requests;
 
             push @reqs,( Ravada::Request->start_domain(
                         remote_ip => '127.0.0.1'
@@ -175,8 +203,13 @@ sub test_restart {
             );
             push @domains,($domain);
         }
-        _wait_requests(\@reqs);
-        sleep 60 - ( time - $t0 );
+        _wait_requests(\@reqs, $vm);
+
+        my $seconds = 60 - ( time - $t0 );
+        $seconds = 1 if $seconds <=0 || $vm_name eq 'Void';
+        diag("sleeping $seconds");
+        sleep($seconds);
+
         for my $domain (@domains) {
             push @reqs,( Ravada::Request->shutdown_domain(
                         id_domain => $domain->id
@@ -184,22 +217,24 @@ sub test_restart {
                         )
             );
         }
-        _wait_requests(\@reqs);
+        _wait_requests(\@reqs, $vm);
 
         for ( 1 .. 60 ) {
             my $alive = 0;
+            my @reqs;
             for my $domain ( @domains ) {
                 if ( $domain->is_active() ) {
                     $alive++;
-                    Ravada::Request->shutdown_domain(
+                    push @reqs,(Ravada::Request->shutdown_domain(
                         id_domain => $domain->id
                             ,uid => user_admin->id
-                    ) if !$domain->list_requests;
+                        )
+                    )if !$domain->list_requests;
                 }
             }
+            _wait_requests(\@reqs, $vm);
             last if !$alive;
             diag("$alive domains alive");
-            _process_requests();
             sleep 1;
         }
     }
@@ -225,7 +260,7 @@ sub test_hibernate {
             );
             push @domains,($domain);
         }
-        _wait_requests(\@reqs);
+        _wait_requests(\@reqs, $vm);
 
         for my $domain ( @domains ) {
             push @reqs,( Ravada::Request->hibernate_domain(
@@ -234,7 +269,7 @@ sub test_hibernate {
                         )
             );
         }
-        _wait_requests(\@reqs);
+        _wait_requests(\@reqs, $vm);
 
     }
 
@@ -246,7 +281,9 @@ sub test_make_clones_base {
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
 
+    diag("Making base to clones from ".$domain_name);
     for my $clone ($domain->clones) {
+        diag("Prepare base to $clone->{name}");
         my @reqs;
         push @reqs,(Ravada::Request->prepare_base(
                     uid => user_admin->id
@@ -254,30 +291,34 @@ sub test_make_clones_base {
                 )
         );
         test_restart($vm_name, $domain_name);
+        _wait_requests(\@reqs, $vm);
         test_create_new_clones($vm_name);
     }
 }
 
-sub _wait_requests {
-    my $reqs = shift;
+sub _wait_requests($reqs, $vm) {
+    return if !$reqs || !scalar @$reqs;
+    diag("Waiting for ".scalar(@$reqs)." requests");
     for ( ;; ) {
-        _process_requests();
-        last if _all_reqs_done($reqs);
+        last if _all_reqs_done($reqs, $vm);
         sleep 1;
     }
 }
 
-sub _process_requests {
-    #rvd_back->_process_all_requests_dont_fork(1);
-#    rvd_back->process_requests(1);
-#    rvd_back->process_long_requests(1);
-#    rvd_back->enforce_limits();
-}
-
-sub _all_reqs_done {
-    my $reqs = shift;
+sub _all_reqs_done($reqs, $vm) {
     for my $r (@$reqs) {
         return 0 if $r->status ne 'done';
+        next if $CHECKED{$r->id}++;
+        next if $r->error =~ /already removed/;
+        if ($r->error =~ /Out of free memory/i) {
+            my ($active) = $vm->list_domains(active => 1);
+            Ravada::Request->shutdown_domain(
+                id_domain => $active->id
+                ,uid => user_admin->id
+            );
+            next;
+        }
+        is($r->error,'',$r->command." ".Dumper($r->args)) or exit;
     }
     return 1;
 }
@@ -294,6 +335,38 @@ sub _ping_backend {
         diag($req->error);
     }
     return 0;
+}
+
+sub clean_clones($domain_name, $vm) {
+
+    my $domain = rvd_back->search_domain($domain_name) or return;
+
+    my @reqs;
+    for my $clone ($domain->clones) {
+        clean_clones($clone->{name}, $vm);
+        push @reqs,(Ravada::Request->remove_domain(
+                name => $clone->{name}
+                ,uid => user_admin->id
+        ));
+    }
+    _wait_requests(\@reqs, $vm);
+}
+
+sub clean_leftovers($vm) {
+    my @reqs;
+    for my $domain ( @{rvd_front->list_domains} ) {
+        next if $domain->{name} !~ /^99_/;
+        next if $DOMAIN_NAME_BASE && $domain->{name} eq $DOMAIN_NAME_BASE;
+
+        clean_clones($domain->{name}, $vm);
+        push @reqs, (
+            Ravada::Request->remove_domain(
+                name => $domain->{name}
+                ,uid => user_admin->id
+           )
+       );
+    }
+    _wait_requests(\@reqs, $vm);
 }
 
 #####################################################################3
@@ -318,10 +391,15 @@ for my $vm_name ( 'KVM', 'Void' ) {
         ok($vm, "Expecting VM $vm_name not found")  or next;
 
         my $domain_name = install_base($vm);
+        clean_clones($domain_name, $vm);
+        clean_leftovers($vm);
         test_create_clones($vm_name, $domain_name);
 
-        test_restart($vm_name);
-        test_make_clones_base($vm_name, $domain_name);
+        for my $domain ( rvd_back->list_domains ) {
+            next if $domain->name !~ /^99/;
+            test_make_clones_base($vm_name, $domain->name);
+        }
+        clean_leftovers($vm);
     }
 }
    
