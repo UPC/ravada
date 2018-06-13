@@ -690,6 +690,23 @@ get '/auto_view' => sub {
     return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
+get '/settings/hardware/remove/(#domain)/(#hardware)/(#index)' => sub {
+    my $c = shift;
+    my $hardware = $c->stash('hardware');
+    my $index = $c->stash('index');
+    my $domain_id = $c->stash('domain');
+    
+    my $req = Ravada::Request->remove_hardware(uid => $USER->id
+        , id_domain => $domain_id
+        , name => $hardware
+        , index => $index
+    );
+    
+    $RAVADA->wait_request($req,60);  
+    
+    return $c->render( json => { ok => "Hardware Modified" });
+};
+
 ###################################################
 
 ## user_settings

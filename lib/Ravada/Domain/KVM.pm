@@ -1691,13 +1691,20 @@ sub remove_controller($self, $name, $index=0) {
     return $sub->($self, $index);
 }
 
-sub _remove_controller_usb($self) {
+sub _remove_controller_usb($self, $index) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my ($devices) = $doc->findnodes('/domain/devices');
+    my $ind=0;
     for my $controller ($devices->findnodes('redirdev')) {
         if ($controller->getAttribute('bus') eq 'usb'){
-            $devices->removeChild($controller);
-            return;
+            $ind++;
+            if( $ind==$index ){
+                $devices->removeChild($controller);
+                $self->_vm->connect if !$self->_vm->vm;
+                my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+                $self->domain($new_domain);
+                return;
+            }
         }
     }
 }

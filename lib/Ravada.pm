@@ -2137,6 +2137,22 @@ sub _cmd_add_hardware {
     $domain->set_controller($hardware, $number);
 }
 
+sub _cmd_remove_hardware {
+    my $self = shift;
+    my $request = shift;
+    
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('name') or confess "Missing argument name";
+    my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
+    my $index = $request->args('index') or confess "Missing argument index";
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    
+    $domain->remove_controller($hardware, $index);
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
