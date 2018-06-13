@@ -406,7 +406,9 @@ sub can_list_machines {
     return 1 if $self->is_admin()
             || $self->can_remove_all || $self->can_remove_clone_all
             || $self->can_shutdown_all
-            || $self->can_change_settings_all();
+            || $self->can_change_settings_all()
+            || $self->can_change_settings_clones()
+            || $self->can_clone_all();
     return 0;
 }
 
@@ -867,6 +869,8 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_remove_clone_all
         && $domain->id_base;
+    
+    return 1 if $self->can_clone_all;
 
     if ( $self->can_remove_clones && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
