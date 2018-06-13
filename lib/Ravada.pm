@@ -2242,6 +2242,40 @@ sub _cmd_download {
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
 }
 
+sub _cmd_add_hardware {
+    my $self = shift;
+    my $request = shift;
+    
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('name') or confess "Missing argument name";
+    my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
+    my $number = $request->args('number') or confess "Missing argument number";
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    
+    $hardware = (split(/_/,$hardware))[-1];
+    
+    $domain->set_controller($hardware, $number);
+}
+
+sub _cmd_remove_hardware {
+    my $self = shift;
+    my $request = shift;
+    
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('name') or confess "Missing argument name";
+    my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
+    my $index = $request->args('index') or confess "Missing argument index";
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    
+    $domain->remove_controller($hardware, $index);
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -2517,6 +2551,8 @@ sub _req_method {
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
+,add_hardware => \&_cmd_add_hardware
+,remove_hardware => \&_cmd_remove_hardware
 
     );
     return $methods{$cmd};

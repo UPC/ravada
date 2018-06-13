@@ -18,6 +18,7 @@ use IPC::Run3 qw(run3);
 use Moose;
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
+use Sys::Virt;
 use XML::LibXML;
 
 no warnings "experimental::signatures";
@@ -63,6 +64,15 @@ our %SET_DRIVER_SUB = (
      ,streaming => \&_set_driver_streaming
 );
 
+our %GET_CONTROLLER_SUB = (
+    usb => \&_get_controller_usb
+    );
+our %SET_CONTROLLER_SUB = (
+    usb => \&_set_controller_usb
+    );
+our %REMOVE_CONTROLLER_SUB = (
+    usb => \&_remove_controller_usb
+    );
 ##################################################
 
 =head2 name
@@ -1635,7 +1645,68 @@ sub _set_driver_sound {
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+}
 
+
+sub set_controller($self, $name, $numero) {
+    my $sub = $SET_CONTROLLER_SUB{$name};
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self,$numero);
+}
+#The only '$tipo' suported right now is 'spicevmc'
+sub _set_controller_usb($self,$numero, $tipo="spicevmc") {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my ($devices) = $doc->findnodes('/domain/devices');
+    
+    my $count = 0;
+    for my $controller ($devices->findnodes('redirdev')) {
+        $count=$count+1;
+        if ($numero < $count) {
+            $devices->removeChild($controller);
+        }
+    }
+    
+    if ( $numero > $count ) {
+        my $missing = $numero-$count-1;
+        
+        for my $i (0..$missing) {
+            my $controller = $devices->addNewChild(undef,"redirdev");
+            $controller->setAttribute(bus => 'usb');
+            $controller->setAttribute(type => $tipo );
+        } 
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+}
+
+sub remove_controller($self, $name, $index=0) {
+    my $sub = $REMOVE_CONTROLLER_SUB{$name};
+    
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self, $index);
+}
+
+sub _remove_controller_usb($self, $index) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my ($devices) = $doc->findnodes('/domain/devices');
+    my $ind=0;
+    for my $controller ($devices->findnodes('redirdev')) {
+        if ($controller->getAttribute('bus') eq 'usb'){
+            $ind++;
+            if( $ind==$index ){
+                $devices->removeChild($controller);
+                $self->_vm->connect if !$self->_vm->vm;
+                my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+                $self->domain($new_domain);
+                return;
+            }
+        }
+    }
 }
 
 =head2 pre_remove
