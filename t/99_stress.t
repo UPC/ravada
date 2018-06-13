@@ -4,6 +4,7 @@ use strict;
 use Data::Dumper;
 use Test::More;
 
+use Carp qw(confess);
 use Cwd;
 use IPC::Run3 qw(run3);
 
@@ -17,16 +18,22 @@ use_ok('Ravada') or BAIL_OUT;
 
 my $RVD_BACK;
 
-my $DOMAIN_NAME_BASE;
+my $DOMAIN_NAME_BASE = Test::Ravada::base_domain_name()."_00";
+
+my %DOMAIN_INSTALLING;
 
 our %CHECKED;
 our %CLONE_N;
 #####################################################################3
 
 sub install_base {
-    my $vm = shift;
+    my $vm_name = shift;
 
     my $name = new_domain_name();
+
+    $DOMAIN_INSTALLING{$vm_name} = $name;
+
+    my $vm = rvd_back->search_vm($vm_name);
 
     my $id_iso = search_id_iso('debian%64');
     ok($id_iso) or BAIL_OUT;
@@ -57,6 +64,9 @@ sub install_base {
         ,id_iso => $id_iso
         ,id_owner => user_admin->id
     );
+
+    return $name if $vm_name eq 'Void';
+
     my $iso = $vm->_search_iso($id_iso);
     my @volumes = $domain->list_volumes();
 
@@ -74,7 +84,6 @@ sub install_base {
     my $preseed = getcwd."/t/preseed.cfg";
     ok(-e $preseed,"ERROR: Missing $preseed") or BAIL_OUT;
 
-    $DOMAIN_NAME_BASE = $name;
     push @cmd,('--extra-args', "'console=ttyS0,115200n8 serial'");
     push @cmd,('--initrd-inject',$preseed);
     push @cmd,('--name' => $name );
@@ -90,11 +99,21 @@ sub install_base {
     diag($out);
     diag($err)  if $err;
 
-    $domain = $vm->search_domain($name);
+    return $name;
+}
+
+sub _wait_base_installed($vm_name) {
+    my $name = $DOMAIN_INSTALLING{$vm_name} or die "No $vm_name domain installing";
+
+    diag("[$vm_name] waiting for $name");
+    my $vm = rvd_back->search_vm($vm_name);
+    return $name if $vm_name eq 'Void';
+
+    my $domain = $vm->search_domain($name);
     diag("Waiting for shutdown from agent");
     for (;;) {
         last if !$domain->is_active;
-        eval { 
+        eval {
             $domain->domain->shutdown(Sys::Virt::Domain::SHUTDOWN_GUEST_AGENT);
         };
         warn $@ if $@ && $@ !~ /^libvirt error code: 74,/;
@@ -115,7 +134,7 @@ sub test_create_new_clones {
 sub test_create_clones {
     my ($vm_name, $domain_name) = @_;
 
-    diag("create clones from $domain_name");
+    diag("[$vm_name] create clones from $domain_name");
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
 
@@ -280,6 +299,7 @@ sub test_make_clones_base {
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
+    ok($domain,"[$vm_name] Expecting to find domain $domain_name") or confess;
 
     diag("Making base to clones from ".$domain_name);
     for my $clone ($domain->clones) {
@@ -310,7 +330,7 @@ sub _all_reqs_done($reqs, $vm) {
         return 0 if $r->status ne 'done';
         next if $CHECKED{$r->id}++;
         next if $r->error =~ /already removed/;
-        if ($r->error =~ /Out of free memory/i) {
+        if ($r->error =~ /free memory/i) {
             my ($active) = $vm->list_domains(active => 1);
             Ravada::Request->shutdown_domain(
                 id_domain => $active->id
@@ -318,7 +338,7 @@ sub _all_reqs_done($reqs, $vm) {
             );
             next;
         }
-        is($r->error,'',$r->command." ".Dumper($r->args)) or exit;
+        is($r->error,'',$r->id." ".$r->command." ".Dumper($r->args)) or exit;
     }
     return 1;
 }
@@ -337,13 +357,15 @@ sub _ping_backend {
     return 0;
 }
 
-sub clean_clones($domain_name, $vm) {
+sub clean_clones($domain_name, $vm_name) {
 
     my $domain = rvd_back->search_domain($domain_name) or return;
 
+    my $vm = rvd_back->search_vm($vm_name);
+
     my @reqs;
     for my $clone ($domain->clones) {
-        clean_clones($clone->{name}, $vm);
+        clean_clones($clone->{name}, $vm_name);
         push @reqs,(Ravada::Request->remove_domain(
                 name => $clone->{name}
                 ,uid => user_admin->id
@@ -352,13 +374,19 @@ sub clean_clones($domain_name, $vm) {
     _wait_requests(\@reqs, $vm);
 }
 
-sub clean_leftovers($vm) {
+sub clean_leftovers($vm_name) {
+    my $vm = rvd_back->search_vm($vm_name);
     my @reqs;
+    DOMAIN:
     for my $domain ( @{rvd_front->list_domains} ) {
         next if $domain->{name} !~ /^99_/;
         next if $DOMAIN_NAME_BASE && $domain->{name} eq $DOMAIN_NAME_BASE;
 
+        for my $vm_installing (keys %DOMAIN_INSTALLING) {
+            next DOMAIN if $DOMAIN_INSTALLING{$vm_installing} eq $domain->{name};
+        }
         clean_clones($domain->{name}, $vm);
+        diag("[$vm_name] cleaning leftover $domain->{name}");
         push @reqs, (
             Ravada::Request->remove_domain(
                 name => $domain->{name}
@@ -371,7 +399,10 @@ sub clean_leftovers($vm) {
 
 #####################################################################3
 
+my @vm_names;
 for my $vm_name ( 'KVM', 'Void' ) {
+
+
     SKIP: {
         eval {
             $RVD_BACK= Ravada->new();
@@ -379,28 +410,37 @@ for my $vm_name ( 'KVM', 'Void' ) {
         };
         diag($@)    if $@;
         skip($@,10) if $@ || !$RVD_BACK;
-    
-        my $virt_install = `which virt-install`;
-        chomp $virt_install;
-        ok($virt_install,"Checking virt-install");
-        skip("Missing virt-install",10) if ! -e $virt_install;
 
+        if ($vm_name eq 'KVM') {
+            my $virt_install = `which virt-install`;
+            chomp $virt_install;
+            ok($virt_install,"Checking virt-install");
+            skip("Missing virt-install",10) if ! -e $virt_install;
+        }
         skip("ERROR: backend stopped")  if !_ping_backend();
 
         my $vm = $RVD_BACK->search_vm($vm_name);
         ok($vm, "Expecting VM $vm_name not found")  or next;
 
-        my $domain_name = install_base($vm);
-        clean_clones($domain_name, $vm);
-        clean_leftovers($vm);
+        clean_leftovers($vm_name);
+        ok(install_base($vm_name),"[$vm_name] Expecting domain installing") or next;
+        push @vm_names, ( $vm_name );
+    }
+}
+
+for my $vm_name (reverse sort @vm_names) {
+        next if $vm_name eq 'KVM';
+        diag("Testing $vm_name");
+        my $domain_name = _wait_base_installed($vm_name);
+        clean_clones($domain_name, $vm_name);
         test_create_clones($vm_name, $domain_name);
 
-        for my $domain ( rvd_back->list_domains ) {
+        my $vm = rvd_back->search_vm($vm_name);
+        for my $domain ( $vm->list_domains ) {
             next if $domain->name !~ /^99/;
             test_make_clones_base($vm_name, $domain->name);
         }
-        clean_leftovers($vm);
-    }
+        clean_leftovers($vm_name);
 }
-   
+
 done_testing();
