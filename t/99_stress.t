@@ -18,8 +18,6 @@ use_ok('Ravada') or BAIL_OUT;
 
 my $RVD_BACK;
 
-my $DOMAIN_NAME_BASE = Test::Ravada::base_domain_name()."_00";
-
 my %DOMAIN_INSTALLING;
 
 our %CHECKED;
@@ -29,7 +27,7 @@ our %CLONE_N;
 sub install_base {
     my $vm_name = shift;
 
-    my $name = new_domain_name();
+    my $name = Test::Ravada::base_domain_name."_$vm_name";
 
     $DOMAIN_INSTALLING{$vm_name} = $name;
 
@@ -329,6 +327,7 @@ sub _all_reqs_done($reqs, $vm) {
     for my $r (@$reqs) {
         return 0 if $r->status ne 'done';
         next if $CHECKED{$r->id}++;
+        next if !defined $r->error;
         next if $r->error =~ /already removed/;
         if ($r->error =~ /free memory/i) {
             my ($active) = $vm->list_domains(active => 1);
@@ -379,8 +378,7 @@ sub clean_leftovers($vm_name) {
     my @reqs;
     DOMAIN:
     for my $domain ( @{rvd_front->list_domains} ) {
-        next if $domain->{name} !~ /^99_/;
-        next if $DOMAIN_NAME_BASE && $domain->{name} eq $DOMAIN_NAME_BASE;
+        next if $domain->{name} !~ /^99_.*\d$/;
 
         for my $vm_installing (keys %DOMAIN_INSTALLING) {
             next DOMAIN if $DOMAIN_INSTALLING{$vm_installing} eq $domain->{name};
@@ -402,8 +400,12 @@ sub clean_leftovers($vm_name) {
 my @vm_names;
 for my $vm_name ( 'KVM', 'Void' ) {
 
-
     SKIP: {
+        if (!$ENV{TEST_STRESS} && !$ENV{"TEST_STRESS_$vm_name"}) {
+            diag("Skipped $vm_name stress test. Set environment variable TEST_STRESS or"
+                        ." TEST_STRESS_$vm_name to run");
+            skip("Skipping stress $vm_name");
+        }
         eval {
             $RVD_BACK= Ravada->new();
             init($RVD_BACK->connector,"/etc/ravada.conf");
@@ -429,7 +431,6 @@ for my $vm_name ( 'KVM', 'Void' ) {
 }
 
 for my $vm_name (reverse sort @vm_names) {
-        next if $vm_name eq 'KVM';
         diag("Testing $vm_name");
         my $domain_name = _wait_base_installed($vm_name);
         clean_clones($domain_name, $vm_name);
