@@ -1398,7 +1398,7 @@ sub _around_is_active($orig, $self) {
     my $is_active = $self->$orig();
     return $is_active if $self->readonly
         || !$self->is_known
-        || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
+        || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
 
     my $status = 'shutdown';
     $status = 'active'  if $is_active;
@@ -1907,6 +1907,12 @@ sub _post_rename {
      $sth->finish;
  }
 
+
+sub get_controller {}
+
+sub set_controller {}
+
+sub remove_controller {}
 =head2 drivers
 
 List the drivers available for a domain. It may filter for a given type.
