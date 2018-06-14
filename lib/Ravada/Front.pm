@@ -15,6 +15,7 @@ use JSON::XS;
 use Moose;
 use Ravada;
 use Ravada::Front::Domain;
+use Ravada::Front::Domain::KVM;
 use Ravada::Network;
 
 use feature qw(signatures);
@@ -708,12 +709,15 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
     $sth->execute($name);
-    my ($id) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
+    my ($id, $tipo) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
 
-    return Ravada::Front::Domain->new(id => $id);
-
+    if ($tipo =~ /KVM/) {
+        return Ravada::Front::Domain::KVM->new(id => $id, name => $name);
+    }else {
+        return Ravada::Front::Domain->new(id => $id);
+    }
 }
 
 =head2 list_requests
