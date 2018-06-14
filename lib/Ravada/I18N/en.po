@@ -788,3 +788,6 @@ msgstr ""
 
 msgid "Update password"
 msgstr ""
+
+msgid "Start all clones"
+msgstr ""

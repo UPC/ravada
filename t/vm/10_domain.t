@@ -46,6 +46,14 @@ sub test_change_owner {
     $USER2->remove();
 }
 
+sub test_start_clones {
+    my $vm_name = shift;
+    my $domain = $vm->create_domain(name => $name
+                    , id_owner => $USER->id
+                    , arg_create_dom($vm_name));
+
+}
+
 sub test_vm_connect {
     my $vm_name = shift;
     my $host = (shift or 'localhost');
@@ -496,6 +504,10 @@ for my $vm_name (qw( Void KVM )) {
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);
         test_change_owner($vm_name);
+
+        test_start_clones($vm_name);
+        test_vm_connect($vm_name);
+        test_search_vm($vm_name);
 
         test_remove_domain_already_gone($vm_name);
 

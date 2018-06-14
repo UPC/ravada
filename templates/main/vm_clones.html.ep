@@ -2,6 +2,9 @@
 <div class="form-group">
 
     <form class="form-inline" action="<%= $action %>" method="post">
+        <div class="row">
+            <input type="submit" id="start-clones" name="start-clones" value="<%=l 'Start all clones' %>"></input>
+        </div>
     </form>
 </div>
 </div>
