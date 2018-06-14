@@ -872,6 +872,8 @@ sub can_manage_machine($self, $domain) {
     
     return 1 if $self->can_clone_all;
 
+    return 1 if $self->can_remove && $domain->id_owner == $self->id;
+
     if ( $self->can_remove_clones && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
@@ -897,7 +899,7 @@ sub can_remove_clones($self, $id_domain=undef) {
 
 sub can_remove_machine($self, $domain) {
     return 1 if $self->can_remove_all();
-    return 0 if !$self->can_remove();
+    #return 0 if !$self->can_remove();
 
     $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
 
