@@ -524,6 +524,8 @@ sub display {
     my ($address) = $graph->getAttribute('listen');
     $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
+    die "ERROR: Machine ".$self->name." is not active\n"
+        if !$port && !$self->is_active;
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
@@ -573,7 +575,6 @@ sub start {
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
-#    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
     $self->domain->create();
 }
 
