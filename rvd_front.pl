@@ -998,6 +998,7 @@ sub admin {
     push @{$c->stash->{js}}, '/js/admin.js';
 
     if ($page eq 'users') {
+        return access_denied($c)    if !$USER->is_admin && !$USER->can_manage_users && !$USER->can_grant;
         $c->stash(list_users => []);
         $c->stash(name => $c->param('name' or ''));
         if ( $c->param('name') ) {
