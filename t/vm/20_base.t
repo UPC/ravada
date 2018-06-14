@@ -495,7 +495,7 @@ sub test_domain_limit_already_requested {
             sleep 3;
 
             rvd_back->_process_requests_dont_fork();
-        }
+
     } else {
         @list_requests = $domain->list_requests;
         is(scalar @list_requests,0,"Expecting 0 request ".Dumper(\@list_requests)) or exit;
