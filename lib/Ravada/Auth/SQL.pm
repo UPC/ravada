@@ -585,7 +585,7 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
-    return 0 if !$self->can_do($grant);
+    return 0 if !$self->can_do($grant) && !$domain->id_base;
 
     return 1 if $self->can_do("${grant}_all");
     return 1 if $domain->id_owner == $self->id;
@@ -874,7 +874,7 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_remove && $domain->id_owner == $self->id;
 
-    if ( $self->can_remove_clones && $domain->id_base ) {
+    if ( ($self->can_remove_clones || $self->can_change_settings_clones) && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
     }
