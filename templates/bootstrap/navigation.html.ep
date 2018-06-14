@@ -25,7 +25,7 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <li><a href="/admin/machines">
                       <i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'machines' %></a>
                     </li>
-%                   if ($_user->is_admin) {
+%                   if ($_user->is_admin || $_user->can_grant) {
                         <li><a href="/admin/users">
                         <i class="fa fa-user" aria-hidden="true"></i>&nbsp<%=l 'users' %></a>
                         </li>

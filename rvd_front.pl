@@ -525,7 +525,7 @@ any '/users/register' => sub {
 
 any '/admin/user/(:id).(:type)' => sub {
     my $c = shift;
-    return access_denied($c) if !$USER->can_manage_users();
+    return access_denied($c) if !$USER->can_manage_users() && !$USER->can_grant();
 
     my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
 

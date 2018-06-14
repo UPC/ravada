@@ -797,7 +797,7 @@ Returns a list of all the available permissions
 =cut
 
 sub list_all_permissions($self) {
-    return if !$self->is_admin;
+    return if !$self->is_admin && !$self->can_grant();
     $self->_load_grants();
 
     my $sth = $$CON->dbh->prepare(
