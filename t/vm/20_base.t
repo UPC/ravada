@@ -481,7 +481,8 @@ sub test_domain_limit_already_requested {
     my @list_requests = $domain->list_requests;
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
-    rvd_back->enforce_limits(timeout => 2);
+    rvd_back->enforce_limits(timeout => 3);
+
 
     if (!$domain->can_hybernate && $domain->is_active) {
         @list_requests = $domain->list_all_requests();
@@ -489,11 +490,12 @@ sub test_domain_limit_already_requested {
         rvd_back->enforce_limits(timeout => 2);
         @list_requests = $domain->list_all_requests();
 
-        is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
+            is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
 
-        sleep 3;
+            sleep 3;
 
-        rvd_back->_process_requests_dont_fork();
+            rvd_back->_process_requests_dont_fork();
+        }
     } else {
         @list_requests = $domain->list_requests;
         is(scalar @list_requests,0,"Expecting 0 request ".Dumper(\@list_requests)) or exit;
