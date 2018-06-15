@@ -1312,6 +1312,7 @@ sub _copy_clone($self, %args) {
         ,_vm => $self->_vm
         ,@copy_arg
     );
+    warn 2;
     my @volumes = $self->list_volumes_target;
     my @copy_volumes = $copy->list_volumes_target;
 
@@ -1402,10 +1403,13 @@ sub _around_is_active($orig, $self) {
 
     my $status = 'shutdown';
     $status = 'active'  if $is_active;
-    $status = 'hibernated'  if !$is_active && $self->is_hibernated;
+    $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
+    eval {
     $self->display(Ravada::Utils::user_daemon())    if $is_active;
+    };
+    warn "around_is_active display $@"  if $@;
 
     return $is_active;
 }
