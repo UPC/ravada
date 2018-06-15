@@ -272,6 +272,44 @@ sub test_requests_by_domain {
     ok($clone,"Expecting domain $clone_name created") or exit;
 }
 
+sub test_req_many_clones {
+    my ($vm, $base) = @_;
+
+    is(scalar $base->clones , 0, Dumper([$base->clones]));
+
+    my ($name1, $name2) = (new_domain_name, new_domain_name);
+    my $req1 = Ravada::Request->clone(
+        name => $name1
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    my $req2 = Ravada::Request->clone(
+        name => $name2
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork();
+
+    is($req1->status, 'done');
+    is($req1->error, '');
+
+    is($req2->status, 'done');
+    is($req2->error, '');
+
+    my $clone1 = rvd_back->search_domain($name1);
+    ok($clone1,"Expecting clone $name1 created");
+
+    my $clone2 = rvd_back->search_domain($name2);
+    ok($clone2,"Expecting clone $name2 created");
+
+    $clone1->remove(user_admin) if $clone1;
+    $clone2->remove(user_admin) if $clone2;
+
+    is(scalar $base->clones , 0, Dumper([$base->clones]));
+}
+
 ################################################
 eval { $ravada = rvd_back () };
 
@@ -310,6 +348,8 @@ for my $vm_name ( qw(Void KVM)) {
             my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
             test_req_start_domain($vm,$domain_clone->name);
             $domain_clone->remove($USER);
+
+            test_req_many_clones($vm, $domain_base);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
 
