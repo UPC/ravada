@@ -362,7 +362,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    if (my @requests = $base->list_requests) {
+    if (my @requests = grep { $_->command ne 'clone' } $base->list_requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
             unless scalar @requests == 1 && $request
