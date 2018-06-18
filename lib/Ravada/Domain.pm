@@ -1645,6 +1645,16 @@ sub open_iptables {
 
     $self->_data('client_status','connecting...');
     $self->_remove_iptables();
+
+    if ( !$self->is_active ) {
+        Ravada::Request->start_domain(
+            uid => $user->id
+            ,id_domain => $self->id
+            ,remote_ip => $args{remote_ip}
+        );
+        die "ERROR: Machine ".$self->name." is not active\n"
+    }
+
     $self->_add_iptable(%args);
 }
 

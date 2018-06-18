@@ -169,6 +169,7 @@ sub test_volatile_auto_kvm {
     );
     my $clone_extra = Ravada::Domain->open($clone->id);
     ok($clone_extra->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
+    ok($clone_extra->_data_extra('id_domain'),"[$vm_name] expecting id_domain for ".$clone->name) or BAIL_OUT;
 
     is( $clone->is_active, 1,"[$vm_name] volatile domains should clone started" );
     $clone->start($user)                if !$clone->is_active;
@@ -180,7 +181,7 @@ sub test_volatile_auto_kvm {
     like($spice_password,qr(..+));
 
     my @volumes = $clone->list_volumes();
-
+    ok($clone->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
     $clone->domain->destroy();
     $clone=undef;
 
