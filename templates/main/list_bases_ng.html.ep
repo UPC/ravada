@@ -24,7 +24,7 @@
                     <i ng-show="!machine.is_public">(<%=l 'not public' %>)</i>
                 </h3>
                 <a ng-show="machine.screenshot" href="/machine/clone/{{machine.id}}.html"><img
-                    src="{{machine.screenshot}}" class="img-thumbnail" width="260"
+                    ng-src="{{machine.screenshot}}" class="img-thumbnail" width="260"
                     alt="{{machine.description}}"></a>
                 <a ng-show="!machine.screenshot" href="/machine/clone/{{machine.id}}.html"><img
                     src="/img/default_screenshot.png" class="screenshot-default img-thumbnail"
