@@ -417,6 +417,7 @@ sub search_id_iso {
 }
 
 sub flush_rules {
+    return if $>;
     my $ipt = open_ipt();
     $ipt->flush_chain('filter', $CHAIN);
     $ipt->delete_chain('filter', 'INPUT', $CHAIN);

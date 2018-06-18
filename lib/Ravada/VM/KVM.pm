@@ -1117,7 +1117,7 @@ sub _cache_filename($url) {
     $file =~ s/__+/_/g;
 
     my ($user) = getpwuid($>);
-    my $dir = "/var/tmp/ravada_cache/$user";
+    my $dir = "/var/tmp/$user/ravada_cache/";
     make_path($dir)    if ! -e $dir;
     return "$dir/$file";
 }

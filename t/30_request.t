@@ -327,13 +327,13 @@ for my $vm_name ( qw(Void KVM)) {
     SKIP: {
         my $msg = "SKIPPED: No $vm_name found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
-            $msg = "SKIPPED: Test must run as root";
+            $msg = "SKIPPED $vm_name: Test must run as root";
             $vm = undef;
         }
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
     
-        diag("Testing requests with ".(ref $vm or '<UNDEF>'));
+        diag("Testing $vm_name requests with ".(ref $vm or '<UNDEF>'));
     
         test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);

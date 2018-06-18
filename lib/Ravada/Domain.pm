@@ -630,7 +630,7 @@ sub open($class, @args) {
     bless $vm0, $vm_class;
 
     my @ro = ();
-    @ro = (readonly => 1 ) if $>;
+    @ro = (readonly => 1 ) if $readonly;
     my $vm = $vm0->new( @ro );
 
     my $domain = $vm->search_domain($row->{name}, $force);
@@ -1462,6 +1462,8 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
+    return if $>;
+
     my %args = @_;
 
     my $user = delete $args{user};
@@ -1588,7 +1590,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)
+                                    if !$>;
 
         $self->_log_iptable(iptables => \@iptables_arg, @_);
 
@@ -1597,7 +1600,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
     
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)
+                                if !$>;
     
     $self->_log_iptable(iptables => \@iptables_arg, %args);
 

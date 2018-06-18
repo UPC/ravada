@@ -480,6 +480,7 @@ sub clean_swap_volumes {
     }
 }
 
+sub can_hibernate { return 1};
 sub hybernate {
     my $self = shift;
     $self->_store(is_hibernated => 1);
