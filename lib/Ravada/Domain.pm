@@ -1312,7 +1312,6 @@ sub _copy_clone($self, %args) {
         ,_vm => $self->_vm
         ,@copy_arg
     );
-    warn 2;
     my @volumes = $self->list_volumes_target;
     my @copy_volumes = $copy->list_volumes_target;
 
