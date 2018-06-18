@@ -801,6 +801,7 @@ sub _alias_grants($self) {
 
 sub _add_grants($self) {
     $self->_add_grant('shutdown', 1);
+    $self->_add_grant('screenshot', 1);
 }
 
 sub _add_grant($self, $grant, $allowed) {
