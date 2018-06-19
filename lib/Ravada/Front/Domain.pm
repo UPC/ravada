@@ -82,7 +82,7 @@ sub is_paused($self) {
     return 0;
 }
 
-sub is_removed          { confess "TODO" }
+sub is_removed          { return 0 }
 sub list_volumes        { confess "TODO" }
 
 sub name($self) {

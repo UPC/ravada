@@ -20,7 +20,7 @@
 %   if ($domain->drivers && $USER->can_change_settings($domain->id)) {
         <li class="nav"><a href="#graphics" data-toggle="tab"><%=l 'Graphics' %></a></li>
 %   }
-%   if ($USER->is_admin){
+%   if ($USER->is_admin || $USER->can_clone_all ){
         <li class="nav"><a href="#copy" data-toggle="tab"><%=l 'Copy' %></a></li>
 %   }
 %   if ( $USER->can_remove_machine($domain->id)) {

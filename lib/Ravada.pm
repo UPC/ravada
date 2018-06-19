@@ -79,8 +79,8 @@ our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
-our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
+our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -801,6 +801,7 @@ sub _alias_grants($self) {
 
 sub _add_grants($self) {
     $self->_add_grant('shutdown', 1);
+    $self->_add_grant('screenshot', 1);
 }
 
 sub _add_grant($self, $grant, $allowed) {
@@ -864,6 +865,7 @@ sub _enable_grants($self) {
         ,'manage_users'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
+        ,'screenshot'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");

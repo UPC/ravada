@@ -368,6 +368,7 @@ sub can_list_own_machines {
         if $self->can_create_base()
             || $self->can_create_machine()
             || $self->can_remove_clone_all()
+            || $self->is_operator()
         ;
     return 0;
 }
@@ -405,7 +406,9 @@ sub can_list_machines {
     return 1 if $self->is_admin()
             || $self->can_remove_all || $self->can_remove_clone_all
             || $self->can_shutdown_all
-            || $self->can_change_settings_all();
+            || $self->can_change_settings_all()
+            || $self->can_change_settings_clones()
+            || $self->can_clone_all();
     return 0;
 }
 
@@ -582,7 +585,7 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
-    return 0 if !$self->can_do($grant);
+    return 0 if !$self->can_do($grant) && !$domain->id_base;
 
     return 1 if $self->can_do("${grant}_all");
     return 1 if $domain->id_owner == $self->id;
@@ -794,7 +797,7 @@ Returns a list of all the available permissions
 =cut
 
 sub list_all_permissions($self) {
-    return if !$self->is_admin;
+    return if !$self->is_admin && !$self->can_grant();
     $self->_load_grants();
 
     my $sth = $$CON->dbh->prepare(
@@ -846,6 +849,15 @@ sub can_change_settings($self, $id_domain=undef) {
 
 =cut
 
+=head2 can_manage_machine
+
+The user can change settings, remove or change other things yet to be defined.
+Some changes require special permissions granted.
+
+Unlinke change_settings that any user is granted to his own machines by default.
+
+=cut
+
 sub can_manage_machine($self, $domain) {
     return 1 if $self->is_admin;
 
@@ -853,10 +865,16 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_change_settings($domain);
 
+    return 1 if $self->can_remove_all;
+
     return 1 if $self->can_remove_clone_all
         && $domain->id_base;
+    
+    return 1 if $self->can_clone_all;
 
-    if ( $self->can_remove_clones && $domain->id_base ) {
+    return 1 if $self->can_remove && $domain->id_owner == $self->id;
+
+    if ( ($self->can_remove_clones || $self->can_change_settings_clones) && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
     }
@@ -881,7 +899,7 @@ sub can_remove_clones($self, $id_domain=undef) {
 
 sub can_remove_machine($self, $domain) {
     return 1 if $self->can_remove_all();
-    return 0 if !$self->can_remove();
+    #return 0 if !$self->can_remove();
 
     $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
 

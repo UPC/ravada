@@ -96,6 +96,28 @@ sub test_list_domains {
     is($list_domains->[0]->{status}, 'hibernated');
 }
 
+sub test_list_bases {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user2 = create_user('malcolm.reynolds','serenity');
+
+    my $base = create_domain($vm_name);
+    my $list = rvd_front->list_machines_user($user2);
+    is(scalar @$list, 0);
+
+    $base->prepare_base(user_admin);
+
+    $list = rvd_front->list_machines_user($user2);
+    is(scalar @$list, 0);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    is(scalar @$list, 1);
+
+    $base->remove(user_admin);
+    $user2->remove();
+}
 #########################################################
 
 remove_old_domains();
@@ -129,6 +151,8 @@ for my $vm_name (reverse sort @VMS) {
 
         my $domain = test_create_domain($vm_name);
         test_list_domains($vm_name, $domain);
+
+        test_list_bases($vm_name);
         $domain->remove($USER);
 
     }

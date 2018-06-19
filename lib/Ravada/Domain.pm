@@ -569,8 +569,17 @@ sub _data($self, $field, $value=undef, $table='domains') {
     }
     return $self->{$data}->{$field} if exists $self->{$data}->{$field};
 
-    my @field_select = ( name => $self->name );
-    @field_select = ( id_domain => $self->id )         if $table ne 'domains';
+    my @field_select;
+    if ($table eq 'domains' ) {
+        if (exists $self->{_data}->{id} ) {
+            @field_select = ( id => $self->{_data}->{id});
+        } else {
+            confess "ERROR: Unknown domain" if ref($self) =~ /^Ravada::Front::Domain/;
+            @field_select = ( name => $self->name );
+        }
+    } else {
+        @field_select = ( id_domain => $self->id );
+    }
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
     confess "No DB info for domain @field_select in $table ".$self->name 
@@ -1370,6 +1379,7 @@ sub _post_shutdown {
     $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
+
     if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1395,6 +1405,7 @@ sub _post_shutdown {
 }
 
 sub _around_is_active($orig, $self) {
+    return 0 if $self->is_removed;
     my $is_active = $self->$orig();
     return $is_active if $self->readonly
         || !$self->is_known
