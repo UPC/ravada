@@ -13,6 +13,7 @@ my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 # init ravada for testing
 init($test->connector);
+my $USER = create_user("foo","bar", 1);
 
 ##############################################################################
 
@@ -28,9 +29,13 @@ sub test_remove_domain {
 
     ok($removed, "Domain deleted: $removed");
     
-    eval{ $domain->remove };
+    eval{ $domain->remove(user_admin) };
     
-    is{$@,''};
+    is($@,"");
+
+    my $list = rvd_front->list_domains();
+    is(scalar @$list , 0);
+
 }
 
 
