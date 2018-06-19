@@ -66,6 +66,7 @@ $FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
+our $VERBOSE;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 
@@ -1723,11 +1724,11 @@ sub process_requests {
                 $req->status("done");
             }
         }
-        next if !$DEBUG && !$debug;
+        next if !$DEBUG && !$debug && !$VERBOSE;
 
-        sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG;
+            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
+        sleep 1 if $DEBUG;
 
     }
     $sth->finish;
