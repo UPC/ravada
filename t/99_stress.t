@@ -22,6 +22,7 @@ my %DOMAIN_INSTALLING;
 
 our %CHECKED;
 our %CLONE_N;
+my $N_MIN;
 #####################################################################3
 
 sub install_base {
@@ -61,6 +62,13 @@ sub install_base {
         name => $name
         ,id_iso => $id_iso
         ,id_owner => user_admin->id
+        ,disk => int(1.2 * 1024 * 1024 * 1024)
+    );
+    my $ram = 256;
+    $domain->add_volume(
+        name => $domain->name.".vdb"
+        ,swap => 1
+        ,size => $ram * 1024 * 1024
     );
 
     return $name if $vm_name eq 'Void';
@@ -72,22 +80,26 @@ sub install_base {
 
     my @cmd = qw(virt-install
         --noautoconsole
-        --ram 256
         --vcpus 1
         --os-type linux
         --os-variant debian9
-        --graphics spice
         --video qxl --channel spicevmc
     );
     my $preseed = getcwd."/t/preseed.cfg";
     ok(-e $preseed,"ERROR: Missing $preseed") or BAIL_OUT;
 
+    push @cmd,('--ram', $ram);
+    push @cmd,('--graphics','spice,listen='.$vm->ip);
     push @cmd,('--extra-args', "'console=ttyS0,115200n8 serial'");
     push @cmd,('--initrd-inject',$preseed);
     push @cmd,('--name' => $name );
     push @cmd,('--disk' => $volumes[0]
                             .",bus=virtio"
                             .",cache=unsafe");# only for this test
+    push @cmd,('--disk' => $volumes[1]
+                            .",bus=virtio"
+                            .",cache=unsafe");# only for this test
+
     push @cmd,('--network' => 'bridge=virbr0,model=virtio');
     push @cmd,('--location' => $iso->{device});
 
@@ -205,10 +217,186 @@ sub random_request($vm) {
     }
 }
 
+sub _fill_vm($field, $attrib, $vm) {
+    if ( $field->{$attrib} == 2 && rand(4)<2 ) {
+        delete $field->{$attrib};
+        return;
+    }
+    $field->{$attrib} = $vm->type;
+}
+
+sub _fill_name($field, $attrib, $vm) {
+    $field->{$attrib} = new_domain_name();
+}
+
+sub _fill_remote_ip($field, $attrib, $vm) {
+    $field->{$attrib} = '192.168.1.'.int(rand(254)+1);
+}
+
+sub _fill_id_vm($field, $attrib, $vm) {
+    $field->{$attrib} = $vm->id;
+}
+
+sub _fill_at($field, $attrib, $vm) {
+    $field->{$attrib} = time + int(rand(30));
+}
+
+sub _fill_filename($field, $attrib, $vm) {
+    $field->{$attrib} = "/var/tmp/$$".int(rand(100)).".txt";
+}
+
+sub _fill_id_domain($field, $attrib, $vm) {
+    my @domains = $vm->list_domains();
+    $field->{$attrib} = $domains[rand(scalar(@domains))]->id;
+}
+
+sub _fill_uid($field, $attrib, $vm) {
+    my $users = rvd_front->list_users();
+    if (rand(5)<3 && exists $field->{id_domain}) {
+        _fill_id_domain($field,'id_domain', $vm);
+        eval {
+            my $domain = Ravada::Domain->open($field->{id_domain});
+            $field->{$attrib} = $domain->id_owner;
+        };
+        if($@) {
+            diag($@);
+            return _fill_uid($field, $attrib, $vm);
+       }
+    } else {
+        $field->{$attrib} = $users->[int(rand(scalar @$users))]->{id};
+    }
+}
+
+sub _fill_memory($field, $attrib, $vm) {
+    $field->{$attrib} = int(rand(10)+1)* 1024 * 1024;
+}
+
+sub _fill_id_iso($field, $attrib, $vm) {
+    my $isos = rvd_front->list_iso_images();
+    $field->{$attrib} = $isos->[int(rand(@$isos))]->{id};
+}
+
+sub _fill_network($field, $attrib, $vm) {
+    my @networks = $vm->list_networks();
+    $field->{$attrib} = $networks[int(rand(scalar @networks))];
+}
+
+sub _fill_boolean($field, $attrib, $vm) {
+    $field->{$attrib} = int(rand(2));
+}
+
+sub _fill_timeout($field, $attrib, $vm) {
+    $field->{$attrib} = int(rand(120));
+}
+
+sub _fill_id_option($field, $attrib, $vm) {
+    _fill_id_domain($field,'id_domain', $vm);
+
+    my $domain = Ravada::Domain->open($field->{id_domain});
+    my @drivers = Ravada::Domain::drivers(undef, undef, $vm->type);
+
+    if (!scalar(@drivers)) {
+        return;
+    }
+    my $driver = $drivers[int(rand(scalar(@drivers)))];
+
+    my $driver_type = $domain->drivers($driver->name);
+
+    my @options = $driver_type->get_options();
+    $field->{$attrib} = $options[int(rand(scalar @options))];
+}
+
+sub _fill_id_template($field, $attrib, $vm) {
+    if ( $vm->type eq 'LXC' ) {
+        confess "TODO id_template for LXC";
+    } else {
+        delete $field->{$attrib}
+    }
+}
+
+sub _fill_iso_file($field, $attrib, $vm) {
+    my @iso = $vm->search_volume(qr(\.iso));
+    $field->{$attrib} = $iso[int(rand(scalar @iso))];
+}
+
+sub _fill_id_base($field, $attrib, $vm) {
+    my $bases = rvd_front->list_bases(id_vm => $vm->id);
+    $field->{$attrib} = $bases->[int(rand($#$bases))];
+}
+
+sub random_request_compliant($vm_name) {
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my @requests = keys %Ravada::Request::VALID_ARG;
+    my $req_name = $requests[int rand(scalar @requests)];
+
+    return if $vm_name eq 'Void' && $req_name eq 'download';
+
+    diag("[$vm_name] Requesting random $req_name");
+    my %fill_attrib = (
+        vm => \&_fill_vm
+        ,at => \&_fill_at
+        ,uid => \&_fill_uid
+        ,name => \&_fill_name
+        ,swap => \&_fill_memory
+        ,disk => \&_fill_memory
+        ,value => \&_fill_boolean
+        ,id_vm => \&_fill_id_vm
+        ,start => \&_fill_boolean
+        ,id_iso => \&_fill_id_iso
+        ,memory => \&_fill_memory
+        ,id_base => \&_fill_id_base
+        ,timeout => \&_fill_timeout
+        ,verbose => \&_fill_boolean
+        ,network => \&_fill_network
+        ,id_owner => \&_fill_uid
+        ,iso_file => \&_fill_iso_file
+        ,filename => \&_fill_filename
+        ,id_domain => \&_fill_id_domain
+        ,id_option => \&_fill_id_option
+        ,remote_ip => \&_fill_remote_ip
+        ,id_template => \&_fill_id_template
+    );
+    my %field = %{$Ravada::Request::VALID_ARG{$req_name}};
+    for my $attrib ( keys %field ) {
+        die "I don't know how to handle field $attrib"
+            if !$fill_attrib{$attrib};
+        $fill_attrib{$attrib}->(\%field, $attrib, $vm);
+    }
+    clean_request($req_name, $vm_name, \%field);
+    diag(Dumper(\%field));
+
+    return Ravada::Request->$req_name(%field);
+}
+
+sub clean_request($req_name,  $vm_name, $field) {
+    if ($req_name eq 'start_domain') {
+        return if !exists $field->{id_domain} || !exists $field->{name};
+        if (rand(2) <1) {
+            delete $field->{id_domain};
+        } else {
+            delete $field->{name};
+        }
+    } elsif($req_name eq 'create_domain') {
+        delete $field->{network} if $vm_name eq 'Void';
+    }
+}
+
+sub test_random_requests($vm_name) {
+
+    my $vm = rvd_back->search_vm($vm_name);
+    my @reqs;
+    for ( 1 .. 100 ){
+        push @reqs,(random_request_compliant($vm_name));
+    }
+    _wait_requests(\@reqs, $vm, 1);
+}
+
 sub new_clone_name {
     my $base_name = shift;
 
     my $clone_name;
+    $CLONE_N{$base_name} = $N_MIN if !exists $CLONE_N{$base_name};
     my $n = $CLONE_N{$base_name}++;
     for ( ;; ) {
         $n++;
@@ -243,7 +431,9 @@ sub test_restart($vm_name) {
                         )
             );
             push @domains,($domain);
-            if ( $vm->free_memory <= $min_memory ) {
+            if ( rand(10) < 2 && $vm->free_memory <= $min_memory ) {
+                _shutdown_random_domain($vm);
+                _shutdown_random_domain($vm);
                 _shutdown_random_domain($vm);
             }
         }
@@ -343,19 +533,23 @@ sub test_make_clones_base {
     }
 }
 
-sub _wait_requests($reqs, $vm) {
+sub _wait_requests($reqs, $vm, $buggy = undef) {
     return if !$reqs || !scalar @$reqs;
     diag("Waiting for ".scalar(@$reqs)." requests");
     for ( ;; ) {
-        last if _all_reqs_done($reqs, $vm);
+        last if _all_reqs_done($reqs, $vm, $buggy);
         sleep 1;
     }
 }
 
-sub _all_reqs_done($reqs, $vm) {
+sub _all_reqs_done($reqs, $vm, $buggy) {
     for my $r (@$reqs) {
         return 0 if $r->status ne 'done';
         next if $CHECKED{$r->id}++;
+        if ($buggy) {
+            ok(1);
+            return;
+        }
         next if !defined $r->error;
         ok(1) and next
             if ( $r->command eq 'remove' && $r->error =~ /already removed/)
@@ -364,7 +558,10 @@ sub _all_reqs_done($reqs, $vm) {
             || ( $r->command eq 'hybernate' && $r->error =~ /not running/)
             || ( $r->command eq 'clone' && $r->error =~ /already exists/)
             || ( $r->command eq 'prepare_base'
-                    && $r->error =~ /already a base/);
+                    && $r->error =~ /already a base/)
+            || ( $r->error =~ /Unknown domain/)
+            || $r->error =~ /Unable to get port for domain/
+            ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain($vm);
              next;
@@ -375,12 +572,12 @@ sub _all_reqs_done($reqs, $vm) {
 }
 
 sub _shutdown_random_domain($vm) {
-    my @domains = $vm->list_domains(active => 1);
-    my $active = $domains[rand($#domains)];
+    my $domains = rvd_front->list_domains(status => 'active', id_vm => $vm->id);
+    my $active = $domains->[int rand($#$domains)];
     return if !$active;
     diag("request shutdown random domain ".$active->name);
     Ravada::Request->shutdown_domain(
-                id_domain => $active->id
+                id_domain => $active->{id}
                 ,uid => user_admin->id
     );
 
@@ -453,7 +650,9 @@ sub clean_leftovers($vm_name) {
     my @reqs;
     DOMAIN:
     for my $domain ( @{rvd_front->list_domains} ) {
-        next if $domain->{name} !~ /^99_.*\d$/;
+        next if $domain->{name} !~ /^99_.*(\d+)$/;
+        $N_MIN = $1
+            if $1 =~ /^\d+$/ && (!$N_MIN || $1 > $N_MIN);
 
         for my $vm_installing (keys %DOMAIN_INSTALLING) {
             next DOMAIN if $DOMAIN_INSTALLING{$vm_installing} eq $domain->{name};
@@ -473,7 +672,7 @@ sub clean_leftovers($vm_name) {
 
 
 my @vm_names;
-for my $vm_name ( 'KVM' ) {
+for my $vm_name ( 'KVM', 'Void' ) {
 
     SKIP: {
         if (!$ENV{TEST_STRESS} && !$ENV{"TEST_STRESS_$vm_name"}) {
@@ -510,17 +709,24 @@ for my $vm_name (reverse sort @vm_names) {
         diag("Testing $vm_name");
         my $domain_name = _wait_base_installed($vm_name);
         clean_clones($domain_name, $vm_name);
-        test_create_clones($vm_name, $domain_name,20);
+        test_create_clones($vm_name, $domain_name);
         test_restart($vm_name);
 
         my $vm = rvd_back->search_vm($vm_name);
         test_make_clones_base($vm_name, $domain_name);
         test_remove_base($vm_name, $domain_name);
 
-        test_create_clones($vm_name, $domain_name, 20);
+        test_create_clones($vm_name, $domain_name, 10);
         test_restart($vm_name);
         test_hibernate($vm_name);
+        test_random_requests($vm_name);
+}
+for ( 1 .. 10 ) {
+    for my $vm_name (reverse sort @vm_names) {
+        test_random_requests($vm_name);
+    }
+}
+for my $vm_name (reverse sort @vm_names) {
         clean_leftovers($vm_name);
 }
-
 done_testing();
