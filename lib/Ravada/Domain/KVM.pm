@@ -541,7 +541,10 @@ Returns whether the domain is running or not
 sub is_active {
     my $self = shift;
     return 0 if $self->is_removed;
-    return ( $self->domain->is_active or 0);
+    my $is_active = 0;
+    eval { $is_active = $self->domain->is_active };
+    die $@ if $@ && $@ !~ /code: 42,/;
+    return $is_active;
 }
 
 =head2 is_persistent
@@ -1730,11 +1733,17 @@ sub pre_remove {
 
 sub is_removed($self) {
     my $is_removed = 0;
-    return 1 if !$self->domain;
-    eval { $self->domain->get_xml_description};
-    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+
+    eval {
+        $is_removed = 1 if !$self->domain;
+        $self->domain->get_xml_description if !$is_removed;
+    };
+    if( $@ && $@ =~ /libvirt error code: 42,/ ) {
+        $@ = '';
+        $is_removed = 1;
+    }
     die $@ if $@;
-    return 0;
+    return $is_removed;
 }
 
 sub internal_id($self) {

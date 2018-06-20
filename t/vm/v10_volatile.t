@@ -97,6 +97,7 @@ sub test_volatile {
 
     my @volumes = $clone->list_volumes();
 
+    is($clone->is_active, 1);
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
