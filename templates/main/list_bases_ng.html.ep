@@ -35,7 +35,7 @@
                 <a type="button" class="btn btn-success" ng-hide="host_action == machine.id"
                    href="/machine/clone/{{machine.id}}.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
                 <a type="button" class="btn btn-danger"
-                    ng-show="machine.id_clone && !machine.is_active"
+                    ng-show="machine.id_clone && !machine.is_active && machine.can_remove"
                     ng-click="host_restore=machine.id_clone; $parent.refresh=20"
                     ><strong><i class="fas fa-redo" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
                     <div ng-show="machine.id_clone && host_restore == machine.id_clone">
@@ -57,6 +57,7 @@
                             ng-show="host_action == machine.id && !host_restore"
                             >
                         <a type="button" class="btn btn-default btn-sm"
+                            ng-show="machine.can_remove"
                             ng-click="host_restore=machine.id_clone"
                         ><%=l 'Restore' %></a>
 

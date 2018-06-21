@@ -164,7 +164,9 @@ sub list_machines_user {
             $base{screenshot} = ( $clone->_data('file_screenshot') 
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
-            $base{id_clone} = $clone->id
+            $base{id_clone} = $clone->id;
+            $base{can_remove} = 0;
+            $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
