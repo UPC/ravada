@@ -426,6 +426,22 @@ sub flush_rules {
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
+
+    @cmd = ('iptables','-L','INPUT');
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my $count = -2;
+    my @found;
+    for my $line ( split /\n/,$out ) {
+        $count++;
+        next if $line !~ /^RAVADA /;
+        push @found,($count);
+    }
+    @cmd = ('iptables','-D','INPUT');
+    for my $n (reverse @found) {
+        run3([@cmd, $n], \$in, \$out, \$err);
+        warn $err if $err;
+    }
 }
 
 sub open_ipt {
