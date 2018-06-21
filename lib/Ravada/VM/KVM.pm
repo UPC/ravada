@@ -247,6 +247,7 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
         if !ref($pattern) || ref($pattern) ne 'Regexp';
 
+    $self->_connect();
     $self->_refresh_storage_pools()    if $refresh;
 
     my @volume;
