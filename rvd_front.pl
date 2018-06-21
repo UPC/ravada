@@ -456,14 +456,9 @@ get '/machine/exists/#name' => sub {
 
 };
 
-get '/machine/rename/#id' => sub {
-    my $c = shift;
-    return access_denied($c)       if !$USER -> can_rename();
-    return rename_machine($c);
-};
-
 get '/machine/rename/#id/#value' => sub {
     my $c = shift;
+    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
     return rename_machine($c);
 };
 
@@ -1622,7 +1617,6 @@ sub rename_machine {
     my $id_domain = $c->stash('id');
     my $new_name = $c->stash('value');
     return login($c) if !_logged_in($c);
-    return access_denied($c)    if !$USER->is_admin();
 
     #return $c->render(data => "Machine id not found in $uri ")
     return $c->render(data => "Machine id not found")
