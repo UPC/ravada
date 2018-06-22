@@ -887,6 +887,7 @@ sub _insert_db {
     my ($vm) = ref($self) =~ /.*\:\:(\w+)$/;
     confess "Unknown domain from ".ref($self)   if !$vm;
     $field{vm} = $vm;
+    $self->{_data}->{name} = $field{name}   if $field{name};
 
     my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
