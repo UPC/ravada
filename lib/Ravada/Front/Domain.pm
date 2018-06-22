@@ -31,15 +31,26 @@ our $CONNECTOR = \$Ravada::Front::CONNECTOR;
 ###########################################################################
 
 sub BUILD($self, $arg) {
-    my $id = $arg->{id} or confess "ERROR: id required";
-    my $ret = $self->_select_domain_db( id => $id);
+    my $id = $arg->{id};
+    my $name = $arg->{name};
+
+    $self->_select_domain_db( id => $id)    if defined $id;
+    $self->_select_domain_db( name => $name)    if defined $name;
+
+    $self->{_data}->{id} = $id      if defined $id;
+    $self->{_data}->{name} = $name  if defined $name;
 
 #    confess "ERROR: Domain '".$self->name." not found "
 #        if $self->is_volatile && ! $self->is_active;
 }
 
 sub open($self, $id) {
-    return Ravada::Front::Domain->new( id => $id );
+    my $domain = Ravada::Front::Domain->new( id => $id );
+    if ($domain->type eq 'KVM') {
+        return Ravada::Front::Domain::KVM->new( id => $id );
+    } else {
+        return Ravada::Front::Domain->new( id => $id );
+    }
 }
 
 sub autostart($self )    { return $self->_data('autostart') }
@@ -86,6 +97,7 @@ sub is_removed          { return 0 }
 sub list_volumes        { confess "TODO" }
 
 sub name($self) {
+    return $self->{_data}->{name}   if exists $self->{_data} && $self->{_data}->{name};
     return $self->_data('name') 
 }
 
