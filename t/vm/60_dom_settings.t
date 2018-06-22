@@ -92,6 +92,11 @@ sub test_drivers_type {
             is($value2 , $option->{value});
 
         }
+        {
+            my $domain_f = Ravada::Front::Domain->open($domain->id);
+            is($domain_f->get_driver($type), $option->{value}) or exit;
+            rvd_front->list_machines_user(user_admin);
+        }
 
     }
     $domain->remove($USER);
@@ -130,7 +135,7 @@ sub test_drivers_type_id {
         {
             my $domain2 = $vm->search_domain($domain->name);
             my $value2 = $domain2->get_driver($type);
-            is($value2 , $option->{value});
+            is($value2 , $option->{value}) or exit;
         }
         $domain->start($USER)   if !$domain->is_active;
 
@@ -192,6 +197,7 @@ sub test_drivers_clone {
         $domain->prepare_base( user_admin );
         $domain->is_public(1);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
+        isa_ok($clone,"Ravada::Domain::$vm_name");
         is($domain->get_driver($type), $option->{value}) or next;
         is($clone->get_driver($type), $option->{value},$clone->name) or exit;
         {
@@ -218,6 +224,7 @@ sub test_drivers_clone {
         }
         # removing the clone and create again, original driver
         $clone->remove($USER);
+        warn 1;
         my $clone2 = $domain->clone(user => $USER, name => $clone_name);
         is($clone2->get_driver($type), $option->{value});
         $clone2->remove($USER);
