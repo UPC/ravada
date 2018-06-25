@@ -358,6 +358,7 @@
     };
 
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
+        var redirected_display = false;
         $scope.get_domain_info = function() {
             if ($scope.id_domain) {
                 var seconds = 1000;
@@ -371,6 +372,10 @@
                     if ($scope.domain.is_active) {
                         seconds = 5000;
                         $scope.redirect();
+                        if ($scope.auto_view && !redirected_display && !$scope.domain.spice_password) {
+                            location.href='/machine/display/'+$scope.domain.id;
+                            redirected_display=true;
+                        }
                     }
                     $timeout(function() {
                         $scope.get_domain_info();

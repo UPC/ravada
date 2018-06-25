@@ -66,6 +66,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                     ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
+                                              ,auto_view => 0
                                               }
                                       ,file => $FILE_CONFIG
 };
@@ -1217,7 +1218,9 @@ sub _new_domain_name {
 }
 
 sub run_request($c, $request) {
-    return $c->render(template => 'main/run_request', request => $request );
+    return $c->render(template => 'main/run_request', request => $request
+        , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
+    );
 }
 
 sub _open_iptables {
