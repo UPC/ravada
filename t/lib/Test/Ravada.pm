@@ -135,7 +135,13 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
-    eval {$USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;};
+    my $login;
+    eval {
+        $login = Ravada::Auth::SQL->new(name => 'admin',password => 'admin');
+    };
+    $USER_ADMIN = $login if $login;
+    $USER_ADMIN = create_user('admin','admin',1)
+        if !$USER_ADMIN && !$login;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
@@ -411,6 +417,7 @@ sub search_id_iso {
 }
 
 sub flush_rules {
+    return if $>;
     my $ipt = open_ipt();
     $ipt->flush_chain('filter', $CHAIN);
     $ipt->delete_chain('filter', 'INPUT', $CHAIN);
@@ -419,6 +426,22 @@ sub flush_rules {
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
+
+    @cmd = ('iptables','-L','INPUT');
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my $count = -2;
+    my @found;
+    for my $line ( split /\n/,$out ) {
+        $count++;
+        next if $line !~ /^RAVADA /;
+        push @found,($count);
+    }
+    @cmd = ('iptables','-D','INPUT');
+    for my $n (reverse @found) {
+        run3([@cmd, $n], \$in, \$out, \$err);
+        warn $err if $err;
+    }
 }
 
 sub open_ipt {

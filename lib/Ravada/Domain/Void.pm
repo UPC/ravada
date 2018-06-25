@@ -11,6 +11,7 @@ use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(LoadFile DumpFile);
 
+extends 'Ravada::Front::Domain::Void';
 with 'Ravada::Domain';
 
 has 'domain' => (
@@ -119,21 +120,6 @@ sub _store {
 
 }
 
-sub _value{
-    my $self = shift;
-
-    my ($var) = @_;
-
-    my ($disk) = $self->_config_file();
-
-    my $data = {} ;
-    $data = LoadFile($disk) if -e $disk;
-    
-    return $data->{$var};
-
-}
-
-
 sub shutdown {
     my $self = shift;
     $self->_store(is_active => 0);
@@ -174,11 +160,6 @@ sub prepare_base {
         close $out;
         $self->_prepare_base_db($file_base);
     }
-}
-
-sub _config_file {
-    my $self = shift;
-    return "$DIR_TMP/".$self->name.".yml";
 }
 
 sub list_disks {
@@ -399,13 +380,7 @@ sub set_memory {
     $self->_set_info(memory => $value );
 }
 
-sub get_driver {
-    my $self = shift;
-    my $name = shift;
 
-    my $drivers = $self->_value('drivers');
-    return $drivers->{$name};
-}
 
 sub set_driver {
     my $self = shift;

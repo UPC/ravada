@@ -49,6 +49,7 @@ sub create_domain {
     );
 
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
+        , id_vm => $self->id
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {

@@ -72,30 +72,37 @@ sub test_drivers_type {
         _domain_shutdown($domain);
 
         die "No value for driver ".Dumper($option)  if !$option->{value};
+
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
-        is($domain->get_driver($type), $option->{value}) or next;
 
-        _domain_shutdown($domain),
-        is($domain->get_driver($type), $option->{value}) or next;
-
-        {
-            my $domain2 = $vm->search_domain($domain->name);
-            my $value2 = $domain2->get_driver($type);
-            is($value2 , $option->{value});
-        }
-        $domain->start($USER)   if !$domain->is_active;
-
-        {
-            my $domain2 = $vm->search_domain($domain->name);
-            my $value2 = $domain2->get_driver($type);
-            is($value2 , $option->{value});
-
-        }
+        is($domain->get_driver($type), $option->{value}, $type) or exit;
         {
             my $domain_f = Ravada::Front::Domain->open($domain->id);
             is($domain_f->get_driver($type), $option->{value}) or exit;
             rvd_front->list_machines_user(user_admin);
+        }
+
+        {
+            my $domain2 = $vm->search_domain($domain->name);
+            my $value2 = $domain2->get_driver($type);
+            is($value2 , $option->{value});
+        }
+        next unless ($ENV{TEST_STRESS} || $ENV{"TEST_STRESS_$vm_name}"});
+
+        _domain_shutdown($domain);
+        $domain->start($USER)   if !$domain->is_active;
+        {
+            my $domain_f = Ravada::Front::Domain->open($domain->id);
+            is($domain_f->get_driver($type), $option->{value}) or exit;
+            rvd_front->list_machines_user(user_admin);
+        }
+
+        {
+            my $domain2 = $vm->search_domain($domain->name);
+            my $value2 = $domain2->get_driver($type);
+            is($value2 , $option->{value});
+
         }
 
     }
@@ -137,6 +144,7 @@ sub test_drivers_type_id {
             my $value2 = $domain2->get_driver($type);
             is($value2 , $option->{value}) or exit;
         }
+        next unless ($ENV{TEST_STRESS} || $ENV{"TEST_STRESS_$vm_name}"});
         $domain->start($USER)   if !$domain->is_active;
 
         {
@@ -217,6 +225,7 @@ sub test_drivers_clone {
             eval { $clone->set_driver($type => $option_clone->{value}) };
             ok(!$@,"Expecting no error, got : ".($@ or ''));
             is($clone->get_driver($type), $option_clone->{value});
+            last unless ($ENV{TEST_STRESS} || $ENV{"TEST_STRESS_$vm_name}"});
 
             $clone->start($USER)    if !$clone->is_active;
             is($clone->get_driver($type), $option_clone->{value});
@@ -224,10 +233,10 @@ sub test_drivers_clone {
         }
         # removing the clone and create again, original driver
         $clone->remove($USER);
-        warn 1;
         my $clone2 = $domain->clone(user => $USER, name => $clone_name);
         is($clone2->get_driver($type), $option->{value});
         $clone2->remove($USER);
+        last unless ($ENV{TEST_STRESS} || $ENV{"TEST_STRESS_$vm_name}"});
     }
     $domain->remove($USER);
 }
@@ -260,7 +269,7 @@ sub test_settings {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ('KVM','Void') {
+for my $vm_name ('Void','KVM') {
 my $vm;
 eval { $vm =rvd_back->search_vm($vm_name) };
 SKIP: {
@@ -276,6 +285,9 @@ SKIP: {
 
     diag("Testing drivers for $vm_name");
     test_settings($vm_name);
+        diag("[$vm_name] Skipping stress test, enable TEST_STRESS or TEST_STRESS_$vm_name}")
+            unless ($ENV{TEST_STRESS} || $ENV{"TEST_STRESS_$vm_name}"});
+
 };
 }
 remove_old_domains();

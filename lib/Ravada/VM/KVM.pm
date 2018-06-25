@@ -429,12 +429,10 @@ Returns true or false if domain exists.
 sub search_domain($self, $name, $force=undef) {
 
     $self->connect();
-    my @all_domains;
-    eval { @all_domains = $self->vm->list_all_domains() };
-    confess $@ if $@;
 
     my $dom;
     eval { $dom = $self->vm->get_domain_by_name($name); };
+    confess $@ if $@ && $@ !~ /error code: 42,/;
     if (!$dom) {
         return if !$force;
         return if !$self->_domain_in_db($name);
@@ -444,8 +442,8 @@ sub search_domain($self, $name, $force=undef) {
         my $domain;
 
         my @domain = ( );
-        @domain = ( domain => $dom ) if $dom;
-        @domain = ( id_owner => $Ravada::USER_DAEMON->id)
+        push @domain, ( domain => $dom ) if $dom;
+        push @domain, ( id_owner => $Ravada::USER_DAEMON->id)
             if $force && !$self->_domain_in_db($name);
         eval {
             $domain = Ravada::Domain::KVM->new(

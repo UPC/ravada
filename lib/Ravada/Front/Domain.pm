@@ -10,8 +10,12 @@ Ravada::Front::Domain - Frontent domain information for Ravada
 =cut
 
 use Carp qw(cluck confess croak);
+use Data::Dumper;
 use JSON::XS;
 use Moose;
+
+use Ravada::Front::Domain::KVM;
+use Ravada::Front::Domain::Void;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -47,10 +51,13 @@ sub BUILD($self, $arg) {
 sub open($self, $id) {
     my $domain = Ravada::Front::Domain->new( id => $id );
     if ($domain->type eq 'KVM') {
-        return Ravada::Front::Domain::KVM->new( id => $id );
-    } else {
-        return Ravada::Front::Domain->new( id => $id );
+        $domain = Ravada::Front::Domain::KVM->new( id => $id );
+    } elsif ($domain->type eq 'Void') {
+        $domain = Ravada::Front::Domain::Void->new( id => $id );
     }
+    die "ERROR: Unknown domain id: $id\n"
+        unless exists $domain->{_data}->{name} && $domain->{_data}->{name};
+    return $domain;
 }
 
 sub autostart($self )    { return $self->_data('autostart') }
@@ -114,5 +121,7 @@ sub shutdown            { confess "TODO" }
 sub shutdown_now        { confess "TODO" }
 sub spinoff_volumes     { confess "TODO" }
 sub start               { confess "TODO" }
+
+sub get_driver {}
 
 1;
