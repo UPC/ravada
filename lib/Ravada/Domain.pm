@@ -841,7 +841,7 @@ sub info($self, $user) {
         ,has_clones => ( $self->has_clones or undef)
     };
     eval {
-        $info->{display_url} => $self->display($user);
+        $info->{display_url} = $self->display($user);
     };
     die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
