@@ -246,7 +246,7 @@
                          <i class="fa fa-play"></i>
                         </a>
                         <a type="button" class="btn btn-warning btn-sm"
-                         ng-click="action('machine','hybernate',machine.id)"
+                         ng-click="action('machine','hibernate',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_shutdown"
                          title="<%=l 'Hybernate' %>">
@@ -367,7 +367,7 @@
                             <i class="fa fa-play"></i>
                           </a>
                           <a type="button" class="btn btn-warning btn-sm"
-                            ng-click="action('machine','hybernate',child.id)"
+                            ng-click="action('machine','hibernate',child.id)"
                             ng-disabled="!child.is_active"
                            ng-show="child.can_shutdown"
                             title="<%=l 'Hybernate' %>">

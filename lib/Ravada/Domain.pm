@@ -494,7 +494,7 @@ sub _allowed {
     eval { $id_owner = $self->id_owner };
     my $err = $@;
 
-    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
         ." owned by ".($id_owner or '<UNDEF>')
             if (defined $id_owner && $id_owner != $user->id );
 
@@ -836,11 +836,14 @@ sub info($self, $user) {
         ,name => $self->name
         ,is_active => $self->is_active
         ,spice_password => $self->spice_password
-        ,display_url => $self->display($user)
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
     };
+    eval {
+        $info->{display_url} = $self->display($user);
+    };
+    die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         $info->{description} = $base->description;
