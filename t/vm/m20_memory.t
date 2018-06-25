@@ -37,7 +37,7 @@ sub test_change_max_memory {
 	$domain->start(user_admin) if !$domain->is_active;
 	
 	eval {
-		$domain->domain->set_memory($use_mem_GB*$factor, Sys::Virt::Domain::MEM_CURRENT);
+		$domain->domain->set_memory($use_mem_GB*$factor);
 	};
 	is($@,'');
 	
@@ -45,31 +45,8 @@ sub test_change_max_memory {
 		$info = $domain->domain->get_info()
 	};
 	my $nvalue = $info->{memory};
-	ok($nvalue==$use_mem_GB*$factor, 'Memory Changed!'.$nvalue);
-}
-
-sub test_change_memory {
-	my $vm = shift;
-	my $memoryGB = shift;
-	my $factor = 1024*1024;
-	
-	my $domain = create_domain($vm->type);
-	
-	my $info;
-	eval {
-		$info = $domain->domain->get_info()
-	};
-	ok($info->{maxMem}>=$memoryGB*$factor, 'Memory value inside bounds');
-	
-	eval {
-		$domain->domain->set_memory($memoryGB*$factor);
-	};
-	is($@,'');
-	
-	eval {
-		$info = $domain->domain->get_info()
-	};
-	ok($info->{memory}==$memoryGB*$factor, 'Memory Changed!');
+	my $maxvalue = $info->{maxMem};
+	ok($nvalue==$use_mem_GB*$factor, 'Memory Changed!'.$nvalue.'  '.$maxvalue);
 }
 
 ####################################################################
