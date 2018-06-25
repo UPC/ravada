@@ -20,33 +20,33 @@ sub test_change_max_memory {
 	my $vm = shift;
 	my $memoryGB = shift;
 	my $use_mem_GB = shift;
-	my $factor = 1024*1024;
+	my $factor = 1024*1024;#kb<-Gb
 	
 	my $domain = create_domain($vm->type);
 	
 	eval {
-		$domain->domain->set_max_memory($memoryGB*$factor);
+		$domain->set_max_mem($memoryGB*$factor)
 	};
 	is($@,'');
 	my $info;
 	eval {
-		$info = $domain->domain->get_info()
+		$info = $domain->get_info()
 	};
-	ok($info->{maxMem}==$memoryGB*$factor, 'Max Memory changed!');#ok
+	ok($info->{max_mem}==$memoryGB*$factor, 'Max Memory changed!');
 	
 	$domain->start(user_admin) if !$domain->is_active;
 	
 	eval {
-		$domain->domain->set_memory($use_mem_GB*$factor);
+		$domain->set_memory($use_mem_GB*$factor)
 	};
 	is($@,'');
 	
 	eval {
-		$info = $domain->domain->get_info()
+		$info = $domain->get_info()
 	};
 	my $nvalue = $info->{memory};
-	my $maxvalue = $info->{maxMem};
-	ok($nvalue==$use_mem_GB*$factor, 'Memory Changed!'.$nvalue.'  '.$maxvalue);
+	my $maxvalue = $info->{max_mem};
+	ok($nvalue==$use_mem_GB*$factor, 'Memory Changed '.$nvalue);
 }
 
 ####################################################################
@@ -70,7 +70,7 @@ for my $vm_name ( q(KVM) ) {
 
         diag("Testing free mem on $vm_name");
 
-        test_change_max_memory($vm, 2, 1);
+        test_change_max_memory($vm, 2, 2);
 
     }
 }
