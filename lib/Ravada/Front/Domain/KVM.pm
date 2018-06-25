@@ -75,6 +75,8 @@ sub get_driver {
     die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
+    $self->xml_description if ref($self) !~ /Front/;
+
     return $sub->($self);
 }
 
@@ -85,7 +87,7 @@ sub _get_driver_generic {
     my ($tag) = $xml_path =~ m{.*/(.*)};
 
     my @ret;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
 
     for my $driver ($doc->findnodes($xml_path)) {
         my $str = $driver->toString;
@@ -164,7 +166,7 @@ sub _get_driver_sound {
     my $xml_path ="/domain/devices/sound";
 
     my @ret;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
 
     for my $driver ($doc->findnodes($xml_path)) {
         push @ret,('model="'.$driver->getAttribute('model').'"');

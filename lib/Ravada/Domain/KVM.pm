@@ -25,6 +25,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 extends 'Ravada::Front::Domain::KVM';
+with 'Ravada::Domain';
 
 has 'domain' => (
       is => 'rw'
