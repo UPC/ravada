@@ -342,7 +342,9 @@ get '/machine/info/(:id).(:type)' => sub {
     return access_denied($c)    if !$domain;
 
     return access_denied($c) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id;
+                              || $domain->id_owner == $USER->id
+                              || $USER->can_change_settings($domain->id)
+                              || $USER->can_remove_machine($domain->id);
 
     $c->render(json => $domain->info($USER) );
 };
@@ -392,7 +394,8 @@ any '/machine/remove_clones/(:id).(:type)' => sub {
 	return access_denied($c)
         unless
             $USER -> can_remove_clone_all()
-	        || $USER ->can_remove_clone();
+	        || $USER->can_remove_clone()
+            || $USER->can_remove_all();
     return remove_clones($c);
 };
 
