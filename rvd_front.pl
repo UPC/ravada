@@ -341,10 +341,11 @@ get '/machine/info/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
-    return access_denied($c) unless $USER->is_admin
+    return access_denied($c,"Access denied to user ".$USER->name) unless $USER->is_admin
                               || $domain->id_owner == $USER->id
                               || $USER->can_change_settings($domain->id)
-                              || $USER->can_remove_machine($domain->id);
+                              || $USER->can_remove_machine($domain->id)
+                              || $USER->can_clone_all;
 
     $c->render(json => $domain->info($USER) );
 };
@@ -1118,11 +1119,17 @@ sub _search_req_base_error {
 sub access_denied {
 
     my $c = shift;
-    my $msg = 'Access denied to '.$c->req->url->to_abs->path;
+    my $msg = shift;
 
-    $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
+    if (!$msg) {
+        $msg = 'Access denied to '.$c->req->url->to_abs->path;
+        $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
+    }
 
-    return $c->render(text => $msg);
+    if (defined $c->stash('type') && $c->stash('type') eq 'json') {
+        return $c->render(json => { error => $msg }, status => 403);
+    }
+    return $c->render(text => $msg, status => 403);
 }
 
 sub base_id {
@@ -1568,7 +1575,7 @@ sub copy_machine {
     return login($c) if !_logged_in($c);
 
 
-    my $id_base= $c->param('id_base');
+    my $id_base= $c->param('id_base') or confess "Missing param id_base";
 
     my $ram = $c->param('copy_ram');
     $ram = 0 if $ram !~ /^\d+(\.\d+)?$/;
@@ -1580,7 +1587,7 @@ sub copy_machine {
 
     my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
 
-    my $base = $RAVADA->search_domain_by_id($id_base);
+    my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 

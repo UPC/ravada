@@ -23,10 +23,11 @@
                  </h2>
 %               }
              </div> <!-- del panel heading-->
-            <div class="tab-content">
+             <div class="tab-content" ng-hide="error">
                 %= include 'main/settings_machine_tabs_head'
                 %= include 'main/settings_machine_tabs_body'
             </div>
+            <div class="alert alert-danger" ng-show="error">{{error}}</div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->
 </div><!-- del ng-controller -->

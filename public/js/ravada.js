@@ -252,8 +252,11 @@
           
           //On load code
           $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
-              $scope.showmachine=response.data;
+          $http.get('/machine/info/'+$scope.showmachineId+'.json')
+          .success(function(response) {
+                $scope.showmachine=response;
+          }).error(function(response) {
+              $scope.error = response.error;
           });
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);

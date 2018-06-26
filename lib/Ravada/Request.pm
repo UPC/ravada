@@ -74,6 +74,7 @@ our %VALID_ARG = (
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
             autostart_domain hibernate hybernate
+            set_driver add_hardware remove_hardware change_owner
     );
 
 our $CONNECTOR;
