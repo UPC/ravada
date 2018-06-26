@@ -12,3 +12,5 @@ log
 rvd_front.conf
 pkg-debian-out
 public/img/screenshots
+yarn.lock
+node_modules/
