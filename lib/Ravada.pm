@@ -864,6 +864,7 @@ sub _enable_grants($self) {
         ,'grant'
         ,'manage_users'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
     );
