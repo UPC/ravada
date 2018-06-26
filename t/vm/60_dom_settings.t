@@ -76,10 +76,10 @@ sub test_drivers_type {
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
 
-        is($domain->get_driver($type), $option->{value}, $type) or exit;
+        is($domain->get_driver($type), $option->{value}, $type);
         {
             my $domain_f = Ravada::Front::Domain->open($domain->id);
-            is($domain_f->get_driver($type), $option->{value}) or exit;
+            is($domain_f->get_driver($type), $option->{value});
             rvd_front->list_machines_user(user_admin);
         }
 
@@ -94,7 +94,7 @@ sub test_drivers_type {
         $domain->start($USER)   if !$domain->is_active;
         {
             my $domain_f = Ravada::Front::Domain->open($domain->id);
-            is($domain_f->get_driver($type), $option->{value}) or exit;
+            is($domain_f->get_driver($type), $option->{value});
             rvd_front->list_machines_user(user_admin);
         }
 
@@ -142,7 +142,7 @@ sub test_drivers_type_id {
         {
             my $domain2 = $vm->search_domain($domain->name);
             my $value2 = $domain2->get_driver($type);
-            is($value2 , $option->{value}) or exit;
+            is($value2 , $option->{value});
         }
         next unless ($ENV{TEST_STRESS} || $ENV{"TEST_STRESS_$vm_name}"});
         $domain->start($USER)   if !$domain->is_active;
@@ -207,7 +207,7 @@ sub test_drivers_clone {
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         isa_ok($clone,"Ravada::Domain::$vm_name");
         is($domain->get_driver($type), $option->{value}) or next;
-        is($clone->get_driver($type), $option->{value},$clone->name) or exit;
+        is($clone->get_driver($type), $option->{value},$clone->name);
         {
             my $clone2 = $vm->search_domain($clone_name);
             is($clone2->get_driver($type), $option->{value}) or next;
