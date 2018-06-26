@@ -39,6 +39,7 @@ sub test_defaults {
     ok(!$user->can_change_settings_clones);
 
 
+    is($user->can_screenshot, 1);
 #    ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 

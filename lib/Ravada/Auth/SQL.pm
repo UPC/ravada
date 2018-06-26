@@ -661,7 +661,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'change_settings');
     $self->grant($user, 'remove');
     $self->grant($user, 'shutdown');
-#    $self->grant($user, 'screenshot');
+    $self->grant($user, 'screenshot');
 }
 
 =head2 grant_operator_permissions
