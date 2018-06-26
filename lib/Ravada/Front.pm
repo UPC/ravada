@@ -713,11 +713,7 @@ sub search_domain {
     $sth->execute($name);
     my ($id, $tipo) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
 
-    if ($tipo =~ /KVM/) {
-        return Ravada::Front::Domain::KVM->new(id => $id, name => $name);
-    }else {
-        return Ravada::Front::Domain->new(id => $id);
-    }
+    return Ravada::Front::Domain->open($id);
 }
 
 =head2 list_requests

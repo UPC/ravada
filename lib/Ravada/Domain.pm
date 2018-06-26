@@ -81,6 +81,7 @@ requires 'autostart';
 requires 'hybernate';
 requires 'hibernate';
 
+requires 'get_driver';
 ##########################################################
 
 has 'domain' => (
@@ -580,11 +581,12 @@ sub _data($self, $field, $value=undef, $table='domains') {
     } else {
         @field_select = ( id_domain => $self->id );
     }
+
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
     confess "No DB info for domain @field_select in $table ".$self->name 
         if ! exists $self->{$data};
-    confess "No field $field in $data @field_select ".Dumper($self->{$data})
+    confess "No field $field in $data ".Dumper(\@field_select)."\n".Dumper($self->{$data})
         if !exists $self->{$data}->{$field};
 
     return $self->{$data}->{$field};
@@ -884,6 +886,7 @@ sub _insert_db {
     my ($vm) = ref($self) =~ /.*\:\:(\w+)$/;
     confess "Unknown domain from ".ref($self)   if !$vm;
     $field{vm} = $vm;
+    $self->{_data}->{name} = $field{name}   if $field{name};
 
     my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
@@ -931,6 +934,7 @@ sub pre_remove { }
 
 sub _pre_remove_domain($self, $user=undef) {
 
+
     $self->_allow_remove($user);
     $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks()         if ($self->is_known && $self->is_known_extra)
@@ -945,7 +949,7 @@ sub _after_remove_domain {
 
     $self->_remove_iptables(user => $user);
 
-    if ($self->is_base) {
+    if ($self->is_known && $self->is_base) {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
     }
@@ -958,9 +962,7 @@ sub _after_remove_domain {
 sub _remove_domain_db {
     my $self = shift;
 
-    $self->_select_domain_db or return;
-
-    my $id = $self->id;
+    my $id = $self->{_data}->{id} or return;
     my $type = $self->type;
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
@@ -977,6 +979,7 @@ sub _remove_domain_db {
 sub _finish_requests_db {
     my $self = shift;
 
+    return if !$self->{_data}->{id};
     $self->_select_domain_db or return;
 
     my $id = $self->id;
@@ -1655,7 +1658,7 @@ sub open_iptables {
             ,id_domain => $self->id
             ,remote_ip => $args{remote_ip}
         );
-        die "ERROR: Machine ".$self->name." is not active\n"
+        die "INFO: Machine ".$self->name." is not active, starting up.\n"
     }
 
     $self->_add_iptable(%args);
@@ -2078,8 +2081,6 @@ Returns all the drivers if not passwed
 
 =cut
 
-sub get_driver {}
-
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
@@ -2124,7 +2125,7 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    if (!$self->is_known) {
+    if (!exists $self->{_data} || !exists $self->{_data}->{vm}) {
         my ($type) = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
         confess "Unknown type from ".ref($self) if !$type;
         return $type;
