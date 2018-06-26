@@ -2251,7 +2251,7 @@ sub _cmd_add_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $number = $request->args('number') or confess "Missing argument number";
+    my $number = $request->args('number');
     
     my $domain = $self->search_domain_by_id($id_domain);
     
@@ -2269,7 +2269,7 @@ sub _cmd_remove_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $index = $request->args('index') or confess "Missing argument index";
+    my $index = $request->args('index');
     
     my $domain = $self->search_domain_by_id($id_domain);
     
