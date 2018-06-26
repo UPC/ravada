@@ -681,6 +681,10 @@ sub test_change_settings($vm_name) {
     is($user->can_change_settings($clone->id), 1);
     is($usera->can_change_settings($clone->id), 1);
 
+    $usera->revoke($user,'change_settings');
+    is($user->can_change_settings(), 0);
+    is($user->can_change_settings($clone->id), 0);
+
     $clone->remove(user_admin);
     $domain->remove(user_admin);
 
