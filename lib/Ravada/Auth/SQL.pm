@@ -588,7 +588,7 @@ sub can_do_domain($self, $grant, $domain) {
     return 0 if !$self->can_do($grant) && !$domain->id_base;
 
     return 1 if $self->can_do("${grant}_all");
-    return 1 if $domain->id_owner == $self->id;
+    return 1 if $domain->id_owner == $self->id && $self->can_do($grant);
 
     if ($self->can_do("${grant}_clones") && $domain->id_base) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
