@@ -1312,6 +1312,15 @@ sub manage_machine {
        my $req_change = Ravada::Request->change_owner(uid => $c->param("new_owner"), id_domain => $domain->id);
        $actual_owner = $c->param("new_owner");
     }
+    
+    if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
+        my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
+    }
+    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024 && $USER->is_admin){
+        if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
+            my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);
+        }  
+    }
 
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;

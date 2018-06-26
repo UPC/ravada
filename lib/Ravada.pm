@@ -2416,6 +2416,24 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_volatile_domains();
 }
 
+sub _cmd_change_max_memory($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $memory = $request->args('ram');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->set_max_mem($memory);
+}
+
+sub _cmd_change_curr_memory($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $memory = $request->args('ram');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->set_memory($memory);
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2555,6 +2573,8 @@ sub _req_method {
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
+,change_max_memory => \&_cmd_change_max_memory
+,change_curr_memory => \&_cmd_change_curr_memory
 
     );
     return $methods{$cmd};

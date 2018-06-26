@@ -46,7 +46,26 @@ sub test_change_max_memory {
 	};
 	my $nvalue = $info->{memory};
 	my $maxvalue = $info->{max_mem};
-	ok($nvalue==$use_mem_GB*$factor, 'Memory Changed '.$nvalue);
+	ok($nvalue==$use_mem_GB*$factor, 'Memory Changed '.$nvalue.'  '.$maxvalue.'  '.$use_mem_GB);
+}
+
+sub test_change_memory_base {
+	my $vm = shift;
+	
+	my $domain = create_domain($vm->type);
+	$domain->shutdown_now(user_admin)    if $domain->is_active();
+
+    eval { $domain->prepare_base( user_admin ) };
+    ok(!$@, $@);
+    ok($domain->is_base);
+    
+    eval { $domain->set_max_mem(1024*1024*3) };
+    ok(!$@,$@);
+     
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description);
+    ok($doc,$doc);
+    
+    $domain->remove(user_admin);
 }
 
 ####################################################################
@@ -70,11 +89,11 @@ for my $vm_name ( q(KVM) ) {
 
         diag("Testing free mem on $vm_name");
 
-        test_change_max_memory($vm, 2, 2);
+        #test_change_max_memory($vm, 2, 2);
+        test_change_memory_base($vm);
 
     }
 }
-
 clean();
 
 done_testing();
