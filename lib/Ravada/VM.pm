@@ -165,7 +165,10 @@ sub _around_create_domain {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
     $domain->_post_start($owner) if $domain->is_active;
+    eval {
     $domain->start($owner)      if $domain->is_volatile && ! $domain->is_active;
+    };
+    die $@ if $@ && $@ !~ /code: 55,/;
 
     $domain->get_info();
 

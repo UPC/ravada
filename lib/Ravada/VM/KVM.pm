@@ -608,7 +608,7 @@ sub _domain_create_from_iso {
     my $device_cdrom;
 
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file && !$iso->{device};
+        if !$iso->{url} && !$iso->{device} && !$iso_file;
 
     if ($iso_file) {
         if ( $iso_file ne "<NONE>") {
