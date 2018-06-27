@@ -56,6 +56,27 @@ sub test_add_hardware_request {
     is($req->error(),'');
 }
 
+sub test_remove_hardware {
+	my $vm = shift;
+	my $domain = shift;
+	my $hardware = shift;
+	my $index = shift;
+	
+	my $req;
+	eval {
+		$req = Ravada::Request->remove_hardware(uid => $USER->id
+				, id_domain => $domain->id
+				, name => $hardware
+				, index => $index
+			);
+	};
+	is($@, '') or return;
+	ok($req, 'Request');
+	rvd_back->_process_all_requests_dont_fork();
+	is($req->status(), 'done');
+	is($req->error(), '');
+}
+
 ########################################################################
 
 
@@ -82,7 +103,8 @@ for my $vm_name ( qw(KVM)) {
         ,active => 0
         ,create_args($vm_name)
     );
-	test_add_hardware_request($vm, $domain_b, 'hardware_usb', 2);	
+	test_add_hardware_request($vm, $domain_b, 'hardware_usb', 2);
+	test_remove_hardware($vm, $domain_b, 'usb', 0);
 }
 
 remove_old_domains();

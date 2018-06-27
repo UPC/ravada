@@ -8,13 +8,13 @@
 		<form class="form-inline" action="<%= $action %>" method="post">
 	%	for my $controller_name (qw(usb)){
 	%       my @controllers = $domain->get_controller($controller_name);
-	%       if (scalar @controllers < 1) {
-	            <b>I can't find controller <%= $controller_name %></b>
-	%			next;
-	%       }
+
 			<div class="row">
 				<div class="col-md-12">
 					<label> <%= uc $controller_name %>: </label>
+			%       if (scalar @controllers < 1) {
+	           			<b>I can't find controller <%= $controller_name %></b>
+			%       }
 					%my $ind=1;
 					<div class="col-md-12"> <!-- List Hardware type and select remove -->
 						<ul>

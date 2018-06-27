@@ -87,8 +87,8 @@ sub test_domain_name {
 
     my $id = $domain->id;
 
-    $domain = Ravada::Front::Domain->open($id);
     eval {
+        $domain = Ravada::Front::Domain->open($id);
         $domain->name();
     };
     like($@,qr'Unknown domain');

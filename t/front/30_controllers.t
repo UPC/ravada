@@ -68,7 +68,7 @@ sub test_vm_controllers_fe {
 	my $vm_name = shift;
 	my $name = shift;
 	my $domain_f = $RVD_FRONT->search_domain($name);
-	isa_ok($domain_f, 'Ravada::Front::Domain::KVM');
+	isa_ok($domain_f, "Ravada::Front::Domain::$vm_name");
 	
 	my @usbs = $domain_f->get_controller('usb');
 	ok(scalar @usbs > 0, "Got USB: @usbs");
