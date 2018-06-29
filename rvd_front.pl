@@ -1315,11 +1315,15 @@ sub manage_machine {
     
     if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
         my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
+        $c->stash(message => 'The value of Max memory has change, reload the page if you want to see the correct value here.');
     }
-    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024 && $USER->is_admin){
+    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024){
         if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
             my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);
-        }  
+            $c->stash(message => 'The value of current memory has change, reload the page if you want to see the correct value here.');
+        }  else {
+            $c->stash(message => 'Value introduced in current memory must be lower than max memory');
+        }
     }
 
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)

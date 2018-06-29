@@ -1,6 +1,10 @@
 <div class="panel-body">
 <div class="form-group">
-
+%   if ($message) {
+        <div class="panel panel-success">
+            <div class="panel-heading"><%= $message %></div>
+        </div>
+%   }
     <form class="form-inline" action="<%= $action %>" method="post">
         <div class="row">
                     <div class="col-md-2">
@@ -25,8 +29,13 @@
                 <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
             </div>
             <div class="col-md-2">
+%   if ($domain->is_active()){
                 <input class="form-control" type="text" name="cram" size="5"
                             value="<%= int($domain->get_info->{memory} / 1024) %>">
+%   } else {
+                <input class="form-control" type="text" name="cram" size="5" disabled
+                            value="<%= int($domain->get_info->{memory} / 1024) %>">
+%   }
             </div>
        
        </div> 
