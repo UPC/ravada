@@ -1308,6 +1308,8 @@ sub manage_machine {
     $c->stash(USER => $USER);
     $c->stash(list_users => $RAVADA->list_users);
     my $actual_owner = $domain->id_owner;
+    
+    $c->stash(message => '');
     if ($c->param("new_owner") && $actual_owner != $c->param("new_owner")) {
        my $req_change = Ravada::Request->change_owner(uid => $c->param("new_owner"), id_domain => $domain->id);
        $actual_owner = $c->param("new_owner");
@@ -1337,7 +1339,6 @@ sub manage_machine {
 
     _enable_buttons($c, $domain);
 
-    $c->stash(message => '');
     my @reqs = ();
     for (qw(sound video network image jpeg zlib playback streaming)) {
         my $driver = "driver_$_";
@@ -1372,8 +1373,8 @@ sub manage_machine {
             my $value = $c->param($option);
             $value *= 60 if $option eq 'run_timeout';
             $domain->set_option($option, $value);
-            $c->stash(message => "\U$option changed!");
-        }elsif ( $option eq 'volatile_clones' && defined $c->param("submitbtn") ) {
+            #$c->stash(message => "\U$option changed!");
+        }elsif ( $option eq 'volatile_clones' && defined $c->param("submitbtn") && $domain->is_volatile_clones ) {
             my $value = '0';
             $domain->set_option($option, $value);
             $c->stash(message => "\U$option changed!");
