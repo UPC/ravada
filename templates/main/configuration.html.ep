@@ -118,6 +118,7 @@
 				<div class="col-md-8">
 					<input type="text" name="session-timeout-admin" value="<%= $session_timeout_admin %>">
 				</div></div>
+				<input type="submit" name="submitbtn">
 			</form>
 		</div>
 	</div>
