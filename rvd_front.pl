@@ -169,6 +169,12 @@ any '/robots.txt' => sub {
     return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
 };
 
+any '/configuration' => sub {
+    my $c = shift;
+    return access_denied($c) unless _logged_in($c);
+    return configuration($c);
+};
+
 any '/' => sub {
     my $c = shift;
     return quick_start($c);
@@ -1691,6 +1697,44 @@ sub list_bases_anonymous {
         , user => undef
         , url => undef
     );
+}
+sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; $s=~ s/,//; $s =~ s/^\s+|\s+$//g; return $s };
+sub configuration {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin();
+    
+    #Open file /etc/rvd_front.conf
+    my $file = '/etc/rvd_front.conf';
+    open my $info, $file or die "Could not open $file: $!";
+    #Make this file atributes visible
+    my @atributes = ();
+    my @values = ();
+    while( my $line = <$info> ) {
+        if ($line !~ /=>/) {
+            last if ($line eq '};');
+            next;
+        }
+        
+        my @aux = split(/=>/, $line);
+        if ($aux[1] =~ /{/) {
+            next;
+        }
+        $aux[0] = trim($aux[0]);
+        $aux[1] = trim($aux[1]);
+        
+        push @atributes, $aux[0];
+        push @values, $aux[1];
+        $c->stash($aux[0] => $aux[1]);
+    }
+    #change where needed
+    for my $i (scalar @atributes) {
+        if ( defined $c->param($atributes[i]) and $c->param($atributes[i])!=$values[i] ){
+            #ha canviat, actualitzar!
+        }
+    }
+    
+    $c->render(template => 'main/configuration'
+        , action => $c->req->url->to_abs->path);
 }
 
 sub _remote_ip {
