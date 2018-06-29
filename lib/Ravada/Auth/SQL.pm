@@ -353,6 +353,7 @@ sub is_operator {
         || $self->can_create_machine
         || $self->can_list_machines
         || $self->can_change_settings_all()
+        || $self->can_grant()
         || 0;
 }
 
