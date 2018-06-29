@@ -1727,8 +1727,8 @@ sub configuration {
         $c->stash($aux[0] => $aux[1]);
     }
     #change where needed
-    for my $i (scalar @atributes) {
-        if ( defined $c->param($atributes[i]) and $c->param($atributes[i])!=$values[i] ){
+    for my $i (0 .. scalar @atributes) {
+        if ( defined $c->param($atributes[$i]) and $c->param($atributes[$i])!=$values[$i] ){
             #ha canviat, actualitzar!
         }
     }
