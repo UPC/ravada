@@ -1728,26 +1728,27 @@ sub configuration {
     }
     #change where needed
     my $need_to_regenerate=0;
-    for my $i (0 .. scalar @atributes) {
-        if ( defined $c->param($atributes[$i]) && $c->param($atributes[$i]) ne $values[$i] ){
-            $values[$i] = $c->param($atributes[$i]);
+    for my $i (1 .. scalar @atributes) {
+        if ( $c->param($atributes[$i-1]) && $c->param($atributes[$i-1]) ne $values[$i-1] ){
+            $values[$i-1] = $c->param($atributes[$i-1]);
             $need_to_regenerate=1;
-        }else {
-            warn $atributes[$i],$values[$i];
         }
     }
-    #warn $need_to_regenerate;
     
-    #if($need_to_regenerate){
-    #    my $str = generate_string(@values);
-    #    warn $str;
-    #}
+    if($need_to_regenerate){
+        my $str = generate_string(@values);
+        #Create Request
+        Ravada::Request->change_front_config(
+            uid => $USER->id
+            ,string => $str  
+        );
+    }
     
     $c->render(template => 'main/configuration'
         , action => $c->req->url->to_abs->path);
 }
 sub generate_string {
-    my @valus = shift;
+    my @valus = @_;
     return "{
   hypnotoad => {
     pid_file => $valus[0]

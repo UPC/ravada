@@ -2416,6 +2416,21 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_volatile_domains();
 }
 
+sub _cmd_change_front_config($self, $request) {
+    my $uid = $request->args('uid');
+    my $content = $request->args('string') or die "ERROR: Missing content";
+    
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "ERROR:No Admin user trying to change config!" if !$user->is_admin();
+    
+    my $file = '/etc/rvd_front.conf';
+    open(INFO , '>', $file) or die "ERROR: Not able to open the file: $file";
+    
+    print INFO $content;
+    
+    close(INFO);
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2555,6 +2570,7 @@ sub _req_method {
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
+,change_front_config => \&_cmd_change_front_config
 
     );
     return $methods{$cmd};

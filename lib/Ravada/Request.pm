@@ -69,6 +69,7 @@ our %VALID_ARG = (
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,change_front_config => {uid => 1, string => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -875,6 +876,32 @@ sub remove_hardware {
         command => 'remove_hardware'
         ,id_domain => $args->{id_domain}
         ,args => encode_json($args)
+    );
+}
+
+=head2 change_front_config
+    
+    Change the content of /etv/rvd_front.conf
+    
+    Ravada::Request->change_front_config(
+        uid => $user->id
+        ,string => $str
+    );
+
+=cut
+
+sub change_front_config {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_front_config', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'change_front_config'
+          ,args => encode_json($args)
     );
 }
 

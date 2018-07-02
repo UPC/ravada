@@ -10,7 +10,7 @@
 					<%=l 'hypnotoad' %> - pid-file:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="pid-file" value="<%= $pid_file %>">
+					<input type="text" name="pid_file" value="<%= $pid_file %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'hypnotoad' %> - listen:
@@ -34,7 +34,7 @@
 					<%=l 'admin' %> - hide-clones:
 				</div>
 				<div class="col-md-8">
-					<input type="number" min="0" name="hide-clones" value="<%= $hide_clones %>">
+					<input type="number" min="0" name="hide_clones" value="<%= $hide_clones %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'admin' %> - auto-start:
@@ -68,7 +68,7 @@
 					<%=l 'login custom' %>:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="login-custom" value="<%= $login_custom %>">
+					<input type="text" name="login_custom" value="<%= $login_custom %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'footer' %>:
@@ -80,13 +80,13 @@
 					<%=l 'login background file' %>:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="login-background-file" value="<%= $login_bg_file %>">
+					<input type="text" name="login_bg_file" value="<%= $login_bg_file %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'login message' %>:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="login-message" value="<%= $login_message %>">
+					<input type="text" name="login_message" value="<%= $login_message %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'monitoring' %>:
@@ -104,19 +104,19 @@
 					<%=l 'guide custom' %>:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="guide-custom" value="<%= $guide_custom %>">
+					<input type="text" name="guide_custom" value="<%= $guide_custom %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'session timeout' %>:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="session-timeout" value="<%= $session_timeout %>">
+					<input type="text" name="session_timeout" value="<%= $session_timeout %>">
 				</div></div>
 				<div class="row"><div class="col-md-4">
 					<%=l 'session timeout admin' %>:
 				</div>
 				<div class="col-md-8">
-					<input type="text" name="session-timeout-admin" value="<%= $session_timeout_admin %>">
+					<input type="text" name="session_timeout_admin" value="<%= $session_timeout_admin %>">
 				</div></div>
 				<input type="submit" name="submitbtn">
 			</form>
