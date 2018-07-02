@@ -153,6 +153,8 @@
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
                             $scope.showmachine=response.data;
+                    $scope.new_name=$scope.showmachine.name+"-2";
+                    $scope.validate_new_name($scope.showmachine.name);
                 });
           };
           $scope.domain_remove = 0;
@@ -222,9 +224,7 @@
             $scope.rename_requested=1;
             $http.get('/machine/rename/'+machineId+'/'
             +$scope.new_name);
-            $scope.message_rename = 1;
-            //   TODO check previous rename returned ok
-            window.location.href = "/admin/machines";
+            $scope.refresh_machine();
           };
           $scope.cancel_rename=function(old_name) {
                 $scope.new_name = old_name;
@@ -260,6 +260,7 @@
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.refresh_machine = function() {
             $http.get('/requests.json').then(function(response) {
+              $scope.requests = response.data;
               var pending = 0;
               for (var i in response.data) {
                   if(response.data[i].status != 'done') {
@@ -278,6 +279,7 @@
                   }
                   setTimeout(function () {
                     $scope.hide_messages=true;
+                    $scope.init($scope.showmachine.id);
                   }, 2000);
               }
             });

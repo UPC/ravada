@@ -1,4 +1,9 @@
-<div class="panel-body">
+<div ng-hide="showmachine.is_active" class="panel panel-warning">
+    <div class="panel-heading">
+        The machine must be started to take the screenshot.
+    </div>
+</div>
+<div class="panel-body" ng-show="showmachine.is_active">
     <div class="form-group">
         <div ng-hide= "<%= $domain->is_base %>" class="row" ng-cloak>
             <div class="col-lg-2">

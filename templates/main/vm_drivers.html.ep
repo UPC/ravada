@@ -5,9 +5,7 @@
 %   ,video => 'qxl'
 % );
 
-    <div class="row" ng-show="pending_requests > 0">
-        <div class="col-md-6">Waiting for {{pending_requests}} requests to complete ... </div>
-    </div>
+    %= include 'main/show_requests'
     <div class="row" ng-hide="pending_requests > 0">
         <div class="col-md-6"></div><div class="col-md-1"><i>recommended</i></div>
     </div>

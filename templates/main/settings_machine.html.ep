@@ -6,7 +6,7 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
+        <div>
     <div class="page-header">
         <div class="panel panel-default">
              <div class="panel-heading">
@@ -23,7 +23,9 @@
                  </h2>
 %               }
              </div> <!-- del panel heading-->
-            <div class="tab-content">
+             <div class="tab-content" 
+                    ng-controller="singleMachinePage" ng-init="init(<%= $id %>)"
+                 >
                 %= include 'main/settings_machine_tabs_head'
                 %= include 'main/settings_machine_tabs_body'
             </div>

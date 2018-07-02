@@ -1647,7 +1647,7 @@ sub copy_machine {
        , id_domain => $base->id
        ,@create_args
     );
-    $c->redirect_to("/admin/machines");#    if !@error;
+    $c->redirect_to("/machine/manage/".$base->id.".html");#    if !@error;
 }
 
 sub machine_is_public {
