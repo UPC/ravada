@@ -148,7 +148,7 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
-            $scope.init = function(id) {
+          $scope.init = function(id) {
                 $scope.showmachineId=id;
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
@@ -273,16 +273,27 @@
                 }, 2000);
               } else {
                   $scope.pending_requests = pending;
+                  if($scope.showmachine) {
+                      $scope.init($scope.showmachine.id);
+                  }
                   setTimeout(function () {
                     $scope.hide_messages=true;
                   }, 2000);
               }
             });
           };
+          $scope.add_hardware = function(hardware, number) {
+              $http.get('/machine/hardware/add/'
+                      +$scope.showmachine.id+'/'+hardware+'/'+number);
+              $scope.refresh_machine();
+          };
           $scope.refresh_machine();
           $scope.hide_messages = false;
-          $scope.test = function() {
-              alert(1);
+          $scope.remove_hardware = function(hardware, index) {
+              $http.get('/machine/hardware/remove/'
+                      +$scope.showmachine.id+'/'+hardware+'/'+index);
+              $scope.refresh_machine();
+
           };
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);

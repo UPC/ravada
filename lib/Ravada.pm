@@ -2257,8 +2257,6 @@ sub _cmd_add_hardware {
     
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     
-    $hardware = (split(/_/,$hardware))[-1];
-    
     $domain->set_controller($hardware, $number);
 }
 

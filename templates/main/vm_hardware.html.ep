@@ -1,12 +1,17 @@
-{{showmachine.hardware}}
 <div class="panel-body">
     <div ng-repeat="(name,value) in showmachine.hardware">
         <h2>{{name}}</h2>
-        <ul>
-            <li ng-repeat="item in value track by $index">{{item}} {{$index}}
-                <button ng-click="test(1)"><i class="fa fa-times">a</i></button>
+        <ul ng-show="value">
+            <li ng-repeat="item in value track by $index">{{item}}
+                <button class="label label-danger" title="remove {{name}} {{$index+1}}"
+                    ng-click="remove_hardware(name, $index+1)"><i class="fa fa-times"></i>
+                </button>
             </li>
         </ul>
+        <div ng-show="value.length == 0">
+            No {{name}} hardware found.
+        </div>
+        <button ng-click="add_hardware(name, value.length+1)">Add {{name}}</button>
     </div>
 
 </div>

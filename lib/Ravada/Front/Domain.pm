@@ -123,5 +123,7 @@ sub spinoff_volumes     { confess "TODO" }
 sub start               { confess "TODO" }
 
 sub get_driver {}
+sub get_controller_by_name { }
+sub list_controllers {}
 
 1;

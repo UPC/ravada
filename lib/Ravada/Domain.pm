@@ -82,6 +82,9 @@ requires 'hybernate';
 requires 'hibernate';
 
 requires 'get_driver';
+requires 'get_controller_by_name';
+requires 'list_controllers';
+
 ##########################################################
 
 has 'domain' => (
@@ -1947,8 +1950,35 @@ sub _post_rename {
      $sth->finish;
  }
 
+=head2 get_controller
 
-sub get_controller {}
+Calls the method to get the specified controller info
+
+Attributes:
+    name -> name of the controller type
+
+=cut
+sub get_controller {
+	my $self = shift;
+	my $name = shift;
+
+    my $sub = $self->get_controller_by_name($name);
+#    my $sub = $GET_CONTROLLER_SUB{$name};
+    
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+sub get_controllers($self) {
+    my $info;
+    my %controllers = $self->list_controllers();
+    for my $name ( sort keys %controllers ) {
+        $info->{$name} = [$self->get_controller($name)];
+    }
+    return $info;
+}
 
 sub set_controller {}
 
@@ -2107,7 +2137,8 @@ Argument: name
 sub get_driver_id($self, $name) {
     my $value = $self->get_driver($name);
 
-    my $driver_type = $self->drivers($name);
+    my $driver_type = $self->drivers($name) or confess "ERROR: Unknown drivers"
+        ." of type '$name'";
 
     for my $option ($driver_type->get_options) {
         return $option->{id} if $option->{value} eq $value;

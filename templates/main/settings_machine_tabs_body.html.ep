@@ -62,7 +62,7 @@
       % }
     </div>
 % }
-% if ($domain->type eq 'KVM' && $USER->can_change_settings($domain->id)) {
+% if ($USER->can_change_settings($domain->id)) {
     <div class="tab-pane fade" id="hardware">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'

@@ -689,11 +689,11 @@ get '/auto_view' => sub {
     return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
-get '/settings/hardware/remove/(#domain)/(#hardware)/(#index)' => sub {
+get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
     my $c = shift;
     my $hardware = $c->stash('hardware');
     my $index = $c->stash('index');
-    my $domain_id = $c->stash('domain');
+    my $domain_id = $c->stash('id_domain');
     
     my $req = Ravada::Request->remove_hardware(uid => $USER->id
         , id_domain => $domain_id
@@ -706,6 +706,17 @@ get '/settings/hardware/remove/(#domain)/(#hardware)/(#index)' => sub {
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
+get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)' => sub {
+    my $c = shift;
+
+    my $req = Ravada::Request->add_hardware(
+        uid => $USER->id
+        ,name => $c->stash('hardware')
+        ,id_domain => $c->stash('id_domain')
+        ,number => $c->stash('number')
+    );
+    return $c->render( json => { request => $req->id } );
+};
 ###################################################
 
 ## user_settings
@@ -1353,6 +1364,7 @@ sub manage_machine {
 
     my %cur_driver;
     for my $driver (qw(sound video network image jpeg zlib playback streaming)) {
+        next if !$domain->drivers($driver);
         $cur_driver{$driver} = $domain->get_driver_id($driver);
         my $value = $c->param("driver_$driver");
         next if !defined $value || $value eq $domain->get_driver_id($driver);
