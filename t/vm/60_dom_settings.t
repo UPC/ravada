@@ -139,6 +139,7 @@ sub test_drivers_type_id {
         my $value = $domain->get_driver($type);
         is($value , $option->{value});
 
+        is($domain->get_driver_id($type), $option->{id});
         {
             my $domain2 = $vm->search_domain($domain->name);
             my $value2 = $domain2->get_driver($type);

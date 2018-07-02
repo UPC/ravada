@@ -77,6 +77,22 @@ sub test_remove_hardware {
 	is($req->error(), '');
 }
 
+sub test_front_hardware {
+    my ($vm, $domain) = @_;
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+
+    for my $hardware ( qw(usb)) {
+        my @controllers = $domain_f->get_controller($hardware);
+        ok(scalar @controllers);
+
+        my $info = $domain_f->info(user_admin);
+        ok(exists $info->{hardware},"Expecting \$info->{hardware}") or next;
+        ok(exists $info->{hardware}->{$hardware},"Expecting \$info->{hardware}->{$hardware}");
+        is_deeply($info->{hardware}->{$hardware},[@controllers]);
+    }
+}
+
 ########################################################################
 
 
@@ -103,6 +119,7 @@ for my $vm_name ( qw(KVM)) {
         ,active => 0
         ,create_args($vm_name)
     );
+    test_front_hardware($vm, $domain_b);
 	test_add_hardware_request($vm, $domain_b, 'hardware_usb', 2);
 	test_remove_hardware($vm, $domain_b, 'usb', 0);
 }

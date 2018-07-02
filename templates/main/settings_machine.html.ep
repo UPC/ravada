@@ -6,7 +6,7 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="singleMachinePage" ng-init="new_name='<%= $domain->name %>'">
+        <div ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
     <div class="page-header">
         <div class="panel panel-default">
              <div class="panel-heading">

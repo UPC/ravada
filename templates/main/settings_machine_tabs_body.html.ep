@@ -1,3 +1,27 @@
+%   if (scalar @$errors) {
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <ul>
+%                   for (@$errors) {
+                        <li><%= $_ %></li>
+%                   }
+                </ul>
+            </div>
+        </div>
+%   }
+
+%   if (scalar @$messages) {
+        <div ng-hide="hide_messages" class="panel panel-success">
+            <div class="panel-heading">
+                <ul>
+%                   for (@$messages) {
+                        <li><%= $_ %></li>
+%                   }
+                </ul>
+            </div>
+        </div>
+%   }
+
 % if ($USER->can_change_settings($domain->id)) {
 <div class="tab-pane fade in active" id="description">
     %= include 'main/vm_description'

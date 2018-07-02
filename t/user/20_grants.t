@@ -39,6 +39,7 @@ sub test_defaults {
     ok(!$user->can_change_settings_clones);
 
 
+    is($user->can_screenshot, 1);
 #    ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 
@@ -64,6 +65,8 @@ sub test_defaults {
             is($user->can_do($perm),undef,$perm);
         }
     }
+
+    $user->remove();
 }
 
 sub test_admin {
@@ -72,6 +75,7 @@ sub test_admin {
     for my $perm ($user->list_all_permissions) {
         is($user->can_do($perm->{name}),1);
     }
+    $user->remove();
 }
 
 sub test_grant {
@@ -95,6 +99,7 @@ sub test_grant {
 
     }
 
+    $user->remove();
 }
 
 sub test_alias {
@@ -203,6 +208,9 @@ sub test_view_clones {
     $clone->prepare_base($usera);
     eval{ $clones = rvd_front->list_clones() };
     is(scalar @$clones, 0) or return;
+
+    $usera->remove();
+    $user->remove();
 }
 
 sub test_shutdown_clone {
@@ -295,6 +303,7 @@ sub test_remove {
     eval { $domain2->remove(user_admin())};
     is($@,'');
 
+    $user->remove();
 }
 
 sub test_shutdown_all {
@@ -332,6 +341,7 @@ sub test_shutdown_all {
     is($domain->is_active,1);
 
     $domain->remove($usera);
+    $user->remove();
 }
 
 sub test_remove_clone_all {
@@ -389,6 +399,9 @@ sub test_remove_clone_all {
 
     $clone->remove($usera);
     $domain->remove($usera);
+
+    $user->remove();
+    $usera->remove();
 }
 
 sub test_prepare_base {
@@ -487,6 +500,9 @@ sub test_frontend {
 
     $clone->remove( $usera );
     $domain->remove( $usera );
+
+    $usera->remove;
+    $user->remove;
 }
 
 sub test_create_domain {
@@ -510,7 +526,7 @@ sub test_create_domain {
     my $domain_name = new_domain_name();
 
     my %create_args = (
-            id_iso => search_id_iso('debian')
+            id_iso => search_id_iso('alpine')
             ,id_owner => $user->id
             ,name => $domain_name
    );
@@ -633,7 +649,8 @@ sub test_create_domain2 {
     is($user->can_create_machine,1) or return;
 
     $domain_name = new_domain_name();
-    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id)};
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+        , id_iso => search_id_iso('alpine'))};
     is($@,'');
 
     my $domain3 = $vm->search_domain($domain_name);
@@ -680,12 +697,28 @@ sub test_change_settings($vm_name) {
     is($user->can_change_settings($clone->id), 1);
     is($usera->can_change_settings($clone->id), 1);
 
+    $usera->revoke($user,'change_settings');
+    is($user->can_change_settings(), 0);
+    is($user->can_change_settings($clone->id), 0);
+
     $clone->remove(user_admin);
     $domain->remove(user_admin);
 
     $user->remove();
     $usera->remove();
 
+}
+
+sub test_grant_grant {
+    my $usero = create_user("oper$$","bar");
+    is($usero->can_grant, undef);
+
+    user_admin->grant($usero,'grant');
+    is($usero->can_grant,1);
+
+    is($usero->is_operator,1);
+
+    $usero->remove();
 }
 
 sub test_clone_all {
@@ -700,27 +733,33 @@ test_grant();
 
 test_alias();
 
+test_grant_grant();
+
 test_operator();
 
-my $vm_name = 'Void';
+clean();
 
-test_change_settings($vm_name);
+for my $vm_name (vm_names()) {
 
-test_shutdown_clone('Void');
-test_shutdown_all('Void');
+    test_change_settings($vm_name);
 
-test_remove('Void');
-test_remove_clone('Void');
-#test_remove_all('Void');
+    test_shutdown_clone($vm_name);
+    test_shutdown_all($vm_name);
 
-test_remove_clone_all('Void');
+    test_remove($vm_name);
+    test_remove_clone($vm_name);
+    #test_remove_all($vm_name);
 
-test_prepare_base('Void');
-test_frontend('Void');
-test_create_domain('Void');
-test_create_domain2('Void');
-test_view_clones('Void');
+    test_remove_clone_all($vm_name);
 
-test_clone_all($vm_name);
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
 
+    test_clone_all($vm_name);
+
+}
+clean();
 done_testing();

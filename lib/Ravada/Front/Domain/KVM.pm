@@ -6,6 +6,9 @@ use XML::LibXML;
 
 extends 'Ravada::Front::Domain';
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     );
@@ -40,6 +43,14 @@ sub get_controller {
     return $sub->($self);
 }
 
+sub get_controllers($self) {
+    my $info;
+    for my $name ( sort keys %GET_CONTROLLER_SUB ) {
+        $info->{$name} = [$self->get_controller($name)];
+    }
+    return $info;
+}
+
 sub _get_controller_usb {
 	my $self = shift;
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
@@ -66,13 +77,11 @@ Argument: name
 
 =cut
 
-sub get_driver {
-    my $self = shift;
-    my $name = shift;
+sub get_driver($self, $name) {
 
     my $sub = $GET_DRIVER_SUB{$name};
 
-    die "I can't get driver $name for domain ".$self->name
+    confess "I can't get driver $name for domain ".$self->name
         if !$sub;
 
     $self->xml_description if ref($self) !~ /Front/;

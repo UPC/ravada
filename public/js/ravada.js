@@ -148,6 +148,13 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
+            $scope.init = function(id) {
+                $scope.showmachineId=id;
+                $http.get('/machine/info/'+$scope.showmachineId+'.json')
+                    .then(function(response) {
+                            $scope.showmachine=response.data;
+                });
+          };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
           $http.get('/pingbackend.json').then(function(response) {
@@ -249,12 +256,34 @@
             else value=0;
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-          
           //On load code
-          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $http.get('/machine/info/'+$scope.showmachineId+'.json').then(function(response) {
-              $scope.showmachine=response.data;
-          });
+//          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
+          $scope.refresh_machine = function() {
+            $http.get('/requests.json').then(function(response) {
+              var pending = 0;
+              for (var i in response.data) {
+                  if(response.data[i].status != 'done') {
+                    pending++;
+                  }
+              }
+              if (pending) {
+                $scope.pending_requests = pending;
+                setTimeout(function () {
+                    $scope.refresh_machine();
+                }, 2000);
+              } else {
+                  $scope.pending_requests = pending;
+                  setTimeout(function () {
+                    $scope.hide_messages=true;
+                  }, 2000);
+              }
+            });
+          };
+          $scope.refresh_machine();
+          $scope.hide_messages = false;
+          $scope.test = function() {
+              alert(1);
+          };
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
         };

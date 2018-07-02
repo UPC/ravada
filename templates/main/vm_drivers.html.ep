@@ -1,21 +1,18 @@
 <div class="panel-body">
-%   if ($message) {
-        <div class="panel panel-success">
-            <div class="panel-heading"><%= $message %></div>
-        </div>
-%   }
 
 % my %recommend=(
 %   network => 'virtio'
 %   ,video => 'qxl'
 % );
 
-    <div class="row">
+    <div class="row" ng-show="pending_requests > 0">
+        <div class="col-md-6">Waiting for {{pending_requests}} requests to complete ... </div>
+    </div>
+    <div class="row" ng-hide="pending_requests > 0">
         <div class="col-md-6"></div><div class="col-md-1"><i>recommended</i></div>
     </div>
 
-<div class="form-group">
-
+<div ng-hide="pending_requests > 0" class="form-group">
     <form class="form-inline" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(network sound video)) {
 %           my $driver = $domain->drivers($driver_name);
@@ -34,9 +31,10 @@
                                 name="driver_<%= $driver_name %>">
 %                               for my $option( $driver->get_options ) {
 %                                   my $selected;
-%                                   $selected = 'selected' if $domain->get_driver($driver_name) eq $option->{value};
+%                                   $selected = 'selected' if $option->{id} eq $cur_driver->{$driver_name};
                                     <option <%= $selected %>
-                                        value="<%= $option->{id} %>"><%= $option->{name} %>
+                                        value="<%= $option->{id} %>">
+                                        <%= $option->{name} %>
                                     </option>
 %                               }
 

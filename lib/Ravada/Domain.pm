@@ -180,6 +180,8 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
+around 'set_max_mem' => \&_around_set_mem;
+around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
@@ -518,6 +520,16 @@ sub _around_get_info($orig, $self) {
     return $info;
 }
 
+sub _around_set_mem($orig, $self, $value) {
+    my $ret = $self->$orig($value);
+    if ($self->is_known) {
+        my $info = decode_json($self->_data('info'));
+        $info->{memory} = $value;
+        $self->_data(info => encode_json($info))
+    }
+    return $ret;
+}
+
 ##################################################################################3
 
 sub _init_connector {
@@ -853,6 +865,7 @@ sub info($self, $user) {
         $info->{display_ip} = $local_ip;
         $info->{display_port} = $local_port;
     }
+    $info->{hardware} = $self->get_controllers();
 
     return $info;
 }
@@ -2081,6 +2094,27 @@ Returns all the drivers if not passwed
 
 =cut
 
+=head2 get_driver_id
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver_id($self, $name) {
+    my $value = $self->get_driver($name);
+
+    my $driver_type = $self->drivers($name);
+
+    for my $option ($driver_type->get_options) {
+        return $option->{id} if $option->{value} eq $value;
+    }
+    return undef;
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
@@ -2105,16 +2139,11 @@ Sets a domain option:
 =cut
 
 sub set_option($self, $option, $value) {
-    if ($option eq 'description') {
-        warn "$option -> $value\n";
-        $self->description($value);
-    } elsif ($option eq 'run_timeout') {
-        $self->run_timeout($value);
-    } elsif ($option eq 'volatile_clones') {
-        $self->volatile_clones($value); 
-    } else {
-        confess "ERROR: Unknown option '$option'";
-    }
+    my %valid_option = map { $_ => 1 } qw( description run_timeout volatile_clones id_owner);
+    die "ERROR: Invalid option '$option'"
+        if !$valid_option{$option};
+
+    return $self->_data($option, $value);
 }
 
 =head2 type

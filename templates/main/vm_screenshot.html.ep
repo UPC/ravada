@@ -3,7 +3,7 @@
         <div ng-hide= "<%= $domain->is_base %>" class="row" ng-cloak>
             <div class="col-lg-2">
                 <button ng-click="screenshot(<%= $domain->id %>, <%= $domain->is_active %>)">
-                  <%=l "Take screenshot" %></a>   
+                  <%=l "Take screenshot" %></button>
             </div>
 %           if ( $USER->is_admin ) {
             <div class="col-lg-2">
