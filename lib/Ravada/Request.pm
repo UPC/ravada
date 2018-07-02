@@ -69,6 +69,7 @@ our %VALID_ARG = (
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -1001,6 +1002,33 @@ sub change_owner {
     return _new_request($self
         , command => 'change_owner'
         , args =>$args
+    );
+}
+
+sub change_max_memory {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_max_memory', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    return _new_request($self
+        , command => 'change_max_memory'
+        , args => $args
+    );
+}
+sub change_curr_memory {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_max_memory', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    return _new_request($self
+        , command => 'change_curr_memory'
+        , args => $args
     );
 }
 

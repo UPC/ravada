@@ -177,4 +177,15 @@ sub _get_driver_sound {
 
 }
 
+sub get_info {
+    my $self = shift;
+
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+    my $info;
+    $info->{max_mem} = ($doc->findnodes('/domain/memory'))[0]->textContent;
+    $info->{memory} = ($doc->findnodes('/domain/currentMemory'))[0]->textContent;
+
+    return $info;
+}
+
 1;
