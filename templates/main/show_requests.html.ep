@@ -1,0 +1,13 @@
+<div class="panel panel-primary" ng-show="pending_requests > 0">
+    <div class="panel-heading">Waiting for {{pending_requests}} requests to complete ... </div>
+    <div class="panel-body">
+        <div ng-repeat="request in requests">
+        <font color="darkgray">{{request.date}} |</font>
+        {{request.command}}
+            <b>{{request.domain}}</b>
+            <i>{{request.status}}</i>
+            <font color="darkblue">{{request.message}}</font>
+        </div>
+    </div>
+</div>
+
