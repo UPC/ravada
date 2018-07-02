@@ -7,6 +7,10 @@ extends 'Ravada::Front::Domain';
 
 my $DIR_TMP = "/var/tmp/rvd_void";
 
+our %GET_CONTROLLER_SUB = (
+    'mock' => \&_get_controller_mock
+);
+
 sub get_driver {
     my $self = shift;
     my $name = shift;
@@ -32,6 +36,22 @@ sub _value{
 sub _config_file {
     my $self = shift;
     return "$DIR_TMP/".$self->name.".yml";
+}
+
+sub list_controllers {
+    return %GET_CONTROLLER_SUB;
+}
+
+sub get_controller_by_name {
+    my ($self, $name) = @_;
+    return $GET_CONTROLLER_SUB{$name};
+}
+
+sub _get_controller_mock {
+    my $self = shift;
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{mock};
+    return @{$hardware->{mock}};
 }
 
 1;

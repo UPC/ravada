@@ -482,4 +482,37 @@ sub autostart {
     }
     return $self->_value('autostart');
 }
+
+sub set_controller {
+    my ($self, $name, $number) = @_;
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{$name} or [] );
+
+    if ($number > $#$list) {
+        for ( $#$list+1 .. $number-1 ) {
+            push @$list,("foo ".($_+1));
+        }
+    } else {
+        $#$list = $number-1;
+    }
+    warn Dumper($list);
+
+    $hardware->{$name} = $list;
+    $self->_store(hardware => $hardware );
+}
+
+sub remove_controller {
+    my ($self, $name, $index) = @_;
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{$name} or [] );
+
+    my @list2 ;
+    for ( 0 .. $#$list ) {
+        next if $_ == $index-1;
+        push @list2, ( $list->[$_]);
+    }
+    $hardware->{$name} = \@list2;
+    $self->_store(hardware => $hardware );
+}
+
 1;
