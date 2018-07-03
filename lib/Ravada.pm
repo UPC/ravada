@@ -924,10 +924,14 @@ sub _upgrade_table {
     my $sth = $dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
-    return if $row;
+    return if ( $row && index(uc $definition ,$row->{TYPE_NAME})!=-1 );
 
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
-    $dbh->do("alter table $table add $field $definition");
+    if ( $row ){
+        $dbh->do("alter table $table change $field $field $definition");
+    }else{
+        $dbh->do("alter table $table add $field $definition");
+    }
     return 1;
 }
 
@@ -1067,6 +1071,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
+    $self->_upgrade_table('requests', 'args', 'text');
 }
 
 

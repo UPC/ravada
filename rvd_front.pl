@@ -65,6 +65,12 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                     ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
+                                              ,dir => {
+                                                templates => '/usr/share/ravada/templates'
+                                                ,public => '/usr/share/ravada/public'
+                                              }
+                                              ,session_timeout => 5*60
+                                              ,session_timeout_admin => 15*60
                                               }
                                       ,file => $FILE_CONFIG
 };
@@ -1698,8 +1704,8 @@ sub list_bases_anonymous {
         , url => undef
     );
 }
-sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; $s=~ s/,//; $s =~ s/^\s+|\s+$//g; return $s };
-sub configuration {
+sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; $s =~ s/^\s+|\s+$//g; return $s };
+sub configuration_o {
     my $c = shift;
     return access_denied($c) if !$USER->is_admin();
     
@@ -1721,6 +1727,8 @@ sub configuration {
         }
         $aux[0] = trim($aux[0]);
         $aux[1] = trim($aux[1]);
+        $aux[0]=~ s/,// if ((substr $aux[0], 0, 1) eq ',');
+        $aux[0] = trim($aux[0]);
         
         push @atributes, $aux[0];
         push @values, $aux[1];
@@ -1734,7 +1742,7 @@ sub configuration {
             $need_to_regenerate=1;
         }
     }
-    
+    $c->stash(message => "");
     if($need_to_regenerate){
         my $str = generate_string(@values);
         #Create Request
@@ -1742,6 +1750,7 @@ sub configuration {
             uid => $USER->id
             ,string => $str  
         );
+        $c->stash(message => "The changes will be aplied in a few seconds");
     }
     
     $c->render(template => 'main/configuration'
@@ -1760,7 +1769,7 @@ sub generate_string {
   }
   ,admin => {
       hide_clones => $valus[4]
-      , autostart => $valus[5]
+      ,autostart => $valus[5]
   }
   ,user => $valus[6]
   ,group => $valus[7]
@@ -1775,6 +1784,32 @@ sub generate_string {
   ,session_timeout => $valus[16]
   ,session_timeout_admin => $valus[17]
 };";
+}
+
+sub configuration {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin();
+    
+    my @atributos = [];
+    my @valores = [];
+    for my $key (keys $CONFIG_FRONT) {
+        if (ref($CONFIG_FRONT->{$key}) eq 'HASH') {
+            for my $key2 (keys ($CONFIG_FRONT->{$key})){
+                push @atributos, $key2;
+                push @valores, $CONFIG_FRONT->{$key}->{$key2};
+            }
+        } else {
+            push @atributos, $key;
+            push @valores, $CONFIG_FRONT->{$key};
+        }
+    }
+    $c->stash(atributos => \@atributos);
+    $c->stash(valores => \@valores);
+    $c->stash(message => "");
+    
+    
+    $c->render(template => 'main/configuration'
+        ,action => $c->req->url->to_abs->path);
 }
 
 sub _remote_ip {

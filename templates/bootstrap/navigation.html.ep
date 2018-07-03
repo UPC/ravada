@@ -58,6 +58,9 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <ul class="dropdown-menu">
                         <li role="separator" class="divider"></li>
                         <li><a href="/user_settings"><i class="fa fa-cog" aria-hidden="true"></i><%=l 'Settings' %></a></li>
+                        % if ($_user->is_admin) {
+                            <li><a href="/configuration"><i class="fa fa-cog" aria-hidden="true"></i><%=l 'System Configuration' %></a></li>
+                        % }
                         <li><a href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a></li>
                     </ul>
                 </li>
