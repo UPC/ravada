@@ -1359,6 +1359,19 @@ sub manage_machine {
             push @errors, ('Current memory must be less than max memory');
         }
     }
+    
+    if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
+        my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
+        $c->stash(message => 'The value of Max memory has change, reload the page if you want to see the correct value here.');
+    }
+    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024){
+        if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
+            my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);
+            $c->stash(message => 'The value of current memory has change, reload the page if you want to see the correct value here.');
+        }  else {
+            $c->stash(message => 'Value introduced in current memory must be lower than max memory');
+        }
+    }
 
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
@@ -1410,6 +1423,7 @@ sub manage_machine {
 
             return access_denied($c)
                 if $option =~ /^(id_owner|run_timeout)$/ && !$USER->is_admin;
+
 
             my $old_value = $domain->_data($option);
             my $value = $c->param($option);
