@@ -1543,7 +1543,9 @@ sub set_controller($self, $name, $numero) {
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self,$numero);
+    my $ret = $sub->($self,$numero);
+    $self->xml_description();
+    return $ret;
 }
 #The only '$tipo' suported right now is 'spicevmc'
 sub _set_controller_usb($self,$numero, $tipo="spicevmc") {
@@ -1578,7 +1580,9 @@ sub remove_controller($self, $name, $index=0) {
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self, $index);
+    my $ret = $sub->($self, $index);
+    $self->xml_description();
+    return $ret;
 }
 
 sub _remove_controller_usb($self, $index) {

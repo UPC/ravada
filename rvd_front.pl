@@ -694,6 +694,11 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
     my $hardware = $c->stash('hardware');
     my $index = $c->stash('index');
     my $domain_id = $c->stash('id_domain');
+
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    return access_denied($c)
+        unless $USER->id == $domain->id_owner || $USER->is_admin;
     
     my $req = Ravada::Request->remove_hardware(uid => $USER->id
         , id_domain => $domain_id
@@ -708,6 +713,10 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
 
 get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)' => sub {
     my $c = shift;
+
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    return access_denied($c)
+        unless $USER->id == $domain->id_owner || $USER->is_admin;
 
     my $req = Ravada::Request->add_hardware(
         uid => $USER->id

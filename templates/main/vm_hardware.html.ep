@@ -11,7 +11,8 @@
         <div ng-show="value.length == 0">
             No {{name}} hardware found.
         </div>
-        <button ng-click="add_hardware(name, value.length+1)">Add {{name}}</button>
+        <button ng-disabled="pending_requests > 0"
+            ng-click="add_hardware(name, value.length+1)">Add {{name}}</button>
     </div>
 
 </div>
