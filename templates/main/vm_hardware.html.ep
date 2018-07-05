@@ -1,62 +1,20 @@
 <div class="panel-body">
-%	if ($message) {
-		<div class="panel panel-success">
-            <div class="panel-heading"><%= $message %></div>
+%=   include "main/needs_restart"
+    <div ng-repeat="(name,value) in showmachine.hardware">
+        <h2>{{name}}</h2>
+        <ul ng-show="value">
+            <li ng-repeat="item in value track by $index">{{item}}
+                <button class="label label-danger" title="remove {{name}} {{$index+1}}"
+                    ng-disabled="pending_requests > 0"
+                    ng-click="remove_hardware(name, $index)"><i class="fa fa-times"></i>
+                </button>
+            </li>
+        </ul>
+        <div ng-show="value.length == 0">
+            No {{name}} hardware found.
         </div>
-%	}
-	<div class="form-group">
-		<form class="form-inline" action="<%= $action %>" method="post">
-	%	for my $controller_name (qw(usb)){
-	%       my @controllers = $domain->get_controller($controller_name);
-	%       if (scalar @controllers < 1) {
-	            <b>I can't find controller <%= $controller_name %></b>
-	%			next;
-	%       }
-			<div class="row">
-				<div class="col-md-12">
-					<label> <%= uc $controller_name %>: </label>
-					%my $ind=1;
-					<div class="col-md-12"> <!-- List Hardware type and select remove -->
-						<ul>
-							%foreach(@controllers) {
-							<li style="margin: 2px">
-							%	my @tipo = split(/=/,$_);
-								<%= $controller_name %> <%= @tipo[-1] %>  <button class="btn btn-xs btn-danger" onclick="event.preventDefault(); deleteHdw('<%= $domain->id %>','<%= $controller_name %>','<%= $ind %>')"><i class="fa fa-times"></i></button>
-							</li>
-							% $ind++;
-							%}
-						</ul>
-						<button class="btn btn-default" onclick="addOneFunction('<%= $controller_name %>');"><%=l 'Add 1' %> <%= uc $controller_name %></button>
-					</div>
-					<div class="col-md-12">
-						<div class="col-sm-12">
-							<br>
-							<div class="form-group">
-							    <label for="<%= $controller_name %>"><%=l 'Number of ' %><%= $controller_name %><%=l ' wanted' %>:</label>
-							     <input type="number" min="0" class="form-control" id="hardware_<%= $controller_name %>" name="hardware_<%= $controller_name %>" value="<%= scalar @controllers %>">
-							     <input type="submit"/> 
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-	%	}
-		</form>
-		<script type="text/javascript">
-			var addOneFunction = (hdw) => {
-				document.getElementById(`hardware_${hdw}`).value=parseInt(document.getElementById(`hardware_${hdw}`).value)+1;
-			}
-			var deleteHdw = (domain, hdw, index) => {
-				console.log(`/settings/hardware/remove/${domain}/${hdw}/${index}`)
-				$.get(`/settings/hardware/remove/${domain}/${hdw}/${index}`, function(){
-				}).fail(function(e){
-					alert("Error removing hardware.");
-				})
-				.done(function(){
-					setTimeout(function() {location.reload();}, 1000);
-				});
-			}
-		</script>
-	</div>
+        <button ng-disabled="pending_requests > 0"
+            ng-click="add_hardware(name, value.length+1)">Add {{name}}</button>
+    </div>
 
 </div>

@@ -74,7 +74,7 @@ sub test_req_start_domain {
     );
     ok($req);
     ok($req->status);
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
     $ravada->_wait_pids();
     wait_request($req);
 
@@ -82,7 +82,7 @@ sub test_req_start_domain {
         ,"Status of request is ".$req->status." it should be done") 
             or return ;
     ok(!$req->error,"Error ".$req->error." creating domain ".$name) 
-            or return ;
+            or return;
 
     my $n_expected = 1;
     test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");

@@ -756,7 +756,6 @@ for my $vm_name (vm_names()) {
     next if $vm_name eq 'KVM' && $>;
 
     diag("Testing VM $vm_name");
-
     test_change_settings($vm_name);
 
     test_shutdown_clone($vm_name);
@@ -774,6 +773,11 @@ for my $vm_name (vm_names()) {
     test_create_domain2($vm_name);
     test_view_clones($vm_name);
 
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
     test_clone_all($vm_name);
 
 }

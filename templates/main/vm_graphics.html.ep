@@ -1,9 +1,5 @@
 <div class="panel-body">
-%   if ($message) {
-        <div class="panel panel-success">
-            <div class="panel-heading"><%= $message %></div>
-        </div>
-%   }
+%=   include "main/needs_restart"
 %   my $driver = $domain->drivers("image");
     <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
                     <strong><%=l 'This machine has not Graphics parameters!' %></strong>
@@ -15,9 +11,13 @@
 %   ,playback => 'on'
 %   ,streaming => 'filter'
 % );
-    <div class="row">
+
+    <div class="row" ng-hide="pending_requests > 0">
         <div class="col-md-6"></div><div class="col-md-1"><i><%=l 'recommended' %></i></div>
     </div>
+
+    <div ng-hide="pending_requests > 0" class="form-group">
+
     <form class="form-horizontal" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(image jpeg zlib playback streaming)) {
 %           my $driver = $domain->drivers($driver_name) or next;
@@ -52,6 +52,7 @@
 %           }
          <input type="submit" class="btn btn-default">
 </form>
+</div> <!-- of form group -->
 </div> <!-- of panel-body -->
 
 <script type="text/javascript">

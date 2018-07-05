@@ -19,7 +19,7 @@
                        <div class="panel-heading"><%= $message_rename %></div>
                     </div>
                 % }
-                <div ng-hide="rename_requested">
+                <div ng-hide="pending_requests">
                     <input class="form-control" type="text" name="new_name" ng-model="new_name"
                              ng-change="validate_new_name(showmachine.name)"
                              ng-disabled="<%= $disable_rename %>"
@@ -41,13 +41,6 @@
                               </label>
                     </div>
                 </div>
-                <div class="panel panel-success" ng-show="rename_requested">
-                    <div class="panel-heading">
-                    Rename requested.
-                    </div>
-                </div>
-                <div ng-show="message_rename"
-                    class="alert alert-warning">Renaming machine </div>
             </div>
             <div class="col-md-6">
 
