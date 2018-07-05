@@ -6,6 +6,9 @@ use XML::LibXML;
 
 extends 'Ravada::Front::Domain';
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     );
@@ -21,27 +24,18 @@ our %GET_DRIVER_SUB = (
      ,streaming => \&_get_driver_streaming
 );
 
-=head2 get_controller
 
-Calls the method to get the specified controller info
+sub get_controller_by_name($self, $name) {
+    return $GET_CONTROLLER_SUB{$name};
+}
 
-Attributes:
-    name -> name of the controller type
-
-=cut
-sub get_controller {
-	my $self = shift;
-	my $name = shift;
-    my $sub = $GET_CONTROLLER_SUB{$name};
-    
-    die "I can't get controller $name for domain ".$self->name
-        if !$sub;
-
-    return $sub->($self);
+sub list_controllers($self) {
+    return %GET_CONTROLLER_SUB;
 }
 
 sub _get_controller_usb {
 	my $self = shift;
+    $self->xml_description if !$self->readonly();
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
     
     my @ret;
@@ -66,16 +60,14 @@ Argument: name
 
 =cut
 
-sub get_driver {
-    my $self = shift;
-    my $name = shift;
+sub get_driver($self, $name) {
 
     my $sub = $GET_DRIVER_SUB{$name};
 
-    die "I can't get driver $name for domain ".$self->name
+    confess "I can't get driver $name for domain ".$self->name
         if !$sub;
 
-    $self->xml_description if ref($self) !~ /Front/;
+    $self->xml_description_inactive if ref($self) !~ /Front/;
 
     return $sub->($self);
 }

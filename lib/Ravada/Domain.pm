@@ -82,6 +82,11 @@ requires 'hybernate';
 requires 'hibernate';
 
 requires 'get_driver';
+requires 'get_controller_by_name';
+requires 'list_controllers';
+requires 'set_controller';
+requires 'remove_controller';
+
 ##########################################################
 
 has 'domain' => (
@@ -180,10 +185,15 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
+around 'set_max_mem' => \&_around_set_mem;
+around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
 around 'autostart' => \&_around_autostart;
+
+after 'set_controller' => \&_post_change_controller;
+after 'remove_controller' => \&_post_change_controller;
 
 ##################################################
 #
@@ -518,6 +528,16 @@ sub _around_get_info($orig, $self) {
     return $info;
 }
 
+sub _around_set_mem($orig, $self, $value) {
+    my $ret = $self->$orig($value);
+    if ($self->is_known) {
+        my $info = decode_json($self->_data('info'));
+        $info->{memory} = $value;
+        $self->_data(info => encode_json($info))
+    }
+    return $ret;
+}
+
 ##################################################################################3
 
 sub _init_connector {
@@ -842,6 +862,7 @@ sub info($self, $user) {
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
+        ,needs_restart => ( $self->needs_restart or 0)
     };
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
@@ -853,6 +874,7 @@ sub info($self, $user) {
         $info->{display_ip} = $local_ip;
         $info->{display_port} = $local_port;
     }
+    $info->{hardware} = $self->get_controllers();
 
     return $info;
 }
@@ -1405,6 +1427,9 @@ sub _post_shutdown {
         );
     }
     $self->_remove_temporary_machine(@_);
+    $self->needs_restart(0) if $self->is_known()
+                                && $self->needs_restart()
+                                && !$self->is_active;
 }
 
 sub _around_is_active($orig, $self) {
@@ -1419,11 +1444,7 @@ sub _around_is_active($orig, $self) {
     $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
-    eval {
-    $self->display(Ravada::Utils::user_daemon())    if $is_active;
-    };
-    warn "around_is_active display $@"  if $@;
-
+    $self->needs_restart(0) if $self->needs_restart() && !$is_active;
     return $is_active;
 }
 
@@ -1582,6 +1603,7 @@ sub _add_iptable {
     my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
+    return if !$self->is_active;
     my $display = $self->display($user);
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
     $self->_remove_iptables( port => $local_port );
@@ -1934,12 +1956,36 @@ sub _post_rename {
      $sth->finish;
  }
 
+=head2 get_controller
 
-sub get_controller {}
+Calls the method to get the specified controller info
 
-sub set_controller {}
+Attributes:
+    name -> name of the controller type
 
-sub remove_controller {}
+=cut
+sub get_controller {
+	my $self = shift;
+	my $name = shift;
+
+    my $sub = $self->get_controller_by_name($name);
+#    my $sub = $GET_CONTROLLER_SUB{$name};
+    
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+sub get_controllers($self) {
+    my $info;
+    my %controllers = $self->list_controllers();
+    for my $name ( sort keys %controllers ) {
+        $info->{$name} = [$self->get_controller($name)];
+    }
+    return $info;
+}
+
 =head2 drivers
 
 List the drivers available for a domain. It may filter for a given type.
@@ -2081,6 +2127,28 @@ Returns all the drivers if not passwed
 
 =cut
 
+=head2 get_driver_id
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver_id($self, $name) {
+    my $value = $self->get_driver($name);
+
+    my $driver_type = $self->drivers($name) or confess "ERROR: Unknown drivers"
+        ." of type '$name'";
+
+    for my $option ($driver_type->get_options) {
+        return $option->{id} if $option->{value} eq $value;
+    }
+    return;
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
@@ -2105,16 +2173,11 @@ Sets a domain option:
 =cut
 
 sub set_option($self, $option, $value) {
-    if ($option eq 'description') {
-        warn "$option -> $value\n";
-        $self->description($value);
-    } elsif ($option eq 'run_timeout') {
-        $self->run_timeout($value);
-    } elsif ($option eq 'volatile_clones') {
-        $self->volatile_clones($value); 
-    } else {
-        confess "ERROR: Unknown option '$option'";
-    }
+    my %valid_option = map { $_ => 1 } qw( description run_timeout volatile_clones id_owner);
+    die "ERROR: Invalid option '$option'"
+        if !$valid_option{$option};
+
+    return $self->_data($option, $value);
 }
 
 =head2 type
@@ -2257,4 +2320,12 @@ sub _client_connection_status($self, $force=undef) {
     return 'disconnected';
 }
 
+sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart',$value);
+}
+
+sub _post_change_controller {
+    my $self = shift;
+    $self->needs_restart(1) if $self->is_active;
+}
 1;

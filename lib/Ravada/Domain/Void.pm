@@ -362,6 +362,10 @@ sub _set_default_info {
             ,state => 'UNKNOWN'
     };
     $self->_store(info => $info);
+    my %controllers = $self->list_controllers;
+    for my $name ( sort keys %controllers) {
+        $self->set_controller($name,2);
+    }
 
 }
 
@@ -482,4 +486,36 @@ sub autostart {
     }
     return $self->_value('autostart');
 }
+
+sub set_controller {
+    my ($self, $name, $number) = @_;
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{$name} or [] );
+
+    if ($number > $#$list) {
+        for ( $#$list+1 .. $number-1 ) {
+            push @$list,("foo ".($_+1));
+        }
+    } else {
+        $#$list = $number-1;
+    }
+
+    $hardware->{$name} = $list;
+    $self->_store(hardware => $hardware );
+}
+
+sub remove_controller {
+    my ($self, $name, $index) = @_;
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{$name} or [] );
+
+    my @list2 ;
+    for ( 0 .. $#$list ) {
+        next if $_ == $index;
+        push @list2, ( $list->[$_]);
+    }
+    $hardware->{$name} = \@list2;
+    $self->_store(hardware => $hardware );
+}
+
 1;

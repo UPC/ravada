@@ -40,6 +40,7 @@ sub test_create_domain {
     }
 }
 
+clean();
 my $id = 10;
 for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
@@ -49,7 +50,7 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
         "INSERT INTO vms (id, name, vm_type, hostname) "
         ." VALUES(?,?,?,?)"
     );
-    $sth->execute($id, $vm_type, $vm_type, 'localhost');
+    $sth->execute(++$id, $vm_type, $vm_type, 'localhost');
     $sth->finish;
 
     my $vm = Ravada::VM->open($id);
@@ -59,5 +60,7 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
 
     $id++;
 }
+
+clean();
 
 done_testing();

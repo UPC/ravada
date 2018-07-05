@@ -123,20 +123,31 @@ sub list_disks {
     return @disks;
 }
 
-sub xml_description($self) {
+sub xml_description($self, $inactive=0) {
     return $self->_data_extra('xml')    if !$self->domain && $self->is_known;
 
     confess "ERROR: KVM domain not available"   if !$self->domain;
     my $xml;
     eval {
-        $xml = $self->domain->get_xml_description();
-        $self->_data_extra('xml', $xml) if $self->is_known;
+        my @flags;
+        @flags = ( Sys::Virt::Domain::XML_INACTIVE ) if $inactive;
+
+        $xml = $self->domain->get_xml_description(@flags);
+        $self->_data_extra('xml', $xml) if $self->is_known
+                                        && ( $inactive
+                                                || !$self->_data_extra('xml')
+                                                || !$self->is_active
+                                        );
     };
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
     if ( $@ ) {
         return $self->_data_extra('xml');
     }
     return $xml;
+}
+
+sub xml_description_inactive($self) {
+    return $self->xml_description(1);
 }
 
 =head2 remove_disks
@@ -527,7 +538,7 @@ sub display {
     my ($address) = $graph->getAttribute('listen');
     $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
-    die "ERROR: Machine ".$self->name." is not active\n"
+    confess "ERROR: Machine ".$self->name." is not active\n"
         if !$port && !$self->is_active;
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
@@ -1350,7 +1361,7 @@ sub set_driver {
         if !$sub;
 
     my $ret = $sub->($self,@_);
-    $self->xml_description();
+    $self->xml_description_inactive();
     return $ret;
 }
 
@@ -1543,11 +1554,13 @@ sub set_controller($self, $name, $numero) {
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self,$numero);
+    my $ret = $sub->($self,$numero);
+    $self->xml_description_inactive();
+    return $ret;
 }
 #The only '$tipo' suported right now is 'spicevmc'
 sub _set_controller_usb($self,$numero, $tipo="spicevmc") {
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes('/domain/devices');
     
     my $count = 0;
@@ -1578,16 +1591,17 @@ sub remove_controller($self, $name, $index=0) {
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self, $index);
+    my $ret = $sub->($self, $index);
+    $self->xml_description_inactive();
+    return $ret;
 }
 
 sub _remove_controller_usb($self, $index) {
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
     for my $controller ($devices->findnodes('redirdev')) {
         if ($controller->getAttribute('bus') eq 'usb'){
-            $ind++;
             if( $ind==$index ){
                 $devices->removeChild($controller);
                 $self->_vm->connect if !$self->_vm->vm;
@@ -1595,8 +1609,11 @@ sub _remove_controller_usb($self, $index) {
                 $self->domain($new_domain);
                 return;
             }
+            $ind++;
         }
     }
+
+    die "ERROR: USB controller ".($index+1)." not removed, only ".($ind)." found\n";
 }
 
 =head2 pre_remove
