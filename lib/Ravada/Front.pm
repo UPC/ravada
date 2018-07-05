@@ -759,7 +759,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=120) {
             ,domain => $domain
             ,date => $date
             ,message => $message
-            ,error => "$time_recent ".$error
+            ,error => $error
         };
     }
     $sth->finish;
