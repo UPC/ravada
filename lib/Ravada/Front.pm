@@ -709,7 +709,7 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 =cut
 
-sub list_requests($self, $id_domain_req=undef, $seconds=120) {
+sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
     my @now = localtime(time-$seconds);
     $now[4]++;
@@ -742,7 +742,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=120) {
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
-                || $command eq 'ping_backend';
+                || $command eq 'ping_backend'
+                || $command eq 'refresh_storage';
         next if $id_domain_req && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;
