@@ -60,14 +60,16 @@ Argument: name
 
 =cut
 
-sub get_driver($self, $name) {
+sub get_driver {
+    my $self = shift;
+    my $name = shift;
 
     my $sub = $GET_DRIVER_SUB{$name};
 
-    confess "I can't get driver $name for domain ".$self->name
+    die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
-    $self->xml_description_inactive if ref($self) !~ /Front/;
+    $self->xml_description if ref($self) !~ /Front/;
 
     return $sub->($self);
 }

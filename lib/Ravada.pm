@@ -864,6 +864,7 @@ sub _enable_grants($self) {
         ,'grant'
         ,'manage_users'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
     );
@@ -2372,7 +2373,7 @@ sub _cmd_set_driver {
     confess "Unkown domain ".Dumper($request)   if !$domain;
 
     die "USER $uid not authorized to set driver for domain ".$domain->name
-        if $domain->id_owner != $user->id && !$user->is_admin;
+        unless $user->can_change_settings($domain->id);
 
     $domain->set_driver_id($request->args('id_option'));
     $domain->needs_restart(1) if $domain->is_active;

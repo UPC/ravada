@@ -154,7 +154,7 @@ sub list_machines_user {
 
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
-            if ($clone->is_active && !$clone->is_locked) {
+            if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
                 my $req = Ravada::Request->screenshot_domain(
                 id_domain => $clone->id
                 ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
@@ -164,7 +164,9 @@ sub list_machines_user {
             $base{screenshot} = ( $clone->_data('file_screenshot') 
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
-            $base{id_clone} = $clone->id
+            $base{id_clone} = $clone->id;
+            $base{can_remove} = 0;
+            $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
@@ -186,21 +188,6 @@ sub list_machines($self, $user) {
         }
         push @list,(@$machines);
     }
-
-=pod
-
-if ($user->can_remove_clone_all()) {
-        my $machines = $self->list_bases( );
-        for my $base (@$machines) {
-            my $clones = $self->list_domains( id_base => $base->{id} );
-            next if !scalar @$clones;
-            push @list, ($base);
-            push @list, @{$clones};
-        }
-
-    }
-
-=cut
 
     push @list,(@{$self->list_clones()}) if $user->can_list_clones;
     if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {

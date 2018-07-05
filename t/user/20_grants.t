@@ -178,6 +178,9 @@ sub test_remove_clone {
 
     $clone->remove($usera);
     $domain->remove($usera);
+    for $clone ( $domain->clones ) {
+        $clone->remove($usera);
+    }
 
     $user->remove();
     $usera->remove();
@@ -208,6 +211,9 @@ sub test_view_clones {
     $clone->prepare_base($usera);
     eval{ $clones = rvd_front->list_clones() };
     is(scalar @$clones, 0) or return;
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 
     $usera->remove();
     $user->remove();
@@ -342,6 +348,7 @@ sub test_shutdown_all {
 
     $domain->remove($usera);
     $user->remove();
+    $usera->remove();
 }
 
 sub test_remove_clone_all {
@@ -399,6 +406,8 @@ sub test_remove_clone_all {
 
     $clone->remove($usera);
     $domain->remove($usera);
+    $domain2->remove($usera);
+    $other_domain->remove($usera);
 
     $user->remove();
     $usera->remove();
@@ -494,12 +503,13 @@ sub test_frontend {
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 1 );
 
-    create_domain($vm_name, $user);
+    my $domain_other = create_domain($vm_name, $user);
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 2 );
 
     $clone->remove( $usera );
     $domain->remove( $usera );
+    $domain_other->remove( $usera );
 
     $usera->remove;
     $user->remove;
@@ -574,6 +584,10 @@ sub test_create_domain {
 
     eval { $base->remove($usera)   if $domain };
     is($@,'');
+
+    $base->remove(user_admin)   if !$base->is_removed;
+    $clone->remove(user_admin) if !$clone->is_removed;
+    $domain->remove(user_admin) if !$domain->is_removed;
 
     $user->remove();
     $usera->remove();
@@ -664,7 +678,6 @@ sub test_create_domain2 {
 }
 
 sub test_change_settings($vm_name) {
-
     my $vm = rvd_back->search_vm($vm_name);
 
     my $user = create_user("oper_cs$$","bar");
@@ -740,7 +753,9 @@ test_operator();
 clean();
 
 for my $vm_name (vm_names()) {
+    next if $vm_name eq 'KVM' && $>;
 
+    diag("Testing VM $vm_name");
     test_change_settings($vm_name);
 
     test_shutdown_clone($vm_name);
@@ -758,6 +773,11 @@ for my $vm_name (vm_names()) {
     test_create_domain2($vm_name);
     test_view_clones($vm_name);
 
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
     test_clone_all($vm_name);
 
 }
