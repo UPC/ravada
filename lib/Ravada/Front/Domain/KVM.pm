@@ -35,6 +35,7 @@ sub list_controllers($self) {
 
 sub _get_controller_usb {
 	my $self = shift;
+    $self->xml_description if !$self->readonly();
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
     
     my @ret;
@@ -66,7 +67,7 @@ sub get_driver($self, $name) {
     confess "I can't get driver $name for domain ".$self->name
         if !$sub;
 
-    $self->xml_description if ref($self) !~ /Front/;
+    $self->xml_description_inactive if ref($self) !~ /Front/;
 
     return $sub->($self);
 }

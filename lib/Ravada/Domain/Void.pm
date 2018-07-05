@@ -362,6 +362,10 @@ sub _set_default_info {
             ,state => 'UNKNOWN'
     };
     $self->_store(info => $info);
+    my %controllers = $self->list_controllers;
+    for my $name ( sort keys %controllers) {
+        $self->set_controller($name,2);
+    }
 
 }
 
@@ -495,7 +499,6 @@ sub set_controller {
     } else {
         $#$list = $number-1;
     }
-    warn Dumper($list);
 
     $hardware->{$name} = $list;
     $self->_store(hardware => $hardware );
@@ -508,7 +511,7 @@ sub remove_controller {
 
     my @list2 ;
     for ( 0 .. $#$list ) {
-        next if $_ == $index-1;
+        next if $_ == $index;
         push @list2, ( $list->[$_]);
     }
     $hardware->{$name} = \@list2;

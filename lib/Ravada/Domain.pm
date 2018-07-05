@@ -84,6 +84,8 @@ requires 'hibernate';
 requires 'get_driver';
 requires 'get_controller_by_name';
 requires 'list_controllers';
+requires 'set_controller';
+requires 'remove_controller';
 
 ##########################################################
 
@@ -189,6 +191,9 @@ around 'set_memory' => \&_around_set_mem;
 around 'is_active' => \&_around_is_active;
 
 around 'autostart' => \&_around_autostart;
+
+after 'set_controller' => \&_post_change_controller;
+after 'remove_controller' => \&_post_change_controller;
 
 ##################################################
 #
@@ -857,6 +862,7 @@ sub info($self, $user) {
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
+        ,needs_restart => ( $self->needs_restart or 0)
     };
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
@@ -1421,6 +1427,9 @@ sub _post_shutdown {
         );
     }
     $self->_remove_temporary_machine(@_);
+    $self->needs_restart(0) if $self->is_known()
+                                && $self->needs_restart()
+                                && !$self->is_active;
 }
 
 sub _around_is_active($orig, $self) {
@@ -1435,11 +1444,7 @@ sub _around_is_active($orig, $self) {
     $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
-    eval {
-    $self->display(Ravada::Utils::user_daemon())    if $is_active;
-    };
-    warn "around_is_active display $@"  if $@;
-
+    $self->needs_restart(0) if $self->needs_restart() && !$is_active;
     return $is_active;
 }
 
@@ -1598,6 +1603,7 @@ sub _add_iptable {
     my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
+    return if !$self->is_active;
     my $display = $self->display($user);
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
     $self->_remove_iptables( port => $local_port );
@@ -1980,9 +1986,6 @@ sub get_controllers($self) {
     return $info;
 }
 
-sub set_controller {}
-
-sub remove_controller {}
 =head2 drivers
 
 List the drivers available for a domain. It may filter for a given type.
@@ -2143,7 +2146,7 @@ sub get_driver_id($self, $name) {
     for my $option ($driver_type->get_options) {
         return $option->{id} if $option->{value} eq $value;
     }
-    return undef;
+    return;
 }
 
 sub _dbh {
@@ -2317,4 +2320,12 @@ sub _client_connection_status($self, $force=undef) {
     return 'disconnected';
 }
 
+sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart',$value);
+}
+
+sub _post_change_controller {
+    my $self = shift;
+    $self->needs_restart(1) if $self->is_active;
+}
 1;

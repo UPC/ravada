@@ -1,10 +1,12 @@
 <div class="panel-body">
+%=   include "main/needs_restart"
     <div ng-repeat="(name,value) in showmachine.hardware">
         <h2>{{name}}</h2>
         <ul ng-show="value">
             <li ng-repeat="item in value track by $index">{{item}}
                 <button class="label label-danger" title="remove {{name}} {{$index+1}}"
-                    ng-click="remove_hardware(name, $index+1)"><i class="fa fa-times"></i>
+                    ng-disabled="pending_requests > 0"
+                    ng-click="remove_hardware(name, $index)"><i class="fa fa-times"></i>
                 </button>
             </li>
         </ul>

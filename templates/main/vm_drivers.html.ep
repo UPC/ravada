@@ -1,11 +1,11 @@
 <div class="panel-body">
+%=   include "main/needs_restart"
 
 % my %recommend=(
 %   network => 'virtio'
 %   ,video => 'qxl'
 % );
 
-    %= include 'main/show_requests'
     <div class="row" ng-hide="pending_requests > 0">
         <div class="col-md-6"></div><div class="col-md-1"><i>recommended</i></div>
     </div>

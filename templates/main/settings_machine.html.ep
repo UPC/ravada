@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h !DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
@@ -8,7 +8,8 @@
         <!--BASES AND DOMAINS LIST-->
         <div>
     <div class="page-header">
-        <div class="panel panel-default">
+        <div class="panel panel-default"
+             ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
              <div class="panel-heading">
 %              if ($domain->is_base) {
                  <h2><%=l 'Virtual Machine' %>
@@ -23,9 +24,8 @@
                  </h2>
 %               }
              </div> <!-- del panel heading-->
-             <div class="tab-content" 
-                    ng-controller="singleMachinePage" ng-init="init(<%= $id %>)"
-                 >
+             %= include 'main/show_requests'
+             <div class="tab-content">
                 %= include 'main/settings_machine_tabs_head'
                 %= include 'main/settings_machine_tabs_body'
             </div>

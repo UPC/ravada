@@ -1063,6 +1063,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','client_status','varchar(32)');
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
 
+    $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -1335,6 +1336,8 @@ sub create_domain {
             };
             $request->error($error) if $error;
         }
+    } elsif ($@) {
+        die $@;
     }
     return $domain;
 }
@@ -2372,6 +2375,7 @@ sub _cmd_set_driver {
         if $domain->id_owner != $user->id && !$user->is_admin;
 
     $domain->set_driver_id($request->args('id_option'));
+    $domain->needs_restart(1) if $domain->is_active;
 }
 
 sub _cmd_refresh_storage($self, $request=undef) {

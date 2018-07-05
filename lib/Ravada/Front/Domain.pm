@@ -126,4 +126,6 @@ sub get_driver {}
 sub get_controller_by_name { }
 sub list_controllers {}
 
+sub set_controller {}
+sub remove_controller {}
 1;

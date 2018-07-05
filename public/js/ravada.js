@@ -155,6 +155,7 @@
                             $scope.showmachine=response.data;
                     $scope.new_name=$scope.showmachine.name+"-2";
                     $scope.validate_new_name($scope.showmachine.name);
+                    $scope.refresh_machine();
                 });
           };
           $scope.domain_remove = 0;
@@ -259,7 +260,8 @@
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.refresh_machine = function() {
-            $http.get('/requests.json').then(function(response) {
+            if(!$scope.showmachine) { return }
+            $http.get('/machine/requests/'+$scope.showmachine.id+'.json').then(function(response) {
               $scope.requests = response.data;
               var pending = 0;
               for (var i in response.data) {
@@ -267,13 +269,13 @@
                     pending++;
                   }
               }
-              if (pending) {
-                $scope.pending_requests = pending;
+              $scope.pending_requests = pending;
+              if ($scope.requests.length) {
                 setTimeout(function () {
                     $scope.refresh_machine();
                 }, 2000);
-              } else {
-                  $scope.pending_requests = pending;
+              }
+              if( pending < $scope.pending_before) {
                   if($scope.showmachine) {
                       $scope.init($scope.showmachine.id);
                   }
@@ -281,25 +283,31 @@
                     $scope.init($scope.showmachine.id);
                   }, 2000);
               }
+              console.log("pending: "+$scope.pending_before+" - "+pending);
+              $scope.pending_before = pending;
             });
           };
           $scope.add_hardware = function(hardware, number) {
               $http.get('/machine/hardware/add/'
                       +$scope.showmachine.id+'/'+hardware+'/'+number).then(function(response) {
-
+                          $scope.pending_before++;
+                          if (!$scope.requests || !$scope.requests.length) {
                             $scope.refresh_machine();
+                          }
                       });
           };
-          $scope.refresh_machine();
           $scope.remove_hardware = function(hardware, index) {
               $http.get('/machine/hardware/remove/'
                       +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
-
-                            $scope.refresh_machine();
+                            $scope.pending_before++;
+                            if (!$scope.requests || !$scope.requests.length) {
+                                $scope.refresh_machine();
+                            }
                       });
 
           };
             $scope.removed_hardware = [];
+            $scope.pending_before = 10;
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
         };
