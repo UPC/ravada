@@ -11,27 +11,48 @@
 				</div>
 				<script type="text/javascript">
 					setTimeout(function() {
-						window.location = window.location.href.split('?')[0];
+						window.location = window.location.href.split('?')[0]; //Without quey
 					}, 3000);
 				</script>
 			%}
 			<h2><%=l 'Configuration' %></h2>
 			<form action="<%= $action %>">
 				%for my $i (1 .. scalar @$atributos){
+				%	next if @$atributos[$i] eq '';
 				<div class="row">
-					<%= @$atributos[$i] %> - 
-					%if (ref(@$valores[$i]) eq 'ARRAY'){
-						<%= join(',', @$valores[$i]) %>
-					%}else{
-						<%= @$valores[$i] %>
-					%}
-					
+					<div class='col-sm-3'>
+						<label><%= @$atributos[$i] %></label>
+					</div>
+					<div class="col-sm-9">
+						<input 
+						% if (@$atributos[$i] =~ /autostart/ || @$atributos[$i] =~ /monitoring/) {
+							type="checkbox"
+						%	if (@$valores[$i]) {
+							checked=True
+						%	}
+						% } else {
+							% if (@$atributos[$i] =~ /session/ || @$atributos[$i] =~ /hide_clones/) {
+								type="number" 
+							% } else {
+								type="text"
+							% }
+							class="form-control"
+						% }
+						name="<%= @$atributos[$i] %>"
+						% if (ref(@$valores[$i]) eq 'ARRAY'){
+						%	#my $value='[';
+						%	#for my $j (1 .. scalar @$valores[$i]){
+						%		#$value = $value.'\''.((@$valores[$i])[$j-1]).'\',';
+						%	#}
+						%	#$value = $value.']';
+							value=<%= (scalar @$valores[$i]) %>
+						% }else{
+							value='<%= @$valores[$i] %>'
+						%}
+						>
+					</div>
 				</div>
 				%}
-				
-				
-				
-				
 				<input type="submit" name="submitbtn">
 			</form>
 		</div>

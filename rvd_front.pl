@@ -32,7 +32,7 @@ my $FILE_CONFIG = "/etc/rvd_front.conf";
 
 my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
-    warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG\n" 
         if -e $file && $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
     $error_file_duplicated++;
@@ -46,7 +46,10 @@ for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
     $FILE_CONFIG_RAVADA = $file if -e $file;
 }
 
-my $CONFIG_FRONT = plugin Config => { default => {
+my $CONFIG_FRONT;
+
+sub _update_config_front {
+    $CONFIG_FRONT = plugin Config => { default => {
                                                 hypnotoad => {
                                                 pid_file => 'log/rvd_front.pid'
                                                 ,listen => ['http://*:8081']
@@ -73,8 +76,9 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,session_timeout_admin => 15*60
                                               }
                                       ,file => $FILE_CONFIG
-};
-
+    };
+}
+_update_config_front();
 #####
 #####
 #####
@@ -1704,48 +1708,53 @@ sub list_bases_anonymous {
         , url => undef
     );
 }
-sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; $s =~ s/^\s+|\s+$//g; return $s };
-sub configuration_o {
+
+sub configuration {
     my $c = shift;
     return access_denied($c) if !$USER->is_admin();
+    _update_config_front();
     
-    #Open file /etc/rvd_front.conf
-    my $file = '/etc/rvd_front.conf';
-    open my $info, $file or die "Could not open $file: $!";
-    #Make this file atributes visible
-    my @atributes = ();
-    my @values = ();
-    while( my $line = <$info> ) {
-        if ($line !~ /=>/) {
-            last if ($line eq '};');
-            next;
-        }
-        
-        my @aux = split(/=>/, $line);
-        if ($aux[1] =~ /{/) {
-            next;
-        }
-        $aux[0] = trim($aux[0]);
-        $aux[1] = trim($aux[1]);
-        $aux[0]=~ s/,// if ((substr $aux[0], 0, 1) eq ',');
-        $aux[0] = trim($aux[0]);
-        
-        push @atributes, $aux[0];
-        push @values, $aux[1];
-        $c->stash($aux[0] => $aux[1]);
-    }
-    #change where needed
-    my $need_to_regenerate=0;
-    for my $i (1 .. scalar @atributes) {
-        if ( $c->param($atributes[$i-1]) && $c->param($atributes[$i-1]) ne $values[$i-1] ){
-            $values[$i-1] = $c->param($atributes[$i-1]);
-            $need_to_regenerate=1;
+    my @atributos = [];
+    my @valores = [];
+    for my $key (keys $CONFIG_FRONT) {
+        if (ref($CONFIG_FRONT->{$key}) eq 'HASH') {
+            for my $key2 (keys ($CONFIG_FRONT->{$key})){
+                my $aux = $key.'_'.$key2;
+                push @atributos, $aux;
+                if (ref($CONFIG_FRONT->{$key}->{$key2}) eq 'ARRAY' ){
+                    push @valores, _extract_config_array($CONFIG_FRONT->{$key}->{$key2});
+                }else{
+                    push @valores, $CONFIG_FRONT->{$key}->{$key2};
+                }
+            }
+        } else {
+            push @atributos, $key;
+            if (ref($CONFIG_FRONT->{$key}) eq 'ARRAY' ){
+                push @valores, _extract_config_array($CONFIG_FRONT->{$key});
+            } else {
+                push @valores, $CONFIG_FRONT->{$key};
+            }
         }
     }
+    
+    $c->stash(atributos => \@atributos);
+    $c->stash(valores => \@valores);
     $c->stash(message => "");
+    
+    my $need_to_regenerate=0;
+    for my $i (1 .. scalar @atributos) {
+        if ($c->param($atributos[$i-1]) && $c->param($atributos[$i-1]) ne $valores[$i-1]){
+            if (_valid_param($atributos[$i-1], $c)) {
+                $valores[$i-1] = $c->param($atributos[$i-1]);
+                $need_to_regenerate=1;
+            } else {
+                $c->stash(message => "Format of $atributos[$i-1] not valid!");
+            }
+        }
+    }
+    
     if($need_to_regenerate){
-        my $str = generate_string(@values);
-        #Create Request
+        my $str = _generate_config_file(\@atributos, \@valores);
         Ravada::Request->change_front_config(
             uid => $USER->id
             ,string => $str  
@@ -1754,62 +1763,89 @@ sub configuration_o {
     }
     
     $c->render(template => 'main/configuration'
-        , action => $c->req->url->to_abs->path);
+        ,action => $c->req->url->to_abs->path);
 }
-sub generate_string {
-    my @valus = @_;
-    return "{
-  hypnotoad => {
-    pid_file => $valus[0]
-    ,listen => $valus[1]
-  }
-  ,dir => {
-      templates => $valus[2]
-        ,public => $valus[3]
-  }
-  ,admin => {
-      hide_clones => $valus[4]
-      ,autostart => $valus[5]
-  }
-  ,user => $valus[6]
-  ,group => $valus[7]
-  ,secrets => $valus[8]
-  ,login_custom => $valus[9]
-  ,footer => $valus[10]
-  ,login_bg_file => $valus[11]
-  ,login_message => $valus[12]
-  ,monitoring => $valus[13]
-  ,guide => $valus[14]
-  ,guide_custom => $valus[15]
-  ,session_timeout => $valus[16]
-  ,session_timeout_admin => $valus[17]
-};";
-}
-
-sub configuration {
+sub _valid_param {
+    my $attr = shift;
     my $c = shift;
-    return access_denied($c) if !$USER->is_admin();
     
-    my @atributos = [];
-    my @valores = [];
-    for my $key (keys $CONFIG_FRONT) {
-        if (ref($CONFIG_FRONT->{$key}) eq 'HASH') {
-            for my $key2 (keys ($CONFIG_FRONT->{$key})){
-                push @atributos, $key2;
-                push @valores, $CONFIG_FRONT->{$key}->{$key2};
-            }
+    if ($attr =~ /secrets/ || $attr =~ /listen/ ) {
+        my $v = $c->param($attr);
+        return 1 if $v =~ /\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]/ ; #Normal array (ended with coma (,)) -> ['1234',]
+        return 1 if $v =~ /^[a-zA-Z0-9_\/\*\:]+$/ ; #Only one password? -> 1234
+        return 0 if $v =~ /(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,*)+/ ; # Posible passwords without being between "'" neither in array "[]" -> It can be converted into a valid format. 
+        return 0;
+    }
+    return 1;
+}
+sub _extract_config_array {
+    my $array = shift;
+    my $out = '[';
+    
+    foreach (@$array) {
+        $out .= '\''.$_.'\',';
+    }
+    $out .= ']';
+    return $out;
+}
+sub _generate_config_file {
+    my @attrs = @{$_[0]};
+    my @vals = @{$_[1]};
+    
+    my $out = '{';
+    my $dir = ',dir => {';
+    my $admin = ',admin => {';
+    my $hypnotoad = ',hypnotoad => {';
+    for my $i (1 .. scalar @attrs -1) {
+        if ($attrs[$i] =~ /^(dir)/){
+            $attrs[$i] =~ s/^[^_]*_//;
+            $dir .= _format_config_argument($dir, $attrs[$i], $vals[$i]);
+        } elsif ($attrs[$i] =~ /^(admin)/) {
+            $attrs[$i] =~ s/^[^_]*_//;
+            $admin .= _format_config_argument($admin, $attrs[$i], $vals[$i]);
+        } elsif ($attrs[$i] =~ /^(hypnotoad)/) {
+            $attrs[$i] =~ s/^[^_]*_//;
+            $hypnotoad .= _format_config_argument($hypnotoad, $attrs[$i], $vals[$i]);  
         } else {
-            push @atributos, $key;
-            push @valores, $CONFIG_FRONT->{$key};
+            $out .= _format_config_argument($out, $attrs[$i], $vals[$i]);
         }
     }
-    $c->stash(atributos => \@atributos);
-    $c->stash(valores => \@valores);
-    $c->stash(message => "");
+    $dir .= '
+    }';
+    $admin .='
+    }';
+    $hypnotoad .= '
+    }';
     
+    $out .= '
+    '.$dir.'
+    '.$admin.'
+    '.$hypnotoad.'
+};';
+    return $out;
+}
+sub _format_config_argument {
+    my $str = shift;
+    my $atr = shift;
+    my $val = shift;
     
-    $c->render(template => 'main/configuration'
-        ,action => $c->req->url->to_abs->path);
+    if (($str =~ tr/\n//) > 0){
+        if ($val =~ /^-?\d+$/ || $val =~ /\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]/ ) {
+            return '
+        ,'.$atr.' => '.$val;
+        } else {
+            return '
+        ,'.$atr.' => \''.$val.'\'';
+        }
+    } else {
+        if ($val =~ /^-?\d+$/ || $val =~ /\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]/ ) {
+            return '
+        '.$atr.' => '.$val;
+        } else {
+            return '
+        '.$atr.' => \''.$val.'\'';
+        }
+    }
 }
 
 sub _remote_ip {
