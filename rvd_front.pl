@@ -32,7 +32,7 @@ my $FILE_CONFIG = "/etc/rvd_front.conf";
 
 my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
-    warn "WARNING: Found config file at $file and at $FILE_CONFIG\n" 
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
         if -e $file && $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
     $error_file_duplicated++;
@@ -41,7 +41,7 @@ warn "WARNING: using $FILE_CONFIG\n"    if$error_file_duplicated>2;
 
 my $FILE_CONFIG_RAVADA;
 for my $file ( "/etc/ravada.conf" , ($ENV{HOME} or '')."/ravada.conf") {
-    warn "WARNING: Found config file at $file and at $FILE_CONFIG_RAVADA\n" 
+    warn "WARNING: Found config file at $file and at $FILE_CONFIG_RAVADA\n"
         if -e $file && $FILE_CONFIG_RAVADA;
     $FILE_CONFIG_RAVADA = $file if -e $file;
 }
