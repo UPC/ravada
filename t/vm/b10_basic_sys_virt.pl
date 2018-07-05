@@ -49,6 +49,6 @@ sub test_basic {
 	$domain->set_max_memory($factor) if !$domain->is_active();
 }
 
-test_basic('testh2');
+#test_basic('testh2');
 
 done_testing();
