@@ -41,7 +41,7 @@ sub test_volatile_clone {
 
     is($clone->is_active, 1) && do {
 
-#        like($clone->display(user_admin),qr'\w+://');
+        like($clone->display(user_admin),qr'\w+://');
 
         my $clonef = Ravada::Front::Domain->open($clone->id);
         ok($clonef);

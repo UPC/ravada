@@ -180,27 +180,22 @@ sub test_domain{
             ." "
             .join(" * ", sort map { $_->name } @list)
         ) or exit;
-        ok(!$domain->is_base,"Domain shouldn't be base "
-            .Dumper($domain->_select_domain_db()));
+        ok(!$domain->is_base,"Domain shouldn't be base ");
 
         # test list domains
         my @list_domains = $vm->list_domains();
         ok(@list_domains,"No domains in list");
         my $list_domains_data = $RAVADA->list_domains_data();
-        ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
+        ok($list_domains_data && $list_domains_data->[0],"No list domains data ");
         my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
-        ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 "
-            .Dumper($list_domains_data));
+        ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 ");
 
         ok(!$domain->is_active  ,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active   ,"domain should be active")   if defined $active && $active==1;
 
         # test prepare base
         test_prepare_base($domain);
-        ok($domain->is_base,"Domain should be base"
-            .Dumper($domain->_select_domain_db())
-
-        );
+        ok($domain->is_base,"Domain should be base");
  
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
         my $domain2;
@@ -282,10 +277,7 @@ sub test_prepare_import {
     if (ok($domain,"test domain not created")) {
 
         test_prepare_base($domain);
-        ok($domain->is_base,"Domain should be base"
-            .Dumper($domain->_select_domain_db())
-
-        );
+        ok($domain->is_base,"Domain should be base");
 
         test_remove_domain($domain->name);
     }
