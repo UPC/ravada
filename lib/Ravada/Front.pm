@@ -744,7 +744,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'hibernate'
                 || $command eq 'ping_backend'
                 || $command eq 'refresh_storage';
-        next if $id_domain_req && $id_domain != $id_domain_req;
+        next if $id_domain_req && defined $id_domain && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;
 
