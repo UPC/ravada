@@ -1743,7 +1743,7 @@ sub configuration {
     
     my $need_to_regenerate=0;
     for my $i (1 .. scalar @atributos) {
-        if ($c->param($atributos[$i-1]) && $c->param($atributos[$i-1]) ne $valores[$i-1]){
+        if ( ($c->param($atributos[$i-1]) && $c->param($atributos[$i-1]) ne $valores[$i-1]) || ( $valores[$i-1] eq 1 )  ){
             if (_valid_param($atributos[$i-1], $c)) {
                 $valores[$i-1] = $c->param($atributos[$i-1]);
                 $need_to_regenerate=1;
@@ -1768,15 +1768,24 @@ sub configuration {
 sub _valid_param {
     my $attr = shift;
     my $c = shift;
-    
-    if ($attr =~ /secrets/ || $attr =~ /listen/ ) {
-        my $v = $c->param($attr);
-        return 1 if $v =~ /\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]/ ; #Normal array (ended with coma (,)) -> ['1234',]
+    my $v = $c->param($attr);
+    if ($attr =~ /secrets/ || $attr =~ /listen/ ) { #Array like
+        return 1 if $v =~ /^\[(\s*('|")[a-zA-Z0-9_\/\*\:]+('|")\s*,\s*)*\]$/ ; #Normal array (ended with coma (,)) -> ['1234',]
         return 1 if $v =~ /^[a-zA-Z0-9_\/\*\:]+$/ ; #Only one password? -> 1234
-        return 0 if $v =~ /(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,*)+/ ; # Posible passwords without being between "'" neither in array "[]" -> It can be converted into a valid format. 
+        #return 0 if $v =~ /(\s*'?[a-zA-Z0-9_\/\*\:]+'?\s*,?)+/ ; # Posible password/host without being between "'" neither in array "[]" -> It can be converted into a valid format (done by browser). 
         return 0;
+    } elsif ($attr =~ /^(dir)/ || $attr =~ /pid_file/ || $attr =~ /config/ || $attr =~ /footer/){ #Paths
+        return 1 if $v =~ /^(\/\w+)+(\/\w+.\w+)?\/?/; # /path/to(/file.f)(/)
+        return 1 if $v eq ''; # empty
+        return 0;
+    } elsif ($attr =~ /hide_clones/ || $attr =~ /session/){ #Ints (seconds)
+        return 1 if $v =~ /^\d+$/;
+        return 0;
+    } elsif ($attr =~ /autostart/ || $attr =~ /monitoring/){ #0-1, in a checkbox, not need to check.
+        return 1;
+    } else{
+        return 1; 
     }
-    return 1;
 }
 sub _extract_config_array {
     my $array = shift;
@@ -1830,7 +1839,7 @@ sub _format_config_argument {
     my $val = shift;
     
     if (($str =~ tr/\n//) > 0){
-        if ($val =~ /^-?\d+$/ || $val =~ /\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]/ ) {
+        if ($val =~ /^\d+$/ || $val =~ /\[(\s*('|")[a-zA-Z0-9_\/\*\:]+('|")\s*,\s*)*\]/ ) {
             return '
         ,'.$atr.' => '.$val;
         } else {
@@ -1838,7 +1847,7 @@ sub _format_config_argument {
         ,'.$atr.' => \''.$val.'\'';
         }
     } else {
-        if ($val =~ /^-?\d+$/ || $val =~ /\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]/ ) {
+        if ($val =~ /^\d+$/ || $val =~ /\[(\s*('|")[a-zA-Z0-9_\/\*\:]+('|")\s*,\s*)*\]/ ) {
             return '
         '.$atr.' => '.$val;
         } else {

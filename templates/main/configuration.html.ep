@@ -11,20 +11,19 @@
 				</div>
 				<script type="text/javascript">
 					setTimeout(function() {
-						window.location = window.location.href.split('?')[0]; //Without quey
+						window.location = window.location.href.split('?')[0]; //Without query
 					}, 3000);
 				</script>
 			%}
 			<h2><%=l 'Configuration' %></h2>
 			<form action="<%= $action %>">
-				%for my $i (1 .. scalar @$atributos){
-				%	next if @$atributos[$i] eq '';
+				%for my $i (1 .. scalar @$atributos -1){
 				<div class="row">
 					<div class='col-sm-3'>
 						<label><%= @$atributos[$i] %></label>
 					</div>
 					<div class="col-sm-9">
-						<input 
+						<input onchange="changing(this);"
 						% if (@$atributos[$i] =~ /autostart/ || @$atributos[$i] =~ /monitoring/) {
 							type="checkbox"
 						%	if (@$valores[$i]) {
@@ -53,8 +52,45 @@
 					</div>
 				</div>
 				%}
-				<input type="submit" name="submitbtn">
+				<input type="submit" name="submitbtn" disabled>
 			</form>
+			<script type="text/javascript">
+				changing=(me)=>{
+					let valid = false;
+					if (me.name.indexOf('dir')>-1 || me.name.indexOf('footer')>-1){
+						if (/^(\/\w+)+\/?/.test(me.value)) valid = true;
+						console.log('path without file extension');
+					}else if (me.name.indexOf('file')>-1 || me.name.indexOf('config')>-1){
+						if (/^(\/?\w+)+(\/\w+.(pid|jpg|conf))\/?/i.test(me.value)) valid=true;
+						console.info('path with file extension');
+					}else if (me.name.indexOf('secrets')>-1 || me.name.indexOf('listen')>-1){
+						if (/^\[(\s*'[a-zA-Z0-9_\/\*\:]+'\s*,\s*)*\]$/.test(me.value) || /^[a-zA-Z0-9_\/\*\:]+$/.test(me.value)) valid=true;
+						else if (/(\s*('|")?[a-zA-Z0-9_\/\*\:]+('|")?\s*,?)+/.test(me.value)) {
+							let arr = me.value.replace(/\s/g, "").split(',');
+							me.value = "[";
+							arr.forEach(item => {
+								me.value += `'${item}',`;
+							});
+							me.value +="]";
+							valid=true;
+						}
+						console.info('Array');
+					}else if (me.name.indexOf('autostart')>-1 || me.name.indexOf('monitoring')>-1){
+						console.info('1 or 0');
+						me.value = me.checked?1:0;
+						valid=true;
+					}else if (me.name.indexOf('session')>-1 || me.name.indexOf('hide_clones')>-1){
+						console.info('UInteger');
+						if(!isNaN(me.value) && me.value!='') valid = true;
+					}else { //login_custom , login_header, group, login_message, user, guide_custom, guide
+						console.info('just Text');
+						valid=true;
+					}
+					if (valid){
+						document.getElementsByName('submitbtn')[0].disabled=false;
+					} 
+				}
+			</script>
 		</div>
 	</div>
     %= include 'bootstrap/scripts'
