@@ -55,3 +55,8 @@
 .disabled {
     color: darkgray;
     cursor: not-allowed;
+}
+
+.comment {
+    color: gray
+}

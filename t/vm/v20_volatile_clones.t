@@ -47,6 +47,14 @@ sub test_volatile_clone {
         is($clonef->is_active, 1);
         like($clonef->display(user_admin),qr'.');
 
+        my $domains = rvd_front->list_machines(user_admin);
+        my ($clone_listed) = grep {$_->{name} eq $clonef->name } @$domains;
+        ok($clone_listed,"Expecting to find ".$clonef->name." in ".Dumper($domains))
+            and do {
+                is($clone_listed->{can_hibernate},0);
+            };
+
+
         like($clone->display(user_admin),qr'\w+://');
 
         $clonef = rvd_front->search_domain($clone_name);

@@ -203,7 +203,7 @@
 %                       if ($_user->can_create_base ) {
                         <input type="checkbox" checked ng-show="{{machine.is_public}}" ng-click="open_modal('mp_',machine)" title="<%=l 'Make private'%>" ng-cloak>
 
-                         <input type="checkbox" ng-hide="{{machine.is_public}}" ng-click="open_modal('mp_',machine)" title="<%=l 'Make public' %>" ng-cloak>
+                         <input type="checkbox" ng-hide="!machine.is_base || machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make public' %>" ng-cloak>
                        
                         <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{machine.id}}">
                            <div class="modal-dialog" role="document">
@@ -248,8 +248,8 @@
                         <a type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hibernate',machine.id)"
                          ng-disabled="!machine.is_active"
-                         ng-show="machine.can_shutdown"
-                         title="<%=l 'Hybernate' %>">
+                         ng-show="machine.can_hibernate"
+                         title="<%=l 'Hibernate' %>">
                           <i class="fa fa-pause"></i>
                        </a>
                         <a type="button" class="btn btn-danger btn-sm"
@@ -280,10 +280,11 @@
                                          ng-class="{disabled: !child.can_manage}"
                           title ="Manage machine"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
-                          <span style="color:gray">[ Cloned ]</span>
+                          <span class="comment">[ Cloned ]</span>
                       </td>
                       <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
+<span class="comment" ng-show="child.is_volatile"><%=l 'Volatile' %></span>
                           <i ng-show="{{child.has_clones}}" class="fa fa-check" aria-hidden="true"
                           title ="Cannot remove base, machine has clones" ng-cloak></i>
                           <input type="checkbox" checked
@@ -321,7 +322,7 @@
                       <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
                           <input type="checkbox" checked ng-show="{{child.is_public}}" ng-click="open_modal('mp_',child)" title="Make private">
-                           <input type="checkbox" ng-hide="{{child.is_public}}" ng-click="open_modal('mp_',child)" title="Make public">
+                           <input type="checkbox" ng-hide="!child.is_base || child.is_public" ng-click="open_modal('mp_',child)" title="Make public">
                         
                           <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{child.id}}">
                            <div class="modal-dialog" role="document">
@@ -369,8 +370,8 @@
                           <a type="button" class="btn btn-warning btn-sm"
                             ng-click="action('machine','hibernate',child.id)"
                             ng-disabled="!child.is_active"
-                           ng-show="child.can_shutdown"
-                            title="<%=l 'Hybernate' %>">
+                           ng-show="child.can_hibernate"
+                            title="<%=l 'Hibernate' %>">
                             <i class="fa fa-pause"></i>
                           </a>
                           <a type="button" class="btn btn-danger btn-sm"

@@ -150,6 +150,7 @@ sub list_machines_user {
             , id_clone => undef
             , name_clone => undef
             , is_locked => undef
+            , can_hibernate => 0
         );
 
         if ($clone) {
@@ -167,6 +168,7 @@ sub list_machines_user {
             $base{id_clone} = $clone->id;
             $base{can_remove} = 0;
             $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
+            $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
@@ -217,6 +219,10 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
+                                    && !$m->{is_volatile};
     }
     return $machines;
 }

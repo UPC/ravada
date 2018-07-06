@@ -66,7 +66,7 @@
                             ng-click="action(machine.id_clone,'shutdown');host_action=-1"
                         ><%=l 'Shutdown'%></a>
 
-                        <a ng-show="machine.is_active" type="button"
+                        <a ng-show="machine.is_active && machine.can_hibernate" type="button"
                                                        class="btn btn-default btn-sm"
                             ng-click="action(machine.id_clone,'hibernate');host_action=-1"
                         ><%=l 'Hibernate' %></a>
