@@ -856,6 +856,7 @@ sub info($self, $user) {
     my $info = {
         id => $self->id
         ,name => $self->name
+        ,is_base => $self->is_base
         ,is_active => $self->is_active
         ,spice_password => $self->spice_password
         ,description => $self->description

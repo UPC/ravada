@@ -666,10 +666,15 @@ sub _domain_create_common {
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
     my $is_volatile = delete $args{is_volatile};
+    my $remote_ip = delete $args{remote_ip};
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "ERROR: User id $id_owner doesn't exist";
 
     my $spice_password = Ravada::Utils::random_name(4);
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $spice_password = undef if !$network->requires_password;
+    }
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
