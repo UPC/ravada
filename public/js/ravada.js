@@ -401,7 +401,6 @@
             $scope.view_password=1;
             var copyTextarea = document.querySelector('.js-copytextarea');
             if (copyTextarea) {
-
                     copyTextarea.select();
                     try {
                         var successful = document.execCommand('copy');
@@ -511,6 +510,10 @@
     $scope.getAlerts = function() {
       $http.get('/unshown_messages.json').then(function(response) {
               $scope.alerts= response.data;
+      },function error(response) {
+               if ( response.status == 403 ) {
+                   window.location.href="/logout";
+               }
       });
     };
     $interval($scope.getAlerts,10000);
