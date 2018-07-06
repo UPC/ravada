@@ -1389,7 +1389,10 @@ sub manage_machine {
         next if !$domain->drivers($driver);
         $cur_driver{$driver} = $domain->get_driver_id($driver);
         my $value = $c->param("driver_$driver");
-        next if !defined $value || $value eq $domain->get_driver_id($driver);
+        next if !defined $value
+                || !$value
+                || (defined $domain->get_driver_id($driver)
+                    && $value eq $domain->get_driver_id($driver));
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
                 , id_option => $value

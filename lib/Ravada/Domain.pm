@@ -2142,6 +2142,7 @@ Argument: name
 
 sub get_driver_id($self, $name) {
     my $value = $self->get_driver($name);
+    return if !defined $value;
 
     my $driver_type = $self->drivers($name) or confess "ERROR: Unknown drivers"
         ." of type '$name'";

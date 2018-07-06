@@ -30,6 +30,9 @@
                     <div class="col-md-4">
                     <select class="selectpicker form-control input-lg"
                         id="driver_<%= $driver_name %>" name="driver_<%= $driver_name %>">
+%                       if ( !$domain->get_driver($driver_name)) {
+                            <option value="" selected ><%=l 'none' %></option>
+%                       }
 %                       for my $option( $driver->get_options ) {
 %                           my $selected ='';
 %                           $selected = 'selected'
