@@ -283,7 +283,6 @@
                     $scope.init($scope.showmachine.id);
                   }, 2000);
               }
-              console.log("pending: "+$scope.pending_before+" - "+pending);
               $scope.pending_before = pending;
             });
           };
