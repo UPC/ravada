@@ -19,6 +19,7 @@ init($test->connector);
 
 sub test_volatile_clone {
     my $vm = shift;
+    my $remote_ip = '127.0.0.1';
 
     my $domain = create_domain($vm->type);
     ok($domain);
@@ -29,9 +30,12 @@ sub test_volatile_clone {
     is($domain->volatile_clones, 1);
     my $clone_name = new_domain_name();
 
-    my $clone = $domain->clone(
+    $domain->prepare_base(user_admin);
+    my $clone = $domain->_vm->create_domain(
         name => $clone_name
-        ,user => user_admin
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
     );
 
     is($clone->is_active, 1);
@@ -63,6 +67,7 @@ sub test_volatile_clone {
         is($clonef->is_active, 1,"[".$vm->type."] expecting active $clone_name") or exit;
         like($clonef->display(user_admin),qr'\w+://');
 
+        is($clone->spice_password, undef);
         my $list = rvd_front->list_domains();
 
         my @volumes = $clone->list_volumes();
