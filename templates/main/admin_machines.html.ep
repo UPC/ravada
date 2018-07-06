@@ -259,13 +259,12 @@
                          title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
                        </a>
-%                   if ($_user->is_admin) {
                         <a type="button" class="btn btn-primary btn-sm"
+                         ng-show="machine.can_view"
                          ng-href="/machine/view/{{machine.id}}.html"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                         </a>
-%                   }
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
