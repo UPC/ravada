@@ -230,6 +230,9 @@ sub _remove_old_domains_kvm {
     for my $domain ( $vm->vm->list_all_domains ) {
         next if $domain->get_name !~ /^$base_name/;
         my $domain_name = $domain->get_name;
+        for my $snap ($domain->list_snapshots){
+            $snap->delete();
+        }
         eval { 
             $domain->shutdown();
             sleep 1; 

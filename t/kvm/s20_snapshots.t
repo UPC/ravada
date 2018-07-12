@@ -16,7 +16,8 @@ init($test->connector);
 clean();
 
 ###################################################################################
-sub test_snapshots {
+
+sub test_snapshots_pre {
 	my $vm = shift;
 	my $domain = create_domain($vm->type);
     ok($domain);
@@ -32,6 +33,27 @@ sub test_snapshots {
     
     eval {$snap->delete()};
     ok(!$@, "Deleted Snapshot");
+}
+
+sub test_snapshots_post {
+    my $vm = shift;
+    my $domain = create_domain($vm->type);
+    ok($domain);
+
+    $domain->start(user_admin) if !$domain->is_active();
+    
+    my $sname = "test_snap";
+    eval{ $domain->create_snapshot($sname) };
+    ok(!$@);
+    
+    my @snaps = $domain->list_snapshots();
+    ok(scalar @snaps > 0);
+    
+    eval{ $domain->delete_snapshot($sname) };
+    ok(!$@);
+    
+    eval { $domain->delete_snapshot('fake_name') };
+    ok($@);
 }
 
 ###################################################################################
@@ -55,7 +77,7 @@ for my $vm_name ( q(KVM) ) {
 
         diag("Testing free mem on $vm_name");
 
-        test_snapshots($vm);
+        test_snapshots_post($vm);
     }
 }
 clean();

@@ -1616,6 +1616,37 @@ sub _remove_controller_usb($self, $index) {
     die "ERROR: USB controller ".($index+1)." not removed, only ".($ind)." found\n";
 }
 
+sub _generate_snap_template($name) {
+    return "<domainsnapshot>
+  <name>$name</name>
+</domainsnapshot>";
+}
+
+sub create_snapshot($self, $name) {
+    $self->domain->create_snapshot(_generate_snap_template($name));
+    return;
+}
+
+sub delete_snapshot($self, $name) {
+    my $snap;
+    eval{ $snap = $self->domain->get_snapshot_by_name($name) };
+    $snap->delete();
+    return;
+}
+
+sub list_snapshots($self) {
+    my @snaps = $self->domain->list_all_snapshots();
+    return @snaps;
+}
+
+sub revert_to_snapshot($self, $name) {
+    my $snap;
+    eval{ $snap = $self->domain->get_snapshot_by_name($name) };
+    die "Not snapshot with name $name" if $@;
+    $snap->revert_to();
+    return;
+}
+
 =head2 pre_remove
 
 Code to run before removing the domain. It can be implemented in each domain.
