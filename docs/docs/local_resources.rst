@@ -1,12 +1,12 @@
-Local js and css files
-======================
+Local JS and CSS files instead CDN
+==================================
 
 Local vs CDN this is the question. 
-For default we used CDN, but in some specific cases it may be useful to have the libraries JS and CSS locally.
+For default we used CDN, it's better, but in some specific cases it may be useful to have the libraries JS and CSS locally.
 
 You need to install `yarn <https://yarnpkg.com/en/docs/install#debian-stable>`_.
 
-You need to run:
+And follow this steps:
 
 ::
 
