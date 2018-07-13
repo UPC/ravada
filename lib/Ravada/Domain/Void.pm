@@ -11,6 +11,7 @@ use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(LoadFile DumpFile);
 
+extends 'Ravada::Front::Domain::Void';
 with 'Ravada::Domain';
 
 has 'domain' => (
@@ -119,21 +120,6 @@ sub _store {
 
 }
 
-sub _value{
-    my $self = shift;
-
-    my ($var) = @_;
-
-    my ($disk) = $self->_config_file();
-
-    my $data = {} ;
-    $data = LoadFile($disk) if -e $disk;
-    
-    return $data->{$var};
-
-}
-
-
 sub shutdown {
     my $self = shift;
     $self->_store(is_active => 0);
@@ -174,11 +160,6 @@ sub prepare_base {
         close $out;
         $self->_prepare_base_db($file_base);
     }
-}
-
-sub _config_file {
-    my $self = shift;
-    return "$DIR_TMP/".$self->name.".yml";
 }
 
 sub list_disks {
@@ -381,6 +362,10 @@ sub _set_default_info {
             ,state => 'UNKNOWN'
     };
     $self->_store(info => $info);
+    my %controllers = $self->list_controllers;
+    for my $name ( sort keys %controllers) {
+        $self->set_controller($name,2);
+    }
 
 }
 
@@ -399,13 +384,7 @@ sub set_memory {
     $self->_set_info(memory => $value );
 }
 
-sub get_driver {
-    my $self = shift;
-    my $name = shift;
 
-    my $drivers = $self->_value('drivers');
-    return $drivers->{$name};
-}
 
 sub set_driver {
     my $self = shift;
@@ -507,4 +486,36 @@ sub autostart {
     }
     return $self->_value('autostart');
 }
+
+sub set_controller {
+    my ($self, $name, $number) = @_;
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{$name} or [] );
+
+    if ($number > $#$list) {
+        for ( $#$list+1 .. $number-1 ) {
+            push @$list,("foo ".($_+1));
+        }
+    } else {
+        $#$list = $number-1;
+    }
+
+    $hardware->{$name} = $list;
+    $self->_store(hardware => $hardware );
+}
+
+sub remove_controller {
+    my ($self, $name, $index) = @_;
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{$name} or [] );
+
+    my @list2 ;
+    for ( 0 .. $#$list ) {
+        next if $_ == $index;
+        push @list2, ( $list->[$_]);
+    }
+    $hardware->{$name} = \@list2;
+    $self->_store(hardware => $hardware );
+}
+
 1;

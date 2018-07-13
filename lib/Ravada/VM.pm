@@ -171,6 +171,7 @@ sub _around_create_domain {
     die $@ if $@ && $@ !~ /code: 55,/;
 
     $domain->get_info();
+    $domain->display($owner)    if $domain->is_active;
 
     return $domain;
 }

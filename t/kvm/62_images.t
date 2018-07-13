@@ -54,6 +54,7 @@ sub test_create_domain_xml {
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom, _vm => $vm);
     $domain->_insert_db(name=> $name, id_owner => $USER->id);
+    $domain->xml_description;
 
     return $domain;
 }

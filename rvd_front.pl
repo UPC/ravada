@@ -9,6 +9,7 @@ use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+use Mojo::JSON qw(decode_json encode_json);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
@@ -344,15 +345,31 @@ get '/machine/info/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
-    return access_denied($c) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id;
+    return access_denied($c,"Access denied to user ".$USER->name) unless $USER->is_admin
+                              || $domain->id_owner == $USER->id
+                              || $USER->can_change_settings($domain->id)
+                              || $USER->can_remove_machine($domain->id)
+                              || $USER->can_clone_all;
 
     $c->render(json => $domain->info($USER) );
+};
+
+get '/machine/requests/(:id).json' => sub {
+    my $c = shift;
+    my $id_domain = $c->stash('id');
+    return access_denied($c) if !$USER->can_manage_machine($id_domain);
+
+    $c->render(json => $RAVADA->list_requests($id_domain,10));
 };
 
 any '/machine/manage/(:id).(:type)' => sub {
    	 my $c = shift;
      return manage_machine($c);
+};
+
+any '/hardware/(:id).(:type)' => sub {
+   	 my $c = shift;
+     return $c->render(template => 'main/hardware');
 };
 
 get '/machine/view/(:id).(:type)' => sub {
@@ -395,7 +412,8 @@ any '/machine/remove_clones/(:id).(:type)' => sub {
 	return access_denied($c)
         unless
             $USER -> can_remove_clone_all()
-	        || $USER ->can_remove_clone();
+	        || $USER->can_remove_clone()
+            || $USER->can_remove_all();
     return remove_clones($c);
 };
 
@@ -459,14 +477,9 @@ get '/machine/exists/#name' => sub {
 
 };
 
-get '/machine/rename/#id' => sub {
-    my $c = shift;
-    return access_denied($c)       if !$USER -> can_rename();
-    return rename_machine($c);
-};
-
 get '/machine/rename/#id/#value' => sub {
     my $c = shift;
+    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
     return rename_machine($c);
 };
 
@@ -686,11 +699,16 @@ get '/auto_view' => sub {
     return $c->render(json => {auto_view => $c->session('auto_view') });
 };
 
-get '/settings/hardware/remove/(#domain)/(#hardware)/(#index)' => sub {
+get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
     my $c = shift;
     my $hardware = $c->stash('hardware');
     my $index = $c->stash('index');
-    my $domain_id = $c->stash('domain');
+    my $domain_id = $c->stash('id_domain');
+
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    return access_denied($c)
+        unless $USER->id == $domain->id_owner || $USER->is_admin;
     
     my $req = Ravada::Request->remove_hardware(uid => $USER->id
         , id_domain => $domain_id
@@ -703,6 +721,21 @@ get '/settings/hardware/remove/(#domain)/(#hardware)/(#index)' => sub {
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
+get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)' => sub {
+    my $c = shift;
+
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    return access_denied($c)
+        unless $USER->id == $domain->id_owner || $USER->is_admin;
+
+    my $req = Ravada::Request->add_hardware(
+        uid => $USER->id
+        ,name => $c->stash('hardware')
+        ,id_domain => $c->stash('id_domain')
+        ,number => $c->stash('number')
+    );
+    return $c->render( json => { request => $req->id } );
+};
 ###################################################
 
 ## user_settings
@@ -1123,11 +1156,17 @@ sub _search_req_base_error {
 sub access_denied {
 
     my $c = shift;
-    my $msg = 'Access denied to '.$c->req->url->to_abs->path;
+    my $msg = shift;
 
-    $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
+    if (!$msg) {
+        $msg = 'Access denied to '.$c->req->url->to_abs->path;
+        $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
+    }
 
-    return $c->render(text => $msg);
+    if (defined $c->stash('type') && $c->stash('type') eq 'json') {
+        return $c->render(json => { error => $msg }, status => 403);
+    }
+    return $c->render(text => $msg, status => 403);
 }
 
 sub base_id {
@@ -1310,10 +1349,31 @@ sub manage_machine {
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
     $c->stash(list_users => $RAVADA->list_users);
-    my $actual_owner = $domain->id_owner;
-    if ($c->param("new_owner") && $actual_owner != $c->param("new_owner")) {
-       my $req_change = Ravada::Request->change_owner(uid => $c->param("new_owner"), id_domain => $domain->id);
-       $actual_owner = $c->param("new_owner");
+
+    $c->stash(  ram => int( $domain->get_info()->{max_mem} / 1024 ));
+    $c->stash( cram => int( $domain->get_info()->{memory} / 1024 ));
+    my @messages;
+    my @errors;
+    my @reqs = ();
+
+    if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
+        my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
+        push @reqs,($req_mem);
+        $c->stash(ram => $c->param('ram'));
+        
+        push @messages,("MAx memory changed from "
+                    .int($domain->get_info()->{max_mem}/1024)." to ".$c->param('ram'));
+    }
+    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024){
+        $c->stash(cram => $c->param('cram'));
+        if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
+            my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);
+            push @reqs,($req_mem);
+            push @messages,("Current memory changed from "
+                    .int($domain->get_info()->{memory} / 1024)." to ".$c->param('cram'));
+        }  else {
+            push @errors, ('Current memory must be less than max memory');
+        }
     }
 
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
@@ -1327,56 +1387,72 @@ sub manage_machine {
 
     _enable_buttons($c, $domain);
 
-    $c->stash(message => '');
-    my @reqs = ();
-    for (qw(sound video network image jpeg zlib playback streaming)) {
-        my $driver = "driver_$_";
-        if ( $c->param($driver) ) {
+    my %cur_driver;
+    for my $driver (qw(sound video network image jpeg zlib playback streaming)) {
+        next if !$domain->drivers($driver);
+        $cur_driver{$driver} = $domain->get_driver_id($driver);
+        my $value = $c->param("driver_$driver");
+        next if !defined $value || $value eq $domain->get_driver_id($driver);
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
-                , id_option => $c->param($driver)
+                , id_option => $value
             );
-            $c->stash(message => 'Changes will apply on next start');
+            $cur_driver{$driver} = $value;
+            my $msg = "Driver changed: $driver.";
+            $msg .= " Changes will apply on next start."    if $domain->is_active;
+            push @messages,($msg);
             push @reqs,($req2);
-        }
+        
     }
-    
+    $c->stash(cur_driver => \%cur_driver);
+
     for (qw(usb)) {#add hardware here
         my $hardware = "hardware_$_";
-        if ( $c->param($hardware) ) {
+        if ( defined $c->param($hardware) ) {
             my $req3 = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
                 , name => $hardware
                 , number => $c->param($hardware)
             );
-            $c->stash(message => 'Changes will apply on next start');
+            push @messages,('Changes will apply on next start');
             push @reqs, ($req3);
         }
     }
 
-    for my $option (qw(description run_timeout volatile_clones)) {
-        if ( defined $c->param($option) && defined $c->param("submitbtn") ) {
+    for my $option (qw(description run_timeout volatile_clones id_owner)) {
+
+        next if $option eq 'description' && !$c->param('btn_description');
+        next if $option ne 'description' && !$c->param('btn_options');
+
             return access_denied($c)
-                if $option eq 'run_timeout' && !$USER->is_admin;
+                if $option =~ /^(id_owner|run_timeout)$/ && !$USER->is_admin;
 
+
+            my $old_value = $domain->_data($option);
             my $value = $c->param($option);
-            $value *= 60 if $option eq 'run_timeout';
-            $domain->set_option($option, $value);
-            $c->stash(message => "\U$option changed!");
-        }elsif ( $option eq 'volatile_clones' && defined $c->param("submitbtn") ) {
-            my $value = '0';
-            $domain->set_option($option, $value);
-            $c->stash(message => "\U$option changed!");
-        }
-    }
+            
+            $value= 0 if $option eq 'volatile_clones' && !$value;
 
-    for my $req (@reqs) {
-        $RAVADA->wait_request($req, 60)
+            if ( $option eq 'run_timeout' ) {
+                $value = 0 if !$value;
+                $value *= 60;
+            }
+
+            next if defined $domain->_data($option) && defined $value
+                    && $domain->_data($option) eq $value;
+            next if !$domain->_data($option) && !$value;
+
+            $domain->set_option($option, $value);
+            my $option_txt = $option;
+            $option_txt =~ s/_/ /g;
+            push @messages,("\u$option_txt changed.");
     }
+    $c->stash(messages => \@messages);
+    $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
-        , actual_owner => $actual_owner);
+    );
 }
 
 sub _enable_buttons {
@@ -1573,7 +1649,7 @@ sub copy_machine {
     return login($c) if !_logged_in($c);
 
 
-    my $id_base= $c->param('id_base');
+    my $id_base= $c->param('id_base') or confess "Missing param id_base";
 
     my $ram = $c->param('copy_ram');
     $ram = 0 if $ram !~ /^\d+(\.\d+)?$/;
@@ -1585,7 +1661,7 @@ sub copy_machine {
 
     my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
 
-    my $base = $RAVADA->search_domain_by_id($id_base);
+    my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = $c->req->param($param_name) if $param_name;
     $name = $base->name."-".$USER->name if !$name;
 
@@ -1597,7 +1673,7 @@ sub copy_machine {
        , id_domain => $base->id
        ,@create_args
     );
-    $c->redirect_to("/admin/machines");#    if !@error;
+    $c->redirect_to("/machine/manage/".$base->id.".html");#    if !@error;
 }
 
 sub machine_is_public {
@@ -1625,7 +1701,6 @@ sub rename_machine {
     my $id_domain = $c->stash('id');
     my $new_name = $c->stash('value');
     return login($c) if !_logged_in($c);
-    return access_denied($c)    if !$USER->is_admin();
 
     #return $c->render(data => "Machine id not found in $uri ")
     return $c->render(data => "Machine id not found")

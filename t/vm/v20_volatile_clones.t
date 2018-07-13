@@ -41,12 +41,13 @@ sub test_volatile_clone {
 
     is($clone->is_active, 1) && do {
 
-#        like($clone->display(user_admin),qr'\w+://');
-
         my $clonef = Ravada::Front::Domain->open($clone->id);
         ok($clonef);
         isa_ok($clonef, 'Ravada::Front::Domain');
         is($clonef->is_active, 1);
+        like($clonef->display(user_admin),qr'.');
+
+        like($clone->display(user_admin),qr'\w+://');
 
         $clonef = rvd_front->search_domain($clone_name);
         ok($clonef);

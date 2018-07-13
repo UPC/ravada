@@ -864,6 +864,7 @@ sub _enable_grants($self) {
         ,'grant'
         ,'manage_users'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
     );
@@ -1063,6 +1064,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','client_status','varchar(32)');
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
 
+    $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -1335,6 +1337,8 @@ sub create_domain {
             };
             $request->error($error) if $error;
         }
+    } elsif ($@) {
+        die $@;
     }
     return $domain;
 }
@@ -2251,13 +2255,11 @@ sub _cmd_add_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $number = $request->args('number') or confess "Missing argument number";
+    my $number = $request->args('number');
     
     my $domain = $self->search_domain_by_id($id_domain);
     
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    
-    $hardware = (split(/_/,$hardware))[-1];
     
     $domain->set_controller($hardware, $number);
 }
@@ -2269,7 +2271,7 @@ sub _cmd_remove_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $index = $request->args('index') or confess "Missing argument index";
+    my $index = $request->args('index');
     
     my $domain = $self->search_domain_by_id($id_domain);
     
@@ -2371,9 +2373,10 @@ sub _cmd_set_driver {
     confess "Unkown domain ".Dumper($request)   if !$domain;
 
     die "USER $uid not authorized to set driver for domain ".$domain->name
-        if $domain->id_owner != $user->id && !$user->is_admin;
+        unless $user->can_change_settings($domain->id);
 
     $domain->set_driver_id($request->args('id_option'));
+    $domain->needs_restart(1) if $domain->is_active;
 }
 
 sub _cmd_refresh_storage($self, $request=undef) {
@@ -2414,6 +2417,24 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+}
+
+sub _cmd_change_max_memory($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $memory = $request->args('ram');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->set_max_mem($memory);
+}
+
+sub _cmd_change_curr_memory($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $memory = $request->args('ram');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->set_memory($memory);
 }
 
 sub _clean_requests($self, $command, $request=undef) {
@@ -2555,6 +2576,8 @@ sub _req_method {
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
+,change_max_memory => \&_cmd_change_max_memory
+,change_curr_memory => \&_cmd_change_curr_memory
 
     );
     return $methods{$cmd};
