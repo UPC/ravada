@@ -16,10 +16,16 @@ And follow this steps:
 
 `Yarn <https://yarnpkg.com>`_ reads from ``package.json`` the requirements and download locally in ``/usr/share/ravada/public/fallback``.
 
-To finish, enable the ``fallback`` parameter in /etc/rvd_front.conf and restart the rvd_front.service to apply changes.
+To finish, enable the ``fallback`` parameter in ``/etc/rvd_front.conf``, 
 
 :: 	
 
 	fallback => 1
+	
+and restart the rvd_front.service to apply changes.
+
+::
+
+	service restart rvd_front.service
 
 Refresh your browser cache and now Ravada use JS and CSS locally.
