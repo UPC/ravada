@@ -10,11 +10,13 @@ Ravada::Front - Web Frontend library for Ravada
 =cut
 
 use Carp qw(carp);
+use DateTime;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
 use Ravada::Front::Domain;
+use Ravada::Front::Domain::KVM;
 use Ravada::Network;
 
 use feature qw(signatures);
@@ -49,6 +51,7 @@ our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 our %VM;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
+our $LOCAL_TZ = DateTime::TimeZone->new(name => 'local');
 ###########################################################################
 #
 # method modifiers
@@ -136,6 +139,7 @@ sub list_machines_user {
 
     my @list;
     while ( $sth->fetch ) {
+        next if !$is_public && !$user->is_admin;
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
@@ -152,7 +156,7 @@ sub list_machines_user {
 
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
-            if ($clone->is_active && !$clone->is_locked) {
+            if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
                 my $req = Ravada::Request->screenshot_domain(
                 id_domain => $clone->id
                 ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
@@ -162,7 +166,9 @@ sub list_machines_user {
             $base{screenshot} = ( $clone->_data('file_screenshot') 
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
-            $base{id_clone} = $clone->id
+            $base{id_clone} = $clone->id;
+            $base{can_remove} = 0;
+            $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
@@ -175,24 +181,29 @@ sub list_machines_user {
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines;
 
+    my @list = ();
     if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
         my $machines = $self->list_bases( id_owner => $user->id );
         for my $base (@$machines) {
             confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
             push @$machines,@{$self->list_domains( id_base => $base->{id} )};
         }
-        return $machines;
+        push @list,(@$machines);
     }
-    if ($user->can_remove_clone_all()) {
-        my $machines = $self->list_bases( );
-        for my $base (@$machines) {
-            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
-        }
-        return $machines;
 
+    push @list,(@{$self->list_clones()}) if $user->can_list_clones;
+    if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
+        my $machines = $self->list_domains(id_owner => $user->id);
+        for my $clone (@$machines) {
+            next if !$clone->{id_base};
+            push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
+        }
+        push @list,(@$machines);
     }
-    return $self->list_clones() if $user->can_list_clones;
-    return [];
+    return [@list] if scalar @list < 2;
+
+    my %uniq = map { $_->{name} => $_ } @list;
+    return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
 sub _around_list_machines($orig, $self, $user) {
@@ -205,6 +216,9 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_view} = 0;
         $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
     }
     return $machines;
 }
@@ -684,12 +698,11 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
     $sth->execute($name);
-    my ($id) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
+    my ($id, $tipo) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
 
-    return Ravada::Front::Domain->new(id => $id);
-
+    return Ravada::Front::Domain->open($id);
 }
 
 =head2 list_requests
@@ -698,16 +711,15 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 =cut
 
-sub list_requests {
-    my $self = shift;
+sub list_requests($self, $id_domain_req=undef, $seconds=120) {
 
-    my @now = localtime(time-120);
+    my @now = localtime(time-$seconds);
     $now[4]++;
     for (0 .. 4) {
         $now[$_] = "0".$now[$_] if length($now[$_])<2;
     }
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
-        ." ".$now[2].":".$now[1].":00";
+        ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT requests.id, command, args, date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
@@ -716,7 +728,7 @@ sub list_requests {
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    requests.status <> 'done' "
-        ."  OR ( command = 'download' AND date_changed >= ?) "
+        ."  OR ( date_changed >= ?) "
         ." ORDER BY date_changed DESC LIMIT 10"
     );
     $sth->execute($time_recent);
@@ -727,12 +739,26 @@ sub list_requests {
         , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
-        next if $command eq 'force_shutdown'
+        my $epoch_date_changed;
+        if ($date_changed) {
+            my ($y,$m,$d,$hh,$mm,$ss) = $date_changed =~ /(\d{4})-(\d\d)-(\d\d) (\d+):(\d+):(\d+)/;
+            if ($y)  {
+                $epoch_date_changed = DateTime->new(year => $y, month => $m, day => $d
+                    ,hour => $hh, minute => $mm, second => $ss
+                    ,time_zone => $LOCAL_TZ
+                )->epoch;
+            }
+        }
+        next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
-                || $command eq 'ping_backend';
+                || $command eq 'ping_backend')
+                && time - $epoch_date_changed > 5
+                && $status eq 'done'
+                && !$error;
+        next if $id_domain_req && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;
 
@@ -748,6 +774,7 @@ sub list_requests {
             ,domain => $domain
             ,date => $date
             ,message => $message
+            ,error => $error
         };
     }
     $sth->finish;
