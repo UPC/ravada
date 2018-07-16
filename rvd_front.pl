@@ -507,7 +507,7 @@ get '/machine/autostart/#id/#value' => sub {
     return $c->render(json => { request => $req->id});
 };
 
-get '/machine/display/#id' => sub {
+get '/machine/display/(:id).vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
@@ -520,10 +520,10 @@ get '/machine/display/#id' => sub {
         && !$USER->is_admin;
 
     $c->res->headers->content_type('application/x-virt-viewer');
-    $c->res->headers->content_disposition(
-        "attachment;filename=".$domain->id.".vv");
+        $c->res->headers->content_disposition(
+        "inline;filename=".$domain->id.".vv");
 
-    return $c->render(data => $domain->display_file($USER));
+    return $c->render(data => $domain->display_file($USER), format => 'vv');
 };
 
 # Users ##########################################################3

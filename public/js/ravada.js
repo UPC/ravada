@@ -373,7 +373,7 @@
                         seconds = 5000;
                         $scope.redirect();
                         if ($scope.auto_view && !redirected_display && !$scope.domain.spice_password) {
-                            location.href='/machine/display/'+$scope.domain.id;
+                            location.href='/machine/display/'+$scope.domain.id+".vv";
                             redirected_display=true;
                         }
                     }
