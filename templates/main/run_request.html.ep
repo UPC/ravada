@@ -51,7 +51,7 @@
             <div ng-show="domain.is_active">
                 <a type="button" class="btn btn-success"
                     ng-click="view_clicked=true; copy_password(); redirect();"
-                    href="/machine/display/{{domain.id}}">
+                    href="/machine/display/{{domain.id}}.vv">
                         <b><%=l 'view'%></b></a>
                 <i><%=l 'Press SHIFT + F12 to exit' %></i>
                 <br/>
