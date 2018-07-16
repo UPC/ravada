@@ -1,0 +1,6 @@
+    <div class="panel panel-warning" ng-show="showmachine.needs_restart">
+        <div class="panel-heading">
+            <%=l 'The changes will apply on next restart' %>
+        </div>
+    </div>
+

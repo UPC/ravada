@@ -81,6 +81,12 @@ requires 'autostart';
 requires 'hybernate';
 requires 'hibernate';
 
+requires 'get_driver';
+requires 'get_controller_by_name';
+requires 'list_controllers';
+requires 'set_controller';
+requires 'remove_controller';
+#
 ##########################################################
 
 has 'domain' => (
@@ -179,10 +185,15 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
+around 'set_max_mem' => \&_around_set_mem;
+around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
 around 'autostart' => \&_around_autostart;
+
+after 'set_controller' => \&_post_change_controller;
+after 'remove_controller' => \&_post_change_controller;
 
 ##################################################
 #
@@ -494,7 +505,7 @@ sub _allowed {
     eval { $id_owner = $self->id_owner };
     my $err = $@;
 
-    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
         ." owned by ".($id_owner or '<UNDEF>')
             if (defined $id_owner && $id_owner != $user->id );
 
@@ -515,6 +526,16 @@ sub _around_get_info($orig, $self) {
         $self->_data(info => encode_json($info));
     }
     return $info;
+}
+
+sub _around_set_mem($orig, $self, $value) {
+    my $ret = $self->$orig($value);
+    if ($self->is_known) {
+        my $info = decode_json($self->_data('info'));
+        $info->{memory} = $value;
+        $self->_data(info => encode_json($info))
+    }
+    return $ret;
 }
 
 ##################################################################################3
@@ -569,13 +590,23 @@ sub _data($self, $field, $value=undef, $table='domains') {
     }
     return $self->{$data}->{$field} if exists $self->{$data}->{$field};
 
-    my @field_select = ( name => $self->name );
-    @field_select = ( id_domain => $self->id )         if $table ne 'domains';
+    my @field_select;
+    if ($table eq 'domains' ) {
+        if (exists $self->{_data}->{id} ) {
+            @field_select = ( id => $self->{_data}->{id});
+        } else {
+            confess "ERROR: Unknown domain" if ref($self) =~ /^Ravada::Front::Domain/;
+            @field_select = ( name => $self->name );
+        }
+    } else {
+        @field_select = ( id_domain => $self->id );
+    }
+
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
     confess "No DB info for domain @field_select in $table ".$self->name 
         if ! exists $self->{$data};
-    confess "No field $field in $data @field_select ".Dumper($self->{$data})
+    confess "No field $field in $data ".Dumper(\@field_select)."\n".Dumper($self->{$data})
         if !exists $self->{$data}->{$field};
 
     return $self->{$data}->{$field};
@@ -827,11 +858,15 @@ sub info($self, $user) {
         ,name => $self->name
         ,is_active => $self->is_active
         ,spice_password => $self->spice_password
-        ,display_url => $self->display($user)
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
+        ,needs_restart => ( $self->needs_restart or 0)
     };
+    eval {
+        $info->{display_url} = $self->display($user);
+    };
+    die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         $info->{description} = $base->description;
@@ -842,6 +877,7 @@ sub info($self, $user) {
         $info->{display_ip} = $local_ip;
         $info->{display_port} = $local_port;
     }
+    $info->{hardware} = $self->get_controllers();
 
     return $info;
 }
@@ -875,6 +911,7 @@ sub _insert_db {
     my ($vm) = ref($self) =~ /.*\:\:(\w+)$/;
     confess "Unknown domain from ".ref($self)   if !$vm;
     $field{vm} = $vm;
+    $self->{_data}->{name} = $field{name}   if $field{name};
 
     my $query = "INSERT INTO domains "
             ."(" . join(",",sort keys %field )." )"
@@ -922,6 +959,7 @@ sub pre_remove { }
 
 sub _pre_remove_domain($self, $user=undef) {
 
+
     $self->_allow_remove($user);
     $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks()         if ($self->is_known && $self->is_known_extra)
@@ -936,7 +974,7 @@ sub _after_remove_domain {
 
     $self->_remove_iptables(user => $user);
 
-    if ($self->is_base) {
+    if ($self->is_known && $self->is_base) {
         $self->_do_remove_base(@_);
         $self->_remove_files_base();
     }
@@ -949,9 +987,7 @@ sub _after_remove_domain {
 sub _remove_domain_db {
     my $self = shift;
 
-    $self->_select_domain_db or return;
-
-    my $id = $self->id;
+    my $id = $self->{_data}->{id} or return;
     my $type = $self->type;
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains "
         ." WHERE id=?");
@@ -968,6 +1004,7 @@ sub _remove_domain_db {
 sub _finish_requests_db {
     my $self = shift;
 
+    return if !$self->{_data}->{id};
     $self->_select_domain_db or return;
 
     my $id = $self->id;
@@ -1370,6 +1407,7 @@ sub _post_shutdown {
     $self->_remove_iptables(%arg);
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
+
     if ($self->is_known && $self->id_base) {
         for ( 1 ..  5 ) {
             last if !$self->is_active;
@@ -1392,21 +1430,24 @@ sub _post_shutdown {
         );
     }
     $self->_remove_temporary_machine(@_);
+    $self->needs_restart(0) if $self->is_known()
+                                && $self->needs_restart()
+                                && !$self->is_active;
 }
 
 sub _around_is_active($orig, $self) {
+    return 0 if $self->is_removed;
     my $is_active = $self->$orig();
     return $is_active if $self->readonly
         || !$self->is_known
-        || (defined $self->_data('id_vm') && $self->_vm->id != $self->_data('id_vm'));
+        || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
 
     my $status = 'shutdown';
     $status = 'active'  if $is_active;
-    $status = 'hibernated'  if !$is_active && $self->is_hibernated;
+    $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
-    $self->display(Ravada::Utils::user_daemon())    if $is_active;
-
+    $self->needs_restart(0) if $self->needs_restart() && !$is_active;
     return $is_active;
 }
 
@@ -1567,6 +1608,7 @@ sub _add_iptable {
     my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
+    return if !$self->is_active;
     my $display = $self->display($user);
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
     $self->_remove_iptables( port => $local_port );
@@ -1638,6 +1680,16 @@ sub open_iptables {
 
     $self->_data('client_status','connecting...');
     $self->_remove_iptables();
+
+    if ( !$self->is_active ) {
+        Ravada::Request->start_domain(
+            uid => $user->id
+            ,id_domain => $self->id
+            ,remote_ip => $args{remote_ip}
+        );
+        die "INFO: Machine ".$self->name." is not active, starting up.\n"
+    }
+
     $self->_add_iptable(%args);
 }
 
@@ -1911,6 +1963,36 @@ sub _post_rename {
      $sth->finish;
  }
 
+=head2 get_controller
+
+Calls the method to get the specified controller info
+
+Attributes:
+    name -> name of the controller type
+
+=cut
+sub get_controller {
+	my $self = shift;
+	my $name = shift;
+
+    my $sub = $self->get_controller_by_name($name);
+#    my $sub = $GET_CONTROLLER_SUB{$name};
+    
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+sub get_controllers($self) {
+    my $info;
+    my %controllers = $self->list_controllers();
+    for my $name ( sort keys %controllers ) {
+        $info->{$name} = [$self->get_controller($name)];
+    }
+    return $info;
+}
+
 =head2 drivers
 
 List the drivers available for a domain. It may filter for a given type.
@@ -2052,7 +2134,27 @@ Returns all the drivers if not passwed
 
 =cut
 
-sub get_driver {}
+=head2 get_driver_id
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver_id($self, $name) {
+    my $value = $self->get_driver($name);
+
+    my $driver_type = $self->drivers($name) or confess "ERROR: Unknown drivers"
+        ." of type '$name'";
+
+    for my $option ($driver_type->get_options) {
+        return $option->{id} if $option->{value} eq $value;
+    }
+    return;
+}
 
 sub _dbh {
     my $self = shift;
@@ -2078,16 +2180,11 @@ Sets a domain option:
 =cut
 
 sub set_option($self, $option, $value) {
-    if ($option eq 'description') {
-        warn "$option -> $value\n";
-        $self->description($value);
-    } elsif ($option eq 'run_timeout') {
-        $self->run_timeout($value);
-    } elsif ($option eq 'volatile_clones') {
-        $self->volatile_clones($value); 
-    } else {
-        confess "ERROR: Unknown option '$option'";
-    }
+    my %valid_option = map { $_ => 1 } qw( description run_timeout volatile_clones id_owner);
+    die "ERROR: Invalid option '$option'"
+        if !$valid_option{$option};
+
+    return $self->_data($option, $value);
 }
 
 =head2 type
@@ -2098,7 +2195,7 @@ Returns the virtual machine type as a string.
 
 sub type {
     my $self = shift;
-    if (!$self->is_known) {
+    if (!exists $self->{_data} || !exists $self->{_data}->{vm}) {
         my ($type) = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
         confess "Unknown type from ".ref($self) if !$type;
         return $type;
@@ -2230,4 +2327,12 @@ sub _client_connection_status($self, $force=undef) {
     return 'disconnected';
 }
 
+sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart',$value);
+}
+
+sub _post_change_controller {
+    my $self = shift;
+    $self->needs_restart(1) if $self->is_active;
+}
 1;

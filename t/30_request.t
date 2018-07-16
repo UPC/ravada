@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
+use Test::Moose::More;
 use Test::More;# tests => 82;
 use Test::SQL::Data;
 
@@ -73,7 +74,7 @@ sub test_req_start_domain {
     );
     ok($req);
     ok($req->status);
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
     $ravada->_wait_pids();
     wait_request($req);
 
@@ -81,7 +82,7 @@ sub test_req_start_domain {
         ,"Status of request is ".$req->status." it should be done") 
             or return ;
     ok(!$req->error,"Error ".$req->error." creating domain ".$name) 
-            or return ;
+            or return;
 
     my $n_expected = 1;
     test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");
@@ -346,8 +347,13 @@ for my $vm_name ( qw(Void KVM)) {
         if ($domain_base) {
             $domain_base->is_public(1);
             my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
+            $domain_clone = Ravada::Domain->open($domain_clone->id);
+            meta_ok($domain_clone,'Ravada::Domain::KVM');
+            does_ok($domain_clone, 'Ravada::Domain');
+            role_wraps_after_method_ok 'Ravada::Domain',('remove');
             test_req_start_domain($vm,$domain_clone->name);
             $domain_clone->remove($USER);
+            is(scalar @{rvd_front->list_domains( id => $domain_clone->id)}, 0) or exit;
 
             test_req_many_clones($vm, $domain_base);
             test_req_remove_domain_name($vm, $domain_base->name);

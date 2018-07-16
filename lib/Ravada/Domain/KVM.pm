@@ -18,11 +18,13 @@ use IPC::Run3 qw(run3);
 use Moose;
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
+use Sys::Virt;
 use XML::LibXML;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+extends 'Ravada::Front::Domain::KVM';
 with 'Ravada::Domain';
 
 has 'domain' => (
@@ -37,21 +39,17 @@ has '_vm' => (
     ,required => 0
 );
 
+has readonly => (
+    isa => 'Int'
+    ,is => 'rw'
+    ,default => 0
+);
+
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
 our $OUT;
 
-our %GET_DRIVER_SUB = (
-    network => \&_get_driver_network
-     ,sound => \&_get_driver_sound
-     ,video => \&_get_driver_video
-     ,image => \&_get_driver_image
-     ,jpeg => \&_get_driver_jpeg
-     ,zlib => \&_get_driver_zlib
-     ,playback => \&_get_driver_playback
-     ,streaming => \&_get_driver_streaming
-);
 our %SET_DRIVER_SUB = (
     network => \&_set_driver_network
      ,sound => \&_set_driver_sound
@@ -63,7 +61,22 @@ our %SET_DRIVER_SUB = (
      ,streaming => \&_set_driver_streaming
 );
 
+our %GET_CONTROLLER_SUB = (
+    usb => \&_get_controller_usb
+    );
+our %SET_CONTROLLER_SUB = (
+    usb => \&_set_controller_usb
+    );
+our %REMOVE_CONTROLLER_SUB = (
+    usb => \&_remove_controller_usb
+    );
 ##################################################
+
+sub BUILD {
+    my ($self, $arg) = @_;
+    $self->readonly( $arg->{readonly} or 0);
+}
+
 
 =head2 name
 
@@ -110,20 +123,31 @@ sub list_disks {
     return @disks;
 }
 
-sub xml_description($self) {
+sub xml_description($self, $inactive=0) {
     return $self->_data_extra('xml')    if !$self->domain && $self->is_known;
 
     confess "ERROR: KVM domain not available"   if !$self->domain;
     my $xml;
     eval {
-        $xml = $self->domain->get_xml_description();
-        $self->_data_extra('xml', $xml) if $self->is_known;
+        my @flags;
+        @flags = ( Sys::Virt::Domain::XML_INACTIVE ) if $inactive;
+
+        $xml = $self->domain->get_xml_description(@flags);
+        $self->_data_extra('xml', $xml) if $self->is_known
+                                        && ( $inactive
+                                                || !$self->_data_extra('xml')
+                                                || !$self->is_active
+                                        );
     };
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
     if ( $@ ) {
         return $self->_data_extra('xml');
     }
     return $xml;
+}
+
+sub xml_description_inactive($self) {
+    return $self->xml_description(1);
 }
 
 =head2 remove_disks
@@ -514,6 +538,8 @@ sub display {
     my ($address) = $graph->getAttribute('listen');
     $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
+    confess "ERROR: Machine ".$self->name." is not active\n"
+        if !$port && !$self->is_active;
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
@@ -529,7 +555,10 @@ Returns whether the domain is running or not
 sub is_active {
     my $self = shift;
     return 0 if $self->is_removed;
-    return ( $self->domain->is_active or 0);
+    my $is_active = 0;
+    eval { $is_active = $self->domain->is_active };
+    die $@ if $@ && $@ !~ /code: 42,/;
+    return $is_active;
 }
 
 =head2 is_persistent
@@ -563,7 +592,6 @@ sub start {
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
-#    $self->domain($self->_vm->vm->get_domain_by_name($self->domain->get_name));
     $self->domain->create();
 }
 
@@ -1313,28 +1341,6 @@ sub clean_swap_volumes {
 	}
 }
 
-=head2 get_driver
-
-Gets the value of a driver
-
-Argument: name
-
-    my $driver = $domain->get_driver('video');
-
-=cut
-
-sub get_driver {
-    my $self = shift;
-    my $name = shift;
-
-    my $sub = $GET_DRIVER_SUB{$name};
-
-    die "I can't get driver $name for domain ".$self->name
-        if !$sub;
-
-    return $sub->($self);
-}
-
 =head2 set_driver
 
 Sets the value of a driver
@@ -1354,104 +1360,9 @@ sub set_driver {
     die "I can't get driver $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self,@_);
-}
-
-sub _get_driver_generic {
-    my $self = shift;
-    my $xml_path = shift;
-
-    my ($tag) = $xml_path =~ m{.*/(.*)};
-
-    my @ret;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-
-    for my $driver ($doc->findnodes($xml_path)) {
-        my $str = $driver->toString;
-        $str =~ s{^<$tag (.*)/>}{$1};
-        push @ret,($str);
-    }
-
-    return $ret[0] if !wantarray && scalar@ret <2;
-    return @ret;
-}
-
-sub _get_driver_graphics {
-    my $self = shift;
-    my $xml_path = shift;
-
-    my ($tag) = $xml_path =~ m{.*/(.*)};
-
-    my @ret;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-
-    for my $tags (qw(image jpeg zlib playback streaming)){
-        for my $driver ($doc->findnodes($xml_path)) {
-            my $str = $driver->toString;
-            $str =~ s{^<$tag (.*)/>}{$1};
-            push @ret,($str);
-        }
-    return $ret[0] if !wantarray && scalar@ret <2;
-    return @ret;
-    }
-}
-
-sub _get_driver_image {
-    my $self = shift;
-
-    my $image = $self->_get_driver_graphics('/domain/devices/graphics/image',@_);
-#
-#    if ( !defined $image ) {
-#        my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-#        Ravada::VM::KVM::xml_add_graphics_image($doc);
-#    }
-    return $image;
-}
-
-sub _get_driver_jpeg {
-    my $self = shift;
-    return $self->_get_driver_graphics('/domain/devices/graphics/jpeg',@_);
-}
-
-sub _get_driver_zlib {
-    my $self = shift;
-    return $self->_get_driver_graphics('/domain/devices/graphics/zlib',@_);
-}
-
-sub _get_driver_playback {
-    my $self = shift;
-    return $self->_get_driver_graphics('/domain/devices/graphics/playback',@_);
-}
-
-sub _get_driver_streaming {
-    my $self = shift;
-    return $self->_get_driver_graphics('/domain/devices/graphics/streaming',@_);
-}
-
-sub _get_driver_video {
-    my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/video/model',@_);
-}
-
-sub _get_driver_network {
-    my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/interface/model',@_);
-}
-
-sub _get_driver_sound {
-    my $self = shift;
-    my $xml_path ="/domain/devices/sound";
-
-    my @ret;
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
-
-    for my $driver ($doc->findnodes($xml_path)) {
-        push @ret,('model="'.$driver->getAttribute('model').'"');
-    }
-
-    return $ret[0] if !wantarray && scalar@ret <2;
-    return @ret;
-
+    my $ret = $sub->($self,@_);
+    $self->xml_description_inactive();
+    return $ret;
 }
 
 sub _text_to_hash {
@@ -1635,7 +1546,74 @@ sub _set_driver_sound {
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+}
 
+
+sub set_controller($self, $name, $numero) {
+    my $sub = $SET_CONTROLLER_SUB{$name};
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    my $ret = $sub->($self,$numero);
+    $self->xml_description_inactive();
+    return $ret;
+}
+#The only '$tipo' suported right now is 'spicevmc'
+sub _set_controller_usb($self,$numero, $tipo="spicevmc") {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    my ($devices) = $doc->findnodes('/domain/devices');
+    
+    my $count = 0;
+    for my $controller ($devices->findnodes('redirdev')) {
+        $count=$count+1;
+        if ($numero < $count) {
+            $devices->removeChild($controller);
+        }
+    }
+    
+    if ( $numero > $count ) {
+        my $missing = $numero-$count-1;
+        
+        for my $i (0..$missing) {
+            my $controller = $devices->addNewChild(undef,"redirdev");
+            $controller->setAttribute(bus => 'usb');
+            $controller->setAttribute(type => $tipo );
+        } 
+    }
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+}
+
+sub remove_controller($self, $name, $index=0) {
+    my $sub = $REMOVE_CONTROLLER_SUB{$name};
+    
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    my $ret = $sub->($self, $index);
+    $self->xml_description_inactive();
+    return $ret;
+}
+
+sub _remove_controller_usb($self, $index) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    my ($devices) = $doc->findnodes('/domain/devices');
+    my $ind=0;
+    for my $controller ($devices->findnodes('redirdev')) {
+        if ($controller->getAttribute('bus') eq 'usb'){
+            if( $ind==$index ){
+                $devices->removeChild($controller);
+                $self->_vm->connect if !$self->_vm->vm;
+                my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+                $self->domain($new_domain);
+                return;
+            }
+            $ind++;
+        }
+    }
+
+    die "ERROR: USB controller ".($index+1)." not removed, only ".($ind)." found\n";
 }
 
 =head2 pre_remove
@@ -1658,11 +1636,17 @@ sub pre_remove {
 
 sub is_removed($self) {
     my $is_removed = 0;
-    return 1 if !$self->domain;
-    eval { $self->domain->get_xml_description};
-    return 1 if $@ && $@ =~ /libvirt error code: 42/;
+
+    eval {
+        $is_removed = 1 if !$self->domain;
+        $self->domain->get_xml_description if !$is_removed;
+    };
+    if( $@ && $@ =~ /libvirt error code: 42,/ ) {
+        $@ = '';
+        $is_removed = 1;
+    }
     die $@ if $@;
-    return 0;
+    return $is_removed;
 }
 
 sub internal_id($self) {

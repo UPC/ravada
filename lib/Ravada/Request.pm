@@ -67,11 +67,17 @@ our %VALID_ARG = (
     ,refresh_storage => { id_vm => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
     ,change_owner => {uid => 1, id_domain => 1}
+    ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
             autostart_domain hibernate hybernate
+            change_owner
+            change_max_memory change_curr_memory
+            add_hardware remove_hardware set_driver
     );
 
 our $CONNECTOR;
@@ -821,6 +827,61 @@ sub set_driver {
 
 }
 
+=head2 add_hardware
+
+    Sets hardware to a VM
+    
+    $domain->add_hardware(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,hardware => 'usb'
+    );
+    
+=cut
+
+sub add_hardware {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    my $args = _check_args('add_hardware', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'add_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+
+=head2 remove_hardware
+
+    Removes hardware to a VM
+    
+    $domain->remove_hardware(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,name_hardware => 'usb'
+    );
+    
+=cut
+
+sub remove_hardware {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('remove_hardware', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'remove_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+
 =head2 hybernate
 
 Hybernates a domain.
@@ -944,6 +1005,33 @@ sub change_owner {
     return _new_request($self
         , command => 'change_owner'
         , args =>$args
+    );
+}
+
+sub change_max_memory {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_max_memory', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    return _new_request($self
+        , command => 'change_max_memory'
+        , args => $args
+    );
+}
+sub change_curr_memory {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_max_memory', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    return _new_request($self
+        , command => 'change_curr_memory'
+        , args => $args
     );
 }
 

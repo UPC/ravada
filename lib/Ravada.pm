@@ -80,8 +80,8 @@ our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
-our %HUGE_COMMAND = map { $_ => 1 } qw(download);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(prepare_base remove_base screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
+our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base);
+our %LONG_COMMAND =  map { $_ => 1 } (qw(screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
@@ -802,6 +802,7 @@ sub _alias_grants($self) {
 
 sub _add_grants($self) {
     $self->_add_grant('shutdown', 1);
+    $self->_add_grant('screenshot', 1);
 }
 
 sub _add_grant($self, $grant, $allowed) {
@@ -864,7 +865,9 @@ sub _enable_grants($self) {
         ,'grant'
         ,'manage_users'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
+        ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
+        ,'screenshot'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -1062,6 +1065,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','client_status','varchar(32)');
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
 
+    $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -1334,6 +1338,8 @@ sub create_domain {
             };
             $request->error($error) if $error;
         }
+    } elsif ($@) {
+        die $@;
     }
     return $domain;
 }
@@ -2243,6 +2249,38 @@ sub _cmd_download {
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
 }
 
+sub _cmd_add_hardware {
+    my $self = shift;
+    my $request = shift;
+    
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('name') or confess "Missing argument name";
+    my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
+    my $number = $request->args('number');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    
+    $domain->set_controller($hardware, $number);
+}
+
+sub _cmd_remove_hardware {
+    my $self = shift;
+    my $request = shift;
+    
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('name') or confess "Missing argument name";
+    my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
+    my $index = $request->args('index');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    
+    $domain->remove_controller($hardware, $index);
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -2336,9 +2374,10 @@ sub _cmd_set_driver {
     confess "Unkown domain ".Dumper($request)   if !$domain;
 
     die "USER $uid not authorized to set driver for domain ".$domain->name
-        if $domain->id_owner != $user->id && !$user->is_admin;
+        unless $user->can_change_settings($domain->id);
 
     $domain->set_driver_id($request->args('id_option'));
+    $domain->needs_restart(1) if $domain->is_active;
 }
 
 sub _cmd_refresh_storage($self, $request=undef) {
@@ -2379,6 +2418,24 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+}
+
+sub _cmd_change_max_memory($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $memory = $request->args('ram');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->set_max_mem($memory);
+}
+
+sub _cmd_change_curr_memory($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $memory = $request->args('ram');
+    
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->set_memory($memory);
 }
 
 sub _clean_requests($self, $command, $request=undef) {
@@ -2518,6 +2575,10 @@ sub _req_method {
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
+,add_hardware => \&_cmd_add_hardware
+,remove_hardware => \&_cmd_remove_hardware
+,change_max_memory => \&_cmd_change_max_memory
+,change_curr_memory => \&_cmd_change_curr_memory
 
     );
     return $methods{$cmd};

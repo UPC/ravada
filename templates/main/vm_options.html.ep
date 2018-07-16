@@ -1,20 +1,39 @@
 <div class="panel-body">
 <div class="form-group">
-
     <form class="form-inline" action="<%= $action %>" method="post">
         <div class="row">
                     <div class="col-md-2">
-                        <label class="control-label" for="ram"><%=l 'Memory' %></label>
+                        <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
                     </div>
                     <div class="col-md-2">
+%   if ($USER->is_admin && !$domain->is_active()){
+                        <input class="form-control" type="text" name="ram" size="5"
+                            value="<%= $ram %>">
+%   }else{
                         <input class="form-control" type="text" name="ram" size="5" disabled
-                            value="<%= int($domain->get_info->{memory} / 1024) %>">
+                            value="<%= $ram %>">
+%   }
                     </div>
-                    <div class="col-md-6">
+                    <!--<div class="col-md-6">
                         <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
                                 <%=l 'MB available' %>.
-                    </div>
+                    </div>-->
        </div>
+       <div class="row">
+            <div class="col-md-2">
+                <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
+            </div>
+            <div class="col-md-2">
+%   if ($domain->is_active()){
+                <input class="form-control" type="text" name="cram" size="5"
+                            value="<%= $cram %>">
+%   } else {
+                <input class="form-control" type="text" name="cram" size="5" disabled
+                            value="<%= $cram %>">
+%   }
+            </div>
+       
+       </div> 
 %   if ($USER->is_admin){
        <div class="row">
                     <div class="col-md-2">
@@ -54,9 +73,9 @@
                          <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
                      </div>
                      <div class="col-md-2">
-                        <select id="new_owner" name="new_owner" >
+                        <select id="new_owner" name="id_owner" >
 %       for my $user (@$list_users) {
-                          <option <%= $user->{id} eq $actual_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
+                          <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
 %        }
                         </select>
                      </div>
@@ -65,7 +84,7 @@
 %   }
         <div class="row">
             <div class="col-md-4">
-        <input type="submit" name="submitbtn">
+        <input type="submit" name="btn_options">
         <button type="reset" ><%=l 'Cancel' %></button>
             </div>
         </div>

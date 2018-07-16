@@ -158,8 +158,9 @@
             <tbody>
                 <tr ng-repeat-start="machine in list_machines | orderBy : orderParam">
                     <td class="lgMachName">
-                        <a align="right" href="/machine/settings/{{machine.id}}.html"
-                        title ="<%=l 'Machine settings' %>"><b
+                        <a align="right" href="/machine/manage/{{machine.id}}.html"
+                                         ng-class="{disabled: !machine.can_manage}"
+                        title ="<%=l 'Manage machine' %>"><b
                         ng-cloak>{{machine.name}}</b></a>
                     </td>
                     <td class="lgMachToggle">
@@ -245,7 +246,7 @@
                          <i class="fa fa-play"></i>
                         </a>
                         <a type="button" class="btn btn-warning btn-sm"
-                         ng-click="action('machine','hybernate',machine.id)"
+                         ng-click="action('machine','hibernate',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_shutdown"
                          title="<%=l 'Hybernate' %>">
@@ -275,8 +276,9 @@
                       <td class="lgMachName">
                           &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
-                          <a align="right" href="/machine/settings/{{child.id}}.html"
-                          title ="Machine settings"><i
+                          <a align="right" href="/machine/manage/{{child.id}}.html"
+                                         ng-class="{disabled: !child.can_manage}"
+                          title ="Manage machine"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
                           <span style="color:gray">[ Cloned ]</span>
                       </td>
@@ -365,7 +367,7 @@
                             <i class="fa fa-play"></i>
                           </a>
                           <a type="button" class="btn btn-warning btn-sm"
-                            ng-click="action('machine','hybernate',child.id)"
+                            ng-click="action('machine','hibernate',child.id)"
                             ng-disabled="!child.is_active"
                            ng-show="child.can_shutdown"
                             title="<%=l 'Hybernate' %>">

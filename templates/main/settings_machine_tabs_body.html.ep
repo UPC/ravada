@@ -1,3 +1,15 @@
+%   if (scalar @$errors) {
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <ul>
+%                   for (@$errors) {
+                        <li><%= $_ %></li>
+%                   }
+                </ul>
+            </div>
+        </div>
+%   }
+
 % if ($USER->can_change_settings($domain->id)) {
 <div class="tab-pane fade in active" id="description">
     %= include 'main/vm_description'
@@ -35,6 +47,15 @@
         %= include 'main/vm_locked_is_base'
       % } else {
         %= include 'main/vm_graphics'
+      % }
+    </div>
+% }
+% if ($USER->can_change_settings($domain->id)) {
+    <div class="tab-pane fade" id="hardware">
+      % if ($domain->is_base) {
+        %= include 'main/vm_locked_is_base'
+      % } else {
+        %= include 'main/vm_hardware'
       % }
     </div>
 % }
