@@ -9,7 +9,7 @@
         {{request.command}}
             <b>{{request.domain}}</b>
             <i>{{request.status}}</i>
-            <font color="darkblue">{{request.message}}</font>
+            <font color="darkblue" ng-bind-html="request.message">{{request.message}}</font>
     </div>
     </div>
 </div>
