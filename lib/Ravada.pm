@@ -2437,6 +2437,38 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
+sub _cmd_take_snapshot($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $sname = $request->args('name');
+    
+    my $dom = $self->search_domain_by_id($id_domain);
+    $dom->create_snapshot($sname);
+}
+
+sub _cmd_revert_to_snapshot($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $sname = $request->args('name');
+    
+    my $dom = $self->search_domain_by_id($id_domain);
+    $dom->revert_to_snapshot($sname);
+}
+
+sub _cmd_delete_snapshot($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $sname = $request->args('name');
+    
+    my $dom = $self->search_domain_by_id($id_domain);
+    $dom->delete_snapshot($sname);
+}
+
+sub _cmd_list_snapshots($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    
+    my $dom = $self->search_domain_by_id($id_domain);
+    my @snaps = $dom->list_snapshots();
+    return \@snaps;
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2578,6 +2610,10 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
+,take_snapshot => \&_cmd_take_snapshot
+,revert_to_snapshot => \&_cmd_revert_to_snapshot
+,delete_snapshot => \&_cmd_delete_snapshot
+,list_snapshot => \&_cmd_list_snapshots
 
     );
     return $methods{$cmd};

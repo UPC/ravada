@@ -70,6 +70,8 @@ our %VALID_ARG = (
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
+    ,snapshot => {uid => 1, id_domain => 1, name => 1}
+    ,list_snapshot => {uid => 1, id_domain => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -877,6 +879,68 @@ sub remove_hardware {
     
     return $self->_new_request(
         command => 'remove_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+
+sub take_snap {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('snapshot', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'take_snapshot'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+sub revert_to_snap {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('snapshot', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'revert_to_snapshot'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+sub delete_snap {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('snapshot', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'delete_snapshot'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+
+sub list_snap {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('list_snapshot', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'list_snapshot'
         ,id_domain => $args->{id_domain}
         ,args => encode_json($args)
     );

@@ -1,0 +1,27 @@
+<div class="panel-body">
+%=   include "main/needs_restart"
+    <div ng-repeat="(name) in showmachine.snapshots">
+        <ul ng-show="value">
+            <li>{{name}}
+                <button class="label label-danger" title="remove {{name}}"
+                    ng-disabled="pending_requests > 0"
+                    ng-click="delete_snapshot(name)"><i class="fa fa-times"></i> Delete
+                </button>
+                <button class="label label-info" title="revert to {{name}}"
+                    ng-disabled="pending_requests > 0"
+                    ng-click="revert_to_snapshot(name)"><i class="fa fa-times"></i> Delete
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="input-group">
+            <input type="text" class="form-control" placeholder="Snapshot Name" id="take-snap">
+            <span class="input-group-btn">
+                <button class="btn btn-default" ng-disabled="pending_requests > 0"
+                    ng-click="take_snapshot();">
+                    <%=l 'Take Snapshot' %>
+                </button>
+            </span>
+        </div>
+
+</div>

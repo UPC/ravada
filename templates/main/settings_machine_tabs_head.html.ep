@@ -14,6 +14,7 @@
 %	if ($USER->can_change_settings($domain->id)){
 		<li class="nav"><a ng-click="refresh_machine()" href="#hardware" data-toggle="tab"><%=l 'Hardware' %></a></li>
 %	}
+<li class="nav"><a href="#snapshots" ng-click="refresh_machine()" data-toggle="tab"><%=l 'Snapshots' %></a></li>
 %   if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
         <li class="nav"><a ng-click="refresh_machine()" href="#screenshot" data-toggle="tab"><%=l 'Screenshot' %></a></li>
 %   }

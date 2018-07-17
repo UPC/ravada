@@ -733,6 +733,63 @@ get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)' => sub {
     );
     return $c->render( json => { request => $req->id } );
 };
+
+get '/machine/snapshot/take/(#id_domain)/(#snap_name)' => sub {
+    my $c = shift;
+    
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    return access_denied($c) unless $USER->id == $domain->id_owner || $USER->is_admin;
+    
+    my $req = Ravada::Request->take_snap(
+        uid=>$USER->id
+        ,id_domain => $c->stash('id_domain')
+        ,name => $c->stash('snap_name')
+    );
+    return $c->render(json => {request => $req->id });
+};
+
+get '/machine/snapshot/revert/(#id_domain)/(#snap_name)' => sub {
+    my $c = shift;
+    
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    return access_denied($c) unless $USER->id == $domain->id_owner || $USER->is_admin;
+    
+    my $req = Ravada::Request->revert_to_snap(
+        uid=>$USER->id
+        ,id_domain => $c->stash('id_domain')
+        ,name => $c->stash('name')
+    );
+    return $c->render(json => {request => $req->id });
+};
+
+get '/machine/snapshot/delete/(#id_domain)/(#snap_name)' => sub {
+    my $c = shift;
+    
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    return access_denied($c) unless $USER->id == $domain->id_owner || $USER->is_admin;
+    
+    my $req = Ravada::Request->delete_snap(
+        uid=>$USER->id
+        ,id_domain => $c->stash('id_domain')
+        ,name => $c->stash('name')
+    );
+    return $c->render(json => {request => $req->id });
+};
+
+get '/machine/snapshot/list/(#id_domain)' => sub {
+    my $c = shift;
+    
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    return access_denied($c) unless $USER->id == $domain->id_owner || $USER->is_admin;
+    
+    my $req = Ravada::Request->list_snap(
+        uid=>$USER->id
+        ,id_domain => $c->stash('id_domain')
+    );
+    warn $req;
+    return $c->render(json => {request => $req->id });
+};
+
 ###################################################
 
 ## user_settings

@@ -1636,7 +1636,7 @@ sub delete_snapshot($self, $name) {
 
 sub list_snapshots($self) {
     my @snaps = $self->domain->list_all_snapshots();
-    return @snaps;
+    return \@snaps;
 }
 
 sub revert_to_snapshot($self, $name) {

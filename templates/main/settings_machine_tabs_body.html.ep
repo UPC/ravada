@@ -59,6 +59,9 @@
       % }
     </div>
 % }
+<div class="tab-pane fade" id="snapshots">
+  %= include 'main/vm_snapshots'
+</div>
 <div class="tab-pane fade" id="copy">
     %= include 'main/vm_copy'
 </div>

@@ -157,6 +157,10 @@
                     $scope.validate_new_name($scope.showmachine.name);
                     $scope.refresh_machine();
                 });
+                /*$http.get('/machine/snapshot/list/'+$scope.showmachineId)
+                .then(function(response){
+                  $scope.snapshots = response.data;
+                });*/
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
@@ -305,6 +309,25 @@
                             }
                       });
 
+          };
+          $scope.take_snapshot = function(){
+            let snap_name=document.getElementById('take-snap').value;
+            $http.get('/machine/snapshot/take/'+$scope.showmachine.id+'/'+snap_name).then(function(response){
+              $scope.pending_before++;
+              if (!$scope.requests || !$scope.requests.length) $scope.refresh_machine();
+            });
+          };
+          $scope.revert_to_snapshot = function(snap_name){
+            $http.get('/machine/snapshot/revert/'+$scope.showmachine.id+'/'+snap_name).then(function(response){
+              $scope.pending_before++;
+              if (!$scope.requests || !$scope.requests.length) $scope.refresh_machine();
+            });
+          };
+          $scope.delete_snapshot = function(snap_name){
+            $http.get('/machine/snapshot/delete/'+$scope.showmachine.id+'/'+snap_name).then(function(response){
+              $scope.pending_before++;
+              if (!$scope.requests || !$scope.requests.length) $scope.refresh_machine();
+            });
           };
             $scope.removed_hardware = [];
             $scope.pending_before = 10;

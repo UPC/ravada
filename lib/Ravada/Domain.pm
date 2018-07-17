@@ -878,6 +878,7 @@ sub info($self, $user) {
         $info->{display_port} = $local_port;
     }
     $info->{hardware} = $self->get_controllers();
+    #$info->{snapshots} = $self->list_snapshots();
 
     return $info;
 }
