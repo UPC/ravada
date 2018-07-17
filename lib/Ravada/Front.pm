@@ -749,6 +749,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
                 || $command eq 'ping_backend'
+                || $command eq 'enforce_limits'
+                || $command eq 'refresh_vms'
                 || $command eq 'refresh_storage';
         next if $id_domain_req && defined $id_domain && $id_domain != $id_domain_req;
         my $args;
