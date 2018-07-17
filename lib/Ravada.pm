@@ -79,7 +79,7 @@ our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
-our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base);
+our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base enforce_limits refresh_vms);
 our %LONG_COMMAND =  map { $_ => 1 } (qw(screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
@@ -2565,11 +2565,13 @@ sub _req_method {
     ,screenshot => \&_cmd_screenshot
     ,copy_screenshot => \&_cmd_copy_screenshot
    ,remove_base => \&_cmd_remove_base
+   ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
@@ -2662,29 +2664,13 @@ sub import_domain {
     return $vm->import_domain($name, $user, $spinoff_disks);
 }
 
-=head2 enforce_limits
-
-Check no user has passed the limits and take action.
-
-Some limits:
-
-- More than 1 domain running at a time ( older get shut down )
-
-
-=cut
-
-sub enforce_limits {
-    _enforce_limits_active(@_);
+sub _cmd_enforce_limits($self, $request=undef) {
+    _enforce_limits_active($self, $request);
 }
 
-sub _enforce_limits_active {
-    my $self = shift;
-    my %args = @_;
+sub _enforce_limits_active($self, $request) {
 
-    my $timeout = (delete $args{timeout} or 10);
-
-    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
-        if keys %args;
+    my $timeout = ($request->defined_arg('timeout') or 10);
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {

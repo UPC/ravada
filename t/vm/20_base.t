@@ -443,7 +443,7 @@ sub test_domain_limit {
     is(rvd_back->list_domains(user => user_admin , active => 1),1);
 
     $domain2->start( user_admin );
-    rvd_back->enforce_limits(timeout => 2);
+    rvd_back->_cmd_enforce_limits(timeout => 3);
     sleep 2;
     rvd_back->_process_requests_dont_fork();
     my @list = rvd_back->list_domains(user => user_admin , active => 1);
@@ -481,7 +481,7 @@ sub test_domain_limit_already_requested {
     my @list_requests = $domain->list_requests;
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
-    rvd_back->enforce_limits(timeout => 3);
+    rvd_back->_cmd_enforce_limits(timeout => 3);
 
 
     if (!$domain->can_hybernate && $domain->is_active) {
