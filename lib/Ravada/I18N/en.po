@@ -710,3 +710,6 @@ msgstr ""
 
 msgid "copied to clipboard"
 msgstr ""
+
+msgid "Portuguese"
+msgstr ""

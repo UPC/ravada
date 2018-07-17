@@ -35,6 +35,7 @@
                                 <option <%= $c->param("tongue") eq 'hi' ? "selected" : "" %> value="hi" ><%=l 'Hindi' %></option>
                                 <option <%= $c->param("tongue") eq 'id' ? "selected" : "" %> value="id" ><%=l 'Indonesian' %></option>
                                 <option <%= $c->param("tongue") eq 'fa' ? "selected" : "" %> value="fa" ><%=l 'Persian' %></option>
+                                <option <%= $c->param("tongue") eq 'pt' ? "selected" : "" %> value="pt" ><%=l 'Portuguese' %></option>
                                 <option <%= $c->param("tongue") eq 'ja' ? "selected" : "" %> value="ja" ><%=l 'Japanese' %></option>
                              </select>
 %                            if ($changed_lang) {
