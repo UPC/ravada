@@ -155,8 +155,8 @@ sub do_start {
         $ravada->process_requests();
         $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
         if ( time - $t_refresh > 60 ) {
-            $ravada->_cmd_refresh_vms() if rand(5)<3;
-            $ravada->enforce_limits()   if rand(5)<2;
+            Ravada::Request->refresh_vms()      if rand(5)<3;
+            Ravada::Request->enforce_limits()   if rand(5)<2;
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
