@@ -383,16 +383,19 @@ get '/machine/view/(:id).(:type)' => sub {
     return view_machine($c);
 };
 
-get '/machine/clone/(:id).(:type)' => sub {
+any '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;
 
     return clone_machine($c)    if $USER && $USER->can_clone() && !$USER->is_temporary();
+
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     for (@$bases_anonymous) {
         if ($_->{id} == $c->stash('id') ) {
             return clone_machine($c,1);
         }
     }
+
+    return login($c)    if !$USER || $USER->is_temporary;
     return access_denied($c);
 };
 
