@@ -8,7 +8,7 @@
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
 
-<div id="page-wrapper" ng-controller="bases">
+<div id="page-wrapper" ng-controller="bases" ng-init="anonymous=<%= $_anonymous or 0 %>;list_machines_user();">
 %= include 'main/list_bases_ng_head'
     <!--MACHINES SELECTION-->
     <div class="panel-body">
@@ -75,7 +75,8 @@
                            ng-click="host_action=0"
                            ><span class="glyphicon glyphicon-arrow-left"></a>
                     </span>
-%			        if ($user->can_change_settings || $user->can_change_settings_all){
+%			        if ($user
+%                       && ( $user->can_change_settings || $user->can_change_settings_all)){
                         <a ng-show="machine.id_clone && (host_action != machine.id && host_restore != machine.id_clone)"
                             align="right" href="/machine/manage/{{machine.id_clone}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
 %                   }

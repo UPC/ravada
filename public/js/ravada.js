@@ -111,8 +111,21 @@
             $scope.list_machines_user = function() {
                 var seconds = 1000;
                 if ($scope.refresh <= 0) {
-                    $http.get('/list_machines_user.json').then(function(response) {
+                    var url = '/list_machines_user.json';
+                    if ($scope.anonymous) {
+                        url = '/list_bases_anonymous.json';
+                    }
+                    $http.get(url).then(function(response) {
                         $scope.machines = response.data;
+                        $scope.public_bases = 0;
+                        $scope.private_bases = 0;
+                        for (var i = 0; i < $scope.machines.length; i++) {
+                            if ( $scope.machines[i].is_public == 1) {
+                                $scope.public_bases++;
+                            } else {
+                                $scope.private_bases++;
+                            }
+                        }
                     }, function error(response) {
                         console.log(response.status);
                     });
@@ -144,7 +157,6 @@
             $scope.startIntro = startIntro;
             $scope.host_action = 0;
             $scope.refresh = 0;
-            $scope.list_machines_user();
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
