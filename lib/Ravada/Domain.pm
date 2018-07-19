@@ -856,6 +856,7 @@ sub info($self, $user) {
     my $info = {
         id => $self->id
         ,name => $self->name
+        ,is_base => $self->is_base
         ,is_active => $self->is_active
         ,spice_password => $self->spice_password
         ,description => $self->description
@@ -2142,6 +2143,7 @@ Argument: name
 
 sub get_driver_id($self, $name) {
     my $value = $self->get_driver($name);
+    return if !defined $value;
 
     my $driver_type = $self->drivers($name) or confess "ERROR: Unknown drivers"
         ." of type '$name'";

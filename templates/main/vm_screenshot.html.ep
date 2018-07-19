@@ -25,11 +25,13 @@
             <div class="col-lg-4">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        % my ($screenshot) = $domain->file_screenshot =~ m{/var/www(.*)};
+                        % my $screenshot;
+                        % ($screenshot) = $domain->file_screenshot =~ m{/var/www(.*)}
+                        %                   if defined $domain->file_screenshot;
                         <img src="<%= $screenshot %>" width="260">
                     </div>
                 </div>
             </div>
-        </div>  
+        </div>
     </div>
 </div>

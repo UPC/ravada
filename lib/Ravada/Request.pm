@@ -70,6 +70,8 @@ our %VALID_ARG = (
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
+    ,refresh_vms => { }
+    ,enforce_limits => { timeout => 60 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -1055,6 +1057,39 @@ sub domain_autostart {
         , args => $args
     );
 }
+
+sub refresh_vms {
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_vms', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    return _new_request($self
+        , command => 'refresh_vms'
+        , args => $args
+    );
+}
+
+sub enforce_limits {
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_vms', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    return _new_request($self
+        , command => 'enforce_limits'
+        , args => $args
+    );
+}
+
 sub AUTOLOAD {
     my $self = shift;
 

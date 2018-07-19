@@ -67,6 +67,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                                     ,autostart => 0
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
+                                              ,auto_view => 0
                                               }
                                       ,file => $FILE_CONFIG
 };
@@ -139,21 +140,21 @@ hook before_routes => sub {
             ,host => $host
             );
 
-  return access_denied($c)
-    if $url =~ /(screenshot|\.json)/
-    && !_logged_in($c);
+    return if _logged_in($c);
+    return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)}
+           || $url =~ m{^/(css|font|img|js)};
 
-  if ($url =~ m{^/machine/display/} && !_logged_in($c)) {
-      $USER = _get_anonymous_user($c);
-      return if $USER->is_temporary;
-  }
-  return login($c)
-    if
-        $url !~ m{^/(anonymous|login|logout|requirements|robots.txt)}
-        && $url !~ m{^/(css|font|img|js)}
+    # anonymous URLs
+    if (($url =~ m{^/machine/(clone|display|info|view)/}
+        || $url =~ m{^/(list_bases_anonymous|request/)}i
+        ) && !_logged_in($c)) {
+        $USER = _anonymous_user($c);
+        return if $USER->is_temporary;
+    }
+    return access_denied($c)
+        if $url =~ /(screenshot|\.json)/
         && !_logged_in($c);
-
-    _logged_in($c)  if $url =~ m{^/requirements};
+    return login($c) if !_logged_in($c);
 
     if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
         if (!defined $c->session('monitoring')) {
@@ -169,7 +170,6 @@ hook before_routes => sub {
 
 any '/robots.txt' => sub {
     my $c = shift;
-    warn "robots";
     return $c->render(text => "User-agent: *\nDisallow: /\n", format => 'text');
 };
 
@@ -386,10 +386,20 @@ get '/machine/view/(:id).(:type)' => sub {
     return view_machine($c);
 };
 
-get '/machine/clone/(:id).(:type)' => sub {
+any '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;
-    return access_denied($c)	     if !$USER->can_clone();
-    return clone_machine($c);
+
+    return clone_machine($c)    if $USER && $USER->can_clone() && !$USER->is_temporary();
+
+    my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
+    for (@$bases_anonymous) {
+        if ($_->{id} == $c->stash('id') ) {
+            return clone_machine($c,1);
+        }
+    }
+
+    return login($c)    if !$USER || $USER->is_temporary;
+    return access_denied($c);
 };
 
 get '/machine/shutdown/(:id).(:type)' => sub {
@@ -509,7 +519,7 @@ get '/machine/autostart/#id/#value' => sub {
     return $c->render(json => { request => $req->id});
 };
 
-get '/machine/display/#id' => sub {
+get '/machine/display/(:id).vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
@@ -522,10 +532,10 @@ get '/machine/display/#id' => sub {
         && !$USER->is_admin;
 
     $c->res->headers->content_type('application/x-virt-viewer');
-    $c->res->headers->content_disposition(
-        "attachment;filename=".$domain->id.".vv");
+        $c->res->headers->content_disposition(
+        "inline;filename=".$domain->id.".vv");
 
-    return $c->render(data => $domain->display_file($USER));
+    return $c->render(data => $domain->display_file($USER), format => 'vv');
 };
 
 # Users ##########################################################3
@@ -582,6 +592,9 @@ get '/request/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
 
+    if (!$USER) {
+        $USER = _get_anonymous_user($c) or access_denied($c);
+    }
     if ($c->stash('type') eq 'json') {
         my $request = Ravada::Request->open($id);
         return $c->render(json => $request->info($USER));
@@ -982,6 +995,7 @@ sub quick_start {
 
 sub render_machines_user {
     my $c = shift;
+    my $anonymous = (shift or 0);
 
     if ($CONFIG_FRONT->{guide_custom}) {
         push @{$c->stash->{js}}, $CONFIG_FRONT->{guide_custom};
@@ -990,8 +1004,8 @@ sub render_machines_user {
     }
     return $c->render(
         template => 'main/list_bases_ng'
-        ,machines => $RAVADA->list_machines_user($USER)
         ,user => $USER
+        ,_anonymous => $anonymous
     );
 }
 
@@ -1001,7 +1015,7 @@ sub quick_start_domain {
     return $c->redirect_to('/login') if !$USER;
 
     confess "Missing id_base" if !defined $id_base;
-    $name = $c->session('login')    if !$name;
+    $name = $USER->name    if !$name;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or die "I can't find base $id_base";
 
@@ -1009,7 +1023,6 @@ sub quick_start_domain {
     $domain_name =~ tr/[\.]/[\-]/;
 
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
-    warn "clone found ".$domain->name   if $domain;
     $domain_name = $domain->name if $domain;
 
     return run_request($c,provision_req($c, $id_base, $domain_name));
@@ -1220,7 +1233,9 @@ sub _new_domain_name {
 }
 
 sub run_request($c, $request) {
-    return $c->render(template => 'main/run_request', request => $request );
+    return $c->render(template => 'main/run_request', request => $request
+        , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
+    );
 }
 
 sub _open_iptables {
@@ -1323,7 +1338,6 @@ sub register {
 
    if($username) {
        my @list_users = Ravada::Auth::SQL::list_all_users();
-       warn join(", ", @list_users);
 
        if (grep {$_ eq $username} @list_users) {
            push @error,("Username already exists, please choose another one");
@@ -1392,7 +1406,10 @@ sub manage_machine {
         next if !$domain->drivers($driver);
         $cur_driver{$driver} = $domain->get_driver_id($driver);
         my $value = $c->param("driver_$driver");
-        next if !defined $value || $value eq $domain->get_driver_id($driver);
+        next if !defined $value
+                || !$value
+                || (defined $domain->get_driver_id($driver)
+                    && $value eq $domain->get_driver_id($driver));
             my $req2 = Ravada::Request->set_driver(uid => $USER->id
                 , id_domain => $domain->id
                 , id_option => $value
@@ -1496,9 +1513,8 @@ sub view_machine {
     );
 }
 
-sub clone_machine {
-    my $c = shift;
-    return login($c) if !_logged_in($c);
+sub clone_machine($c, $anonymous=0) {
+    return login($c) unless $anonymous || _logged_in($c);
     _init_error($c);
 
     my $base = _search_requested_machine($c);
@@ -1762,13 +1778,7 @@ sub list_bases_anonymous {
 
     return access_denied($c)    if !scalar @$bases_anonymous;
 
-    $c->render(template => 'main/list_bases2'
-        , _logged_in => undef
-        , _anonymous => 1
-        , machines => $bases_anonymous
-        , user => undef
-        , url => undef
-    );
+    return render_machines_user($c,1);
 }
 
 sub _remote_ip {
@@ -1809,8 +1819,14 @@ sub _anonymous_user {
     }
     my $user= Ravada::Auth::SQL->new( name => $name );
 
-    confess "user ".$user->name." has no id, may not be in table users"
-        if !$user->id;
+    if ( !$user->id ) {
+        $name = _new_anonymous_user($c);
+        $c->session(anonymous_user => $name);
+        $user= Ravada::Auth::SQL->new( name => $name );
+
+        confess "USER $name has no id after creation"
+            if !$user->id;
+    }
 
     return $user;
 }
@@ -1829,13 +1845,15 @@ sub _random_name {
 sub _new_anonymous_user {
     my $c = shift;
 
-    my $name_mojo = $c->signed_cookie('mojolicious');
-    $name_mojo = _random_name(32)    if !$name_mojo;
+    my $name_mojo = reverse($c->signed_cookie('mojolicious'));
+
+    my $length = 32;
+    $name_mojo = _random_name($length)    if !$name_mojo;
 
     $name_mojo =~ tr/[^a-z][^A-Z][^0-9]/___/c;
 
     my $name;
-    for my $n ( 4 .. 32 ) {
+    for my $n ( 4 .. $length ) {
         $name = "anon".substr($name_mojo,0,$n);
         my $user;
         eval {
