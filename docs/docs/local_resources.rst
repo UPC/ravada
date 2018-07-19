@@ -26,6 +26,6 @@ and restart the rvd_front.service to apply changes.
 
 ::
 
-	service restart rvd_front.service
+	systemctl restart rvd_front.service
 
 Refresh your browser cache and now Ravada use JS and CSS locally.
