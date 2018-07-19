@@ -282,7 +282,7 @@ get '/list_images.json' => sub {
     my $c = shift;
 
     return access_denied($c) unless _logged_in($c)
-        $$ $USER->can_create_machine();
+        && $USER->can_create_machine();
 
     my $vm_name = $c->param('backend');
 
@@ -292,7 +292,7 @@ get '/list_images.json' => sub {
 get '/iso_file.json' => sub {
     my $c = shift;
     return access_denied($c) unless _logged_in($c)
-        $$ $USER->can_create_machine();
+        && $USER->can_create_machine();
     my @isos =('<NONE>');
     push @isos,(@{$RAVADA->iso_file});
     $c->render(json => \@isos);
