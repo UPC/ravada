@@ -6,6 +6,8 @@ For default we used CDN, it's better, but in some specific cases it may be usefu
 
 You need to install `yarn <https://yarnpkg.com/en/docs/install#debian-stable>`_.
 
+.. note::  Ubuntu 18.04 comes with cmdtest installed by default, and yarn is and old version (0.32 vs 1.7) from `yarnpkg.com <https://yarnpkg.com/en/docs/install#debian-stable>`_. 
+
 And follow this steps:
 
 ::
