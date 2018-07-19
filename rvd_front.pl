@@ -281,6 +281,9 @@ get '/list_bases.json' => sub {
 get '/list_images.json' => sub {
     my $c = shift;
 
+    return access_denied($c) unless _logged_in($c)
+        $$ $USER->can_create_machine();
+
     my $vm_name = $c->param('backend');
 
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
@@ -288,6 +291,8 @@ get '/list_images.json' => sub {
 
 get '/iso_file.json' => sub {
     my $c = shift;
+    return access_denied($c) unless _logged_in($c)
+        $$ $USER->can_create_machine();
     my @isos =('<NONE>');
     push @isos,(@{$RAVADA->iso_file});
     $c->render(json => \@isos);
@@ -610,6 +615,8 @@ get '/anonymous/request/(:id).(:type)' => sub {
 
 get '/requests.json' => sub {
     my $c = shift;
+    return access_denied($c) unless _logged_in($c)
+        && $USER->is_admin;
     return list_requests($c);
 };
 
