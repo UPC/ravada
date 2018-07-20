@@ -443,8 +443,7 @@ sub test_domain_limit {
     is(rvd_back->list_domains(user => user_admin , active => 1),1);
 
     $domain2->start( user_admin );
-    rvd_back->_cmd_enforce_limits(timeout => 3);
-    sleep 2;
+    my $req = Ravada::Request->enforce_limits(timeout => 3);
     rvd_back->_process_requests_dont_fork();
     my @list = rvd_back->list_domains(user => user_admin , active => 1);
     is(scalar @list,1) or die Dumper(\@list);
