@@ -2068,8 +2068,7 @@ sub set_driver_id {
     $sth->finish;
 }
 
-sub remote_ip {
-    my $self = shift;
+sub remote_ip($self) {
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT remote_ip FROM iptables "
