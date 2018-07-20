@@ -36,9 +36,22 @@ GetOptions(
 my ($ID_BASE) = shift @ARGV;
 
 if ($HELP || !$ID_BASE) {
+    if (!$ID_BASE) {
+        warn "ERROR: I need the id of a domain to use as base for the benchmark.\n"
+        ."    You can use any virtual machine id, but it will be converted to base if\n"
+        ."    it already hasn't.\n";
+        my $rvd_back = Ravada->new();
+        for my $machine ($rvd_back->list_domains) {
+            next if $machine->is_volatile;
+            print $machine->id."\t".$machine->name;
+            print " (base)" if $machine->is_base;
+            print "\n";
+        }
+    }
     die "$0 [--help] [--requests=X] [--timeout=$TIMEOUT] id-base\n"
         ."  requests: Number of requests for create machines.\n"
         ."  timeout: Max waiting time for machine to create.\n";
+
 }
 
 ##################################################################################
