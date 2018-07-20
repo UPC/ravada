@@ -110,7 +110,7 @@ sub show_console {
 sub wait_domain_up {
     my $req = shift;
 
-    my $p = Net::Ping->new();
+    my $p = Net::Ping->new('icmp');
     my $t0 = time;
 
     my $domain_name = $req->args('name');
@@ -139,7 +139,6 @@ sub wait_domain_up {
             print ".";
             $t1 = time;
         }
-        sleep 1;
     }
     print "\n";
 }
