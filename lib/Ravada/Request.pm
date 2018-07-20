@@ -71,7 +71,7 @@ our %VALID_ARG = (
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,refresh_vms => { }
-    ,enforce_limits => { timeout => 60 }
+    ,enforce_limits => { timeout => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -81,6 +81,8 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver
     );
+
+our $TIMEOUT_SHUTDOWN = 120;
 
 our $CONNECTOR;
 
@@ -341,7 +343,7 @@ sub shutdown_domain {
 
     my $args = _check_args('shutdown_domain', @_ );
 
-    $args->{timeout} = 120 if !exists $args->{timeout};
+    $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
 
     confess "ERROR: You must supply either id_domain or name ".Dumper($args)
         if !$args->{id_domain} && !$args->{name};
@@ -1079,7 +1081,9 @@ sub enforce_limits {
 
     my $class = ref($proto) || $proto;
 
-    my $args = _check_args('refresh_vms', @_ );
+    my $args = _check_args('enforce_limits', @_ );
+
+    $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
 
     my $self = {};
     bless($self, $class);
