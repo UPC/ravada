@@ -26,9 +26,11 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 
 my $USER = create_user('foo','bar', 1);
 
+add_ubuntu_minimal_iso();
+
 my %CREATE_ARGS = (
     Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
+    ,KVM => { id_iso => search_id_iso('Ubuntu % Minimal'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 
@@ -105,6 +107,22 @@ sub test_domain_name {
 
 }
 
+sub test_domain_info {
+    my $domain = shift;
+
+    my $domain_b = Ravada::Domain->open($domain->id);
+    $domain_b->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain_b->is_active;
+    $domain_b->open_iptables(user => user_admin, remote_ip => '127.0.0.1');
+    for ( 1 .. 30 ) {
+        diag($domain_b->ip);
+        last if $domain_b->ip;
+        sleep 1;
+    }
+    $domain_b->get_info;
+    ok(exists $domain->info(user_admin)->{ip}
+        ,"Expecting ip field in domain info ".Dumper($domain->info(user_admin))) or exit;
+}
+
 ####################################################################
 #
 
@@ -152,7 +170,7 @@ for my $vm_name ('Void','KVM','LXC') {
         $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
         .($domain->name or '<UNDEF>'));
 
-    my $ip = '99.88.77.66';
+    my $ip = '127.0.0.1';
 
     $req = $RVD_FRONT->start_domain(name => $name, user =>  $USER, remote_ip => $ip);
     $RVD_FRONT->wait_request($req,10);
@@ -188,6 +206,8 @@ for my $vm_name ('Void','KVM','LXC') {
         my $domain_back = rvd_back->search_domain($domain->name);
         is($domain->internal_id, $domain_back->domain->get_id);
     }
+
+    test_domain_info($domain);
 
     test_remove_domain($name);
     test_domain_name($vm_name);
