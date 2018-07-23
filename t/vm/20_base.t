@@ -443,8 +443,10 @@ sub test_domain_limit {
     is(rvd_back->list_domains(user => user_admin , active => 1),1);
 
     $domain2->start( user_admin );
-    my $req = Ravada::Request->enforce_limits(timeout => 3);
-    rvd_back->_process_requests_dont_fork();
+    my $req = Ravada::Request->enforce_limits(timeout => 1);
+    rvd_back->_process_all_requests_dont_fork();
+    sleep 1;
+    rvd_back->_process_all_requests_dont_fork();
     my @list = rvd_back->list_domains(user => user_admin , active => 1);
     is(scalar @list,1) or die Dumper(\@list);
     is($list[0]->name, $domain2->name) if $list[0];
@@ -480,8 +482,10 @@ sub test_domain_limit_already_requested {
     my @list_requests = $domain->list_requests;
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
-    rvd_back->_cmd_enforce_limits(timeout => 3);
-
+    Ravada::Request->enforce_limits(timeout => 1);
+    rvd_back->_process_all_requests_dont_fork();
+    sleep 1;
+    rvd_back->_process_all_requests_dont_fork();
 
     if (!$domain->can_hybernate && $domain->is_active) {
         @list_requests = $domain->list_all_requests();
