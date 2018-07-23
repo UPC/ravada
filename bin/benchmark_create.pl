@@ -107,29 +107,53 @@ sub show_console {
     }
 }
 
-sub wait_domain_up {
+sub open_domain {
     my $req = shift;
-
-    my $p = Net::Ping->new('icmp');
-    my $t0 = time;
-
     my $domain_name = $req->args('name');
     my $domain;
+    my $t0 = time;
     for ( ;; ) {
         exit_timeout($domain_name) if time-$t0 > $TIMEOUT;
         eval { $domain = $RVD_BACK->search_domain($domain_name) };
-        last if $domain;
+        last if $domain && !check_free_memory($domain->_vm);
+        return $domain if $domain;
     }
+}
 
-    print "Waiting for machine ".$domain->name;
+sub wait_domain_up {
+    my $req = shift;
+    my $t0 = time;
+
+    my $domain = open_domain($req);
     for ( ;; ) {
         last if $domain->is_active;
-        exit_timeout($domain_name) if time-$t0 > $TIMEOUT;
+        last if !check_free_memory($domain->_vm);
+        exit_timeout($domain->name) if time-$t0 > $TIMEOUT;
     }
     show_console($domain);
+}
+
+sub check_free_memory {
+    my $vm = shift;
+
+    my $free_mem = $vm->free_memory / 1024 / 1024;
+    $free_mem =~ s/(\d+\.\d?).*/$1/;
+    return $free_mem >= 1;
+
+}
+
+sub wait_domain_active {
+    my $domain = shift;
+
+    print "Waiting for machine ".$domain->name;
+
+    my $p = Net::Ping->new('icmp');
+    my $t0 = time;
     my $t1 = time;
     for ( ;; ) {
-        exit_timeout($domain_name) if time-$t0 > $TIMEOUT;
+        exit_timeout($domain->name) if time-$t0 > $TIMEOUT;
+        last if !check_free_memory($domain->_vm);
+
         next if !$domain->is_active;
         my ($ip) = domain_ip($domain->id);
         if ($ip) {
@@ -219,6 +243,7 @@ sub exit_timeout {
     shutdown_all();
     exit -1;
 }
+
 #####################################################################################
 
 shutdown_all(1);
@@ -228,6 +253,8 @@ set_base_volatile_anon();
 my %requests = request_create();
 
 my $t0 = Benchmark->new();
+my @clones;
+
 for ( ;; ) {
     my $n_pending = 0;
     for my $id_req (sort { $requests{$a}->args('name') cmp $requests{$b}->args('name') } keys %requests) {
@@ -238,11 +265,17 @@ for ( ;; ) {
                 warn $req->error
             } else {
                 wait_domain_up($req);
+                push @clones,(open_domain($req));
             }
             delete $requests{$id_req};
         }
     }
     last if !$n_pending;
+}
+
+for my $domain (@clones) {
+    wait_domain_active($domain);
+    last if !check_free_memory($domain->_vm);
 }
 
 print timestr(timediff(Benchmark->new,$t0))." to create $N_REQUESTS machines.\n";
