@@ -1700,7 +1700,10 @@ sub process_requests {
     $debug_type = 'all' if $long_commands && $short_commands;
 
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
-        my $req = Ravada::Request->open($id_request);
+        my $req;
+        eval { $req = Ravada::Request->open($id_request) };
+        next if $@ && $@ =~ /I can't find id/;
+        die $@ if $@;
 
         if ( ($long_commands &&
                 (!$short_commands && !$LONG_COMMAND{$req->command}))
