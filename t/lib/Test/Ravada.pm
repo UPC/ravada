@@ -46,6 +46,7 @@ create_domain
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
     remote_node
+    add_ubuntu_minimal_iso
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -93,6 +94,19 @@ sub arg_create_dom {
     confess "Unknown vm $vm_name"
         if !$ARG_CREATE_DOM{$vm_name};
     return @{$ARG_CREATE_DOM{$vm_name}};
+}
+
+sub add_ubuntu_minimal_iso {
+    my %info = ('bionic_minimal' => {
+        name => 'Ubuntu Bionic Minimal'
+        ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-i386/current/images/netboot/mini.iso'
+        ,xml => 'bionic-i386.xml'
+        ,xml_volume => 'bionic32-volume.xml'
+        ,rename_file => 'ubuntu_bionic_mini.iso'
+        ,arch => 'i386'
+        ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
+    });
+    $RVD_BACK->_update_table('iso_images','name',\%info);
 }
 
 sub vm_names {
