@@ -292,6 +292,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
+    $valid_args->{at}=2 if !exists $valid_args->{at};
 
     confess "Unknown method $sub" if !$valid_args;
     for (keys %{$args}) {

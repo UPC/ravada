@@ -2677,8 +2677,8 @@ sub _enforce_limits_active($self, $request) {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
-        $domain->client_status();
         push @{$domains{$domain->id_owner}},$domain;
+        $domain->client_status();
     }
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
