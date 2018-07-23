@@ -2667,6 +2667,7 @@ sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
                 || $domain->_data('id_vm') != $vm->id;
     }
     $domain->_set_data(status => $status);
+    $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
 
 }

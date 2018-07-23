@@ -1041,6 +1041,12 @@ sub info($self, $user) {
     }
     $info->{hardware} = $self->get_controllers();
 
+    my $internal_info = $self->get_info();
+    for (keys(%$internal_info)) {
+        die "Field $_ already in info" if exists $info->{$_};
+        $info->{$_} = $internal_info->{$_};
+    }
+
     return $info;
 }
 

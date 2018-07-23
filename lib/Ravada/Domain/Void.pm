@@ -413,6 +413,7 @@ sub _set_default_info {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
+            ,ip => $self->ip
     };
     $self->_store(info => $info);
     my %controllers = $self->list_controllers;
