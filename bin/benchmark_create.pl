@@ -154,7 +154,11 @@ sub wait_domain_active {
         exit_timeout($domain->name) if time-$t0 > $TIMEOUT;
         last if !check_free_memory($domain->_vm);
 
-        next if !$domain->is_active;
+        my $is_active;
+        eval { $is_active = $domain->is_active };
+        warn $@ if $@;
+        last if $@;
+        next if !$is_active;
         my ($ip) = domain_ip($domain->id);
         if ($ip) {
             last if $p->ping($ip,1);
