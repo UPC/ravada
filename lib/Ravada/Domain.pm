@@ -1586,6 +1586,7 @@ sub _post_start {
 
     }
     $self->get_info();
+    Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
 
@@ -1685,6 +1686,8 @@ sub open_iptables {
             ,remote_ip => $args{remote_ip}
         );
         die "INFO: Machine ".$self->name." is not active, starting up.\n"
+    } else {
+        Ravada::Request->enforce_limits( at => time + 60);
     }
 
     $self->_add_iptable(%args);
