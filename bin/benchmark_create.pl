@@ -17,6 +17,7 @@ my $PORT = 3000;
 my $HOST = 'localhost';
 my $N_REQUESTS;
 my $TIMEOUT = 60;
+my $KEEP = 0;
 my $DEBUG;
 
 my $CONT = 0;
@@ -32,6 +33,7 @@ GetOptions(
     ,debug => \$DEBUG
     ,'requests=s' => \$N_REQUESTS
     ,'timeout=s' => \$TIMEOUT
+    ,'keep' => \$KEEP
 ) or exit;
 
 my ($ID_BASE) = shift @ARGV;
@@ -49,10 +51,13 @@ if ($HELP || !$ID_BASE) {
             print "\n";
         }
     }
-    die "$0 [--help] [--requests=X] [--timeout=$TIMEOUT] id-base\n"
-        ."  requests: Number of requests for create machines.\n"
-        ."  timeout: Max waiting time for machine to create.\n";
-
+    die "$0 [--help] [--requests=X] [--timeout=$TIMEOUT] [--keep] id-base\n"
+        ."  - requests: Number of requests for create machines.\n"
+        ."  - timeout: Max waiting time for machine to create.\n"
+        ."  - keep: Keep the machines created after run the test.\n"
+        ."          Machines are cleaned up by default unless this is enabled.\n"
+            .".\n"
+        ;
 }
 
 ##################################################################################
@@ -293,10 +298,43 @@ sub exit_timeout {
     exit -1;
 }
 
+sub check_rvd_back {
+    my $req = Ravada::Request->ping_backend();
+    for ( 1 .. 5 ) {
+        last if $req->status eq 'done';
+        sleep 1;
+    }
+    die "ERROR: I couldn't connect to rvd_back. "
+        .($req->error or '')
+        ."\n"
+        if $req->status ne 'done' || $req->error();
+
+        warn Dumper($req);
+    print "rvd_back connected.\n";
+}
+
+sub remove_old_requests {
+    my $sth = $RVD_BACK->connector->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE "
+        ."    ( command = 'create'  OR command = 'ping_backend' )"
+        ."    AND status <> 'done' "
+    );
+    my $sth_del = $RVD_BACK->connector->dbh->prepare("DELETE FROM requests WHERE id=?");
+    $sth->execute();
+    while (my ($id) = $sth->fetchrow) {
+        my $request = Ravada::Request->open($id);
+        next if $request->args('name') !~ /^bench_/;
+        $sth_del->execute($id);
+    }
+    $sth->finish;
+}
 #####################################################################################
 
-#shutdown_all(1);
+remove_old_requests();
+check_rvd_back();
 remove_old();
+shutdown_all(1);
 init();
 set_base_volatile_anon();
 
@@ -329,4 +367,5 @@ for my $domain (@clones) {
 }
 
 print timestr(timediff(Benchmark->new,$t0))." to create $N_REQUESTS machines.\n";
-remove_old();
+remove_old() if !$KEEP;
+remove_old_requests();
