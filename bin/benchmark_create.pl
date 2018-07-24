@@ -24,6 +24,7 @@ my $CONT = 0;
 $|=1;
 
 my $RVD_BACK = Ravada->new();
+my $RVD_FRONT = Ravada::Front->new();
 
 my $USER_DAEMON = Ravada::Utils->user_daemon();
 GetOptions(
@@ -80,12 +81,17 @@ sub request_create {
     my @requests;
     for ( 1 .. $N_REQUESTS ) {
         my $name = new_domain_name();
+        my $user = Ravada::Auth::SQL::add_user(
+            name => "user_$name"
+            ,is_temporary => 1
+        );
+
         push @requests,(Ravada::Request->create_domain(
                 id_base => $ID_BASE
-                ,id_owner => $USER_DAEMON->id
+                ,id_owner => $user->id
                 ,name => $name
                 ,remote_ip => '127.0.0.1'
-        ));
+            ));
         print "Request create machine $name\n" if $DEBUG;
     }
     return map{ $_->id => $_ } @requests;
@@ -211,12 +217,51 @@ sub shutdown_all {
     print "\n";
 }
 
+sub remove_old {
+    remove_old_machines();
+    remove_old_machines();
+    remove_old_users();
+}
+sub remove_old_users {
+    for my $user_f ( @{$RVD_FRONT->list_users} ) {
+        next if $user_f->{name} !~ /^user_bench/;
+        my $user = Ravada::Auth::SQL->search_by_id($user_f->{id});
+        $user->remove();
+    }
+}
+
+sub remove_old_machines {
+    my @machines = $RVD_BACK->list_domains();
+    my @reqs;
+    for my $machine( @machines ) {
+        next if $machine->name !~ /^bench/;
+        warn "Removing ".$machine->name."\n";
+        push @reqs,(Ravada::Request->remove_domain(
+            uid => $USER_DAEMON->id
+            ,name => $machine->name
+        ));
+    }
+    return if !scalar @reqs;
+    print "Waiting for ".scalar(@reqs)." machines to be removed.\n";
+    for ( 1 .. $TIMEOUT * scalar(@reqs) ) {
+        my $pending = 0;
+        for my $req(@reqs) {
+            $pending++ if $req->status ne 'done';
+        }
+        last if !$pending;
+        print ".";
+        sleep 1;
+    }
+
+}
+
 sub set_base_volatile_anon {
     my $domain = Ravada::Domain->open($ID_BASE);
     if ( !$domain->is_base ) {
         print "Preparing base for ".$domain->name."\n";
-        $domain->prepare_base($USER_DAEMON)
+        $domain->prepare_base($USER_DAEMON);
     }
+    $domain->is_public(1);
     $domain->volatile_clones(1) if !$domain->volatile_clones();
 
 }
@@ -250,7 +295,8 @@ sub exit_timeout {
 
 #####################################################################################
 
-shutdown_all(1);
+#shutdown_all(1);
+remove_old();
 init();
 set_base_volatile_anon();
 
@@ -283,4 +329,4 @@ for my $domain (@clones) {
 }
 
 print timestr(timediff(Benchmark->new,$t0))." to create $N_REQUESTS machines.\n";
-shutdown_all();
+remove_old();
