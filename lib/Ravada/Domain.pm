@@ -838,7 +838,7 @@ sub info($self, $user) {
         ,needs_restart => ( $self->needs_restart or 0)
     };
     eval {
-        $info->{display_url} = $self->display($user);
+        $info->{display_url} = $self->display($user)    if $self->is_active;
     };
     die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
