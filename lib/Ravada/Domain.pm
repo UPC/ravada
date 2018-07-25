@@ -17,7 +17,6 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
-use Sys::Statistics::Linux;
 use Time::Piece;
 use IPTables::ChainMgr;
 
