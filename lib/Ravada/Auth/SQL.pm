@@ -882,6 +882,10 @@ sub can_manage_machine($self, $domain) {
     return 0;
 }
 
+=head2 can_remove_clones
+
+=cut
+
 sub can_remove_clones($self, $id_domain=undef) {
 
     return $self->can_do('remove_clones') if !$id_domain;
