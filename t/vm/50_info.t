@@ -60,7 +60,7 @@ sub test_memory {
                 my $info2 = $domain->get_info();
                 $memory2 = $info2->{memory};
                 last if $memory2 == $exp_memory;
-                sleep 2;
+                sleep 1;
     }
     SKIP: {
         skip("possible virt bug",1) if $vm_name =~ /kvm/i;
@@ -68,6 +68,28 @@ sub test_memory {
                                         ." , got $memory2 ") ;
     }
         
+}
+
+sub test_memory_first_time {
+    my ($vm_name,$domain) = @_;
+    $domain->start($USER) if !$domain->is_active;
+
+    my $exp_memory =  333333;
+    $domain->_data('info','');
+    $domain->set_memory($exp_memory);
+    my $memory2;
+    for ( 0 .. 5 ) {
+                my $info2 = $domain->get_info();
+                $memory2 = $info2->{memory};
+                last if $memory2 == $exp_memory;
+                sleep 1;
+    }
+    SKIP: {
+        skip("possible virt bug",1) if $vm_name =~ /kvm/i;
+        ok($memory2 == $exp_memory,"[$vm_name] Expecting memory: '$exp_memory' "
+                                        ." , got $memory2 ") ;
+    }
+
 }
 
 
@@ -110,6 +132,7 @@ for my $vm_name (qw( Void KVM )) {
         ok($max_mem,"[$vm_name] Expecting max_mem from info, got '$max_mem'");
 
         test_memory($vm_name, $domain);
+        test_memory_first_time($vm_name, $domain);
   
         {
             $domain->shutdown(user => $USER, timeout => 1);
