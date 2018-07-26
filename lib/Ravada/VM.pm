@@ -494,6 +494,16 @@ sub min_free_memory {
     return $self->_data('min_free_memory');
 }
 
+=head2 max_load 
+
+Returns the maximum cpu load that the host can handle.
+
+=cut
+
+sub max_load {
+    my $self = shift;
+    return $self->_data('max_load');
+}
 
 =head2 list_drivers
 

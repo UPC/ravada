@@ -270,7 +270,9 @@ sub init {
     my $base = Ravada::Domain->open($ID_BASE);
     my $free_memory = $base->_vm->free_memory();
     my $info = $base->get_info();
+    chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
     my $rec_n_requests = int($free_memory / $info->{memory})-1;
+    $rec_n_requests = int($cpu_count)*3 if(int($cpu_count)*3 < int($free_memory / $info->{memory})-1 && int($cpu_count));
 
     $N_REQUESTS = $rec_n_requests if !$N_REQUESTS;
 
