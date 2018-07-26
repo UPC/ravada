@@ -427,10 +427,10 @@ sub _check_free_vm_memory {
 sub _check_cpu_usage{
     my $self = shift;
     return if ref($self) =~ /Void/i;
-
-    chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
-    die "ERROR: Too much active domains." if (scalar $self->_vm->vm->list_domains() >= int($cpu_count)*3);
-
+    if ($self->_vm->check_cpu_limits){
+        chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
+        die "ERROR: Too much active domains." if (scalar $self->_vm->vm->list_domains() >= int($cpu_count)*3);
+    }
     open(STAT, '/proc/loadavg') or die "WTF: $!";
     my @cpu = split /\s+/, <STAT>;
     close STAT;
