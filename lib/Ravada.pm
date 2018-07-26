@@ -1026,7 +1026,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
     $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
-    $self->_upgrade_table('vms', 'cpu_limit','tinyint DEFAULT 0');
+    $self->_upgrade_table('vms', 'cpu_limit','int DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
