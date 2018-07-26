@@ -17,7 +17,6 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
-use Sys::Statistics::Linux;
 use Time::Piece;
 use IPTables::ChainMgr;
 
@@ -233,7 +232,6 @@ sub _start_preconditions{
     } else {
         _allow_manage(@_);
     }
-    $self->_check_free_memory();
     $self->_check_free_vm_memory();
     $self->_check_cpu_usage();
     _check_used_memory(@_);
@@ -412,25 +410,18 @@ sub _check_has_clones {
         if $#clones>=0;
 }
 
-sub _check_free_memory{
-    my $self = shift;
-    return if ref($self) =~ /Void/i;
-
-    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
-    my $stat = $lxs->get;
-    die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
-            ." MB out of ".int($MIN_FREE_MEMORY/1024)." MB required." 
-        if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
-}
-
 sub _check_free_vm_memory {
     my $self = shift;
 
     return if !$self->_vm->min_free_memory;
-    return if $self->_vm->free_memory > $self->_vm->min_free_memory;
+    my $vm_free_mem = $self->_vm->free_memory;
 
-    die "ERROR: No free memory. Only "._gb($self->_vm->free_memory)." out of "
+    return if $vm_free_mem > $self->_vm->min_free_memory;
+
+    my $msg = "ERROR: No free memory. Only "._gb($vm_free_mem)." out of "
         ._gb($self->_vm->min_free_memory)." GB required.\n";
+
+    die $msg;
 }
 
 sub _check_cpu_usage{
@@ -456,29 +447,6 @@ sub _gb($mem=0) {
     $gb =~ s/(\d+\.\d).*/$1/;
     return ($gb);
 
-}
-
-sub _check_used_memory {
-    my $self = shift;
-    my $used_memory = 0;
-
-    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
-    my $stat = $lxs->get;
-
-    # We get mem total less the used for the system
-    my $mem_total = $stat->{memstats}->{memtotal} - 1*1024*1024;
-
-    for my $domain ( $self->_vm->list_domains ) {
-        my $alive;
-        eval { $alive = 1 if $domain->is_active && !$domain->is_paused };
-        next if !$alive;
-
-        my $info = $domain->get_info;
-        confess "No info memory ".Dumper($info) if !exists $info->{memory};
-        $used_memory += $info->{memory};
-    }
-
-    confess "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
 =pod
@@ -699,6 +667,12 @@ sub is_known {
     return 0;
 }
 
+=head2 is_known
+
+Returns if the domain has extra fields information known in Ravada.
+
+=cut
+
 sub is_known_extra {
     my $self = shift;
 
@@ -883,7 +857,7 @@ sub info($self, $user) {
         ,needs_restart => ( $self->needs_restart or 0)
     };
     eval {
-        $info->{display_url} = $self->display($user);
+        $info->{display_url} = $self->display($user)    if $self->is_active;
     };
     die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
@@ -1204,20 +1178,6 @@ sub list_files_base_target {
     return $_[0]->list_files_base("target");
 }
 
-=head2 json
-Returns the domain information as json
-=cut
-
-sub json {
-    my $self = shift;
-
-    my $id = $self->_data('id');
-    my $data = $self->{_data};
-    $data->{is_active} = $self->is_active;
-
-    return encode_json($data);
-}
-
 =head2 can_screenshot
 Returns wether this domain can take an screenshot.
 =cut
@@ -1448,6 +1408,7 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+    Ravada::Request->enforce_limits();
     $self->_remove_temporary_machine(@_);
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
@@ -1892,6 +1853,13 @@ sub is_volatile($self, $value=undef) {
     return $is_volatile;
 }
 
+=head2 is_persistent
+
+Returns true if the virtual machine is persistent. So it is not removed after
+shut down.
+
+=cut
+
 sub is_persistent($self) {
     return !$self->{_is_volatile} if exists $self->{_is_volatile};
     return 0;
@@ -1989,6 +1957,7 @@ Attributes:
     name -> name of the controller type
 
 =cut
+
 sub get_controller {
 	my $self = shift;
 	my $name = shift;
@@ -2001,6 +1970,13 @@ sub get_controller {
 
     return $sub->($self);
 }
+
+=head2 get_controllers
+
+Returns a hashref of the hardware controllers for this virtual machine
+
+=cut
+
 
 sub get_controllers($self) {
     my $info;
@@ -2295,6 +2271,35 @@ sub status($self, $value=undef) {
     return $self->_data('status', $value);
 }
 
+=head2 client_status
+
+Returns the status of the viewer connection. The virtual machine must be
+active, and the remote ip must be known.
+
+Possible results:
+
+=over
+
+=item * connecting : set at the start of the virtual machine
+
+=item * IP : known remote ip from the current connection
+
+=item * disconnected : the remote client has been closed
+
+=back
+
+This method is used from higher level commands, for example, you can shut down
+or hibernate all the disconnected virtual machines like this:
+
+  # rvd_back --hibernate --disconnected
+  # rvd_back --shutdown --disconnected
+
+You could also set this command on a cron entry to run nightly, hourly or whenever
+you find suitable.
+
+=cut
+
+
 sub client_status($self, $force=0) {
     return if !$self->is_active;
     return if !$self->remote_ip;
@@ -2344,6 +2349,13 @@ sub _client_connection_status($self, $force=undef) {
     }
     return 'disconnected';
 }
+
+=head2 needs_restart
+
+Returns true or false if the virtual machine needs to be restarted so some
+hardware change can be applied.
+
+=cut
 
 sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);

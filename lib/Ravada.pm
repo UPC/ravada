@@ -12,6 +12,7 @@ use File::Copy;
 use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
+use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
@@ -1027,6 +1028,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -1336,6 +1338,7 @@ sub create_domain {
                     ,remote_ip => $request->defined_arg('remote_ip')
                 )
             };
+            my $error = $@;
             $request->error($error) if $error;
         }
     } elsif ($@) {
@@ -1846,8 +1849,11 @@ sub _execute {
     $request->error('');
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
+        my $t0 = [gettimeofday];
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
+        my $elapsed = tv_interval($t0,[gettimeofday]);
+        $request->run_time($elapsed);
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
         $request->error($err) if $err;
@@ -1861,7 +1867,11 @@ sub _execute {
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ( $pid == 0 ) {
-        $self->_do_execute_command($sub, $request)
+        my $t0 = [gettimeofday];
+        $self->_do_execute_command($sub, $request);
+        my $elapsed = tv_interval($t0,[gettimeofday]);
+        $request->run_time($elapsed) if !$request->run_time();
+        print "++++ ".request->command." ".Dumper($elapsed);
     } else {
         $self->_add_pid($pid, $request->id);
     }
@@ -1882,11 +1892,14 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    my $t0 = [gettimeofday];
     eval {
         $self->_connect_vm();
         $sub->($self,$request);
         $self->_disconnect_vm();
     };
+    my $elapsed = tv_interval($t0,[gettimeofday]);
+    $request->run_time($elapsed);
     my $err = ( $@ or '');
     $request->error($err);
     $request->status('done')
@@ -2385,6 +2398,9 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
+    if ($request && ( my $id_recent = $request->done_recently(60))) {
+        die "Command ".$request->command." run recently by $id_recent.\n";
+    }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));
@@ -2416,6 +2432,9 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
+    if ($request && (my $id_recent = $request->done_recently(30))) {
+        die "Command ".$request->command." run recently by $id_recent.\n";
+    }
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
@@ -2674,6 +2693,9 @@ sub _cmd_enforce_limits($self, $request=undef) {
 
 sub _enforce_limits_active($self, $request) {
 
+    if (my $id_recent = $request->done_recently(30)) {
+        die "Command ".$request->command." run recently by $id_recent.\n";
+    }
     my $timeout = ($request->defined_arg('timeout') or 10);
 
     my %domains;

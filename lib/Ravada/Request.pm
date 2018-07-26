@@ -13,6 +13,7 @@ use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Hash::Util;
+use Time::Piece;
 use Ravada;
 use Ravada::Front;
 
@@ -159,7 +160,8 @@ sub info {
             || ($self->defined_arg('id_owner') && $user->id == $self->args('id_owner'));
 
     return {
-        status => $self->status
+        id => $self->id
+        ,status => $self->status
         ,error => $self->error
         ,id_domain => $self->id_domain
     }
@@ -167,7 +169,8 @@ sub info {
 
 =head2 create_domain
 
-    my $req = Ravada::Request->create_domain( name => 'bla'
+    my $req = Ravada::Request->create_domain(
+                        name => 'bla'
                     , id_iso => 1
     );
 
@@ -193,7 +196,8 @@ sub create_domain {
 
 =head2 remove_domain
 
-    my $req = Ravada::Request->remove_domain( name => 'bla'
+    my $req = Ravada::Request->remove_domain(
+                     name => 'bla'
                     , uid => $user->id
     );
 
@@ -225,7 +229,22 @@ sub remove_domain {
 
 Requests to start a domain
 
-  my $req = Ravada::Request->start_domain( name => 'name', uid => $user->id );
+  my $req = Ravada::Request->start_domain(
+     name => 'name'
+    , uid => $user->id
+  );
+
+Mandatory arguments: one of those must be passed:
+
+=over
+
+=item * name or id_domain
+
+=item * uid: user id
+
+=item * remote_ip: [optional] IP of the remote client that requested to start the domain
+
+=back
 
 =cut
 
@@ -993,7 +1012,7 @@ Changes the owner of a machine
 
     my $req = Ravada::Request->change_owner(
              ,uid => $user->id
-              id_domain => $domain->id
+             ,id_domain => $domain->id
     );
 
 =cut
@@ -1013,6 +1032,18 @@ sub change_owner {
     );
 }
 
+=head2 change_max_memory
+
+Changes the maximum memory of a virtual machine.
+
+    my $req = Ravada::Request->change_max_memory (
+             ,uid => $user->id
+             ,ram => $ram_in_kb
+             ,id_domain => $domain->id
+    );
+
+=cut
+
 sub change_max_memory {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -1026,6 +1057,19 @@ sub change_max_memory {
         , args => $args
     );
 }
+
+=head2 change_curr_memory
+
+Changes the current memory used by a virtual machine.
+
+    my $req = Ravada::Request->change_curr_memory (
+             ,uid => $user->id
+             ,ram => $ram_in_kb
+             ,id_domain => $domain->id
+    );
+
+=cut
+
 sub change_curr_memory {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -1061,6 +1105,14 @@ sub domain_autostart {
     );
 }
 
+=head2 refresh_vms
+
+Refreshes cached information of the VMs.
+
+    my $req = Ravada::Request->refresh_vms();
+
+=cut
+
 sub refresh_vms {
     my $proto = shift;
 
@@ -1077,6 +1129,37 @@ sub refresh_vms {
     );
 }
 
+=head2 enforce_limits
+
+Enforces virtual machine limits, ie: an user can only run one virtual machine
+at a time, so the older ones are shut down.
+
+
+    my $req = Ravada::Request->enforce_limits(
+        timeout => $timeout
+    );
+
+Arguments:
+
+=over
+
+=item * timeout: seconds that are given to a virtual machine to shutdown itself.
+After this time, it gets powered off. Defaults to 120 seconds.
+
+=back
+
+It is advisable configure virtual machines so they shut down easily if asked to.
+Just a few hints:
+
+=over
+
+=item * install ACPI services
+
+=item * Set default action for power off to shutdown, do not ask the user
+
+=cut
+
+
 sub enforce_limits {
     my $proto = shift;
 
@@ -1089,10 +1172,45 @@ sub enforce_limits {
     my $self = {};
     bless($self, $class);
 
-    return _new_request($self
+    my $req = _new_request($self
         , command => 'enforce_limits'
         , args => $args
     );
+
+    if (!$args->{at} && (my $id_request = $req->done_recently(30))) {
+        $req->status("done",$req->command." run recently by id_request: $id_request");
+    }
+    return $req;
+}
+
+=head2 done_recently
+
+Returns wether this command has been requested successfully recently.
+
+  if ($request->done_recently($seconds)) {
+    ... skips work ...
+  } else {
+    ... does work ...
+  }
+
+This method is used for commands that take long to run as garbage collection.
+
+=cut
+
+sub done_recently {
+    my ($self, $seconds) = @_;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests"
+        ." WHERE date_changed > ? "
+        ."        AND command = ? "
+        ."         AND ( status = 'done' OR status ='working') "
+        ."         AND  error = '' "
+        ."         AND id <> ? "
+    );
+    my $date= Time::Piece->localtime(time - $seconds);
+    $sth->execute($date->ymd." ".$date->hms, $self->command, $self->id);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub AUTOLOAD {
