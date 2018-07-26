@@ -505,15 +505,15 @@ sub max_load {
     return $self->_data('max_load');
 }
 
-=head2 check_cpu_limits
+=head2 active_limit
 
-Returns if the value of 'cpu_limit' in the BBDD
+Returns the value of 'active_limit' in the BBDD
 
 =cut
 
-sub check_cpu_limits {
+sub active_limit {
     my $self = shift;
-    return $self->_data('cpu_limit');
+    return $self->_data('active_limit');
 }
 
 =head2 list_drivers
