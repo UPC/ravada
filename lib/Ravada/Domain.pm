@@ -233,6 +233,8 @@ sub _start_preconditions{
         _allow_manage(@_);
     }
     $self->_check_free_vm_memory();
+    $self->_check_cpu_usage();
+    #_check_used_memory(@_);
 
 }
 
@@ -420,6 +422,23 @@ sub _check_free_vm_memory {
         ._gb($self->_vm->min_free_memory)." GB required.\n";
 
     die $msg;
+}
+
+sub _check_cpu_usage{
+    my $self = shift;
+    return if ref($self) =~ /Void/i;
+    if ($self->_vm->check_cpu_limits){
+        chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
+        die "ERROR: Too much active domains." if (scalar $self->_vm->vm->list_domains() >= $self->_vm->check_cpu_limits);
+    }
+    open(STAT, '/proc/loadavg') or die "WTF: $!";
+    my @cpu = split /\s+/, <STAT>;
+    close STAT;
+
+    return if $cpu[0] < $self->_vm->max_load;
+
+    die "ERROR: To much load on cpu. Have "._gb($cpu[0])." out of "
+	._gb($self->_vm->max_load)." max especified.\n";
 }
 
 sub _gb($mem=0) {
