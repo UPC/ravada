@@ -54,8 +54,8 @@ if ($HELP || !$ID_BASE) {
         ."    You can use any virtual machine id, but it will be converted to base if\n"
         ."    it already hasn't.\n";
         my $rvd_back = Ravada->new();
-        for my $machine ($rvd_back->list_domains) {
-            next if $machine->is_volatile;
+        for my $machine ($rvd_back->list_domains( )) {
+            next if $machine->is_volatile || !$machine->is_base;
             print $machine->id."\t".$machine->name;
             print " (base)" if $machine->is_base;
             print "\n";
@@ -161,9 +161,9 @@ sub wait_domain_active {
     my $domain = shift;
     my $t0 = time;
 
+    print "Waiting for ".$domain->name." ";
     my $t1 = time;
     for ( ;; ) {
-        my $t3 = time;
         last if $domain->is_active;
         last if !check_free_memory($domain->_vm);
         exit_timeout($domain->name) if time-$t0 > $TIMEOUT;
