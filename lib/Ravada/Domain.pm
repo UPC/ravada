@@ -498,7 +498,9 @@ sub _around_get_info($orig, $self) {
 sub _around_set_mem($orig, $self, $value) {
     my $ret = $self->$orig($value);
     if ($self->is_known) {
-        my $info = decode_json($self->_data('info'));
+        my $info;
+        eval { $info = decode_json($self->_data('info')) if $self->_data('info')};
+        warn $@ if $@ && $@ !~ /malformed JSON/i;
         $info->{memory} = $value;
         $self->_data(info => encode_json($info))
     }
@@ -648,7 +650,7 @@ sub is_known {
     return 0;
 }
 
-=head2 is_known
+=head2 is_known_extra
 
 Returns if the domain has extra fields information known in Ravada.
 
