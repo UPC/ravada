@@ -375,9 +375,13 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $vm->define_storage_pool($xml);
-    $pool->create();
-    $pool->set_autostart(1);
+    my $pool;
+    eval {
+        $pool = $vm->define_storage_pool($xml);
+        $pool->create();
+        $pool->set_autostart(1);
+    };
+    warn $@ if $@;
 
 }
 
@@ -1951,6 +1955,11 @@ sub _free_memory_available($self) {
     for my $domain ( $self->list_domains(active => 1) ) {
         $used += $domain->domain->get_info->{memory};
     }
-    return $info->{total} - $used;
+    my $free_mem = $info->{total} - $used;
+    my $free_real = $self->_free_memory_overcommit;
+
+    $free_mem = $free_real if $free_real < $free_mem;
+
+    return $free_mem;
 }
 1;

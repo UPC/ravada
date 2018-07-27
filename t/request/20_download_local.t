@@ -113,8 +113,8 @@ sub httpd_localhost {
     eval {  
        $res = $ua->get('http://localhost/iso/')->res;
     };
-    diag($res->code." ".$res->message);
-    return 1 if $res && $res->code == 200;
+    diag(($res->code or '')." ".($res->message or '')." ".($@ or ''));
+    return 1 if $res && $res->code && $res->code == 200;
     return if !$@;
     is($@,qr/Connection refused/);
     return 0;

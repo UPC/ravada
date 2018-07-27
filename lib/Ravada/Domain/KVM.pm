@@ -587,12 +587,15 @@ sub start {
 
     my $set_password=0;
     my $remote_ip = $arg{remote_ip};
+    my $request = delete $arg{request};
+
     if ($remote_ip) {
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
-    $self->domain->create();
+    eval { $self->domain->create() };
+    $request->error($@) if $request && $@ && $@ !~ /already running/i;
 }
 
 sub _pre_shutdown_domain {

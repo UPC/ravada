@@ -17,7 +17,8 @@
             </div>
 
             <div ng-show="!domain_remove_done">
-%              if ($USER->can_remove_clone_all || $USER->can_remove_all) {
+%              if ($USER->can_remove_clone_all || $USER->can_remove_all
+%                   || $USER->can_remove_clones) {
                     <a ng-show="showmachine.has_clones > 0" type="button" class="btn btn-danger"
                               ng-click="domain_remove_clones=1"
                           >

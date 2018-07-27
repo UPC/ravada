@@ -1073,6 +1073,13 @@ sub admin {
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
+        if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
+            if (!defined $c->session('monitoring')) {
+                my $host = $c->req->url->to_abs->host;
+                $c->stash(check_netdata => "https://$host:19999/index.html");
+            }
+            $c->stash( monitoring => 1 ) if $c->session('monitoring');
+        }
     }
     $c->render( template => 'main/admin_'.$page);
 };
