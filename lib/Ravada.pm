@@ -1317,7 +1317,7 @@ sub create_domain {
     confess "No vm found"   if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name;
+        if !$vm_name && !$args{id_base};
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
@@ -1337,6 +1337,7 @@ sub create_domain {
                 $domain->start(
                     user => $user
                     ,remote_ip => $request->defined_arg('remote_ip')
+                    ,request => $request
                 )
             };
             my $error = $@;
@@ -2180,7 +2181,7 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
+    $domain->start(user => $user, remote_ip => $request->args('remote_ip'), request => $request);
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"

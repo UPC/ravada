@@ -595,7 +595,7 @@ sub start {
     }
     $self->_set_spice_ip($set_password);
     eval { $self->domain->create() };
-    $request->error($@) if $request && $@;
+    $request->error($@) if $request && $@ && $@ !~ /already running/i;
 }
 
 sub _pre_shutdown_domain {

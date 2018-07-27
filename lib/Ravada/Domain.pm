@@ -227,13 +227,19 @@ sub _start_preconditions{
     die "Domain ".$self->name." is a base. Bases can't get started.\n"
         if $self->is_base();
 
+    my $request;
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
+        my @args = @_;
+        shift @args;
+        my %args = @args;
+        $request = $args{request} if exists $args{request};
     } else {
         _allow_manage(@_);
     }
+    return if $self->is_active;
     $self->_check_free_vm_memory();
-    $self->_check_cpu_usage();
+    $self->_check_cpu_usage($request);
     #_check_used_memory(@_);
 
 }
@@ -418,27 +424,38 @@ sub _check_free_vm_memory {
 
     return if $vm_free_mem > $self->_vm->min_free_memory;
 
-    my $msg = "ERROR: No free memory. Only "._gb($vm_free_mem)." out of "
+    my $msg = "Error: No free memory. Only "._gb($vm_free_mem)." out of "
         ._gb($self->_vm->min_free_memory)." GB required.\n";
 
     die $msg;
 }
 
-sub _check_cpu_usage{
-    my $self = shift;
+sub _check_cpu_usage($self, $request=undef){
+
     return if ref($self) =~ /Void/i;
     if ($self->_vm->active_limit){
         chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
-        die "ERROR: Too many active domains." if (scalar $self->_vm->vm->list_domains() >= $self->_vm->active_limit);
+        die "Error: Too many active domains." if (scalar $self->_vm->vm->list_domains() >= $self->_vm->active_limit);
     }
-    open( my $stat ,'<','/proc/loadavg') or die "WTF: $!";
-    my @cpu = split /\s+/, <$stat>;
-    close $stat;
+    
+    my @cpu;
+    my $msg;
+    for ( 1 .. 10 ) {
+        open( my $stat ,'<','/proc/loadavg') or die "WTF: $!";
+        @cpu = split /\s+/, <$stat>;
+        close $stat;
 
-    return if $cpu[0] < $self->_vm->max_load;
-
-    die "ERROR: To much load on cpu. Have "._gb($cpu[0])." out of "
-	._gb($self->_vm->max_load)." max especified.\n";
+        if ( $cpu[0] < $self->_vm->max_load ) {
+            $request->error('') if $request;
+            return;
+        }
+        $msg = "Error: CPU Too loaded. ".($cpu[0])." out of "
+        	.$self->_vm->max_load." max specified.";
+        $request->error($msg)   if $request;
+        die "$msg\n" if $cpu[0] > $self->_vm->max_load +1;
+        sleep 1;
+    }
+    die "$msg\n";
 }
 
 sub _gb($mem=0) {
@@ -1661,12 +1678,14 @@ sub open_iptables {
     $self->_remove_iptables();
 
     if ( !$self->is_active ) {
-        Ravada::Request->start_domain(
-            uid => $user->id
+        eval {
+            $self->start(
+                user => $user
             ,id_domain => $self->id
             ,remote_ip => $args{remote_ip}
-        );
-        die "INFO: Machine ".$self->name." is not active, starting up.\n"
+            );
+        };
+        die $@ if $@ && $@ !~ /already running/i;
     } else {
         Ravada::Request->enforce_limits( at => time + 60);
     }
