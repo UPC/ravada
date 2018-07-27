@@ -77,6 +77,8 @@ if ($HELP || !$ID_BASE) {
         ;
 }
 
+my @CLONES;
+
 ##################################################################################
 
 sub domain_ip {
@@ -161,18 +163,19 @@ sub wait_domain_active {
     my $domain = shift;
     my $t0 = time;
 
-    print "Waiting for ".$domain->name." ";
     my $t1 = time;
+    my $msg = 0;
     for ( ;; ) {
         last if $domain->is_active;
         last if !check_free_memory($domain->_vm);
         exit_timeout($domain->name) if time-$t0 > $TIMEOUT;
         if (time - $t1 > 1 ) {
+            print "\tWaiting for ".$domain->name." " if !$msg++;
             print ".";
             $t1 = time;
         }
     }
-    print "\n";
+    print "\n" if $msg;
     show_console($domain);
 }
 
@@ -188,15 +191,16 @@ sub check_free_memory {
 sub wait_domain_up{
     my $domain = shift;
 
-    print "Waiting for machine ".$domain->name;
 
     my $p = Net::Ping->new('icmp');
     my $p_tcp = Net::Ping->new('tcp');
     my $t0 = time;
     my $t1 = time;
     my $ip_showed = 0;
+    my $msg = 0;
     for ( ;; ) {
         if ( time  - $t1 > 1) {
+            print "\tWaiting for machine ".$domain->name if !$msg++;
             print ".";
             $t1 = time;
         }
@@ -210,11 +214,13 @@ sub wait_domain_up{
         last if $@;
         my ($ip) = domain_ip($domain->id);
         if ($ip) {
-            print " ".$ip."\n";
+            if ($msg) {
+                print " ".$ip if !$ip_showed++;
+            }
             last if $p->ping($ip,1) || $p_tcp->ping($ip,1);
         }
     }
-    print "\n";
+    print "\n" if $msg;
 }
 
 sub shutdown_all {
@@ -274,7 +280,7 @@ sub remove_old_machines {
     my @reqs;
     for my $machine( @machines ) {
         next if $machine->name !~ /^bench/;
-        warn "Removing ".$machine->name."\n";
+        warn "Removing ".$machine->name."\n" if $DEBUG;
         push @reqs,(Ravada::Request->remove_domain(
             uid => $USER_DAEMON->id
             ,name => $machine->name
@@ -332,7 +338,7 @@ sub init {
 
 sub exit_timeout {
     my $name = shift;
-    print "ERROR: Timeout exhausted waiting";
+    print "ERROR: Timeout waiting";
     print " for domain $name\n";
     shutdown_all();
     exit -1;
@@ -369,6 +375,14 @@ sub remove_old_requests {
     }
     $sth->finish;
 }
+
+sub END {
+    for my $domain (@CLONES) {
+        Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER_DAEMON->id);
+    }
+    remove_old() if !$KEEP;
+    remove_old_requests();
+}
 #####################################################################################
 
 remove_old_requests();
@@ -381,7 +395,6 @@ set_base_volatile_anon();
 my %requests = request_create();
 
 my $t0 = Benchmark->new();
-my @clones;
 
 print "Waiting for ".scalar (keys %requests)." requests to run";
 for ( ;; ) {
@@ -394,7 +407,7 @@ for ( ;; ) {
                 warn $req->error
             } else {
                 my $domain = open_domain($req);
-                push @clones,($domain)  if $domain;
+                push @CLONES,($domain)  if $domain;
                 last if !check_free_memory($domain->_vm);
             }
             delete $requests{$id_req};
@@ -407,7 +420,7 @@ print "\n";
 
 if ($START) {
     print "Waiting for domains to start\n";
-    for my $domain (@clones) {
+    for my $domain (@CLONES) {
         wait_domain_active($domain);
         last if !check_free_memory($domain->_vm);
     }
@@ -415,13 +428,11 @@ if ($START) {
 
 if ($START && $PING) {
     print "Waiting for domains to ping\n";
-    for my $domain (@clones) {
+    for my $domain (@CLONES) {
         wait_domain_up($domain);
         last if !check_free_memory($domain->_vm);
     }
 }
 
-print timestr(timediff(Benchmark->new,$t0))." to create ".scalar(@clones)." machines.\n";
-remove_old() if !$KEEP;
-shutdown_all();
-remove_old_requests();
+print timestr(timediff(Benchmark->new,$t0))." to create ".scalar(@CLONES)." machines.\n";
+
