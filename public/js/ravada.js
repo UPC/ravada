@@ -400,9 +400,9 @@
             $scope.dots += '.';
             if ($scope.id_request) {
                 $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
+                    $scope.request=response.data;
                     if (response.data.status == 'done' ) {
                         $scope.id_domain=response.data.id_domain;
-                        $scope.request=response.data;
                         $scope.get_domain_info();
                     }
                 });
