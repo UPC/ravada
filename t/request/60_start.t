@@ -58,10 +58,9 @@ sub test_request_iptables($vm_name) {
     );
     rvd_back->_process_all_requests_dont_fork();
     is($req->status, 'done');
-    like($req->error,qr/is not active/);
+    is($req->error,'');
 
-    is(scalar($domain->list_requests), 1);
-    rvd_back->_process_all_requests_dont_fork();
+    is(scalar($domain->list_requests), 0);
 
     is($domain->remote_ip,'127.0.0.1');
 
