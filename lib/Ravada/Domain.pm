@@ -295,7 +295,7 @@ sub _start_preconditions{
         my %args = @args;
         my $user = delete $args{user};
         my $remote_ip = delete $args{remote_ip};
-        $request = $args{request} if exists $args{request};
+        $request = delete $args{request} if exists $args{request};
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
         _allow_manage_args(@_);
@@ -1724,6 +1724,9 @@ sub _remove_iptables {
 
     my %args = @_;
 
+    return if $>;
+
+    my $user = delete $args{user};
     my $port = delete $args{port};
     my $id_vm = delete $args{id_vm};
 
@@ -1869,6 +1872,8 @@ sub _add_iptable {
     my $self = shift;
     return if scalar @_ % 2;
     my %args = @_;
+
+    return if $>;
 
     my $remote_ip = $args{remote_ip} or return;
 
