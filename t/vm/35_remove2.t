@@ -58,7 +58,7 @@ for my $vm_name ( q'KVM' ) {
         }
 
         diag($msg)      if !$vm;
-        skip $msg       if !$vm;
+        skip $msg,10       if !$vm;
 
         diag("Testing remove on $vm_name");
 
