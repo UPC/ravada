@@ -224,6 +224,8 @@ sub _around_list_machines($orig, $self, $user) {
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
                                     && !$m->{is_volatile};
+
+        lock_hash(%$m);
     }
     return $machines;
 }
@@ -253,12 +255,10 @@ Returns a list of the domains as a listref
 
 =cut
 
-sub list_domains {
-    my $self = shift;
-    my %args = @_;
+sub list_domains($self, %args) {
 
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
-        ."      ,vms.name as node , is_volatile, client_status "
+        ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -316,8 +316,6 @@ sub list_domains {
             }
         }
         delete $row->{spice_password};
-        lock_hash(%$row);
-        warn $row->{name}." ".(time - $t0)."\n"   if time - $t0>0;
         push @domains, ($row);
     }
     $sth->finish;
@@ -344,7 +342,7 @@ sub list_clones {
   my $self = shift;
   my %args = @_;
   
-  my $domains = list_domains();
+  my $domains = $self->list_domains();
   my @clones;
   for (@$domains ) {
     if($_->{id_base}) { push @clones, ($_); }
