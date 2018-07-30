@@ -15,6 +15,7 @@ use Date::Calc qw(Today_and_Now);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
+use Time::Piece;
 use Ravada;
 use Ravada::Front;
 
@@ -50,6 +51,8 @@ our %VALID_ARG = (
          ,memory => 2
            ,disk => 2
         ,network => 2
+      ,remote_ip => 2
+          ,start => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -63,7 +66,7 @@ our %VALID_ARG = (
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,autostart_domain => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
-    ,start_domain => {%$args_manage, remote_ip => 1 }
+    ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
@@ -73,12 +76,24 @@ our %VALID_ARG = (
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
+    ,change_owner => {uid => 1, id_domain => 1}
+    ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
+    ,refresh_vms => { }
+    ,enforce_limits => { timeout => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
-            autostart_domain set_base_vm remove_base_vm
+            set_base_vm remove_base_vm
+            autostart_domain hibernate hybernate
+            change_owner
+            change_max_memory change_curr_memory
+            add_hardware remove_hardware set_driver
     );
+
+our $TIMEOUT_SHUTDOWN = 120;
 
 our $CONNECTOR;
 
@@ -153,9 +168,32 @@ sub open {
     return $row;
 }
 
+=head2 info
+
+Returns information of the request
+
+=cut
+
+sub info {
+    my $self = shift;
+    my $user = shift;
+    confess "USER ".$user->name." not authorized"
+        unless $user->is_admin
+            || ($self->defined_arg('uid') && $user->id == $self->args('uid'))
+            || ($self->defined_arg('id_owner') && $user->id == $self->args('id_owner'));
+
+    return {
+        id => $self->id
+        ,status => $self->status
+        ,error => $self->error
+        ,id_domain => $self->id_domain
+    }
+}
+
 =head2 create_domain
 
-    my $req = Ravada::Request->create_domain( name => 'bla'
+    my $req = Ravada::Request->create_domain(
+                        name => 'bla'
                     , id_iso => 1
     );
 
@@ -184,7 +222,8 @@ sub create_domain {
 
 =head2 remove_domain
 
-    my $req = Ravada::Request->remove_domain( name => 'bla'
+    my $req = Ravada::Request->remove_domain(
+                     name => 'bla'
                     , uid => $user->id
     );
 
@@ -216,7 +255,22 @@ sub remove_domain {
 
 Requests to start a domain
 
-  my $req = Ravada::Request->start_domain( name => 'name', uid => $user->id );
+  my $req = Ravada::Request->start_domain(
+     name => 'name'
+    , uid => $user->id
+  );
+
+Mandatory arguments: one of those must be passed:
+
+=over
+
+=item * name or id_domain
+
+=item * uid: user id
+
+=item * remote_ip: [optional] IP of the remote client that requested to start the domain
+
+=back
 
 =cut
 
@@ -226,10 +280,13 @@ sub start_domain {
 
     my $args = _check_args('start_domain', @_);
 
+    confess "ERROR: choose either id_domain or name "
+        if $args->{id_domain} && $args->{name};
+
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'start' , args => encode_json($args));
+    return $self->_new_request(command => 'start' , args => $args);
 }
 
 =head2 pause_domain
@@ -280,6 +337,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
+    $valid_args->{at}=2 if !exists $valid_args->{at};
 
     confess "Unknown method $sub" if !$valid_args;
     for (keys %{$args}) {
@@ -331,7 +389,7 @@ sub shutdown_domain {
 
     my $args = _check_args('shutdown_domain', @_ );
 
-    $args->{timeout} = 10 if !exists $args->{timeout};
+    $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
 
     confess "ERROR: You must supply either id_domain or name ".Dumper($args)
         if !$args->{id_domain} && !$args->{name};
@@ -743,7 +801,7 @@ sub copy_screenshot {
       ,id_domain => $args->{id_domain}
       ,args => $args
       );
-  
+
 }
 
 =head2 open_iptables
@@ -817,6 +875,61 @@ sub set_driver {
              , args => encode_json($args)
     );
 
+}
+
+=head2 add_hardware
+
+    Sets hardware to a VM
+    
+    $domain->add_hardware(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,hardware => 'usb'
+    );
+    
+=cut
+
+sub add_hardware {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    my $args = _check_args('add_hardware', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'add_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
+}
+
+=head2 remove_hardware
+
+    Removes hardware to a VM
+    
+    $domain->remove_hardware(
+        id_domain => $domain->id
+        ,uid => $USER->id
+        ,name_hardware => 'usb'
+    );
+    
+=cut
+
+sub remove_hardware {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('remove_hardware', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    
+    return $self->_new_request(
+        command => 'remove_hardware'
+        ,id_domain => $args->{id_domain}
+        ,args => encode_json($args)
+    );
 }
 
 =head2 hybernate
@@ -921,7 +1034,7 @@ sub clone {
 
 =head2 refresh_vms
 
-Refreshes a storage pool
+Refreshes the Virtual Mangers
 
 =cut
 
@@ -1055,6 +1168,84 @@ sub requests_limit($self, $type = $self->type) {
     return $COMMAND{$type}->{limit};
 }
 
+=head2 change_owner
+
+Changes the owner of a machine
+
+    my $req = Ravada::Request->change_owner(
+             ,uid => $user->id
+             ,id_domain => $domain->id
+    );
+
+=cut
+
+sub change_owner {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('change_owner', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return _new_request($self
+        , command => 'change_owner'
+        , args =>$args
+    );
+}
+
+=head2 change_max_memory
+
+Changes the maximum memory of a virtual machine.
+
+    my $req = Ravada::Request->change_max_memory (
+             ,uid => $user->id
+             ,ram => $ram_in_kb
+             ,id_domain => $domain->id
+    );
+
+=cut
+
+sub change_max_memory {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_max_memory', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    return _new_request($self
+        , command => 'change_max_memory'
+        , args => $args
+    );
+}
+
+=head2 change_curr_memory
+
+Changes the current memory used by a virtual machine.
+
+    my $req = Ravada::Request->change_curr_memory (
+             ,uid => $user->id
+             ,ram => $ram_in_kb
+             ,id_domain => $domain->id
+    );
+
+=cut
+
+sub change_curr_memory {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    
+    my $args = _check_args('change_max_memory', @_);
+    
+    my $self = {};
+    bless($self, $class);
+    return _new_request($self
+        , command => 'change_curr_memory'
+        , args => $args
+    );
+}
+
 =head2 domain_autostart
 
 Sets the autostart flag on a domain
@@ -1074,6 +1265,90 @@ sub domain_autostart {
         , command => 'domain_autostart'
         , args => $args
     );
+}
+
+=head2 enforce_limits
+
+Enforces virtual machine limits, ie: an user can only run one virtual machine
+at a time, so the older ones are shut down.
+
+
+    my $req = Ravada::Request->enforce_limits(
+        timeout => $timeout
+    );
+
+Arguments:
+
+=over
+
+=item * timeout: seconds that are given to a virtual machine to shutdown itself.
+After this time, it gets powered off. Defaults to 120 seconds.
+
+=back
+
+It is advisable configure virtual machines so they shut down easily if asked to.
+Just a few hints:
+
+=over
+
+=item * install ACPI services
+
+=item * Set default action for power off to shutdown, do not ask the user
+
+=cut
+
+
+sub enforce_limits {
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('enforce_limits', @_ );
+
+    $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
+
+    my $self = {};
+    bless($self, $class);
+
+    my $req = _new_request($self
+        , command => 'enforce_limits'
+        , args => $args
+    );
+
+    if (!$args->{at} && (my $id_request = $req->done_recently(30))) {
+        $req->status("done",$req->command." run recently by id_request: $id_request");
+    }
+    return $req;
+}
+
+=head2 done_recently
+
+Returns wether this command has been requested successfully recently.
+
+  if ($request->done_recently($seconds)) {
+    ... skips work ...
+  } else {
+    ... does work ...
+  }
+
+This method is used for commands that take long to run as garbage collection.
+
+=cut
+
+sub done_recently {
+    my ($self, $seconds) = @_;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests"
+        ." WHERE date_changed > ? "
+        ."        AND command = ? "
+        ."         AND ( status = 'done' OR status ='working') "
+        ."         AND  error = '' "
+        ."         AND id <> ? "
+    );
+    my $date= Time::Piece->localtime(time - $seconds);
+    $sth->execute($date->ymd." ".$date->hms, $self->command, $self->id);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub AUTOLOAD {

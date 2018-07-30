@@ -9,6 +9,9 @@ Ravada::Utils - Misc util libraries for Ravada
 
 =cut
 
+our $USER_DAEMON;
+our $USER_DAEMON_NAME = 'daemon';
+
 =head2 now
 
 Returns the current datetime
@@ -47,6 +50,20 @@ sub random_name {
     }
     return $ret;
 
+}
+
+sub user_daemon {
+    return $USER_DAEMON if $USER_DAEMON;
+
+    $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+    if (!$USER_DAEMON->id) {
+        $USER_DAEMON = Ravada::Auth::SQL::add_user(
+            name => $USER_DAEMON_NAME,
+            is_admin => 1
+        );
+        $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+    }
+    return $USER_DAEMON;
 }
 
 1;

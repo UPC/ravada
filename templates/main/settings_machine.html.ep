@@ -6,19 +6,30 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-    <div class="page-header" ng-controller="singleMachinePage">
-        <div class="panel panel-default">
+        <div>
+    <div class="page-header">
+        <div class="panel panel-default"
+             ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
              <div class="panel-heading">
-                 <h2>Virtual Machine 
+%              if ($domain->is_base) {
+                 <h2><%=l 'Virtual Machine' %>
+                     <b><%= $domain->name %></b>
+                     <%=l 'Settings' %>
+                 </h2>
+%               } else {
+                 <h2><%=l 'Virtual Machine' %>
                      <a ng-hide="domain_remove_done" 
                          href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
-                     Settings
+                     <%=l 'Settings' %>
                  </h2>
+%               }
              </div> <!-- del panel heading-->
-            <div class="tab-content">
+             %= include 'main/show_requests'
+             <div class="tab-content">
                 %= include 'main/settings_machine_tabs_head'
                 %= include 'main/settings_machine_tabs_body'
             </div>
+            <div class="alert alert-danger" ng-show="error">{{error}}</div>
         </div><!-- del panel default-->
 %=   include 'bootstrap/requests'
     </div><!-- del page-header -->

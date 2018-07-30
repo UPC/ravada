@@ -81,6 +81,7 @@ sub create_domain {
     );
 
     $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
+        , id_vm => $self->id
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {
@@ -199,8 +200,10 @@ sub search_domain {
         eval { $id = $domain->id };
         warn $@ if $@;
         return if !defined $id;#
+        $domain->_insert_db_extra   if !$domain->is_known_extra();
         return $domain;
     }
+    return;
 }
 
 sub list_networks {

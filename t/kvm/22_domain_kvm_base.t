@@ -102,7 +102,8 @@ sub test_usb {
     my ($devices)= $xml->findnodes('/domain/devices');
 
     my @redir = $devices->findnodes('redirdev');
-    ok(scalar @redir == 1,"Expecting 1 redirdev, got ".scalar(@redir)
+    my $expect = 3;
+    ok(scalar @redir == $expect,"Expecting $expect redirdev, got ".scalar(@redir)
         ." in ".$devices->toString);
 
     for my $model ( 'nec-xhci') {

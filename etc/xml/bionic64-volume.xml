@@ -3,7 +3,7 @@
   <key>/var/lib/libvirt/images/__name__.img</key>
   <source>
   </source>
-  <capacity unit='bytes'>10442450944</capacity>
+  <capacity unit='bytes'>9442450944</capacity>
   <allocation unit='bytes'>5395775488</allocation>
   <target>
     <path>/var/lib/libvirt/images/__name__.img</path>
@@ -20,4 +20,3 @@
     </timestamps>
   </target>
 </volume>
-

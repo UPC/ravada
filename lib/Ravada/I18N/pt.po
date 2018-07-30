@@ -54,9 +54,6 @@ msgstr "Não é possível Preparar Base, Remover Base ou Deletar. A Máquina tem
 msgid "Clone/s"
 msgstr "Clone/s"
 
-msgid "NEW"
-msgstr "NOVO"
-
 msgid "Users List"
 msgstr "Lista de Usuários"
 
@@ -264,8 +261,8 @@ msgstr "Pesquisar na sua distro, ex. no Debian/Ubuntu com"
 msgid "You'll need to install"
 msgstr "Você vai precisar instalar"
 
-msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
-msgstr "ex. VirtViewer v5.0-256, e drivers USB ("
+msgid "and USB drivers ("
+msgstr "e drivers USB ("
 
 msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "

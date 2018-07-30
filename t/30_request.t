@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
+use Test::Moose::More;
 use Test::More;# tests => 82;
 use Test::SQL::Data;
 
@@ -73,7 +74,7 @@ sub test_req_start_domain {
     );
     ok($req);
     ok($req->status);
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
     $ravada->_wait_pids();
     wait_request($req);
 
@@ -81,7 +82,7 @@ sub test_req_start_domain {
         ,"Status of request is ".$req->status." it should be done") 
             or return ;
     ok(!$req->error,"Error ".$req->error." creating domain ".$name) 
-            or return ;
+            or return;
 
     my $n_expected = 1;
     test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");
@@ -246,10 +247,7 @@ sub test_requests_by_domain {
     my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
     ok($domain->list_requests == 3);
 
-    eval {
-            rvd_back->_process_all_requests_dont_fork();
-    };
-
+    rvd_back->_process_all_requests_dont_fork(1);
 
     is($req1->status , 'done');
     is($req2->status , 'done');
@@ -270,6 +268,44 @@ sub test_requests_by_domain {
 
     my $clone = $vm->search_domain($clone_name);
     ok($clone,"Expecting domain $clone_name created") or exit;
+}
+
+sub test_req_many_clones {
+    my ($vm, $base) = @_;
+
+    is(scalar $base->clones , 0, Dumper([$base->clones]));
+
+    my ($name1, $name2) = (new_domain_name, new_domain_name);
+    my $req1 = Ravada::Request->clone(
+        name => $name1
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    my $req2 = Ravada::Request->clone(
+        name => $name2
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork();
+
+    is($req1->status, 'done');
+    is($req1->error, '');
+
+    is($req2->status, 'done');
+    is($req2->error, '');
+
+    my $clone1 = rvd_back->search_domain($name1);
+    ok($clone1,"Expecting clone $name1 created");
+
+    my $clone2 = rvd_back->search_domain($name2);
+    ok($clone2,"Expecting clone $name2 created");
+
+    $clone1->remove(user_admin) if $clone1;
+    $clone2->remove(user_admin) if $clone2;
+
+    is(scalar $base->clones , 0, Dumper([$base->clones]));
 }
 
 ################################################
@@ -310,8 +346,15 @@ for my $vm_name ( qw(Void KVM)) {
             is ($domain_base->_vm->readonly, 0) or next;
 
             my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
+            $domain_clone = Ravada::Domain->open($domain_clone->id);
+            meta_ok($domain_clone,'Ravada::Domain::KVM');
+            does_ok($domain_clone, 'Ravada::Domain');
+            role_wraps_after_method_ok 'Ravada::Domain',('remove');
             test_req_start_domain($vm,$domain_clone->name);
             $domain_clone->remove($USER);
+            is(scalar @{rvd_front->list_domains( id => $domain_clone->id)}, 0) or exit;
+
+            test_req_many_clones($vm, $domain_base);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
 

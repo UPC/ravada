@@ -56,9 +56,6 @@ msgstr "Tidak Bisa Mempersiapkan Basis, Buang Basis atau Hapus. Mesin telah"
 msgid "Clone/s"
 msgstr "Klon/s"
 
-msgid "NEW"
-msgstr "BARU"
-
 msgid "Users List"
 msgstr "Daftar Pengguna"
 
@@ -260,8 +257,8 @@ msgstr "Cari di distribusi Anda, mis. di Debia /Ubuntu dengan"
 msgid "You'll need to install"
 msgstr "Anda harus memasang"
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
-msgstr "e.g. VirtViewer v5.0-256 di komputer Anda."
+msgid "e.g. VirtViewer in your computer."
+msgstr "e.g. VirtViewer di komputer Anda."
 
 msgid "To make this possible, download"
 msgstr "Untuk membuat ini mungkin, unduh"

@@ -54,9 +54,6 @@ msgstr "आधार तैयार नहीं कर सकते, आधा
 msgid "Clone/s"
 msgstr "क्लोन"
 
-msgid "NEW"
-msgstr "नया"
-
 msgid "Users List"
 msgstr "उपयोगकर्ता की सूची"
 
@@ -264,8 +261,8 @@ msgstr "अपने डिस्टो में खोज करें, जै
 msgid "You'll need to install"
 msgstr "आपको इंस्टॉल करना होगा"
 
-msgid "e.g. VirtViewer v5.0-256, and USB drivers ("
-msgstr "जैसे VirtViewer v5.0-256, और यूएसबी ड्राइवर ("
+msgid "and USB drivers ("
+msgstr "और यूएसबी ड्राइवर ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatically. It's "

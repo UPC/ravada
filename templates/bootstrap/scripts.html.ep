@@ -17,7 +17,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.js"></script>
 
-% if ($monitoring) {
+% if ($monitoring && $_user && $_user->is_admin ) {
 <script>var netdataNoBootstrap = true;</script>
 <script type="text/javascript" src="https://<%= $host %>:19999/dashboard.js"></script>
 % }

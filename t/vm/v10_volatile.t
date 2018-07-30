@@ -98,15 +98,27 @@ sub test_volatile {
 
     my @volumes = $clone->list_volumes();
 
+    is($clone->is_active, 1);
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
+    # test out of the DB
+    my $sth = $test->connector->dbh->prepare("SELECT id,name FROM domains WHERE name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    ok(!$row,"Expecting no domain info in the DB, found ".Dumper($row))    or exit;
+
+    # search for the removed domain
     my $domain2 = $vm->search_domain($name);
-    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
+    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown\n"
+        .Dumper($domain2)) or exit;
 
     is(rvd_front->domain_exists($name),0,"[$vm_name] Expecting domain removed after shutdown")
         or exit;
 
+    my $user2 = Ravada::Auth::SQL->new(name => $user_name);
+    # TODO
+    # ok(!$user2->id,"Expecting user '$user_name' removed");
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
 
@@ -116,6 +128,7 @@ sub test_volatile {
     $name = undef;
 
         $vm->refresh_storage_pools();
+        $vm->refresh_storage();
         for my $file ( @volumes ) {
             ok(! -e $file,"[$vm_name] Expecting volume $file removed") or BAIL_OUT();
         }
@@ -162,6 +175,7 @@ sub test_volatile_auto_kvm {
     );
     my $clone_extra = Ravada::Domain->open($clone->id);
     ok($clone_extra->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
+    ok($clone_extra->_data_extra('id_domain'),"[$vm_name] expecting id_domain for ".$clone->name) or BAIL_OUT;
 
     is( $clone->is_active, 1,"[$vm_name] volatile domains should clone started" );
     $clone->start($user)                if !$clone->is_active;
@@ -174,7 +188,7 @@ sub test_volatile_auto_kvm {
     like($spice_password,qr(..+));
 
     my @volumes = $clone->list_volumes();
-
+    ok($clone->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
     $clone->domain->destroy();
     $clone=undef;
 
@@ -189,6 +203,7 @@ sub test_volatile_auto_kvm {
 
     rvd_back->_clean_volatile_machines();
 
+    rvd_back->_refresh_volatile_domains();
     my $domain_f;
     $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
     ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown "
@@ -197,8 +212,20 @@ sub test_volatile_auto_kvm {
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
 
+    rvd_back->_cmd_refresh_storage();
+
+    my $sth = $test->connector->dbh->prepare("SELECT * FROM domains where name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    is(scalar keys %$row, 0, Dumper($row)) or exit;
+
     my $domains_f = rvd_front->list_domains();
-    ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed");
+    ok(!grep({ $_->{name} eq $name } @$domains_f),"[$vm_name] Expecting $name not listed")
+        or exit;
+
+    for my $file ( @volumes ) {
+        ok(! -e $file,"[$vm_name] Expecting volume $file removed") or exit;
+    }
 
     for my $file ( @volumes ) {
         ok(! -e $file,"[$vm_name] Expecting volume $file removed");
@@ -212,6 +239,7 @@ sub test_volatile_auto_kvm {
         );
     };
     is(''.$@,'',"[$vm_name] Expecting clone called $name created");
+    ok($clone2,"[".$vm->type."] expecting clone from ".$base->name) or exit;
     isnt($clone2->spice_password, $spice_password
             ,"[$vm_name] Expecting spice password different")   if $clone2;
 
@@ -224,10 +252,10 @@ sub test_volatile_auto_kvm {
     { $clone2->remove(user_admin) if $clone2 };
     is(''.$@,'');
 
-    my $sth = $test->dbh->prepare("SELECT id, name FROM domains WHERE name=?");
+    $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=?");
     $sth->execute($name);
-    my $row = $sth->fetchrow_hashref;
-    is($row->{id},undef, Dumper($row));
+    $row = $sth->fetchrow_hashref;
+    is(keys(%$row),0);
 }
 
 ################################################################################

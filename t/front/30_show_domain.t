@@ -71,6 +71,7 @@ sub test_start_domain {
 
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
+    isa_ok($domain_f, 'Ravada::Front::Domain');
 
     if ($domain_b->is_active) {
         eval { $domain_b->shutdown(user => $USER)};

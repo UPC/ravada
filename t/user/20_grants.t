@@ -10,6 +10,9 @@ use Test::SQL::Data;
 use lib 't/lib';
 use Test::Ravada;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
@@ -17,7 +20,6 @@ use_ok('Ravada');
 my @VMS = vm_names();
 init($test->connector);
 
-rvd_back();
 #########################################################3
 
 sub test_defaults {
@@ -26,41 +28,45 @@ sub test_defaults {
 
     ok($user->can_clone);
     ok($user->can_change_settings);
-    ok($user->can_screenshot);
+#    ok($user->can_screenshot);
 
     ok($user->can_remove);
 
-    ok(!$user->can_remove_clone);
+    ok(!$user->can_remove_clones);
 
-    ok(!$user->can_clone_all);
+#    ok(!$user->can_clone_all);
     ok(!$user->can_change_settings_all);
     ok(!$user->can_change_settings_clones);
 
 
-    ok(!$user->can_screenshot_all);
+    is($user->can_screenshot, 1);
+#    ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 
     ok(!$user->can_create_base);
     ok(!$user->can_create_machine);
-    ok(!$user->can_remove_all);
+#    ok(!$user->can_remove_all);
     ok(!$user->can_remove_clone_all);
 
-    ok(!$user->can_shutdown_clone);
+#    ok(!$user->can_shutdown_clone);
     ok(!$user->can_shutdown_all);
 
-    ok(!$user->can_hibernate_clone);
-    ok(!$user->can_hibernate_all);
-    ok(!$user->can_hibernate_clone_all);
+#    ok(!$user->can_hibernate_clone);
+#    ok(!$user->can_hibernate_all);
+#    ok(!$user->can_hibernate_clone_all);
     
     ok(!$user->can_manage_users);
 
     for my $perm (user_admin->list_permissions) {
-        if ( $perm =~ m{^(clone|change_settings|screenshot|remove)$}) {
+        $perm = $perm->[0];
+        if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown)$}) {
             is($user->can_do($perm),1,$perm);
         } else {
             is($user->can_do($perm),undef,$perm);
         }
     }
+
+    $user->remove();
 }
 
 sub test_admin {
@@ -69,6 +75,7 @@ sub test_admin {
     for my $perm ($user->list_all_permissions) {
         is($user->can_do($perm->{name}),1);
     }
+    $user->remove();
 }
 
 sub test_grant {
@@ -92,6 +99,26 @@ sub test_grant {
 
     }
 
+    $user->remove();
+}
+
+sub test_alias {
+    my @list_permissions = user_admin->list_permissions;
+    my @list_all_permissions = user_admin->list_all_permissions;
+
+    my $sth = $test->connector->dbh->prepare("SELECT name, alias FROM grant_types_alias");
+    $sth->execute;
+    while ( my ($name, $alias) = $sth->fetchrow) {
+        eval { is(user_admin->can_do($name),1, $name) };
+        is($@,'',$name);
+
+        eval { is(user_admin->can_do($alias),1, $alias) };
+        is($@,'',$alias);
+
+        ok(grep({ $_->[0] eq $alias } @list_permissions), $alias);
+        ok(grep({ $_->{name} eq $alias } @list_all_permissions), $alias);
+    }
+
 }
 
 sub test_operator {
@@ -103,7 +130,7 @@ sub test_operator {
     ok($usera->is_operator);
     ok($usera->is_admin);
 
-    $usera->grant($usero,'shutdown_clone');
+    $usera->grant($usero,'shutdown_clones');
     ok($usero->is_operator);
     ok(!$usero->is_admin);
 
@@ -130,7 +157,8 @@ sub test_remove_clone {
     eval { $clone2 = rvd_back->search_domain($clone->name) };
     ok($clone2, "Expecting ".$clone->name." not removed");
 
-    $usera->grant($user,'remove_clone');
+    $usera->grant($user,'remove_clones');
+    is($user->can_remove_clones, 1);
     eval { $clone->remove($user); };
     is($@,'');
 
@@ -140,7 +168,7 @@ sub test_remove_clone {
     # revoking remove clone permission
 
     $clone = $domain->clone(user => $usera,name => new_domain_name());
-    $usera->revoke($user,'remove_clone');
+    $usera->revoke($user,'remove_clones');
 
     eval { $clone->remove($user); };
     like($@,qr(.));
@@ -150,9 +178,45 @@ sub test_remove_clone {
 
     $clone->remove($usera);
     $domain->remove($usera);
+    for $clone ( $domain->clones ) {
+        $clone->remove($usera);
+    }
 
     $user->remove();
     $usera->remove();
+}
+
+sub test_view_clones {
+    my $vm_name = shift;
+    my $user = create_user("oper_rm$$","bar");
+    ok(!$user->is_operator);
+    ok(!$user->is_admin);
+    my $usera = create_user("admin_rm$$","bar",'is admin');
+    ok($usera->is_operator);
+    ok($usera->is_admin);
+    
+    my $domain = create_domain($vm_name, $usera);
+    $domain->prepare_base($usera);
+    ok($domain->is_base) or return;
+    
+    my $clones;
+    eval{ $clones = rvd_front->list_clones() };
+    is($@,'');
+    is(scalar @$clones,0, Dumper($clones)) or return;
+    
+    my $clone = $domain->clone(user => $usera,name => new_domain_name());
+    eval{ $clones = rvd_front->list_clones() };
+    is(scalar @$clones, 1) or return;
+    
+    $clone->prepare_base($usera);
+    eval{ $clones = rvd_front->list_clones() };
+    is(scalar @$clones, 0) or return;
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+
+    $usera->remove();
+    $user->remove();
 }
 
 sub test_shutdown_clone {
@@ -182,7 +246,8 @@ sub test_shutdown_clone {
 
     is($clone->is_active,1) or return;
 
-    $usera->grant($user,'shutdown_clone');
+    $usera->grant($user,'shutdown_clones');
+    is($user->can_shutdown_clones,1);
 
     eval { $clone->shutdown_now($user); };
     is($@,'');
@@ -192,7 +257,7 @@ sub test_shutdown_clone {
     $clone->start($usera)   if !$clone->is_active;
     is($clone->is_active,1);
 
-    $usera->revoke($user,'shutdown_clone');
+    $usera->revoke($user,'shutdown_clones');
     eval { $clone->shutdown_now($user); };
     like($@,qr(.));
     is($clone->is_active,1);
@@ -244,6 +309,7 @@ sub test_remove {
     eval { $domain2->remove(user_admin())};
     is($@,'');
 
+    $user->remove();
 }
 
 sub test_shutdown_all {
@@ -281,12 +347,16 @@ sub test_shutdown_all {
     is($domain->is_active,1);
 
     $domain->remove($usera);
+    $user->remove();
+    $usera->remove();
 }
 
 sub test_remove_clone_all {
     my $vm_name = shift;
     my $user = create_user("oper_rca$$","bar");
     is($user->can_remove_clone_all(),undef) or return;
+    is($user->is_operator, 0);
+
     my $usera = create_user("admin_rca$$","bar",1);
     is($usera->can_remove_clone_all(),1) or return;
 
@@ -303,6 +373,7 @@ sub test_remove_clone_all {
 
     $usera->grant($user,'remove_clone_all');
     is($user->can_remove_clone_all(),1);
+    is($user->is_operator,1);
 
     eval { $clone->remove($user); };
     is($@,'');
@@ -316,6 +387,16 @@ sub test_remove_clone_all {
 
     $clone_name = new_domain_name();
     $clone = $domain->clone(user => $usera, name => $clone_name);
+
+    my $other_domain = create_domain($vm_name);
+    ok($other_domain);
+
+    is($user->is_admin, 0);
+    is($user->can_list_machines, 1);
+    my $list = rvd_front->list_machines($user);
+    is(scalar@$list,4);
+    ok( grep { $_->{name} eq $other_domain->name } @$list);
+
     $usera->revoke($user,'remove_clone_all');
 
     eval { $clone->remove($user); };
@@ -325,6 +406,11 @@ sub test_remove_clone_all {
 
     $clone->remove($usera);
     $domain->remove($usera);
+    $domain2->remove($usera);
+    $other_domain->remove($usera);
+
+    $user->remove();
+    $usera->remove();
 }
 
 sub test_prepare_base {
@@ -394,9 +480,17 @@ sub test_frontend {
     is($user->can_list_machines, 0);
     is($user->can_list_own_machines, 1);
 
-    my $list_machines = rvd_front->list_domains( id_owner => $user->id );
-    is (scalar @$list_machines, 1 );
-    ok($list_machines->[0]->{name} eq $clone->name);
+    my $list_domains = rvd_front->list_domains( id_owner => $user->id );
+    is (scalar @$list_domains, 1 );
+    ok($list_domains->[0]->{name} eq $clone->name);
+
+    my $list_machines = rvd_front->list_machines( $user );
+    is (scalar @$list_machines, 2 );
+    if (defined $list_machines->[1]) {
+        ok($list_machines->[1]->{name} eq $clone->name);
+        is($list_machines->[1]->{can_manage}, 1);
+        is($list_machines->[0]->{can_manage}, 0);
+    }
 
     $usera->revoke($user, 'create_base');
     is($user->can_list_machines, 0);
@@ -409,12 +503,16 @@ sub test_frontend {
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 1 );
 
-    create_domain($vm_name, $user);
+    my $domain_other = create_domain($vm_name, $user);
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 2 );
 
     $clone->remove( $usera );
     $domain->remove( $usera );
+    $domain_other->remove( $usera );
+
+    $usera->remove;
+    $user->remove;
 }
 
 sub test_create_domain {
@@ -438,10 +536,11 @@ sub test_create_domain {
     my $domain_name = new_domain_name();
 
     my %create_args = (
-            id_iso => search_id_iso('debian')
+            id_iso => search_id_iso('alpine')
             ,id_owner => $user->id
             ,name => $domain_name
    );
+
 
     my $domain;
     eval { $domain = $vm->create_domain(%create_args)};
@@ -472,6 +571,10 @@ sub test_create_domain {
     my $domain3 = $vm->search_domain($domain_name);
     ok($domain3);
 
+    is($user->can_change_settings($domain3),1);
+
+    my $list_machines = rvd_front->list_machines($user);
+    is (scalar @$list_machines, 1 );
 
     eval { $domain3->remove($usera)  if $domain3 };
     is($@,'');
@@ -481,6 +584,10 @@ sub test_create_domain {
 
     eval { $base->remove($usera)   if $domain };
     is($@,'');
+
+    $base->remove(user_admin)   if !$base->is_removed;
+    $clone->remove(user_admin) if !$clone->is_removed;
+    $domain->remove(user_admin) if !$domain->is_removed;
 
     $user->remove();
     $usera->remove();
@@ -556,7 +663,8 @@ sub test_create_domain2 {
     is($user->can_create_machine,1) or return;
 
     $domain_name = new_domain_name();
-    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id)};
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+        , id_iso => search_id_iso('alpine'))};
     is($@,'');
 
     my $domain3 = $vm->search_domain($domain_name);
@@ -568,26 +676,110 @@ sub test_create_domain2 {
     $user->remove();
     $usera->remove();
 }
+
+sub test_change_settings($vm_name) {
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_cs$$","bar");
+    my $usera = create_user("admin_cs$$","bar",1);
+
+    # settings grant on fresh users ###########################################
+
+    is($user->can_change_settings(), 1);
+    is($usera->can_change_settings(), 1);
+
+    is($user->can_change_settings_all(), undef);
+    is($usera->can_change_settings_all(), 1);
+
+    is($user->can_change_settings_clones(), undef);
+    is($usera->can_change_settings_clones(), 1);
+
+    # settings grant on domain owned by admin ##################################
+
+    my $domain = create_domain($vm_name, $usera);
+
+    is($user->can_change_settings($domain->id), 0);
+    is($usera->can_change_settings($domain->id), 1);
+
+    # settings grant on clone owned by user ##################################
+
+    $domain->prepare_base($usera);
+    $domain->is_public(1);
+    my $clone = $domain->clone( name => new_domain_name, user => $user );
+
+    is($user->can_change_settings($clone->id), 1);
+    is($usera->can_change_settings($clone->id), 1);
+
+    $usera->revoke($user,'change_settings');
+    is($user->can_change_settings(), 0);
+    is($user->can_change_settings($clone->id), 0);
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+
+    $user->remove();
+    $usera->remove();
+
+}
+
+sub test_grant_grant {
+    my $usero = create_user("oper$$","bar");
+    is($usero->can_grant, undef);
+
+    user_admin->grant($usero,'grant');
+    is($usero->can_grant,1);
+
+    is($usero->is_operator,1);
+
+    $usero->remove();
+}
+
+sub test_clone_all {
+    diag("TODO test clone all");
+}
+
 ##########################################################
 
 test_defaults();
 test_admin();
 test_grant();
 
+test_alias();
+
+test_grant_grant();
+
 test_operator();
 
-test_shutdown_clone('Void');
-test_shutdown_all('Void');
+clean();
 
-test_remove('Void');
-test_remove_clone('Void');
-#test_remove_all('Void');
+for my $vm_name (vm_names()) {
+    next if $vm_name eq 'KVM' && $>;
 
-test_remove_clone_all('Void');
+    diag("Testing VM $vm_name");
+    test_change_settings($vm_name);
 
-test_prepare_base('Void');
-test_frontend('Void');
-test_create_domain('Void');
-test_create_domain2('Void');
+    test_shutdown_clone($vm_name);
+    test_shutdown_all($vm_name);
 
+    test_remove($vm_name);
+    test_remove_clone($vm_name);
+    #test_remove_all($vm_name);
+
+    test_remove_clone_all($vm_name);
+
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
+
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
+    test_clone_all($vm_name);
+
+}
+clean();
 done_testing();

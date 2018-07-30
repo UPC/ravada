@@ -77,6 +77,23 @@ sub test_list_domains {
     $list_domains = rvd_front->list_domains();
     is($list_domains->[0]->{remote_ip}, $remote_ip);
     is($list_domains->[0]->{is_active}, 1);
+    is($list_domains->[0]->{is_hibernated}, 0);
+
+    $domain->hibernate($USER);
+    is($domain->is_hibernated, 1);
+    is($domain->status, 'hibernated');
+
+    $list_domains = rvd_front->list_domains();
+    is($list_domains->[0]->{is_active}, 0);
+    is($list_domains->[0]->{is_hibernated}, 1);
+    is($list_domains->[0]->{status}, 'hibernated');
+
+    rvd_back->_cmd_refresh_vms();
+
+    $list_domains = rvd_front->list_domains();
+    is($list_domains->[0]->{is_active}, 0);
+    is($list_domains->[0]->{is_hibernated}, 1);
+    is($list_domains->[0]->{status}, 'hibernated');
 }
 
 sub test_open_domain {
@@ -87,6 +104,28 @@ sub test_open_domain {
     is($domain_f->type, $domain->type);
 }
 
+sub test_list_bases {
+    my $vm_name = shift;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user2 = create_user('malcolm.reynolds','serenity');
+
+    my $base = create_domain($vm_name);
+    my $list = rvd_front->list_machines_user($user2);
+    is(scalar @$list, 0);
+
+    $base->prepare_base(user_admin);
+
+    $list = rvd_front->list_machines_user($user2);
+    is(scalar @$list, 0);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    is(scalar @$list, 1);
+
+    $base->remove(user_admin);
+    $user2->remove();
+}
 #########################################################
 
 remove_old_domains();
@@ -123,6 +162,7 @@ for my $vm_name (reverse sort @VMS) {
         test_list_domains($vm_name, $domain);
 
         test_open_domain($vm_name, $domain);
+        test_list_bases($vm_name);
         $domain->remove($USER);
 
     }

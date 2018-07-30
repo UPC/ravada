@@ -12,6 +12,7 @@ Ravada::Auth::SQL - SQL authentication library for Ravada
 use Carp qw(carp);
 
 use Ravada;
+use Ravada::Utils;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
@@ -152,35 +153,34 @@ sub add_user {
 
     my $user = Ravada::Auth::SQL->search_by_id($id_user);
 
-    # temporary allow grant permissions
-    my $id_grant = _search_id_grant('grant');
-
-    $sth = $$CON->dbh->prepare(
-            "INSERT INTO grants_user "
-            ." (id_grant, id_user, allowed)"
-            ." VALUES(?,?,1) "
-        );
-    $sth->execute($id_grant, $id_user);
-    $sth->finish;
-
-    $user->grant_user_permissions($user);
+    Ravada::Utils::user_daemon->grant_user_permissions($user);
     if (!$is_admin) {
-        $user->grant_user_permissions($user);
-        $user->revoke($user,'grant');
+        Ravada::Utils::user_daemon->grant_user_permissions($user);
         return $user;
     }
-    $user->grant_admin_permissions($user);
+    Ravada::Utils::user_daemon->grant_admin_permissions($user);
     return $user;
 }
 
-sub _search_id_grant {
-    my $type = shift;
-    my $sth = $$CON->dbh->prepare("SELECT id FROM grant_types WHERE name = ?");
-    $sth->execute($type);
+sub _search_id_grant($self, $type) {
+
+    return $self->{_grant_id}->{$type}
+        if exists $self->{_grant_id}->{$type};
+
+    $self->_load_grants();
+
+    my @names = $self->_grant_alternate_name($type);
+
+    my $sth = $$CON->dbh->prepare("SELECT id FROM grant_types WHERE "
+        .join( " OR ",  map { "name=?"}@names));
+    $sth->execute(@names);
     my ($id) = $sth->fetchrow;
     $sth->finish;
 
-    confess "Unknown grant $type"   if !$id;
+    confess "Unknown grant $type\n".Dumper($self->{_grant_alias}, $self->{_grant})   if !$id;
+
+    $self->{_grant_id}->{$type} = $id;
+
     return $id;
 }
 
@@ -332,7 +332,7 @@ Returns true if the user is admin.
 
 sub is_admin {
     my $self = shift;
-    return $self->{_data}->{is_admin};
+    return ($self->{_data}->{is_admin} or 0);
 }
 
 =head2 is_operator
@@ -344,12 +344,17 @@ Returns true if the user is admin or has been granted special permissions
 sub is_operator {
     my $self = shift;
     return $self->is_admin()
-        || $self->can_shutdown_clone()
-	|| $self->can_hibernate_clone
+        || $self->can_shutdown_clones()
+#	|| $self->can_hibernate_clone()
 	|| $self->can_change_settings_clones()
-        || $self->can_remove_clone()
+        || $self->can_remove_clones()
+        || $self->can_remove_clone_all()
         || $self->can_create_base()
-        || $self->can_create_machine();
+        || $self->can_create_machine
+        || $self->can_list_machines
+        || $self->can_change_settings_all()
+        || $self->can_grant()
+        || 0;
 }
 
 =head2 can_list_own_machines
@@ -362,10 +367,40 @@ sub can_list_own_machines {
     my $self = shift;
     return 1
         if $self->can_create_base()
-            || $self->can_create_machine
+            || $self->can_create_machine()
+            || $self->can_remove_clone_all()
+            || $self->is_operator()
         ;
     return 0;
 }
+
+=head2 can_list_clones
+
+Returns true if the user can list all machines that are clones and its bases
+
+=cut
+
+sub can_list_clones {
+    my $self = shift;
+    return 1 if $self->is_admin()
+                || $self->can_remove_clone_all();
+    return 0;
+  
+}
+
+=head2 can_list_clones_from_own_base
+
+Returns true if the user can list all machines that are clones from his bases
+
+=cut
+
+sub can_list_clones_from_own_base($self) {
+    return 1 if $self->can_remove_clones || $self->can_remove_clone_all
+        || $self->can_shutdown_clones
+        || $self->can_change_settings_clones;
+    return 0;
+}
+
 
 =head2 can_list_machines
 
@@ -375,7 +410,12 @@ Returns true if the user can list all the virtual machines at the web frontend
 
 sub can_list_machines {
     my $self = shift;
-    return 1 if $self->is_admin();
+    return 1 if $self->is_admin()
+            || $self->can_remove_all || $self->can_remove_clone_all
+            || $self->can_shutdown_all
+            || $self->can_change_settings_all()
+            || $self->can_change_settings_clones()
+            || $self->can_clone_all();
     return 0;
 }
 
@@ -528,29 +568,102 @@ Returns if the user is allowed to perform a privileged action
 =cut
 
 sub can_do($self, $grant) {
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
-
     $self->_load_grants();
 
-    confess "Unknown permission '$grant'\n" if !exists $self->{_grant}->{$grant};
+    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+        if $grant !~ /^[a-z_]+$/;
+
+    $grant = $self->_grant_alias($grant);
+
+    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+        if $grant !~ /^[a-z_]+$/;
+
+    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+
+    confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
+            ."Try removing the table grant_types and start rvd_back again:\n"
+            ."mysql> drop table grant_types;\n"
+            .Dumper($self->{_grant}, $self->{_grant_alias})
+        if !exists $self->{_grant}->{$grant};
     return $self->{_grant}->{$grant};
 }
 
+=head2 can_do_domain
+
+Returns if the user is allowed to perform a privileged action in a virtual machine
+
+    if ($user->can_do_domain("remove", $domain)) {
+        ...
+
+=cut
+
+sub can_do_domain($self, $grant, $domain) {
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
+    confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
+
+    return 0 if !$self->can_do($grant) && !$domain->id_base;
+
+    return 1 if $self->can_do("${grant}_all");
+    return 1 if $domain->id_owner == $self->id && $self->can_do($grant);
+
+    if ($self->can_do("${grant}_clones") && $domain->id_base) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+    return 0;
+}
+
 sub _load_grants($self) {
-    my $sth = $$CON->dbh->prepare(
-        "SELECT gt.name, gu.allowed"
+    $self->_load_aliases();
+    return if exists $self->{_grant};
+
+    my $sth;
+    eval { $sth= $$CON->dbh->prepare(
+        "SELECT gt.name, gu.allowed, gt.enabled"
         ." FROM grant_types gt LEFT JOIN grants_user gu "
         ."      ON gt.id = gu.id_grant "
         ."      AND gu.id_user=?"
     );
     $sth->execute($self->id);
-    my ($name, $allowed);
-    $sth->bind_columns(\($name, $allowed));
+    };
+    confess $@ if $@;
+    my ($name, $allowed, $enabled);
+    $sth->bind_columns(\($name, $allowed, $enabled));
 
     while ($sth->fetch) {
-        $self->{_grant}->{$name} = $allowed;# or undef);
+        my $grant_alias = $self->_grant_alias($name);
+        $self->{_grant}->{$grant_alias} = $allowed     if $enabled;
+        $self->{_grant_disabled}->{$grant_alias} = !$enabled;
     }
     $sth->finish;
+
+}
+
+sub _grant_alias($self, $name) {
+    my $alias = $name;
+    return $self->{_grant_alias}->{$name} if exists $self->{_grant_alias}->{$name};
+    return $name;# if exists $self->{_grant}->{$name};
+
+}
+
+sub _grant_alternate_name($self,$name_req) {
+    my %name = ( $name_req => 1);
+    while (my($name, $alias) = each %{$self->{_grant_alias}}) {
+        $name{$name} = 1 if $name_req eq $alias;
+        $name{$alias} = 1 if $name_req eq $name;
+    }
+    return keys %name;
+}
+
+sub _load_aliases($self) {
+    return if exists $self->{_grant_alias};
+
+    my $sth = $$CON->dbh->prepare("SELECT name,alias FROM grant_types_alias");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $self->{_grant_alias}->{$row->{name}} = $row->{alias};
+    }
+
 }
 
 =head2 grant_user_permissions
@@ -563,6 +676,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'clone');
     $self->grant($user, 'change_settings');
     $self->grant($user, 'remove');
+    $self->grant($user, 'shutdown');
     $self->grant($user, 'screenshot');
 }
 
@@ -597,6 +711,7 @@ Grant an user all the permissions
 sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
             "SELECT name FROM grant_types "
+            ." WHERE enabled=1"
     );
     $sth->execute();
     while ( my ($name) = $sth->fetchrow) {
@@ -614,7 +729,7 @@ Revoke all permissions from an user
 
 sub revoke_all_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
-            "SELECT name FROM grant_types "
+            "SELECT name FROM grant_types WHERE enabled=1"
     );
     $sth->execute();
     while ( my ($name) = $sth->fetchrow) {
@@ -637,7 +752,11 @@ Grant an user a specific permission, or revoke it
 =cut
 
 sub grant($self,$user,$permission,$value=1) {
-    if ( !$self->can_grant() && $self->name ne $Ravada::USER_DAEMON_NAME ) {
+
+    confess "ERROR: permission '$permission' disabled "
+        if $self->{_grant_disabled}->{$permission};
+
+    if ( !$self->can_grant() && $self->name ne Ravada::Utils::user_daemon->name ) {
         my @perms = $self->list_permissions();
         confess "ERROR: ".$self->name." can't grant permissions for ".$user->name."\n"
             .Dumper(\@perms);
@@ -648,7 +767,8 @@ sub grant($self,$user,$permission,$value=1) {
     my $value_sql = $user->can_do($permission);
     return $value if defined $value_sql && $value_sql eq $value;
 
-    my $id_grant = _search_id_grant($permission);
+    $permission = $self->_grant_alias($permission);
+    my $id_grant = $self->_search_id_grant($permission);
     if (! defined $user->can_do($permission)) {
         my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
@@ -693,14 +813,18 @@ Returns a list of all the available permissions
 =cut
 
 sub list_all_permissions($self) {
-    return if !$self->is_admin;
+    return if !$self->is_admin && !$self->can_grant();
+    $self->_load_grants();
 
     my $sth = $$CON->dbh->prepare(
-        "SELECT * FROM grant_types ORDER BY name"
+        "SELECT * FROM grant_types"
+        ." WHERE enabled=1 "
+        ." ORDER BY name "
     );
     $sth->execute;
     my @list;
     while (my $row = $sth->fetchrow_hashref ) {
+        $row->{name} = $self->_grant_alias($row->{name});
         lock_hash(%$row);
         push @list,($row);
     }
@@ -714,6 +838,7 @@ Returns a list of all the permissions granted to the user
 =cut
 
 sub list_permissions($self) {
+    $self->_load_grants();
     my @list;
     for my $grant (sort keys %{$self->{_grant}}) {
         push @list , (  [$grant => $self->{_grant}->{$grant} ] )
@@ -722,8 +847,158 @@ sub list_permissions($self) {
     return @list;
 }
 
-sub AUTOLOAD {
-    my $self = shift;
+=pod
+
+sub can_change_settings($self, $id_domain=undef) {
+    if (!defined $id_domain) {
+        return $self->can_do("change_settings");
+    }
+    return 1 if $self->can_change_settings_all();
+
+    return 0 if !$self->can_change_settings();
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    return 1 if $self->id == $domain->id_owner;
+
+    return 0;
+}
+
+=cut
+
+=head2 can_manage_machine
+
+The user can change settings, remove or change other things yet to be defined.
+Some changes require special permissions granted.
+
+Unlinke change_settings that any user is granted to his own machines by default.
+
+=cut
+
+sub can_manage_machine($self, $domain) {
+    return 1 if $self->is_admin;
+
+    $domain = Ravada::Front::Domain->open($domain)  if !ref $domain;
+
+    return 1 if $self->can_change_settings($domain);
+
+    return 1 if $self->can_remove_all;
+
+    return 1 if $self->can_remove_clone_all
+        && $domain->id_base;
+    
+    return 1 if $self->can_clone_all;
+
+    return 1 if $self->can_remove && $domain->id_owner == $self->id;
+
+    if ( ($self->can_remove_clones || $self->can_change_settings_clones) && $domain->id_base ) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+    return 0;
+}
+
+=head2 can_remove_clones
+
+Returns true if the user can remove clones.
+
+Arguments:
+
+=over
+
+=item * id_domain: optional
+
+=back
+
+=cut
+
+sub can_remove_clones($self, $id_domain=undef) {
+
+    return $self->can_do('remove_clones') if !$id_domain;
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    confess "ERROR: domain is not a base "  if !$domain->id_base;
+
+    return 1 if $self->can_remove_clone_all();
+
+    return 0 if !$self->can_remove_clones();
+
+    my $base = Ravada::Front::Domain->open($domain->id_base);
+    return 1 if $base->id_owner == $self->id;
+    return 0;
+}
+
+=head2 can_remove_machine
+
+Return true if the user can remove this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
+sub can_remove_machine($self, $domain) {
+    return 1 if $self->can_remove_all();
+    #return 0 if !$self->can_remove();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    if ( $domain->id_owner == $self->id ) {
+        return 1 if $self->can_do("remove");
+    }
+
+    return $self->can_remove_clones($domain->id) if $domain->id_base;
+    return 0;
+}
+
+=head2 can_shutdown_machine
+
+Return true if the user can shutdown this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
+sub can_shutdown_machine($self, $domain) {
+
+    return 1 if $self->can_shutdown_all();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    return 1 if $self->id == $domain->id_owner;
+
+    if ($domain->id_base && $self->can_shutdown_clone()) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+
+    return 0;
+}
+
+=head2 grants
+
+Returns a list of permissions granted to the user in a hash
+
+=cut
+
+sub grants($self) {
+    $self->_load_grants();
+    return () if !$self->{_grant};
+    return %{$self->{_grant}};
+}
+
+
+sub AUTOLOAD($self, $domain=undef) {
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
@@ -732,7 +1007,10 @@ sub AUTOLOAD {
         if !ref($self) || $name !~ /^can_(.*)/;
 
     my ($permission) = $name =~ /^can_([a-z_]+)/;
-    return $self->can_do($permission)  if $permission;
+    return $self->can_do($permission)   if !$domain;
+
+    $domain = Ravada::Front::Domain->open($domain)      if !ref $domain;
+    return $self->can_do_domain($permission,$domain);
 }
 
 1;

@@ -137,7 +137,7 @@ sub test_start {
     # stop
 
     my $req3 = Ravada::Request->force_shutdown_domain(id_domain => $id_domain, uid => $USER->id);
-    $RAVADA->process_requests();
+    $RAVADA->_process_all_requests_dont_fork(0);
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
                             .$req3->status);

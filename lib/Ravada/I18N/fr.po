@@ -57,9 +57,6 @@ msgstr "La base ne peut pas être préparée, supprimée ou effacée. La machine
 msgid "Clone/s"
 msgstr "Clone(s)"
 
-msgid "NEW"
-msgstr "NOUVEAU"
-
 msgid "Users List"
 msgstr "Liste d'utilisateurs"
 
@@ -274,8 +271,8 @@ msgstr "Cherchez dans votre distro, par exemple dans Debian/Ubuntu avec"
 msgid "You'll need to install"
 msgstr "Vous devez installer"
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
-msgstr "par exemple VirtViewer v5.0-256 sur votre ordinateur."
+msgid "e.g. VirtViewer in your computer."
+msgstr "par exemple VirtViewer sur votre ordinateur."
 
 msgid ""
 "Be aware that in Windows, spice redirection is not automatically. It's "

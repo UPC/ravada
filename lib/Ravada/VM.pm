@@ -51,6 +51,8 @@ requires 'disconnect';
 requires 'import_domain';
 
 requires 'is_alive';
+
+requires 'free_memory';
 ############################################################
 
 has 'host' => (
@@ -315,9 +317,20 @@ sub _around_create_domain {
             if defined $base->run_timeout();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)    if $user->is_temporary();
+    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
+
+    my @start_args = ( user => $owner );
+    my $remote_ip = $args{remote_ip};
+    push @start_args, (remote_ip => $remote_ip) if $remote_ip;
+
+    $domain->_post_start(@start_args) if $domain->is_active;
+    eval {
+           $domain->start(@start_args)      if $domain->is_volatile && ! $domain->is_active;
+    };
+    die $@ if $@ && $@ !~ /code: 55,/;
 
     $domain->get_info();
+    $domain->display($owner)    if $domain->is_active;
 
     return $domain;
 }
@@ -399,6 +412,14 @@ sub search_domain_by_id {
     return if !$name;
 
     return $self->search_domain($name);
+}
+
+sub _domain_in_db($self, $name) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id) =$sth->fetchrow;
+    return $id;
 }
 
 =head2 ip
@@ -501,13 +522,16 @@ sub _check_require_base {
     my $id_owner = delete $args{id_owner}
         or confess "ERROR: id_owner required ";
 
+    delete $args{start};
+    delete $args{remote_ip};
+
     delete @args{'_vm','name','vm', 'memory','description'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    if (my @requests = $base->list_requests) {
+    if (my @requests = grep { $_->command ne 'clone' } $base->list_requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
             unless scalar @requests == 1 && $request
@@ -636,6 +660,39 @@ sub default_storage_pool_name {
         $self->{_data}->{default_storage} = $value;
     }
     return $self->_data('default_storage');
+}
+
+=head2 min_free_memory
+
+Returns the minimun free memory necessary to start a new virtual machine
+
+=cut
+
+sub min_free_memory {
+    my $self = shift;
+    return $self->_data('min_free_memory');
+}
+
+=head2 max_load 
+
+Returns the maximum cpu load that the host can handle.
+
+=cut
+
+sub max_load {
+    my $self = shift;
+    return $self->_data('max_load');
+}
+
+=head2 active_limit
+
+Returns the value of 'active_limit' in the BBDD
+
+=cut
+
+sub active_limit {
+    my $self = shift;
+    return $self->_data('active_limit');
 }
 
 =head2 list_drivers

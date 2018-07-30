@@ -182,12 +182,15 @@ sub _load_storage_pool {
     my $vm_pool;
     my $available;
 
+    if (defined $self->default_storage_pool_name) {
+        return( $self->vm->get_storage_pool_by_name($self->default_storage_pool_name)
+            or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
+    }
+
     for my $pool ($self->vm->list_storage_pools) {
         my $info = $pool->get_info();
         next if defined $available
-                && $info->{available} <= $available
-                && !( defined $self->default_storage_pool_name
-                        && $pool->get_name eq $self->default_storage_pool_name);
+                && $info->{available} <= $available;
 
         my $doc = $XML->load_xml(string => $pool->get_xml_description);
 
@@ -373,6 +376,17 @@ sub dir_img {
     return $dir;
 }
 
+sub _storage_path($self, $storage) {
+    my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
+
+    my $dir = $xml->findnodes('/pool/target/path/text()');
+    die "I can't find /pool/target/path in ".$xml->toString
+        if !$dir;
+
+    return $dir;
+
+}
+
 sub _create_default_pool {
     my $self = shift;
     my $vm = shift;
@@ -402,9 +416,13 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $vm->define_storage_pool($xml);
-    $pool->create();
-    $pool->set_autostart(1);
+    my $pool;
+    eval {
+        $pool = $vm->define_storage_pool($xml);
+        $pool->create();
+        $pool->set_autostart(1);
+    };
+    warn $@ if $@;
 
 }
 
@@ -456,19 +474,22 @@ Returns true or false if domain exists.
 sub search_domain($self, $name, $force=undef) {
 
     $self->connect();
-    return if !$self->vm;
-    my @all_domains;
-    eval { @all_domains = $self->vm->list_all_domains() };
-    confess $@ if $@;
 
     my $dom;
     eval { $dom = $self->vm->get_domain_by_name($name); };
-    return if !$dom && !$force;
+    confess $@ if $@ && $@ !~ /error code: 42,/;
+    if (!$dom) {
+        return if !$force;
+        return if !$self->_domain_in_db($name);
+    }
+    return if !$force && !$self->_domain_in_db($name);
 
     my $domain;
 
         my @domain = ( );
-        @domain = ( domain => $dom ) if $dom;
+        push @domain, ( domain => $dom ) if $dom;
+        push @domain, ( id_owner => $Ravada::USER_DAEMON->id)
+            if $force && !$self->_domain_in_db($name);
         eval {
             $domain = Ravada::Domain::KVM->new(
                 @domain
@@ -479,12 +500,12 @@ sub search_domain($self, $name, $force=undef) {
         };
         warn $@ if $@;
         if ($domain) {
+            $domain->xml_description()  if $dom && $domain->is_known();
             return $domain;
         }
 
     return;
 }
-
 
 =head2 list_domains
 
@@ -504,26 +525,13 @@ sub list_domains {
 
     confess "Arguments uknown ".Dumper(\%args)  if keys %args;
 
-    confess "Missing vm" if !$self->vm;
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains WHERE vm = ?");
+    $sth->execute('KVM');
     my @list;
-    my @domains;
-    if ($active) {
-        @domains = $self->vm->list_domains();
-    } else {
-        @domains = $self->vm->list_all_domains();
-    }
-    for my $name (@domains) {
-        my $domain ;
-        my $id;
-        $domain = Ravada::Domain::KVM->new(
-                          domain => $name
-                        ,_vm => $self
-        );
-        next if !$domain->is_known();
-#        next if $active && !$domain->is_active;
-        $id = $domain->id();
-#        warn $@ if $@ && $@ !~ /No DB info/i;
-        push @list,($domain) if $domain && $id;
+    while ( my ($id) = $sth->fetchrow) {
+        my $domain = Ravada::Domain->open($id);
+        next if !$domain || $active && !$domain->is_active;
+        push @list,($domain);
     }
     return @list;
 }
@@ -542,11 +550,17 @@ sub create_volume {
     confess "Wrong arrs " if scalar @_ % 2;
     my %args = @_;
 
-    my ($name, $file_xml, $size, $capacity, $allocation, $swap, $path)
-        = @args{qw(name xml size capacity allocation swap path)};
+    my $name = delete $args{name}       or confess "ERROR: Missing volume name";
+    my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
-    confess "Missing volume name"   if !$name;
-    confess "Missing xml template"  if !$file_xml;
+    my $size        = delete $args{size};
+    my $swap        =(delete $args{swap} or 0);
+    my $target      = delete $args{target};
+    my $capacity    = delete $args{capacity};
+    my $allocation  = delete $args{allocation};
+
+    confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+
     confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
     confess "Capacity and size are the same, give only one of them"
         if defined $capacity && defined $size;
@@ -561,7 +575,15 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $img_file = ($path or $self->_volume_path(@_));
+    my $storage_pool = $self->storage_pool();
+
+    my $img_file = $self->_volume_path(
+        target => $target
+        , swap => $swap
+        , name => $name
+        , storage => $storage_pool
+    );
+
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
@@ -586,11 +608,14 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
-    my $target = $args{target};
-    my $dir_img = $self->dir_img();
+    my $swap     =(delete $args{swap} or 0);
+    my $target   = delete $args{target};
+    my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
+    my $filename = $args{name}  or confess "ERROR: Missing name";
+
+    my $dir_img = $self->_storage_path($storage);
     my $suffix = ".img";
-    $suffix = ".SWAP.img"   if $args{swap};
-    my $filename = $args{name};
+    $suffix = ".SWAP.img"   if $swap;
     $filename .= "-$target" if $target;
     my (undef, $img_file) = tempfile($filename."-XXXX"
         ,DIR => $dir_img
@@ -622,7 +647,6 @@ sub _domain_create_from_iso {
         if $self->search_domain($args{name});
 
     my $vm = $self->vm;
-    my $storage = $self->storage_pool;
     my $iso = $self->_search_iso($args{id_iso} , $iso_file);
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
@@ -631,7 +655,7 @@ sub _domain_create_from_iso {
     my $device_cdrom;
 
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file;
+        if !$iso->{url} && !$iso_file && !$iso->{device};
 
     if ($iso_file) {
         if ( $iso_file ne "<NONE>") {
@@ -676,6 +700,7 @@ sub _domain_create_from_iso {
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args);
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+
     $domain->_set_spice_password($spice_password)
         if $spice_password;
     $domain->xml_description();
@@ -689,21 +714,28 @@ sub _domain_create_common {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $is_volatile = delete $args{is_volatile};
+    my $remote_ip = delete $args{remote_ip};
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "ERROR: User id $id_owner doesn't exist";
 
     my $spice_password = Ravada::Utils::random_name(4);
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $spice_password = undef if !$network->requires_password;
+    }
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
+    $self->_xml_add_guest_agent($xml);
 
     my $dom;
 
     eval {
-        if ($user->is_temporary) {
+        if ($user->is_temporary || $is_volatile ) {
             $dom = $self->vm->create_domain($xml->toString());
         } else {
             $dom = $self->vm->define_domain($xml->toString());
@@ -727,6 +759,7 @@ sub _domain_create_common {
               _vm => $self
          , domain => $dom
         , storage => $self->storage_pool
+       , id_owner => $id_owner
     );
     return ($domain, $spice_password);
 }
@@ -852,7 +885,7 @@ sub _domain_create_from_base {
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args);
+        = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
     $domain->_set_spice_password($spice_password);
     $domain->xml_description();
@@ -919,7 +952,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
     confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
-        if !$iso->{md5} && !$iso->{sha256};
+        if $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
     if (! -e $device || ! -s $device) {
@@ -1145,6 +1178,11 @@ sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    if (!$row->{file_re} && !$row->{url} && $row->{device}) {
+         my ($file) = $row->{device} =~ m{.*/(.*)};
+         $row->{filename} = $file;
+         return;
+    }
     return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
@@ -1206,9 +1244,9 @@ sub _match_file($self, $url, $file_re) {
     my $res;
     for ( 1 .. 10 ) {
         eval { $res = $self->_web_user_agent->get($url)->res(); };
-        last if !$@;
+        last if !$@ && $res && defined $res->code;
         next if $@ && $@ =~ /timeout/i;
-        die $@;
+        die $@ if $@;
     }
 
     return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
@@ -1451,13 +1489,15 @@ sub _xml_modify_usb {
 #    $self->_xml_add_usb_uhci2($devices);
 #    $self->_xml_add_usb_uhci3($devices);
 
-    $self->_xml_add_usb_redirect($devices);
+    my $num_usb = 3;
+    $self->_xml_add_usb_redirect($devices, $num_usb);
 
 }
 
 sub _xml_add_usb_redirect {
     my $self = shift;
     my $devices = shift;
+    my $items = shift;
 
     my $dev=_search_xml(
           xml => $devices
@@ -1465,11 +1505,13 @@ sub _xml_add_usb_redirect {
         , bus => 'usb'
         ,type => 'spicevmc'
     );
-    return if $dev;
-
-    $dev = $devices->addNewChild(undef,'redirdev');
-    $dev->setAttribute( bus => 'usb');
-    $dev->setAttribute(type => 'spicevmc');
+    $items = $items - 1 if $dev;
+    
+    for (my $var = 0; $var < $items; $var++) {
+        $dev = $devices->addNewChild(undef,'redirdev');
+        $dev->setAttribute( bus => 'usb');
+        $dev->setAttribute(type => 'spicevmc');
+    }
 
 }
 
@@ -1651,7 +1693,29 @@ sub _xml_add_usb_uhci3 {
 
 }
 
-
+sub _xml_add_guest_agent {
+    my $self = shift;
+    my $doc = shift;
+    
+    my ($devices) = $doc->findnodes('/domain/devices');
+    
+    return if _search_xml(
+                            xml => $devices
+                            ,name => 'channel'
+                            ,type => 'unix'
+    );
+    
+    my $channel = $devices->addNewChild(undef,"channel");
+    $channel->setAttribute(type => 'unix');
+    
+    my $source = $channel->addNewChild(undef,'source');
+    $source->setAttribute(mode => 'bind');
+    
+    my $target = $channel->addNewChild(undef,'target');
+    $target->setAttribute(type => 'virtio');
+    $target->setAttribute(name => 'org.qemu.guest_agent.0');
+    
+}
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -1919,16 +1983,6 @@ sub is_alive($self) {
     return 1 if $self->vm->is_alive;
     return 0;
 }
-sub free_memory($self) {
-
-    confess "ERROR: VM ".$self->name." inactive"
-        if !$self->is_active;
-
-    return
-    $self->vm->get_node_memory_stats()->{free}
-    + $self->vm->get_node_memory_stats()->{cached};
-    + $self->vm->get_node_memory_stats()->{buffers};
-}
 
 sub list_storage_pools($self) {
     return
@@ -1937,4 +1991,31 @@ sub list_storage_pools($self) {
         $self->vm->list_storage_pools();
 }
 
+sub free_memory($self) {
+    confess "ERROR: VM ".$self->name." inactive"
+        if !$self->is_alive;
+    return $self->_free_memory_available();
+}
+
+# TODO: enable this check from free memory with a config flag
+#   though I don't think it would be suitable to use
+#   Insights welcome
+sub _free_memory_overcommit($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    return ($info->{free} + $info->{buffers} + $info->{cached});
+}
+
+sub _free_memory_available($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    my $used = 0;
+    for my $domain ( $self->list_domains(active => 1) ) {
+        $used += $domain->domain->get_info->{memory};
+    }
+    my $free_mem = $info->{total} - $used;
+    my $free_real = $self->_free_memory_overcommit;
+
+    $free_mem = $free_real if $free_real < $free_mem;
+
+    return $free_mem;
+}
 1;

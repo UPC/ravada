@@ -42,6 +42,7 @@ sub test_create_domain {
     }
 }
 
+clean();
 my $id = 10;
 
 for my $vm_type( @{rvd_front->list_vm_types}) {
@@ -73,5 +74,7 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     $id++;
     };
 }
+
+clean();
 
 done_testing();

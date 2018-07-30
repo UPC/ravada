@@ -54,3 +54,12 @@
     background: #4CAF50; /* Green background */
     cursor: pointer; /* Cursor on hover */
 }
+
+.disabled {
+    color: darkgray;
+    cursor: not-allowed;
+}
+
+.comment {
+    color: gray
+}

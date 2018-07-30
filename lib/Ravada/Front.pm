@@ -15,6 +15,7 @@ use JSON::XS;
 use Moose;
 use Ravada;
 use Ravada::Front::Domain;
+use Ravada::Front::Domain::KVM;
 use Ravada::Network;
 
 use feature qw(signatures);
@@ -50,6 +51,13 @@ our %VM;
 our %VM_ID;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
+###########################################################################
+#
+# method modifiers
+#
+
+around 'list_machines' => \&_around_list_machines;
+
 =head2 BUILD
 
 Internal constructor
@@ -64,6 +72,8 @@ sub BUILD {
         Ravada::_init_config($self->config()) if $self->config;
         $CONNECTOR = Ravada::_connect_dbh();
     }
+    Ravada::_init_config($self->config()) if $self->config;
+    Ravada::Auth::init($Ravada::CONFIG);
     $CONNECTOR->dbh();
 }
 
@@ -75,17 +85,22 @@ Returns a list of the base domains as a listref
 
 =cut
 
-sub list_bases {
-    my $self = shift;
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name, id, is_base FROM domains where is_base=1");
-    $sth->execute();
-    
+sub list_bases($self, %args) {
+    $args{is_base} = 1;
+    my $query = "SELECT name, id, is_base, id_owner FROM domains "
+        ._where(%args)
+        ." ORDER BY name";
+
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(map { $args{$_} } sort keys %args);
+
     my @bases = ();
     while ( my $row = $sth->fetchrow_hashref) {
         my $domain;
         eval { $domain   = $self->search_domain($row->{name}) };
         next if !$domain;
         $row->{has_clones} = $domain->has_clones;
+        $row->{is_locked} = 0 if !exists $row->{is_locked};
         delete $row->{spice_password};
         push @bases, ($row);
     }
@@ -123,6 +138,7 @@ sub list_machines_user {
 
     my @list;
     while ( $sth->fetch ) {
+        next if !$is_public && !$user->is_admin;
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
@@ -135,11 +151,12 @@ sub list_machines_user {
             , id_clone => undef
             , name_clone => undef
             , is_locked => undef
+            , can_hibernate => 0
         );
 
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
-            if ($clone->is_active && !$clone->is_locked) {
+            if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
                 my $req = Ravada::Request->screenshot_domain(
                 id_domain => $clone->id
                 ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
@@ -149,7 +166,10 @@ sub list_machines_user {
             $base{screenshot} = ( $clone->_data('file_screenshot') 
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
-            $base{id_clone} = $clone->id
+            $base{id_clone} = $clone->id;
+            $base{can_remove} = 0;
+            $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
+            $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
@@ -157,6 +177,55 @@ sub list_machines_user {
     }
     $sth->finish;
     return \@list;
+}
+
+sub list_machines($self, $user) {
+    return $self->list_domains() if $user->can_list_machines;
+
+    my @list = ();
+    if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
+        my $machines = $self->list_bases( id_owner => $user->id );
+        for my $base (@$machines) {
+            confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
+            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+        }
+        push @list,(@$machines);
+    }
+
+    push @list,(@{$self->list_clones()}) if $user->can_list_clones;
+    if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
+        my $machines = $self->list_domains(id_owner => $user->id);
+        for my $clone (@$machines) {
+            next if !$clone->{id_base};
+            push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
+        }
+        push @list,(@$machines);
+    }
+    return [@list] if scalar @list < 2;
+
+    my %uniq = map { $_->{name} => $_ } @list;
+    return [sort { $a->{name} cmp $b->{name} } values %uniq];
+}
+
+sub _around_list_machines($orig, $self, $user) {
+    my $machines = $self->$orig($user);
+    for my $m (@$machines) {
+        $m->{can_shutdown} = $user->can_shutdown($m->{id});
+
+        $m->{can_start} = 0;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+        $m->{can_view} = 0;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
+                                    && !$m->{is_volatile};
+    }
+    return $machines;
 }
 
 =pod
@@ -189,7 +258,7 @@ sub list_domains {
     my %args = @_;
 
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
-        ."      ,vms.name as node , is_volatile "
+        ."      ,vms.name as node , is_volatile, client_status "
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -224,8 +293,8 @@ sub list_domains {
         $row->{remote_ip} = undef;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
-            $row->{is_paused} = 1 if $row->{status} eq 'paused';
+            $row->{is_hibernated} = ( $domain->is_hibernated or 0);
+            $row->{is_paused} = 1 if $domain->is_paused;
             $row->{is_active} = 1 if $row->{status} eq 'active';
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
@@ -233,7 +302,18 @@ sub list_domains {
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
             $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
             $row->{node} = $domain->_vm->name if $domain->_vm;
+            $row->{remote_ip} = $domain->client_status
+                if $domain->client_status && $domain->client_status ne 'connected';
             $row->{autostart} = $domain->autostart;
+            if (!$row->{status} ) {
+                if ($row->{is_active}) {
+                    $row->{status} = 'active';
+                } elsif ($row->{is_hibernated}) {
+                    $row->{status} = 'hibernated';
+                } else {
+                    $row->{status} = 'down';
+                }
+            }
         }
         delete $row->{spice_password};
         lock_hash(%$row);
@@ -243,6 +323,33 @@ sub list_domains {
     $sth->finish;
 
     return \@domains;
+}
+sub _where(%args) {
+    my $where = '';
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " $field=?"
+    }
+    $where = "WHERE $where" if $where;
+    return $where;
+}
+
+=head2 list_clones
+  Returns a list of the domains that are clones as a listref
+
+      my $clones = $rvd_front->list_clones();
+=cut
+
+sub list_clones {
+  my $self = shift;
+  my %args = @_;
+  
+  my $domains = list_domains();
+  my @clones;
+  for (@$domains ) {
+    if($_->{id_base}) { push @clones, ($_); }
+  }
+  return \@clones;
 }
 
 sub _remove_domain_db($self, $id) {
@@ -418,7 +525,7 @@ Returns a reference to a list of the ISOs known by the system
 sub iso_file {
     my $self = shift;
     my $vm = $self->search_vm('KVM');
-    my @isos = $vm->search_volume_path_re(qr(.*\.iso$)); 
+    my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
     #TODO remove path from device
     return \@isos;
 }
@@ -658,8 +765,11 @@ sub search_domain {
 
     my $name = shift;
 
-    return Ravada::Front::Domain->search_domain($name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id, $tipo) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
 
+    return Ravada::Front::Domain->open($id);
 }
 
 =head2 list_requests
@@ -668,16 +778,15 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 =cut
 
-sub list_requests {
-    my $self = shift;
+sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
-    my @now = localtime(time-120);
+    my @now = localtime(time-$seconds);
     $now[4]++;
     for (0 .. 4) {
         $now[$_] = "0".$now[$_] if length($now[$_])<2;
     }
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
-        ." ".$now[2].":".$now[1].":00";
+        ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT requests.id, command, args, date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
@@ -686,7 +795,7 @@ sub list_requests {
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    requests.status <> 'done' "
-        ."  OR ( command = 'download' AND date_changed >= ?) "
+        ."  OR ( date_changed >= ?) "
         ." ORDER BY date_changed DESC LIMIT 10"
     );
     $sth->execute($time_recent);
@@ -703,8 +812,11 @@ sub list_requests {
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
                 || $command eq 'ping_backend'
+                || $command eq 'cleanup'
+                || $command eq 'enforce_limits'
                 || $command eq 'refresh_vms'
-                || $command eq 'cleanup';
+                || $command eq 'refresh_storage';
+        next if $id_domain_req && defined $id_domain && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;
 
@@ -720,6 +832,7 @@ sub list_requests {
             ,domain => $domain
             ,date => $date
             ,message => $message
+            ,error => $error
         };
     }
     $sth->finish;

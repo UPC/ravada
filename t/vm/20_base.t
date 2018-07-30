@@ -446,11 +446,12 @@ sub test_domain_limit {
     is(rvd_back->list_domains(user => $user , active => 1),1);
 
     $domain2->start( $user );
-    rvd_back->enforce_limits(timeout => 2);
-    sleep 2;
-    rvd_back->_process_requests_dont_fork();
-    my @list = rvd_back->list_domains(user => $user , active => 1);
-    is(scalar @list,1) or die Dumper([ map { $_->name } @list ]);
+    my $req = Ravada::Request->enforce_limits(timeout => 1);
+    rvd_back->_process_all_requests_dont_fork();
+    sleep 1;
+    rvd_back->_process_all_requests_dont_fork();
+    my @list = rvd_back->list_domains(user => user_admin , active => 1);
+    is(scalar @list,1) or die Dumper(\@list);
     is($list[0]->name, $domain2->name) if $list[0];
 
     $domain2->remove($user);
@@ -491,11 +492,27 @@ sub test_domain_limit_already_requested {
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
     is(rvd_back->list_domains(user => $user, active => 1),2);
+    Ravada::Request->enforce_limits(timeout => 1);
+    rvd_back->_process_all_requests_dont_fork();
+    sleep 1;
+    rvd_back->_process_all_requests_dont_fork();
 
-    my $timeout = 2;
-    rvd_back->enforce_limits(timeout => $timeout);
-    sleep $timeout;
+    if (!$domain->can_hybernate && $domain->is_active) {
+        @list_requests = $domain->list_all_requests();
+        is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
+        rvd_back->enforce_limits(timeout => 2);
+        @list_requests = $domain->list_all_requests();
 
+            is(scalar @list_requests,1,"Expecting 1 request ".Dumper(\@list_requests));
+
+            sleep 3;
+
+            rvd_back->_process_requests_dont_fork();
+
+    } else {
+        @list_requests = $domain->list_requests;
+        is(scalar @list_requests,0,"Expecting 0 request ".Dumper(\@list_requests)) or exit;
+    }
     my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1,"[$vm_name] Expecting 1 active domain")
         or die Dumper([map { $_->name } @list]);

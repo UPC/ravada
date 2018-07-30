@@ -59,6 +59,8 @@ our $CONT_POOL= 0;
 our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
+our $RVD_BACK;
+
 our %ARG_CREATE_DOM = (
     KVM => []
     ,Void => []
@@ -67,8 +69,6 @@ our %ARG_CREATE_DOM = (
 our %VM_VALID = ( KVM => 1
     ,Void => 0
 );
-
-our $RVD_BACK;
 
 sub user_admin {
     return $USER_ADMIN;
@@ -145,7 +145,9 @@ sub base_pool_name {
 }
 
 sub new_domain_name {
-    return base_domain_name()."_".$CONT++;
+    my $cont = $CONT++;
+    $cont = "0$cont"    if length($cont)<2;
+    return base_domain_name()."_".$cont;
 }
 
 sub new_pool_name {
@@ -162,8 +164,13 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
-    $rvd->_update_isos();
-    $USER_ADMIN = create_user('admin','admin',1)    if !$USER_ADMIN;
+    my $login;
+    eval {
+        $login = Ravada::Auth::SQL->new(name => 'admin',password => 'admin');
+    };
+    $USER_ADMIN = $login if $login;
+    $USER_ADMIN = create_user('admin','admin',1)
+        if !$USER_ADMIN && !$login;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
@@ -213,6 +220,7 @@ sub init {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
+    rvd_back()  if !$RVD_BACK;
 }
 
 sub remote_config {
@@ -359,19 +367,25 @@ sub _remove_old_domains_kvm {
 
     for my $domain ( $vm->vm->list_all_domains ) {
         next if $domain->get_name !~ /^$base_name/;
+        my $domain_name = $domain->get_name;
         eval { 
             $domain->shutdown() if $domain->is_active;
             sleep 1; 
-            $domain->destroy() if $domain->is_active;
-        };
-        warn "WARNING: error $@ trying to shutdown ".$domain->get_name
-            if $@ && $@ !~ /error code: 55/;
+            eval { $domain->destroy() if $domain->is_active };
+            warn $@ if $@;
+        }
+            if $domain->is_active;
+        warn "WARNING: error $@ trying to shutdown ".$domain_name
+            if $@ && $@ !~ /error code: 42,/;
 
-        $domain->managed_save_remove()
-            if $domain->has_managed_save_image();
+        eval {
+            $domain->managed_save_remove()
+                if $domain->has_managed_save_image();
+        };
+        warn $@ if $@ && $@ !~ /error code: 42,/;
 
         eval { $domain->undefine };
-        warn $@ if $@;
+        warn $@ if $@ && $@ !~ /error code: 42,/;
     }
 }
 
@@ -405,14 +419,17 @@ sub _remove_old_disks_kvm {
     }
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
-    eval { $vm->refresh_storage_pools() };
+    eval { $vm->_refresh_storage_pools() };
     return if $@ && $@ =~ /Cannot recv data/;
 
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
-    for my $volume ( $vm->storage_pool->list_all_volumes()) {
-        next if $volume->get_name !~ /^${name}_\d+.*\.(img|ro\.qcow2|qcow2)$/;
-        $volume->delete;
+
+    for my $pool( $vm->vm->list_all_storage_pools ) {
+        for my $volume  ( $pool->list_volumes ) {
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
+            $volume->delete();
+        }
     }
     $vm->storage_pool->refresh();
 }
@@ -557,6 +574,7 @@ sub remove_qemu_pools {
         }
         $pool->destroy();
         eval { $pool->undefine() };
+        warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
 
@@ -709,6 +727,7 @@ sub _flush_rules_remote($node) {
 }
 
 sub flush_rules {
+    return if $>;
     my $ipt = open_ipt();
     $ipt->flush_chain('filter', $CHAIN);
     $ipt->delete_chain('filter', 'INPUT', $CHAIN);
@@ -717,6 +736,22 @@ sub flush_rules {
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
+
+    @cmd = ('iptables','-L','INPUT');
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my $count = -2;
+    my @found;
+    for my $line ( split /\n/,$out ) {
+        $count++;
+        next if $line !~ /^RAVADA /;
+        push @found,($count);
+    }
+    @cmd = ('iptables','-D','INPUT');
+    for my $n (reverse @found) {
+        run3([@cmd, $n], \$in, \$out, \$err);
+        warn $err if $err;
+    }
 }
 
 sub open_ipt {
