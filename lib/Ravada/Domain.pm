@@ -1724,8 +1724,6 @@ sub _remove_iptables {
 
     my %args = @_;
 
-    return if $>;
-
     my $user = delete $args{user};
     my $port = delete $args{port};
     my $id_vm = delete $args{id_vm};
@@ -1845,8 +1843,10 @@ sub _post_start {
 
     }
     $self->get_info();
-    Ravada::Request->enforce_limits(at => time + 60)
-        if !Ravada::Request::done_recently(undef, 60, 'enforce_limits');
+
+    # get the display so it is stored for front access
+    $self->display($arg{user})  if $self->is_active;
+    Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
 
@@ -1872,8 +1872,6 @@ sub _add_iptable {
     my $self = shift;
     return if scalar @_ % 2;
     my %args = @_;
-
-    return if $>;
 
     my $remote_ip = $args{remote_ip} or return;
 
@@ -1940,7 +1938,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-    );
+    ) if !$>;
 
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
@@ -1962,7 +1960,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-        );
+        ) if !$>;
         $self->_log_iptable(
             iptables => [
                     $remote_ip2
@@ -1970,6 +1968,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                     ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port}
             ]
             , user => $user,remote_ip => $local_ip);
+        );
     }
 }
 
