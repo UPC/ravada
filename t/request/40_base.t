@@ -378,9 +378,7 @@ sub test_req_remove_base_fail {
     }
 
     ok($req->status eq 'requested' || $req->status eq 'done');
-    rvd_back->process_requests();
-    rvd_back->process_long_requests(0,1);
-    wait_request($req);
+    rvd_back->_process_all_requests_dont_fork();
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
                                 ."'".$req->status."'");
