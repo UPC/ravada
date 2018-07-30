@@ -1619,6 +1619,12 @@ sub _post_shutdown {
     $self->_rsync_volumes_back( $request )
         if !$self->is_local && !$self->is_active && !$self->is_volatile;
 
+    Ravada::Request->enforce_limits();
+    $self->_remove_temporary_machine(@_);
+    $self->needs_restart(0) if $self->is_known()
+        && $self->needs_restart()
+        && !$self->is_active;
+
 }
 
 sub _around_is_active($orig, $self) {
@@ -1692,8 +1698,6 @@ sub _remove_iptables {
     my $self = shift;
     my %args = @_;
 
-    return if $>;
-
     my $user = delete $args{user};
     my $port = delete $args{port};
 
@@ -1723,7 +1727,7 @@ sub _remove_iptables {
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
             if ($vm->is_local) {
-                $ipt_obj->delete_ip_rule(@$iptables);
+                $ipt_obj->delete_ip_rule(@$iptables)    if $>;
             } else {
                 $self->_delete_ip_rule_remote($iptables, $vm);
             }
@@ -1800,6 +1804,9 @@ sub _post_start {
 
     }
     $self->get_info();
+
+    # get the display so it is stored for front access
+    $self->display($arg{user})  if $self->is_active;
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
@@ -1826,8 +1833,6 @@ sub _add_iptable {
     my $self = shift;
     return if scalar @_ % 2;
     my %args = @_;
-
-    return if $>;
 
     my $remote_ip = $args{remote_ip} or return;
 
@@ -1891,7 +1896,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-    );
+    ) if !$>;
 
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
@@ -1908,7 +1913,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-        );
+        ) if !$>;
         $self->_log_iptable(iptables => \@iptables_arg, user => $user,remote_ip => $local_ip);
     }
 }
