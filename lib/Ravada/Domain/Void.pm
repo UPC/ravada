@@ -117,9 +117,7 @@ sub _store {
     my $data = $self->_load();
     $data->{$var} = $value;
 
-    my ($path) = $self->_config_file() =~ m{(.*/).*};
-    make_path($path) or die "Error: I can't mkdir $path"
-        if ! -e $path;
+    make_path($self->_config_dir()) if !-e $self->_config_dir;
     eval { DumpFile($self->_config_file(), $data) };
     chomp $@;
     confess $@ if $@;
@@ -151,9 +149,7 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
-    $self->_vm->run_command("mkdir -p ".$self->_config_dir());
-    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.log: $!";
-    _lock($lock);
+    $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
     $self->_vm->write_file($disk, Dump($data));
     _unlock($lock);
     return $self->_value($var);

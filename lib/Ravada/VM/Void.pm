@@ -181,7 +181,7 @@ sub _list_domains_remote($self, %args) {
 }
 
 sub list_domains($self, %args) {
-    return $self->_list_domains_local(%args) if $self->host eq 'localhost';
+    return $self->_list_domains_local(%args) if $self->is_local();
     return $self->_list_domains_remote(%args);
 }
 
