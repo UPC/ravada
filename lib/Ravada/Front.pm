@@ -259,8 +259,7 @@ Returns a list of the domains as a listref
 sub list_domains($self, %args) {
 
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
-        ."      ,vms.name as node , is_volatile, client_status "
-        ."      ,id_owner "
+        ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
