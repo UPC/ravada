@@ -117,8 +117,8 @@ sub create_domain {
 sub create_volume {
 }
 
-sub dir_img {
-    return $Ravada::Domain::Void::DIR_TMP;
+sub _dir_img {
+    return $Ravada::Front::Domain::Void::_config_dir();
 }
 
 sub _list_domains_local($self, %args) {
@@ -127,7 +127,7 @@ sub _list_domains_local($self, %args) {
     confess "Wrong arguments ".Dumper(\%args)
         if keys %args;
 
-    opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
+    opendir my $ls,Ravada::Front::Domain::Void::_config_dir() or return;
 
     my @domain;
     while (my $file = readdir $ls ) {
@@ -179,7 +179,7 @@ sub _list_domains_remote($self, %args) {
 }
 
 sub list_domains($self, %args) {
-    return $self->_list_domains_local(%args) if $self->host eq 'localhost';
+    return $self->_list_domains_local(%args) if $self->is_local();
     return $self->_list_domains_remote(%args);
 }
 
@@ -266,7 +266,7 @@ sub refresh_storage_pools {
 }
 
 sub list_storage_pools {
-    return $Ravada::Domain::Void::DIR_TMP;
+    return Ravada::Front::Domain::Void::_config_dir();
 }
 
 sub is_alive($self) {
