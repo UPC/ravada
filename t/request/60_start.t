@@ -33,7 +33,7 @@ sub test_request_start($vm_name) {
     is($req->status, 'done');
     is($req->error,'');
 
-    is($domain->remote_ip,'127.0.0.1') if !$>;
+    is($domain->remote_ip,'127.0.0.1');
 
     $req = Ravada::Request->start_domain(
         id_domain => $domain->id
@@ -44,7 +44,7 @@ sub test_request_start($vm_name) {
     is($req->status, 'done');
     is($req->error,'');
 
-    is($domain->remote_ip,'127.0.0.2')  if !$>;
+    is($domain->remote_ip,'127.0.0.2');
 
     $domain->remove(user_admin);
 }
@@ -62,7 +62,7 @@ sub test_request_iptables($vm_name) {
 
     is(scalar($domain->list_requests), 0);
 
-    is($domain->remote_ip,'127.0.0.1')  if !$>;
+    is($domain->remote_ip,'127.0.0.1');
 
     $domain->remove(user_admin);
 }

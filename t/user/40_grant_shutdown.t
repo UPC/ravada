@@ -357,7 +357,7 @@ for my $vm_name ( vm_names() ) {
         }
 
         diag($msg)      if !$vm;
-        skip $msg       if !$vm;
+        skip $msg,10       if !$vm;
 
         diag("Testing shutdown on $vm_name");
 

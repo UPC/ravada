@@ -59,7 +59,7 @@ sub test_volatile_clone {
             and do {
                 is($clone_listed->{can_hibernate},0);
                 ok(exists $clone_listed->{client_status},"Expecting client_status field");
-                like($clone_listed->{client_status},qr(.))
+                like($clone_listed->{client_status},qr(.));
             };
 
 

@@ -247,7 +247,7 @@ sub test_requests_by_domain {
     my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
     ok($domain->list_requests == 3);
 
-    rvd_back->_process_all_requests_dont_fork(1);
+    rvd_back->_process_all_requests_dont_fork();
 
     is($req1->status , 'done');
     is($req2->status , 'done');
@@ -315,7 +315,7 @@ ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;

@@ -383,7 +383,7 @@ for my $vm_name ( vm_names() ) {
         }
 
         diag($msg)      if !$vm;
-        skip $msg       if !$vm;
+        skip $msg,10       if !$vm;
 
         diag("Testing remove on $vm_name");
 
