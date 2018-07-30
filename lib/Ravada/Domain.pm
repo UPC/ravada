@@ -294,7 +294,7 @@ sub _start_preconditions{
         my %args = @args;
         my $user = delete $args{user};
         my $remote_ip = delete $args{remote_ip};
-        $request = $args{request} if exists $args{request};
+        $request = delete $args{request} if exists $args{request};
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
         _allow_manage_args(@_);
@@ -1692,6 +1692,8 @@ sub _remove_iptables {
     my $self = shift;
     my %args = @_;
 
+    return if $>;
+
     my $user = delete $args{user};
     my $port = delete $args{port};
 
@@ -1825,6 +1827,8 @@ sub _add_iptable {
     return if scalar @_ % 2;
     my %args = @_;
 
+    return if $>;
+
     my $remote_ip = $args{remote_ip} or return;
 
     my $user = $args{user} or confess "ERROR: Missing user";
@@ -1949,7 +1953,6 @@ sub open_iptables {
         eval {
             $self->start(
                 user => $user
-            ,id_domain => $self->id
             ,remote_ip => $args{remote_ip}
             );
         };
