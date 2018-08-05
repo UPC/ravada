@@ -147,7 +147,7 @@ for my $vm_name (reverse sort @VMS) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $vm eq 'KVM' && $>) {
+        if ($vm && $vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
