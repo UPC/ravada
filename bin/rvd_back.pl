@@ -150,6 +150,7 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
+    Ravada::Request->enforce_limits();
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();

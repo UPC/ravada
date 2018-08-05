@@ -32,6 +32,7 @@ for ( qw(css fallback fonts img js )) {
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
     ,'bin/rvd_back.pl' => 'usr/sbin/rvd_back'
+    ,'bin/rvd_benchmark_create.pl' => 'usr/sbin/rvd_benchmark_create'
     ,'rvd_front.pl' => 'usr/sbin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
     ,'copyright' => 'usr/share/doc/ravada'

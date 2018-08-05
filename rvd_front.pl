@@ -284,6 +284,9 @@ get '/list_bases.json' => sub {
 get '/list_images.json' => sub {
     my $c = shift;
 
+    return access_denied($c) unless _logged_in($c)
+        && $USER->can_create_machine();
+
     my $vm_name = $c->param('backend');
 
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
@@ -291,6 +294,8 @@ get '/list_images.json' => sub {
 
 get '/iso_file.json' => sub {
     my $c = shift;
+    return access_denied($c) unless _logged_in($c)
+        && $USER->can_create_machine();
     my @isos =('<NONE>');
     push @isos,(@{$RAVADA->iso_file});
     $c->render(json => \@isos);
@@ -613,6 +618,8 @@ get '/anonymous/request/(:id).(:type)' => sub {
 
 get '/requests.json' => sub {
     my $c = shift;
+    return access_denied($c) unless _logged_in($c)
+        && $USER->is_admin;
     return list_requests($c);
 };
 
@@ -1069,6 +1076,13 @@ sub admin {
 
         # if we find no clones do not hide them. They may be created later
         $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
+        if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
+            if (!defined $c->session('monitoring')) {
+                my $host = $c->req->url->to_abs->host;
+                $c->stash(check_netdata => "https://$host:19999/index.html");
+            }
+            $c->stash( monitoring => 1 ) if $c->session('monitoring');
+        }
     }
     $c->render( template => 'main/admin_'.$page);
 };
