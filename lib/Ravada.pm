@@ -1804,6 +1804,7 @@ sub process_requests {
     );
     $sth->execute(time);
 
+    my @requests;
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
@@ -1823,15 +1824,19 @@ sub process_requests {
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
 
+        push @requests,($req);
+
+    }
+    $sth->finish;
+
+    for my $req (@requests) {
         $self->_execute($req, $dont_fork);
 #        $req->status("done") if $req->status() !~ /retry/;
         next if !$DEBUG && !$debug;
 
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG;
-
     }
-    $sth->finish;
 }
 
 =head2 process_long_requests
@@ -1989,6 +1994,7 @@ sub _execute {
         $self->{fork_manager} = $fm;
     }
     $self->{fork_manager}->reap_finished_children;
+    $CONNECTOR->dbh->disconnect();
     my $pid = $self->{fork_manager}->start;
     die "I can't fork" if !defined $pid;
 
@@ -2021,9 +2027,9 @@ sub _do_execute_command {
     eval {
         $sub->($self,$request);
     };
+    my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    my $err = ( $@ or '');
     $request->error($err)   if $err;
     $request->status('done')
         if $request->status() ne 'done'
@@ -2803,7 +2809,7 @@ sub vm($self) {
         push @vms, ( $vm );
     };
     return [@vms] if @vms;
-    return $self->_create_vms();
+    return $self->_create_vm();
 
 }
 
