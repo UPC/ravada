@@ -1502,8 +1502,6 @@ sub clone {
         name => $name
         ,id_base => $id_base
         ,id_owner => $uid
-        ,vm => $self->vm
-        ,_vm => $self->_vm
         ,@args_copy
     );
     return $clone;
