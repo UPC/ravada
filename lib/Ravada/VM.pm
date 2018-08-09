@@ -296,7 +296,7 @@ sub ip {
     return $ip if $ip && $ip !~ /^127/ && $ip =~ /^\d+\.\d+\.\d+\.\d+$/;
 
     warn "WARNING: I can't find the IP of host ".$self->host.", using localhost."
-        ." This virtual machine won't be available from the network.";
+        ." This virtual machine won't be available from the network." if $0 !~ /\.t$/;
 
     return '127.0.0.1';
 }
