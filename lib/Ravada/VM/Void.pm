@@ -107,6 +107,7 @@ sub create_domain {
         );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
+        $domain->_store( is_active => 0 );
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
