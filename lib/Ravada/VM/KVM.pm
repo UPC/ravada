@@ -339,6 +339,9 @@ sub dir_img {
 }
 
 sub _storage_path($self, $storage) {
+    if (!ref($storage)) {
+        $storage = $self->vm->get_storage_pool_by_name($storage);
+    }
     my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -738,6 +741,8 @@ sub _create_disk_qcow2 {
     confess "Missing name" if !$name;
 
     my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
 
     my @files_out;
 
