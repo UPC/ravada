@@ -33,6 +33,7 @@ sub create_pool {
 
     my $pool_name = new_pool_name();
     my $dir = "/var/tmp/$pool_name";
+
     mkdir $dir if ! -e $dir;
 
     my $xml =
@@ -124,7 +125,7 @@ sub test_base {
     my ($path0) = $files_base[0] =~ m{(.*)/};
     my ($path1) = $files_base[1] =~ m{(.*)/};
 
-    isnt($path0,$path1);
+    is($path0,$path1);
 
     $domain->remove_base( user_admin );
 
@@ -192,6 +193,41 @@ sub test_default_pool {
     is($vm->default_storage_pool_name, $pool_name);
 }
 
+sub test_default_pool_base {
+    my $vm = shift;
+    my $pool_name = shift;
+
+    my %pool = (
+        default => '/var/lib/libvirt'
+        ,$pool_name => $vm->_storage_path($pool_name)
+    );
+    for my $name1 (keys %pool ) {
+        my $dir_pool = $pool{$name1};
+        $vm->default_storage_pool_name($name1);
+        my $domain = create_domain($vm->type);
+        ok($domain);
+
+        for my $volume ($domain->list_volumes ) {
+            my ($path ) = $volume =~ m{(.*)/.*};
+            like($path, qr{$dir_pool});
+        }
+        for my $name2 ( $pool_name, 'default' ) {
+            my $dir_pool2 = $pool{$name2};
+            $vm->default_storage_pool_name($name2);
+            $domain->prepare_base(user_admin);
+
+            ok(scalar ($domain->list_files_base));
+            for my $volume ($domain->list_files_base) {
+                my ($path ) = $volume =~ m{(.*)/.*};
+                like($path, qr{$dir_pool2});
+            }
+
+            $domain->remove_base(user_admin);
+            is($domain->is_base,0);
+        }
+        $domain->remove(user_admin);
+    }
+}
 #########################################################################
 
 clean();
@@ -216,6 +252,10 @@ SKIP: {
     test_default_pool($vm_name,$pool_name);
 
     test_volumes_in_two_pools($vm_name);
+
+    $domain->remove(user_admin);
+
+    test_default_pool_base($vm, $pool_name);
 }
 
 clean();

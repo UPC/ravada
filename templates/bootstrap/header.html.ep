@@ -9,21 +9,32 @@
 % }
     <title>Ravada VDI</title>
 
+% if ( !$fallback ) {
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.css">
+    <link href="https://use.fontawesome.com/releases/v5.0.7/css/all.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/introjs.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.ckeditor.com/4.8.0/standard/ckeditor.js"></script>
+% } else {
+	<link rel="stylesheet" href="/fallback/bootstrap/dist/css/bootstrap.min.css" type="text/css">
+    <link rel="stylesheet" href="/fallback/morris.js/morris.css" type="text/css">
+
+    <link rel="stylesheet" href="/fallback/bootstrap-select/dist/css/bootstrap-select.css" type="text/css">
+    <link rel="stylesheet" href="/fallback/font-awesome5/css/fontawesome-all.min.css" type="text/css">
+    <link rel="stylesheet" href="/fallback/introjs/bin/introjs.css" type="text/css">
+    <script src="/fallback/ckeditor/ckeditor.js"></script>
+% }
+
 % foreach my $csslink (@$css) {
     <link href="<%= $csslink %>" rel="stylesheet">
 % }
-    <link href="https://use.fontawesome.com/releases/v5.0.7/css/all.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/introjs.css" rel="stylesheet" type="text/css">
 
   <style>
 % foreach my $csssnip (@$csssnippets) {
   <%= $csssnip %>
 % }
   </style>
-  <script src="https://cdn.ckeditor.com/4.8.0/standard/ckeditor.js"></script>
 
 </head>

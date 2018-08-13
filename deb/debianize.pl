@@ -25,7 +25,7 @@ my %DIR = (
     ,'etc/systemd/' => 'lib/systemd/system/'
 );
 
-for ( qw(css fonts img js )) {
+for ( qw(css fallback fonts img js )) {
     $DIR{"public/$_"} = "usr/share/ravada/public";
 }
 
@@ -36,6 +36,7 @@ my %FILE = (
     ,'rvd_front.pl' => 'usr/sbin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
     ,'copyright' => 'usr/share/doc/ravada'
+    ,'package.json' => 'usr/share/ravada'
 );
 
 my @REMOVE= qw(
