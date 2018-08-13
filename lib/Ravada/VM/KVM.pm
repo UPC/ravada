@@ -339,6 +339,9 @@ sub dir_img {
 }
 
 sub _storage_path($self, $storage) {
+    if (!ref($storage)) {
+        $storage = $self->vm->get_storage_pool_by_name($storage);
+    }
     my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
