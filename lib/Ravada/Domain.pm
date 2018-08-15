@@ -665,9 +665,7 @@ sub open($class, @args) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my @ro = ();
-    @ro = (readonly => 1 ) if $>;
-    my $vm = $vm0->new( @ro );
+    my $vm = $vm0->new( );
 
     my $domain = $vm->search_domain($row->{name}, $force);
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
