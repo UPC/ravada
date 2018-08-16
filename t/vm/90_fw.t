@@ -7,6 +7,8 @@ use Test::More;
 use Test::SQL::Data;
 use IPTables::ChainMgr;
 
+use Carp qw(confess);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -69,6 +71,7 @@ sub test_fw_domain {
     test_chain($vm_name, $local_ip,$local_port, $remote_ip, 1);
 
     $domain->shutdown_now( $USER );
+    is($domain->is_active, 0) or exit;
     test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
 }
 
@@ -116,7 +119,7 @@ sub test_chain {
     is(scalar(@rule),$expected_count) or do {
         my ($rv, $out, $errs) = $ipt->run_ipt_cmd("/sbin/iptables -n -L $CHAIN");
         warn join("\n",@$out);
-        exit;
+        confess;
     };
     ok($rule[0],"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
         if $expected_count;

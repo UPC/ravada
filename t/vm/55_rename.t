@@ -103,7 +103,6 @@ sub test_req_rename_domain {
         for ( 1 .. 5 ) {
             wait_request($req) if $req->status ne 'done';
         }
-        $rvd_back->_wait_pids();
         ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done") or exit;
         ok(!$req->error,"Error ".($req->error or'')

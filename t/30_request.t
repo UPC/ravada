@@ -75,7 +75,6 @@ sub test_req_start_domain {
     ok($req);
     ok($req->status);
     $ravada->_process_requests_dont_fork();
-    $ravada->_wait_pids();
     wait_request($req);
 
     ok($req->status eq 'done'
@@ -121,7 +120,6 @@ sub test_req_create_domain_iso {
 
     $ravada->process_requests();
 
-    $ravada->_wait_pids();
     wait_request($req);
 
     ok($req->status eq 'done'

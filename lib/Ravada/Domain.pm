@@ -812,8 +812,9 @@ sub open($class, @args) {
         if !keys %$row;
 
     my $vm;
-    if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
-        $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+    my $id_vm2 = $self->_data('id_vm');
+    if ($id_vm || ( $id_vm2 && !$self->is_base) ) {
+        $vm = Ravada::VM->open(id => ($id_vm or $id_vm2)
                 , readonly => $readonly);
     }
     if (!$vm || !$vm->is_active) {
@@ -1528,7 +1529,6 @@ sub _copy_clone($self, %args) {
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
-        ,_vm => $self->_vm
         ,@copy_arg
     );
     my @volumes = $self->list_volumes_target;
@@ -1725,7 +1725,7 @@ sub _remove_iptables {
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
             if ($vm->is_local) {
-                $ipt_obj->delete_ip_rule(@$iptables)    if $>;
+                $ipt_obj->delete_ip_rule(@$iptables)    if !$>;
             } else {
                 $self->_delete_ip_rule_remote($iptables, $vm);
             }

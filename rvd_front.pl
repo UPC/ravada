@@ -61,6 +61,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,login_custom => ''
                                               ,footer => 'bootstrap/footer'
                                               ,monitoring => 0
+                                              ,fallback => 0
                                               ,guide_custom => ''
                                               ,admin => {
                                                     hide_clones => 15
@@ -134,6 +135,7 @@ hook before_routes => sub {
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
             ,monitoring => 0
+            ,fallback => $CONFIG_FRONT->{fallback}
             ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
@@ -161,6 +163,7 @@ hook before_routes => sub {
         }
         $c->stash( monitoring => 1) if $c->session('monitoring');
     }
+        $c->stash( fallback => 1) if $c->session('fallback');
 };
 
 

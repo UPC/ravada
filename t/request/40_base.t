@@ -7,6 +7,9 @@ use POSIX qw(WNOHANG);
 use Test::More;
 use Test::SQL::Data;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -394,19 +397,32 @@ sub test_req_remove_base {
     check_files_removed(@files_base);
 }
 
-sub test_req_remove {
-    my ($vm_name, $name_domain, $name_clone ) = @_;
+sub test_req_remove($vm_name, $set_id_vm=0) {
     my $vm = rvd_back->search_vm($vm_name);
+    my $domain = create_domain($vm_name);
+    ok($domain) or BAIL_OUT;
+
+    if (!$set_id_vm) {
+        my $sth = $test->connector->dbh->prepare("UPDATE domains set id_vm=NULL WHERE id=?");
+        $sth->execute($domain->id);
+        $sth->finish;
+
+        $domain = rvd_back->search_domain($domain->name);
+        is($domain->_data('id_vm'), undef);
+    } else {
+        $domain->start(user_admin);
+        is($domain->_data('id_vm'), $vm->id);
+    }
 
     my $req = Ravada::Request->remove_domain(
         uid => $USER->id
-        , name => $name_clone
+        , name => $domain->name
     );
 
     rvd_back->_process_all_requests_dont_fork();
 
-    my $clone_gone = $vm->search_domain($name_clone);
-    ok(!$clone_gone);
+    my $clone_gone = rvd_back->search_domain($domain->name);
+    is($clone_gone, undef);
 }
 
 sub test_shutdown_by_name {
@@ -529,8 +545,9 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
-        test_req_remove($vm_name, $base_name, $clone_name);
 
+        test_req_remove($vm_name);
+        test_req_remove($vm_name,1); # remove with id_vm set
     };
 }
 

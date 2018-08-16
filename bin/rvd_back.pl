@@ -165,11 +165,6 @@ sub do_start {
 
 }
 
-sub clean_old_requests {
-    my $ravada = Ravada->new( %CONFIG );
-    $ravada->clean_old_requests();
-}
-
 sub start {
     {
         my $ravada = Ravada->new( %CONFIG );
@@ -177,9 +172,8 @@ sub start {
         for my $vm (@{$ravada->vm}) {
             $vm->id;
         }
-        $ravada->_wait_pids();
+        $ravada->clean_old_requests();
     }
-    clean_old_requests();
     for (;;) {
         do_start();
     }

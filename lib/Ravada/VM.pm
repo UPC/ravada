@@ -118,21 +118,23 @@ Arguments: id of the VM
 sub open {
     my $proto = shift;
     my %args;
+    my $id;
     if (!scalar @_ % 2) {
         %args = @_;
         confess "ERROR: Don't set the id and the type "
             if $args{id} && $args{type};
         return _open_type($proto,@_) if $args{type};
+        $id = delete $args{id} or confess "Error: missing id";
     } else {
-        $args{id} = shift;
+        $id = shift;
     }
     my $class=ref($proto) || $proto;
 
     my $self = {};
     bless($self, $class);
-    my $row = $self->_do_select_vm_db( id => $args{id});
+    my $row = $self->_do_select_vm_db( id => $id);
     lock_hash(%$row);
-    confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
+    confess "ERROR: I can't find VM id=$id" if !$row || !keys %$row;
 
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
@@ -305,7 +307,7 @@ sub _around_create_domain {
      delete $args{memory};
      delete $args{request};
      delete $args{iso_file};
-     delete @args{'description','remove_cpu','vm'};
+     delete @args{'description','remove_cpu','vm','disk','id_template','start'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 

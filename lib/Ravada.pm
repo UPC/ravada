@@ -1337,7 +1337,7 @@ sub create_domain {
     my $id_base = delete $args{id_base};
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
-    _check_args(\%args,qw(iso_file id_base id_iso active swap memory disk id_template));
+    _check_args(\%args,qw(iso_file id_base id_iso active swap memory disk id_template start remote_ip));
 
     my $vm;
     if ($vm_name) {
@@ -1355,7 +1355,7 @@ sub create_domain {
     confess "No vm found"   if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name && !$args{id_base};
+        if !$vm_name && !$id_base;
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
@@ -1773,8 +1773,11 @@ sub clean_old_requests {
         $req->status("done","Killed ".$req->command." before completion");
     }
 
-    $self->_clean_requests('refresh_vms');
     $self->_clean_requests('cleanup');
+    $self->_clean_requests('enforce_limits');
+    $self->_clean_requests('ping_backend');
+    $self->_clean_requests('refresh_storage');
+    $self->_clean_requests('refresh_vms');
 }
 
 =head2 process_requests
@@ -2098,7 +2101,7 @@ sub _cmd_create{
     warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
 
-    $domain = $self->create_domain(%{$request->args},request => $request);
+    $domain = $self->create_domain(request => $request);
 
     my $msg = '';
 
@@ -2680,21 +2683,8 @@ sub _cmd_set_base_vm {
 }
 
 sub _cmd_cleanup($self, $request) {
-    $self->enforce_limits( request => $request);
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_requests('cleanup', $request);
-    $self->_wait_pids($request);
-}
-
-sub _wait_pids($self) {
-    $self->{fork_manager}->reap_finished_children   if $self->{fork_manager};
-    my $procs = `ps -eo "pid cmd"`;
-    for my $line (split /\n/, $procs ) {
-        my ($pid, $cmd) = $line =~ m{\s*(\d+)\s+.*(rvd_back).*defunct};
-        next if !$pid;
-        next if $cmd !~ /rvd_back/;
-        my $kid = waitpid($pid , WNOHANG);
-    }
 }
 
 sub _req_method {
@@ -2717,7 +2707,6 @@ sub _req_method {
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
     ,copy_screenshot => \&_cmd_copy_screenshot
-   ,cmd_cleanup => \&_cmd_cleanup
    ,remove_base => \&_cmd_remove_base
    ,set_base_vm => \&_cmd_set_base_vm
    ,refresh_vms => \&_cmd_refresh_vms
