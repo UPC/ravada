@@ -2729,6 +2729,8 @@ sub _enforce_limits_active($self, $request) {
     }
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
+        my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        next if $user->is_admin;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
