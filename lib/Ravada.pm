@@ -222,7 +222,7 @@ sub _update_isos {
                     ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
                 ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
                 ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
-                ,min_disk_size => '10'
+                ,min_disk_size => '1'
         }
         ,artful => {
                     name => 'Ubuntu Artful Aardvark'
@@ -1027,6 +1027,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
+    $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
@@ -1296,55 +1298,62 @@ sub create_domain {
 
     my %args = @_;
 
-    croak "Argument id_owner required "
-        if !$args{id_owner};
-
+    my $start = $args{start};
     my $vm_name = $args{vm};
-    delete $args{vm};
-
-    my $request = ( $args{request} or undef);
+    my $id_base = $args{id_base};
+    my $request = $args{request};
+    my $id_owner = $args{id_owner};
 
     my $vm;
+    if ($request) {
+        %args = %{$request->args};
+        $vm_name = $request->defined_arg('vm') if $request->defined_arg('vm');
+    }
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    if ($args{id_base}) {
-        my $base = Ravada::Domain->open($args{id_base});
+    if ($id_base) {
+        my $base = Ravada::Domain->open($id_base)
+            or confess "Unknown base id: $id_base";
         $vm = Ravada::VM->open($base->_vm->id);
     }
 
-    confess "No vm found"   if !$vm;
+    confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name && !$args{id_base};
+        if !$vm_name && !$id_base;
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    my $domain;
     $request->status("creating")    if $request;
-    eval { $domain = $vm->create_domain(@_) };
+    my $domain;
+    eval { $domain = $vm->create_domain(%args)};
+
     my $error = $@;
     if ( $request ) {
         $request->error($error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
-        if (!$error && $request->defined_arg('start')) {
-            $request->status("starting");
-            eval {
-                my $user = Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
-                $domain->start(
-                    user => $user
-                    ,remote_ip => $request->defined_arg('remote_ip')
-                    ,request => $request
-                )
-            };
-            my $error = $@;
-            $request->error($error) if $error;
-        }
-    } elsif ($@) {
-        die $@;
+    } elsif ($error) {
+        die $error;
+    }
+    if (!$error && $start) {
+        $request->status("starting") if $request;
+        eval {
+            my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+            my $remote_ip;
+            $remote_ip = $request->defined_arg('remote_ip') if $request;
+            $domain->start(
+                user => $user
+                ,remote_ip => $remote_ip
+                ,request => $request
+            )
+        };
+        my $error = $@;
+        die $error if $error && !$request;
+        $request->error($error) if $error;
     }
     return $domain;
 }
@@ -1361,18 +1370,31 @@ sub remove_domain {
     my $self = shift;
     my %arg = @_;
 
-    confess "Argument name required "
-        if !$arg{name};
+    my $name = delete $arg{name} or confess "Argument name required ";
 
     confess "Argument uid required "
         if !$arg{uid};
 
     lock_hash(%arg);
 
-    my $domain = $self->search_domain($arg{name}, 1)
-        or die "ERROR: I can't find domain '$arg{name}', maybe already removed.";
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name = ?");
+    $sth->execute($name);
+
+    my ($id)= $sth->fetchrow;
+    confess "Error: Unknown domain $name"   if !$id;
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
+    die "Error: user ".$user->name." can't remove domain $id"
+        if !$user->can_remove_machine($id);
+
+    my $domain = Ravada::Domain->open(id => $id, _force => 1)
+        or do {
+            warn "Warning: I can't find domain '$id', maybe already removed.";
+            $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
+            $sth->execute($id);
+            return;
+    };
+
     $domain->remove( $user);
 }
 
@@ -1972,7 +1994,7 @@ sub _cmd_create{
     warn "$$ creating domain"   if $DEBUG;
     my $domain;
 
-    $domain = $self->create_domain(%{$request->args},request => $request);
+    $domain = $self->create_domain(request => $request);
 
     my $msg = '';
 
@@ -2707,6 +2729,8 @@ sub _enforce_limits_active($self, $request) {
     }
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
+        my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        next if $user->is_admin;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
