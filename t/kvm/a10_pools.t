@@ -36,6 +36,7 @@ sub create_pool {
 
     my $pool_name = new_pool_name();
     my $dir = "/var/tmp/$pool_name";
+
     mkdir $dir if ! -e $dir;
 
     my $xml =
@@ -365,6 +366,44 @@ sub test_clone_pool_2($vm, $pool, $base) {
         $clone->remove(user_admin);
     }
 }
+
+sub test_default_pool_base {
+    my $vm = shift;
+    my $pool_name = shift;
+
+    my %pool = (
+        default => '/var/lib/libvirt'
+        ,$pool_name => $vm->_storage_path($pool_name)
+    );
+    for my $name1 (keys %pool ) {
+        my $dir_pool = $pool{$name1};
+        $vm->default_storage_pool_name($name1);
+        my $domain = create_domain($vm->type);
+        ok($domain);
+
+        for my $volume ($domain->list_volumes ) {
+            my ($path ) = $volume =~ m{(.*)/.*};
+            like($path, qr{$dir_pool});
+        }
+        for my $name2 ( $pool_name, 'default' ) {
+            my $dir_pool2 = $pool{$name2};
+            $vm->default_storage_pool_name($name2);
+            $domain->prepare_base(user_admin);
+
+            ok(scalar ($domain->list_files_base));
+            for my $volume ($domain->list_files_base) {
+                my ($path ) = $volume =~ m{(.*)/.*};
+                like($path, qr{$dir_pool2});
+            }
+
+            $domain->remove_base(user_admin);
+            is($domain->is_base,0);
+        }
+        $domain->remove(user_admin);
+    }
+}
+
+#
 #########################################################################
 
 clean();
@@ -393,8 +432,12 @@ SKIP: {
     test_base_pool($vm, $pool_name);
     test_clone_pool($vm, $pool_name);
 
+    test_default_pool_base($vm, $pool_name);
+
     my $pool_name2 = create_pool($vm_name);
     test_base_clone_pool($vm, $pool_name, $pool_name2);
+    $domain->remove(user_admin);
+
 }
 
 clean();

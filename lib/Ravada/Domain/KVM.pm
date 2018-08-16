@@ -351,7 +351,6 @@ sub _create_qcow_base {
 
     my @base_img;
 
-    my $base_name = $self->name;
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
         my $base_img = $file_img;
