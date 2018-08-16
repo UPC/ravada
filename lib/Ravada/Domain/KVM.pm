@@ -351,14 +351,17 @@ sub _create_qcow_base {
 
     my @base_img;
 
-    my $base_name = $self->name;
-    my $base_dir = $self->_vm->_storage_path($self->_vm->storage_pool);
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
         my $base_img = $file_img;
 
+        my $pool_base = $self->_vm->default_storage_pool_name;
+        $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+
+        my $dir_base = $self->_vm->_storage_path($pool_base);
+
         my @cmd;
-        $base_img =~ s{(.*)/(.*)\.\w+$}{$base_dir/$2\.ro.qcow2};
+        $base_img =~ s{(.*)/(.*)\.\w+$}{$dir_base/$2\.ro.qcow2};
 
         die "ERROR: base image already exists '$base_img'" if -e $base_img;
 

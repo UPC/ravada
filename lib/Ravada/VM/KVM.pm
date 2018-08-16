@@ -741,6 +741,8 @@ sub _create_disk_qcow2 {
     confess "Missing name" if !$name;
 
     my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
 
     my @files_out;
 
