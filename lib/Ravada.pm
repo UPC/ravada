@@ -1326,18 +1326,24 @@ sub create_domain {
     my $self = shift;
 
     my %args = @_;
-    my $vm_name = delete $args{vm};
 
+    my $request = $args{request};
+
+    if ($request) {
+        my %args_r = %{$request->args};
+        for my $field (keys %args_r) {
+            confess "Error: Argument $field different in request "
+                if $args{$field} && $args{$field} ne $args_r{$field};
+            $args{$field} = $args_r{$field};
+        }
+    }
+    my $vm_name = delete $args{vm};
     my @create_args = (%args);
 
-    my $id_owner = delete $args{id_owner}   or croak "ERROR: Argument id_owner required ";
-    my $name = delete $args{name}           or confess "ERROR: Argument name required";
-
-    my $request = delete $args{request};
     my $id_base = delete $args{id_base};
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
-    _check_args(\%args,qw(iso_file id_base id_iso active swap memory disk id_template start remote_ip));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
 
     my $vm;
     if ($vm_name) {
