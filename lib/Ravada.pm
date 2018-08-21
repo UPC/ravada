@@ -1308,6 +1308,7 @@ sub create_domain {
     if ($request) {
         %args = %{$request->args};
         $vm_name = $request->defined_arg('vm') if $request->defined_arg('vm');
+        $id_base = $request->defined_arg('id_base') if $request->defined_arg('id_base');
     }
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
@@ -1316,7 +1317,7 @@ sub create_domain {
     if ($id_base) {
         my $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
-        $vm = Ravada::VM->open($base->_vm->id);
+        $vm = $base->_vm;
     }
 
     confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
