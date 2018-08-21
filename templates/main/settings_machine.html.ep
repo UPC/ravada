@@ -1,4 +1,4 @@
-h !DOCTYPE html>
+<!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">

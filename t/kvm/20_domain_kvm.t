@@ -107,7 +107,7 @@ sub test_new_domain_iso {
     my $active = shift;
     
     my $vm = rvd_back()->search_vm($BACKEND);
-    my $iso = $vm->_search_iso(1);
+    my $iso = $vm->_search_iso(search_id_iso('alpine'));
     my $name = new_domain_name();
 
     test_remove_domain($name);

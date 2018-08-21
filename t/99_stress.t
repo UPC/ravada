@@ -669,7 +669,9 @@ sub _all_reqs_done($reqs, $vm, $buggy) {
             || $r->error =~ /Bases can't .*start/i
             || $r->error =~ /^INFO:/i
             || $r->error =~ /domain with a managed saved state can't be renamed/i
-            || $r->error =~ /only \d+ found/i;
+            || $r->error =~ /Autostart.*on base/i
+            || $r->error =~ /only \d+ found/i
+            || $r->error =~ /command .* run recently/i
             ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain($vm);

@@ -152,6 +152,7 @@ sub list_machines_user {
             , id_clone => undef
             , name_clone => undef
             , is_locked => undef
+            , can_hibernate => 0
         );
 
         if ($clone) {
@@ -169,6 +170,7 @@ sub list_machines_user {
             $base{id_clone} = $clone->id;
             $base{can_remove} = 0;
             $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
+            $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
@@ -219,6 +221,10 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
+                                    && !$m->{is_volatile};
     }
     return $machines;
 }
@@ -711,7 +717,7 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 =cut
 
-sub list_requests($self, $id_domain_req=undef, $seconds=120) {
+sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
     my @now = localtime(time-$seconds);
     $now[4]++;
@@ -755,10 +761,13 @@ sub list_requests($self, $id_domain_req=undef, $seconds=120) {
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
                 || $command eq 'ping_backend')
+                || $command eq 'enforce_limits'
+                || $command eq 'refresh_vms'
+                || $command eq 'refresh_storage'
                 && time - $epoch_date_changed > 5
                 && $status eq 'done'
                 && !$error;
-        next if $id_domain_req && $id_domain != $id_domain_req;
+        next if $id_domain_req && defined $id_domain && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;
 

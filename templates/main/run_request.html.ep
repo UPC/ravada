@@ -5,7 +5,7 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main"
         ng-controller="run_domain_req"
-                ng-init="id_request=<%= $request->id %>"
+        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>"
     >
     <div class="jumbotron">
 
@@ -51,18 +51,20 @@
             <div ng-show="domain.is_active">
                 <a type="button" class="btn btn-success"
                     ng-click="view_clicked=true; copy_password(); redirect();"
-                    href="/machine/display/{{domain.id}}">
+                    href="/machine/display/{{domain.id}}.vv">
                         <b><%=l 'view'%></b></a>
                 <i><%=l 'Press SHIFT + F12 to exit' %></i>
                 <br/>
-                <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %><b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
+                <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
                 </span>
             </div>
-            <div class="panel-body"
-                ng-show="domain && request.status == 'done' && !domain.is_active">
-                <div ng-show="request.error">{{request.error}}</div>
-                <div ng-show="request.error == ''">The machine has shut down.</div>
+        </div>
+        <div>
+            <div class="panel-body">
+                <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
+                <div ng-show="domain && request.status == 'done' && domain.is_active == 0">The machine is down.
                  <button type="submit" onclick="location.reload('forceGet')">Start again</button>
+                </div>
             </div>
 
         </div>

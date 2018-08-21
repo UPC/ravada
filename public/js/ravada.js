@@ -111,8 +111,21 @@
             $scope.list_machines_user = function() {
                 var seconds = 1000;
                 if ($scope.refresh <= 0) {
-                    $http.get('/list_machines_user.json').then(function(response) {
+                    var url = '/list_machines_user.json';
+                    if ($scope.anonymous) {
+                        url = '/list_bases_anonymous.json';
+                    }
+                    $http.get(url).then(function(response) {
                         $scope.machines = response.data;
+                        $scope.public_bases = 0;
+                        $scope.private_bases = 0;
+                        for (var i = 0; i < $scope.machines.length; i++) {
+                            if ( $scope.machines[i].is_public == 1) {
+                                $scope.public_bases++;
+                            } else {
+                                $scope.private_bases++;
+                            }
+                        }
                     }, function error(response) {
                         console.log(response.status);
                     });
@@ -144,7 +157,6 @@
             $scope.startIntro = startIntro;
             $scope.host_action = 0;
             $scope.refresh = 0;
-            $scope.list_machines_user();
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
@@ -283,7 +295,6 @@
                     $scope.init($scope.showmachine.id);
                   }, 2000);
               }
-              console.log("pending: "+$scope.pending_before+" - "+pending);
               $scope.pending_before = pending;
             });
           };
@@ -359,6 +370,7 @@
     };
 
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
+        var redirected_display = false;
         $scope.get_domain_info = function() {
             if ($scope.id_domain) {
                 var seconds = 1000;
@@ -372,6 +384,10 @@
                     if ($scope.domain.is_active) {
                         seconds = 5000;
                         $scope.redirect();
+                        if ($scope.auto_view && !redirected_display && !$scope.domain.spice_password) {
+                            location.href='/machine/display/'+$scope.domain.id+".vv";
+                            redirected_display=true;
+                        }
                     }
                     $timeout(function() {
                         $scope.get_domain_info();
@@ -384,9 +400,9 @@
             $scope.dots += '.';
             if ($scope.id_request) {
                 $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
+                    $scope.request=response.data;
                     if (response.data.status == 'done' ) {
                         $scope.id_domain=response.data.id_domain;
-                        $scope.request=response.data;
                         $scope.get_domain_info();
                     }
                 });
@@ -402,7 +418,6 @@
             $scope.view_password=1;
             var copyTextarea = document.querySelector('.js-copytextarea');
             if (copyTextarea) {
-
                     copyTextarea.select();
                     try {
                         var successful = document.execCommand('copy');
@@ -512,6 +527,10 @@
     $scope.getAlerts = function() {
       $http.get('/unshown_messages.json').then(function(response) {
               $scope.alerts= response.data;
+      },function error(response) {
+               if ( response.status == 403 ) {
+                   window.location.href="/logout";
+               }
       });
     };
     $interval($scope.getAlerts,10000);

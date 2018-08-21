@@ -388,6 +388,12 @@ sub can_list_clones {
   
 }
 
+=head2 can_list_clones_from_own_base
+
+Returns true if the user can list all machines that are clones from his bases
+
+=cut
+
 sub can_list_clones_from_own_base($self) {
     return 1 if $self->can_remove_clones || $self->can_remove_clone_all
         || $self->can_shutdown_clones
@@ -581,6 +587,15 @@ sub can_do($self, $grant) {
         if !exists $self->{_grant}->{$grant};
     return $self->{_grant}->{$grant};
 }
+
+=head2 can_do_domain
+
+Returns if the user is allowed to perform a privileged action in a virtual machine
+
+    if ($user->can_do_domain("remove", $domain)) {
+        ...
+
+=cut
 
 sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
@@ -882,6 +897,20 @@ sub can_manage_machine($self, $domain) {
     return 0;
 }
 
+=head2 can_remove_clones
+
+Returns true if the user can remove clones.
+
+Arguments:
+
+=over
+
+=item * id_domain: optional
+
+=back
+
+=cut
+
 sub can_remove_clones($self, $id_domain=undef) {
 
     return $self->can_do('remove_clones') if !$id_domain;
@@ -898,6 +927,20 @@ sub can_remove_clones($self, $id_domain=undef) {
     return 0;
 }
 
+=head2 can_remove_machine
+
+Return true if the user can remove this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
 sub can_remove_machine($self, $domain) {
     return 1 if $self->can_remove_all();
     #return 0 if !$self->can_remove();
@@ -911,6 +954,20 @@ sub can_remove_machine($self, $domain) {
     return $self->can_remove_clones($domain->id) if $domain->id_base;
     return 0;
 }
+
+=head2 can_shutdown_machine
+
+Return true if the user can shutdown this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
 
 sub can_shutdown_machine($self, $domain) {
 
@@ -927,6 +984,12 @@ sub can_shutdown_machine($self, $domain) {
 
     return 0;
 }
+
+=head2 grants
+
+Returns a list of permissions granted to the user in a hash
+
+=cut
 
 sub grants($self) {
     $self->_load_grants();

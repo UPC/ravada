@@ -19,6 +19,7 @@ init($test->connector);
 
 sub test_volatile_clone {
     my $vm = shift;
+    my $remote_ip = '127.0.0.1';
 
     my $domain = create_domain($vm->type);
     ok($domain);
@@ -29,9 +30,12 @@ sub test_volatile_clone {
     is($domain->volatile_clones, 1);
     my $clone_name = new_domain_name();
 
-    my $clone = $domain->clone(
+    $domain->prepare_base(user_admin);
+    my $clone = $domain->_vm->create_domain(
         name => $clone_name
-        ,user => user_admin
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
     );
 
     is($clone->is_active, 1);
@@ -46,6 +50,18 @@ sub test_volatile_clone {
         isa_ok($clonef, 'Ravada::Front::Domain');
         is($clonef->is_active, 1);
         like($clonef->display(user_admin),qr'.');
+        like($clone->remote_ip,qr(.)) or exit;
+        like($clone->client_status,qr(.));
+
+        my $domains = rvd_front->list_machines(user_admin);
+        my ($clone_listed) = grep {$_->{name} eq $clonef->name } @$domains;
+        ok($clone_listed,"Expecting to find ".$clonef->name." in ".Dumper($domains))
+            and do {
+                is($clone_listed->{can_hibernate},0);
+                ok(exists $clone_listed->{client_status},"Expecting client_status field");
+                like($clone_listed->{client_status},qr(.))
+            };
+
 
         like($clone->display(user_admin),qr'\w+://');
 
@@ -55,6 +71,7 @@ sub test_volatile_clone {
         is($clonef->is_active, 1,"[".$vm->type."] expecting active $clone_name") or exit;
         like($clonef->display(user_admin),qr'\w+://');
 
+        is($clone->spice_password, undef);
         my $list = rvd_front->list_domains();
 
         my @volumes = $clone->list_volumes();
@@ -120,7 +137,8 @@ sub test_enforce_limits {
     is($clone2->is_active, 1);
     is($clone2->is_volatile, 1);
 
-    eval { rvd_back->_enforce_limits_active( timeout => 1) };
+    my $req = Ravada::Request->enforce_limits( timeout => 1 );
+    eval { rvd_back->_enforce_limits_active($req) };
     is(''.$@,'');
     for ( 1 .. 10 ){
         last if !$clone->is_active;

@@ -256,9 +256,7 @@ sub test_json {
 
     my $domain = rvd_back()->search_domain($domain_name);
 
-    my $json = $domain->json();
-    ok($json);
-    my $dec_json = decode_json($json);
+    my $dec_json = $domain->info(user_admin);
     ok($dec_json->{name} && $dec_json->{name} eq $domain->name
         ,"[$vm_name] expecting json->{name} = '".$domain->name."'"
         ." , got ".($dec_json->{name} or '<UNDEF>')." for json ".Dumper($dec_json)
@@ -266,9 +264,7 @@ sub test_json {
 
     my $vm = rvd_back()->search_vm($vm_name);
     my $domain2 = $vm->search_domain_by_id($domain->id);
-    my $json2 = $domain2->json();
-    ok($json2);
-    my $dec_json2 = decode_json($json2);
+    my $dec_json2 = $domain2->info(user_admin);
     ok($dec_json2->{name} && $dec_json2->{name} eq $domain2->name
         ,"[$vm_name] expecting json->{name} = '".$domain2->name."'"
         ." , got ".($dec_json2->{name} or '<UNDEF>')." for json ".Dumper($dec_json2)

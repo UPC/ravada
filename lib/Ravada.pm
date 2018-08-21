@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.3.0';
+our $VERSION = '0.3.0-beta6';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -12,6 +12,7 @@ use File::Copy;
 use Hash::Util qw(lock_hash);
 use Moose;
 use POSIX qw(WNOHANG);
+use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 
 use Socket qw( inet_aton inet_ntoa );
@@ -80,7 +81,7 @@ our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 # LONG commands take long
-our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base);
+our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base enforce_limits refresh_vms);
 our %LONG_COMMAND =  map { $_ => 1 } (qw(screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
 
 our $USER_DAEMON;
@@ -222,7 +223,7 @@ sub _update_isos {
                     ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
                 ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
                 ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
-                ,min_disk_size => '10'
+                ,min_disk_size => '1'
         }
         ,artful => {
                     name => 'Ubuntu Artful Aardvark'
@@ -1025,8 +1026,13 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
     $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
+    $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
+    $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
+    $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -1293,53 +1299,62 @@ sub create_domain {
 
     my %args = @_;
 
-    croak "Argument id_owner required "
-        if !$args{id_owner};
-
+    my $start = $args{start};
     my $vm_name = $args{vm};
-    delete $args{vm};
-
-    my $request = ( $args{request} or undef);
+    my $id_base = $args{id_base};
+    my $request = $args{request};
+    my $id_owner = $args{id_owner};
 
     my $vm;
+    if ($request) {
+        %args = %{$request->args};
+        $vm_name = $request->defined_arg('vm') if $request->defined_arg('vm');
+    }
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
-    if ($args{id_base}) {
-        my $base = Ravada::Domain->open($args{id_base});
+    if ($id_base) {
+        my $base = Ravada::Domain->open($id_base)
+            or confess "Unknown base id: $id_base";
         $vm = Ravada::VM->open($base->_vm->id);
     }
 
-    confess "No vm found"   if !$vm;
+    confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
 
     carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name;
+        if !$vm_name && !$id_base;
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    my $domain;
     $request->status("creating")    if $request;
-    eval { $domain = $vm->create_domain(@_) };
+    my $domain;
+    eval { $domain = $vm->create_domain(%args)};
+
     my $error = $@;
     if ( $request ) {
         $request->error($error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
-        if (!$error && $request->defined_arg('start')) {
-            $request->status("starting");
-            eval {
-                my $user = Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
-                $domain->start(
-                    user => $user
-                    ,remote_ip => $request->defined_arg('remote_ip')
-                )
-            };
-            $request->error($error) if $error;
-        }
-    } elsif ($@) {
-        die $@;
+    } elsif ($error) {
+        die $error;
+    }
+    if (!$error && $start) {
+        $request->status("starting") if $request;
+        eval {
+            my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+            my $remote_ip;
+            $remote_ip = $request->defined_arg('remote_ip') if $request;
+            $domain->start(
+                user => $user
+                ,remote_ip => $remote_ip
+                ,request => $request
+            )
+        };
+        my $error = $@;
+        die $error if $error && !$request;
+        $request->error($error) if $error;
     }
     return $domain;
 }
@@ -1356,18 +1371,31 @@ sub remove_domain {
     my $self = shift;
     my %arg = @_;
 
-    confess "Argument name required "
-        if !$arg{name};
+    my $name = delete $arg{name} or confess "Argument name required ";
 
     confess "Argument uid required "
         if !$arg{uid};
 
     lock_hash(%arg);
 
-    my $domain = $self->search_domain($arg{name}, 1)
-        or die "ERROR: I can't find domain '$arg{name}', maybe already removed.";
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name = ?");
+    $sth->execute($name);
+
+    my ($id)= $sth->fetchrow;
+    confess "Error: Unknown domain $name"   if !$id;
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
+    die "Error: user ".$user->name." can't remove domain $id"
+        if !$user->can_remove_machine($id);
+
+    my $domain = Ravada::Domain->open(id => $id, _force => 1)
+        or do {
+            warn "Warning: I can't find domain '$id', maybe already removed.";
+            $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
+            $sth->execute($id);
+            return;
+    };
+
     $domain->remove( $user);
 }
 
@@ -1701,7 +1729,10 @@ sub process_requests {
     $debug_type = 'all' if $long_commands && $short_commands;
 
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
-        my $req = Ravada::Request->open($id_request);
+        my $req;
+        eval { $req = Ravada::Request->open($id_request) };
+        next if $@ && $@ =~ /I can't find id/;
+        die $@ if $@;
 
         if ( ($long_commands &&
                 (!$short_commands && !$LONG_COMMAND{$req->command}))
@@ -1843,8 +1874,11 @@ sub _execute {
     $request->error('');
     if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
 
+        my $t0 = [gettimeofday];
         eval { $sub->($self,$request) };
         my $err = ($@ or '');
+        my $elapsed = tv_interval($t0,[gettimeofday]);
+        $request->run_time($elapsed);
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
         $request->error($err) if $err;
@@ -1858,7 +1892,11 @@ sub _execute {
     my $pid = fork();
     die "I can't fork" if !defined $pid;
     if ( $pid == 0 ) {
-        $self->_do_execute_command($sub, $request)
+        my $t0 = [gettimeofday];
+        $self->_do_execute_command($sub, $request);
+        my $elapsed = tv_interval($t0,[gettimeofday]);
+        $request->run_time($elapsed) if !$request->run_time();
+        print "++++ ".request->command." ".Dumper($elapsed);
     } else {
         $self->_add_pid($pid, $request->id);
     }
@@ -1879,11 +1917,14 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    my $t0 = [gettimeofday];
     eval {
         $self->_connect_vm();
         $sub->($self,$request);
         $self->_disconnect_vm();
     };
+    my $elapsed = tv_interval($t0,[gettimeofday]);
+    $request->run_time($elapsed);
     my $err = ( $@ or '');
     $request->error($err);
     $request->status('done')
@@ -1954,7 +1995,7 @@ sub _cmd_create{
     warn "$$ creating domain"   if $DEBUG;
     my $domain;
 
-    $domain = $self->create_domain(%{$request->args},request => $request);
+    $domain = $self->create_domain(request => $request);
 
     my $msg = '';
 
@@ -2163,7 +2204,7 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
+    $domain->start(user => $user, remote_ip => $request->args('remote_ip'), request => $request);
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
@@ -2382,6 +2423,9 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
+    if ($request && ( my $id_recent = $request->done_recently(60))) {
+        die "Command ".$request->command." run recently by $id_recent.\n";
+    }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));
@@ -2413,6 +2457,9 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
+    if ($request && (my $id_recent = $request->done_recently(30))) {
+        die "Command ".$request->command." run recently by $id_recent.\n";
+    }
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
@@ -2566,11 +2613,13 @@ sub _req_method {
     ,screenshot => \&_cmd_screenshot
     ,copy_screenshot => \&_cmd_copy_screenshot
    ,remove_base => \&_cmd_remove_base
+   ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
@@ -2663,37 +2712,26 @@ sub import_domain {
     return $vm->import_domain($name, $user, $spinoff_disks);
 }
 
-=head2 enforce_limits
-
-Check no user has passed the limits and take action.
-
-Some limits:
-
-- More than 1 domain running at a time ( older get shut down )
-
-
-=cut
-
-sub enforce_limits {
-    _enforce_limits_active(@_);
+sub _cmd_enforce_limits($self, $request=undef) {
+    _enforce_limits_active($self, $request);
 }
 
-sub _enforce_limits_active {
-    my $self = shift;
-    my %args = @_;
+sub _enforce_limits_active($self, $request) {
 
-    my $timeout = (delete $args{timeout} or 10);
-
-    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
-        if keys %args;
+    if (my $id_recent = $request->done_recently(30)) {
+        die "Command ".$request->command." run recently by $id_recent.\n";
+    }
+    my $timeout = ($request->defined_arg('timeout') or 10);
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
-        $domain->client_status();
         push @{$domains{$domain->id_owner}},$domain;
+        $domain->client_status();
     }
     for my $id_user(keys %domains) {
         next if scalar @{$domains{$id_user}}<2;
+        my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        next if $user->is_admin;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }

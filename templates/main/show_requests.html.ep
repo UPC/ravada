@@ -1,6 +1,7 @@
 <div class="panel panel-primary" ng-show="requests.length > 0">
     <div class="panel-heading">
         <span ng-show="pending_requests"><%=l 'Waiting for requests to complete' %> ... 
+        <span ng-show="pending_requests<1"><%=l 'Recent requests' %> ... 
     </div>
     <div class="panel-body">
         <div ng-repeat="request in requests">

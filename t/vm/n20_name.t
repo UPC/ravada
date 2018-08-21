@@ -144,7 +144,7 @@ sub test_nat($vm_name) {
 
 sub test_chain($vm_name, %args) {
     SKIP: {
-        skip(2,"SKIPPED: iptables test must be run from root user") if $>;
+        skip("SKIPPED: iptables test must be run from root user", 2) if $>;
     my $jump =  (delete $args{jump} or 'ACCEPT');
     my $local_ip = delete $args{local_ip}       or confess "Missing local_ip";
     my $remote_ip = delete $args{remote_ip}     or confess "Missing remote_ip";

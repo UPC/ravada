@@ -351,13 +351,17 @@ sub _create_qcow_base {
 
     my @base_img;
 
-    my $base_name = $self->name;
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
         my $base_img = $file_img;
 
+        my $pool_base = $self->_vm->default_storage_pool_name;
+        $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+
+        my $dir_base = $self->_vm->_storage_path($pool_base);
+
         my @cmd;
-        $base_img =~ s{\.\w+$}{\.ro.qcow2};
+        $base_img =~ s{(.*)/(.*)\.\w+$}{$dir_base/$2\.ro.qcow2};
 
         die "ERROR: base image already exists '$base_img'" if -e $base_img;
 
@@ -587,12 +591,15 @@ sub start {
 
     my $set_password=0;
     my $remote_ip = $arg{remote_ip};
+    my $request = delete $arg{request};
+
     if ($remote_ip) {
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
-    $self->domain->create();
+    eval { $self->domain->create() };
+    $request->error($@) if $request && $@ && $@ !~ /already running/i;
 }
 
 sub _pre_shutdown_domain {
