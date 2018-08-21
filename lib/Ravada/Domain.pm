@@ -203,6 +203,7 @@ around 'autostart' => \&_around_autostart;
 after 'set_controller' => \&_post_change_controller;
 after 'remove_controller' => \&_post_change_controller;
 
+around 'name' => \&_around_name;
 ##################################################
 #
 
@@ -2973,5 +2974,14 @@ sub needs_restart($self, $value=undef) {
 sub _post_change_controller {
     my $self = shift;
     $self->needs_restart(1) if $self->is_active;
+}
+
+sub _around_name($orig, $self) {
+    my $name;
+    $name = $self->$orig();
+    return $self->{_name} if exists $self->{_name} && ! defined $name;
+
+    $self->{_name} = $name;
+    return $name;
 }
 1;

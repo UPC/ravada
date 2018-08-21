@@ -143,7 +143,8 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
+    eval { $sth->execute($name,$password,$is_admin,$is_temporary, $is_external) };
+    confess $@ if $@;
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");

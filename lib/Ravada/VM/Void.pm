@@ -118,8 +118,8 @@ sub create_domain {
 sub create_volume {
 }
 
-sub _dir_img {
-    return $Ravada::Front::Domain::Void::_config_dir();
+sub dir_img {
+    return Ravada::Front::Domain::Void::_config_dir();
 }
 
 sub _list_domains_local($self, %args) {

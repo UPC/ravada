@@ -216,7 +216,7 @@ sub init {
     $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
     };
 
-    die $@ if $@ && $@ !~ /UNIQUE constraint failed: users.name/;
+    die $@ if $@ && $@ !~ /UNIQUE constraint failed: users.name|Duplicate entry/;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 

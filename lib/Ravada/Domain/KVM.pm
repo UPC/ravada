@@ -251,8 +251,6 @@ sub remove {
     eval { $self->remove_disks() if $self->is_known };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 
-    $self->remove_disks();
-
     eval { $self->_remove_file_image() };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
@@ -362,15 +360,20 @@ sub disk_device {
 sub _create_qcow_base {
     my $self = shift;
 
-    my @base_img;
+    $self->_vm->_select_vm_db();
 
-    my $base_name = $self->name;
+    my $pool_base = $self->_vm->default_storage_pool_name;
+    $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+
+    my $dir_base = $self->_vm->_storage_path($pool_base);
+
+    my @base_img;
     for  my $vol_data ( $self->list_volumes_target()) {
         my ($file_img,$target) = @$vol_data;
         my $base_img = $file_img;
 
         my @cmd;
-        $base_img =~ s{\.\w+$}{\.ro.qcow2};
+        $base_img =~ s{(.*)/(.*)\.\w+$}{$dir_base/$2\.ro.qcow2};
 
         die "ERROR: base image already exists '$base_img'" if -e $base_img;
 
@@ -391,11 +394,11 @@ sub _create_qcow_base {
             chomp $err;
             chomp $out;
             die "ERROR: Output file $base_img not created at "
-                ."\n"
-                ."ERROR $?: '".($err or '')."'\n"
-                ."  OUT: '".($out or '')."'\n"
-                ."\n"
-                .join(" ",@cmd);
+            ."\n"
+            ."ERROR $?: '".($err or '')."'\n"
+            ."  OUT: '".($out or '')."'\n"
+            ."\n"
+            .join(" ",@cmd);
         }
 
         chmod 0555,$base_img;

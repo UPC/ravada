@@ -294,7 +294,7 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
-    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Error: Unknown owner id: $id_owner";
 
     my $base;
     my $remote_ip = delete $args{remote_ip};
@@ -321,6 +321,7 @@ sub _around_create_domain {
     confess "ERROR: Base ".$base->name." is private"
         if !$owner->is_admin && $base && !$base->is_public();
 
+    $self->_select_vm_db();
     $self->_pre_create_domain(@_);
 
     my $domain = $self->$orig(@_);
@@ -538,7 +539,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -673,6 +674,56 @@ sub default_storage_pool_name {
         $self->{_data}->{default_storage} = $value;
     }
     return $self->_data('default_storage');
+}
+
+=head2 base_storage_pool
+
+Set the storage pool for bases in this Virtual Machine Manager
+
+    $vm->base_storage_pool('pool2');
+
+=cut
+
+sub base_storage_pool {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET base_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{base_storage} = $value;
+    }
+    return $self->_data('base_storage');
+}
+
+=head2 clone_storage_pool
+
+Set the storage pool for clones in this Virtual Machine Manager
+
+    $vm->clone_storage_pool('pool3');
+
+=cut
+
+sub clone_storage_pool {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET clone_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{clone_storage} = $value;
+    }
+    return $self->_data('clone_storage');
 }
 
 =head2 min_free_memory
