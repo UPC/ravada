@@ -451,7 +451,7 @@ sub clean_request($req_name,  $vm_name, $field) {
     } elsif ($req_name eq 'copy_screenshot') {
         my $domain = Ravada::Domain->open($field->{id_domain});
         if (!$domain->id_base) {
-            _fill_id_clone($field,'id_domain',rvd_back->search_vm($vm_name));
+            _fill_id_clone($field,'id_domain',rvd_back->search_vm($vm_name), $req_name);
             $domain = Ravada::Domain->open($field->{id_domain});
         }
         if ( !$domain->file_screenshot ) {
@@ -672,6 +672,7 @@ sub _all_reqs_done($reqs, $vm, $buggy) {
             || $r->error =~ /Autostart.*on base/i
             || $r->error =~ /only \d+ found/i
             || $r->error =~ /command .* run recently/i
+            || $r->error =~ /Unknown base id/i
             ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain($vm);
