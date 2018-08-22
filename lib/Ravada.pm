@@ -1330,6 +1330,7 @@ sub create_domain {
 
     $request->status("creating")    if $request;
     my $domain;
+    delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
 
     my $error = $@;
