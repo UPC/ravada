@@ -264,6 +264,50 @@ sub test_req_create_from_base {
     return $clone_name;
 
 }
+sub test_req_create_from_base_novm {
+    my $vm_name = shift;
+    my $base_name = shift;
+
+    my $clone_name = new_domain_name();
+    my $id_base;
+    {
+    my $rvd_back = rvd_back();
+    my $vm = $rvd_back->search_vm($vm_name);
+    my $domain_base = $vm->search_domain($base_name);
+    $id_base = $domain_base->id
+    }
+
+    {
+        my $req = Ravada::Request->create_domain(
+            name => $clone_name
+            , id_base => $id_base
+            , id_owner => $USER->id
+        );
+        ok($req->status eq 'requested'
+            ,"Status of request is ".$req->status." it should be requested");
+
+
+        rvd_back->process_requests();
+        wait_request($req);
+
+        ok($req->status eq 'done'
+            ,"Status of request is ".$req->status." it should be done");
+        ok(!$req->error,"Expecting error '' , got '"
+                        .($req->error or '')."' creating domain ".$clone_name);
+
+    }
+    my $domain =  rvd_front()->search_domain($clone_name);
+
+    ok($domain,"Searching for domain $clone_name") or return;
+    ok($domain->name eq $clone_name
+        ,"Expecting domain name '$clone_name', got ".$domain->name);
+    ok(!$domain->is_base,"Expecting clone not base , got: "
+        .$domain->is_base()." ".$domain->name);
+
+    $domain = Ravada::Domain->open($domain->id);
+    $domain->remove(user_admin);
+
+}
 
 sub test_volumes {
     my ($vm_name, $domain1_name , $domain2_name) = @_;
@@ -508,6 +552,7 @@ for my $vm_name ( qw(KVM Void)) {
         my $base_name = test_req_create_domain($vm_name) or next;
 
         test_req_prepare_base($vm_name, $base_name);
+        test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
 
         ok($clone_name) or next;
