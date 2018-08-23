@@ -313,7 +313,7 @@ sub _fill_id_option($field, $attrib, $vm, $req_name) {
     my @drivers = Ravada::Domain::drivers(undef, undef, $vm->type);
 
     if (!scalar(@drivers)) {
-        die "No drivers for ".Dumper($domain);
+        die "No drivers for ".$vm->type." at Ravada::Domain::drivers";
         return;
     }
     my $driver = $drivers[int(rand(scalar(@drivers)))];
@@ -880,14 +880,15 @@ for my $vm_name (reverse sort @vm_names) {
 
 }
 
-test_requests();
 for my $n ( 1 .. 10 ) {
     for my $vm_name (reverse sort @vm_names) {
+        test_requests($vm_name);
         test_random_requests($vm_name, $n*10);
         test_restart($vm_name);
     }
 }
 for my $vm_name (reverse sort @vm_names) {
+        test_requests($vm_name);
         my $domain_name = _wait_base_installed($vm_name);
         test_remove_base($vm_name, $domain_name);
         clean_leftovers($vm_name);
