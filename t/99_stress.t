@@ -507,6 +507,10 @@ sub clean_request($req_name,  $vm_name, $field) {
             diag("Requesting screenshot for $field->{id_domain}");
             _wait_requests([$req], rvd_back->search_vm($vm_name));
         }
+    } elsif ($req_name eq 'shutdown_domain') {
+        if (!exists $field->{id_domain} && !exists $field->{name}) {
+            _fill_id_domain($field, 'id_domain', rvd_back->search_vm($vm_name), $req_name);
+        }
     }
 }
 
