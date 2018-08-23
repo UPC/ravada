@@ -58,7 +58,7 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
-    ,autostart_domain => { id_domain => 1 , uid => 1, value => 2 }
+    ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -77,7 +77,7 @@ our %VALID_ARG = (
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
-            autostart_domain hibernate hybernate
+            domain_autostart hibernate hybernate
             change_owner
             change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver
@@ -1084,7 +1084,7 @@ sub change_curr_memory {
     );
 }
 
-=head2 domain_autostart
+=head2 autostart_domain
 
 Sets the autostart flag on a domain
 
@@ -1094,7 +1094,8 @@ sub domain_autostart {
     my $proto = shift;
     my $class = ref($proto) || $proto;
 
-    my $args = _check_args('autostart_domain', @_ );
+    my $args = _check_args('domain_autostart', @_ );
+    $args->{value} = 1 if !exists $args->{value};
 
     my $self = {};
     bless($self, $class);
