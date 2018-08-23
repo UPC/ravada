@@ -1741,21 +1741,11 @@ sub _obj_iptables($create_chain=1) {
 	#check_chain_exists
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
-	    $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	    or die "[*] Could not acquire IPTables::ChainMgr object";
-	    ($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
-        if (!$rv) {
-            sleep 1;
-	        $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	        or die "[*] Could not acquire IPTables::ChainMgr object";
-	        ($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
-        }
-        if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-        }
+        ($rv, $out_ar, $errs_ar)
+            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+        warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	}
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
-    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
