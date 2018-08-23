@@ -219,7 +219,7 @@ sub random_request($vm) {
 }
 
 sub _fill_vm($field, $attrib, $vm, $req_name) {
-    if ( $field->{$attrib} == 2 && rand(4)<2 ) {
+    if (defined $field->{$attrib} && $field->{$attrib} == 2 && rand(4)<2 ) {
         delete $field->{$attrib};
         return;
     }
@@ -376,6 +376,11 @@ sub random_request_compliant($vm_name) {
     return if $vm_name eq 'Void' && $req_name =~ /download|set_driver/;
 
     diag("[$vm_name] Requesting random $req_name");
+    my %field = map { $_ => undef } keys %{$Ravada::Request::VALID_ARG{$req_name}};
+    return new_request($req_name, \%field, $vm);
+}
+
+sub new_request($req_name, $field, $vm) {
     my %fill_attrib = (
         vm => \&_fill_vm
         ,at => \&_fill_at
@@ -403,16 +408,56 @@ sub random_request_compliant($vm_name) {
         ,remote_ip => \&_fill_remote_ip
         ,id_template => \&_fill_id_template
     );
-    my %field = map { $_ => undef } keys %{$Ravada::Request::VALID_ARG{$req_name}};
-    for my $attrib ( keys %field ) {
-        die "I don't know how to handle field $attrib in $req_name\n".Dumper(\%field)
+    for my $attrib ( keys %$field ) {
+        die "I don't know how to handle field $attrib in $req_name\n".Dumper($field)
             if !$fill_attrib{$attrib};
-        $fill_attrib{$attrib}->(\%field, $attrib, $vm, $req_name);
+        $fill_attrib{$attrib}->($field, $attrib, $vm, $req_name);
     }
-    clean_request($req_name, $vm_name, \%field);
-    diag(Dumper(\%field));
+    clean_request($req_name, $vm->type, $field);
+    diag(Dumper($field));
 
-    return Ravada::Request->$req_name(%field);
+    return Ravada::Request->$req_name(%$field);
+}
+
+sub test_requests($vm_name) {
+    my $vm = rvd_back->search_vm($vm_name);
+    my @requests = sort keys %Ravada::Request::VALID_ARG;
+    for my $req_name (@requests) {
+        my $fields = $Ravada::Request::VALID_ARG{$req_name};
+        diag("Testing $req_name ".Dumper($fields));
+        my %fields_dom = map { $_ => undef } keys %$fields;
+        my $req = new_request($req_name, \%fields_dom, $vm);
+        _wait_requests([$req], $vm);
+
+        #remove optional attribs 1 by 1
+        for my $attrib (sort keys %$fields ) {
+            next if $fields->{$attrib} != 2;
+            %fields_dom = map { $_ => undef } keys %$fields;
+            delete $fields_dom{$attrib};
+            my $req = new_request($req_name, \%fields_dom, $vm);
+            _wait_requests([$req], $vm);
+        }
+
+        #remove all optional attribs
+        my @remove_field;
+        for my $attrib (sort keys %$fields ) {
+            next if $fields->{$attrib} != 2;
+            %fields_dom = map { $_ => undef } keys %$fields;
+            push @remove_field,($attrib);
+            for (@remove_field) {
+                delete $fields_dom{$_};
+            }
+            diag("Removed fields : ".join(",", sort @remove_field));
+            my $req = new_request($req_name, \%fields_dom, $vm);
+            _wait_requests([$req], $vm);
+        }
+        if ($req_name eq 'create_domain') {
+            delete $fields_dom{'vm'};
+            $fields_dom{id_base} = 1;
+            my $req = new_request($req_name, \%fields_dom, $vm);
+            _wait_requests([$req], $vm);
+        }
+    }
 }
 
 sub clean_request($req_name,  $vm_name, $field) {
@@ -824,6 +869,7 @@ for my $vm_name (reverse sort @vm_names) {
         my $domain_name = _wait_base_installed($vm_name);
         clean_clones($domain_name, $vm_name);
         test_create_clones($vm_name, $domain_name,4);
+        test_requests($vm_name);
         test_random_requests($vm_name);
         test_restart($vm_name);
 
@@ -832,6 +878,8 @@ for my $vm_name (reverse sort @vm_names) {
         test_random_requests($vm_name);
 
 }
+
+test_requests();
 for my $n ( 1 .. 10 ) {
     for my $vm_name (reverse sort @vm_names) {
         test_random_requests($vm_name, $n*10);
