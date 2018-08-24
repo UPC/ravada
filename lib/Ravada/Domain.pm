@@ -1512,7 +1512,7 @@ sub _remove_iptables {
 
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
-    my $ipt_obj = _obj_iptables();
+    my $ipt_obj = _obj_iptables(0);
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iptables SET time_deleted=?"
@@ -1711,7 +1711,7 @@ sub open_iptables {
     $self->_add_iptable(%args);
 }
 
-sub _obj_iptables {
+sub _obj_iptables($create_chain=1) {
 
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
@@ -1733,6 +1733,7 @@ sub _obj_iptables {
 	my $ipt_obj = IPTables::ChainMgr->new(%opts)
     	or die "[*] Could not acquire IPTables::ChainMgr object";
 
+    return $ipt_obj if !$create_chain;
 	my $rv = 0;
 	my $out_ar = [];
 	my $errs_ar = [];
@@ -1741,9 +1742,10 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
+        ($rv, $out_ar, $errs_ar)
+            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+        warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	}
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
-    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
