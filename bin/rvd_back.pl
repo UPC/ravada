@@ -463,7 +463,11 @@ sub shutdown_domain {
                 next;
             }
             if ($domain->is_hibernated) {
-                $domain->start(user => $Ravada::USER_DAEMON);
+                print "Starting ".$domain->name."\n";
+                eval { $domain->start(user => $Ravada::USER_DAEMON) };
+                warn $@ if $@;
+                sleep 5 if !$@;
+
             }
             if ($DISCONNECTED && $domain->client_status
                     && $domain->client_status eq 'disconnected') {
@@ -471,9 +475,11 @@ sub shutdown_domain {
                 next DOMAIN if _verify_connection($domain);
             }
             print "Shutting down ".$domain->name.".\n";
-            eval { $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 300) };
+            eval {
+                $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 300);
+                $down++;
+            };
             warn $@ if $@;
-            $down++;
         }
     }
     warn "ERROR: Domain $domain_name not found.\n"
