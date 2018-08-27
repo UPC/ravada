@@ -1730,8 +1730,15 @@ sub _obj_iptables($create_chain=1) {
 	                           ### iptables commands (default is 0).
 	);
 
-	my $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	or die "[*] Could not acquire IPTables::ChainMgr object";
+	my $ipt_obj;
+    for ( 1 .. 10 ) {
+        eval {
+            $ipt_obj = IPTables::ChainMgr->new(%opts)
+                or warn "[*] Could not acquire IPTables::ChainMgr object";
+        };
+        last if $ipt_obj;
+        sleep 1;
+    }
 
     return $ipt_obj if !$create_chain;
 	my $rv = 0;
