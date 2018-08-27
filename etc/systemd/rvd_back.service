@@ -1,7 +1,7 @@
 [Unit]
 Description=Backend Ravada
 Requires=network.target
-After=network.target remote-fs.target nss-lookup.target
+After=network.target remote-fs.target nss-lookup.target mysql.target
 # put here other service requirements
 
 [Service]
