@@ -723,6 +723,7 @@ sub _all_reqs_done($reqs, $vm, $buggy) {
             || $r->error =~ /command .* run recently/i
             || $r->error =~ /Unknown base id/i
             || $r->error =~ /CPU too loaded/i
+            || $r->error =~ /I don't have the screenshot of the domain/i
             ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain($vm);
@@ -832,7 +833,6 @@ sub clean_leftovers($vm_name) {
 }
 
 #####################################################################3
-
 
 flush_rules();
 my @vm_names;
