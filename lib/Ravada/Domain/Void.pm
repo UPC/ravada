@@ -378,9 +378,9 @@ sub can_screenshot { return $CONVERT; }
 sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
-    $self->_set_default_info()
-        if !$info->{memory};
-    $info = $self->_value('info');
+    if (!$info->{memory}) {
+        $info = $self->_set_default_info();
+    }
     lock_keys(%$info);
     return $info;
 }
@@ -399,7 +399,7 @@ sub _set_default_info {
     for my $name ( sort keys %controllers) {
         $self->set_controller($name,2);
     }
-
+    return $info;
 }
 
 sub set_max_memory {
