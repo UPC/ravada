@@ -146,7 +146,7 @@ sub test_create_clones($vm_name, $domain_name, $n_clones=undef) {
     diag("creating $n_users");
 
     my @domain_reqs = $domain->list_requests;
-    _wait_requests([@domain_reqs], $vm) if scalar @domain_reqs;
+    _wait_requests([@domain_reqs]) if scalar @domain_reqs;
 
     my @reqs;
     for my $n ( 1 .. $n_users ) {
@@ -173,7 +173,7 @@ sub test_create_clones($vm_name, $domain_name, $n_clones=undef) {
         push @reqs,($req);
         push @reqs,(random_request($vm))  if rand(10)<2;
     }
-    _wait_requests(\@reqs, $vm);
+    _wait_requests(\@reqs);
 }
 
 sub random_request($vm) {
@@ -322,10 +322,10 @@ sub _fill_id_option($field, $attrib, $vm, $req_name) {
 
     my @options = $driver_type->get_options();
     my $option;
-    for (;;) {
+    for (1 .. 100) {
         $option = $options[int(rand(scalar @options))];
         # unsupported id option Xen in Qemu
-        last if $option->{id} != 5;
+        last if exists $option->{id} && $option->{id} != 5;
     }
     confess "No id in ".Dumper($option) if !$option->{id};
     $field->{$attrib} = $option->{id};
@@ -427,7 +427,7 @@ sub test_requests($vm_name) {
         diag("Testing $req_name ".Dumper($fields));
         my %fields_dom = map { $_ => undef } keys %$fields;
         my $req = new_request($req_name, \%fields_dom, $vm);
-        _wait_requests([$req], $vm);
+        _wait_requests([$req]);
 
         #remove optional attribs 1 by 1
         for my $attrib (sort keys %$fields ) {
@@ -435,7 +435,7 @@ sub test_requests($vm_name) {
             %fields_dom = map { $_ => undef } keys %$fields;
             delete $fields_dom{$attrib};
             my $req = new_request($req_name, \%fields_dom, $vm);
-            _wait_requests([$req], $vm);
+            _wait_requests([$req]);
         }
 
         #remove all optional attribs
@@ -449,13 +449,13 @@ sub test_requests($vm_name) {
             }
             diag("Removed fields : ".join(",", sort @remove_field));
             my $req = new_request($req_name, \%fields_dom, $vm);
-            _wait_requests([$req], $vm);
+            _wait_requests([$req]);
         }
         if ($req_name eq 'create_domain') {
             delete $fields_dom{'vm'};
             $fields_dom{id_base} = 1;
             my $req = new_request($req_name, \%fields_dom, $vm);
-            _wait_requests([$req], $vm);
+            _wait_requests([$req]);
         }
     }
 }
@@ -505,7 +505,7 @@ sub clean_request($req_name,  $vm_name, $field) {
                         ,filename => "/var/tmp/".$domain->id.".txt"
             );
             diag("Requesting screenshot for $field->{id_domain}");
-            _wait_requests([$req], rvd_back->search_vm($vm_name));
+            _wait_requests([$req]);
         }
     } elsif ($req_name eq 'shutdown_domain') {
         if (!exists $field->{id_domain} && !exists $field->{name}) {
@@ -514,19 +514,21 @@ sub clean_request($req_name,  $vm_name, $field) {
     }
 }
 
-sub test_random_requests($vm_name, $count=10) {
+sub test_random_requests($vm_name0, $count=10) {
 
-    my $vm = rvd_back->search_vm($vm_name);
     my @reqs;
-    for ( 1 .. 10 ){
+    for ( 1 .. $count ){
+        my $vm_name = $vm_name0;
+        $vm_name=$vm_name0->[int rand(scalar @$vm_name0)]  if ref($vm_name0);
+        my $vm = rvd_back->search_vm($vm_name);
         my $req = random_request_compliant($vm_name) or next;
         push @reqs,($req);
         if ( $req->command eq 'copy_screenshot' || $req->command =~ /create/i ) {
-            _wait_requests(\@reqs, $vm);
+            _wait_requests(\@reqs);
             @reqs=();
         }
     }
-    _wait_requests(\@reqs, $vm);
+    _wait_requests(\@reqs);
 }
 
 sub new_clone_name {
@@ -574,7 +576,7 @@ sub test_restart($vm_name) {
                 _shutdown_random_domain($vm);
             }
         }
-        _wait_requests(\@reqs, $vm);
+        _wait_requests(\@reqs);
 
         my $seconds = 60 - ( time - $t0 );
         $seconds = 1 if $seconds <=0 || $vm_name eq 'Void';
@@ -589,7 +591,7 @@ sub test_restart($vm_name) {
                         )
             );
         }
-        _wait_requests(\@reqs, $vm);
+        _wait_requests(\@reqs);
 
         for ( 1 .. 60 ) {
             my $alive = 0;
@@ -605,7 +607,7 @@ sub test_restart($vm_name) {
                     )if !$domain->list_requests;
                 }
             }
-            _wait_requests(\@reqs, $vm);
+            _wait_requests(\@reqs);
             last if !$alive;
             diag("$alive domains alive");
             sleep 1;
@@ -633,7 +635,7 @@ sub test_hibernate {
         );
         push @domains,($domain);
     }
-    _wait_requests(\@reqs, $vm);
+    _wait_requests(\@reqs);
 
     for my $domain ( @domains ) {
         next if $domain->is_base || !$domain->is_active;
@@ -644,7 +646,7 @@ sub test_hibernate {
                     )
         );
     }
-    _wait_requests(\@reqs, $vm);
+    _wait_requests(\@reqs);
 }
 
 sub test_make_clones_base {
@@ -665,17 +667,22 @@ sub test_make_clones_base {
         );
         test_restart($vm_name);
         test_hibernate($vm_name);
-        _wait_requests(\@reqs, $vm);
+        _wait_requests(\@reqs);
         test_create_clones($vm_name, $clone->{name});
     }
 }
 
-sub _wait_requests($reqs, $vm, $buggy = undef) {
+sub _wait_requests($reqs, $buggy = undef) {
     return if !$reqs || !scalar @$reqs;
     diag("Waiting for ".scalar(@$reqs)." requests");
-    for ( ;; ) {
-        last if _all_reqs_done($reqs, $vm, $buggy);
+    for ( 1 .. 1000 ) {
+        last if _all_reqs_done($reqs, $buggy);
         sleep 1;
+    }
+    for my $r (@$reqs) {
+        next if $r->status eq 'done';
+        die "Request not done ".Dumper($r);
+        `killall -TERM rvd_back.pl`;
     }
 }
 
@@ -693,8 +700,9 @@ sub test_iptables_jump {
         or exit;
 }
 
-sub _all_reqs_done($reqs, $vm, $buggy) {
+sub _all_reqs_done($reqs, $buggy) {
     for my $r (@$reqs) {
+        diag("Request ".$r->id." ".$r->command);
         return 0 if $r->status ne 'done';
         test_iptables_jump();
         next if $CHECKED{$r->id}++;
@@ -725,7 +733,7 @@ sub _all_reqs_done($reqs, $vm, $buggy) {
             || $r->error =~ /CPU too loaded/i
             ;
         if ($r->error =~ /free memory/i) {
-            _shutdown_random_domain($vm);
+            _shutdown_random_domain();
              next;
         }
         is($r->error,'',$r->id." ".$r->command." ".Dumper($r->args)) or exit;
@@ -733,8 +741,8 @@ sub _all_reqs_done($reqs, $vm, $buggy) {
     return 1;
 }
 
-sub _shutdown_random_domain($vm) {
-    my $domains = rvd_front->list_domains(status => 'active', id_vm => $vm->id);
+sub _shutdown_random_domain() {
+    my $domains = rvd_front->list_domains(status => 'active');
     my $active = $domains->[int rand($#$domains)];
     return if !$active;
     diag("request shutdown random domain ".$active->{name});
@@ -773,7 +781,7 @@ sub clean_clones($domain_name, $vm_name) {
                 ,uid => user_admin->id
         ));
     }
-    _wait_requests(\@reqs, $vm);
+    _wait_requests(\@reqs);
 }
 
 sub test_remove_base($domain_name, $vm_name) {
@@ -791,7 +799,7 @@ sub test_remove_base($domain_name, $vm_name) {
         ));
         test_restart($vm_name);
         test_hibernate($vm_name);
-        _wait_requests(\@reqs, $vm);
+        _wait_requests(\@reqs);
     }
 }
 
@@ -885,9 +893,11 @@ for my $vm_name (reverse sort @vm_names) {
 }
 
 for my $n ( 1 .. 10 ) {
-    for my $vm_name (reverse sort @vm_names) {
+    for my $vm_name (@vm_names) {
         test_requests($vm_name);
-        test_random_requests($vm_name, $n*10);
+    }
+    test_random_requests(\@vm_names, $n*10);
+    for my $vm_name (@vm_names) {
         test_restart($vm_name);
     }
 }
@@ -897,4 +907,5 @@ for my $vm_name (reverse sort @vm_names) {
         test_remove_base($vm_name, $domain_name);
         clean_leftovers($vm_name);
 }
+clean();
 done_testing();
