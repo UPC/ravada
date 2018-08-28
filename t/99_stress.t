@@ -659,7 +659,7 @@ sub test_hibernate {
 }
 
 sub test_make_clones_base {
-    my ($vm_name, $domain_name) = @_;
+    my ($vm_name, $domain_name, $n_clones) = @_;
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
@@ -677,7 +677,7 @@ sub test_make_clones_base {
         test_restart($vm_name);
         test_hibernate($vm_name);
         _wait_requests(\@reqs);
-        test_create_clones($vm_name, $clone->{name});
+        test_create_clones($vm_name, $clone->{name}, $n_clones);
     }
 }
 
@@ -896,7 +896,7 @@ for my $vm_name (reverse sort @vm_names) {
         test_restart($vm_name);
 
         my $vm = rvd_back->search_vm($vm_name);
-        test_make_clones_base($vm_name, $domain_name);
+        test_make_clones_base($vm_name, $domain_name,4);
         test_random_requests($vm_name);
 
 }
@@ -908,6 +908,9 @@ for my $n ( 1 .. 10 ) {
     test_random_requests(\@vm_names, $n*10);
     for my $vm_name (@vm_names) {
         test_restart($vm_name);
+        next if $n != 1;
+        my $domain_name = _wait_base_installed($vm_name);
+        test_make_clones_base($vm_name, $domain_name);
     }
 }
 for my $vm_name (reverse sort @vm_names) {
