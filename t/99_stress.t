@@ -580,9 +580,9 @@ sub test_restart($vm_name) {
             );
             push @domains,($domain);
             if ( rand(10) < 2 && $vm->free_memory <= $min_memory ) {
-                _shutdown_random_domain($vm);
-                _shutdown_random_domain($vm);
-                _shutdown_random_domain($vm);
+                _shutdown_random_domain();
+                _shutdown_random_domain();
+                _shutdown_random_domain();
             }
         }
         _wait_requests(\@reqs);
