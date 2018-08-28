@@ -138,12 +138,14 @@ sub rvd_back {
                 , warn_error => 0
     );
     my $login;
+    my $admin_name = base_domain_name();
+    my $admin_pass = "$$ $$";
     eval {
-        $login = Ravada::Auth::SQL->new(name => 'admin',password => 'admin');
+        $login = Ravada::Auth::SQL->new(name => $admin_name );
     };
-    $USER_ADMIN = $login if $login;
-    $USER_ADMIN = create_user('admin','admin',1)
-        if !$USER_ADMIN && !$login;
+    $USER_ADMIN = $login if $login && $login->id;
+    $USER_ADMIN = create_user($admin_name, $admin_pass,1)
+        if !$USER_ADMIN;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
@@ -406,8 +408,14 @@ sub clean {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
+    remove_old_user();
 }
 
+sub remove_old_user {
+    $USER_ADMIN->remove if $USER_ADMIN;
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
+    $sth->execute(base_domain_name());
+}
 sub search_id_iso {
     my $name = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
