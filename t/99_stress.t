@@ -261,10 +261,19 @@ sub _fill_id_domain($field, $attrib, $vm, $req_name) {
     my $dom;
     for ( 1 .. 100 ) {
         $dom = $domains->[rand(scalar(@$domains))];
+        next if _domain_requested_remove($dom->{id});
         my $base = base_domain_name();
         last if $dom->{name} =~ /^$base.*\d$/;
     }
     $field->{$attrib} = $dom->{id};
+}
+
+sub _domain_requested_remove($id_domain) {
+    my $domain = Ravada::Domain->open($id_domain);
+    for my $req ($domain->list_all_requests) {
+        return if $req->command eq 'remove_domain';
+    }
+    return 0;
 }
 
 sub _fill_uid($field, $attrib, $vm, $req_name) {
