@@ -1731,14 +1731,17 @@ sub _obj_iptables($create_chain=1) {
 	);
 
 	my $ipt_obj;
+    my $error;
     for ( 1 .. 10 ) {
         eval {
             $ipt_obj = IPTables::ChainMgr->new(%opts)
                 or warn "[*] Could not acquire IPTables::ChainMgr object";
         };
-        last if $ipt_obj;
+        $error = $@;
+        last if !$error;
         sleep 1;
     }
+    confess $error if $error;
 
     return $ipt_obj if !$create_chain;
 	my $rv = 0;
