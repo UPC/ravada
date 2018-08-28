@@ -1736,9 +1736,12 @@ sub process_requests {
         next if $@ && $@ =~ /I can't find id/;
         die $@ if $@;
 
-        if ( ($long_commands &&
+        if (
+            $req->command ne 'ping_backend'
+            &&( ($long_commands &&
                 (!$short_commands && !$LONG_COMMAND{$req->command}))
-            ||(!$long_commands && $LONG_COMMAND{$req->command})
+                ||(!$long_commands && $LONG_COMMAND{$req->command})
+            )
         ) {
             warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
                 .$req->command  if $DEBUG;
