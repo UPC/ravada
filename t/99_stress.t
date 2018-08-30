@@ -507,13 +507,7 @@ sub clean_request($req_name,  $vm_name, $field) {
     } elsif ($req_name eq 'copy_screenshot') {
         my $domain = Ravada::Domain->open($field->{id_domain});
         if (!$domain->id_base) {
-<<<<<<< HEAD
             _fill_id_clone($field, 'id_domain', $vm, $req_name);
-||||||| merged common ancestors
-            _fill_id_clone($field,'id_domain',rvd_back->search_vm($vm_name), $req_name);
-=======
-            _fill_id_clone($field,'id_domain',$vm, $req_name);
->>>>>>> 6c5effe9ad390c679df157af1c920c0db546f554
             $domain = Ravada::Domain->open($field->{id_domain});
         }
         if ( !$domain->file_screenshot ) {
