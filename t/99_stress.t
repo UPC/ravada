@@ -470,6 +470,7 @@ sub test_requests($vm_name) {
 }
 
 sub clean_request($req_name,  $vm_name, $field) {
+    my $vm = rvd_back->search_vm($vm_name) or confess "Unknown vm $vm_name";
     if ($req_name eq 'start_domain') {
         return if !exists $field->{id_domain} || !exists $field->{name};
         if (rand(2) <1) {
@@ -505,7 +506,7 @@ sub clean_request($req_name,  $vm_name, $field) {
     } elsif ($req_name eq 'copy_screenshot') {
         my $domain = Ravada::Domain->open($field->{id_domain});
         if (!$domain->id_base) {
-            _fill_id_clone($field,'id_domain',rvd_back->search_vm($vm_name), $req_name);
+            _fill_id_clone($field,'id_domain',$vm, $req_name);
             $domain = Ravada::Domain->open($field->{id_domain});
         }
         if ( !$domain->file_screenshot ) {
@@ -521,6 +522,7 @@ sub clean_request($req_name,  $vm_name, $field) {
             _fill_id_domain($field, 'id_domain', rvd_back->search_vm($vm_name), $req_name);
         }
     }
+    $field->{vm}='KVM' if exists $field->{vm} && $field->{vm} =~ /qemu/i;
 }
 
 sub test_random_requests($vm_name0, $count=10) {
@@ -689,8 +691,8 @@ sub _wait_requests($reqs, $buggy = undef) {
         sleep 1;
     }
     for my $r (@$reqs) {
-        next if $r->status eq 'done';
-        die "Request not done ".Dumper($r);
+        next if !$r || $r->status eq 'done';
+        die ''.localtime(time)." Request not done ".Dumper($r);
         `killall -TERM rvd_back.pl`;
     }
 }
@@ -710,9 +712,10 @@ sub test_iptables_jump {
 }
 
 sub _all_reqs_done($reqs, $buggy) {
-    for my $r (@$reqs) {
-        diag("Request ".$r->id." ".$r->command);
+    for my $cont ( 0 .. scalar @$reqs) {
+        my $r = $reqs->[$cont] or next;
         return 0 if $r->status ne 'done';
+        $reqs->[$cont] = undef;
         test_iptables_jump();
         next if $CHECKED{$r->id}++;
         if ($buggy) {
