@@ -714,6 +714,7 @@ sub test_iptables_jump {
 sub _all_reqs_done($reqs, $buggy) {
     for my $cont ( 0 .. scalar @$reqs) {
         my $r = $reqs->[$cont] or next;
+        next if !$r->id;
         return 0 if $r->status ne 'done';
         $reqs->[$cont] = undef;
         test_iptables_jump();
