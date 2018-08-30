@@ -507,7 +507,13 @@ sub clean_request($req_name,  $vm_name, $field) {
     } elsif ($req_name eq 'copy_screenshot') {
         my $domain = Ravada::Domain->open($field->{id_domain});
         if (!$domain->id_base) {
+<<<<<<< HEAD
             _fill_id_clone($field, 'id_domain', $vm, $req_name);
+||||||| merged common ancestors
+            _fill_id_clone($field,'id_domain',rvd_back->search_vm($vm_name), $req_name);
+=======
+            _fill_id_clone($field,'id_domain',$vm, $req_name);
+>>>>>>> 6c5effe9ad390c679df157af1c920c0db546f554
             $domain = Ravada::Domain->open($field->{id_domain});
         }
         if ( !$domain->file_screenshot ) {
@@ -523,6 +529,7 @@ sub clean_request($req_name,  $vm_name, $field) {
             _fill_id_domain($field, 'id_domain', $vm, $req_name);
         }
     }
+    $field->{vm}='KVM' if exists $field->{vm} && $field->{vm} =~ /qemu/i;
 }
 
 sub test_random_requests($vm_name0, $count=10) {
@@ -661,7 +668,7 @@ sub test_hibernate {
 }
 
 sub test_make_clones_base {
-    my ($vm_name, $domain_name) = @_;
+    my ($vm_name, $domain_name, $n_clones) = @_;
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
@@ -679,7 +686,7 @@ sub test_make_clones_base {
         test_restart($vm_name);
         test_hibernate($vm_name);
         _wait_requests(\@reqs);
-        test_create_clones($vm_name, $clone->{name});
+        test_create_clones($vm_name, $clone->{name}, $n_clones);
     }
 }
 
@@ -691,8 +698,8 @@ sub _wait_requests($reqs, $buggy = undef) {
         sleep 1;
     }
     for my $r (@$reqs) {
-        next if $r->status eq 'done';
-        die "Request not done ".Dumper($r);
+        next if !$r || $r->status eq 'done';
+        die ''.localtime(time)." Request not done ".Dumper($r);
         `killall -TERM rvd_back.pl`;
     }
 }
@@ -712,9 +719,11 @@ sub test_iptables_jump {
 }
 
 sub _all_reqs_done($reqs, $buggy) {
-    for my $r (@$reqs) {
-        diag("Request ".$r->id." ".$r->command);
+    for my $cont ( 0 .. scalar @$reqs) {
+        my $r = $reqs->[$cont] or next;
+        next if !$r->id;
         return 0 if $r->status ne 'done';
+        $reqs->[$cont] = undef;
         test_iptables_jump();
         next if $CHECKED{$r->id}++;
         if ($buggy) {
@@ -898,7 +907,7 @@ for my $vm_name (reverse sort @vm_names) {
         test_restart($vm_name);
 
         my $vm = rvd_back->search_vm($vm_name);
-        test_make_clones_base($vm_name, $domain_name);
+        test_make_clones_base($vm_name, $domain_name,4);
         test_random_requests($vm_name);
 
 }
@@ -910,6 +919,9 @@ for my $n ( 1 .. 10 ) {
     test_random_requests(\@vm_names, $n*10);
     for my $vm_name (@vm_names) {
         test_restart($vm_name);
+        next if $n != 1;
+        my $domain_name = _wait_base_installed($vm_name);
+        test_make_clones_base($vm_name, $domain_name);
     }
 }
 for my $vm_name (reverse sort @vm_names) {
