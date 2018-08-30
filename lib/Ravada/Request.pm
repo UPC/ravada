@@ -507,6 +507,11 @@ sub _new_request {
 
     $self->{id} = $self->_last_insert_id();
 
+    $sth = $$CONNECTOR->dbh->prepare(
+    "UPDATE requests set date_req=date_changed"
+    ." WHERE id=?");
+    $sth->execute($self->{id});
+
     return $self->open($self->{id});
 }
 
