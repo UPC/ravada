@@ -162,12 +162,13 @@ sub test_create_clones($vm_name, $domain_name, $n_clones=undef) {
                 )
         )   if $clone;
 
-        my $mem = 1024 * 128 if $n_users < 3 && $vm_name eq 'Void';
+        my $mem = 1024 * 256;
+        $mem = 1024 * 128 if $n_users < 3 && $vm_name eq 'Void';
         my $req = Ravada::Request->clone(
             name => $clone_name
             ,uid => $user->id
             ,id_domain => $domain->id
-            , memory => 1024 * 256
+            , memory => $mem
         );
         diag("create $clone_name");
         push @reqs,($req);
@@ -470,6 +471,8 @@ sub test_requests($vm_name) {
 }
 
 sub clean_request($req_name,  $vm_name, $field) {
+    $vm_name = 'KVM' if $vm_name eq 'qemu';
+    my $vm = rvd_back->search_vm($vm_name) or confess "Error, unknown vm called '$vm_name'";
     if ($req_name eq 'start_domain') {
         return if !exists $field->{id_domain} || !exists $field->{name};
         if (rand(2) <1) {
@@ -491,7 +494,6 @@ sub clean_request($req_name,  $vm_name, $field) {
         if ($field->{id_domain}) {
             $domain = Ravada::Domain->open($field->{id_domain});
         } elsif($field->{name}) {
-            my $vm = rvd_back->search_vm($vm_name);
             $domain = $vm->search_domain($field->{name});
         }
         return if !$domain;
@@ -505,7 +507,7 @@ sub clean_request($req_name,  $vm_name, $field) {
     } elsif ($req_name eq 'copy_screenshot') {
         my $domain = Ravada::Domain->open($field->{id_domain});
         if (!$domain->id_base) {
-            _fill_id_clone($field,'id_domain',rvd_back->search_vm($vm_name), $req_name);
+            _fill_id_clone($field, 'id_domain', $vm, $req_name);
             $domain = Ravada::Domain->open($field->{id_domain});
         }
         if ( !$domain->file_screenshot ) {
@@ -518,7 +520,7 @@ sub clean_request($req_name,  $vm_name, $field) {
         }
     } elsif ($req_name eq 'shutdown_domain') {
         if (!exists $field->{id_domain} && !exists $field->{name}) {
-            _fill_id_domain($field, 'id_domain', rvd_back->search_vm($vm_name), $req_name);
+            _fill_id_domain($field, 'id_domain', $vm, $req_name);
         }
     }
 }
