@@ -711,6 +711,7 @@ sub test_iptables_jump {
 
 sub _all_reqs_done($reqs, $buggy) {
     for my $r (@$reqs) {
+        next if !$r->id;
         diag("Request ".$r->id." ".$r->command);
         return 0 if $r->status ne 'done';
         test_iptables_jump();
