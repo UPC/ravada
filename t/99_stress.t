@@ -693,6 +693,7 @@ sub _wait_requests($reqs, $buggy = undef) {
     }
     for my $r (@$reqs) {
         next if !$r || $r->status eq 'done';
+        next if $r->command eq 'download';
         die ''.localtime(time)." Request not done ".Dumper($r);
         `killall -TERM rvd_back.pl`;
     }
@@ -746,6 +747,7 @@ sub _all_reqs_done($reqs, $buggy) {
             || $r->error =~ /Unknown base id/i
             || $r->error =~ /CPU too loaded/i
             || $r->error =~ /I don't have the screenshot of the domain/i
+            || $r->error =~ /No free USB ports/i
             ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain();
