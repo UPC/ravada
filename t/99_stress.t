@@ -149,11 +149,15 @@ sub test_create_clones($vm_name, $domain_name, $n_clones=undef) {
     _wait_requests([@domain_reqs]) if scalar @domain_reqs;
 
     my @reqs;
+    my @clones;
     for my $n ( 1 .. $n_users ) {
-        my $user_name = "user-".$domain->id."-".$n;
+        my $user_name = "tstuser-".$domain->id."-".$n;
         my $user = Ravada::Auth::SQL->new(name => $user_name);
         $user = create_user($user_name,$n)   if !$user || !$user->id;
+        die "User $user_name not created" if !$user->id;
 
+        my $user2 = Ravada::Auth::SQL->search_by_id($user->id);
+        ok($user2, "Expecting user id ".$user->id) or exit;
         my $clone_name = new_clone_name($domain_name);
         my $clone = $vm->search_domain($clone_name);
         push @reqs,(Ravada::Request->remove_domain(
@@ -171,10 +175,15 @@ sub test_create_clones($vm_name, $domain_name, $n_clones=undef) {
             , memory => $mem
         );
         diag("create $clone_name");
+        push @clones,($clone_name);
         push @reqs,($req);
         push @reqs,(random_request($vm))  if rand(10)<2;
     }
     _wait_requests(\@reqs);
+    for my $clone_name (@clones) {
+        my $clone = rvd_back->search_domain($clone_name);
+        ok($clone,"Expecting clone $clone_name created") or exit;
+    }
 }
 
 sub random_request($vm) {
@@ -257,8 +266,25 @@ sub _fill_filename($field, $attrib, $vm, $req_name) {
     $field->{$attrib} = "/var/tmp/$$".int(rand(100)).".txt";
 }
 
+sub _select_domains(@list_args) {
+    my $domains0 = rvd_front->list_domains( @list_args );
+    my @domains;
+    for (@$domains0) {
+        push @domains,($_) if $_->{name} =~ /^99/;
+    }
+    return \@domains;
+}
+sub _select_bases(@list_args) {
+    my $domains0 = rvd_front->list_bases( @list_args );
+    my @domains;
+    for (@$domains0) {
+        push @domains,($_) if $_->{name} =~ /^99/;
+    }
+    return \@domains;
+}
+
 sub _fill_id_domain($field, $attrib, $vm, $req_name) {
-    my $domains = rvd_front->list_domains( id_vm => $vm->id );
+    my $domains = _select_domains( id_vm => $vm->id );
     my $dom;
     for ( 1 .. 100 ) {
         $dom = $domains->[rand(scalar(@$domains))];
@@ -355,18 +381,19 @@ sub _fill_iso_file($field, $attrib, $vm, $req_name) {
 }
 
 sub _fill_id_base($field, $attrib, $vm, $req_name) {
-    my $bases = rvd_front->list_bases(id_vm => $vm->id);
+    my $bases = _select_bases( id_vm => $vm->id );
     $field->{$attrib} = $bases->[int(rand($#$bases))]->{id};
 }
 
 sub _fill_id_clone($field, $attrib, $vm, $req_name) {
-    my $domains = rvd_front->list_domains(id_vm => $vm->id);
+    my $domains = _select_domains(id_vm => $vm->id);
     confess "No domains id_vm => ".$vm->id  if !scalar@$domains;
-    my $clones;
+    my @clones;
     for (@$domains) {
-        push @$clones,($_)  if $_->{id_base};
+        push @clones,($_)  if $_->{id_base};
     }
-    $field->{$attrib} = $clones->[int(rand($#$clones))]->{id};
+    confess "No clones ".Dumper($domains) if !scalar @clones;
+    $field->{$attrib} = $clones[int(rand($#clones))]->{id};
 }
 
 sub _fill_number($field, $attrib, $vm, $req_name) {
@@ -749,8 +776,10 @@ sub _all_reqs_done($reqs, $buggy) {
             || $r->error =~ /Unknown base id/i
             || $r->error =~ /CPU too loaded/i
             || $r->error =~ /I don't have the screenshot of the domain/i
-            || $r->error =~ /domain already running/i
+            || $r->error =~ /domain .* already running/i
             || $r->error =~ /No free USB ports/i
+            || $r->error =~ /User.*missing/i
+            || $r->error =~ /Missing user/i
             ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain();
