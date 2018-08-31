@@ -2185,9 +2185,11 @@ sub _cmd_clone($self, $request) {
     push @args, ( memory => $request->args('memory'))
         if $request->defined_arg('memory');
 
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'))
+        or die "Error: User missing, id: ".$request->args('uid');
+    push @args,(user => $user);
     $domain->clone(
         name => $request->args('name')
-        ,user => Ravada::Auth::SQL->search_by_id($request->args('uid'))
         ,@args
     );
 
