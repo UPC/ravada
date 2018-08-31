@@ -661,7 +661,9 @@ sub _domain_create_from_iso {
 
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args);
-    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;
@@ -850,7 +852,9 @@ sub _domain_create_from_base {
 
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
-    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
     $domain->_set_spice_password($spice_password);
     $domain->xml_description();
     return $domain;
