@@ -384,6 +384,7 @@ sub random_request_compliant($vm_name) {
     my $req_name = $requests[int rand(scalar @requests)];
 
     return if $vm_name eq 'Void' && $req_name =~ /download|set_driver/;
+    return if $req_name eq 'download';
 
     diag("[$vm_name] Requesting random $req_name");
     my %field = map { $_ => undef } keys %{$Ravada::Request::VALID_ARG{$req_name}};
@@ -433,6 +434,7 @@ sub test_requests($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
     my @requests = sort keys %Ravada::Request::VALID_ARG;
     for my $req_name (@requests) {
+        next if $req_name eq 'download';
         my $fields = $Ravada::Request::VALID_ARG{$req_name};
         diag("Testing $req_name ".Dumper($fields));
         my %fields_dom = map { $_ => undef } keys %$fields;
@@ -693,6 +695,7 @@ sub _wait_requests($reqs, $buggy = undef) {
     }
     for my $r (@$reqs) {
         next if !$r || $r->status eq 'done';
+        next if $r->command eq 'download';
         die ''.localtime(time)." Request not done ".Dumper($r);
         `killall -TERM rvd_back.pl`;
     }
@@ -747,6 +750,7 @@ sub _all_reqs_done($reqs, $buggy) {
             || $r->error =~ /CPU too loaded/i
             || $r->error =~ /I don't have the screenshot of the domain/i
             || $r->error =~ /domain already running/i
+            || $r->error =~ /No free USB ports/i
             ;
         if ($r->error =~ /free memory/i) {
             _shutdown_random_domain();
