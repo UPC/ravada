@@ -408,16 +408,17 @@ sub clean {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
-    remove_old_user();
 }
 
 sub remove_old_user {
     $USER_ADMIN->remove if $USER_ADMIN;
+    confess "Undefined connector" if !defined $CONNECTOR;
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
     $sth->execute(base_domain_name());
 }
 sub search_id_iso {
     my $name = shift;
+    confess if !$CONNECTOR;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
@@ -568,4 +569,7 @@ sub start_domain_internal($domain) {
     }
 }
 
+sub END {
+    remove_old_user() if $CONNECTOR;
+}
 1;
