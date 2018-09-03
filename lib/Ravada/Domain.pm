@@ -1430,7 +1430,7 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$self->is_active;
-    test_iptables_jump();
+    _test_iptables_jump();
 }
 
 sub _around_is_active($orig, $self) {
@@ -1529,7 +1529,8 @@ sub _remove_iptables {
         $sth->execute(Ravada::Utils::now(), $id);
     }
 }
-sub test_iptables_jump {
+
+sub _test_iptables_jump {
     my @cmd = ('iptables','-L','INPUT');
     my ($in, $out, $err);
 
@@ -1540,7 +1541,7 @@ sub test_iptables_jump {
         $count++ if $line =~ /^RAVADA /;
     }
     return if !$count || $count == 1;
-    die "Expecting 0 or 1 RAVADA iptables jump, got: "    .($count or 0);
+    warn "Expecting 0 or 1 RAVADA iptables jump, got: "    .($count or 0);
 }
 
 
@@ -1601,7 +1602,6 @@ sub _post_start {
     $self->get_info();
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
-    test_iptables_jump();
 }
 
 =head2 post_resume_aux
@@ -1752,14 +1752,26 @@ sub _obj_iptables($create_chain=1) {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-        ($rv, $out_ar, $errs_ar)
-            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
-        warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
-	}
+    }
+    _add_jump($ipt_obj);
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
+}
+
+sub _add_jump($ipt_obj) {
+    my $out = `iptables -L INPUT -n`;
+    my $count = 0;
+    for my $line ( split /\n/,$out ) {
+        next if $line !~ /^[A-Z]+ /;
+        $count++;
+        return if $line =~ /^RAVADA/;
+    }
+    my ($rv, $out_ar, $errs_ar)
+            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
+
 }
 
 sub _log_iptable {
