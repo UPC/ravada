@@ -1062,20 +1062,9 @@ sub admin {
         }
     }
     if ($page eq 'machines') {
-        $c->stash(hide_clones => 0 );
-        my $list_domains = $RAVADA->list_machines($USER);
-
-        $c->stash(hide_clones => 1 )
-            if defined $CONFIG_FRONT->{admin}->{hide_clones}
-                && scalar @$list_domains
-                        > $CONFIG_FRONT->{admin}->{hide_clones};
-
+        $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
         $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
-        # count clones from list_domains grepping those that have id_base
-        $c->stash(n_clones => scalar(grep { $_->{id_base} } @$list_domains) );
 
-        # if we find no clones do not hide them. They may be created later
-        $c->stash(hide_clones => 0 ) if !$c->stash('n_clones');
         if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
             if (!defined $c->session('monitoring')) {
                 my $host = $c->req->url->to_abs->host;

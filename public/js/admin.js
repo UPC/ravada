@@ -126,6 +126,10 @@ ravadaApp.directive("solShowMachine", swMach)
             });
       }
       if(!$scope.modalOpened){
+        if ($scope.list_machines_busy) {
+            return ;
+        }
+        $scope.list_machines_busy = true;
         $http.get("/requests.json").then(function(response) {
           $scope.requests=response.data;
           $scope.download_done=false;
@@ -141,6 +145,7 @@ ravadaApp.directive("solShowMachine", swMach)
           }
         });
         $http.get("/list_machines.json").then(function(response) {
+          $scope.list_machines_busy = false;
           $scope.list_machines = [];
           var mach;
           for (var i=0, iLength = response.data.length; i<iLength; i++){
@@ -150,10 +155,12 @@ ravadaApp.directive("solShowMachine", swMach)
               $scope.list_machines[mach.id].childs = [];
             }
           }
+          var n_clones = 0;
           for (var i=0, iLength = response.data.length; i<iLength; i++){
             mach = response.data[i];
             if (mach.id_base){
               $scope.list_machines[mach.id_base].childs.push(mach);
+              n_clones++;
             }
           }
           for (var i = $scope.list_machines.length-1; i >= 0; i--){
@@ -161,7 +168,15 @@ ravadaApp.directive("solShowMachine", swMach)
               $scope.list_machines.splice(i,1);
             }
           }
-        });
+          $scope.hide_clones = 0;
+          if (n_clones > $scope.n_clones_hide ) {
+            $scope.hide_clones = 1;
+          }
+        }
+          ,function (error){;
+              $scope.list_machines_busy = false;
+          }
+        );
       }
     };
     $scope.orderParam = ['name'];
