@@ -115,9 +115,11 @@ sub base_pool_name {
 }
 
 sub new_domain_name {
+    my $post = (shift or '');
+    $post = $post."_" if $post;
     my $cont = $CONT++;
     $cont = "0$cont"    if length($cont)<2;
-    return base_domain_name()."_".$cont;
+    return base_domain_name()."_$post".$cont;
 }
 
 sub new_pool_name {
@@ -136,12 +138,14 @@ sub rvd_back {
                 , warn_error => 0
     );
     my $login;
+    my $admin_name = base_domain_name();
+    my $admin_pass = "$$ $$";
     eval {
-        $login = Ravada::Auth::SQL->new(name => 'admin',password => 'admin');
+        $login = Ravada::Auth::SQL->new(name => $admin_name );
     };
-    $USER_ADMIN = $login if $login;
-    $USER_ADMIN = create_user('admin','admin',1)
-        if !$USER_ADMIN && !$login;
+    $USER_ADMIN = $login if $login && $login->id;
+    $USER_ADMIN = create_user($admin_name, $admin_pass,1)
+        if !$USER_ADMIN;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
@@ -406,8 +410,15 @@ sub clean {
     remove_old_pools();
 }
 
+sub remove_old_user {
+    $USER_ADMIN->remove if $USER_ADMIN;
+    confess "Undefined connector" if !defined $CONNECTOR;
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
+    $sth->execute(base_domain_name());
+}
 sub search_id_iso {
     my $name = shift;
+    confess if !$CONNECTOR;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
@@ -558,4 +569,7 @@ sub start_domain_internal($domain) {
     }
 }
 
+sub END {
+    remove_old_user() if $CONNECTOR;
+}
 1;

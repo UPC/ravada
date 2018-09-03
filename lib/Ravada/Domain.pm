@@ -1430,6 +1430,7 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$self->is_active;
+    _test_iptables_jump();
 }
 
 sub _around_is_active($orig, $self) {
@@ -1500,6 +1501,8 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
+    return if $>;
+
     my %args = @_;
 
     my $user = delete $args{user};
@@ -1509,7 +1512,7 @@ sub _remove_iptables {
 
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
-    my $ipt_obj = _obj_iptables();
+    my $ipt_obj = _obj_iptables(0);
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iptables SET time_deleted=?"
@@ -1526,6 +1529,21 @@ sub _remove_iptables {
         $sth->execute(Ravada::Utils::now(), $id);
     }
 }
+
+sub _test_iptables_jump {
+    my @cmd = ('iptables','-L','INPUT');
+    my ($in, $out, $err);
+
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my $count = 0;
+    for my $line ( split /\n/,$out ) {
+        $count++ if $line =~ /^RAVADA /;
+    }
+    return if !$count || $count == 1;
+    warn "Expecting 0 or 1 RAVADA iptables jump, got: "    .($count or 0);
+}
+
 
 sub _remove_temporary_machine {
     my $self = shift;
@@ -1628,7 +1646,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)
+                                    if !$>;
 
         $self->_log_iptable(iptables => \@iptables_arg, @_);
 
@@ -1637,7 +1656,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
     
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)
+                                if !$>;
     
     $self->_log_iptable(iptables => \@iptables_arg, %args);
 
@@ -1691,7 +1711,7 @@ sub open_iptables {
     $self->_add_iptable(%args);
 }
 
-sub _obj_iptables {
+sub _obj_iptables($create_chain=1) {
 
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
@@ -1710,9 +1730,20 @@ sub _obj_iptables {
 	                           ### iptables commands (default is 0).
 	);
 
-	my $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	or die "[*] Could not acquire IPTables::ChainMgr object";
+	my $ipt_obj;
+    my $error;
+    for ( 1 .. 10 ) {
+        eval {
+            $ipt_obj = IPTables::ChainMgr->new(%opts)
+                or warn "[*] Could not acquire IPTables::ChainMgr object";
+        };
+        $error = $@;
+        last if !$error;
+        sleep 1;
+    }
+    confess $error if $error;
 
+    return $ipt_obj if !$create_chain;
 	my $rv = 0;
 	my $out_ar = [];
 	my $errs_ar = [];
@@ -1721,13 +1752,26 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-	}
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
-    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
+    }
+    _add_jump($ipt_obj);
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
+}
+
+sub _add_jump($ipt_obj) {
+    my $out = `iptables -L INPUT -n`;
+    my $count = 0;
+    for my $line ( split /\n/,$out ) {
+        next if $line !~ /^[A-Z]+ /;
+        $count++;
+        return if $line =~ /^RAVADA/;
+    }
+    my ($rv, $out_ar, $errs_ar)
+            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
+
 }
 
 sub _log_iptable {

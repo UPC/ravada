@@ -67,6 +67,7 @@ $FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 our $CONNECTOR;
 our $CONFIG = {};
 our $DEBUG;
+our $VERBOSE;
 our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 
@@ -1298,18 +1299,15 @@ sub create_domain {
 
     my %args = @_;
 
+    my $request = $args{request};
+    %args = %{$request->args}   if $request;
+
     my $start = $args{start};
     my $vm_name = $args{vm};
     my $id_base = $args{id_base};
-    my $request = $args{request};
     my $id_owner = $args{id_owner};
 
     my $vm;
-    if ($request) {
-        %args = %{$request->args};
-        $vm_name = $request->defined_arg('vm') if $request->defined_arg('vm');
-        $id_base = $request->defined_arg('id_base') if $request->defined_arg('id_base');
-    }
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
@@ -1329,6 +1327,7 @@ sub create_domain {
 
     $request->status("creating")    if $request;
     my $domain;
+    delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
 
     my $error = $@;
@@ -1734,9 +1733,12 @@ sub process_requests {
         next if $@ && $@ =~ /I can't find id/;
         die $@ if $@;
 
-        if ( ($long_commands &&
+        if (
+            $req->command ne 'ping_backend'
+            &&( ($long_commands &&
                 (!$short_commands && !$LONG_COMMAND{$req->command}))
-            ||(!$long_commands && $LONG_COMMAND{$req->command})
+                ||(!$long_commands && $LONG_COMMAND{$req->command})
+            )
         ) {
             warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
                 .$req->command  if $DEBUG;
@@ -1761,11 +1763,11 @@ sub process_requests {
                 $req->status("done");
             }
         }
-        next if !$DEBUG && !$debug;
+        next if !$DEBUG && !$debug && !$VERBOSE;
 
-        sleep 1;
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG;
+            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
+        sleep 1 if $DEBUG;
 
     }
     $sth->finish;
@@ -2180,9 +2182,11 @@ sub _cmd_clone($self, $request) {
     push @args, ( memory => $request->args('memory'))
         if $request->defined_arg('memory');
 
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'))
+        or die "Error: User missing, id: ".$request->args('uid');
+    push @args,(user => $user);
     $domain->clone(
         name => $request->args('name')
-        ,user => Ravada::Auth::SQL->search_by_id($request->args('uid'))
         ,@args
     );
 

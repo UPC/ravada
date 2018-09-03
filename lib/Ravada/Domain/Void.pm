@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(cluck croak);
 use Data::Dumper;
+use Fcntl qw(:flock SEEK_END);
 use File::Copy;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
@@ -114,11 +115,39 @@ sub _store {
 
     $data->{$var} = $value;
 
+    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.log: $!";
+    _lock($lock);
     eval { DumpFile($disk, $data) };
+    _unlock($lock);
     chomp $@;
     confess $@ if $@;
 
 }
+
+sub _lock {
+    my ($fh) = @_;
+    flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
+}
+
+sub _unlock {
+    my ($fh) = @_;
+    flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
+}
+
+sub _value{
+    my $self = shift;
+
+    my ($var) = @_;
+
+    my ($disk) = $self->_config_file();
+
+    my $data = {} ;
+    $data = LoadFile($disk) if -e $disk;
+    
+    return $data->{$var};
+
+}
+
 
 sub shutdown {
     my $self = shift;
@@ -232,7 +261,11 @@ sub add_volume {
     $args{target} = _new_target($data);
 
     $data->{device}->{$args{name}} = \%args;
+    my $disk = $self->_config_file;
+    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.log: $!";
+    _lock($lock);
     eval { DumpFile($self->_config_file, $data) };
+    _unlock($lock);
     chomp $@;
     die "readonly=".$self->readonly." ".$@ if $@;
 
@@ -345,9 +378,9 @@ sub can_screenshot { return $CONVERT; }
 sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
-    $self->_set_default_info()
-        if !$info->{memory};
-    $info = $self->_value('info');
+    if (!$info->{memory}) {
+        $info = $self->_set_default_info();
+    }
     lock_keys(%$info);
     return $info;
 }
@@ -366,7 +399,7 @@ sub _set_default_info {
     for my $name ( sort keys %controllers) {
         $self->set_controller($name,2);
     }
-
+    return $info;
 }
 
 sub set_max_memory {
@@ -459,6 +492,7 @@ sub clean_swap_volumes {
     }
 }
 
+sub can_hibernate { return 1};
 sub hybernate {
     my $self = shift;
     $self->_store(is_active => 0);

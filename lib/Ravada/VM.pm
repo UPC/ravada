@@ -138,7 +138,7 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
-    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
 
     my $base;
     my $id_base = delete $args{id_base};
@@ -480,6 +480,7 @@ sub default_storage_pool_name {
         $sth->execute($value,$id);
         $self->{_data}->{default_storage} = $value;
     }
+    $self->_select_vm_db();
     return $self->_data('default_storage');
 }
 
@@ -505,6 +506,7 @@ sub base_storage_pool {
         $sth->execute($value,$id);
         $self->{_data}->{base_storage} = $value;
     }
+    $self->_select_vm_db();
     return $self->_data('base_storage');
 }
 
@@ -530,6 +532,7 @@ sub clone_storage_pool {
         $sth->execute($value,$id);
         $self->{_data}->{clone_storage} = $value;
     }
+    $self->_select_vm_db();
     return $self->_data('clone_storage');
 }
 

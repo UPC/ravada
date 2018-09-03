@@ -45,7 +45,7 @@ our %VALID_ARG = (
     ,id_template => 2
          ,memory => 2
            ,disk => 2
-        ,network => 2
+           #        ,network => 2
       ,remote_ip => 2
           ,start => 2
     }
@@ -58,13 +58,13 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
-    ,autostart_domain => { id_domain => 1 , uid => 1, value => 2 }
+    ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, delay => 2, verbose => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2}
     ,refresh_storage => { id_vm => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
     ,change_owner => {uid => 1, id_domain => 1}
@@ -77,7 +77,7 @@ our %VALID_ARG = (
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
-            autostart_domain hibernate hybernate
+            domain_autostart hibernate hybernate
             change_owner
             change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver
@@ -506,6 +506,11 @@ sub _new_request {
     $sth->finish;
 
     $self->{id} = $self->_last_insert_id();
+
+    $sth = $$CONNECTOR->dbh->prepare(
+    "UPDATE requests set date_req=date_changed"
+    ." WHERE id=?");
+    $sth->execute($self->{id});
 
     return $self->open($self->{id});
 }
@@ -1094,7 +1099,8 @@ sub domain_autostart {
     my $proto = shift;
     my $class = ref($proto) || $proto;
 
-    my $args = _check_args('autostart_domain', @_ );
+    my $args = _check_args('domain_autostart', @_ );
+    $args->{value} = 1 if !exists $args->{value};
 
     my $self = {};
     bless($self, $class);
@@ -1103,6 +1109,16 @@ sub domain_autostart {
         , command => 'domain_autostart'
         , args => $args
     );
+}
+
+=head2 autostart_domain
+
+Deprecated for domain_autostart
+
+=cut
+
+sub autostart_domain {
+    return domain_autostart(@_);
 }
 
 =head2 refresh_vms
