@@ -1089,7 +1089,7 @@ sub change_curr_memory {
     );
 }
 
-=head2 autostart_domain
+=head2 domain_autostart
 
 Sets the autostart flag on a domain
 
@@ -1110,6 +1110,12 @@ sub domain_autostart {
         , args => $args
     );
 }
+
+=head2 autostart_domain
+
+Deprecated for domain_autostart
+
+=cut
 
 sub autostart_domain {
     return domain_autostart(@_);
