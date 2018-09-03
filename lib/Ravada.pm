@@ -1299,18 +1299,15 @@ sub create_domain {
 
     my %args = @_;
 
+    my $request = $args{request};
+    %args = %{$request->args}   if $request;
+
     my $start = $args{start};
     my $vm_name = $args{vm};
     my $id_base = $args{id_base};
-    my $request = $args{request};
     my $id_owner = $args{id_owner};
 
     my $vm;
-    if ($request) {
-        %args = %{$request->args};
-        $vm_name = $request->defined_arg('vm') if $request->defined_arg('vm');
-        $id_base = $request->defined_arg('id_base') if $request->defined_arg('id_base');
-    }
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
