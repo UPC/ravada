@@ -756,6 +756,40 @@ sub _update_data {
     $self->_update_domain_drivers_options();
     $self->_update_old_qemus();
 
+    $self->_add_indexes();
+}
+
+sub _add_indexes($self) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+    $self->_add_indexes_domains();
+    $self->_add_indexes_requests();
+}
+
+sub _add_indexes_domains($self) {
+    my %index;
+    my $sth = $CONNECTOR->dbh->prepare("show index from domains");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+    return if $index{id_base_index};
+    warn "INFO: Adding domains . id_base index";
+    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE domains add index id_base_index "
+        ."(id_base)");
+    $sth->execute;
+}
+sub _add_indexes_requests($self) {
+    my %index;
+    my $sth = $CONNECTOR->dbh->prepare("show index from requests");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+    return if $index{domain_status};
+    warn "INFO: Adding requests . id_domain,status index";
+    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE requests add index domain_status "
+        ."(id_domain, status)");
+    $sth->execute;
 }
 
 sub _rename_grants($self) {
