@@ -225,17 +225,6 @@ sub _update_isos {
                 ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
                 ,min_disk_size => '1'
         }
-        ,artful => {
-                    name => 'Ubuntu Artful Aardvark'
-            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/17.10/'
-                ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
-          ,min_disk_size => '10'
-        }
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
@@ -243,7 +232,7 @@ sub _update_isos {
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
-                ,file_re => 'ubuntu-18.04.*desktop-amd64.iso'
+                ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
           ,min_disk_size => '9'
         }
@@ -396,15 +385,6 @@ sub _update_isos {
              ,md5_url => '$url/MD5SUMS'
              ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
-        }
-        ,lubuntu_aardvark => {
-            name => 'Lubuntu Artful Aardvark'
-            ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
-            ,md5_url => '$url/MD5SUMS'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,min_disk_size => '10'
         }
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
@@ -1959,9 +1939,9 @@ sub _do_execute_command {
         $sub->($self,$request);
         $self->_disconnect_vm();
     };
+    my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    my $err = ( $@ or '');
     $request->error($err);
     $request->status('done')
         if $request->status() ne 'done'
