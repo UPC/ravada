@@ -55,6 +55,8 @@ sub test_download {
 
     ok($device,"Expecting a device name , got ".($device or '<UNDEF>'));
 
+    is($iso2->{rename_file}, $iso2->{filename}) if $iso2->{rename_file};
+
 }
 
 sub test_download_fail {
@@ -89,19 +91,6 @@ sub search_id_isos {
     my @id_iso;
     while ( my $row = $sth->fetchrow_hashref ) {
         next if !$row->{url};
-        eval {$vm->Ravada::VM::KVM::_fetch_filename($row);};
-        if ($@ =~ /Can't connect to localhost/) {
-            diag("Skipped tests, see http://ravada.readthedocs.io/en/latest/devel-docs/local_iso_server.html");
-            return;
-        }
-        diag($@) if $@ && $@ !~ /No.*found/i;
-
-        if (!$row->{filename}) {
-            diag("skipped test $row->{name} $row->{url} $row->{file_re}");
-            exit;
-            next;
-        }
-
         push @id_iso,($row->{id});
     }
     return @id_iso;
