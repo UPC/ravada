@@ -20,8 +20,6 @@ use Ravada;
 use Ravada::Auth::SQL;
 use Ravada::Domain::Void;
 
-$Ravada::Domain::Void::DIR_TMP = "/var/tmp/test/rvd_void";
-
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 
 require Exporter;
@@ -452,7 +450,7 @@ sub _remove_old_disks_void_remote($node) {
 sub _remove_old_disks_void_local {
     my $name = base_domain_name();
 
-    my $dir_img =  $Ravada::Domain::Void::DIR_TMP ;
+    my $dir_img =  Ravada::Front::Domain::Void::_config_dir();
     opendir my $ls,$dir_img or return;
     while (my $file = readdir $ls ) {
         next if $file !~ /^${name}_\d/;
