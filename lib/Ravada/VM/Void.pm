@@ -118,7 +118,7 @@ sub create_volume {
 }
 
 sub dir_img {
-    return $Ravada::Domain::Void::DIR_TMP;
+    return Ravada::Front::Domain::Void::_config_dir();
 }
 
 sub _list_domains_local($self, %args) {
@@ -127,7 +127,7 @@ sub _list_domains_local($self, %args) {
     confess "Wrong arguments ".Dumper(\%args)
         if keys %args;
 
-    opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
+    opendir my $ls,dir_img or return;
 
     my @domain;
     while (my $file = readdir $ls ) {
@@ -266,7 +266,7 @@ sub refresh_storage_pools {
 }
 
 sub list_storage_pools {
-    return $Ravada::Domain::Void::DIR_TMP;
+    return dir_img();
 }
 
 sub is_alive($self) {

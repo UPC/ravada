@@ -31,8 +31,6 @@ has '_ip' => (
     ,default => sub { return '1.1.1.'.int rand(255)}
 );
 
-our $DIR_TMP = "/var/tmp/rvd_void";
-
 our $CONVERT = `which convert`;
 chomp $CONVERT;
 #######################################3
@@ -41,9 +39,6 @@ sub BUILD {
     my $self = shift;
 
     my $args = $_[0];
-
-    make_path($DIR_TMP) or die "$! when mkdir $DIR_TMP"
-        if ! -e $DIR_TMP;
 
     my $drivers = {};
     if ($args->{id_base}) {
@@ -120,6 +115,9 @@ sub _store {
     my $data = $self->_load();
     $data->{$var} = $value;
 
+    my ($path) = $self->_config_file() =~ m{(.*/).*};
+    make_path($path) or die "Error: I can't mkdir $path"
+        if ! -e $path;
     eval { DumpFile($self->_config_file(), $data) };
     chomp $@;
     confess $@ if $@;
@@ -151,7 +149,7 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
-    $self->_vm->run_command("mkdir -p $DIR_TMP");
+    $self->_vm->run_command("mkdir -p ".$self->_config_dir());
     $self->_vm->write_file($disk, Dump($data));
     return $data->{$var};
 }
@@ -252,7 +250,7 @@ sub add_volume {
 
     my $suffix = ".img";
     $suffix = '.SWAP.img' if $args{swap};
-    $args{path} = "$DIR_TMP/".$self->name.".$args{name}$suffix"
+    $args{path} = $self->_config_dir."/".$self->name.".$args{name}$suffix"
         if !$args{path};
 
     confess "Volume path must be absolute , it is '$args{path}'"
@@ -386,7 +384,7 @@ sub screenshot {
 
 sub _file_screenshot {
     my $self = shift;
-    return $DIR_TMP."/".$self->name.".png";
+    return $self->_config_dir."/".$self->name.".png";
 }
 
 sub can_screenshot { return $CONVERT; }
@@ -477,7 +475,7 @@ sub rename {
 
     my $file_yml = $self->_config_file();
 
-    my $file_yml_new = "$DIR_TMP/$new_name.yml";
+    my $file_yml_new = $self->_config_dir."/$new_name.yml";
     copy($file_yml, $file_yml_new) or die "$! $file_yml -> $file_yml_new";
     unlink($file_yml);
 
