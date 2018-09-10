@@ -20,9 +20,9 @@ use_ok('Ravada');
 ##########################################################
 
 sub test_vm_connect {
-    my $vm = Ravada::VM::KVM->new(backend => $BACKEND );
+    my $vm = Ravada::VM::KVM->new();
     ok($vm);
-    ok($vm->type eq 'qemu');
+    ok($vm->type eq 'KVM');
     ok($vm->host eq 'localhost');
     ok($vm->vm);
 }

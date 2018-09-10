@@ -11,6 +11,8 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
+use Date::Calc qw(Today_and_Now);
+use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
 use Time::Piece;
@@ -18,6 +20,9 @@ use Ravada;
 use Ravada::Front;
 
 use vars qw($AUTOLOAD);
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 =pod
 
@@ -55,8 +60,9 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2 }
-    ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2 }
+    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
+                       , id_vm => 2 }
+    ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
@@ -66,6 +72,9 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2}
     ,refresh_storage => { id_vm => 2 }
+    ,refresh_vms => { id_domain => 2 }
+    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
+    ,cleanup => { }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
@@ -77,6 +86,7 @@ our %VALID_ARG = (
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+            set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
             change_owner
             change_max_memory change_curr_memory
@@ -86,6 +96,19 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
 our $TIMEOUT_SHUTDOWN = 120;
 
 our $CONNECTOR;
+
+our %COMMAND = (
+    long => { limit => 2 } #default
+    ,huge => {
+        limit => 1
+        ,commands => ['download']
+    }
+    ,priority => {
+        limit => 20
+        ,commands => ['clone','start']
+    }
+);
+lock_hash %COMMAND;
 
 sub _init_connector {
     $CONNECTOR = \$Ravada::CONNECTOR;
@@ -184,6 +207,9 @@ sub create_domain {
     my %args = @_;
 
     my $args = _check_args('create_domain', @_ );
+
+    confess "ERROR: Argument vm required without id_base"
+        if !exists $args->{vm} && !exists $args->{id_base};
 
     my $self = {};
     if ($args->{network}) {
@@ -1005,10 +1031,146 @@ sub clone {
     my $self = {};
     bless($self,$class);
 
-    return _new_request($self
+        return _new_request($self
         , command => 'clone'
         , args =>$args
     );
+}
+
+=head2 refresh_vms
+
+Refreshes the Virtual Mangers
+
+=cut
+
+sub refresh_vms {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_vms', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id, date_changed FROM requests WHERE command = 'refresh_vms' "
+        ." AND ( date_changed > ? OR status='requested') "
+    );
+
+    my @now = Today_and_Now();
+    $now[4]-- if $now[4] >1 ;
+    my $before = "$now[0]-$now[1]-$now[2] $now[3]:$now[4]:$now[5]";
+    $sth->execute($before);
+    my ($id, $date) = $sth->fetchrow;
+    return if $id;
+    return $self->_new_request(
+        command => 'refresh_vms'
+        , args => $args
+    );
+
+
+}
+
+=head2 set_base_vm
+
+Enables a base in a Virtual Manager
+
+=cut
+
+sub set_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 1 if !exists $args->{value};
+
+    my $self = {};
+    bless ($self, $class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => $args
+    );
+
+}
+
+=head2 cleanup
+
+Performs cleanup operations on the virtual machines.
+
+- Enforces limits
+- .. more .. ?
+
+=cut
+
+sub cleanup($proto , @args) {
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('cleanup', @args );
+
+    my $self = {};
+    bless ($self, $class);
+
+    return $self->_new_request(
+            command => 'cleanup'
+             , args => $args
+    );
+
+}
+
+
+=head2 remove_base_vm
+
+Disables a base in a Virtual Manager
+
+=cut
+
+sub remove_base_vm {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('set_base_vm', @_ );
+    $args->{value} = 0;
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(
+            command => 'set_base_vm'
+             , args => encode_json($args)
+    );
+
+}
+
+sub type($self) {
+    my $command = $self->command;
+    for my $type ( keys %COMMAND ) {
+        return $type if grep /^$command$/, @{$COMMAND{$type}->{commands}};
+    }
+    return 'long';
+}
+
+=head2 working_requests
+
+Returns the number of working requests of the same type
+
+    my $n = $request->working_requests();
+
+=cut
+
+sub count_requests($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT COUNT(*) FROM requests"
+        ." WHERE status = 'working' "
+    );
+    $sth->execute();
+    my ($n) = $sth->fetchrow;
+    return $n;
+}
+
+sub requests_limit($self, $type = $self->type) {
+    return $COMMAND{$type}->{limit};
 }
 
 =head2 change_owner

@@ -153,6 +153,7 @@
                                                                       ng-cloak
                        ng-hide="orderParam[0] !== '-is_active'"></i><%=l 'Status' %></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
+                    <th class="lgMachNode"><%=l 'Node' %></th>
                 </tr>
             </thead>
             <tbody>
@@ -270,6 +271,7 @@
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak><%=l 'This Machine is a base' %></div>
                     </td>
+                    <td class="lgMachNode"></tg>
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
@@ -389,6 +391,7 @@
                         </div>
                         <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine locked by' %><a href="/request/{{child.is_locked}}.html"> <%=l 'process' %></a></div>
                       </td>
+                      <td class="lgMachToggle">{{child.node}}</td>
                     </tr>
                     <tr ng-repeat-end ng-hide="true"></tr>
             </tbody>

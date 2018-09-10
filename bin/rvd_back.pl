@@ -7,6 +7,7 @@ use lib './lib';
 
 use Data::Dumper;
 use Getopt::Long;
+use POSIX ":sys_wait_h";
 use Proc::PID::File;
 
 use Ravada;
@@ -60,7 +61,7 @@ my $USAGE = "$0 "
         ." --import-domain-owner : owner of the domain to import\n"
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
-        ." -X : start in foreground\n"
+        ." --no-fork : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
         ."\n"
@@ -136,7 +137,6 @@ $Ravada::CAN_FORK=0    if $NOFORK;
 
 ###################################################################
 
-my $PID_LONGS;
 ###################################################################
 #
 
@@ -145,9 +145,6 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
-    clean_killed_requests();
-
-    start_process_longs() if !$NOFORK;
 
     my $t_refresh = 0;
 
@@ -155,37 +152,24 @@ sub do_start {
     Ravada::Request->enforce_limits();
     for (;;) {
         my $t0 = time;
+        $ravada->process_priority_requests();
+        $ravada->process_long_requests();
         $ravada->process_requests();
-        $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
+
         if ( time - $t_refresh > 60 ) {
+            Ravada::Request->cleanup();
             Ravada::Request->refresh_vms()      if rand(5)<3;
             Ravada::Request->enforce_limits()   if rand(5)<2;
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
     }
+
 }
 
-sub start_process_longs {
-    my $pid = fork();
-    die "I can't fork" if !defined $pid;
-    if ( $pid ) {
-        $PID_LONGS = $pid;
-        return;
-    }
-    
-    warn "Processing long requests in pid $$\n" if $DEBUG;
+sub clean_old_requests {
     my $ravada = Ravada->new( %CONFIG );
-    for (;;) {
-        my $t0 = time;
-        $ravada->process_long_requests();
-        sleep 1 if time - $t0 <1;
-    }
-}
-
-sub clean_killed_requests {
-    my $ravada = Ravada->new( %CONFIG );
-    $ravada->clean_killed_requests();
+    $ravada->clean_old_requests();
 }
 
 sub start {
@@ -194,18 +178,12 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm;
         }
+        $ravada->_wait_pids();
     }
+    clean_old_requests();
     for (;;) {
-        my $pid = fork();
-        die "I can't fork $!" if !defined $pid;
-        if ($pid == 0 ) {
-            do_start();
-            exit;
-        }
-        warn "Waiting for pid $pid\n";
-        waitpid($pid,0);
+        do_start();
     }
 }
 
@@ -523,14 +501,6 @@ sub test_ldap {
 }
 
 sub DESTROY {
-    return if !$PID_LONGS;
-    warn "Killing pid: $PID_LONGS";
-
-    my $cnt = kill 15 , $PID_LONGS;
-    return if !$cnt;
-
-    kill 9 , $PID_LONGS;
-    
 }
 
 #################################################################

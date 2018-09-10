@@ -55,11 +55,14 @@ sub search_domain_db
 sub test_remove_domain {
     my $name = shift;
 
+    my $domain_f = $RVD_FRONT->search_domain($name);
+    ok($domain_f,"Expecting domain $name in front");
+
     my $domain;
     $domain = $RVD_BACK->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         $domain->remove($USER);
     }
     $domain = $RVD_BACK->search_domain($name);
@@ -67,6 +70,12 @@ sub test_remove_domain {
         if $domain;
 
     ok(!search_domain_db($name),"Domain $name still in db");
+
+    $domain_f = $RVD_FRONT->search_domain($name);
+    ok(!$domain_f,"Expecting no domain $name in front");
+
+    my $list_domains = $RVD_FRONT->list_domains;
+    is(scalar@$list_domains,0, Dumper($list_domains));
 }
 
 sub test_list_bases {
@@ -165,12 +174,19 @@ for my $vm_name ('Void','KVM','LXC') {
     eval { $display = $RVD_FRONT->domdisplay($name ) };
     ok(!$display,"No display should b e returned with no user");
 
+
+    my $domain_front2 = Ravada::Front::Domain->open($domain->id);
+    is($domain_front2->id, $domain->id);
+    is($domain_front2->{_vm}, undef);
+
+    my $domain_front3 = Ravada::Front::Domain->new( id => $domain->id);
+    is($domain_front3->id, $domain->id);
+    is($domain_front3->{_vm}, undef);
     ok($domain->internal_id,"[$vm_name] Expecting an internal id , got ".($domain->internal_id or ''));
     if ($domain->type =~ /kvm/i) {
         my $domain_back = rvd_back->search_domain($domain->name);
         is($domain->internal_id, $domain_back->domain->get_id);
     }
-
 
     test_remove_domain($name);
     test_domain_name($vm_name);

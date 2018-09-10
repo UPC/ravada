@@ -30,9 +30,14 @@ has 'readonly' => (
     ,default => 1
 );
 
-our $CONNECTOR = \$Ravada::Front::CONNECTOR;
+our $CONNECTOR;
 #
 ###########################################################################
+
+sub _init_connector {
+    $CONNECTOR= \$Ravada::CONNECTOR;
+    $CONNECTOR= \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+}
 
 sub BUILD($self, $arg) {
     my $id = $arg->{id};
@@ -102,6 +107,7 @@ sub is_paused($self) {
 
 sub is_removed          { return 0 }
 sub list_volumes        { confess "TODO" }
+sub migrate             { confess "TODO" }
 
 sub name($self) {
     return $self->{_data}->{name}   if exists $self->{_data} && $self->{_data}->{name};
@@ -114,6 +120,16 @@ sub remove              { confess "TODO" }
 sub rename              { confess "TODO" }
 sub resume              { confess "TODO" }
 sub screenshot          { confess "TODO" }
+
+sub search_domain($self,$name) {
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return if !$id;
+    return Ravada::Front::Domain->new(id => $id);
+}
 
 sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }

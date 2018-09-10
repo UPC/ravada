@@ -49,6 +49,7 @@ our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
+our %VM_ID;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
 our $LOCAL_TZ = DateTime::TimeZone->new(name => 'local');
@@ -135,7 +136,7 @@ sub list_machines_user {
     );
     my ($id, $name, $is_public, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
 
     my @list;
     while ( $sth->fetch ) {
@@ -225,6 +226,7 @@ sub _around_list_machines($orig, $self, $user) {
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
                                     && !$m->{is_volatile};
+        lock_hash(%$m);
     }
     return $machines;
 }
@@ -254,24 +256,35 @@ Returns a list of the domains as a listref
 
 =cut
 
-sub list_domains {
-    my $self = shift;
-    my %args = @_;
+sub list_domains($self, %args) {
 
-    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile, client_status"
-                    .", id_owner "
-                ." FROM domains "
-                ._where(%args)
-                ." ORDER BY name";
+    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
+        ."      ,vms.name as node , is_volatile, client_status "
+        ."      ,id_owner "
+        ." FROM domains d LEFT JOIN vms "
+        ."  ON d.id_vm = vms.id ";
 
+    my $where = '';
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " d.$field=?"
+    }
+    $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare($query);
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        for (qw(is_locked is_hibernated is_paused
+                has_clones )) {
+            $row->{$_} = 0;
+        }
         my $domain ;
+        my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
+        warn $@ if $@;
+        $row->{remote_ip} = undef;
         if ( $row->{is_volatile} && !$domain ) {
             $self->_remove_domain_db($row->{id});
             next;
@@ -279,16 +292,18 @@ sub list_domains {
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
+        $row->{remote_ip} = undef;
         if ( $domain ) {
-            $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = ( $domain->is_hibernated or 0);
             $row->{is_paused} = 1 if $domain->is_paused;
+            $row->{is_active} = 1 if $row->{status} eq 'active';
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
+            $row->{node} = $domain->_vm->name if $domain->_vm;
             $row->{remote_ip} = $domain->client_status
                 if $domain->client_status && $domain->client_status ne 'connected';
             $row->{autostart} = $domain->autostart;
@@ -329,7 +344,7 @@ sub list_clones {
   my $self = shift;
   my %args = @_;
   
-  my $domains = list_domains();
+  my $domains = $self->list_domains();
   my @clones;
   for (@$domains ) {
     if($_->{id_base}) { push @clones, ($_); }
@@ -403,6 +418,52 @@ sub list_vm_types {
     $self->{cache}->{vm_types} = $result if $result->[0];
 
     return $result;
+}
+
+=head2 list_vms
+
+Returns a list of Virtual Managers
+
+=cut
+
+sub list_vms($self, $type=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, vm_type FROM vms ";
+
+    my @args = ();
+    if ($type) {
+        $sql .= "WHERE (vm_type=? or vm_type=?)";
+        my $type2 = $type;
+        $type2 = 'qemu' if $type eq 'KVM';
+        @args = ( $type, $type2);
+    }
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute(@args);
+
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $self->_list_bases_vm($row);
+        $row->{type} = $row->{vm_type};
+        delete $row->{vm_type};
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    return @list;
+}
+
+sub _list_bases_vm($self, $node) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+    );
+    $sth->execute($node->{id});
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        $node->{"base_".$id_domain} =0;
+    }
+    $sth->finish;
 }
 
 =head2 list_iso_images
@@ -706,7 +767,7 @@ sub search_domain {
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
     $sth->execute($name);
-    my ($id, $tipo) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
+    my ($id, $tipo) = $sth->fetchrow or return;
 
     return Ravada::Front::Domain->open($id);
 }
@@ -760,7 +821,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
-                || $command eq 'ping_backend')
+                || $command eq 'ping_backend'
+                || $command eq 'cleanup'
                 || $command eq 'enforce_limits'
                 || $command eq 'refresh_vms'
                 || $command eq 'refresh_storage'

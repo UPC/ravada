@@ -297,7 +297,7 @@ sub test_dont_remove_base_cloned {
     $domain->is_public(1);
     is($domain->is_base(), 1);
     my $clone = rvd_back()->create_domain( name => $name_clone
-            ,id_owner => $USER->id
+            ,id_owner => user_admin->id
             ,id_base => $domain->id
             ,vm => $vm_name
     );
@@ -421,9 +421,10 @@ sub test_domain_limit_admin {
     for my $domain ( rvd_back->list_domains()) {
         $domain->shutdown_now(user_admin);
     }
+
     my $domain = create_domain($vm_name, user_admin );
     ok($domain,"Expecting a new domain created") or exit;
-    $domain->shutdown_now($USER)    if $domain->is_active;
+    $domain->shutdown_now(user_admin)    if $domain->is_active;
 
     is(rvd_back->list_domains(user => user_admin , active => 1),0
         ,Dumper(rvd_back->list_domains())) or exit;
@@ -446,7 +447,7 @@ sub test_domain_limit_admin {
     rvd_back->_process_all_requests_dont_fork();
     sleep 1;
     rvd_back->_process_all_requests_dont_fork();
-    my @list = rvd_back->list_domains(user => user_admin , active => 1);
+    my @list = rvd_back->list_domains(user => user_admin, active => 1);
     is(scalar @list,2) or die Dumper([map { $_->name } @list]);
 }
 
@@ -488,6 +489,9 @@ sub test_domain_limit_noadmin {
     my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or die Dumper(\@list);
     is($list[0]->name, $domain2->name) if $list[0];
+
+    $domain2->remove($user);
+    $domain->remove($user);
 }
 
 sub test_domain_limit_already_requested {
@@ -496,41 +500,47 @@ sub test_domain_limit_already_requested {
     for my $domain ( rvd_back->list_domains()) {
         $domain->shutdown_now(user_admin);
     }
-    user_admin->grant($USER,'create_machine');
-    is($USER->is_admin, 0);
-    my $domain = create_domain($vm_name, $USER );
+    my $user = create_user("limit$$","bar");
+    user_admin->grant($user, 'create_machine');
+    my $domain = create_domain($vm_name, $user);
     ok($domain,"Expecting a new domain created") or return;
-    $domain->shutdown_now($USER)    if $domain->is_active;
+    $domain->shutdown_now($user)    if $domain->is_active;
 
     is(rvd_back->list_domains(user => $USER, active => 1),0
         ,Dumper(rvd_back->list_domains())) or return;
 
-    $domain->start( $USER );
+    $domain->start( $user );
     is($domain->is_active,1);
 
     ok($domain->start_time <= time,"Expecting start time <= ".time
                                     ." got ".time);
 
     sleep 1;
-    is(rvd_back->list_domains(user => $USER, active => 1),1);
+    is(rvd_back->list_domains(user => $user, active => 1),1);
 
-    my $domain2 = create_domain($vm_name, $USER );
+    my $domain2 = create_domain($vm_name, $user);
     $domain2->shutdown_now($USER)   if $domain2->is_active;
-    is(rvd_back->list_domains(user => $USER, active => 1),1);
+    is(rvd_back->list_domains(user => $user, active => 1),1);
 
-    $domain2->start( $USER );
+    $domain2->start( $user );
     my @list_requests = $domain->list_requests;
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
+    is(rvd_back->list_domains(user => $user, active => 1),2);
     Ravada::Request->enforce_limits(timeout => 1);
     rvd_back->_process_all_requests_dont_fork();
     sleep 1;
     rvd_back->_process_all_requests_dont_fork();
 
 
-    my @list = rvd_back->list_domains(user => $USER, active => 1);
+    my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or die Dumper(\@list);
     is($list[0]->name, $domain2->name) if $list[0];
+
+    $domain2->remove($user);
+    $domain->remove($user);
+
+    $user->remove();
 }
 
 #######################################################################33

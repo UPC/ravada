@@ -188,7 +188,7 @@ sub test_drivers_clone {
 
     for my $option (@options) {
         _domain_shutdown($domain);
-        diag("Testing $vm_name $type : $option->{name}");
+#        diag("Testing $vm_name $type : $option->{name}");
 
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or '')) or next;
@@ -258,7 +258,7 @@ sub test_settings {
     my @drivers = $vm->list_drivers();
 #    @drivers = $vm->list_drivers('image');
     for my $driver ( @drivers ) {
-        diag("Testing drivers for $vm_name ".$driver->name);
+#        diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_type($vm_name, $driver->name);
         test_drivers_clone($vm_name, $driver->name);
         test_drivers_type_id($vm_name, $driver->name);

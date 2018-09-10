@@ -96,6 +96,14 @@ sub test_list_domains {
     is($list_domains->[0]->{status}, 'hibernated');
 }
 
+sub test_open_domain {
+    my ($vm_name, $domain) = @_;
+
+    my $domain_f = rvd_front->search_domain_by_id($domain->id);
+    is($domain_f->id , $domain->id);
+    is($domain_f->type, $domain->type);
+}
+
 sub test_list_bases {
     my $vm_name = shift;
 
@@ -144,6 +152,7 @@ for my $vm_name (reverse sort @VMS) {
             $vm = undef;
         }
 
+
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
@@ -152,6 +161,7 @@ for my $vm_name (reverse sort @VMS) {
         my $domain = test_create_domain($vm_name);
         test_list_domains($vm_name, $domain);
 
+        test_open_domain($vm_name, $domain);
         test_list_bases($vm_name);
         $domain->remove($USER);
 
