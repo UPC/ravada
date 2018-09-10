@@ -1637,7 +1637,6 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$self->is_active;
-    _test_iptables_jump();
 }
 
 sub _around_is_active($orig, $self) {
