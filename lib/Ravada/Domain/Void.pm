@@ -149,7 +149,13 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
+<<<<<<< HEAD
     $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
+||||||| parent of 7d6f140e... test(backend): fixed dir for mock VMs
+    $self->_vm->run_command("mkdir -p $DIR_TMP");
+=======
+    $self->_vm->run_command("mkdir -p ".$self->_config_dir());
+>>>>>>> 7d6f140e... test(backend): fixed dir for mock VMs
     $self->_vm->write_file($disk, Dump($data));
     _unlock($lock);
     return $self->_value($var);
