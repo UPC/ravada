@@ -450,7 +450,7 @@ sub test_domain_limit {
     rvd_back->_process_all_requests_dont_fork();
     sleep 1;
     rvd_back->_process_all_requests_dont_fork();
-    my @list = rvd_back->list_domains(user => user_admin , active => 1);
+    my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or die Dumper(\@list);
     is($list[0]->name, $domain2->name) if $list[0];
 
