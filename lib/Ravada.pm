@@ -2021,9 +2021,9 @@ sub _do_execute_command {
     eval {
         $sub->($self,$request);
     };
+    my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    my $err = ( $@ or '');
     $request->error($err)   if $err;
     $request->status('done')
         if $request->status() ne 'done'
@@ -2245,7 +2245,7 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->start(user => $user, remote_ip => $request->args('remote_ip'), request => $request);
+    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
@@ -2301,7 +2301,6 @@ sub _cmd_hybernate {
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
-    warn "open $id_domain";
     my $domain = Ravada::Domain->open($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
