@@ -219,6 +219,7 @@ sub init {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
     rvd_back()  if !$RVD_BACK;
+    $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
 sub remote_config {

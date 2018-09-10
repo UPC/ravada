@@ -292,7 +292,7 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
-    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Error: Missing user $id_owner";
 
     my $base;
     my $id_base = delete $args{id_base};
@@ -452,7 +452,7 @@ sub ip {
     return $ip if $ip && $ip !~ /^127/ && $ip =~ /^\d+\.\d+\.\d+\.\d+$/;
 
     warn "WARNING: I can't find the IP of host ".$self->host.", using localhost."
-        ." This virtual machine won't be available from the network.";
+        ." This virtual machine won't be available from the network." if $0 !~ /\.t$/;
 
     return '127.0.0.1';
 }
@@ -525,7 +525,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -659,7 +659,60 @@ sub default_storage_pool_name {
         $sth->execute($value,$id);
         $self->{_data}->{default_storage} = $value;
     }
+    $self->_select_vm_db();
     return $self->_data('default_storage');
+}
+
+=head2 base_storage_pool
+
+Set the storage pool for bases in this Virtual Machine Manager
+
+    $vm->base_storage_pool('pool2');
+
+=cut
+
+sub base_storage_pool {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET base_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{base_storage} = $value;
+    }
+    $self->_select_vm_db();
+    return $self->_data('base_storage');
+}
+
+=head2 clone_storage_pool
+
+Set the storage pool for clones in this Virtual Machine Manager
+
+    $vm->clone_storage_pool('pool3');
+
+=cut
+
+sub clone_storage_pool {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET clone_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{clone_storage} = $value;
+    }
+    $self->_select_vm_db();
+    return $self->_data('clone_storage');
 }
 
 =head2 min_free_memory

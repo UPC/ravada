@@ -821,6 +821,7 @@ sub open($class, @args) {
         bless $vm0, $vm_class;
 
         $vm = $vm0->new( readonly => $readonly );
+        $vm = $vm0->new( );
     }
 
     my $domain = $vm->search_domain($row->{name}, $force);

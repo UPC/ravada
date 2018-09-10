@@ -76,6 +76,7 @@ our $WGET = `which wget`;
 chomp $WGET;
 
 our $CACHE_DOWNLOAD = 1;
+our $VERIFY_ISO = 1;
 
 our %_CREATED_DEFAULT_STORAGE = ();
 ##########################################################################
@@ -377,6 +378,9 @@ sub dir_img {
 }
 
 sub _storage_path($self, $storage) {
+    if (!ref($storage)) {
+        $storage = $self->vm->get_storage_pool_by_name($storage);
+    }
     my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -780,6 +784,8 @@ sub _create_disk_qcow2 {
     confess "Missing name" if !$name;
 
     my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
 
     my @files_out;
 
@@ -952,7 +958,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
     confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
-        if $iso->{url} && !$iso->{md5} && !$iso->{sha256};
+        if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
     if (! -e $device || ! -s $device) {
@@ -1076,8 +1082,10 @@ sub _search_iso {
     return $row if $file_iso;
 
     $self->_fetch_filename($row);#    if $row->{file_re};
-    $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
-    $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
+    if ($VERIFY_ISO) {
+        $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
+        $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
+    }
 
     if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume($row->{filename})) {
@@ -1197,8 +1205,15 @@ sub _fetch_filename {
     confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
-    my @found = $self->_search_url_file($row->{url}, $row->{file_re});
-    die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+    my @found = $self->search_volume_re(qr($row->{file_re}));
+    if (@found) {
+        $row->{device} = $found[0]->get_path;
+        $row->{filename} = $found[0]->get_path =~ m{.*/(.*)};
+        return;
+    } else {
+        @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
+        die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+    }
 
     my $url = $found[-1];
     my ($file) = $url =~ m{.*/(.*)};
