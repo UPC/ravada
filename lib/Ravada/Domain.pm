@@ -303,11 +303,7 @@ sub _start_preconditions{
     }
     return if $self->is_active;
 
-    #TODO: remove them and make it more general now we have nodes
-    #$self->_check_free_vm_memory();
-    #$self->_check_cpu_usage($request);
     #_check_used_memory(@_);
-
 
     return if $self->_search_already_started();
     # if it is a clone ( it is not a base )
@@ -320,6 +316,9 @@ sub _start_preconditions{
         $self->_balance_vm();
         $self->rsync()  if !$self->_vm->is_local();
     }
+    $self->_check_free_vm_memory();
+    #TODO: remove them and make it more general now we have nodes
+    #$self->_check_cpu_usage($request);
 }
 
 sub _search_already_started($self) {
@@ -1137,7 +1136,7 @@ sub _pre_remove_domain($self, $user, @) {
     $self->_allow_remove($user);
     $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks()         if ($self->is_known && $self->is_known_extra)
-                                    || $self->domain ;
+    || $self->domain ;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
@@ -1170,7 +1169,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
-        my $domain = $vm->search_domain($self->name) or next;
+        my $domain = $vm->search_domain($name) or next;
 
         $domain->remove($user, $cascade);
     }
@@ -1614,11 +1613,19 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+    if ($self->is_volatile) {
+        $self->_remove_temporary_machine();
+        return;
+    }
+    # only if not volatile
     my $request;
     $request = $arg{request} if exists $arg{request};
     $self->_rsync_volumes_back( $request )
         if !$self->is_local && !$self->is_active && !$self->is_volatile;
 
+    $self->needs_restart(0) if $self->is_known()
+                                && $self->needs_restart()
+                                && !$self->is_active;
 }
 
 sub _around_is_active($orig, $self) {
@@ -1949,7 +1956,6 @@ sub open_iptables {
         eval {
             $self->start(
                 user => $user
-            ,id_domain => $self->id
             ,remote_ip => $args{remote_ip}
             );
         };
