@@ -124,9 +124,11 @@ sub list_disks {
 }
 
 sub xml_description($self, $inactive=0) {
-    return $self->_data_extra('xml')    if !$self->domain && $self->is_known;
+    return $self->_data_extra('xml')
+        if ($self->is_removed || !$self->domain )
+            && $self->is_known;
 
-    confess "ERROR: KVM domain not available"   if !$self->domain;
+    confess "ERROR: KVM domain not available ".$self->is_known   if !$self->domain;
     my $xml;
     eval {
         my @flags;
@@ -249,8 +251,6 @@ sub remove {
 
     eval { $self->remove_disks() if $self->is_known };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
-
-    $self->remove_disks();
 
     eval { $self->_remove_file_image() };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
@@ -1648,6 +1648,7 @@ In KVM it removes saved images.
 
 sub pre_remove {
     my $self = shift;
+    return if $self->is_removed;
     $self->domain->managed_save_remove
         if $self->domain && $self->domain->has_managed_save_image;
 }
