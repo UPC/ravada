@@ -102,6 +102,7 @@ sub test_volatile {
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
+    is($clone->is_active, 0);
     # test out of the DB
     my $sth = $test->connector->dbh->prepare("SELECT id,name FROM domains WHERE name=?");
     $sth->execute($name);
