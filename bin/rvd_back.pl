@@ -85,6 +85,7 @@ GetOptions (       help => \$help
                    ,all => \$ALL
                   ,list => \$LIST
                  ,debug => \$DEBUG
+                ,verbose => \$VERBOSE
               ,'no-fork'=> \$NOFORK
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
@@ -131,6 +132,7 @@ my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
 $Ravada::DEBUG=1    if $DEBUG;
+$Ravada::VERBOSE=1      if $VERBOSE;
 $Ravada::CAN_FORK=0    if $NOFORK;
 
 ###################################################################

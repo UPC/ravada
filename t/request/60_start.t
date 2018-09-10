@@ -49,6 +49,26 @@ sub test_request_start($vm_name) {
     $domain->remove(user_admin);
 }
 
+sub test_request_create_start($vm_name) {
+    my $base = create_domain($vm_name);
+    $base->prepare_base(user_admin);
+
+    my $domain_name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        id_base => $base->id
+        ,id_owner => user_admin->id
+        ,remote_ip => '127.0.0.1'
+        ,start => 1
+        ,name => $domain_name
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status, 'done');
+    is($req->error,'');
+
+    my $domain = rvd_back->search_domain($domain_name);
+    is($domain->remote_ip,'127.0.0.1');
+    is($domain->is_active,1);
+}
 sub test_request_iptables($vm_name) {
     my $domain = create_domain($vm_name);
     my $req = Ravada::Request->open_iptables(
@@ -88,6 +108,7 @@ for my $vm_name ( vm_names() ) {
 
         test_request_start($vm_name);
         test_request_iptables($vm_name);
+        test_request_create_start($vm_name);
     }
 }
 

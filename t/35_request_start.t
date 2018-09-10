@@ -234,7 +234,7 @@ for my $vm_name (qw(KVM Void)) {
 
     SKIP: {
         my $msg = "SKIPPED: Virtual manager $vm_name not found";
-        if ($vmm && $>) {
+        if ($vmm && $vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vmm = undef;
         }

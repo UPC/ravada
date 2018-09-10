@@ -10,6 +10,7 @@ Ravada::Front - Web Frontend library for Ravada
 =cut
 
 use Carp qw(carp);
+use DateTime;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
@@ -51,6 +52,7 @@ our %VM;
 our %VM_ID;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
+our $LOCAL_TZ = DateTime::TimeZone->new(name => 'local');
 ###########################################################################
 #
 # method modifiers
@@ -804,7 +806,17 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
-        next if $command eq 'force_shutdown'
+        my $epoch_date_changed;
+        if ($date_changed) {
+            my ($y,$m,$d,$hh,$mm,$ss) = $date_changed =~ /(\d{4})-(\d\d)-(\d\d) (\d+):(\d+):(\d+)/;
+            if ($y)  {
+                $epoch_date_changed = DateTime->new(year => $y, month => $m, day => $d
+                    ,hour => $hh, minute => $mm, second => $ss
+                    ,time_zone => $LOCAL_TZ
+                )->epoch;
+            }
+        }
+        next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
@@ -813,7 +825,10 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'cleanup'
                 || $command eq 'enforce_limits'
                 || $command eq 'refresh_vms'
-                || $command eq 'refresh_storage';
+                || $command eq 'refresh_storage'
+                && time - $epoch_date_changed > 5
+                && $status eq 'done'
+                && !$error;
         next if $id_domain_req && defined $id_domain && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;

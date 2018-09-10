@@ -274,6 +274,22 @@ sub is_alive($self) {
     return 1;
 }
 
+sub free_memory {
+    my $self = shift;
+
+    open my $mem,'<',"/proc/meminfo" or die "$! /proc/meminfo";
+    my $memory = <$mem>;
+    close $mem;
+
+    chomp $memory;
+    $memory =~ s/.*?(\d+).*/$1/;
+    for my $domain ( $self->list_domains(active => 1) ) {
+        next if !$domain->is_active;
+        $memory -= $domain->get_info->{memory};
+    }
+    return $memory;
+}
+
 #########################################################################3
 
 1;
