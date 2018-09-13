@@ -90,6 +90,7 @@ sub remove {
 
     $self->remove_disks();
     unlink $self->_config_file();
+    unlink $self->_config_file()."lock";
 }
 
 sub can_hibernate { return 1; }
@@ -174,21 +175,6 @@ sub _unlock {
     my ($fh) = @_;
     flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
 }
-
-sub _value{
-    my $self = shift;
-
-    my ($var) = @_;
-
-    my ($disk) = $self->_config_file();
-
-    my $data = {} ;
-    $data = LoadFile($disk) if -e $disk;
-    
-    return $data->{$var};
-
-}
-
 
 sub shutdown {
     my $self = shift;
@@ -540,7 +526,6 @@ sub clean_swap_volumes {
 }
 
 
-sub can_hibernate { return 1};
 sub hybernate {
     my $self = shift;
     $self->_store(is_hibernated => 1);
