@@ -259,8 +259,6 @@ sub import_domain {
 
 sub refresh_storage {}
 
-sub free_memory { return 1024*1024 }
-
 sub refresh_storage_pools {
 
 }
