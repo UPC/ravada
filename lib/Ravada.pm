@@ -1329,13 +1329,13 @@ sub create_domain {
     my $self = shift;
 
     my %args = @_;
-    my $vm_name = delete $args{vm};
 
     my $request = $args{request};
     %args = %{$request->args}   if $request;
 
     my $start = $args{start};
     my $id_base = $args{id_base};
+    my $vm_name = delete $args{vm};
     my $id_owner = $args{id_owner};
 
     my $vm;
@@ -1379,7 +1379,6 @@ sub create_domain {
             $domain->start(
                 user => $user
                 ,remote_ip => $remote_ip
-                ,request => $request
             )
         };
         my $error = $@;
@@ -1880,7 +1879,7 @@ sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
 sub _kill_stale_process($self) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT pid,command,start_time "
+        "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
         ." AND command = 'refresh_vms'"
@@ -1889,15 +1888,15 @@ sub _kill_stale_process($self) {
         ." AND start_time IS NOT NULL "
     );
     $sth->execute(time - 60 );
-    while (my ($pid, $command, $start_time) = $sth->fetchrow) {
+    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
             next;
         }
-        warn "Killing $command stale for ".(time - $start_time)." seconds\n";
-        kill (15,$pid);
-    }
+        my $request = Ravada::Request->open($id);
+        $request->stop();
+     }
     $sth->finish;
 }
 
@@ -2225,7 +2224,8 @@ sub _cmd_open_iptables {
 }
 
 sub _cmd_clone($self, $request) {
-    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    my $domain = Ravada::Domain->open($request->args('id_domain'))
+        or confess "Error: Domain ".$request->args('id_domain')." not found";
 
     my @args = ( request => $request);
     push @args, ( memory => $request->args('memory'))
@@ -2671,7 +2671,9 @@ sub _cmd_set_base_vm {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+    my $domain = Ravada::Domain->open($id_domain) or confess "Error: Unknown domain id $id_domain";
+
+    #    my $domain = $self->search_domain_by_id($id_domain) or confess "Error: Unknown domain id: $id_domain";
 
     die "USER $uid not authorized to set base vm"
         if !$user->is_admin;
@@ -2814,7 +2816,7 @@ sub vm($self) {
         push @vms, ( $vm );
     };
     return [@vms] if @vms;
-    return $self->_create_vms();
+    return $self->_create_vm();
 
 }
 

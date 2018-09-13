@@ -91,6 +91,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             change_owner
             change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver
+            set_base_vm
     );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -1283,30 +1284,6 @@ sub autostart_domain {
     return domain_autostart(@_);
 }
 
-=head2 refresh_vms
-
-Refreshes cached information of the VMs.
-
-    my $req = Ravada::Request->refresh_vms();
-
-=cut
-
-sub refresh_vms {
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('refresh_vms', @_ );
-
-    my $self = {};
-    bless($self, $class);
-
-    return _new_request($self
-        , command => 'refresh_vms'
-        , args => $args
-    );
-}
-
 =head2 enforce_limits
 
 Enforces virtual machine limits, ie: an user can only run one virtual machine
@@ -1391,6 +1368,19 @@ sub done_recently {
     return $id;
 }
 
+sub stop($self) {
+    warn "Killing ".$self->command
+        ." , pid: ".$self->pid
+        .", stale for ".(time - $self->start_time)." seconds\n";
+    my $ok = kill (15,$self->pid);
+    warn "exit = $ok\n";
+    if (!$ok) {
+       $self->status('done',"Killed start process after "
+           .(time - $self->start_time)." seconds\n");
+    }
+
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
@@ -1428,6 +1418,7 @@ sub AUTOLOAD {
     return $value;
 
 }
+
 
 sub DESTROY {}
 1;
