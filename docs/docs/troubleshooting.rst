@@ -157,13 +157,8 @@ You create a VM and you set the time correctly. After this VM becomes base and t
 
 This is due to the parameter:
 ::
-    <clock offset='utc'>
+    <clock offset='utc'>  vs    <clock offset='localtime'>
 
-vs
-
-::
-    <clock offset='localtime'>
-
-You can modify it from the command:  
+You can modify XML file from the command:  
 ::
     virsh edit <machine_name>
