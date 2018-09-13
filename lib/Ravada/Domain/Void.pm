@@ -528,6 +528,13 @@ sub clean_swap_volumes {
     }
 }
 
+<<<<<<< HEAD
+||||||| parent of c50798d2... refactor(test): get data from remote
+
+sub can_hibernate { return 1};
+=======
+
+>>>>>>> c50798d2... refactor(test): get data from remote
 sub hybernate {
     my $self = shift;
     $self->_store(is_hibernated => 1);
