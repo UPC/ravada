@@ -944,7 +944,7 @@ for my $n ( 1 .. 10 ) {
     for my $vm_name (@vm_names) {
         test_requests($vm_name);
     }
-    test_random_requests(\@vm_names, $n*10);
+    test_random_requests(\@vm_names, $n*10) if @vm_names;
     for my $vm_name (@vm_names) {
         test_restart($vm_name);
         next if $n != 1;
@@ -958,5 +958,5 @@ for my $vm_name (reverse sort @vm_names) {
         test_remove_base($vm_name, $domain_name);
         clean_leftovers($vm_name);
 }
-clean();
+clean() if @vm_names;
 done_testing();
