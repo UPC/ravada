@@ -1653,7 +1653,7 @@ sub toggle_base_vm {
         return $c->render(json => {message => 'access denied'});
     }
     my $new_value = 0;
-    $new_value = 1 if !$domain->base_in_vm($id_vm);
+    $new_value = 1 if !$domain->is_base || !$domain->base_in_vm($id_vm);
 
     my $req = Ravada::Request->set_base_vm(
           value => $new_value
