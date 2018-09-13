@@ -50,6 +50,8 @@ create_domain
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
 
+$Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
+
 our ($CONNECTOR, $CONFIG , $FILE_CONFIG_TMP);
 
 our $CONT = 0;
@@ -69,6 +71,19 @@ our %VM_VALID = ( KVM => 1
 );
 
 sub user_admin {
+
+    return $USER_ADMIN if $USER_ADMIN;
+
+    my $login;
+    my $admin_name = base_domain_name();
+    my $admin_pass = "$$ $$";
+    eval {
+        $login = Ravada::Auth::SQL->new(name => $admin_name );
+    };
+    $USER_ADMIN = $login if $login && $login->id;
+    $USER_ADMIN = create_user($admin_name, $admin_pass,1)
+        if !$USER_ADMIN;
+
     return $USER_ADMIN;
 }
 
@@ -155,7 +170,8 @@ sub new_pool_name {
 }
 
 sub rvd_back {
-    my ($connector, $config) = @_;
+    my ($connector, $config, $create_user) = @_;
+    $create_user = 1 if !defined $create_user;
     return $RVD_BACK if defined $RVD_BACK && !defined $connector && !defined $config;
     init($connector,$config,0)    if $connector;
 
@@ -164,16 +180,8 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
-    my $login;
-    my $admin_name = base_domain_name();
-    my $admin_pass = "$$ $$";
-    eval {
-        $login = Ravada::Auth::SQL->new(name => $admin_name );
-    };
-    $USER_ADMIN = $login if $login && $login->id;
-    $USER_ADMIN = create_user($admin_name, $admin_pass,1)
-        if !$USER_ADMIN;
 
+    user_admin() if $create_user;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
     $RVD_BACK = $rvd;
@@ -214,15 +222,10 @@ sub init {
 
     $Ravada::CONNECTOR = $CONNECTOR;# if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
-    eval {
-    $USER_ADMIN = create_user('admin','admin',1)    if $create_user;
-    };
-
-    die $@ if $@ && $@ !~ /UNIQUE constraint failed: users.name/;
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-    rvd_back()  if !$RVD_BACK;
+    rvd_back(undef, undef, $create_user)  if !$RVD_BACK;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
@@ -327,6 +330,7 @@ sub _remove_old_domains_void {
 
     opendir my $dir, $vm->dir_img or return;
     while ( my $file = readdir($dir) ) {
+        next if $file !~ /^tst_/;
         my $path = $vm->dir_img."/".$file;
         next if ! -f $path
             || $path !~ m{\.(yml|qcow|img)$};
@@ -875,7 +879,7 @@ sub start_node($node) {
     for ( 1 .. 30 ) {
         last if $node->ping ;
         sleep 1;
-        diag("Waiting for ping node ".$node->name." $_") if !($_ % 10);
+        diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
     }
 
     is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
@@ -1081,11 +1085,8 @@ sub _do_remote_node($vm_name, $remote_config) {
     return $node;
 }
 
-sub END {
-    remove_old_user() if $CONNECTOR;
-}
-
 sub DESTROY {
+    remove_old_user() if $CONNECTOR;
     _clean_file_config();
 }
 
