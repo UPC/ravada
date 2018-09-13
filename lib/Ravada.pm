@@ -1379,10 +1379,13 @@ sub create_domain {
     my $vm_name = delete $args{vm};
     my @create_args = (%args);
 
-    my $id_base = delete $args{id_base};
-    confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
-
     _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
+    my $start = $args{start};
+    my $id_base = $args{id_base};
+    my $vm_name = delete $args{vm};
+    my $id_owner = $args{id_owner};
+
+    confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
     my $vm;
     if ($vm_name) {
@@ -1935,7 +1938,6 @@ sub _kill_stale_process($self) {
     );
     $sth->execute(time - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
-        next if $command eq 'refresh_vms' && time - $start_time < 120;
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
