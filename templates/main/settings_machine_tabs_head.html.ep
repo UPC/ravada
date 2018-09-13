@@ -20,7 +20,7 @@
 %   if ($domain->drivers && $USER->can_change_settings($domain->id)) {
         <li class="nav"><a ng-click="refresh_machine()" href="#graphics" data-toggle="tab"><%=l 'Graphics' %></a></li>
 %   }
-%   if ($USER->is_admin && $domain->is_base) {
+%   if ($USER->is_admin) {
         <li class="nav"><a href="#base" data-toggle="tab">Base</a></li>
 %   }
 %   if ($USER->is_admin || $USER->can_clone_all ){

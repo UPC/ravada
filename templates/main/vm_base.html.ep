@@ -29,7 +29,7 @@ has clones = <%= $domain->has_clones %><br/>
 %               $node_disabled = 1 if $node_disabled_msg;
                 <input type="checkbox"
                     ng-disabled="<%= $node_disabled %>"
-%           if ($domain->base_in_vm($node->{id})) {
+%           if ($domain->is_base && $domain->base_in_vm($node->{id})) {
                 checked
 %           }
                 ng-click="toggle_base(<%= $node->{id} %>, <%= $domain->id %>)"
