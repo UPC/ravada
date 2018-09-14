@@ -1018,7 +1018,6 @@ sub start_domain_internal($domain) {
     }
 }
 
-
 sub _clean_file_config {
     if ( $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP ) {
         unlink $FILE_CONFIG_TMP or warn "$! $FILE_CONFIG_TMP";

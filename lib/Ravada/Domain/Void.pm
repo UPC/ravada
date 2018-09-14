@@ -525,7 +525,6 @@ sub clean_swap_volumes {
     }
 }
 
-
 sub hybernate {
     my $self = shift;
     $self->_store(is_hibernated => 1);

@@ -212,17 +212,6 @@ sub _update_isos {
                 ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
                 ,min_disk_size => '1'
         }
-        ,artful => {
-                    name => 'Ubuntu Artful Aardvark'
-            ,description => 'Ubuntu 17.10 Artful Aardvark 64 bits'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/17.10/'
-                ,file_re => 'ubuntu-17.10.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
-          ,min_disk_size => '10'
-        }
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
@@ -230,7 +219,7 @@ sub _update_isos {
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
-                ,file_re => 'ubuntu-18.04.*desktop-amd64.iso'
+                ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
           ,min_disk_size => '9'
         }
@@ -383,15 +372,6 @@ sub _update_isos {
              ,md5_url => '$url/MD5SUMS'
              ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
-        }
-        ,lubuntu_aardvark => {
-            name => 'Lubuntu Artful Aardvark'
-            ,description => 'Lubuntu 17.10 Artful Aardvark 64 bits'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/17.10.*/release/lubuntu-17.10.*-desktop-amd64.iso'
-            ,md5_url => '$url/MD5SUMS'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,min_disk_size => '10'
         }
         ,lubuntu_xenial => {
             name => 'Lubuntu Xenial Xerus'
@@ -749,6 +729,40 @@ sub _update_data {
     $self->_update_domain_drivers_options();
     $self->_update_old_qemus();
 
+    $self->_add_indexes();
+}
+
+sub _add_indexes($self) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+    $self->_add_indexes_domains();
+    $self->_add_indexes_requests();
+}
+
+sub _add_indexes_domains($self) {
+    my %index;
+    my $sth = $CONNECTOR->dbh->prepare("show index from domains");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+    return if $index{id_base_index};
+    warn "INFO: Adding domains . id_base index";
+    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE domains add index id_base_index "
+        ."(id_base)");
+    $sth->execute;
+}
+sub _add_indexes_requests($self) {
+    my %index;
+    my $sth = $CONNECTOR->dbh->prepare("show index from requests");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+    return if $index{domain_status};
+    warn "INFO: Adding requests . id_domain,status index";
+    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE requests add index domain_status "
+        ."(id_domain, status)");
+    $sth->execute;
 }
 
 sub _rename_grants($self) {
@@ -2687,10 +2701,9 @@ sub _cmd_set_base_vm {
 }
 
 sub _cmd_cleanup($self, $request) {
-    $self->enforce_limits( request => $request);
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_requests('cleanup', $request);
-    $self->_wait_pids($request);
+    $self->_wait_pids();
 }
 
 sub _wait_pids($self) {

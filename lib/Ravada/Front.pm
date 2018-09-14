@@ -821,11 +821,11 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'shutdown'
                 || $command eq 'screenshot'
                 || $command eq 'hibernate'
-                || $command eq 'ping_backend')
                 || $command eq 'cleanup'
+                || $command eq 'ping_backend'
                 || $command eq 'enforce_limits'
                 || $command eq 'refresh_vms'
-                || $command eq 'refresh_storage'
+                || $command eq 'refresh_storage')
                 && time - $epoch_date_changed > 5
                 && $status eq 'done'
                 && !$error;

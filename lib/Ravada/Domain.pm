@@ -1709,7 +1709,6 @@ sub _remove_iptables {
 
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
-
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iptables SET time_deleted=?"
         ." WHERE id=?"
@@ -2034,7 +2033,6 @@ sub _obj_iptables($create_chain=1) {
 
     return $ipt_obj;
 }
-
 
 sub _log_iptable {
     my $self = shift;

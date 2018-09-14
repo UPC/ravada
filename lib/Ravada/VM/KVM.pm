@@ -971,7 +971,8 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                 ,"Downloading ISO file for $iso_name "
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
-        _download_file_external($iso->{url}, $device, $verbose);
+        _fill_url($iso);
+        $self->_download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
@@ -999,6 +1000,16 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
     }
     $self->_refresh_storage_pools();
     return $device;
+}
+
+sub _fill_url($iso) {
+    return if $iso->{url} =~ m{.*/[^/]+\.[^/]+$};
+    if ($iso->{file_re}) {
+        $iso->{url} .= "/" if $iso->{url} !~ m{/$};
+        $iso->{url} .= $iso->{file_re};
+        return;
+    }
+    confess "Error: Missing field file_re for ".$iso->{name};
 }
 
 sub _check_md5 {
@@ -1049,7 +1060,17 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_external($url, $device, $verbose=1) {
+sub _download_file_external($self, $url, $device, $verbose=1) {
+    $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
+    if ( $url =~ m{/$} ) {
+        my ($filename) = $device =~ m{.*/(.*)};
+        $url = "$url$filename";
+    }
+    if ($url =~ m{[^*]}) {
+        my @found = $self->_search_url_file($url);
+        confess "No match for $url" if !scalar @found;
+        $url = $found[-1];
+    }
     confess "ERROR: wget missing"   if !$WGET;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
@@ -1106,7 +1127,7 @@ sub _search_iso {
 
 sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
-    if ($url =~ m{\*}) {
+    if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
         confess "No match for $url" if !scalar @found;
         $url = $found[-1];
@@ -1135,9 +1156,10 @@ sub _match_url($self,$url) {
     my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
     $url2 = '' if !$url2;
 
+    confess "No url1 from $url" if !defined $url1;
     my $ua = Mojo::UserAgent->new;
     my $res = $ua->get(($url1 or '/'))->res;
-    die "ERROR ".$res->code." ".$res->message." : $url1"
+    confess "ERROR ".$res->code." ".$res->message." : $url1"
         unless $res->code == 200 || $res->code == 301;
 
     my @found;
@@ -1205,15 +1227,20 @@ sub _fetch_filename {
         confess "No filename in $row->{name} $row->{url}" if !$file;
 
         $row->{url} = $new_url;
-        $row->{file_re} = $file;
+        $row->{file_re} = "^$file";
     }
     confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
-    my @found = $self->search_volume_re(qr($row->{file_re}));
+    my @found;
+    if ($row->{rename_file}) {
+        @found = $self->search_volume_re(qr("^".$row->{rename_file}));
+    } else {
+        @found = $self->search_volume_re(qr($row->{file_re}));
+    }
     if (@found) {
         $row->{device} = $found[0]->get_path;
-        $row->{filename} = $found[0]->get_path =~ m{.*/(.*)};
+        ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
         return;
     } else {
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
@@ -1266,7 +1293,7 @@ sub _match_file($self, $url, $file_re) {
         eval { $res = $self->_web_user_agent->get($url)->res(); };
         last if !$@ && $res && defined $res->code;
         next if $@ && $@ =~ /timeout/i;
-        die $@ if $@;
+        confess $@ if $@;
     }
 
     return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
