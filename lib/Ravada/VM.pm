@@ -953,9 +953,15 @@ sub _write_file_local( $self, $file, $contents ) {
 
 sub create_iptables_chain($self,$chain) {
     my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
-    return if $out =~ /^Chain $chain/;
 
-    $self->run_command("/sbin/iptables", '-N' => $chain);
+    $self->run_command("/sbin/iptables", '-N' => $chain)
+        if $out !~ /^Chain $chain/;
+
+    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",'INPUT');
+    return if grep(/^RAVADA /, split(/\n/,$out));
+
+    $self->run_command("/sbin/iptables", '-A','INPUT', '-j' => $chain);
+
 }
 
 sub iptables($self, @args) {

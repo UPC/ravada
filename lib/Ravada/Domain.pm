@@ -820,7 +820,6 @@ sub open($class, @args) {
         my $vm_class = "Ravada::VM::".$row->{vm};
         bless $vm0, $vm_class;
 
-        $vm = $vm0->new( readonly => $readonly );
         $vm = $vm0->new( );
     }
 
@@ -1710,7 +1709,6 @@ sub _remove_iptables {
 
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
-    my $ipt_obj = _obj_iptables(0);
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iptables SET time_deleted=?"
@@ -1727,6 +1725,7 @@ sub _remove_iptables {
         next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
+    my $ipt_obj = _obj_iptables(0);
     for my $id_vm (keys %rule) {
         my $vm = Ravada::VM->open($id_vm);
         for my $entry (@ {$rule{$id_vm}}) {
@@ -1927,7 +1926,13 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,dport => $local_port
                 ,j => $jump
         );
-        $self->_log_iptable(iptables => \@iptables_arg, user => $user,remote_ip => $local_ip);
+        $self->_log_iptable(
+            iptables => [
+                    $local_ip
+                    , $local_ip, 'filter', $IPTABLES_CHAIN, $jump
+                    ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port}
+            ]
+            , user => $user,remote_ip => $local_ip);
     }
 }
 
@@ -2024,26 +2029,12 @@ sub _obj_iptables($create_chain=1) {
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
     }
-    _add_jump($ipt_obj);
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
 }
 
-sub _add_jump($ipt_obj) {
-    my $out = `iptables -L INPUT -n`;
-    my $count = 0;
-    for my $line ( split /\n/,$out ) {
-        next if $line !~ /^[A-Z]+ /;
-        $count++;
-        return if $line =~ /^RAVADA/;
-    }
-    my ($rv, $out_ar, $errs_ar)
-            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
-    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
-
-}
 
 sub _log_iptable {
     my $self = shift;
