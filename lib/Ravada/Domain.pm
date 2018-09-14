@@ -811,20 +811,24 @@ sub open($class, @args) {
         if !keys %$row;
 
     my $vm;
+    my $vm_local = {};
+    my $vm_class = "Ravada::VM::".$row->{vm};
+    bless $vm_local, $vm_class;
+
     if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
         $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
                 , readonly => $readonly);
     }
     if (!$vm || !$vm->is_active) {
-        my $vm0 = {};
-        my $vm_class = "Ravada::VM::".$row->{vm};
-        bless $vm0, $vm_class;
-
-        $vm = $vm0->new( );
+        $vm = $vm_local->new( );
     }
 
     my $domain = $vm->search_domain($row->{name}, $force);
-    return if !$domain;
+    if ( !$domain ) {
+        return if $vm->is_local;
+        $vm = $vm_local->new();
+        $domain = $vm->search_domain($row->{name}, $force) or return;
+    }
     if (!$id_vm) {
         $domain->_search_already_started();
         $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
@@ -1822,7 +1826,8 @@ sub _post_start {
 
     }
     $self->get_info();
-    Ravada::Request->enforce_limits(at => time + 60);
+    Ravada::Request->enforce_limits(at => time + 60)
+        if !Ravada::Request::done_recently(undef, 60, 'enforce_limits');
     $self->post_resume_aux;
 }
 
