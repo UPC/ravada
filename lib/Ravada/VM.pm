@@ -35,6 +35,8 @@ our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
 
+our $SSH_TIMEOUT = 20 * 1000;
+
 our %SSH;
 # domain
 requires 'create_domain';
@@ -249,7 +251,7 @@ sub _connect_ssh($self, $disconnect=0) {
 
     if (! $ssh || $disconnect ) {
         $ssh->disconnect if $ssh && $disconnect;
-        $ssh = Net::SSH2->new();
+        $ssh = Net::SSH2->new( timeout => $SSH_TIMEOUT );
         my $connect;
         for ( 1 .. 3 ) {
             $connect = $ssh->connect($self->host);
