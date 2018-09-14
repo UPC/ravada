@@ -324,6 +324,8 @@ sub test_localhost {
     @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,0);
 
+    @rule_drop = find_ip_rule(remote_ip => $vm->ip, jump => 'ACCEPT');
+    is(scalar @rule_drop,0) or exit;
 }
 
 sub test_shutdown_internal {
@@ -348,7 +350,6 @@ sub test_shutdown_internal {
         ,jump => 'DROP'
     );
 
-    my $domain2 = create_domain($vm->type);
     my $remote_ip2 = '2.2.2.2';
     $domain->start( user => user_admin, remote_ip => $remote_ip2);
 
@@ -395,7 +396,7 @@ sub test_hibernate {
 
     $domain->hibernate( user_admin );
     @rule = find_ip_rule(%test_args);
-    is(scalar @rule,0) or exit;
+    is(scalar @rule,0);
 
     @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,0);
