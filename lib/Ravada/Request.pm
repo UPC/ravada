@@ -106,7 +106,7 @@ our %COMMAND = (
     }
     ,priority => {
         limit => 20
-        ,commands => ['clone','start']
+        ,commands => ['clone','start','cleanup']
     }
 );
 lock_hash %COMMAND;
@@ -1049,6 +1049,7 @@ sub refresh_vms {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args('refresh_vms', @_ );
+    return if _requested('refresh_vms');
 
     my $self = {};
     bless($self,$class);
@@ -1109,6 +1110,8 @@ sub cleanup($proto , @args) {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args('cleanup', @args );
+
+    return if _requested('cleanup');
 
     my $self = {};
     bless ($self, $class);
@@ -1322,6 +1325,7 @@ sub enforce_limits {
 
     my $args = _check_args('enforce_limits', @_ );
 
+    return if _requested('enforce_limits');
     $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
 
     my $self = {};
@@ -1352,8 +1356,12 @@ This method is used for commands that take long to run as garbage collection.
 
 =cut
 
-sub done_recently {
-    my ($self, $seconds) = @_;
+sub done_recently($self, $seconds=60,$command=undef) {
+    my $id_req = 0;
+    if ($self) {
+        $id_req = $self->id;
+        $command = $self->command;
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id FROM requests"
         ." WHERE date_changed > ? "
@@ -1363,9 +1371,22 @@ sub done_recently {
         ."         AND id <> ? "
     );
     my $date= Time::Piece->localtime(time - $seconds);
-    $sth->execute($date->ymd." ".$date->hms, $self->command, $self->id);
+    $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
     my ($id) = $sth->fetchrow;
     return $id;
+}
+
+sub _requested($command) {
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests"
+        ."  WHERE command = ? "
+        ."     AND status <> 'done' "
+    );
+    $sth->execute($command);
+    my ($id) = $sth->fetchrow;
+    return $id;
+
 }
 
 sub stop($self) {
