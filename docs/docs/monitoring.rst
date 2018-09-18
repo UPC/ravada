@@ -105,7 +105,7 @@ Tunning netdata
 Disable mail alarms
 ~~~~~~~~~~~~~~~~~~~
 
-Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` and set 
+Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` or ``/etc/netdata/health_alarm_notify.conf`` and set 
 
 ::
 
