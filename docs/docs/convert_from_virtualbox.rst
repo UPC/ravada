@@ -51,6 +51,7 @@ Convert the image file
 ----------------------
 
 Make sure the VirtualBox machine is down, then convert the VDI to raw, then to qcow2
+This converted image wil be used by the empty virtual machine that was created before.
 
 DIRECTLY VDI TO QCOW2
 ~~~~~~~~~~~~~~~~~~~~~
