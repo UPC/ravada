@@ -81,7 +81,7 @@ our %VALID_ARG = (
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,refresh_vms => { }
-    ,enforce_limits => { timeout => 2 }
+    ,enforce_limits => { timeout => 2, _force => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -1148,7 +1148,8 @@ sub remove_base_vm {
 }
 
 sub type($self) {
-    my $command = $self->command;
+    my $command = $self;
+    $command = $self->command if ref($self);
     for my $type ( keys %COMMAND ) {
         return $type if grep /^$command$/, @{$COMMAND{$type}->{commands}};
     }
@@ -1165,11 +1166,14 @@ Returns the number of working requests of the same type
 
 sub count_requests($self) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT COUNT(*) FROM requests"
+        "SELECT command FROM requests"
         ." WHERE status = 'working' "
     );
     $sth->execute();
-    my ($n) = $sth->fetchrow;
+    my $n = 0;
+    while ( my $command = $sth->fetchrow ) {
+        $n++ if type($command) eq $self->type;
+    }
     return $n;
 }
 
@@ -1325,7 +1329,7 @@ sub enforce_limits {
 
     my $args = _check_args('enforce_limits', @_ );
 
-    return if _requested('enforce_limits');
+    return if !$args->{_force} && _requested('enforce_limits');
     $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
 
     my $self = {};
@@ -1357,6 +1361,7 @@ This method is used for commands that take long to run as garbage collection.
 =cut
 
 sub done_recently($self, $seconds=60,$command=undef) {
+    _init_connector();
     my $id_req = 0;
     if ($self) {
         $id_req = $self->id;

@@ -40,6 +40,7 @@ sub test_search_vm {
 my $RAVADA;
 eval {
     $RAVADA = Ravada->new(%CONFIG);
+    $RAVADA->_install();
 };
 
 my $err = ($@ or '');

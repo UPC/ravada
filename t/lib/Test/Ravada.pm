@@ -180,6 +180,7 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
+    $rvd->_install();
 
     user_admin() if $create_user;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];

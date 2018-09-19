@@ -482,7 +482,7 @@ sub test_domain_limit_noadmin {
     is(rvd_back->list_domains(user => $user, active => 1),1);
 
     $domain2->start( $user );
-    my $req = Ravada::Request->enforce_limits(timeout => 1);
+    my $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
     rvd_back->_process_all_requests_dont_fork();
     sleep 1;
     rvd_back->_process_all_requests_dont_fork();
@@ -527,14 +527,14 @@ sub test_domain_limit_already_requested {
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
     is(rvd_back->list_domains(user => $user, active => 1),2);
-    Ravada::Request->enforce_limits(timeout => 1);
-    rvd_back->_process_all_requests_dont_fork();
-    sleep 1;
+    my $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
     rvd_back->_process_all_requests_dont_fork();
 
+    is($req->status,'done');
+    is($req->error, '');
 
     my @list = rvd_back->list_domains(user => $user, active => 1);
-    is(scalar @list,1) or die Dumper(\@list);
+    is(scalar @list,1) or die Dumper([ map { $_->name } @list]);
     is($list[0]->name, $domain2->name) if $list[0];
 
     $domain2->remove($user);
