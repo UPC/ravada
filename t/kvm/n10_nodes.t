@@ -325,6 +325,7 @@ sub test_sync_base {
 
     my $vm =rvd_back->search_vm($vm_name);
     my $base = create_domain($vm_name);
+    $base->add_volume(name => 'vdb', swap => 1, size => 128 );
     my $clone = $base->clone(
         name => new_domain_name
        ,user => user_admin
@@ -339,6 +340,8 @@ sub test_sync_base {
     is($base->base_in_vm($node->id),1,"Expecting domain ".$base->id
         ." base in node ".$node->id ) or return;
 
+    $clone->start(user_admin);
+    $clone->shutdown_now(user_admin);
     eval { $clone->migrate($node); };
     is(''.$@,'');
 
@@ -484,8 +487,8 @@ sub test_already_started_hibernated($vm_name, $node) {
     }
     rvd_back->_process_all_requests_dont_fork();
 
-    is($clone->is_active, 0);
-    is($clone_local->is_active, 0);
+    is($clone->is_active, 0,"[$vm_name] expected ".$clone->name." down");
+    is($clone_local->is_active, 0,"[$vm_name] expected ".$clone->name." down") or exit;
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -1134,6 +1137,7 @@ SKIP: {
         next;
     };
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
     test_status($node);
     test_bases_node($vm_name, $node);
 
