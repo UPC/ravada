@@ -1012,6 +1012,7 @@ sub _fill_url($iso) {
     if ($iso->{file_re}) {
         $iso->{url} .= "/" if $iso->{url} !~ m{/$};
         $iso->{url} .= $iso->{file_re};
+        $iso->{filename} = '';
         return;
     }
     confess "Error: Missing field file_re for ".$iso->{name};
@@ -1323,9 +1324,10 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     my ($url, $file2) = $row->{url} =~ m{(.*)/(.*)};
     my $url_orig = $row->{"${type}_url"};
-    $file = $file2 if $file2 !~ /\*|\^/;
+    $file = $file2 if $file2 && $file2 !~ /\*|\^/;
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
+
     confess "error " if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
@@ -1340,6 +1342,9 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
         ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file} if !$value;
         if ($value) {
             $row->{$type} = $value;
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images set $type = ? "
+                                                ." WHERE id = ? ");
+                                            $sth->execute($value, $row->{id});
             return $value;
         }
     }
