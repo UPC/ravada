@@ -89,8 +89,8 @@ sub remove {
     my $self = shift;
 
     $self->remove_disks();
-    unlink $self->_config_file();
-    unlink $self->_config_file()."lock";
+    $self->_vm->run_command("/bin/rm",$self->_config_file());
+    $self->_vm->run_command("/bin/rm",$self->_config_file().".lock");
 }
 
 sub can_hibernate { return 1; }
@@ -225,19 +225,20 @@ sub list_disks {
 sub _vol_remove {
     my $self = shift;
     my $file = shift;
-    unlink $file or die "$! $file"
-        if -e $file;
+    if ($self->is_local) {
+        unlink $file or die "$! $file"
+            if -e $file;
+    } else {
+        my ($out, $err) = $self->_vm->run_command('ls',$file,'&&','rm',$file);
+        warn $err if $err;
+    }
 }
 
 sub remove_disks {
     my $self = shift;
     my @files = $self->list_disks;
     for my $file (@files) {
-        next if ! -e $file;
         $self->_vol_remove($file);
-        if ( -e $file ) {
-            unlink $file or die "$! $file";
-        }
     }
 
 }

@@ -238,8 +238,9 @@ sub remove {
     my $self = shift;
     my $user = shift;
 
+    my @volumes;
     if (!$self->is_removed ) {
-        $self->list_disks();
+        @volumes = $self->list_disks();
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
@@ -251,6 +252,10 @@ sub remove {
 
     eval { $self->remove_disks() if $self->is_known };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
+
+    for my $file ( @volumes ) {
+        $self->_vol_remove($file);
+    }
 
     eval { $self->_remove_file_image() };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
