@@ -632,7 +632,7 @@ msgid "Current Password:"
 msgstr "Contrasenya Actual:"
 
 msgid "For more information, check"
-msgstr "Per més informació, revisa"
+msgstr "Per a més informació, revisa"
 
 msgid "the Windows Clients documentation"
 msgstr "la documentació dels clients de Windows"
@@ -708,3 +708,34 @@ msgstr "La confirmació de la contrasenya ha de tenir com a mínim 5 caràcters"
 msgid "Confirm Password can only contain words and numbers"
 msgstr ""
 "La confirmació de la contrasenya només pot contenir paraules i números"
+
+msgid "This information will be available to the users"
+msgstr "Aquesta informació estarà disponible per als usuaris"
+
+msgid "Volatile Clones"
+msgstr "Clon volàtil"
+
+msgid "Owner"
+msgstr "Propietari"
+
+msgid "Change the owner of the machine"
+msgstr "Canvieu el propietari de la màquina"
+
+msgid "Press SHIFT + F12 to exit"
+msgstr "Premeu SHIFT + F12 per sortir"
+
+msgid ""
+"If you can not see the machine screen in a few seconds check for a file "
+"called"
+msgstr ""
+"Si no podeu veure la pantalla de la màquina en uns segons, consulteu un "
+"fitxer anomenat"
+
+msgid "in your downloads folder."
+msgstr "a la carpeta de descàrregues."
+
+msgid "copied to clipboard"
+msgstr "copiat al porta-retalls"
+
+msgid "Portuguese"
+msgstr "Portuguès"
