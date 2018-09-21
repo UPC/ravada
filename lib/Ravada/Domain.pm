@@ -301,8 +301,6 @@ sub _start_preconditions{
     } else {
         _allow_manage(@_);
     }
-    return if $self->is_active;
-
     #_check_used_memory(@_);
 
     return if $self->_search_already_started();
@@ -1173,8 +1171,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
-        my $domain = $vm->search_domain($name) or next;
-
+        my $domain = $vm->search_domain($self->name) or next;
         $domain->remove($user, $cascade);
     }
 }
