@@ -31,7 +31,8 @@ create_domain
     test_chain_prerouting
     find_ip_rule
     search_id_iso
-    flush_rules open_ipt
+    flush_rules_node
+    flush_rules
     arg_create_dom
     vm_names
     remote_config
@@ -671,7 +672,7 @@ sub clean_remote_node {
 
     _remove_old_domains_vm($node);
     _remove_old_disks($node);
-    _flush_rules_remote($node)  if !$node->is_local();
+    flush_rules_node($node)  if !$node->is_local();
 }
 
 sub _remove_old_disks {
@@ -722,10 +723,13 @@ sub search_iptable_remote {
         my %args = @$line;
         next if $args{A} ne $CHAIN;
         $count++;
-        if(exists $args{j} && defined $jump         && $args{j} eq $jump
-           && exists $args{s} && defined $remote_ip && $args{s} eq $remote_ip
-           && exists $args{d} && defined $local_ip  && $args{d} eq $local_ip
-           && exists $args{dport} && defined $local_port && $args{dport} eq $local_port) {
+
+        if(
+              (!defined $jump      || exists $args{j} && $args{j} eq $jump )
+           && (!defined $remote_ip || exists $args{s} && $args{s} eq $remote_ip )
+           && (!defined $local_ip  || exists $args{d} && $args{d} eq $local_ip )
+           && (!defined $local_port|| exists $args{dport} && $args{dport} eq $local_port)
+        ){
 
             push @found,($count);
         }
@@ -735,17 +739,14 @@ sub search_iptable_remote {
     return $found[0];
 }
 
-sub _flush_rules_remote($node) {
+sub flush_rules_node($node) {
     $node->create_iptables_chain($CHAIN);
-    $node->run_command("iptables -F $CHAIN");
-    $node->run_command("iptables -X $CHAIN");
+    $node->run_command("/sbin/iptables","-F", $CHAIN);
+    $node->run_command("/sbin/iptables","-X", $CHAIN);
 }
 
 sub flush_rules {
     return if $>;
-    my $ipt = open_ipt();
-    $ipt->flush_chain('filter', $CHAIN);
-    $ipt->delete_chain('filter', 'INPUT', $CHAIN);
 
     my @cmd = ('iptables','-t','nat','-F','PREROUTING');
     my ($in,$out,$err);
@@ -767,29 +768,6 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
-}
-
-sub open_ipt {
-    my %opts = (
-    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
-	    'ipt_rules_file' => '',  # optional file path from
-	                             # which to read iptables rules
-	    'iptout'   => '/tmp/iptables.out',
-	    'ipterr'   => '/tmp/iptables.err',
-	    'debug'    => 0,
-	    'verbose'  => 0,
-
-	    ### advanced options
-	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
-	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
-	                                    ### 'system', or 'popen'.
-	    'ipt_exec_sleep' => 1, ### add in time delay between execution of
-	                           ### iptables commands (default is 0).
-	);
-
-	my $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	or die "[*] Could not acquire IPTables::ChainMgr object";
-
 }
 
 sub _domain_node($node) {
