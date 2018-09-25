@@ -175,10 +175,11 @@ sub test_chain($vm_name, %args) {
     my $msg = ( delete $args{msg} or '' );
 
     confess "Unknown args ".join(",",sort keys %args)   if keys %args;
-    my $ipt = open_ipt();
-    my ($rule_num , $chain_rules)
-        = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, $jump
-                              , {normalize => 1 , d_port => $local_port });
+    my $rule_num
+        = find_ip_rule( remote_ip => $remote_ip
+                      ,local_port => $local_port
+                        ,local_ip => $local_ip
+                            ,jump => $jump);
 
     my $msg2 = "[$vm_name]";
     $msg2 = "[$vm_name - $msg]" if $msg;
@@ -186,7 +187,7 @@ sub test_chain($vm_name, %args) {
             or exit
         if $enabled;
     ok(!$rule_num,"$msg2 Expecting no rule for $remote_ip -> $local_ip: $local_port"
-                        .", found at $rule_num ")
+                        .", found at ".($rule_num  or 0))
         if !$enabled;
     }
 }

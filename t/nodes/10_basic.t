@@ -72,6 +72,69 @@ sub test_remove($clone, $node) {
     }
 }
 
+sub test_iptables($node, $node2) {
+    my $domain = create_domain($node->type);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(vm => $node, user => user_admin) if !$domain->base_in_vm($node->id);
+
+    my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+
+    flush_rules_node($node);
+
+    $clone1->migrate($node) if $clone1->_vm->id != $node->id;
+
+    my $remote_ip1 = '1.1.1.1';
+    $clone1->start(user => user_admin, remote_ip => $remote_ip1);
+    is($clone1->is_active,1,"[".$node->type."] expecting ".$clone1->name." active "
+                                    ." in ".$node->name) or exit;
+
+    my ($local_ip, $local_port)
+        = $clone1->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
+
+    # check iptabled added on node
+    my @found = search_iptable_remote(
+        node => $node
+        ,remote_ip => $remote_ip1
+        ,local_port => $local_port
+    );
+    is(scalar @found,1,$node->name." $remote_ip1:$local_port".Dumper(\@found)) or exit;
+    @found = search_iptable_remote(
+        node => $node
+        ,local_port => $local_port
+        ,jump => 'DROP'
+    );
+    is(scalar @found,1,Dumper(\@found));
+    #
+    # check iptabled NOT added on node2
+    @found = search_iptable_remote(
+        node => $node2
+        ,remote_ip => $remote_ip1
+        ,local_port => $local_port
+    );
+    is(scalar @found,0,$node2->name." $remote_ip1:$local_port".Dumper(\@found)) or exit;
+    @found = search_iptable_remote(
+        node => $node2
+        ,local_port => $local_port
+        ,jump => 'DROP'
+    );
+    is(scalar @found,0,Dumper(\@found));
+    #    warn Dumper($list->{filter});
+
+    $clone1->remove(user_admin);
+
+    @found = search_iptable_remote(
+        node => $node
+        ,remote_ip => $remote_ip1
+        ,local_port => $local_port
+    );
+    is(scalar @found,0,$node->name." $remote_ip1:$local_port".Dumper(\@found)) or exit;
+    @found = search_iptable_remote( node => $node
+        ,local_port => $local_port
+        ,jump => 'DROP'
+    );
+    is(scalar @found,0,$node->name." ".Dumper(\@found)) or exit;
+    $domain->remove(user_admin);
+}
 
 ##################################################################################
 clean();
@@ -110,10 +173,11 @@ for my $vm_name ('Void', 'KVM' ) {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
-        test_reuse_vm($node);
+        #        test_reuse_vm($node);
+        test_iptables($vm, $node);
+        test_iptables($node, $vm);
 
         clean_remote_node($node);
-        clean_remote_node($vm);
         remove_node($node);
     }
 

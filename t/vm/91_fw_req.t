@@ -7,6 +7,9 @@ use Test::More;
 use Test::SQL::Data;
 use IPTables::ChainMgr;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -74,9 +77,7 @@ sub test_fw_domain{
         ok(defined $local_port, "Expecting a port in display '$display'") or return;
     
         ok($domain->is_active);
-        my $ipt = open_ipt();
-        $ipt->flush_chain('filter', $CHAIN);
-
+        flush_rules_node($vm);
         test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
         $domain_id = $domain->id;
     }
@@ -150,21 +151,21 @@ sub test_fw_domain_pause {
     }
 }
 
-sub search_rule {
+sub search_rule($local_ip, $local_port, $remote_ip) {
 
-    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
-    my $ipt = open_ipt();
-
-    my ($rule_num , $chain_rules) 
-        = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, 'ACCEPT'
-                              , {normalize => 1 , d_port => $local_port });
-    return if ! $rule_num;
-    return $rule_num;
+    my @rules = find_ip_rule(remote_ip => $remote_ip
+            , local_ip => $local_ip
+            , local_port => $local_port
+        );
+    return if ! scalar@rules;
+    return scalar @rules;
 }
 
 sub test_chain {
     my $vm_name = shift;
-    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
+    my $enabled = pop;
+
+    my ($local_ip, $local_port, $remote_ip) = @_;
 
     my $rule_num = search_rule(@_);
 
