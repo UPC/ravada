@@ -192,6 +192,7 @@ sub start {
     {
         my $ravada = Ravada->new( %CONFIG );
         $Ravada::CONNECTOR->dbh;
+        $ravada->_install();
         for my $vm (@{$ravada->vm}) {
             $vm->id;
             $vm->vm;
