@@ -19,7 +19,6 @@ use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
 use Time::Piece;
-use IPTables::ChainMgr;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -494,7 +493,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them 
 #    $self->_check_disk_modified(
-    die "ERROR: domain ".$self->name." is already a base" if $self->is_base();
+    confess "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
 
     $self->is_base(0);
@@ -1725,16 +1724,11 @@ sub _remove_iptables {
         next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
-    my $ipt_obj = _obj_iptables(0);
     for my $id_vm (keys %rule) {
         my $vm = Ravada::VM->open($id_vm);
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
-            if ($vm->is_local) {
-                $ipt_obj->delete_ip_rule(@$iptables);
-            } else {
-                $self->_delete_ip_rule_remote($iptables, $vm);
-            }
+            $self->_delete_ip_rule($iptables, $vm);
             $sth->execute(Ravada::Utils::now(), $id);
         }
     }
@@ -1868,33 +1862,36 @@ sub _add_iptable {
 
 }
 
-sub _delete_ip_rule_remote($self, $iptables, $vm = $self->_vm) {
+sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
 
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
+    $s = undef if $s =~ m{^0\.0\.0\.0};
     $s .= "/32" if defined $s && $s !~ m{/};
     $d .= "/32" if defined $d && $d !~ m{/};
 
     my $iptables_list = $self->_vm->iptables_list();
 
+    my $removed = 0;
     my $count = 0;
     for my $line (@{$iptables_list->{$filter}}) {
         my %args = @$line;
         next if $args{A} ne $chain;
         $count++;
-        if(exists $args{j} && defined $jump         && $args{j} eq $jump
-           && exists $args{s} && defined $s && $args{s} eq $s
-           && exists $args{d} && defined $d && $args{d} eq $d
-           && exists $args{dport} && exists $extra->{d_port}
-           && $args{dport} eq $extra->{d_port}) {
+        if((!defined $jump || ( exists $args{j} && $args{j} eq $jump ))
+           && ( !defined $s || (exists $args{s} && $args{s} eq $s))
+           && ( !defined $d || ( exists $args{d} && $args{d} eq $d))
+           && ( $args{dport} eq $extra->{d_port}))
+        {
 
            $self->_vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count);
+           $removed++;
            $count--;
         }
 
     }
-
+    return $removed;
 }
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
     confess "local port undefined " if !$local_port;
@@ -1918,18 +1915,27 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
     if ($remote_ip eq '127.0.0.1') {
+        my $remote_ip2 = $local_ip;
+        if (!$self->_vm->is_local) {
+            for my $node ($self->_vm->list_nodes) {
+                if ($node->is_local) {
+                    $remote_ip2 = $node->ip;
+                    last;
+                }
+            }
+        }
         $self->_vm->iptables(
                 A => $IPTABLES_CHAIN
                 ,m=> 'tcp'
                 ,p => 'tcp'
-                ,s => $local_ip
+                ,s => $remote_ip2
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
         );
         $self->_log_iptable(
             iptables => [
-                    $local_ip
+                    $remote_ip2
                     , $local_ip, 'filter', $IPTABLES_CHAIN, $jump
                     ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port}
             ]
@@ -1988,54 +1994,6 @@ sub open_iptables {
     $self->_add_iptable(%args);
 }
 
-sub _obj_iptables($create_chain=1) {
-
-	my %opts = (
-    	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
-	    'ipt_rules_file' => '',  # optional file path from
-	                             # which to read iptables rules
-	    'iptout'   => '/tmp/iptables.out',
-	    'ipterr'   => '/tmp/iptables.err',
-	    'debug'    => 0,
-	    'verbose'  => 0,
-
-	    ### advanced options
-	    'ipt_alarm' => 5,  ### max seconds to wait for iptables execution.
-	    'ipt_exec_style' => 'waitpid',  ### can be 'waitpid',
-	                                    ### 'system', or 'popen'.
-	    'ipt_exec_sleep' => 0, ### add in time delay between execution of
-	                           ### iptables commands (default is 0).
-	);
-
-	my $ipt_obj;
-    my $error;
-    for ( 1 .. 10 ) {
-        eval {
-            $ipt_obj = IPTables::ChainMgr->new(%opts)
-                or warn "[*] Could not acquire IPTables::ChainMgr object";
-        };
-        $error = $@;
-        last if !$error;
-        sleep 1;
-    }
-    confess $error if $error;
-
-    return $ipt_obj if !$create_chain;
-	my $rv = 0;
-	my $out_ar = [];
-	my $errs_ar = [];
-
-	#check_chain_exists
-	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
-    if (!$rv) {
-		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-    }
-	# set the policy on the FORWARD table to DROP
-#    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
-
-    return $ipt_obj;
-}
-
 sub _log_iptable {
     my $self = shift;
     if (scalar(@_) %2 ) {
@@ -2077,6 +2035,7 @@ sub _active_iptables {
 
     my      $port = delete $args{port};
     my      $user = delete $args{user};
+    my     $id_vm = delete $args{id_vm};
     my   $id_user = delete $args{id_user};
     my $id_domain = delete $args{id_domain};
 
@@ -2101,6 +2060,13 @@ sub _active_iptables {
     if ( $id_domain ) {
         $sql .= "    AND id_domain=? ";
         push @sql_fields,($id_domain);
+    }
+    if ($port && !$id_vm) {
+        $id_vm = $self->_vm->id;
+    }
+    if ( $id_vm) {
+        $sql .= "    AND id_vm=? ";
+        push @sql_fields,($id_vm);
     }
 
     $sql .= " ORDER BY time_req DESC ";

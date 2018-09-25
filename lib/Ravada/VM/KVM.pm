@@ -528,15 +528,18 @@ sub list_domains {
 
     my $active = (delete $args{active} or 0);
 
-    confess "Arguments uknown ".Dumper(\%args)  if keys %args;
+    confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains WHERE vm = ?");
-    $sth->execute('KVM');
+    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
+    $query .= " AND status = 'active' " if $active;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    $sth->execute( $self->id );
     my @list;
     while ( my ($id) = $sth->fetchrow) {
         my $domain = Ravada::Domain->open($id);
-        next if !$domain || $active && !$domain->is_active;
-        push @list,($domain);
+        push @list,($domain) if $domain;
     }
     return @list;
 }

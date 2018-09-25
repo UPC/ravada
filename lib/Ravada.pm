@@ -1896,6 +1896,7 @@ sub _kill_stale_process($self) {
     );
     $sth->execute(time - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
+        next if $command eq 'refresh_vms' && time - $start_time < 120;
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
@@ -2866,6 +2867,7 @@ sub _cmd_enforce_limits($self, $request=undef) {
 
 sub _enforce_limits_active($self, $request) {
 
+    confess if !$request;
     if (my $id_recent = $request->done_recently(30)) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }

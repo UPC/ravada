@@ -561,7 +561,7 @@ sub display($self, $user) {
     my ($address) = $graph->getAttribute('listen');
     $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
-    confess "ERROR: Machine ".$self->name." is not active\n"
+    confess "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
@@ -610,7 +610,6 @@ sub start {
     my $remote_ip = delete $arg{remote_ip};
 
     my $set_password=0;
-    my $request = delete $arg{request};
 
     if ($remote_ip) {
         $set_password = 0;
@@ -619,7 +618,7 @@ sub start {
     }
     $self->_set_spice_ip($set_password);
     eval { $self->domain->create() };
-    $request->error($@) if $request && $@ && $@ !~ /already running/i;
+    die $@ if $@ && $@ !~ /libvirt error code: 55,/;
 }
 
 sub _pre_shutdown_domain {
