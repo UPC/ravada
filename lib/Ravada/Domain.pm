@@ -202,6 +202,8 @@ around 'autostart' => \&_around_autostart;
 after 'set_controller' => \&_post_change_controller;
 after 'remove_controller' => \&_post_change_controller;
 
+around 'name' => \&_around_name;
+
 ##################################################
 #
 
@@ -1163,6 +1165,8 @@ sub _after_remove_domain {
 sub _remove_domain_cascade($self,$user, $cascade = 1) {
 
     return if !$self->_vm;
+    my $domain_name = $self->name or confess "Unknown my self name $self ".Dumper($self->{_data});
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name FROM vms WHERE is_active=1");
     my ($id, $name);
     $sth->execute();
@@ -1170,7 +1174,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
-        my $domain = $vm->search_domain($self->name) or next;
+        my $domain = $vm->search_domain($domain_name) or next;
         $domain->remove($user, $cascade);
     }
 }
@@ -1656,6 +1660,15 @@ sub _around_shutdown_now {
         $self->$orig($user);
     }
     $self->_post_shutdown(user => $user)    if $self->is_known();
+}
+
+sub _around_name($orig,$self) {
+    return $self->{_name} if $self->{_name};
+
+    $self->{_name} = $self->{_data}->{name} if $self->{_data};
+    $self->{_name} = $self->$orig()         if !$self->{_name};
+
+    return $self->{_name};
 }
 
 =head2 can_hybernate

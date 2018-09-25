@@ -86,12 +86,8 @@ Returns the name of the domain
 
 sub name {
     my $self = shift;
-    return $self->{_name}           if $self->{_name};
-    return $self->{_data}->{name}   if $self->{_data};
 
-    $self->{_name} = $self->domain->get_name if $self->domain;
-
-    return $self->{_name}   if $self->{_name};
+    return $self->domain->get_name if $self->domain;
 
     confess "ERROR: Unknown domain name";
 }
