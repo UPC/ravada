@@ -214,6 +214,7 @@ sub add_user {
     my $login = shift;
 
     my $ravada = Ravada->new( %CONFIG);
+    $ravada->_install();
 
     print "$login password: ";
     my $password = <STDIN>;
