@@ -313,7 +313,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
-            ,md5_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
+            ,sha256_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
             ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
 
         }
