@@ -325,7 +325,7 @@ sub test_sync_base {
 
     my $vm =rvd_back->search_vm($vm_name);
     my $base = create_domain($vm_name);
-    $base->add_volume(name => 'vdb', swap => 1, size => 128 );
+    $base->add_volume(name => 'vdb', swap => 1, size => 512*1024 );
     my $clone = $base->clone(
         name => new_domain_name
        ,user => user_admin
@@ -392,13 +392,14 @@ sub test_start_twice {
     eval { $base->set_base_vm(vm => $node, user => user_admin); };
     is(''.$@,'') or return;
 
+    $clone->start(user_admin) if !$clone->is_active();
     my $display0 = $clone->display(user_admin);
+    $clone->shutdown_now(user_admin) if $clone->is_active();
 
     eval { $clone->migrate($node); };
     is(''.$@,'')    or return;
 
     is($clone->_vm->host, $node->host) or exit;
-    isnt($clone->display(user_admin), $display0, $clone->name) or exit;
 
     is($clone->is_active,0);
 
@@ -410,11 +411,13 @@ sub test_start_twice {
     start_domain_internal($clone2);
 
     eval { $clone->start(user => user_admin ) };
-    like(''.$@,qr'libvirt error code: 55,',$clone->name) or exit
-        if $vm_name eq 'KVM';
+    like(''.$@,qr'libvirt error code: 55,',$clone->name)
+        if $vm_name eq 'KVM' && $@;
+    is($clone->is_active,1);
     is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip)
         or return;
     is($clone->display(user_admin), $clone2->display(user_admin));
+    isnt($clone->display(user_admin), $display0, $clone->name) or exit;
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -442,18 +445,19 @@ sub test_already_started_twice($vm_name, $node) {
     eval { $clone2->start(user => user_admin) };
     like($@,qr/already running/)    if $@;
 
-    for ( 1 .. 3 ) {
-        rvd_back->_process_all_requests_dont_fork();
+    is($clone2->list_requests,2);
+    for ( 1 .. 6 ) {
         for ( 1 .. 10 ) {
             last if !$clone->is_active
             && !$clone_local->is_active;
             sleep 1;
+            rvd_back->_process_all_requests_dont_fork();
         }
     }
     rvd_back->_process_all_requests_dont_fork();
 
-    is($clone->is_active, 0,"[".$node->type."] expecting remote clone ".$clone->name." down");
-    is($clone_local->is_active, 0,"[".$node->type."] expecting local clone down");
+    is($clone->is_active, 0,"[".$node->type."] expecting remote clone ".$clone->name." down") or exit;
+    is($clone_local->is_active, 0,"[".$node->type."] expecting local clone down") or exit;
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -479,7 +483,7 @@ sub test_already_started_hibernated($vm_name, $node) {
     like($@,qr/already running/)    if $@;
 
     rvd_back->_process_all_requests_dont_fork();
-    for ( 1 .. 10 ) {
+    for ( 1 .. 120 ) {
         last if $clone->is_active
                 && !$clone_local->is_active
                 && !$clone_local->is_hibernated;
@@ -622,7 +626,6 @@ sub test_bases_node {
     my $vm = rvd_back->search_vm($vm_name);
 
     my $domain = create_domain($vm_name);
-    my $local_display = $domain->display(user_admin);
 
     eval { $domain->base_in_vm($domain->_vm->id)};
     like($@,qr'is not a base');
@@ -636,7 +639,6 @@ sub test_bases_node {
     is($domain->base_in_vm($node->id), undef);
 
     $domain->migrate($node);
-    isnt($domain->display(user_admin), $local_display) or exit;
     is($domain->base_in_vm($node->id), 1);
 
     for my $file ( $domain->list_files_base ) {
@@ -680,12 +682,48 @@ sub test_bases_node {
     $domain->remove(user_admin);
 }
 
+sub test_clone_make_base {
+    my ($vm_name, $node) = @_;
+
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $domain = create_domain($vm_name);
+
+    $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($domain->_vm->id), 1);
+
+    is($domain->base_in_vm($node->id), undef) or exit;
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+    is($domain->base_in_vm($node->id), 1);
+
+    my $clone = $domain->clone(
+        name => new_domain_name
+        ,user => user_admin
+    );
+
+    $clone->migrate($node);
+    eval { $clone->base_in_vm($node->id) };
+    like($@,qr(is not a base));
+
+    eval { $clone->base_in_vm($vm->id) };
+    like($@,qr(is not a base));
+
+    $clone->prepare_base(user_admin);
+    is($clone->base_in_vm($vm->id),1);
+    is($clone->base_in_vm($node->id),undef);
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+}
+
 sub _disable_storage_pools {
     my $node = shift;
     for my $sp ($node->vm->list_all_storage_pools()) {
         $sp->destroy();
     }
 }
+
 
 sub _enable_storage_pools {
     my $node = shift;
@@ -995,6 +1033,7 @@ sub test_shutdown($node) {
     is($clone->_data('status'),'shutdown',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
+    is($clone2->is_active,0) or exit;
 
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
@@ -1007,8 +1046,8 @@ sub test_shutdown($node) {
         , local_ip => $local_ip
         , local_port => $local_port
     );
-    ok(scalar @line == 0,"[".$node->type."] There should be no iptables found"
-        ." $remote_ip -> $local_ip:$local_port ".Dumper(\@line)) ;
+    ok(scalar @line == 0,"[".$node->name."] There should be no iptables found"
+        ." $remote_ip -> $local_ip:$local_port ".Dumper(\@line)) or exit;
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -1140,6 +1179,7 @@ SKIP: {
 
     test_status($node);
     test_bases_node($vm_name, $node);
+    test_clone_make_base($vm_name, $node);
 
     test_migrate_back($node);
 
