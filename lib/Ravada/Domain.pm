@@ -223,10 +223,10 @@ sub BUILD {
 }
 
 sub _check_clean_shutdown($self) {
-    if ( $self->is_known
-        && !$self->readonly
-        && $self->_data('status') eq 'active'
-        && !$self->is_active ) {
+    return if !$self->is_known || $self->readonly;
+
+    if (( $self->_data('status') eq 'active' && !$self->is_active )
+        || $self->_active_iptables(id_domain => $self->id)) {
             $self->_post_shutdown();
     }
 }
@@ -347,6 +347,7 @@ sub _search_already_started($self) {
                 id_domain => $self->id
                 , uid => $self->id_owner
                 , id_vm => $id_vm
+                ,timeout => $TIMEOUT_SHUTDOWN
             );
         }
     }
@@ -516,6 +517,10 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     }
     if ($self->id_base ) {
         $self->spinoff_volumes();
+    }
+    if (!$self->is_local) {
+        my $vm_local = Ravada::VM->open( type => $self->vm );
+        $self->migrate($vm_local);
     }
 };
 
@@ -1251,6 +1256,10 @@ sub is_base {
         $sth->execute($value, $self->id );
         $sth->finish;
 
+        if (!$value) {
+            $sth =$$CONNECTOR->dbh->prepare("UPDATE bases_vm SET enabled=? WHERE id_domain=?");
+            $sth->execute(0, $self->id);
+        }
         return $value;
     }
     my $ret = $self->_data('is_base');
@@ -1884,7 +1893,7 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     $s .= "/32" if defined $s && $s !~ m{/};
     $d .= "/32" if defined $d && $d !~ m{/};
 
-    my $iptables_list = $self->_vm->iptables_list();
+    my $iptables_list = $vm->iptables_list();
 
     my $removed = 0;
     my $count = 0;
@@ -1898,7 +1907,7 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
            && ( $args{dport} eq $extra->{d_port}))
         {
 
-           $self->_vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count);
+           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count);
            $removed++;
            $count--;
         }
@@ -2081,7 +2090,6 @@ sub _active_iptables {
         $sql .= "    AND id_vm=? ";
         push @sql_fields,($id_vm);
     }
-
     $sql .= " ORDER BY time_req DESC ";
     my $sth = $$CONNECTOR->dbh->prepare($sql);
     $sth->execute(@sql_fields);
