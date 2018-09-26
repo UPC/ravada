@@ -735,7 +735,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         ." WHERE "
         ."    requests.status <> 'done' "
         ."  OR ( date_changed >= ?) "
-        ." ORDER BY date_changed DESC LIMIT 10"
+        ." ORDER BY date_changed "
     );
     $sth->execute($time_recent);
     my @reqs;
