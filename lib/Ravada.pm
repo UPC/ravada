@@ -306,6 +306,17 @@ sub _update_isos {
             ,file_re => 'kubuntu-18.04-desktop-i386.iso'
             ,rename_file => 'kubuntu_bionic_32.iso'
         }
+        ,suse_15 => {
+            name => "openSUSE Leap 15"
+            ,description => "openSUSE Leap 15 64 bits"
+            ,arch => 'amd64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
+            ,md5_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
+            ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
+
+        }
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
