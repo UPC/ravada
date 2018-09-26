@@ -929,13 +929,18 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
-        $self->_download_file_external($iso->{url}, $device, $verbose);
+        my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
+            if (!$iso->{$check} && $iso->{"${check}_url"}) {
+                my ($url_path,$url_file) = $url =~ m{(.*)/(.*)};
+                $iso->{"${check}_url"} =~ s/(.*)\$url(.*)/$1$url_path$2/;
+                $self->_fetch_this($iso,$check,$url_file);
+            }
             next if !$iso->{$check};
 
             die "Download failed, $check id=$iso->{id} missmatched for $device."
@@ -944,7 +949,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
-        warn "WARNING: $device signature not verified"    if !$verified;
+        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -1039,14 +1044,14 @@ sub _download_file_external($self, $url, $device, $verbose=1) {
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
 
-    return if !$err;
+    return $url if !$err;
 
     if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
         if ( $1 != $2 ) {
             unlink $device or die "$! $device" if -e $device;
             die "ERROR: Expecting $1 , got $2.\n$err"
         }
-        return;
+        return $url;
     }
     unlink $device or die "$! $device" if -e $device;
     die $err;
@@ -1267,30 +1272,38 @@ sub _match_file($self, $url, $file_re) {
     return @found;
 }
 
-sub _fetch_this($self,$row,$type){
+sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
-    my ($url,$file) = $row->{url} =~ m{(.*/)(.*)};
-    my ($file2) = $row->{url} =~ m{.*/(.*/.*)};
-    confess "No file for $row->{url}"   if !$file;
+    confess "Error: missing file or filename ".Dumper($row) if !$file;
 
+    $file=~ s{.*/(.*)}{$1} if $file =~ m{/};
+
+    my ($url, $file2) = $row->{url} =~ m{(.*)/(.*)};
     my $url_orig = $row->{"${type}_url"};
+    $file = $file2 if $file2 !~ /\*|\^/;
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
+    confess "error " if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
 
     for my $line (split/\n/,$content) {
         next if $line =~ /^#/;
-        my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
-        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
-        ($value) = $line =~ m{$file2.* ([a-f0-9]+)}i if !$value;
+        my $value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{\s*([a-f0-9]+).*$file}i     if !$value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file} if !$value;
         if ($value) {
             $row->{$type} = $value;
             return $value;
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n".$content;
+    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+        .$url_orig."\n"
+        .$content;
 }
 
 sub _fetch_md5($self,$row) {

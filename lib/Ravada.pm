@@ -132,6 +132,9 @@ sub BUILD {
     }
     Ravada::Auth::init($CONFIG);
 
+}
+
+sub _install($self) {
     $self->_create_tables();
     $self->_upgrade_tables();
     $self->_update_data();
@@ -222,7 +225,7 @@ sub _update_isos {
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
                 ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
-                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.0-x86_64.iso.sha256'
+                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.\d-x86_64.iso.sha256'
                 ,min_disk_size => '1'
         }
         ,bionic=> {
@@ -261,26 +264,6 @@ sub _update_isos {
             ,min_disk_size => '10'
 
         }
-        ,fedora => {
-            name => 'Fedora 25'
-            ,description => 'RedHat Fedora 25 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
-            ,arch => 'amd64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
-        }
-        ,fedora_26 => {
-            name => 'Fedora 26'
-            ,description => 'RedHat Fedora 26 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-26-.*\.iso'
-            ,arch => 'amd64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
-        }
         ,fedora_27 => {
             name => 'Fedora 27'
             ,description => 'RedHat Fedora 27 Workstation 64 bits'
@@ -288,7 +271,17 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
+            ,min_disk_size => '10'
+        }
+        ,fedora_28 => {
+            name => 'Fedora 28'
+            ,description => 'RedHat Fedora 28 Workstation 64 bits'
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
         ,kubuntu_64 => {
@@ -320,7 +313,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
-            ,md5_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
+            ,sha256_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
             ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
 
         }

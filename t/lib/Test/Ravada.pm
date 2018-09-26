@@ -137,6 +137,7 @@ sub rvd_back {
                 , config => ( $CONFIG or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
+    $rvd->_install();
     my $login;
     my $admin_name = base_domain_name();
     my $admin_pass = "$$ $$";
