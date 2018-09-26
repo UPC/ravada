@@ -78,6 +78,13 @@ the same one as the ravada package.
 ::
 
     $ sudo apt-get install mysql-server
+    
+After completion of mysql installation, run command:
+
+::
+
+    $ sudo mysql_secure_installation
+
 
 MySQL database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
