@@ -729,4 +729,35 @@ msgstr ""
 msgid "The machine is down."
 msgstr ""
 
+msgid "Remove"
+msgstr ""
 
+msgid "The machine must be started to take the screenshot."
+msgstr ""
+
+msgid "Take screenshot"
+msgstr ""
+
+msgid "Set base picture"
+msgstr ""
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr ""
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr ""
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr ""
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "The changes will apply on next restart"
+msgstr ""
+
+msgid "This VM is running and can't be renamed."
+msgstr ""
