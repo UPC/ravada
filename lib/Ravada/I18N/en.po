@@ -761,3 +761,10 @@ msgstr ""
 
 msgid "This VM is running and can't be renamed."
 msgstr ""
+
+msgid "Thanks to:"
+msgstr ""
+
+msgid "licensed."
+msgstr ""
+
