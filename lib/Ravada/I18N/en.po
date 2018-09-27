@@ -713,3 +713,20 @@ msgstr ""
 
 msgid "Portuguese"
 msgstr ""
+
+msgid "Read more."
+msgstr ""
+
+msgid "The password for this virtual machine connection is :"
+msgstr ""
+
+msgid "view"
+msgstr ""
+
+msgid "Start again"
+msgstr ""
+
+msgid "The machine is down."
+msgstr ""
+
+
