@@ -402,6 +402,31 @@ sub domain_exists {
     return 1;
 }
 
+
+=head2 node_exists
+
+Returns true if the node name exists
+
+    if ($rvd->node('node_name')) {
+        ...
+    }
+
+=cut
+
+sub node_exists {
+    my $self = shift;
+    my $name = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms"
+        ." WHERE name=? "
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return 0 if !defined $id;
+    return 1;
+}
 =head2 list_vm_types
 
 Returns a reference to a list of Virtual Machine Managers known by the system
@@ -428,7 +453,7 @@ Returns a list of Virtual Managers
 
 sub list_vms($self, $type=undef) {
 
-    my $sql = "SELECT id,name,hostname,is_active, vm_type FROM vms ";
+    my $sql = "SELECT id,name,hostname,is_active, vm_type, enabled FROM vms ";
 
     my @args = ();
     if ($type) {
@@ -437,12 +462,13 @@ sub list_vms($self, $type=undef) {
         $type2 = 'qemu' if $type eq 'KVM';
         @args = ( $type, $type2);
     }
-    my $sth = $CONNECTOR->dbh->prepare($sql);
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
     $sth->execute(@args);
 
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
-        $self->_list_bases_vm($row);
+        $row->{bases}= $self->_list_bases_vm($row->{id});
+        $row->{machines}= $self->_list_machines_vm($row->{id});
         $row->{type} = $row->{vm_type};
         delete $row->{vm_type};
         lock_hash(%$row);
@@ -452,20 +478,36 @@ sub list_vms($self, $type=undef) {
     return @list;
 }
 
-sub _list_bases_vm($self, $node) {
+sub _list_bases_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id FROM domains d,bases_vm bv"
         ." WHERE d.is_base=1"
         ."  AND d.id = bv.id_domain "
         ."  AND bv.id_vm=?"
     );
-    $sth->execute($node->{id});
+    my @bases;
+    $sth->execute($id_node);
     while ( my ($id_domain) = $sth->fetchrow ) {
-        $node->{"base_".$id_domain} =0;
+        push @bases,($id_domain);
     }
     $sth->finish;
+    return \@bases;
 }
 
+sub _list_machines_vm($self, $id_node) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d"
+        ." WHERE d.status='active'"
+        ."  AND d.id_vm=?"
+    );
+    my @bases;
+    $sth->execute($id_node);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return \@bases;
+}
 =head2 list_iso_images
 
 Returns a reference to a list of the ISO images known by the system
@@ -965,6 +1007,36 @@ Disconnects all the conneted VMs
 
 sub disconnect_vm {
     %VM = ();
+}
+
+=head2 enable_node
+
+Enables or disables a node
+
+    $rvd->enable_node($id_node, $value);
+
+Returns true if the node is enabled, false otherwise.
+
+=cut
+
+sub enable_node($self, $id_node, $value) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms SET enabled=? WHERE id=?");
+    $sth->execute($value, $id_node);
+    $sth->finish;
+
+    return $value;
+}
+
+sub add_node($self,%arg) {
+    my $sql = "INSERT INTO vms "
+        ."("
+        .join(",",sort keys %arg)
+        .")"
+        ." VALUES ( ".join(",", map { '?' } keys %arg).")";
+
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $arg{$_} } sort keys %arg );
+    $sth->finish;
 }
 
 =head2 version

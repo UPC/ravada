@@ -738,8 +738,25 @@ sub _update_data {
 
 sub _add_indexes($self) {
     return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+    $self->_add_indexes_vms();
     $self->_add_indexes_domains();
     $self->_add_indexes_requests();
+}
+
+sub _add_indexes_vms($self) {
+    my %index;
+    my $sth = $CONNECTOR->dbh->prepare("show index from vms");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+
+    my $index_name = 'hostname_vm_type';
+    return if $index{$index_name};
+    warn "INFO: Adding index to vms: $index_name";
+    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE vms add unique $index_name"
+        ." (hostname, vm_type)");
+    $sth->execute;
 }
 
 sub _add_indexes_domains($self) {
@@ -755,6 +772,7 @@ sub _add_indexes_domains($self) {
         ."(id_base)");
     $sth->execute;
 }
+
 sub _add_indexes_requests($self) {
     my %index;
     my $sth = $CONNECTOR->dbh->prepare("show index from requests");
@@ -1041,6 +1059,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','cached_active_time',"integer DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
+    $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
 
     $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
@@ -2595,6 +2614,9 @@ sub _refresh_active_domains($self, $request=undef) {
     my %active_domain;
     my %active_vm;
     for my $vm ($self->list_vms) {
+        $request->status('working',"checking active domains on ".$vm->name)
+            if $request;
+        next if !$vm->enabled();
         if ( !$vm->is_active ) {
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
@@ -2605,7 +2627,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my $domain = $vm->search_domain_by_id($id_domain);
             $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
          } else {
-            for my $domain ($vm->list_domains( active => 1)) {
+            for my $domain ($vm->list_domains( )) {
                 next if $active_domain{$domain->id};
                 next if $domain->is_hibernated;
                 $self->_refresh_active_domain($vm, $domain, \%active_domain);
@@ -2825,8 +2847,10 @@ sub vm($self) {
     $sth->execute();
     my @vms;
     while ( my ($id) = $sth->fetchrow()) {
-        my $vm = Ravada::VM->open($id);
-        eval { $vm->vm };
+        my $vm;
+        eval {
+            $vm = Ravada::VM->open($id);
+        };
         if ( $@ ) {
             warn $@;
             next;

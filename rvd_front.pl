@@ -267,6 +267,29 @@ get '/list_vm_types.json' => sub {
     $c->render(json => $RAVADA->list_vm_types);
 };
 
+get '/list_nodes.json' => sub {
+    my $c = shift;
+    $c->render(json => [$RAVADA->list_vms]);
+};
+
+get '/node/enable/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),1)});
+};
+
+get '/node/disable/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),0)});
+};
+
+any '/new_node' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    return new_node($c);
+};
+
 get '/list_bases.json' => sub {
     my $c = shift;
 
@@ -498,6 +521,13 @@ get '/machine/exists/#name' => sub {
 
 };
 
+get '/node/exists/#name' => sub {
+    my $c = shift;
+    my $name = $c->stash('name');
+
+    return $c->render(json => $RAVADA->node_exists($name));
+
+};
 get '/machine/rename/#id/#value' => sub {
     my $c = shift;
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
@@ -1067,9 +1097,6 @@ sub admin {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         }
     }
-    if ($page eq 'nodes') {
-        $c->stash(list_nodes => [$RAVADA->list_vms]);
-    }
     if ($page eq 'machines') {
         Ravada::Request->refresh_vms();
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
@@ -1082,6 +1109,9 @@ sub admin {
             }
             $c->stash( monitoring => 1 ) if $c->session('monitoring');
         }
+    }
+    if ($page eq 'nodes') {
+        Ravada::Request->refresh_vms();
     }
     $c->render( template => 'main/admin_'.$page);
 };
@@ -1110,6 +1140,21 @@ sub new_machine {
         , valid_vm => \%valid_vm
     );
 };
+
+sub new_node {
+    my $c = shift;
+
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+
+    if ($c->param('_submit')) {
+        $c->req->params->remove('_submit');
+        my $pairs = $c->req->params()->pairs;
+        $RAVADA->add_node(@$pairs);
+        return $c->render(text => 'node created. <a href ="/admin/nodes/">nodes</a> ');
+    }
+    return $c->render(template => 'main/new_node');
+}
 
 sub req_new_domain {
     my $c = shift;

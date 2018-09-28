@@ -819,13 +819,18 @@ sub ping($self, $option=undef) {
 
     warn "trying tcp"   if $debug;
     my $p = Net::Ping->new('tcp',2);
-    return 1 if $p->ping($self->host);
+    my $ping_ok;
+    eval { $ping_ok = $p->ping($self->host) };
+    warn $@ if $@;
+    return 1 if $ping_ok;
     $p->close();
 
     return if $>; # icmp ping requires root privilege
     warn "trying icmp"   if $debug;
     $p= Net::Ping->new('icmp',2);
-    return 1 if $p->ping($self->host);
+    eval { $ping_ok = $p->ping($self->host) };
+    warn $@ if $@;
+    return 1 if $ping_ok;
 
     return 0;
 }
@@ -879,6 +884,20 @@ sub _cached_active($self, $value=undef) {
 
 sub _cached_active_time($self, $value=undef) {
     return $self->_data('cached_active_time', $value);
+}
+
+=head2 enabled
+
+Returns if the domain is enabled.
+
+=cut
+
+sub enabled($self) {
+    return $self->_data('enabled');
+}
+
+sub is_enabled($self) {
+    return $self->enabled();
 }
 
 =head2 remove

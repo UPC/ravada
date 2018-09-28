@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+%=  include 'bootstrap/navigation'
+<div id="page-wrapper" ng-controller="new_node">
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+                <h2><%=l 'New Node' %></h2>
+        </div>
+
+        <form name="new_nodeForm" role="form" method="post" novalidate
+                action="/new_node.html">
+            <div class="form-group row">
+            <label for="vm_type" class="col-lg-3 control-label"><%=l 'Backend' %> <a
+              title="Choose the virtualization type of the Node."><i class="fa fa-info-circle"></i></a></label>
+                <div class="col-lg-3">
+                    <select class= "form-control"
+                    name="vm_type"
+                    ng-model="vm_type"
+                    ng-options="item for item in backends track by item "
+                    required=""
+                    ></select>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="name" class="col-lg-3 control-label"><%=l 'Name' %></label>
+                <input class="col-lg-3" name="name" type="text"
+                    ng-model="name"
+                    ng-change="validate_node_name()"
+                    required
+                    >
+            </div>
+            <div class="form-group row">
+                <label for="hostname" class="col-lg-3 control-label"><%=l 'Address' %></label>
+                <input class="col-lg-3" name="hostname" type="text"
+                ng-model="hostname"
+                required>
+            </div>
+                <div ng-show="name_duplicated"
+                    class="alert alert-warning fade in">
+                    <%=l 'A node with that name already exists.' %>
+                </div>
+            <div class="form-group row">
+                <input type="submit" name="_submit"
+                    ng-disabled="new_nodeForm.$invalid || name_duplicated"
+                >
+            </div>
+        </form>
+    </div>
+</div><!-- page wrapper -->
+</div><!-- wrapper -->
+%=      include 'bootstrap/footer'
+%=      include 'bootstrap/scripts'
+</body>
+</html>

@@ -43,8 +43,10 @@ sub _connect {
                 || $self->host eq '127.0.0.1'
                 || $self->{_ssh};
 
-    my ($out, $err)
-        = $self->run_command("ls -l ".$self->dir_img." || mkdir -p ".$self->dir_img);
+    my ($out, $err);
+    eval {
+       ($out, $err)= $self->run_command("ls -l ".$self->dir_img." || mkdir -p ".$self->dir_img);
+    };
 
     warn "ERROR: error connecting to ".$self->host." $err"  if $err;
     return 0 if $err;

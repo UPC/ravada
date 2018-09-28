@@ -328,7 +328,7 @@ sub _search_already_started($self) {
     my %started;
     while (my ($id) = $sth->fetchrow) {
         my $vm = Ravada::VM->open($id);
-        next if !$vm->is_active;
+        next if !$vm->is_enabled || !$vm->is_active;
 
         my $domain = $vm->search_domain($self->name);
         next if !$domain;
@@ -1153,7 +1153,7 @@ sub _after_remove_domain {
     my $self = shift;
     my ($user, $cascade) = @_;
 
-    $self->_remove_iptables(user => $user);
+    $self->_remove_iptables( );
     $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_known && $self->is_base) {
@@ -1600,7 +1600,7 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables(%arg);
+    $self->_remove_iptables();
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
 
@@ -1724,8 +1724,12 @@ sub _remove_iptables {
 
     my %args = @_;
 
-    my $user = delete $args{user};
     my $port = delete $args{port};
+    my $id_vm = delete $args{id_vm};
+
+    if($port && !$id_vm) {
+        $id_vm = $self->_data('id_vm');
+    }
 
     delete $args{request};
 
@@ -1737,8 +1741,7 @@ sub _remove_iptables {
     );
     my @iptables;
     push @iptables, ( $self->_active_iptables(id_domain => $self->id))  if $self->is_known();
-    push @iptables, ( $self->_active_iptables(user => $user) )          if $user;
-    push @iptables, ( $self->_active_iptables(port => $port) )          if $port;
+    push @iptables, ( $self->_active_iptables(port => $port, id_vm => $id_vm) ) if $port;
 
     my %rule;
     for my $row (@iptables) {

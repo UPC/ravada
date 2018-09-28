@@ -1,31 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
-    <div id="page-wrapper">
+    <div id="page-wrapper" ng-controller="manage_nodes">
       <div id="admin-content">
-        <h2>Nodes</h2>
+          <div class="row">
+              <div class="col-md-8"><h2>Nodes</h2></div>
+              <div class="col-md-4" align="right">
+                  <h2><a type="button"
+                          class="btn btn-success" href="/new_node.html"><b>New Node</b></a>
+                  </h2>
+              </div>
+          </div>
         <table class="table table-striped">
         <thead>
             <tr>
+            <th><%=l 'Type' %></th>
             <th><%=l 'Name' %></th>
-            <th><%=l 'Host' %></th>
+            <th><%=l 'Address' %></th>
+            <th><%=l 'Bases' %></th>
+            <th><%=l 'Machines' %></th>
+            <th><%=l 'Status' %></th>
+            <th><%=l 'Action' %></th>
             </tr>
         </thead>
         <tbody>
-%       for my $node (@$list_nodes) {
-            <tr>
-                <td><%= $node->{name} %></td>
-                <td><%= $node->{hostname} %></td>
+            <tr ng-repeat="node in nodes">
+                <td>{{node.type}}</td>
+                <td>{{node.name}}</td>
+                <td>{{node.hostname}}</td>
+                <td>{{node.bases.length}}</td>
+                <td>{{node.machines.length}}</td>
+                <td>
+                    <span ng-show="{{node.is_active}}"
+                          class="label label-success"><%=l 'Active' %></span>
+                    <span ng-show="{{!node.is_active}}"
+                          class="label label-danger"><%=l 'Shutdown' %></span>
+                    <br/>
+                    <span ng-show="!node.enabled"
+                          class="label label-warning"><%=l 'Disabled' %></span>
+                </td>
+                <td>
+                    <a type="button" class="btn btn-success btn-sm"
+                         ng-click="node_enable(node.id)"
+                         ng-show="!node.enabled"
+                         title="<%=l 'Enable' %>">
+                          <i class="fa fa-check"></i>
+                    </a>
+                    <a type="button" class="btn btn-warning btn-sm"
+                         ng-click="node_disable(node.id)"
+                         ng-show="node.enabled"
+                         title="<%=l 'Disable' %>">
+                          <i class="fa fa-window-close"></i>
+                    </a>
+                </td>
             </tr>
-%       }
         </tbody>
         </table>
       </div>
     </div>
 </div>
 %= include 'bootstrap/footer'
+%= include 'bootstrap/scripts'
 </body>
 </html>
