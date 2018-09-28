@@ -1,9 +1,9 @@
 
         <div class="panel-body nav--danger">
             <h2 class="Subhead-heading">
-                    Danger Zone
+                    <%=l 'Danger Zone' %>
             </h2>
-            <span class="text">Once you delete the machine, there is no going back. Please be certain.</span><br>
+            <span class="text"><%=l 'Once you delete the machine, there is no going back. Please be certain.' %></span><br>
             <div class="panel panel-warning" ng-show="showmachine.has_clones">
 
                 <div class="panel-heading">

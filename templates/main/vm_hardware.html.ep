@@ -14,7 +14,7 @@
             No {{name}} hardware found.
         </div>
         <button ng-disabled="pending_requests > 0"
-            ng-click="add_hardware(name, value.length+1)">Add {{name}}</button>
+            ng-click="add_hardware(name, value.length+1)"><%=l 'Add' %> {{name}}</button>
     </div>
 
 </div>
