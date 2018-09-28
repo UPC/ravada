@@ -135,6 +135,62 @@ sub test_iptables($node, $node2) {
     is(scalar @found,0,$node->name." ".Dumper(\@found)) or exit;
     $domain->remove(user_admin);
 }
+sub test_iptables_close($vm, $node) {
+    flush_rules_node($vm);
+    flush_rules_node($node);
+
+    my $domain = create_domain($node->type);
+
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(vm => $node, user => user_admin) if !$domain->base_in_vm($node->id);
+
+    my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+    $clone1->migrate($node) if $clone1->_vm->id != $node->id;
+
+    my $remote_ip1 = '1.1.1.1';
+    $clone1->start(user => user_admin, remote_ip => $remote_ip1);
+
+    my $clone2 = $domain->clone(name => new_domain_name, user => user_admin);
+    $clone2->migrate($vm) if $clone2->_vm->id != $vm->id;
+
+    my $remote_ip2 = '2.2.2.2';
+    $clone2->start(user => user_admin, remote_ip => $remote_ip2);
+
+    my ($local_ip1, $local_port1)
+        = $clone1->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
+    my ($local_ip2, $local_port2)
+        = $clone2->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
+
+    is($local_port1, $local_port2);
+
+    my @found = search_iptable_remote(
+       node => $vm
+        ,remote_ip => $remote_ip2
+        ,local_port => $local_port2
+    );
+    is(scalar @found,1,$vm->name." $remote_ip2:$local_port2".Dumper(\@found)) or exit;
+
+    $clone1->shutdown_now(user_admin);
+
+    @found = search_iptable_remote(
+       node => $node
+        ,remote_ip => $remote_ip1
+        ,local_port => $local_port1
+    );
+    is(scalar @found,0,$node->name." $remote_ip1:$local_port1".Dumper(\@found));
+
+    @found = search_iptable_remote(
+       node => $vm
+        ,remote_ip => $remote_ip2
+        ,local_port => $local_port2
+    );
+    is(scalar @found,1,$vm->name." $remote_ip2:$local_port2".Dumper(\@found));
+
+    $clone2->remove(user_admin);
+    $clone1->remove(user_admin);
+    $domain->remove(user_admin);
+
+}
 
 ##################################################################################
 clean();
@@ -173,7 +229,9 @@ for my $vm_name ('Void', 'KVM' ) {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
-        #        test_reuse_vm($node);
+        test_iptables_close($vm, $node);
+
+        test_reuse_vm($node);
         test_iptables($vm, $node);
         test_iptables($node, $vm);
 

@@ -792,7 +792,7 @@ sub test_clone_not_in_node {
 
     isnt($clones[-1]->_vm->host, $clones[0]->_vm->host,"[$vm_name] "
         .$clones[-1]->name
-        ." - ".$clones[0]->name) or return;
+        ." - ".$clones[0]->name.Dumper({map {$_->name => $_->_vm->host} @clones})) or return;
     for (@clones) {
         $_->remove(user_admin);
     }
@@ -1179,6 +1179,7 @@ SKIP: {
 
     test_status($node);
     test_bases_node($vm_name, $node);
+    test_clone_not_in_node($vm_name, $node);
     test_clone_make_base($vm_name, $node);
 
     test_migrate_back($node);
