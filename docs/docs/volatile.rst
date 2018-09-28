@@ -11,4 +11,4 @@ Enable/disable this option
 
 You can enable or disable this option from the VM settings in the options tab.
 
-.. image:: ../../img/volatile..png
+.. image:: ../../img/volatile.png
