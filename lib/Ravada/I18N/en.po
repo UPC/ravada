@@ -768,11 +768,3 @@ msgstr ""
 msgid "licensed."
 msgstr ""
 
-msgid "New Node"
-msgstr ""
-
-msgid "Address"
-msgstr ""
-
-msgid "A node with that name already exists."
-msgstr ""
