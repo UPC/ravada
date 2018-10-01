@@ -5,7 +5,7 @@ use YAML qw(LoadFile);
 
 extends 'Ravada::Front::Domain';
 
-my $DIR_TMP = "/var/tmp/rvd_void";
+my $DIR_TMP = "/var/tmp/rvd_void/".getpwuid($>);
 
 our %GET_CONTROLLER_SUB = (
     'mock' => \&_get_controller_mock
@@ -36,6 +36,10 @@ sub _value{
 sub _config_file {
     my $self = shift;
     return "$DIR_TMP/".$self->name.".yml";
+}
+
+sub _config_dir {
+    return $DIR_TMP;
 }
 
 sub list_controllers {

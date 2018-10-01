@@ -70,6 +70,7 @@ sub test_new_domain {
 
 sub test_start {
     my $vm_name = shift;
+    my $fork = shift;
 
     my $name = new_domain_name();
 #    test_remove_domain($vm_name, $name);
@@ -82,14 +83,18 @@ sub test_start {
         ,uid => $USER->id
         ,remote_ip => $remote_ip
     );
-    $RAVADA->process_requests();
+    if ($fork) {
+        $RAVADA->process_requests(0);
+    } else {
+        $RAVADA->_process_all_requests_dont_fork(0);
+    }
 
     wait_request($req);
 
     ok($req->status eq 'done', "[$vm_name] Req ".$req->{id}." expecting status done, got ".$req->status);
-    ok($req->error && $req->error =~ /unknown/i
+    like($req->error , qr/unknown/i
             ,"[$vm_name] Req ".$req->{id}." expecting unknown domain error , got "
-                .($req->error or '<NULL>')) or return;
+                .($req->error or '<NULL>')) or exit;
     $req = undef;
 
     #####################################################################3
@@ -117,10 +122,12 @@ sub test_start {
         $id_domain = $domain->id;
         $domain->start($USER)    if !$domain->is_active();
         ok($domain->is_active);
+        is($domain->is_volatile,0);
 
         my $vm = $RAVADA->search_vm($vm_name);
         my $domain2 = $vm->search_domain($name);
         ok($domain2->is_active);
+        is($domain2->is_volatile,0);
     }
 
     $req2 = undef;
@@ -139,8 +146,9 @@ sub test_start {
 
     my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);
+    ok($domain3,"[$vm_name] Searching for domain $name") or exit;
     for ( 1 .. 60 ) {
-        last if !$domain3->is_active;
+        last if !$domain3 || !$domain3->is_active;
         sleep 1;
     }
     ok(!$domain3->is_active,"Domain $name should not be active");
@@ -236,8 +244,10 @@ for my $vm_name (qw(KVM Void)) {
 
 #        $vmm->disconnect() if $vmm;
         diag("Testing VM $vm_name");
-        my $domain = test_start($vm_name);
+        my $domain = test_start($vm_name,0);
+        $domain = test_start($vm_name,1);
 #        $domain->_vm->disconnect;
+        next if !$domain;
         my $domain_name = $domain->name;
         $domain = undef;
 
