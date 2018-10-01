@@ -739,3 +739,58 @@ msgstr "copiado en el portapapeles"
 
 msgid "Portuguese"
 msgstr "Portugués"
+
+msgid "Read more."
+msgstr "Leer más."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "La contraseña para la conexión de esta máquina virtual es:"
+
+msgid "view"
+msgstr "Ver"
+
+msgid "Start again"
+msgstr "Iniciar de nuevo"
+
+msgid "The machine is down."
+msgstr "La máquina está parada."
+
+msgid "Remove"
+msgstr "Eliminar"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "La máquina ha de estar en marcha para hacer una captura de pantalla."
+
+msgid "Take screenshot"
+msgstr "Hacer una captura de pantalla"
+
+msgid "Set base picture"
+msgstr "Establer imagen para la base"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Grabando la captura de pantalla, espere un momento por favor..."
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr ""
+"Necesitas la máquina en marcha para poder hacer una captura de pantalla."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Copiando la captura de pantalla, espere un momento por favor..."
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr "Necesitas una captura de pantalla para copiar a la máquina base."
+
+msgid "Add"
+msgstr "Añadir"
+
+msgid "The changes will apply on next restart"
+msgstr "Los cambios se aplicarán en la próxima puesta en marcha"
+
+msgid "This VM is running and can't be renamed."
+msgstr "Esta VM se está ejecutando y no puede ser renombrada."
+
+msgid "Thanks to:"
+msgstr "Gracias a:"
+
+msgid "licensed."
+msgstr "licenciado."
