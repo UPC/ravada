@@ -1,13 +1,13 @@
 <volume type='file'>
-  <name>alpine_64.qcow2</name>
-  <key>/var/lib/libvirt/images/alpine_64.qcow2</key>
+  <name>__name__.img</name>
+  <key>/var/lib/libvirt/images/__name__.img</key>
   <source>
   </source>
   <capacity unit='bytes'>21474836480</capacity>
   <allocation unit='bytes'>3485696</allocation>
   <physical unit='bytes'>21478375424</physical>
   <target>
-    <path>/var/lib/libvirt/images/alpine_64.qcow2</path>
+    <path>/var/lib/libvirt/images/__name__.img</path>
     <format type='qcow2'/>
     <permissions>
       <mode>0600</mode>
@@ -25,4 +25,3 @@
     </features>
   </target>
 </volume>
-

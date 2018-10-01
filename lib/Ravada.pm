@@ -297,7 +297,7 @@ sub _update_isos {
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
             ,min_disk_size => '10'
         }
-        ,mint32 => {
+        ,alpine32 => {
             name => 'Linux Alpine 3.8.1 32 bits'
     ,description => 'Linux Alpine 3.8.1 32 bits'
            ,arch => 'i386'

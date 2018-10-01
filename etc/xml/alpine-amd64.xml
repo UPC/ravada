@@ -1,4 +1,4 @@
-<domain type='kvm' id='5'>
+<domain type='kvm'>
   <name>alpine_64</name>
   <uuid>a289e5a7-77c8-4447-b21e-177105598ec6</uuid>
   <memory unit='KiB'>1048576</memory>
@@ -8,8 +8,7 @@
     <partition>/machine</partition>
   </resource>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-bionic'>hvm</type>
-    <boot dev='hd'/>
+    <type arch='x86_64' machine='pc'>hvm</type>
   </os>
   <features>
     <acpi/>
@@ -37,18 +36,20 @@
   <devices>
     <emulator>/usr/bin/kvm-spice</emulator>
     <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='/var/lib/libvirt/images/alpine_64.qcow2'/>
+      <driver name='qemu' type='raw'/>
+      <source file='/var/lib/libvirt/images/alpine_64.img'/>
       <backingStore/>
-      <target dev='hda' bus='ide'/>
-      <alias name='ide0-0-0'/>
-      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+      <target dev='vda' bus='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+      <boot order='1'/>
     </disk>
     <disk type='file' device='cdrom'>
-      <target dev='hdb' bus='ide'/>
+      <driver name='qemu' type='raw'/>
+      <source file='/var/lib/libvirt/images/alpine-standard-3.8.1-x86_64.iso'/>
+      <target dev='hdc' bus='ide'/>
       <readonly/>
-      <alias name='ide0-0-1'/>
-      <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+      <address type='drive' controller='0' bus='1' target='0' unit='0'/>
+      <boot order='2'/>
     </disk>
     <controller type='usb' index='0' model='ich9-ehci1'>
       <alias name='usb'/>
@@ -146,4 +147,3 @@
     <imagelabel>+64055:+130</imagelabel>
   </seclabel>
 </domain>
-
