@@ -313,7 +313,7 @@ sub _start_preconditions{
             $self->_set_vm($vm_local, 1);
         }
         $self->_balance_vm();
-        $self->rsync()  if !$self->_vm->is_local();
+        $self->rsync()  if !$self->is_volatile && !$self->_vm->is_local();
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
@@ -356,32 +356,15 @@ sub _search_already_started($self) {
 
 sub _balance_vm($self) {
     return if $self->{_migrated};
-    return if !$self->id_base;
 
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms where vm_type=?"
-    );
-    $sth->execute($self->_vm->type);
-    my %vm_list;
-    for my $vm ($self->_vm->list_nodes) {
-        next if !$vm->is_active();
-        next if !$vm->is_active || $vm->free_memory < $MIN_FREE_MEMORY;
-        $vm_list{$vm->id} = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
-    }
-    my @sorted_vm = sort { $vm_list{$a} <=> $vm_list{$b} } keys %vm_list;
+    my $base;
+    $base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
-    my $base = Ravada::Domain->open($self->id_base);
-    for my $id (@sorted_vm) {
-        if ( $base->base_in_vm($id) ) {
-            return if $id == $self->_vm->id;
+    my $vm_free = $self->_vm->balance_vm($base);
+    return if !$vm_free;
 
-            my $vm_free = Ravada::VM->open($id);
-
-            $self->migrate($vm_free);
-            return $id;
-        }
-    }
-    return;
+    $self->migrate($vm_free) if $vm_free->id != $self->_vm->id;
+    return $vm_free->id;
 }
 
 sub _update_description {
@@ -1504,20 +1487,26 @@ sub clone {
         $self->prepare_base($user)
     }
 
-    my $id_base = $self->id;
-
     my @args_copy = ();
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
 
-    my $clone = $self->_vm->create_domain(
+    my $vm = $self->_vm;
+    if ($self->volatile_clones ) {
+        $vm = $vm->balance_vm();
+    } elsif( !$vm->is_local ) {
+        for my $node ($self->_vm->list_nodes) {
+            $vm = $node if $node->is_local;
+        }
+    }
+    my $clone = $vm->create_domain(
         name => $name
-        ,id_base => $id_base
+        ,id_base => $self->id
         ,id_owner => $uid
         ,vm => $self->vm
-        ,_vm => $self->_vm
         ,@args_copy
     );
+    die if $clone->_data('id_vm') ne $vm->id;
     return $clone;
 }
 
@@ -2601,6 +2590,9 @@ sub rsync($self, @args) {
     }
     my $rsync = File::Rsync->new(update => 1);
     for my $file ( @$files ) {
+        my ($path) = $file =~ m{(.*)/};
+        my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
+        die $err if $err;
         $request->status("syncing","Tranferring $file to ".$node->host)
             if $request;
         my $src = $file;
@@ -2613,7 +2605,7 @@ sub rsync($self, @args) {
     }
     if ($rsync->err) {
         $request->status("done",join(" ",@{$rsync->err}))   if $request;
-        die $rsync->err;
+        confess $rsync->err;
     }
     $node->refresh_storage_pools();
 }
@@ -2630,7 +2622,7 @@ sub _rsync_volumes_back($self, $request=undef) {
     $self->_vm->refresh_storage_pools();
 }
 
-sub _pre_migrate($self, $node) {
+sub _pre_migrate($self, $node, $request = undef) {
 
     $self->_check_equal_storage_pools($node);
 
@@ -2659,7 +2651,7 @@ sub _pre_migrate($self, $node) {
     $self->_set_base_vm_db($node->id,0);
 }
 
-sub _post_migrate($self, $node) {
+sub _post_migrate($self, $node, $request = undef) {
     $self->_set_base_vm_db($node->id,1) if $self->is_base;
     $self->_vm($node);
     $self->_update_id_vm();
@@ -2743,7 +2735,7 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        $self->rsync(node => $vm, request => $request);
+        $self->migrate($vm, $request);
     }
     return $self->_set_base_vm_db($vm->id, $value);
 }

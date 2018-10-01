@@ -11,6 +11,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 use Carp qw( carp croak cluck);
 use Data::Dumper;
+use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
@@ -298,8 +299,10 @@ sub _around_create_domain {
 
     my $base;
     my $id_base = delete $args{id_base};
-    $base = Ravada::Domain->open($id_base)  if $id_base;
-
+    if ($id_base) {
+        $base = $self->search_domain_by_id($id_base)
+            or confess "Error: I can't find domain $id_base on ".$self->name;
+    }
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
         unless $owner->is_admin
             || $owner->can_create_machine()
@@ -501,10 +504,6 @@ sub _check_create_domain {
     my $self = shift;
 
     my %args = @_;
-
-    confess "ERROR: Domains can only be created at localhost got ".$self->host
-        unless     $self->host eq 'localhost'
-                || $self->host eq '127.0.0.1';
 
     $self->_check_readonly(@_);
 
@@ -790,6 +789,8 @@ Returns a list of virtual machine manager nodes of the same type as this.
 =cut
 
 sub list_nodes($self) {
+    return @{$self->{_nodes}} if $self->{_nodes};
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id FROM vms WHERE vm_type=?"
     );
@@ -800,6 +801,7 @@ sub list_nodes($self) {
         push @nodes,(Ravada::VM->open($id))
     }
 
+    $self->{_nodes} = \@nodes;
     return @nodes;
 }
 
@@ -969,7 +971,12 @@ sub write_file( $self, $file, $contents ) {
 }
 
 sub _write_file_local( $self, $file, $contents ) {
-    confess "TODO";
+    my ($path) = $file =~ m{(.*)/};
+    make_path($path) or die "$! $path"
+        if ! -e $path;
+    CORE::open(my $out,">",$file) or die "$! $file";
+    print $out $contents;
+    close $out or die "$! $file";
 }
 
 sub create_iptables_chain($self,$chain) {
@@ -1033,6 +1040,23 @@ sub iptables_list($self) {
     }
 
     return $ret;
+}
+
+sub balance_vm($self, $base=undef) {
+    my %vm_list;
+    for my $vm ($self->list_nodes) {
+        next if !$vm->is_active();
+        next if !$vm->is_active || $vm->free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+        my $key = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
+        $vm_list{$key} = $vm;
+    }
+    my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
+
+    for my $vm (@sorted_vm) {
+        next if $base && !$base->base_in_vm($vm->id);
+        return $vm;
+    }
+    return;
 }
 
 1;
