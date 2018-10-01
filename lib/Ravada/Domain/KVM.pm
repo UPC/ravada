@@ -601,9 +601,10 @@ sub start {
     if (!(scalar(@_) % 2))  {
         %arg = @_;
     }
-    my $remote_ip = delete $arg{remote_ip};
 
     my $set_password=0;
+    my $remote_ip = delete $arg{remote_ip};
+    my $request = delete $arg{request};
 
     if ($remote_ip) {
         $set_password = 0;
