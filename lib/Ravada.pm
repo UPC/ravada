@@ -1380,11 +1380,16 @@ sub create_domain {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
+    my $base;
     if ($id_base) {
-        my $base = Ravada::Domain->open($id_base)
+        $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
     }
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    $vm = $vm->balance_vm($base) if $base && $base->volatile_clones
+                                    || $user->is_temporary;
 
     confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
 
@@ -1410,7 +1415,6 @@ sub create_domain {
     if (!$error && $start) {
         $request->status("starting") if $request;
         eval {
-            my $user = Ravada::Auth::SQL->search_by_id($id_owner);
             my $remote_ip;
             $remote_ip = $request->defined_arg('remote_ip') if $request;
             $domain->start(
