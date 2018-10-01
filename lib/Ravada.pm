@@ -261,6 +261,30 @@ sub _update_isos {
             ,min_disk_size => '10'
 
         }
+        ,mint64 => {
+            name => 'Linux Mint 19 Mate 64 bits'
+    ,description => 'Linux Mint Mate 19 64bits'
+           ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+     ,xml_volume => 'xenial64-volume.xml'
+            ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
+        ,file_re => 'linuxmint-19-mate-64bit-v2.iso '
+        ,md5_url => ''
+            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+            ,min_disk_size => '15'
+        }
+        ,mint32 => {
+            name => 'Linux Mint 19 Mate 32 bits'
+    ,description => 'Linux Mint Mate 19 32bits'
+           ,arch => 'amd64'
+            ,xml => 'mint19-i386.xml'
+     ,xml_volume => 'mint32-volume.xml'
+            ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
+        ,file_re => 'linuxmint-19-mate-32bit.iso'
+        ,md5_url => ''
+            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+            ,min_disk_size => '15'
+        }
         ,fedora => {
             name => 'Fedora 25'
             ,description => 'RedHat Fedora 25 Workstation 64 bits'
@@ -2311,32 +2335,32 @@ sub _cmd_download {
 sub _cmd_add_hardware {
     my $self = shift;
     my $request = shift;
-    
+
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
     my $number = $request->args('number');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
-    
+
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    
+
     $domain->set_controller($hardware, $number);
 }
 
 sub _cmd_remove_hardware {
     my $self = shift;
     my $request = shift;
-    
+
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
     my $index = $request->args('index');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
-    
+
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    
+
     $domain->remove_controller($hardware, $index);
 }
 
@@ -2489,7 +2513,7 @@ sub _cmd_change_max_memory($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
     my $memory = $request->args('ram');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
     $domain->set_max_mem($memory);
 }
@@ -2498,7 +2522,7 @@ sub _cmd_change_curr_memory($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
     my $memory = $request->args('ram');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
     $domain->set_memory($memory);
 }
