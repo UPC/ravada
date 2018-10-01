@@ -1,14 +1,14 @@
 # Translators:
 # Fernando Verdugo, 2017
 # Alexander Salas Bastidas <alexander.salas@gmail.com>, 2018
-# Jan Fontanet Castillo <jan2_@hotmail.es>, 2018
+# JanFontanet <jan2_@hotmail.es>, 2018
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
 "PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: Jan Fontanet Castillo <jan2_@hotmail.es>, 2018\n"
+"Last-Translator: JanFontanet <jan2_@hotmail.es>, 2018\n"
 "Language-Team: Spanish (https://www.transifex.com/ravada/teams/70385/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -708,3 +708,89 @@ msgstr "La contraseña debe tener al menos 5 caracteres"
 
 msgid "Confirm Password can only contain words and numbers"
 msgstr "La contraseña solo puede contener palabras y números"
+
+msgid "This information will be available to the users"
+msgstr "Esta Información será visible por los usuarios"
+
+msgid "Volatile Clones"
+msgstr "Clones volatiles"
+
+msgid "Owner"
+msgstr "Propietario"
+
+msgid "Change the owner of the machine"
+msgstr "Cambiar el propietario de la máquina"
+
+msgid "Press SHIFT + F12 to exit"
+msgstr "Presione SHIFT + F12 para salir"
+
+msgid ""
+"If you can not see the machine screen in a few seconds check for a file "
+"called"
+msgstr ""
+"Si no puedes ver la pantalla de la máquina en unos pocos segundos, busca un "
+"archivo llamado"
+
+msgid "in your downloads folder."
+msgstr "en tu carpeta de descargas."
+
+msgid "copied to clipboard"
+msgstr "copiado en el portapapeles"
+
+msgid "Portuguese"
+msgstr "Portugués"
+
+msgid "Read more."
+msgstr "Leer más."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "La contraseña para la conexión de esta máquina virtual es:"
+
+msgid "view"
+msgstr "Ver"
+
+msgid "Start again"
+msgstr "Iniciar de nuevo"
+
+msgid "The machine is down."
+msgstr "La máquina está parada."
+
+msgid "Remove"
+msgstr "Eliminar"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "La máquina ha de estar en marcha para hacer una captura de pantalla."
+
+msgid "Take screenshot"
+msgstr "Hacer una captura de pantalla"
+
+msgid "Set base picture"
+msgstr "Establer imagen para la base"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Grabando la captura de pantalla, espere un momento por favor..."
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr ""
+"Necesitas la máquina en marcha para poder hacer una captura de pantalla."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Copiando la captura de pantalla, espere un momento por favor..."
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr "Necesitas una captura de pantalla para copiar a la máquina base."
+
+msgid "Add"
+msgstr "Añadir"
+
+msgid "The changes will apply on next restart"
+msgstr "Los cambios se aplicarán en la próxima puesta en marcha"
+
+msgid "This VM is running and can't be renamed."
+msgstr "Esta VM se está ejecutando y no puede ser renombrada."
+
+msgid "Thanks to:"
+msgstr "Gracias a:"
+
+msgid "licensed."
+msgstr "licenciado."

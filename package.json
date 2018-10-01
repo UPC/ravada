@@ -15,7 +15,7 @@
     "ckeditor": "4.8.0",
     "font-awesome5": "^1.0.5",
     "intro.js": "2.7.0",
-    "jquery": "1.12.4",
+    "jquery": "3.3.1",
     "jqueryui": "^1.11.1",
     "morris.js": "^0.5.0",
     "raphael": "^2.2.7"

@@ -52,7 +52,7 @@
 	
 %        }
      <input type="submit">
-     <input type="button" value="Cancel" onclick = "location='/admin/machines'"/>
+     <input type="button" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
 
     </form>
 </div><!-- del form-group -->

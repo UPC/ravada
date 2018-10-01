@@ -26,7 +26,7 @@
 
                         <p> <%=l 'The code is available on ' %><a href="http://bit.ly/get_ravada">Github</a>.</p>
                         <h3><%=l 'License' %></h3>
-                        <p><%=l 'The code is' %>&nbsp;<a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a>&nbsp;<%=l 'licensed.' %></p>
+                        <p><%=l 'The code is ' %>&nbsp;<a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a>&nbsp;<%=l 'licensed.' %></p>
                     </div>
                 </div>
             </div>

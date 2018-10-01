@@ -1330,6 +1330,7 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
     $file = $file2 if $file2 && $file2 !~ /\*|\^/;
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
+    confess "error " if $url_orig =~ /\$/;
 
     confess "error " if $url_orig =~ /\$/;
 
