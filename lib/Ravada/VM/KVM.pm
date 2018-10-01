@@ -754,7 +754,7 @@ sub _domain_create_common {
     };
     if ($@) {
         my $out;
-		warn $@;
+		warn $self->name."\n".$@;
         my $name_out = "/var/tmp/$args{name}.xml";
         warn "Dumping $name_out";
         open $out,">",$name_out and do {
@@ -762,7 +762,7 @@ sub _domain_create_common {
         };
         close $out;
         warn "$! $name_out" if !$out;
-        die $@ if !$dom;
+        confess $@ if !$dom;
     }
 
     my $domain = Ravada::Domain::KVM->new(
@@ -813,20 +813,14 @@ sub _create_disk_qcow2 {
 
 sub _clone_disk($self, $file_base, $file_out) {
 
-        my @cmd = ('qemu-img','create'
+        my @cmd = ('/usr/bin/qemu-img','create'
                 ,'-f','qcow2'
                 ,"-b", $file_base
                 ,$file_out
         );
 
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-
-        if (! -e $file_out) {
-            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
-            exit;
-        }
-
+        my ($out, $err) = $self->run_command(@cmd);
+        die $err if $err;
 }
 
 sub _create_disk_raw {
