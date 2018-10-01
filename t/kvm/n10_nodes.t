@@ -220,7 +220,7 @@ sub test_iptables($node, $remote_ip, $local_ip, $local_port) {
     ok(scalar @line == 1,$node->type." iptables should found only 1 found $remote_ip -> $local_ip:$local_port ".Dumper(\@line));
 }
 
-sub test_domain_no_remote {
+sub test_domain_on_remote {
     my ($vm_name, $node) = @_;
 
     my $domain;
@@ -231,7 +231,7 @@ sub test_domain_no_remote {
             ,id_iso => 1
         );
     };
-    like($@,qr'.',"Expecting no domain in remote node by now");
+    is($@,'',"Expecting no domain in remote node by now");
 
     $domain->remove(user_admin) if $domain;
 }
@@ -1206,7 +1206,7 @@ SKIP: {
     test_domain_already_started($vm_name, $node);
     test_clone_not_in_node($vm_name, $node);
     test_rsync_newer($vm_name, $node);
-    test_domain_no_remote($vm_name, $node);
+    test_domain_on_remote($vm_name, $node);
 
     my $domain2 = test_domain($vm_name, $node);
     test_remove_domain_from_local($vm_name, $node, $domain2)    if $domain2;
