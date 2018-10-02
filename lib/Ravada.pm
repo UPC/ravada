@@ -261,7 +261,7 @@ sub _update_isos {
             ,min_disk_size => '10'
 
         }
-        ,mint64 => {
+        ,mint19_64 => {
             name => 'Linux Mint 19 Mate 64 bits'
     ,description => 'Linux Mint Mate 19 64bits'
            ,arch => 'amd64'
@@ -273,36 +273,36 @@ sub _update_isos {
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
             ,min_disk_size => '15'
         }
-        ,mint32 => {
+        ,mint19_32 => {
             name => 'Linux Mint 19 Mate 32 bits'
     ,description => 'Linux Mint Mate 19 32bits'
            ,arch => 'i386'
             ,xml => 'mint19-i386.xml'
-     ,xml_volume => 'mint32-volume.xml'
+     ,xml_volume => 'mint19_32-volume.xml'
             ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
         ,file_re => 'linuxmint-19-mate-32bit.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
             ,min_disk_size => '15'
         }
-        ,alpine64 => {
+        ,alpine381_64 => {
             name => 'Linux Alpine 3.8.1 64 bits'
     ,description => 'Linux Alpine 3.8.1 64 bits'
            ,arch => 'amd64'
             ,xml => 'alpine-amd64.xml'
-     ,xml_volume => 'alpine64-volume.xml'
+     ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
             ,min_disk_size => '10'
         }
-        ,alpine32 => {
+        ,alpine381_32 => {
             name => 'Linux Alpine 3.8.1 32 bits'
     ,description => 'Linux Alpine 3.8.1 32 bits'
            ,arch => 'i386'
             ,xml => 'alpine-i386.xml'
-     ,xml_volume => 'alpine32-volume.xml'
+     ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,md5_url => ''
