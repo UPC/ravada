@@ -1142,6 +1142,7 @@ sub test_status($node) {
 
 #############################################################
 clean();
+clean_remote();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
