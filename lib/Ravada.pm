@@ -1388,8 +1388,12 @@ sub create_domain {
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
-    $vm = $vm->balance_vm($base) if $base && $base->volatile_clones
-                                    || $user->is_temporary;
+    $request->status("creating machine")    if $request;
+    if ( $base && $base->volatile_clones
+                                    || $user->is_temporary ) {
+        $vm = $vm->balance_vm($base);
+        $request->status("creating machine on ".$vm->name);
+    }
 
     confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
 
@@ -1398,7 +1402,6 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    $request->status("creating")    if $request;
     my $domain;
     delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
@@ -2139,7 +2142,7 @@ sub _cmd_create{
     my $self = shift;
     my $request = shift;
 
-    $request->status('creating domain');
+    $request->status('creating machine');
     warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
 
