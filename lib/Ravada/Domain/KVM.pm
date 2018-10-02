@@ -1679,7 +1679,7 @@ sub _check_machine($self,$doc) {
     $os_type->setAttribute( machine => 'pc');
 }
 
-sub migrate($self, $node) {
+sub migrate($self, $node, $request=undef) {
     my $dom;
     eval { $dom = $node->vm->get_domain_by_name($self->name) };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
@@ -1698,7 +1698,7 @@ sub migrate($self, $node) {
     }
     $self->_set_spice_ip(1,$node->ip);
 
-    $self->rsync($node);
+    $self->rsync(node => $node, request => $request);
 
     return if $self->is_removed;
     $self->domain->managed_save_remove
