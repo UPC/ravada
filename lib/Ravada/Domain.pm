@@ -223,7 +223,7 @@ sub BUILD {
 }
 
 sub _check_clean_shutdown($self) {
-    return if !$self->is_known || $self->readonly;
+    return if !$self->is_known || $self->readonly || $self->is_volatile;
 
     if (( $self->_data('status') eq 'active' && !$self->is_active )
         || $self->_active_iptables(id_domain => $self->id)) {
@@ -313,7 +313,7 @@ sub _start_preconditions{
             $self->_set_vm($vm_local, 1);
         }
         $self->_balance_vm();
-        $self->rsync()  if !$self->is_volatile && !$self->_vm->is_local();
+        $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
