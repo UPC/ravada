@@ -603,10 +603,9 @@ sub create_volume {
         $doc->findnodes('/volume/allocation/text()')->[0]->setData($allocation);
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
-    my $vol = $self->storage_pool->create_volume($doc->toString);
-    die "volume $img_file does not exists after creating volume "
-            .$doc->toString()
-            if ! -e $img_file;
+    my $vol = $self->storage_pool->create_volume($doc->toString)
+        or die "volume $img_file does not exists after creating volume on ".$self->name." "
+            .$doc->toString();
 
     return $img_file;
 
