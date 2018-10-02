@@ -855,7 +855,7 @@ Returns if the domain is active.
 sub is_active($self) {
     return $self->_do_is_active() if $self->is_local;
 
-    return $self->_cached_active if time - $self->_cached_active_time < 5;
+    return $self->_cached_active if time - $self->_cached_active_time < 60;
     return $self->_do_is_active();
 }
 
@@ -1045,7 +1045,7 @@ sub iptables_list($self) {
 sub balance_vm($self, $base=undef) {
     my %vm_list;
     for my $vm ($self->list_nodes) {
-        next if !$vm->is_active();
+        next if !$vm->enabled();
         next if !$vm->is_active || $vm->free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
         my $key = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
         $vm_list{$key} = $vm;
