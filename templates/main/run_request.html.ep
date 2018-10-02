@@ -9,10 +9,10 @@
     >
     <div class="jumbotron">
 
-        <h2>Running {{domain.name}}</h2>
+        <h2><%=l 'Running' %> {{domain.name}}</h2>
 
             <div class="alert alert-warning">
-                <%=l 'It is required a viewer to run the virtual machines.' %>
+                <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
         <div ng-hide="request.status == 'done'">Waiting for machine to start {{dots}}</div>
@@ -62,8 +62,8 @@
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0">The machine is down.
-                 <button type="submit" onclick="location.reload('forceGet')">Start again</button>
+                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.'%>
+                 <button type="submit" onclick="location.reload('forceGet')"><%=l 'Start again'%></button>
                 </div>
             </div>
 

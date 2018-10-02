@@ -739,3 +739,59 @@ msgstr "copiat al porta-retalls"
 
 msgid "Portuguese"
 msgstr "Portuguès"
+
+msgid "Read more."
+msgstr "Llegir més."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "La contrasenya per la connexió d'aquesta màquina virtual és:"
+
+msgid "view"
+msgstr "veure"
+
+msgid "Start again"
+msgstr "Inicia de nou"
+
+msgid "The machine is down."
+msgstr "La màquina està aturada."
+
+msgid "Remove"
+msgstr "Esborra"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "La màquina ha d'estar en marxa per a fer la captura de pantalla."
+
+msgid "Take screenshot"
+msgstr "Fer captura de pantalla"
+
+msgid "Set base picture"
+msgstr "Establir imatge a la base"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Desant la captura de pantalla, espereu un moment si us plau...."
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr ""
+"Necessites la màquina en marxa per a poder fer la captura de pantalla."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Copiant la captura de pantalla, espereu un moment si us plau..."
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr ""
+"Necessites una captura de pantalla per a poder copiar-la a la màquina base."
+
+msgid "Add"
+msgstr "Afegeix"
+
+msgid "The changes will apply on next restart"
+msgstr "Els canvis seran efectius en la pròxima posada en marxa."
+
+msgid "This VM is running and can't be renamed."
+msgstr "Aquesta VM està en marxa i no es pot canviar el nom."
+
+msgid "Thanks to:"
+msgstr "Gràcies a:"
+
+msgid "licensed."
+msgstr "llicenciat."
