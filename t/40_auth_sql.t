@@ -16,6 +16,8 @@ my $RAVADA = Ravada->new(connector => $test->connector
     , config => 't/etc/ravada.conf'
 );
 
+$RAVADA->_install();
+
 Ravada::Auth::SQL::add_user(name => 'test',password => $$);
 
 ok($$Ravada::Auth::SQL::CON,"Undefined DB connection");

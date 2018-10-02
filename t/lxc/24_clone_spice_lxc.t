@@ -18,6 +18,7 @@ SKIP: {
 
 my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $RAVADA= Ravada->new( connector => $test->connector);
+$RAVADA->_install();
 my $vm_lxc;
 
 my $CONT= 0;

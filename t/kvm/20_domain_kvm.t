@@ -35,7 +35,7 @@ sub test_remove_domain {
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         eval { $domain->remove($user) };
         ok(!$@,"Domain $name should be removed ".$@) or exit;
     }
@@ -49,7 +49,7 @@ sub test_remove_domain {
 sub test_remove_domain_by_name {
     my $name = shift;
 
-    diag("Removing domain $name");
+#    diag("Removing domain $name");
     $RAVADA->remove_domain(name => $name, uid => $USER->id);
 
     my $domain = $RAVADA->search_domain($name, 1);
@@ -75,7 +75,7 @@ sub test_new_domain {
 
     test_remove_domain($name);
 
-    diag("Creating domain $name");
+#    diag("Creating domain $name");
     my $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('Alpine')
         , active => $active
         , id_owner => $USER->id
@@ -107,12 +107,12 @@ sub test_new_domain_iso {
     my $active = shift;
     
     my $vm = rvd_back()->search_vm($BACKEND);
-    my $iso = $vm->_search_iso(search_id_iso('alpine'));
+    my $iso = $vm->_search_iso(search_id_iso('Alpine'));
     my $name = new_domain_name();
 
     test_remove_domain($name);
 
-    diag("Creating domain $name");
+#    diag("Creating domain $name");
     my $domain;
     eval {
       $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('alpine')
@@ -287,6 +287,7 @@ sub test_prepare_import {
 ################################################################
 
 my $vm;
+clean();
 
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
@@ -313,4 +314,5 @@ test_domain_by_name();
 test_prepare_import();
 
 };
+clean();
 done_testing();

@@ -20,7 +20,7 @@ $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
 sub test_download {
-    my ($vm, $id_iso) = @_;
+    my ($vm, $id_iso, $clean) = @_;
     my $iso;
     eval { $iso = $vm->_search_iso($id_iso) };
     if ($@ =~ /No md5/) {
@@ -29,7 +29,7 @@ sub test_download {
     }
     is($@,'');
     unlink($iso->{device}) or die "$! $iso->{device}"
-        if $iso->{device} && -e $iso->{device};
+        if $clean && $iso->{device} && -e $iso->{device};
     confess "Missing name in ".Dumper($iso) if !$iso->{name};
     diag("Testing download $iso->{name}");
     my $req1 = Ravada::Request->download(
@@ -84,7 +84,7 @@ sub search_id_isos {
     my $vm = shift;
     my $sth=$test->dbh->prepare(
         "SELECT * FROM iso_images"
-        #." where name like 'Xubuntu%'"
+        #                        ." where name like 'Xubuntu Bionic%'"
         ." ORDER BY name,arch"
     );
     $sth->execute;
@@ -132,6 +132,12 @@ for my $vm_name ('KVM') {
         test_download_fail($vm, 1);
 
         for my $id_iso (search_id_isos($vm)) {
+            test_download($vm, $id_iso, 1); #clean
+            my $sth = $test->dbh
+                ->prepare("UPDATE iso_images set md5=NULL, sha256=NULL WHERE id=?");
+            $sth->execute($id_iso);
+            $sth->finish;
+
             test_download($vm, $id_iso);
         }
     }
