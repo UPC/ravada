@@ -298,11 +298,27 @@ sub _around_create_domain {
     my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
 
     my $base;
+    my $remote_ip = delete $args{remote_ip};
     my $id_base = delete $args{id_base};
+     my $id_iso = delete $args{id_iso};
+     my $active = delete $args{active};
+       my $name = delete $args{name};
+       my $swap = delete $args{swap};
+
+     # args get deleted but kept on @_ so when we call $self->$orig below are passed
+     delete $args{disk};
+     delete $args{memory};
+     delete $args{request};
+     delete $args{iso_file};
+     delete @args{'description','remove_cpu','vm'};
+
+    confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
+
     if ($id_base) {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
     }
+
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
         unless $owner->is_admin
             || $owner->can_create_machine()
@@ -314,8 +330,7 @@ sub _around_create_domain {
     $self->_pre_create_domain(@_);
 
     my $domain = $self->$orig(@_);
-
-    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -325,12 +340,11 @@ sub _around_create_domain {
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
 
     my @start_args = ( user => $owner );
-    my $remote_ip = $args{remote_ip};
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
     $domain->_post_start(@start_args) if $domain->is_active;
     eval {
-           $domain->start(@start_args)      if $domain->is_volatile && ! $domain->is_active;
+           $domain->start(@start_args)      if $active || ($domain->is_volatile && ! $domain->is_active);
     };
     die $@ if $@ && $@ !~ /code: 55,/;
 

@@ -315,7 +315,7 @@ ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;

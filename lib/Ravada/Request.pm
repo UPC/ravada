@@ -106,7 +106,7 @@ our %COMMAND = (
     }
     ,priority => {
         limit => 20
-        ,commands => ['clone','start','cleanup']
+        ,commands => ['clone','start']
     }
 );
 lock_hash %COMMAND;

@@ -295,7 +295,7 @@ sub _start_preconditions{
         my %args = @args;
         my $user = delete $args{user};
         my $remote_ip = delete $args{remote_ip};
-        $request = $args{request} if exists $args{request};
+        $request = delete $args{request} if exists $args{request};
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
         _allow_manage_args(@_);
@@ -1503,7 +1503,6 @@ sub clone {
         name => $name
         ,id_base => $self->id
         ,id_owner => $uid
-        ,vm => $self->vm
         ,@args_copy
     );
     die if $clone->_data('id_vm') ne $vm->id;
@@ -1531,7 +1530,6 @@ sub _copy_clone($self, %args) {
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
-        ,_vm => $self->_vm
         ,@copy_arg
     );
     my @volumes = $self->list_volumes_target;
@@ -1628,7 +1626,6 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$self->is_active;
-    _test_iptables_jump();
 }
 
 sub _around_is_active($orig, $self) {
@@ -1713,6 +1710,7 @@ sub _remove_iptables {
 
     my %args = @_;
 
+    my $user = delete $args{user};
     my $port = delete $args{port};
     my $id_vm = delete $args{id_vm};
 
@@ -1831,8 +1829,10 @@ sub _post_start {
 
     }
     $self->get_info();
-    Ravada::Request->enforce_limits(at => time + 60)
-        if !Ravada::Request::done_recently(undef, 60, 'enforce_limits');
+
+    # get the display so it is stored for front access
+    $self->display($arg{user})  if $self->is_active;
+    Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
 
@@ -1924,7 +1924,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-    );
+    ) if !$>;
 
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
@@ -1946,14 +1946,15 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                 ,d => $local_ip
                 ,dport => $local_port
                 ,j => $jump
-        );
+        ) if !$>;
         $self->_log_iptable(
             iptables => [
                     $remote_ip2
                     , $local_ip, 'filter', $IPTABLES_CHAIN, $jump
                     ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port}
             ]
-            , user => $user,remote_ip => $local_ip);
+            , user => $user,remote_ip => $local_ip
+        );
     }
 }
 

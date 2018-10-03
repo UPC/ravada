@@ -27,12 +27,19 @@ sub test_create_domain {
 
     my $domain = create_domain($vm);
     my $domain_open = Ravada::Domain->open($domain->id);
-
+    ok($domain_open,"Expecting domain id ".$domain->id);
     is(ref($domain_open),"Ravada::Domain::$vm_type"
         ,"Expecting domain in $vm_type");
 
     my $id_domain = $domain->id;
     like($id_domain,qr/^\d+/);
+
+    my $domain2 = $vm->search_domain($domain->name);
+    ok($domain2);
+
+    is(ref($domain2),"Ravada::Domain::$vm_type"
+        ,"Expecting domain in $vm_type");
+
     $domain->remove(user_admin);
 
     if (defined $id_domain) {

@@ -266,7 +266,8 @@ sub test_remove_domain_already_gone {
     my $domain_b = rvd_back->search_domain($domain->name);
     ok(!$domain_b);
 
-    my $domain_f = rvd_front->search_domain($domain->name);
+    my $domain_f;
+    eval { $domain_f = rvd_front->search_domain($domain->name)};
     ok(!$domain_f,"[$vm_name] Expecting no domain ".$domain->name." in front") or exit;
 }
 

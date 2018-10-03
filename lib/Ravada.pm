@@ -1368,12 +1368,23 @@ sub create_domain {
     my %args = @_;
 
     my $request = $args{request};
-    %args = %{$request->args}   if $request;
-
-    my $start = $args{start};
-    my $id_base = $args{id_base};
+    if ($request) {
+        my %args_r = %{$request->args};
+        delete $args_r{'at'};
+        for my $field (keys %args_r) {
+            confess "Error: Argument $field different in request "
+                if $args{$field} && $args{$field} ne $args_r{$field};
+            $args{$field} = $args_r{$field};
+        }
+    }
     my $vm_name = delete $args{vm};
-    my $id_owner = $args{id_owner};
+
+    my $start = delete $args{start};
+    my $id_base = $args{id_base};
+    my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
+
+    confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
     my $vm;
     if ($vm_name) {
@@ -1403,7 +1414,6 @@ sub create_domain {
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
     my $domain;
-    delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
 
     my $error = $@;
@@ -1433,10 +1443,11 @@ sub create_domain {
 }
 
 sub _check_args($args,@) {
+    my %args_check = %$args;
     for my $field (@_) {
-        delete $args->{$field};
+        delete $args_check{$field};
     }
-    confess "ERROR: Unknown arguments ".Dumper($args) if keys %$args;
+    confess "ERROR: Unknown arguments ".Dumper(\%args_check) if keys %args_check;
     lock_hash(%$args);
 }
 
@@ -1933,7 +1944,6 @@ sub _kill_stale_process($self) {
     );
     $sth->execute(time - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
-        next if $command eq 'refresh_vms' && time - $start_time < 120;
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";

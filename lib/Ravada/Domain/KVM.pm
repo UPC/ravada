@@ -196,6 +196,7 @@ Cleanup operations executed before removing this domain
 
 sub pre_remove_domain {
     my $self = shift;
+    return if $self->is_removed;
     $self->xml_description();
     $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
 }
@@ -261,9 +262,6 @@ sub remove {
 #            ." , I will try again later : $@" if $@;
 
     $self->_post_remove_base_domain() if $self->is_base();
-
-    eval { $self->domain->undefine()    if $self->domain };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
 
 }
 

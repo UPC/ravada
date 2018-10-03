@@ -109,6 +109,7 @@ sub create_domain {
         );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
+        $domain->_store( is_active => 0 );
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
@@ -181,7 +182,7 @@ sub _list_domains_remote($self, %args) {
 }
 
 sub list_domains($self, %args) {
-    return $self->_list_domains_local(%args) if $self->host eq 'localhost';
+    return $self->_list_domains_local(%args) if $self->is_local();
     return $self->_list_domains_remote(%args);
 }
 
