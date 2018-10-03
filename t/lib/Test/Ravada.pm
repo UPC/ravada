@@ -329,10 +329,11 @@ sub _remove_old_domains_vm {
 sub _remove_old_domains_void {
     my $vm = shift;
     return _remove_old_domains_void_remote($vm) if !$vm->is_local;
+    my $base_name = base_domain_name();
 
     opendir my $dir, $vm->dir_img or return;
     while ( my $file = readdir($dir) ) {
-        next if $file !~ /^tst_/;
+        next if $file !~ /^$base_name/;
         my $path = $vm->dir_img."/".$file;
         next if ! -f $path
             || $path !~ m{\.(yml|qcow|img)$};
@@ -346,9 +347,11 @@ sub _remove_old_domains_void_remote($vm) {
     eval { $vm->connect };
     warn $@ if $@;
     return if !$vm->_do_is_active;
-    $vm->run_command("rm -f ".$vm->dir_img."/*yml "
-                    .$vm->dir_img."/*qcow "
-                    .$vm->dir_img."/*img"
+
+    my $base_name = base_domain_name();
+    $vm->run_command("rm -f ".$vm->dir_img."/$base_name*yml "
+                    .$vm->dir_img."/$base_name*qcow "
+                    .$vm->dir_img."/$base_name*img"
     );
 }
 
