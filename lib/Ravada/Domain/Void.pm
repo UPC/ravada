@@ -149,15 +149,11 @@ sub _store_remote($self, $var, $value) {
     my $data = $self->_load_remote();
     $data->{$var} = $value;
 
-<<<<<<< HEAD
+    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.lock: $!";
     $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
-||||||| parent of 7d6f140e... test(backend): fixed dir for mock VMs
-    $self->_vm->run_command("mkdir -p $DIR_TMP");
-=======
-    $self->_vm->run_command("mkdir -p ".$self->_config_dir());
->>>>>>> 7d6f140e... test(backend): fixed dir for mock VMs
     $self->_vm->write_file($disk, Dump($data));
     _unlock($lock);
+    unlink("$disk.lock");
     return $self->_value($var);
 }
 
@@ -528,13 +524,6 @@ sub clean_swap_volumes {
     }
 }
 
-<<<<<<< HEAD
-||||||| parent of c50798d2... refactor(test): get data from remote
-
-sub can_hibernate { return 1};
-=======
-
->>>>>>> c50798d2... refactor(test): get data from remote
 sub hybernate {
     my $self = shift;
     $self->_store(is_hibernated => 1);

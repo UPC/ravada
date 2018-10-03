@@ -1370,6 +1370,7 @@ sub create_domain {
     my $request = $args{request};
     if ($request) {
         my %args_r = %{$request->args};
+        delete $args_r{'at'};
         for my $field (keys %args_r) {
             confess "Error: Argument $field different in request "
                 if $args{$field} && $args{$field} ne $args_r{$field};
@@ -1377,13 +1378,11 @@ sub create_domain {
         }
     }
     my $vm_name = delete $args{vm};
-    my @create_args = (%args);
 
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
     my $start = $args{start};
     my $id_base = $args{id_base};
-    my $vm_name = delete $args{vm};
-    my $id_owner = $args{id_owner};
+    my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -1407,7 +1406,6 @@ sub create_domain {
 
     $request->status("creating")    if $request;
     my $domain;
-    delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
 
     my $error = $@;
@@ -1438,10 +1436,11 @@ sub create_domain {
 }
 
 sub _check_args($args,@) {
+    my %args_check = %$args;
     for my $field (@_) {
-        delete $args->{$field};
+        delete $args_check{$field};
     }
-    confess "ERROR: Unknown arguments ".Dumper($args) if keys %$args;
+    confess "ERROR: Unknown arguments ".Dumper(\%args_check) if keys %args_check;
     lock_hash(%$args);
 }
 
