@@ -331,7 +331,6 @@
           $scope.getReqs= function() {
             $http.get('/requests.json').then(function(response) {
                 $scope.requests=response.data;
-                $scope.getSingleMachine();
             });
           };
           $scope.getReqs();
