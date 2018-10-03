@@ -252,8 +252,8 @@ sub _update_isos {
 
         }
         ,mint19_64 => {
-            name => 'Linux Mint 19 Mate 64 bits'
-    ,description => 'Linux Mint Mate 19 64bits'
+            name => 'Mint 19 Mate 64 bits'
+    ,description => 'Mint Tara 19 with Mate Desktop 64 bits'
            ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
@@ -264,8 +264,8 @@ sub _update_isos {
             ,min_disk_size => '15'
         }
         ,mint19_32 => {
-            name => 'Linux Mint 19 Mate 32 bits'
-    ,description => 'Linux Mint Mate 19 32bits'
+            name => 'Mint 19 Mate 32 bits'
+    ,description => 'Mint Tara 19 with Mate Desktop 32 bits'
            ,arch => 'i386'
             ,xml => 'mint19-i386.xml'
      ,xml_volume => 'mint19_32-volume.xml'
@@ -276,28 +276,28 @@ sub _update_isos {
             ,min_disk_size => '15'
         }
         ,alpine381_64 => {
-            name => 'Linux Alpine 3.8.1 64 bits'
-    ,description => 'Linux Alpine 3.8.1 64 bits'
+            name => 'Alpine 3.8 64 bits'
+    ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
            ,arch => 'amd64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
-        ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
+        ,file_re => 'alpine-standard-3.8.\d+-x86_64.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
-            ,min_disk_size => '10'
+            ,min_disk_size => '1'
         }
         ,alpine381_32 => {
-            name => 'Linux Alpine 3.8.1 32 bits'
-    ,description => 'Linux Alpine 3.8.1 32 bits'
+            name => 'Alpine 3.8 32 bits'
+    ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
            ,arch => 'i386'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
-        ,file_re => 'alpine-standard-3.8.1-x86.iso'
+        ,file_re => 'alpine-standard-3.8.\d+-x86.iso'
         ,md5_url => ''
             ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
-            ,min_disk_size => '10'
+            ,min_disk_size => '1'
         }
         ,fedora => {
             name => 'Fedora 25'
