@@ -252,8 +252,8 @@ sub _update_isos {
 
         }
         ,mint19_64 => {
-            name => 'Linux Mint 19 Mate 64 bits'
-    ,description => 'Linux Mint Mate 19 64bits'
+            name => 'Mint 19 Mate 64 bits'
+    ,description => 'Mint Tara 19 with Mate Desktop 64 bits'
            ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
@@ -263,8 +263,8 @@ sub _update_isos {
             ,min_disk_size => '15'
         }
         ,mint19_32 => {
-            name => 'Linux Mint 19 Mate 32 bits'
-    ,description => 'Linux Mint Mate 19 32bits'
+            name => 'Mint 19 Mate 32 bits'
+    ,description => 'Mint Tara 19 with Mate Desktop 32 bits'
            ,arch => 'i386'
             ,xml => 'mint19-i386.xml'
      ,xml_volume => 'mint19_32-volume.xml'
@@ -274,25 +274,25 @@ sub _update_isos {
             ,min_disk_size => '15'
         }
         ,alpine381_64 => {
-            name => 'Linux Alpine 3.8.1 64 bits'
-    ,description => 'Linux Alpine 3.8.1 64 bits'
+            name => 'Alpine 3.8 64 bits'
+    ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
            ,arch => 'amd64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
-        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
+        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
             ,min_disk_size => '10'
         }
         ,alpine381_32 => {
-            name => 'Linux Alpine 3.8.1 32 bits'
-    ,description => 'Linux Alpine 3.8.1 32 bits'
+            name => 'Alpine 3.8 32 bits'
+    ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
            ,arch => 'i386'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
-        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
+        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '10'
         }
         ,fedora => {
@@ -1444,10 +1444,19 @@ sub create_domain {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
+    my $base;
     if ($id_base) {
-        my $base = Ravada::Domain->open($id_base)
+        $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    $request->status("creating machine")    if $request;
+    if ( $base && $base->volatile_clones
+                                    || $user->is_temporary ) {
+        $vm = $vm->balance_vm($base);
+        $request->status("creating machine on ".$vm->name);
     }
 
     confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
@@ -1457,7 +1466,6 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    $request->status("creating")    if $request;
     my $domain;
     delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
@@ -1474,7 +1482,6 @@ sub create_domain {
     if (!$error && $start) {
         $request->status("starting") if $request;
         eval {
-            my $user = Ravada::Auth::SQL->search_by_id($id_owner);
             my $remote_ip;
             $remote_ip = $request->defined_arg('remote_ip') if $request;
             $domain->start(
@@ -2199,7 +2206,7 @@ sub _cmd_create{
     my $self = shift;
     my $request = shift;
 
-    $request->status('creating domain');
+    $request->status('creating machine');
     warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
 

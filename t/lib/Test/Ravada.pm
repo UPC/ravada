@@ -378,14 +378,17 @@ sub _remove_old_domains_kvm {
         next if $domain->get_name !~ /^$base_name/;
         my $domain_name = $domain->get_name;
         eval { 
-            $domain->shutdown() if $domain->is_active;
-            sleep 1; 
-            eval { $domain->destroy() if $domain->is_active };
-            warn $@ if $@;
-        }
-            if $domain->is_active;
-        warn "WARNING: error $@ trying to shutdown ".$domain_name
-            if $@ && $@ !~ /error code: 42,/;
+            $domain->shutdown();
+            sleep 1 if $domain->is_active;
+        };
+        warn "WARNING: error $@ trying to shutdown ".$domain_name." on ".$vm->name
+            if $@ && $@ !~ /error code: (42|55),/;
+
+        eval { $domain->destroy() if $domain->is_active };
+        warn $@ if $@;
+
+        warn "WARNING: error $@ trying to shutdown ".$domain_name." on ".$vm->name
+            if $@ && $@ !~ /error code: (42|55),/;
 
         eval {
             $domain->managed_save_remove()
