@@ -1379,7 +1379,7 @@ sub create_domain {
     }
     my $vm_name = delete $args{vm};
 
-    my $start = $args{start};
+    my $start = delete $args{start};
     my $id_base = $args{id_base};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
     _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));

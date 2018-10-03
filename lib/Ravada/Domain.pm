@@ -1540,7 +1540,6 @@ sub _copy_clone($self, %args) {
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
-        ,_vm => $self->_vm
         ,@copy_arg
     );
     my @volumes = $self->list_volumes_target;
