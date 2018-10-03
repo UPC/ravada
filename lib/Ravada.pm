@@ -259,8 +259,7 @@ sub _update_isos {
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
         ,file_re => 'linuxmint-19-mate-64bit-v2.iso'
-        ,md5_url => ''
-            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+        ,sha256_url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/sha256sum.txt'
             ,min_disk_size => '15'
         }
         ,mint19_32 => {
@@ -271,8 +270,7 @@ sub _update_isos {
      ,xml_volume => 'mint19_32-volume.xml'
             ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
         ,file_re => 'linuxmint-19-mate-32bit.iso'
-        ,md5_url => ''
-            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+     ,sha256_url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/sha256sum.txt'
             ,min_disk_size => '15'
         }
         ,alpine381_64 => {
@@ -283,8 +281,7 @@ sub _update_isos {
      ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
-        ,md5_url => ''
-            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
             ,min_disk_size => '10'
         }
         ,alpine381_32 => {
@@ -295,8 +292,7 @@ sub _update_isos {
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
-        ,md5_url => ''
-            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
+        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '10'
         }
         ,fedora => {
