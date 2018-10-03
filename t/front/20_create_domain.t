@@ -73,7 +73,6 @@ sub test_remove_domain {
 
     $domain_f = undef;
     eval { $domain_f = $RVD_FRONT->search_domain($name) };
-    like($@,qr(Unknown domain name));
     ok(!$domain_f,"Expecting no domain $name in front ".Dumper($domain_f));
 
     my $list_domains = $RVD_FRONT->list_domains;
