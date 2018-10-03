@@ -268,7 +268,6 @@ sub test_remove_domain_already_gone {
 
     my $domain_f;
     eval { $domain_f = rvd_front->search_domain($domain->name)};
-    like($@, qr'Unknown domain');
     ok(!$domain_f,"[$vm_name] Expecting no domain ".$domain->name." in front") or exit;
 }
 
