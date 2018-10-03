@@ -9,5 +9,5 @@
 <li>Kimia Mirehbar</li>
 <li>Laura Figuerola</li>
 </ul>
-Thanks to:
+<%=l 'Thanks to:' %>
 <ul><li>Jorge Mata</li></ul>

@@ -13,6 +13,7 @@ use Proc::PID::File;
 use Ravada;
 use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
+use Ravada::Utils;
 
 $|=1;
 
@@ -248,7 +249,7 @@ sub make_admin {
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
-    $Ravada::USER_DAEMON->make_admin($user->id);
+    Ravada::Utils::user_daemon()->make_admin($user->id);
     print "USER $login granted admin permissions\n";
 }
 
@@ -259,7 +260,7 @@ sub remove_admin {
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
-    $Ravada::USER_DAEMON->remove_admin($user->id);
+    Ravada::Utils::user_daemon()->remove_admin($user->id);
     print "USER $login removed admin permissions, granted normal user permissions.\n";
 }
 
@@ -381,7 +382,7 @@ sub hibernate {
                 next if _verify_connection($domain);
             }
             if ($domain->can_hibernate) {
-                $domain->hibernate( $Ravada::USER_DAEMON);
+                $domain->hibernate( Ravada::Utils::user_daemon() );
                 $down++;
             } else {
                 warn "WARNING: Virtual machine ".$domain->name
@@ -411,7 +412,7 @@ sub start_domain {
                     ." is already up.\n";
                 next;
             }
-            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            eval { $domain->start(user => Ravada::Utils::user_daemon() ) };
             if ($@) {
                 warn $@;
                 next;
@@ -448,7 +449,7 @@ sub shutdown_domain {
             }
             if ($domain->is_hibernated) {
                 print "Starting ".$domain->name."\n";
-                eval { $domain->start(user => $Ravada::USER_DAEMON) };
+                eval { $domain->start(user => Ravada::Utils::user_daemon()) };
                 warn $@ if $@;
                 sleep 5 if !$@;
 
@@ -460,7 +461,7 @@ sub shutdown_domain {
             }
             print "Shutting down ".$domain->name.".\n";
             eval {
-                $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 300);
+                $domain->shutdown(user => Ravada::Utils::user_daemon(), timeout => 300);
                 $down++;
             };
             warn $@ if $@;

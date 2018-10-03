@@ -26,9 +26,9 @@
                 >
                 <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated || new_name_invalid || message_rename"
                              ng-click="rename(showmachine.id, showmachine.name)">
-                                Rename
+                                <%=l 'Rename' %>
                     </button>
-                    <input type="reset" value="Cancel" onclick = "location='/admin/machines'"/>
+                    <input type="reset" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
                     <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">

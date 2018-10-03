@@ -259,8 +259,6 @@ Adds a new volume to the domain
 sub add_volume {
     my $self = shift;
     confess "Wrong arguments " if scalar@_ % 1;
-    confess "ERROR: add_volume on for local"
-        if !$self->is_local();
 
     my %args = @_;
 
@@ -271,8 +269,6 @@ sub add_volume {
 
     confess "Volume path must be absolute , it is '$args{path}'"
         if $args{path} !~ m{^/};
-
-
 
     my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap target));
 
@@ -290,20 +286,12 @@ sub add_volume {
     my $data = $self->_load();
     $args{target} = _new_target($data) if !$args{target};
 
-    $data->{device}->{$args{name}} = \%args;
-    my $disk = $self->_config_file;
-    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.log: $!";
-    _lock($lock);
-    eval { DumpFile($self->_config_file, $data) };
-    _unlock($lock);
-    chomp $@;
-    die "readonly=".$self->readonly." ".$@ if $@;
+    my $device = $data->{device};
+    $device->{$args{name}} = \%args;
 
-    return if -e $args{path};
+    $self->_store(device => $device);
 
-    open my $out,'>>',$args{path} or die "$! $args{path}";
-    print $out Dumper($data->{device}->{$args{name}});
-    close $out;
+    $self->_vm->write_file($args{path}, Dumper($data->{device}->{$args{name}}));
 
 }
 
@@ -538,10 +526,11 @@ sub hibernate($self, $user) {
 
 sub type { 'Void' }
 
-sub migrate($self, $node) {
+sub migrate($self, $node, $request=undef) {
     $self->rsync(
            node => $node
         , files => [$self->_config_file ]
+       ,request => $request
     );
     $self->rsync($node);
 

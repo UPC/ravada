@@ -10,6 +10,7 @@
 <div class="form-group">
 
 has clones = <%= $domain->has_clones %><br/>
+    {{nodes}}
     <form class="form-inline" action="<%= $action %>" method="post">
 %   for my $node (@$nodes) {
 %       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
@@ -24,6 +25,9 @@ has clones = <%= $domain->has_clones %><br/>
 %               }
 %               if ( !$node->{is_active} ) {
 %                   $node_disabled_msg = "Node inactive";
+%               }
+%               if ( !$node->{enabled} ) {
+%                   $node_disabled_msg = "Node disabled";
 %               }
 %               my $node_disabled = 0;
 %               $node_disabled = 1 if $node_disabled_msg;
@@ -41,7 +45,6 @@ has clones = <%= $domain->has_clones %><br/>
             <div class="col-md-5">
             node disabled = <%= $node_disabled_msg %>
             <br/>
-            <pre><%= Dumper($node) %></pre>
             </div>
         </div>
 %   }
