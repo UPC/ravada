@@ -49,8 +49,10 @@
                 <li><b>Display Port :</b> 5900</li>
             </ul>
             <h3>Machine Information</h3>
-            <ul ng-show="domain.ip">
-                <li><b>Internal IP:</b> {{domain.ip}}</li>
+            <ul>
+                <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
+                    <span ng-hide="domain.ip"><i>waiting for network to come up</i></span>
+                </li>
                 <li><b>Max Memory:</b> {{domain.max_mem}}</li>
                 <li><b>Memory:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
