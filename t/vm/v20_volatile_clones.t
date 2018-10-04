@@ -137,7 +137,7 @@ sub test_enforce_limits {
     is($clone2->is_active, 1);
     is($clone2->is_volatile, 1);
 
-    my $req = Ravada::Request->enforce_limits( timeout => 1 );
+    my $req = Ravada::Request->enforce_limits( timeout => 1, _force => 1 );
     eval { rvd_back->_enforce_limits_active($req) };
     is(''.$@,'');
     for ( 1 .. 10 ){

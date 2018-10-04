@@ -158,7 +158,7 @@ sub test_volumes_in_two_pools {
     my $pool_name2 = create_pool($vm_name);
     $vm->default_storage_pool_name($pool_name2);
 
-    $domain->add_volume(name => 'volb' , size => 1024*1024 );
+    $domain->add_volume(name => $name.'_volb' , size => 1024*1024 );
 
     my @volumes = $domain->list_volumes();
     is(scalar @volumes , 2);
@@ -181,7 +181,6 @@ sub test_volumes_in_two_pools {
     for my $file (@volumes) {
         ok(!-e $file,"Expecting volume $file doesn't exist, got : ".(-e $file or 0));
     }
-
 }
 
 sub test_default_pool {
@@ -224,7 +223,7 @@ sub test_base_pool {
             ok(scalar ($domain->list_files_base));
             for my $volume ($domain->list_files_base) {
                 my ($path ) = $volume =~ m{(.*)/.*};
-                like($path, qr{$dir_pool2});
+                like($path, qr{$dir_pool2}) or exit;
             }
 
             my $clone = $domain->clone(
@@ -375,6 +374,7 @@ sub test_default_pool_base {
         default => '/var/lib/libvirt'
         ,$pool_name => $vm->_storage_path($pool_name)
     );
+    $vm->base_storage_pool('');
     for my $name1 (keys %pool ) {
         my $dir_pool = $pool{$name1};
         $vm->default_storage_pool_name($name1);
@@ -393,7 +393,7 @@ sub test_default_pool_base {
             ok(scalar ($domain->list_files_base));
             for my $volume ($domain->list_files_base) {
                 my ($path ) = $volume =~ m{(.*)/.*};
-                like($path, qr{$dir_pool2});
+                like($path, qr{$dir_pool2}) or die Dumper($vm->{_data});
             }
 
             $domain->remove_base(user_admin);
