@@ -282,7 +282,7 @@ sub _update_isos {
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
-            ,min_disk_size => '10'
+            ,min_disk_size => '1'
         }
         ,alpine381_32 => {
             name => 'Alpine 3.8 32 bits'
@@ -293,7 +293,7 @@ sub _update_isos {
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
-            ,min_disk_size => '10'
+            ,min_disk_size => '1'
         }
         ,fedora => {
             name => 'Fedora 25'
