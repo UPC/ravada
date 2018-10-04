@@ -141,13 +141,13 @@ sub search_user {
     my $retry = (delete $args{retry} or 0);
     my $field = (delete $args{field} or 'uid');
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
+    my $base = (delete $args{base} or _dc_base());
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
 
     $username = escape_filter_value($username);
 
-    my $base = _dc_base();
     my $mesg = $ldap->search(      # Search for the user
     base   => $base,
     scope  => 'sub',
@@ -309,15 +309,27 @@ sub add_to_group {
 
 sub login($self) {
     my $user_ok;
-    $user_ok = $self->_login_bind()
-        if !exists $$CONFIG->{ldap}->{auth}
-            || !$$CONFIG->{ldap}->{auth}
-            || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
-    $user_ok = $self->_login_match()    if !$user_ok;
+    my $allowed;
 
-    $self->_check_user_profile($self->name)   if $user_ok;
-    $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
-    return $user_ok;
+    if ($$CONFIG->{ldap}->{ravada_posix_group}) {
+        $allowed = search_user (name => $self->name, field => 'memberUid', base => $$CONFIG->{ldap}->{ravada_posix_group}) || 0;
+    } else {
+        $allowed = 1;
+    }
+
+    if ($allowed) {
+        $user_ok = $self->_login_bind()
+            if !exists $$CONFIG->{ldap}->{auth}
+                || !$$CONFIG->{ldap}->{auth}
+                || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
+        $user_ok = $self->_login_match()    if !$user_ok;
+
+        $self->_check_user_profile($self->name)   if $user_ok;
+        $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
+        return $user_ok;
+    } else {
+        return 0;
+    }
 }
 
 sub _login_bind {
