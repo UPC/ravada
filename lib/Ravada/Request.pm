@@ -82,6 +82,7 @@ our %VALID_ARG = (
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,refresh_vms => { }
     ,enforce_limits => { timeout => 2, _force => 2 }
+    ,refresh_machine => { id_domain => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -1346,6 +1347,29 @@ sub enforce_limits {
     return $req;
 }
 
+sub refresh_machine {
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('refresh_machine', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    my $id_domain = $args->{id_domain};
+    my $id_requested = _requested('refresh_machine',id_domain => $id_domain);
+    return Ravada::Request->open($id_requested) if $id_requested;
+
+    my $req = _new_request($self
+        , command => 'refresh_machine'
+        , args => $args
+    );
+
+    return $req;
+
+}
+
 =head2 done_recently
 
 Returns wether this command has been requested successfully recently.
@@ -1381,14 +1405,20 @@ sub done_recently($self, $seconds=60,$command=undef) {
     return $id;
 }
 
-sub _requested($command) {
+sub _requested($command, %fields) {
     _init_connector();
-    my $sth = $$CONNECTOR->dbh->prepare(
+    my $query =
         "SELECT id FROM requests"
         ."  WHERE command = ? "
         ."     AND status <> 'done' "
-    );
-    $sth->execute($command);
+    ;
+    my @values = ( $command );
+    for my $key( keys %fields ) {
+        $query.= " AND $key = ?";
+        push @values,($fields{$key});
+    }
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(@values);
     my ($id) = $sth->fetchrow;
     return $id;
 

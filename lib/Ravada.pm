@@ -2556,6 +2556,14 @@ sub _cmd_refresh_storage($self, $request=undef) {
     $vm->refresh_storage();
 }
 
+sub _cmd_refresh_machine($self, $request) {
+
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain);
+    $domain->get_info();
+
+}
+
 sub _cmd_change_owner($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
@@ -2794,6 +2802,7 @@ sub _req_method {
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,refresh_storage => \&_cmd_refresh_storage
+,refresh_machine => \&_cmd_refresh_machine
 ,refresh_vms => \&_cmd_refresh_vms
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
