@@ -114,13 +114,16 @@ sub test_domain_info {
     $domain_b->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain_b->is_active;
     $domain_b->open_iptables(user => user_admin, remote_ip => '127.0.0.1');
     for ( 1 .. 30 ) {
-        diag($domain_b->ip);
         last if $domain_b->ip;
         sleep 1;
     }
     $domain_b->get_info;
     ok(exists $domain->info(user_admin)->{ip}
         ,"Expecting ip field in domain info ".Dumper($domain->info(user_admin))) or exit;
+
+    $domain_b->shutdown_now(user_admin);
+
+    is($domain->info(user_admin)->{ip}, undef,"Expecting no IP after shutdown");
 }
 
 ####################################################################
@@ -210,6 +213,7 @@ for my $vm_name ('Void','KVM','LXC') {
     test_domain_info($domain);
 
     test_remove_domain($name);
+
     test_domain_name($vm_name);
 }
 }
