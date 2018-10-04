@@ -15,6 +15,7 @@ my $RAVADA = Ravada->new(connector => $test->connector
     , warn_error => 0
     , config => 't/etc/ravada.conf'
 );
+$RAVADA->_install();
 
 Ravada::Auth::SQL::add_user(name => 'test',password => $$);
 

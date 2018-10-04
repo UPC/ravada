@@ -11,6 +11,7 @@ use_ok('Ravada::Auth::SQL');
 my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $ravada = Ravada->new(connector => $test->connector, config => 't/etc/ravada.conf');
+$ravada->_install();
 
 Ravada::Auth::SQL::add_user(name => 'root', password => 'root', is_admin => 1);
 
