@@ -9,7 +9,7 @@ Welcome to Ravada VDI documentation
 ===================================
 
 The chances are you're here because you've been searching for free Virtual Desktop Infraestructure (VDI) documentation.
-Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you 
+Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you
 do want to start your VDI project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
 
 `Ravada VDI`_ is an open-source project that allows users to connect to a virtual desktop. So it is a VDI broker.
@@ -40,10 +40,11 @@ Our code uses the `AGPL`_ license and it is `available on GitHub`_.
 Ravada VDI documentation
 ------------------------
 
-The main documentation for the site is divided into two main sections:
+The main documentation for the site is divided into three main sections:
 
 * :ref:`user-docs`
 * :ref:`feature-docs`
+* :ref:`guest-docs`
 
 Do you feel like giving us a hand? Here you have all the information you need as *a developer*:
 
@@ -56,7 +57,10 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
 
    docs/INSTALL
+   docs/INSTALL_Fedora
+   docs/INSTALL_Script
    docs/production
+   docs/recomendations
    docs/INSTALL_devel
    docs/Ubuntu_Installation
    docs/add_kvm_storage_pool
@@ -64,8 +68,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/convert_from_virtualbox
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
-   docs/resize_hard_drive
-   docs/resize_hard_drive_linux_machine
    docs/ldap_local
    docs/new_kvm_template
    docs/new_iso_image
@@ -75,9 +77,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/update
    docs/windows_clients
    docs/change_windows_driver_to_virtio
-   docs/config_console
    docs/migrate_manual
    docs/Kiosk_mode
+   docs/volatile
 
 .. _feature-docs:
 
@@ -89,6 +91,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/custom
    docs/custom_login
    docs/custom_footer
+   docs/Disable_spice_password
    docs/advanced_settings
    docs/new_documentation
    docs/auth_ldap
@@ -98,6 +101,20 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/translations
    docs/monitoring
    docs/guide
+   docs/local_resources
+
+.. _guest-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Guest VM section
+   
+   docs/resize_hard_drive
+   docs/resize_hard_drive_linux_machine
+   docs/config_console
+   docs/reduce-size-image
+   docs/qemu_ga
+
 
 .. _about-docs:
 
@@ -119,4 +136,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/release
    devel-docs/run
    devel-docs/test
+   devel-docs/create_test
+   devel-docs/documentation
    docs/spice_tls

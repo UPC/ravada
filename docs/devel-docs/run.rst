@@ -20,3 +20,24 @@ restarted manually when the code is modified:
 ::
 
     ~/src/ravada$ sudo ./bin/rvd_back.pl --debug
+
+Stop system Ravada
+==================
+
+You may have another copy of Ravada if you installed the package release.
+**rvd_back** will complain if it finds there is another daemon running.
+Stop it with:
+
+::
+
+    $ sudo systemctl stop rvd_back; sudo systemctl stop rvd_front
+
+Keep the library up to date
+===========================
+If you change of branch you may have old libraries running, clean it up from
+the ravada source directory with:
+
+::
+
+    ~/src/ravada$ sudo make clean
+

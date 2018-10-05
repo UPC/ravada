@@ -1,5 +1,5 @@
-Install Ravada
-==============
+Install Ravada on Fedora
+========================
 
 Requirements
 ------------
@@ -7,10 +7,7 @@ Requirements
 OS
 --
 
-Ravada works in any Linux distribution but we only support the package for `Ubuntu <https://www.ubuntu.com/download/>`_ server
-and `Fedora <https://getfedora.org/es/>`_ server.
-
-Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
+Ravada works in any Linux distribution.
 
 Hardware
 --------
@@ -36,55 +33,30 @@ Install Ravada
 Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
 if you are only upgrading Ravada from a previous version already installed.
 
-Ubuntu
+Fedora and EPEL7
 ------
 
-.. note:: We only provide support for Ubuntu 18.04 LTS (bionic).
-
-We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__.
-
-Install *libmojolicious-plugin-renderfile-perl* package:
+You can install ravada using the 'dnf' package manager.
 
 ::
 
-    $ sudo apt-get install libmojolicious-plugin-renderfile-perl
-
-Then install the ravada package, it will show some errors, it is ok, keep reading.
-
-::
-
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.17_all.deb
-    $ sudo dpkg -i ravada_0.2.17_all.deb
-
-The last command will show a warning about missing dependencies. Install
-them running:
-
-::
-
-    $ sudo apt-get update
-    $ sudo apt-get -f install
-
-Mysql Database
---------------
+    $ sudo dnf install ravada
 
 MySQL server
 ~~~~~~~~~~~~
-.. Warning::  MySql required minimum version 5.6
-
-It is required a MySQL server, it can be installed in another host or in
-the same one as the ravada package.
+It is required a MySQL server, in Fedora we use MariaDB server. It can be
+installed in another host or in the same as the ravada package.
 
 ::
 
-    $ sudo apt-get install mysql-server
-    
-After completion of mysql installation, run command:
+    $ sudo dnf install mariadb mariadb-server
+
+And don't forget to enable and start the server process:
 
 ::
 
-    $ sudo mysql_secure_installation
-
+    $ sudo systemctl enable --now mariadb.service
+    $ sudo systemctl start mariadb.service
 
 MySQL database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,7 +65,7 @@ It is required a database for internal use. In this examples we call it *ravada*
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
 In this stage the system wants you to set a password for the sql connection.
 
-.. Warning:: When installing MySQL you wont be asked for a password, you can set a password for the root user in MySQL via *mysql_secure_installation* or type your user's password when it ask's you for a password.
+.. Warning:: If installing ravada on Ubuntu 18 or newer you should enter your user's password instead of mysql's root password.
 
 Create the database:
 
@@ -117,7 +89,7 @@ example.
 
 ::
 
-    $ sudo vi /etc/ravada.conf
+    $ sudoedit /etc/ravada.conf
     db:
       user: rvd_user
       password: changeme
@@ -132,6 +104,33 @@ When asked if this user is admin answer *yes*.
 ::
 
     $ sudo /usr/sbin/rvd_back --add-user user.name
+
+Firewall (Optional)
+-------------------
+
+The server must be able to send *DHCP* packets to its own virtual interface.
+
+KVM should be using a virtual interface for the NAT domnains. Look what is the address range and add it to your *iptables* configuration.
+
+First we try to find out what is the new internal network:
+
+::
+
+    $  sudo route -n
+    ...
+    192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
+
+So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
+
+::
+
+    sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
+To confirm that the configuration was updated, check it with:
+
+::
+
+    sudo iptables -S
 
 Client
 ------

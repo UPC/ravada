@@ -21,6 +21,23 @@ Install the *deb* package.
 
     $ sudo dpkg -i <deb file>
 
+On some upgrades may be required to install some dependencies. You will see
+because the packaging system will warn about it:
+
+
+::
+
+    dpkg: dependency problems prevent configuration of ravada:
+      ravada depends on libdatetime-perl; however:
+      Package libdatetime-perl is not installed.
+
+If so, install those dependencies automatically running:
+
+::
+
+    $ sudo apt-get -f install
+
+
 Step 3 
 ~~~~~~
 

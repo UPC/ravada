@@ -30,4 +30,4 @@ The ravada backend script allows creating users in the LDAP
 
 ::
 
-    $ sudo ./bin/ldap_admin.pl --add-user-ldap jimmy.mcnulty
+    $ sudo ./bin/rvd_back.pl --add-user-ldap jimmy.mcnulty

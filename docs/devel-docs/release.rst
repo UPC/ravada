@@ -25,6 +25,8 @@ Draft
 Draft the release
 ~~~~~~~~~~~~~~~~~
 
+This step should be done at the very beginning of planning. If you didn't do it, skip it now.
+
 At code -> releases draft a new release
 
 -  tag version : v0.2.2

@@ -36,7 +36,13 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ a
 
 ::
 
-    $ sudo apt-get install perl libmojolicious-perl mysql-common libauthen-passphrase-perl libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl qemu-kvm
+    $ sudo apt-get install perl libmojolicious-perl mysql-common libauthen-passphrase-perl \
+    libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
+    libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
+    libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl \
+    libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl \
+    wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl \
+    debconf adduser libdigest-sha-perl qemu-kvm
     
 In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__ and install it this way:
@@ -145,3 +151,47 @@ Run each one of these commands in a separate terminal
     $ sudo ./bin/rvd_back.pl
 
 Now you must be able to reach ravada at the location http://your.ip:3000/
+
+If you wish to create a script to automatize the start and shutdown of the ravada server, you can use these two bash scripts:
+
+start_ravada.sh:
+
+::
+
+    #!/bin/bash
+    #script to initialize ravada server
+    
+    display_usage()
+    {
+	echo "./start_ravada 1 (messages not prompting to terminal)
+	echo "./start_ravada 0 (prompts enables to this terminal)
+    }
+
+    if [ $# -eq 0 ]
+    then
+	display_usage
+    	exit 1
+    else
+	SHOW_MESSAGES=$1
+	if [ $SHOW_MESSAGES -eq 1 ]
+	then
+	    morbo ./rvd_front.pl > /dev/null 2>&1 &
+	    sudo ./bin/rvd_back.pl > /dev/null 2>&1 &
+	else
+	    morbo ./rvd_front.pl &
+	    sudo ./bin/rvd_back.pl &
+	fi
+	echo "Server initialized succesfully."
+    fi
+
+shutdown_ravada.sh:
+
+::
+
+    #!/bin/bash
+    #script to shutdown the ravada server
+
+    sudo kill -15 $(pidof './rvd_front.pl')
+    sudo kill -15 $(pidof -x 'rvd_back.pl')
+    echo "Server closed succesfully"
+    
