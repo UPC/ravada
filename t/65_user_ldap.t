@@ -247,6 +247,7 @@ SKIP: {
         _init_config($file_config, $with_admin);
         my $ravada = Ravada->new(config => $file_config
                         , connector => $test->connector);
+        $ravada->_install();
         my $ldap;
 
         eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
