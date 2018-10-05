@@ -47,6 +47,7 @@ create_domain
     hibernate_domain_internal
     remote_node
     add_ubuntu_minimal_iso
+    create_ldap_user
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -511,6 +512,33 @@ sub create_user {
     };
     die $@ if !$user;
     return $user;
+}
+
+sub create_ldap_user($name, $password) {
+
+    if ( Ravada::Auth::LDAP::search_user($name) ) {
+        diag("Removing $name");
+        Ravada::Auth::LDAP::remove_user($name)  
+    }
+
+    my $user = Ravada::Auth::LDAP::search_user($name);
+    ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
+
+    my $user_db = Ravada::Auth::SQL->new( name => $name);
+    $user_db->remove();
+    # check for the user in the SQL db, he shouldn't be  there
+    #
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users WHERE name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    ok(!$row->{name},"I shouldn't find $name in the SQL db ".Dumper($row));
+
+    eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
+    is($@,'') or return;
+
+    my @user = Ravada::Auth::LDAP::search_user($name);
+    return $user[0];
 }
 
 sub wait_request {
