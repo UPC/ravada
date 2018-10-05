@@ -1041,6 +1041,12 @@ sub info($self, $user) {
     }
     $info->{hardware} = $self->get_controllers();
 
+    my $internal_info = $self->get_info();
+    for (keys(%$internal_info)) {
+        die "Field $_ already in info" if exists $info->{$_};
+        $info->{$_} = $internal_info->{$_};
+    }
+
     return $info;
 }
 
@@ -1617,6 +1623,11 @@ sub _post_shutdown {
         $self->_remove_temporary_machine();
         return;
     }
+    my $info = $self->_data('info');
+    $info = decode_json($info) if $info;
+    $info = {} if !$info;
+    delete $info->{ip};
+    $self->_data(info => encode_json($info));
     # only if not volatile
     my $request;
     $request = $arg{request} if exists $arg{request};
