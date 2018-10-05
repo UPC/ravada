@@ -15,6 +15,7 @@ use_ok('Ravada');
 use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
+my $RAVADA_POSIX_GROUP = "rvd_posix_group";
 
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 init();
@@ -30,6 +31,7 @@ sub test_user_fail {
     
 sub test_user{
     my $name = (shift or 'jimmy.mcnulty');
+    my $with_posix_group = ( shift or 0);
     my $password = 'jameson';
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
@@ -55,9 +57,12 @@ sub test_user{
     push @USERS,($name);
 
     ok(!$@,$@) or return;
+
+    _add_to_posix_group($name);
+
     my $mcnulty;
     eval { $mcnulty = Ravada::Auth::LDAP->new(name => $name,password => $password) };
-    is($@,'');
+    is($@,'', Dumper($Ravada::CONFIG)) or exit;
 
     ok($mcnulty,($@ or "ldap login failed for $name")) or return;
     ok(ref($mcnulty) =~ /Ravada/i,"User must be Ravada::Auth::LDAP , it is '".ref($mcnulty));
@@ -149,6 +154,7 @@ sub test_add_group {
 
 sub test_manage_group {
     my $with_admin = shift;
+    my $with_posix_group = shift;
 
     my $name = $ADMIN_GROUP;
 
@@ -166,7 +172,7 @@ sub test_manage_group {
     ok($group,"Group $name not created") or return;
 
     my $uid = 'ragnar.lothbrok';
-    my $user = test_user($uid);
+    my $user = test_user($uid, $with_posix_group);
 
     my $is_admin;
     eval { $is_admin = $user->is_admin };
@@ -199,6 +205,7 @@ sub test_manage_group {
 
 sub test_user_bind {
     my $file_config = shift;
+    my $with_posix_group = shift;
 
     my $config = LoadFile($file_config);
     $config->{ldap}->{auth} = 'bind';
@@ -209,6 +216,8 @@ sub test_user_bind {
         , connector => connector);
 
     Ravada::Auth::LDAP::init();
+
+    _add_to_posix_group('jimmy.mcnulty') if $with_posix_group;
 
     my $mcnulty;
     eval { $mcnulty = Ravada::Auth::LDAP->new(name => 'jimmy.mcnulty',password => 'jameson') };
@@ -235,8 +244,12 @@ sub _init_config($file_config, $with_admin, $with_posix_group) {
             ,base => "dc=example,dc=com"
             ,admin_group => $ADMIN_GROUP
             ,auth => 'match'
+            ,ravada_posix_group => $RAVADA_POSIX_GROUP
         }
-    };
+        };
+        DumpFile($file_config,$config);
+    }
+    my $config = LoadFile($file_config);
     delete $config->{ldap}->{admin_group}   if !$with_admin;
     if ($with_posix_group) {
         if ( !exists $config->{ldap}->{ravada_posix_group}
@@ -249,6 +262,8 @@ sub _init_config($file_config, $with_admin, $with_posix_group) {
     }
 
     $config->{vm}=['KVM','Void'];
+    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
     my $fly_config = "/var/tmp/$$.config";
     DumpFile($fly_config, $config);
     return $fly_config;
@@ -318,9 +333,9 @@ sub test_posix_group {
 }
 
 SKIP: {
-    my $with_admin = 0;
-    for my $file_config ( "t/etc/ravada_ldap_1.conf"
-                        , "t/etc/ravada_ldap_2.conf") {
+    my $file_config = "t/etc/ravada_ldap.conf";
+    for my $with_posix_group (0,1) {
+    for my $with_admin (0,1) {
 
         my $fly_config = _init_config($file_config, $with_admin, $with_posix_group);
         my $ravada = Ravada->new(config => $fly_config
@@ -347,17 +362,20 @@ SKIP: {
         skip( ($@ or "No LDAP server found"),6) if !$ldap && $@ !~ /Bad credentials/;
 
         ok($ldap) and do {
+
             test_user_fail();
-            test_user();
+            test_user( );
 
             test_add_group();
             test_manage_group($with_admin);
+            test_posix_group($with_posix_group);
 
-            test_user_bind($file_config);
+            test_user_bind($fly_config, $with_posix_group);
 
             remove_users();
         };
-        $with_admin++;
+        unlink($fly_config) if -e $fly_config;
+    }
     }
 };
 
