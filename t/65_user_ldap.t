@@ -315,7 +315,6 @@ sub test_posix_group {
     $mesg = $ldap->delete($group);
     die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
 
->>>>>>> 6cd2432b... test(ldap): fixed ravada posix group test
 }
 
 SKIP: {
