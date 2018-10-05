@@ -264,6 +264,50 @@ sub _update_isos {
             ,min_disk_size => '10'
 
         }
+        ,mint19_64 => {
+            name => 'Mint 19 Mate 64 bits'
+    ,description => 'Mint Tara 19 with Mate Desktop 64 bits'
+           ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+     ,xml_volume => 'xenial64-volume.xml'
+            ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
+        ,file_re => 'linuxmint-19-mate-64bit-v2.iso'
+        ,sha256_url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/sha256sum.txt'
+            ,min_disk_size => '15'
+        }
+        ,mint19_32 => {
+            name => 'Mint 19 Mate 32 bits'
+    ,description => 'Mint Tara 19 with Mate Desktop 32 bits'
+           ,arch => 'i386'
+            ,xml => 'mint19-i386.xml'
+     ,xml_volume => 'mint19_32-volume.xml'
+            ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
+        ,file_re => 'linuxmint-19-mate-32bit.iso'
+     ,sha256_url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/sha256sum.txt'
+            ,min_disk_size => '15'
+        }
+        ,alpine381_64 => {
+            name => 'Alpine 3.8 64 bits'
+    ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
+           ,arch => 'amd64'
+            ,xml => 'alpine-amd64.xml'
+     ,xml_volume => 'alpine381_64-volume.xml'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
+        ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
+        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
+            ,min_disk_size => '1'
+        }
+        ,alpine381_32 => {
+            name => 'Alpine 3.8 32 bits'
+    ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
+           ,arch => 'i386'
+            ,xml => 'alpine-i386.xml'
+     ,xml_volume => 'alpine381_32-volume.xml'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
+        ,file_re => 'alpine-standard-3.8.1-x86.iso'
+        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
+            ,min_disk_size => '1'
+        }
         ,fedora_27 => {
             name => 'Fedora 27'
             ,description => 'RedHat Fedora 27 Workstation 64 bits'
@@ -2315,32 +2359,32 @@ sub _cmd_download {
 sub _cmd_add_hardware {
     my $self = shift;
     my $request = shift;
-    
+
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
     my $number = $request->args('number');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
-    
+
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    
+
     $domain->set_controller($hardware, $number);
 }
 
 sub _cmd_remove_hardware {
     my $self = shift;
     my $request = shift;
-    
+
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
     my $index = $request->args('index');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
-    
+
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    
+
     $domain->remove_controller($hardware, $index);
 }
 
@@ -2493,7 +2537,7 @@ sub _cmd_change_max_memory($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
     my $memory = $request->args('ram');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
     $domain->set_max_mem($memory);
 }
@@ -2502,7 +2546,7 @@ sub _cmd_change_curr_memory($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
     my $memory = $request->args('ram');
-    
+
     my $domain = $self->search_domain_by_id($id_domain);
     $domain->set_memory($memory);
 }
