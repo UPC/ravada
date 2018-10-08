@@ -5,7 +5,7 @@ use Data::Dumper;
 use Test::More;
 
 use lib 't/lib';
-use Test::KVM;
+use Test::Ravada;
 
 my $BACKEND = 'KVM';
 my $CLASS= "Ravada::VM::$BACKEND";

@@ -117,7 +117,7 @@ SKIP: {
         $Ravada::VM::LXC::CMD_LXC_LS = '';
         diag("Testing missing LXC");
 
-        my $ravada2= Ravada->new( connector => $test->connector);
+        my $ravada2= Ravada->new( connector => connector() );
         my $vm2 = $ravada2->search_vm('lxc');
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
     }
