@@ -10,45 +10,47 @@
         <div class="panel-heading">
                 <h2><%=l 'New Node' %></h2>
         </div>
-
-        <form name="new_nodeForm" role="form" method="post" novalidate
-                action="/new_node.html">
-            <div class="form-group row">
-            <label for="vm_type" class="col-lg-3 control-label"><%=l 'Backend' %> <a
-              title="Choose the virtualization type of the Node."><i class="fa fa-info-circle"></i></a></label>
-                <div class="col-lg-3">
-                    <select class= "form-control"
-                    name="vm_type"
-                    ng-model="vm_type"
-                    ng-options="item for item in backends track by item "
-                    required=""
-                    ></select>
+        <div class="panel-body">
+            <form name="new_nodeForm" role="form" method="post" novalidate
+                    action="/new_node.html">
+                <div class="form-group row">
+                <label for="vm_type" class="col-lg-2 control-label"><%=l 'Backend' %> <a
+                  title="Choose the virtualization type of the Node."><i class="fa fa-info-circle"></i></a></label>
+                    <div class="col-lg-3">
+                        <select class= "form-control"
+                        name="vm_type"
+                        ng-model="vm_type"
+                        ng-options="item for item in backends track by item "
+                        required=""
+                        ></select>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group row">
-                <label for="name" class="col-lg-3 control-label"><%=l 'Name' %></label>
-                <input class="col-lg-3" name="name" type="text"
-                    ng-model="name"
-                    ng-change="validate_node_name()"
-                    required
-                    >
-            </div>
-            <div class="form-group row">
-                <label for="hostname" class="col-lg-3 control-label"><%=l 'Address' %></label>
-                <input class="col-lg-3" name="hostname" type="text"
-                ng-model="hostname"
-                required>
-            </div>
+                <div class="form-group row">
+                    <label for="name" class="col-lg-2 control-label"><%=l 'Name' %></label>
+                    <input class="col-lg-13" name="name" type="text"
+                        ng-model="name"
+                        ng-change="validate_node_name()"
+                        required
+                        >
+                    <!-- <small class="form-text text-muted">Name that will be shown in the list</small> -->
+                </div>
+                <div class="form-group row">
+                    <label for="hostname" class="col-lg-2 control-label"><%=l 'Address' %></label>
+                    <input class="col-lg-13" name="hostname" type="text"
+                    ng-model="hostname"
+                    required>
+                    <!--<small class="form-text text-muted">Format: 192.168.0.1/32</small> -->
+                </div>
                 <div ng-show="name_duplicated"
                     class="alert alert-warning fade in">
                     <%=l 'A node with that name already exists.' %>
                 </div>
-            <div class="form-group row">
-                <input type="submit" name="_submit"
-                    ng-disabled="new_nodeForm.$invalid || name_duplicated"
-                >
-            </div>
-        </form>
+                    <input type="submit" name="_submit"
+                        ng-disabled="new_nodeForm.$invalid || name_duplicated"
+                    >
+                    <button type="reset" ><%=l 'Cancel' %></button>
+            </form>
+        </div>
     </div>
 </div><!-- page wrapper -->
 </div><!-- wrapper -->
