@@ -5,16 +5,13 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 use Mojo::UserAgent;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
-init($test->connector);
+init();
 
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
@@ -82,7 +79,7 @@ sub local_urls {
 
 sub search_id_isos {
     my $vm = shift;
-    my $sth=$test->dbh->prepare(
+    my $sth=connector->dbh->prepare(
         "SELECT * FROM iso_images"
         #                        ." where name like 'Xubuntu Bionic%'"
         ." ORDER BY name,arch"
@@ -133,7 +130,7 @@ for my $vm_name ('KVM') {
 
         for my $id_iso (search_id_isos($vm)) {
             test_download($vm, $id_iso, 1); #clean
-            my $sth = $test->dbh
+            my $sth = connector->dbh
                 ->prepare("UPDATE iso_images set md5=NULL, sha256=NULL WHERE id=?");
             $sth->execute($id_iso);
             $sth->finish;

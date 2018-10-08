@@ -6,7 +6,6 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::Moose::More;
 use Test::More;# tests => 82;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -14,14 +13,12 @@ use_ok('Ravada::Request');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $ravada;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
-init($test->connector, 't/etc/ravada.conf');
+init();
 
 my $RVD_BACK = rvd_back();# $test->connector , 't/etc/ravada.conf');
 my $USER = create_user("foo","bar", 1);

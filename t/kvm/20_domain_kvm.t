@@ -4,7 +4,6 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,9 +12,7 @@ my $BACKEND = 'KVM';
 
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-
-my $RAVADA = rvd_back($test->connector , 't/etc/ravada.conf');
+my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
@@ -61,7 +58,7 @@ sub test_remove_domain_by_name {
 sub search_domain_db
  {
     my $name = shift;
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
     my $row =  $sth->fetchrow_hashref;
     return $row;
@@ -150,7 +147,7 @@ sub test_prepare_base {
     my $domain = shift;
     $domain->prepare_base(user_admin);
 
-    my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my ($is_base) =  $sth->fetchrow;
     ok($is_base
@@ -234,7 +231,7 @@ sub test_domain_missing_in_db {
 
     if (ok($domain,"test domain not created")) {
 
-        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+        my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
         $sth->execute($domain->id);
 
         my $domain2 = $RAVADA->search_domain($domain->name);

@@ -5,14 +5,11 @@ use warnings;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector);
+init();
 clean();
 ###################################################################
 
@@ -72,7 +69,7 @@ sub test_change_memory_base {
 
 for my $vm_name ( q(KVM) ) {
 
-    init($test->connector, 't/etc/ravada_freemem.conf');
+    init('t/etc/ravada_freemem.conf');
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
     warn $@ if $@;

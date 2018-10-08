@@ -5,7 +5,6 @@ use Data::Dumper;
 use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
@@ -15,9 +14,7 @@ my $BACKEND = 'KVM';
 
 use_ok('Ravada');
 
-
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada_kvm.conf');
+my $RAVADA = rvd_back('t/etc/ravada_kvm.conf');
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
@@ -82,7 +79,7 @@ sub test_new_domain_from_iso {
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
@@ -133,7 +130,7 @@ sub test_prepare_base {
     eval { $domain->prepare_base(user_admin) };
     is($@,'') or exit;
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{is_base});
@@ -181,7 +178,7 @@ sub test_new_domain_from_base {
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");

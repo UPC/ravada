@@ -3,16 +3,16 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use YAML qw(LoadFile DumpFile);
+
+use lib 't/lib';
+use Test::Ravada;
 
 use_ok('Ravada');
 use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
 
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
@@ -41,7 +41,7 @@ sub test_user{
     $user_db->remove();
     # check for the user in the SQL db, he shouldn't be  there
     #
-    my $sth = $test->connector->dbh->prepare("SELECT * FROM users WHERE name=?");
+    my $sth = connector->dbh->prepare("SELECT * FROM users WHERE name=?");
     $sth->execute($name);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
@@ -69,7 +69,7 @@ sub test_user{
             "ref should be Ravada::Auth::LDAP , got ".ref($mcnulty_login));
     # check for the user in the SQL db
     # 
-    $sth = $test->connector->dbh->prepare("SELECT * FROM users WHERE name=?");
+    $sth = connector->dbh->prepare("SELECT * FROM users WHERE name=?");
     $sth->execute($name);
     $row = $sth->fetchrow_hashref;
     $sth->finish;
@@ -86,7 +86,7 @@ sub test_user{
     eval { $mcnulty2 = Ravada::Auth::LDAP->new(name => $name,password => $password) };
     
     ok($mcnulty2,($@ or "ldap login failed for $name")) or return;
-    $sth = $test->connector->dbh->prepare("SELECT count(*) FROM users WHERE name=?");
+    $sth = connector->dbh->prepare("SELECT count(*) FROM users WHERE name=?");
     $sth->execute($name);
     my ($count) = $sth->fetchrow;
     $sth->finish;
@@ -203,7 +203,7 @@ sub test_user_bind {
     my $file_config_bind = "/var/tmp/ravada_test_ldap_bind_$$.conf";
     DumpFile($file_config_bind, $config);
     my $ravada = Ravada->new(config => $file_config_bind
-        , connector => $test->connector);
+        , connector => connector);
 
     Ravada::Auth::LDAP::init();
 
@@ -218,7 +218,7 @@ sub test_user_bind {
     unlink $file_config_bind;
 
     $ravada = Ravada->new(config => $file_config
-        , connector => $test->connector);
+        , connector => connector);
 
     Ravada::Auth::LDAP::_init_ldap_admin();
 
@@ -246,7 +246,7 @@ SKIP: {
 
         _init_config($file_config, $with_admin);
         my $ravada = Ravada->new(config => $file_config
-                        , connector => $test->connector);
+                        , connector => connector);
         my $ldap;
 
         eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };

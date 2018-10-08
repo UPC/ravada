@@ -4,23 +4,20 @@ use strict;
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector() );
 
 my $RVD_BACK;
 
-eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
-ok($RVD_BACK) or exit;
+eval { $RVD_BACK = rvd_back() };
+ok($RVD_BACK,($@ or '')) or BAIL_OUT;
 
 my $USER = create_user("foo","bar", 1);
 ok($USER);
@@ -386,7 +383,7 @@ sub test_create_domain_nocd {
 
 sub select_iso {
     my $id = shift;
-    my $sth = $test->connector->dbh->prepare("SELECT * FROM iso_images"
+    my $sth = connector->dbh->prepare("SELECT * FROM iso_images"
         ." WHERE id=?");
     $sth->execute($id);
     return $sth->fetchrow_hashref;

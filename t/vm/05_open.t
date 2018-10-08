@@ -5,16 +5,13 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-init($test->connector);
+init();
 
 clean();
 
@@ -46,7 +43,7 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     diag($vm_type);
     my $exp_class = "Ravada::VM::$vm_type";
 
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "INSERT INTO vms (id, name, vm_type, hostname) "
         ." VALUES(?,?,?,?)"
     );
