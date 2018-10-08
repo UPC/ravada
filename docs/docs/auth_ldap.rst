@@ -46,8 +46,8 @@ If you have all your users under a main OU (e.g. ou=users, dc=domain, dc=com), y
     server: 192.168.1.44
     port: 636
     base: ou=users,ou=groupname,dc=upc,dc=edu
-    ravada_posix_group: 
-    admin_user: cn=ravada,ou=groups,dc=domain,dc=com
+    ravada_posix_group: cn=ravada,ou=groups,dc=domain,dc=com
+    admin_user: 
         dn: cn=admin.user,dc=domain,dc=com
         password: secretpassword
 
