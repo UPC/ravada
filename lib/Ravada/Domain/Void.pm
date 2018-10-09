@@ -27,7 +27,7 @@ has '_ip' => (
     ,default => sub { return '1.1.1.'.int rand(255)}
 );
 
-our $DIR_TMP = "/var/tmp/rvd_void";
+our $DIR_TMP = Ravada::Front::Domain::Void::_config_dir();
 
 our $CONVERT = `which convert`;
 chomp $CONVERT;
