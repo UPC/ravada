@@ -13,8 +13,8 @@ use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
 
-
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
+init();
 
 my @USERS;
 
