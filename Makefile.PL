@@ -29,7 +29,7 @@ WriteMakefile(
     ,'Net::DNS' => 0
   },
   BUILD_REQUIRES => {
-    ,'Test::Perl::Critic' => 0
+    'Test::Perl::Critic' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
