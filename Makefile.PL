@@ -29,7 +29,6 @@ WriteMakefile(
     ,'Net::DNS' => 0
   },
   BUILD_REQUIRES => {
-    'Test::SQL::Data' => 0
     ,'Test::Perl::Critic' => 0
   },
 
