@@ -1501,7 +1501,6 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
-    return if $>;
 
     my %args = @_;
 
@@ -1525,7 +1524,7 @@ sub _remove_iptables {
 
     for my $row (@iptables) {
         my ($id, $iptables) = @$row;
-        $ipt_obj->delete_ip_rule(@$iptables);
+        $ipt_obj->delete_ip_rule(@$iptables) if !$>;
         $sth->execute(Ravada::Utils::now(), $id);
     }
 }
@@ -1637,7 +1636,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+	my ($rv, $out_ar, $errs_ar);
+	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)  if !$>;
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
@@ -1743,7 +1743,7 @@ sub _obj_iptables($create_chain=1) {
     }
     confess $error if $error;
 
-    return $ipt_obj if !$create_chain;
+    return $ipt_obj if !$create_chain || $>;
 	my $rv = 0;
 	my $out_ar = [];
 	my $errs_ar = [];
