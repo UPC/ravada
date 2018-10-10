@@ -4,22 +4,18 @@ use strict;
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
-use IPTables::ChainMgr;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+init();
 
-init($test->connector, $FILE_CONFIG);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector);
 
 my $USER = create_user("foo","bar", 1);
 

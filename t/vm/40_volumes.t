@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use File::Copy;
 use Test::More;
-use Test::SQL::Data;
 
 use v5.22; use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -13,15 +12,13 @@ no warnings "experimental::signatures";
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
+my $RVD_BACK = rvd_back();
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector() );
 
 my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);

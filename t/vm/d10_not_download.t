@@ -5,12 +5,10 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 my %ARG_CREATE_DOM = (
@@ -18,9 +16,8 @@ my %ARG_CREATE_DOM = (
 );
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
-init($test->connector);
+init();
 
-rvd_back();
 #########################################################
 
 sub test_dont_download {
@@ -32,7 +29,7 @@ sub test_dont_download {
     print $out $$;
     close $out;
 
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "INSERT INTO iso_images (name,xml,xml_volume,device) "
         ." VALUES('test".$vm->type."','jessie-i386.xml','dsl-volume.xml','$device')"
     );

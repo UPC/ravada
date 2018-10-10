@@ -5,15 +5,13 @@ use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-init($test->connector);
+init();
 
 ######################################################################3
 
@@ -93,7 +91,7 @@ sub test_volatile_clone {
         my $clone2 = $vm->search_domain($clone_name);
         ok(!$clone2, "[".$vm->type."] volatile clone should be removed on shutdown");
 
-        my $sth = $test->dbh->prepare("SELECT * FROM domains where name=?");
+        my $sth = connector->dbh->prepare("SELECT * FROM domains where name=?");
         $sth->execute($clone_name);
         my $row = $sth->fetchrow_hashref;
         is($row,undef);
@@ -224,10 +222,10 @@ sub test_old_machine {
     my $user = create_user('Roland','Pryzbylewski');
     my $clone = $domain->clone( user => $user , name => $clone_name);
 
-    my $sth = $test->connector->dbh->prepare("DELETE FROM domains_kvm");
+    my $sth = connector->dbh->prepare("DELETE FROM domains_kvm");
     $sth->execute();
 
-    $sth = $test->connector->dbh->prepare("DELETE FROM domains_void ");
+    $sth = connector->dbh->prepare("DELETE FROM domains_void ");
     $sth->execute();
 
     my $clone2 = Ravada::Domain->open($clone->id);
@@ -266,11 +264,11 @@ sub test_old_machine_req {
     my $user = create_user('Roland','Pryzbylewski');
     my $clone = $domain->clone( user => $user , name => $clone_name);
 
-    my $sth = $test->connector->dbh->prepare("DELETE FROM domains_kvm");
+    my $sth = connector->dbh->prepare("DELETE FROM domains_kvm");
     $sth->execute();
     $sth->finish;
 
-    $sth = $test->connector->dbh->prepare("DELETE FROM domains_void ");
+    $sth = connector->dbh->prepare("DELETE FROM domains_void ");
     $sth->execute();
     $sth->finish;
 

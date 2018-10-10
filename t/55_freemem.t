@@ -5,7 +5,6 @@ use Data::Dumper;
 use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
@@ -14,8 +13,7 @@ use Sys::Statistics::Linux;
 
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RVD_BACK = rvd_back( );
 
 my $USER = create_user('foo','bar', 1);
 

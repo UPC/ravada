@@ -3,23 +3,20 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $CONFIG_FILE = 't/etc/ravada.conf';
 
 my @rvd_args = (
        config => $CONFIG_FILE
-   ,connector => $test->connector
+   ,connector => connector()
 );
 
-my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE);
+my $RVD_BACK  = rvd_back( $CONFIG_FILE);
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );

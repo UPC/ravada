@@ -5,17 +5,14 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
+init();
 my @VMS = vm_names();
-init($test->connector);
 my $USER = create_user("foo","bar", 1);
 
 #######################################################
@@ -261,11 +258,11 @@ sub add_network_10 {
     my $requires_password = shift;
     $requires_password = 1 if !defined $requires_password;
 
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "DELETE FROM networks where address='10.0.0.0/24'"
     );
     $sth->execute;
-    $sth = $test->connector->dbh->prepare(
+    $sth = connector->dbh->prepare(
         "INSERT INTO networks (name,address,all_domains,requires_password)"
         ."VALUES('10','10.0.0.0/24',1,?)"
     );
@@ -276,12 +273,12 @@ sub add_network_any {
     my $requires_password = shift;
     $requires_password = 1 if !defined $requires_password;
 
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "DELETE FROM networks where address='0.0.0.0/0'"
     );
     $sth->execute;
 
-    $sth = $test->connector->dbh->prepare(
+    $sth = connector->dbh->prepare(
         "INSERT INTO networks (name,address,all_domains,requires_password,n_order)"
         ."VALUES('any','0.0.0.0/0',1,?,999)"
     );
@@ -289,7 +286,7 @@ sub add_network_any {
 }
 
 sub remove_network_10 {
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "DELETE FROM networks where name='10'"
     );
     $sth->execute();
@@ -297,7 +294,7 @@ sub remove_network_10 {
 }
 
 sub remove_network_default {
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "DELETE FROM networks where name='default'"
     );
     $sth->execute();

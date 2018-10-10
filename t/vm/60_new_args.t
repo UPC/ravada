@@ -5,18 +5,15 @@ use Data::Dumper;
 use JSON::XS;
 use YAML qw(LoadFile);
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector());
 
 my %TEST_DISK = (
     Void => \&test_disk_void
@@ -25,7 +22,7 @@ my %TEST_DISK = (
 
 my $USER;
 
-init($test->connector, $FILE_CONFIG);
+init();
 
 #######################################################################
 
