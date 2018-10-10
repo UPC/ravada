@@ -678,7 +678,7 @@ sub clean_remote_node {
 
     _remove_old_domains_vm($node);
     _remove_old_disks($node);
-    flush_rules_node($node)  if !$node->is_local();
+    flush_rules_node($node)  if !$node->is_local() && $node->is_active;
 }
 
 sub _remove_old_disks {
