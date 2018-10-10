@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,14 +12,14 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
-init($test->connector);
+init();
 
 ##################################################################################
 
 sub test_down_node($vm, $node) {
+    start_node($node);
+
     my $domain = create_domain($vm);
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(node => $node, user => user_admin);
@@ -31,6 +30,36 @@ sub test_down_node($vm, $node) {
     is($clone->_vm->id, $node->id );
 
     shutdown_node($node);
+    my $req = Ravada::Request->refresh_vms();
+    rvd_back->_process_requests_dont_fork();
+    is($req->status, 'done');
+    is($req->error, '',"Expecting no error after refresh vms");
+
+    is($clone->is_active, 0, "Expecting clone not active after node shutdown");
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+}
+
+sub test_disabled_node($vm, $node) {
+    start_node($node);
+}
+
+sub test_deleted_node($vm, $node) {
+    start_node($node);
+
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+
+    my $clone = $domain->clone(user => user_admin, name => new_domain_name() );
+    $clone->migrate($node);
+    $clone->start(user_admin);
+    is($clone->_vm->id, $node->id );
+
+    my $sth = connector->dbh->prepare("DELETE FROM vms WHERE id=?");
+    $sth->execute($node->id);
+
     my $req = Ravada::Request->refresh_vms();
     rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
@@ -80,6 +109,8 @@ for my $vm_name ( 'KVM', 'Void') {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
         test_down_node($vm, $node);
+        test_disabled_node($vm, $node);
+        test_deleted_node($vm, $node);
 
         NEXT:
         clean_remote_node($node);
