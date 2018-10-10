@@ -2047,6 +2047,7 @@ sub is_alive($self) {
 }
 
 sub list_storage_pools($self) {
+    confess "No VM " if !$self->vm;
     return
         map { $_->get_name }
         grep { $_-> is_active }

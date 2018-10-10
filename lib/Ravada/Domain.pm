@@ -195,7 +195,7 @@ around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
-around 'is_active' => \&_around_is_active;
+around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
@@ -1125,11 +1125,27 @@ sub _pre_remove_domain($self, $user, @) {
     warn $@ if $@;
 
     $self->_allow_remove($user);
+    $self->_check_active_node();
+
     $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks()         if ($self->is_known && $self->is_known_extra)
     || $self->domain ;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+}
+
+sub _check_active_node($self) {
+    return $self->_vm if $self->_vm->is_active();
+
+    for my $node ($self->_vm->list_nodes) {
+        next if !$node->is_local;
+
+        $self->_vm($node);
+        $self->domain($node->search_domain_by_id($self->id)->domain);
+        last;
+    }
+    return $self->_vm;
+
 }
 
 sub _after_remove_domain {
@@ -1630,7 +1646,10 @@ sub _post_shutdown {
 
 sub _around_is_active($orig, $self) {
     return 0 if $self->is_removed;
-    my $is_active = $self->$orig();
+
+    my $is_active = 0;
+    $is_active = $self->$orig() if $self->_vm && $self->_vm->is_active;
+
     return $is_active if $self->readonly
         || !$self->is_known
         || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
@@ -1642,6 +1661,12 @@ sub _around_is_active($orig, $self) {
 
     $self->needs_restart(0) if $self->needs_restart() && !$is_active;
     return $is_active;
+}
+
+sub _around_is_hibernated($orig, $self) {
+    return if $self->_vm && !$self->_vm->is_active;
+
+    return $self->$orig();
 }
 
 sub _around_shutdown_now {
@@ -2587,7 +2612,7 @@ sub rsync($self, @args) {
                 ." are both local "
                     if $self->_vm->is_local;
         $self->_vm->_connect_ssh()
-            or confess "No Connection to ".$node->host;
+            or confess "No Connection to ".$self->_vm->host;
     } else {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
@@ -2628,7 +2653,7 @@ sub _rsync_volumes_back($self, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
-    $self->_check_equal_storage_pools($node);
+    $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     return if !$self->id_base;
 

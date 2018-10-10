@@ -1706,6 +1706,8 @@ sub migrate($self, $node, $request=undef) {
 sub is_removed($self) {
     my $is_removed = 0;
 
+    return if !$self->_vm->is_active;
+
     eval {
         $is_removed = 1 if !$self->domain;
         $self->domain->get_xml_description if !$is_removed;
