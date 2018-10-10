@@ -48,22 +48,22 @@ Install *libmojolicious-plugin-renderfile-perl* package:
 
 ::
 
-    $ sudo apt-get install libmojolicious-plugin-renderfile-perl
+     sudo apt-get install libmojolicious-plugin-renderfile-perl
 
 Then install the ravada package, it will show some errors, it is ok, keep reading.
 
 ::
 
-    $ wget http://infoteleco.upc.edu/img/debian/ravada_0.2.17_all.deb
-    $ sudo dpkg -i ravada_0.2.17_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_0.2.17_all.deb
+     sudo dpkg -i ravada_0.2.17_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
 
 ::
 
-    $ sudo apt-get update
-    $ sudo apt-get -f install
+     sudo apt-get update
+     sudo apt-get -f install
 
 Mysql Database
 --------------
@@ -77,13 +77,13 @@ the same one as the ravada package.
 
 ::
 
-    $ sudo apt-get install mysql-server
+     sudo apt-get install mysql-server
     
 After completion of mysql installation, run command:
 
 ::
 
-    $ sudo mysql_secure_installation
+     sudo mysql_secure_installation
 
 
 MySQL database and user
@@ -99,13 +99,13 @@ Create the database:
 
 ::
 
-    $ sudo mysqladmin -u root -p create ravada
+     sudo mysqladmin -u root -p create ravada
 
 Grant all permissions on this database to the *rvd_user*:
 
 ::
 
-    $ sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
+     sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
 
 Config file
 ~~~~~~~~~~~
@@ -117,7 +117,7 @@ example.
 
 ::
 
-    $ sudo vi /etc/ravada.conf
+     sudo vi /etc/ravada.conf
     db:
       user: rvd_user
       password: changeme
@@ -131,7 +131,7 @@ When asked if this user is admin answer *yes*.
 
 ::
 
-    $ sudo /usr/sbin/rvd_back --add-user user.name
+     sudo /usr/sbin/rvd_back --add-user user.name
 
 Client
 ------
