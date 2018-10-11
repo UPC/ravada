@@ -17,9 +17,9 @@ use_ok('Ravada');
 init();
 
 #######################################################################
-sub test_node_down($node, $action) {
-    diag("Starting domain in remote node ".$node->type
-        ." then hibernate domain, down remote node and"
+sub test_node_down($node, $action, $action_name) {
+    diag("Starting domain in remote node ".$node->type."."
+        ." Then $action_name domain, down remote node and"
         ." check if domain starts in local node."
         );
 
@@ -49,14 +49,21 @@ sub test_node_down($node, $action) {
 
     start_node($node);
 
-    $clone->shutdown_now(user_admin);
-    $clone->migrate($node);
+    is($domain->_vm->is_active, 1);
+
+    eval { $clone->shutdown_now(user_admin) };
+    is($@,'');
+    eval { $clone->migrate($node) };
+    is($@,'');
 
     is($clone->is_local, 0);
     is($clone->_vm->id, $node->id);
 
     $clone->remove(user_admin);
-    $domain->remove(user_admin);
+
+    $domain = Ravada::Domain->open($domain->id);
+    eval { $domain->remove(user_admin) };
+    is(''.$@,'');
 }
 
 sub _shutdown_domain($domain) {
@@ -89,8 +96,8 @@ for my $vm_name ('Void' , 'KVM' ) {
         diag("Testing remote node in $vm_name");
         my $node = remote_node($vm_name)  or next;
 
-        test_node_down($node, \&_shutdown_domain);
-        test_node_down($node, \&_hibernate_domain);
+        test_node_down($node, \&_shutdown_domain, 'shutdown');
+        test_node_down($node, \&_hibernate_domain, 'hibernate');
 
         start_node($node);
         clean_remote_node($node);
