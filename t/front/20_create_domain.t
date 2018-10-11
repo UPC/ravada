@@ -3,32 +3,31 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $CONFIG_FILE = 't/etc/ravada.conf';
 
 my @rvd_args = (
        config => $CONFIG_FILE
-   ,connector => $test->connector 
+   ,connector => connector 
 );
 
-my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE);
+my $RVD_BACK  = rvd_back( );
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
 
 my $USER = create_user('foo','bar', 1);
 
+add_ubuntu_minimal_iso();
+
 my %CREATE_ARGS = (
     Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
+    ,KVM => { id_iso => search_id_iso('Ubuntu % Minimal'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 
@@ -45,7 +44,7 @@ sub create_args {
 sub search_domain_db
  {
     my $name = shift;
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
     my $row =  $sth->fetchrow_hashref;
     return $row;
@@ -92,7 +91,7 @@ sub test_domain_name {
     my $vm_name = shift;
 
     my $domain = create_domain($vm_name);
-    my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+    my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($domain->id);
 
     my $id = $domain->id;
@@ -103,6 +102,25 @@ sub test_domain_name {
     };
     like($@,qr'Unknown domain');
 
+}
+
+sub test_domain_info {
+    my $domain = shift;
+
+    my $domain_b = Ravada::Domain->open($domain->id);
+    $domain_b->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain_b->is_active;
+    $domain_b->open_iptables(user => user_admin, remote_ip => '127.0.0.1');
+    for ( 1 .. 30 ) {
+        last if $domain_b->ip;
+        sleep 1;
+    }
+    $domain_b->get_info;
+    ok(exists $domain->info(user_admin)->{ip}
+        ,"Expecting ip field in domain info ".Dumper($domain->info(user_admin))) or exit;
+
+    $domain_b->shutdown_now(user_admin);
+
+    is($domain->info(user_admin)->{ip}, undef,"Expecting no IP after shutdown");
 }
 
 ####################################################################
@@ -152,7 +170,7 @@ for my $vm_name ('Void','KVM','LXC') {
         $domain->name eq $name,"[$vm_name] Expecting domain name $name, got "
         .($domain->name or '<UNDEF>'));
 
-    my $ip = '99.88.77.66';
+    my $ip = '127.0.0.1';
 
     $req = $RVD_FRONT->start_domain(name => $name, user =>  $USER, remote_ip => $ip);
     $RVD_FRONT->wait_request($req,10);
@@ -189,7 +207,10 @@ for my $vm_name ('Void','KVM','LXC') {
         is($domain->internal_id, $domain_back->domain->get_id);
     }
 
+    test_domain_info($domain);
+
     test_remove_domain($name);
+
     test_domain_name($vm_name);
 }
 }

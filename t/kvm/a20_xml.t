@@ -5,17 +5,14 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $RVD_BACK = rvd_back($test->connector);
-my $RVD_FRONT= rvd_front($test->connector);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
 my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);

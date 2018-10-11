@@ -380,7 +380,11 @@ get '/machine/info/(:id).(:type)' => sub {
                               || $USER->can_remove_machine($domain->id)
                               || $USER->can_clone_all;
 
-    $c->render(json => $domain->info($USER) );
+    my $info = $domain->info($USER);
+    if ($domain->is_active && !$info->{ip}) {
+        Ravada::Request->refresh_machine(id_domain => $domain->id);
+    }
+    return $c->render(json => $info);
 };
 
 get '/machine/requests/(:id).json' => sub {

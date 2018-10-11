@@ -1,18 +1,18 @@
 # Translators:
-# Joel Alarcón <joelalju100@gmail.com>, 2017
-# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+# peuportier aurelien <aurelien.peuportier@protonmail.com>, 2018
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
 "PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
-"Language-Team: \n"
-"Language: ca\n"
+"Last-Translator: peuportier aurelien <aurelien.peuportier@protonmail.com>, 2018\n"
+"Language-Team: Chinese (China) (https://www.transifex.com/ravada/teams/70385/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
@@ -49,7 +49,7 @@ msgid "Users List"
 msgstr ""
 
 msgid "Name"
-msgstr ""
+msgstr "名字"
 
 msgid "Log Out"
 msgstr ""
@@ -82,37 +82,37 @@ msgid "I want to change my language"
 msgstr ""
 
 msgid "Language:"
-msgstr ""
+msgstr "语音"
 
 msgid "English"
-msgstr ""
+msgstr "英文"
 
 msgid "Spanish"
-msgstr ""
+msgstr "西班牙语"
 
 msgid "Catalan"
-msgstr ""
+msgstr "加泰罗尼亚语"
 
 msgid "Galician"
-msgstr ""
+msgstr "加利西亚语"
 
 msgid "French"
-msgstr ""
+msgstr "法语"
 
 msgid "Hindi"
-msgstr ""
+msgstr "印地语"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "印尼语"
 
 msgid "Persian"
-msgstr ""
+msgstr "波斯语"
 
 msgid "Japanese"
-msgstr ""
+msgstr "日语"
 
 msgid "German"
-msgstr ""
+msgstr "德语"
 
 msgid "New Password:"
 msgstr ""
@@ -169,10 +169,10 @@ msgid "Copy"
 msgstr ""
 
 msgid "Error!"
-msgstr ""
+msgstr "错误！"
 
 msgid "Error"
-msgstr ""
+msgstr "错误"
 
 msgid "Backend not available!"
 msgstr ""
@@ -229,10 +229,10 @@ msgid "Are you sure?"
 msgstr ""
 
 msgid "Yes"
-msgstr ""
+msgstr "是"
 
 msgid "No"
-msgstr ""
+msgstr "不"
 
 msgid "Make public"
 msgstr ""
@@ -379,7 +379,9 @@ msgstr ""
 msgid "Select Template"
 msgstr ""
 
-msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
+msgid ""
+"This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is fetched from the Internet."
 msgstr ""
 
 msgid "Download now"
@@ -418,15 +420,17 @@ msgstr ""
 msgid "A machine with that name already exists."
 msgstr ""
 
-msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
+msgid ""
+"The machine name is only allowed to consist of alphabetic characters, "
+"numbers, dashes and points."
 msgstr ""
 
 msgid "Create"
 msgstr ""
 
 msgid ""
-"can change the settings of all virtual machines "
-"cloned from one base owned by the user."
+"can change the settings of all virtual machines cloned from one base owned "
+"by the user."
 msgstr ""
 
 msgid "monitoring"
@@ -504,7 +508,8 @@ msgstr ""
 msgid "Danger Zone"
 msgstr ""
 
-msgid "Once you delete the machine, there is no going back. Please be certain."
+msgid ""
+"Once you delete the machine, there is no going back. Please be certain."
 msgstr ""
 
 msgid "Danger"
@@ -637,7 +642,7 @@ msgid "The machine will shutdown after these minutes"
 msgstr ""
 
 msgid "Cancel"
-msgstr ""
+msgstr "取消"
 
 msgid "Please enter the following information to create the account"
 msgstr ""
@@ -702,7 +707,9 @@ msgstr ""
 msgid "Press SHIFT + F12 to exit"
 msgstr ""
 
-msgid "If you can not see the machine screen in a few seconds check for a file called"
+msgid ""
+"If you can not see the machine screen in a few seconds check for a file "
+"called"
 msgstr ""
 
 msgid "in your downloads folder."
@@ -766,13 +773,4 @@ msgid "Thanks to:"
 msgstr ""
 
 msgid "licensed."
-msgstr ""
-
-msgid "New Node"
-msgstr ""
-
-msgid "Address"
-msgstr ""
-
-msgid "A node with that name already exists."
 msgstr ""

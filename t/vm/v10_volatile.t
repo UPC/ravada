@@ -8,7 +8,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Network');
@@ -16,8 +15,7 @@ use_ok('Ravada::Network');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-init($test->connector);
+init();
 
 my $IP = "10.0.0.1";
 my $NETWORK = $IP;
@@ -27,7 +25,7 @@ $NETWORK =~ s{(.*\.).*}{$1.0/24};
 
 sub create_network {
 
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "INSERT INTO networks (name, address) "
         ." VALUES (?,?)"
     );
@@ -36,7 +34,7 @@ sub create_network {
 }
 
 sub delete_network {
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "DELETE FROM networks WHERE address=?"
     );
     $sth->execute($NETWORK);
@@ -46,7 +44,7 @@ sub delete_network {
 sub id_network {
     my $address = shift;
 
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "SELECT id FROM networks WHERE address=?"
     );
     $sth->execute($address);
@@ -59,7 +57,7 @@ sub allow_anonymous {
     my $base = shift;
 
     my $id_network = id_network($NETWORK);
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "INSERT INTO domains_network "
         ." (id_domain, id_network, anonymous )"
         ." VALUES (?,?,?) "
@@ -104,7 +102,7 @@ sub test_volatile {
 
     is($clone->is_active, 0);
     # test out of the DB
-    my $sth = $test->connector->dbh->prepare("SELECT id,name FROM domains WHERE name=?");
+    my $sth = connector->dbh->prepare("SELECT id,name FROM domains WHERE name=?");
     $sth->execute($name);
     my $row = $sth->fetchrow_hashref;
     ok(!$row,"Expecting no domain info in the DB, found ".Dumper($row))    or exit;
@@ -215,7 +213,7 @@ sub test_volatile_auto_kvm {
 
     rvd_back->_cmd_refresh_storage();
 
-    my $sth = $test->connector->dbh->prepare("SELECT * FROM domains where name=?");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains where name=?");
     $sth->execute($name);
     my $row = $sth->fetchrow_hashref;
     is(scalar keys %$row, 0, Dumper($row)) or exit;
@@ -253,7 +251,7 @@ sub test_volatile_auto_kvm {
     { $clone2->remove(user_admin) if $clone2 };
     is(''.$@,'');
 
-    $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=?");
+    $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=?");
     $sth->execute($name);
     $row = $sth->fetchrow_hashref;
     is(keys(%$row),0);
@@ -271,10 +269,15 @@ for my $vm_name ('Void', 'KVM') {
 
         my $msg = "SKIPPED: No virtual managers found";
 
+        if ($vm_name eq 'KVM' && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+
         skip($msg,10)   if !$vm;
         diag("Testing volatile for $vm_name");
 
-        init($test->connector, $vm_name );
+        init( $vm_name );
 
         create_network();
 

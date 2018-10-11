@@ -3,16 +3,13 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+init();
 
 use_ok('Ravada');
-
-init($test->connector);
 
 ##########################################################################3
 
@@ -201,7 +198,7 @@ for my $vm_name ('Void', 'KVM') {
 
         skip($msg,10)   if !$vm;
 
-        init($test->connector, { vm => [$vm_name] });
+        init( { vm => [$vm_name] });
 
         test_copy_clone($vm_name);
         test_copy_clone($vm_name,1);

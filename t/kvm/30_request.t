@@ -3,7 +3,6 @@ use warnings;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -12,8 +11,6 @@ use_ok('Ravada');
 use_ok('Ravada::Request');
 
 my $BACKEND = 'KVM';
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $RAVADA;
 my $VMM;
@@ -191,7 +188,7 @@ sub test_force_kvm {
 }
 
 #########################################################################
-eval { $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf') };
+eval { $RAVADA = rvd_back() };
 $USER = create_user('foo','bar', 1)    if $RAVADA;
 
 ok($RAVADA,"I can't launch a new Ravada");# or exit;

@@ -1041,6 +1041,12 @@ sub info($self, $user) {
     }
     $info->{hardware} = $self->get_controllers();
 
+    my $internal_info = $self->get_info();
+    for (keys(%$internal_info)) {
+        die "Field $_ already in info" if exists $info->{$_};
+        $info->{$_} = $internal_info->{$_};
+    }
+
     return $info;
 }
 
@@ -1633,6 +1639,11 @@ sub _post_shutdown {
         $self->_remove_temporary_machine();
         return;
     }
+    my $info = $self->_data('info');
+    $info = decode_json($info) if $info;
+    $info = {} if !$info;
+    delete $info->{ip};
+    $self->_data(info => encode_json($info));
     # only if not volatile
     my $request;
     $request = $arg{request} if exists $arg{request};
@@ -1731,7 +1742,6 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
-    return if $>;
 
     my %args = @_;
 
@@ -1765,7 +1775,7 @@ sub _remove_iptables {
         my $vm = Ravada::VM->open($id_vm);
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
-            $self->_delete_ip_rule($iptables, $vm);
+            $self->_delete_ip_rule($iptables, $vm) if !$>;
             $sth->execute(Ravada::Utils::now(), $id);
         }
     }

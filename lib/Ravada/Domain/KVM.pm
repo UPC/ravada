@@ -1076,9 +1076,17 @@ sub get_info {
     $info->{memory} = $info->{memory};
     $info->{cpu_time} = $info->{cpuTime};
     $info->{n_virt_cpu} = $info->{nVirtCpu};
+    $info->{ip} = $self->ip()   if $self->is_active();
 
     lock_keys(%$info);
     return $info;
+}
+
+sub ip($self) {
+    my @ip;
+    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+    warn $@ if $@;
+    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 }
 
 =head2 set_max_mem

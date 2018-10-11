@@ -171,6 +171,8 @@ sub _get_driver_sound {
 
 }
 
+=pod
+
 sub get_info {
     my $self = shift;
 
@@ -181,5 +183,7 @@ sub get_info {
 
     return $info;
 }
+
+=cut
 
 1;

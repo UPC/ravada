@@ -3,15 +3,14 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+use lib 't/lib';
+use Test::Ravada;
 
 use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
 
-
-my $RAVADA = Ravada->new(connector => $test->connector
+my $RAVADA = Ravada->new(connector => connector()
     , warn_error => 0
     , config => 't/etc/ravada.conf'
 );

@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,12 +12,11 @@ use Test::Ravada;
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my @VMS = vm_names();
-init($test->connector);
+init();
 
 #########################################################3
 
@@ -106,7 +104,7 @@ sub test_alias {
     my @list_permissions = user_admin->list_permissions;
     my @list_all_permissions = user_admin->list_all_permissions;
 
-    my $sth = $test->connector->dbh->prepare("SELECT name, alias FROM grant_types_alias");
+    my $sth = connector->dbh->prepare("SELECT name, alias FROM grant_types_alias");
     $sth->execute;
     while ( my ($name, $alias) = $sth->fetchrow) {
         eval { is(user_admin->can_do($name),1, $name) };
