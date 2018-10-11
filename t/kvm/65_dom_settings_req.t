@@ -182,6 +182,10 @@ eval { $vm =rvd_back->search_vm($vm_name) };
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found"
                 ." error: (".($@ or '').")";
+    if ($vm && $vm_name eq 'KVM' && $>) {
+        $vm = undef;
+        $msg = "SKIPPED: Test must run as root";
+    }
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

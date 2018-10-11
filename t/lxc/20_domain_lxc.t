@@ -175,7 +175,7 @@ sub test_domain{
     }
 }
 
-sub remove_old_domains {
+sub remove_old_domains_lxc_local {
     for ( 0 .. 10 ) {
         my $dom_name = $DOMAIN_NAME."_$_";
 
@@ -207,7 +207,7 @@ SKIP: {
         my $vm2 = $ravada2->search_vm('lxc')    if $ravada2;
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
         $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
-        remove_old_domains();
+        remove_old_domains_lxc_local();
         my $domain = test_domain();
         my $domain2 = test_domain_from_base($domain);
         test_remove_domain($domain);
