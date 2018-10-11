@@ -863,12 +863,22 @@ sub _around_ping($orig, $self, $option=undef) {
 
 =head2 is_active
 
-Returns if the domain is active.
+Returns if the domain is active. The active state is cached for some seconds.
+Pass an optional true value to perform a real check.
+
+Arguments: optional force mode
+
+    if ($node->is_active) {
+    }
+
+
+    if ($node->is_active(1)) {
+    }
 
 =cut
 
-sub is_active($self) {
-    return $self->_do_is_active() if $self->is_local;
+sub is_active($self, $force=0) {
+    return $self->_do_is_active() if $self->is_local || $force;
 
     return $self->_cached_active if time - $self->_cached_active_time < 60;
     return $self->_do_is_active();

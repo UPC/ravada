@@ -1141,7 +1141,7 @@ sub _pre_remove_domain($self, $user, @) {
 }
 
 sub _check_active_node($self) {
-    return $self->_vm if $self->_vm->is_active();
+    return $self->_vm if $self->_vm->is_active(1);
 
     for my $node ($self->_vm->list_nodes) {
         next if !$node->is_local;
