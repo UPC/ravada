@@ -3,17 +3,14 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
+init();
 my @VMS = vm_names();
-init($test->connector);
 my $USER = create_user("foo","bar", 1);
 
 our $TIMEOUT_SHUTDOWN = 10;

@@ -295,26 +295,6 @@ sub _update_isos {
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
         }
-        ,fedora => {
-            name => 'Fedora 25'
-            ,description => 'RedHat Fedora 25 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/25/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-25-.*\.iso'
-            ,arch => 'amd64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => '$url/Fedora-Workstation-25-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
-        }
-        ,fedora_26 => {
-            name => 'Fedora 26'
-            ,description => 'RedHat Fedora 26 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/26/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-26-.*\.iso'
-            ,arch => 'amd64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => '$url/Fedora-Workstation-26-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
-        }
         ,fedora_27 => {
             name => 'Fedora 27'
             ,description => 'RedHat Fedora 27 Workstation 64 bits'

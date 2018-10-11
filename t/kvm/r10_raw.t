@@ -5,12 +5,9 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $VOL_NAME = new_domain_name();
 my $XML_VOL =
@@ -24,7 +21,7 @@ my $XML_VOL =
 
 use_ok('Ravada');
 
-init($test->connector);
+init();
 
 #####################################################################
 

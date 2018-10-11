@@ -4,7 +4,9 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
+
+use lib 't/lib';
+use Test::Ravada;
 
 use_ok('Ravada');
 my $CAN_LXC = 0;
@@ -16,8 +18,7 @@ SKIP: {
     $CAN_LXC = 1;
 }
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA= Ravada->new( connector => $test->connector);
+my $RAVADA= Ravada->new( connector => connector() );
 $RAVADA->_install();
 my $vm_lxc;
 
@@ -117,7 +118,7 @@ SKIP: {
         $Ravada::VM::LXC::CMD_LXC_LS = '';
         diag("Testing missing LXC");
 
-        my $ravada2= Ravada->new( connector => $test->connector);
+        my $ravada2= Ravada->new( connector => connector() );
         my $vm2 = $ravada2->search_vm('lxc');
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
     }

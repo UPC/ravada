@@ -5,7 +5,6 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -13,9 +12,7 @@ use_ok('Ravada::Request');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, 't/etc/ravada.conf');
+init();
 
 my $USER = create_user("foo","bar");
 

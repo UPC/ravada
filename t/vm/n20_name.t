@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use YAML qw(DumpFile);
 
 use lib 't/lib';
@@ -13,13 +12,11 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-init( $test->connector , $FILE_CONFIG );
+init();
 
 my $NAT_IP = 'www.example.com';
 
@@ -88,7 +85,7 @@ sub test_nat($vm_name) {
     my $file_config = "/tmp/config_display.yml";
     DumpFile($file_config,{ display_ip => $display_ip, vm => \@VMS });
     my $rvd_back = Ravada->new(
-            connector => $test->connector
+            connector => connector()
                 , config => $file_config
                 , warn_error => 0
     );
@@ -124,7 +121,7 @@ sub test_nat($vm_name) {
     #
     DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => \@VMS });
     $rvd_back = Ravada->new(
-            connector => $test->connector
+            connector => connector()
                 , config => $file_config
                 , warn_error => 0
     );
@@ -155,12 +152,13 @@ sub test_nat($vm_name) {
 
     unlink($file_config);
     $rvd_back = Ravada->new(
-            connector => $test->connector
+            connector => connector()
                 , config => $FILE_CONFIG
                 , warn_error => 0
     );
 
 
+    rvd_back($FILE_CONFIG);
 }
 
 sub test_chain($vm_name, %args) {
@@ -200,7 +198,7 @@ for my $vm_name ( @VMS ) {
 
     my $vm;
 
-    init( $test->connector , $FILE_CONFIG );
+    init( $FILE_CONFIG );
     { $vm = rvd_back->search_vm($vm_name) };
 
     SKIP: {

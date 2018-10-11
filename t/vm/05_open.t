@@ -6,16 +6,13 @@ use Data::Dumper;
 use IPC::Run3;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-init($test->connector);
+init();
 
 clean();
 
@@ -61,11 +58,11 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     SKIP: {
         skip("Skipping $exp_class on this system",10)   if !$vm;
 
-    my $sth = $test->dbh->prepare("DELETE FROM vms WHERE vm_type=?");
+    my $sth = connector->dbh->prepare("DELETE FROM vms WHERE vm_type=?");
     $sth->execute($vm_type);
     $sth->finish;
 
-    $sth = $test->connector->dbh->prepare(
+    $sth = connector->dbh->prepare(
         "INSERT INTO vms (id, name, vm_type, hostname) "
         ." VALUES(?,?,?,?)"
     );

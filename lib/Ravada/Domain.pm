@@ -1717,7 +1717,6 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
-    return if $>;
 
     my %args = @_;
 
@@ -1751,7 +1750,7 @@ sub _remove_iptables {
         my $vm = Ravada::VM->open($id_vm);
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
-            $self->_delete_ip_rule($iptables, $vm);
+            $self->_delete_ip_rule($iptables, $vm) if !$>;
             $sth->execute(Ravada::Utils::now(), $id);
         }
     }

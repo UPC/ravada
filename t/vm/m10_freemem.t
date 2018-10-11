@@ -5,14 +5,11 @@ use warnings;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector);
+init();
 clean();
 
 #################################################################################
@@ -20,7 +17,7 @@ clean();
 sub test_min_freemem {
     my $vm = shift;
 
-    my $sth = $test->connector->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "UPDATE vms SET min_free_memory=? "
         ." WHERE id=?"
     );
@@ -60,7 +57,7 @@ sub test_min_freemem {
 
 for my $vm_name ( vm_names() ) {
 
-    init($test->connector, 't/etc/ravada_freemem.conf');
+    init('t/etc/ravada_freemem.conf');
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
     warn $@ if $@;

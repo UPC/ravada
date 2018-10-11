@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,15 +12,13 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 my %ARG_CREATE_DOM = (
       KVM => [ id_iso => 1 ]
 );
 
 my @VMS = reverse keys %ARG_CREATE_DOM;
-init($test->connector);
+init();
 my $USER = create_user("foo","bar");
 
 my $REMOTE_CONFIG;
@@ -35,7 +32,7 @@ sub test_node_renamed {
 
     my $name2 = "knope_".new_domain_name();
 
-    my $sth= $test->connector->dbh->prepare(
+    my $sth= connector->dbh->prepare(
         "UPDATE vms SET name=? WHERE name=?"
     );
     $sth->execute($name2, $name);
@@ -47,9 +44,10 @@ sub test_node_renamed {
     is($node2->id, $node->id)                   or return;
 
     my $rvd_back2 = Ravada->new(
-        connector => $test->connector
+        connector => connector
         ,config => "t/etc/ravada.conf"
     );
+    $rvd_back2->_install();
     is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm}),Dumper(rvd_back->vm)) or return;
     my @list_nodes2 = rvd_front->list_vms;
 
@@ -840,7 +838,7 @@ sub test_domain_already_started {
     is($clone2->_vm->host , $clone->_vm->host);
     }
 
-    my $sth = $test->connector->dbh->prepare("UPDATE domains set id_vm=NULL WHERE id=?");
+    my $sth = connector->dbh->prepare("UPDATE domains set id_vm=NULL WHERE id=?");
     $sth->execute($clone->id);
     $sth->finish;
 
@@ -1161,7 +1159,7 @@ SKIP: {
         skip($msg,10);
     }
 
-    if ($vm && $vm_name =~ /kvm/i && $>) {
+    if ($vm && $>) {
         $msg = "SKIPPED: Test must run as root";
         $vm = undef;
     }

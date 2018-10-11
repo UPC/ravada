@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -12,9 +11,6 @@ use lib 't/lib';
 
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, 't/etc/ravada.conf');
 my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 

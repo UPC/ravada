@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use YAML qw(DumpFile);
 
 use lib 't/lib';
@@ -13,13 +12,10 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-init( $test->connector , $FILE_CONFIG );
+my $FILE_CONFIG = "t/etc/ravada.conf";
+init( );
 
 my $NAT_IP = '2.2.2.2';
 
@@ -84,7 +80,7 @@ sub test_nat($vm_name) {
     DumpFile($file_config,{ display_ip => $display_ip, vm => ['Void', 'KVM'] });
 
     my $rvd_back = Ravada->new(
-        connector => $test->connector
+        connector => connector()
         , config => $file_config
     );
 
@@ -119,7 +115,7 @@ sub test_nat($vm_name) {
     DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => ['Void', 'KVM'] });
 
     $rvd_back = Ravada->new(
-        connector => $test->connector
+        connector => connector()
         , config => $file_config
     );
 
@@ -147,7 +143,7 @@ sub test_nat($vm_name) {
 
     unlink($file_config);
 
-    rvd_back($test->connector, $FILE_CONFIG);
+    rvd_back($FILE_CONFIG);
 }
 
 sub test_chain($vm_name, %args) {

@@ -3,18 +3,14 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
-my $FILE_CONFIG = 't/etc/ravada.conf';
 
+init();
 my @VMS = vm_names();
-init($test->connector);
 my $USER = create_user("foo","bar", 1);
 my $DISPLAY_IP = '99.1.99.1';
 
@@ -225,7 +221,7 @@ sub test_remove_base {
     my @files_deleted = $domain->list_files_base();
     is(scalar @files_deleted,0);
 
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "SELECT count(*) FROM file_base_images"
         ." WHERE id_domain = ?"
     );

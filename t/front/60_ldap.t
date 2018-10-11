@@ -4,7 +4,6 @@ use strict;
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use Test::More;
-use Test::SQL::Data;
 use YAML qw( LoadFile );
 
 use lib 't/lib';
@@ -14,11 +13,9 @@ use_ok('Ravada::Front');
 use_ok('Ravada::Auth');
 use_ok('Ravada::Auth::LDAP');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $CONFIG_FILE = 't/etc/ravada_ldap_1.conf';
 
-init($test->connector, $CONFIG_FILE);
+init( $CONFIG_FILE);
 rvd_back();
 
 my $RVD_FRONT;
@@ -29,7 +26,7 @@ my $USER_DATA = { name => 'jimmy', password => 'jameson' };
 sub test_ldap {
     $RVD_FRONT = Ravada::Front->new(
         config => $CONFIG_FILE
-        ,connector => $test->connector
+        ,connector => connector()
     );
     create_ldap_user($USER_DATA->{name}, $USER_DATA->{password});
     my $login_ok;
@@ -71,7 +68,7 @@ sub test_ldap {
 
 SKIP: {
     my $ravada = Ravada->new(config => $CONFIG_FILE
-                        , connector => $test->connector);
+                        , connector => connector());
     $ravada->_install();
     my $ldap;
 

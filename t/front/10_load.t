@@ -3,7 +3,6 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -11,9 +10,7 @@ use Test::Ravada;
 use_ok('Ravada');
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector , 't/etc/ravada.conf');
+init();
 
 my $USER = create_user('foo','bar', 1);
 my $RVD_BACK  = rvd_back( );
@@ -66,7 +63,7 @@ sub test_add_domain_db {
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
     
-    $test->dbh->do("UPDATE DOMAINS set is_base=1,is_public=1 WHERE name='$domain_name'");
+    connector->dbh->do("UPDATE DOMAINS set is_base=1,is_public=1 WHERE name='$domain_name'");
     
     $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");

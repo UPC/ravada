@@ -4,7 +4,6 @@ use warnings;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -12,9 +11,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector);
+init();
 
 sub test_memory_empty($vm) {
     my $domain = create_domain($vm->type);

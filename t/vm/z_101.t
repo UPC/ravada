@@ -3,21 +3,14 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
 my @VMS = ('KVM','Void');
 
@@ -45,7 +38,7 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        init($test->connector, $vm_name);
+        init($vm_name);
 
         my $domain = create_domain($vm_name);
         my $t0 = time;

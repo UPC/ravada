@@ -3,7 +3,6 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -12,9 +11,7 @@ use_ok('Ravada');
 use_ok('Ravada::VM::Void');
 use_ok('Ravada::Auth::SQL');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-my $ravada = rvd_back($test->connector , 't/etc/ravada.conf');
+my $ravada = rvd_back();
 
 #
 # Create a new user

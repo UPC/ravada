@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,11 +12,9 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-init($test->connector);
+init();
 
 #######################################################################
 sub test_node_down($node, $action) {
@@ -47,8 +44,8 @@ sub test_node_down($node, $action) {
 
     eval { $clone->start(user_admin) };
     is($@,'');
-    is($clone->is_active, 1);
-    is($clone->is_local, 1);
+    is($clone->is_active, 1, "Expecting clone ".$clone->name." active");
+    is($clone->is_local, 1,"Expecting clone ".$clone->name." local");
 
     start_node($node);
 
@@ -81,7 +78,7 @@ for my $vm_name ('Void' , 'KVM' ) {
     SKIP: {
 
         my $msg = "SKIPPED: $vm_name virtual manager not found ".($@ or '');
-        if ($vm && $vm_name =~ /kvm/i && $>) {
+        if ($vm && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }

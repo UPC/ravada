@@ -3,15 +3,17 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+use lib 't/lib';
+use Test::Ravada;
 
 my $BACKEND = 'KVM';
 my $CLASS= "Ravada::VM::$BACKEND";
 
+init();
+
 my %CONFIG = (
-        connector => $test->connector
+        connector => connector
         ,config => 't/etc/ravada.conf'
 );
 

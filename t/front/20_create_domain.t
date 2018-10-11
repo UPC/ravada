@@ -3,23 +3,20 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $CONFIG_FILE = 't/etc/ravada.conf';
 
 my @rvd_args = (
        config => $CONFIG_FILE
-   ,connector => $test->connector 
+   ,connector => connector 
 );
 
-my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE);
+my $RVD_BACK  = rvd_back( );
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
@@ -47,7 +44,7 @@ sub create_args {
 sub search_domain_db
  {
     my $name = shift;
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
     my $row =  $sth->fetchrow_hashref;
     return $row;
@@ -94,7 +91,7 @@ sub test_domain_name {
     my $vm_name = shift;
 
     my $domain = create_domain($vm_name);
-    my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+    my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($domain->id);
 
     my $id = $domain->id;

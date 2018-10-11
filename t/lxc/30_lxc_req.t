@@ -4,7 +4,9 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
+
+use lib 't/lib';
+use Test::Ravada;
 
 my $CAN_LXC = 0;
 
@@ -16,8 +18,7 @@ SKIP: {
     $CAN_LXC = 1;
 }
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA= Ravada->new( connector => $test->connector);
+my $RAVADA= Ravada->new( connector => connector() );
 my $vm_lxc;
 
 my $CONT= 0;

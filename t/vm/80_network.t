@@ -3,13 +3,10 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
@@ -18,10 +15,8 @@ $Ravada::CAN_FORK = 1;
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
 my @VMS = vm_names();
 my $USER = create_user("foo","bar");
@@ -58,7 +53,7 @@ sub test_vm {
     $RVD_FRONT = undef;
     test_vm_rvd($vm_name, $RVD_BACK);
 
-    $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
+    $RVD_FRONT= rvd_front( $FILE_CONFIG);
     test_vm_rvd($vm_name, $RVD_FRONT);
 
     $RVD_FRONT = undef;
