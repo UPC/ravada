@@ -803,8 +803,13 @@ sub open($class, @args) {
     bless $vm_local, $vm_class;
 
     if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
-        $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+        eval {
+            $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
                 , readonly => $readonly);
+        };
+        if ($@ && $@ =~ /I can't find VM id=/) {
+            $vm = Ravada::VM->open( type => $self->type );
+        }
     }
     if (!$vm || !$vm->is_active) {
         $vm = $vm_local->new( );
@@ -1595,6 +1600,7 @@ sub _pre_shutdown {
 
     $self->_allow_shutdown(@_);
 
+    $self->_vm->connect;
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
@@ -1659,7 +1665,7 @@ sub _around_is_active($orig, $self) {
     return 0 if $self->is_removed;
 
     my $is_active = 0;
-    $is_active = $self->$orig() if $self->_vm && $self->_vm->is_active;
+    $is_active = $self->$orig() if $self->_vm->is_active;
 
     return $is_active if $self->readonly
         || !$self->is_known
@@ -1685,6 +1691,7 @@ sub _around_shutdown_now {
     my $self = shift;
     my $user = shift;
 
+    $self->_vm->connect;
     $self->list_disks;
     $self->_pre_shutdown(user => $user);
     if ($self->is_active) {
