@@ -753,6 +753,11 @@ clean();
 for my $vm_name (vm_names()) {
     next if $vm_name eq 'KVM' && $>;
 
+    my $vm;
+    eval { $vm = rvd_back->search_vm($vm_name) };
+    diag($@) if $@;
+    next if !$vm;
+
     diag("Testing VM $vm_name");
     test_change_settings($vm_name);
 
