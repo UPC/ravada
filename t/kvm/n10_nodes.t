@@ -1103,6 +1103,7 @@ sub test_status($node) {
     is($vm->is_local, 1);
     my $domain_local = $vm->search_domain($clone->name);
     is($domain_local->is_active, 0 );
+    is($domain_local->_data('id_vm'), $node->id) or exit;
 
     my $domain_front = Ravada::Front::Domain->open($clone->id);
     is($domain_front->is_active, 1);
