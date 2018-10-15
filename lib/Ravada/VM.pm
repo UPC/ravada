@@ -24,6 +24,8 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+use Ravada::Utils;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -919,12 +921,12 @@ Returns if the domain is enabled.
 
 =cut
 
-sub enabled($self) {
-    return $self->_data('enabled');
+sub enabled($self, $value=undef) {
+    return $self->_data('enabled', $value);
 }
 
-sub is_enabled($self) {
-    return $self->enabled();
+sub is_enabled($self, $value=undef) {
+    return $self->enabled($value);
 }
 
 =head2 remove
@@ -1082,6 +1084,25 @@ sub balance_vm($self, $base=undef) {
         return $vm;
     }
     return;
+}
+
+sub shutdown_domains($self) {
+    my $sth_inactive
+        = $$CONNECTOR->dbh->prepare("UPDATE domains set status='down' WHERE id=?");
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM domains "
+        ." where status='active'"
+        ."  AND id_vm = ".$self->id
+    );
+    $sth->execute();
+    while ( my ($id_domain) = $sth->fetchrow) {
+        $sth_inactive->execute($id_domain);
+        Ravada::Request->shutdown_domain(
+            id_domain => $id_domain
+                , uid => Ravada::Utils::user_daemon->id
+        );
+    }
+    $sth->finish;
 }
 
 1;
