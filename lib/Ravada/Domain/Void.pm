@@ -7,10 +7,15 @@ use Carp qw(cluck croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Copy;
+use File::Path qw(make_path);
+use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
-use YAML qw(LoadFile DumpFile);
+use YAML qw(Load Dump  LoadFile DumpFile);
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 extends 'Ravada::Front::Domain::Void';
 with 'Ravada::Domain';
@@ -27,8 +32,6 @@ has '_ip' => (
     ,default => sub { return '1.1.1.'.int rand(255)}
 );
 
-our $DIR_TMP = Ravada::Front::Domain::Void::_config_dir();
-
 our $CONVERT = `which convert`;
 chomp $CONVERT;
 #######################################3
@@ -37,9 +40,6 @@ sub BUILD {
     my $self = shift;
 
     my $args = $_[0];
-
-    mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
-        if ! -e $DIR_TMP;
 
     my $drivers = {};
     if ($args->{id_base}) {
@@ -89,8 +89,12 @@ sub remove {
     my $self = shift;
 
     $self->remove_disks();
-    unlink $self->_config_file();
+    $self->_vm->run_command("/bin/rm",$self->_config_file());
+    $self->_vm->run_command("/bin/rm",$self->_config_file().".lock");
 }
+
+sub can_hibernate { return 1; }
+sub can_hybernate { return 1; }
 
 sub is_hibernated {
     my $self = shift;
@@ -106,21 +110,57 @@ sub is_paused {
 sub _store {
     my $self = shift;
 
+    return $self->_store_remote(@_) if !$self->_vm->is_local;
+
     my ($var, $value) = @_;
 
+    my $data = $self->_load();
+    $data->{$var} = $value;
+
+    make_path($self->_config_dir()) if !-e $self->_config_dir;
+    eval { DumpFile($self->_config_file(), $data) };
+    chomp $@;
+    confess $@ if $@;
+
+}
+
+sub _load($self) {
+    return $self->_load_remote()    if !$self->is_local();
     my $data = {};
 
     my $disk = $self->_config_file();
     $data = LoadFile($disk)   if -e $disk;
 
+    return $data;
+}
+
+
+sub _load_remote($self) {
+    my ($disk) = $self->_config_file();
+
+    my ($lines, $err) = $self->_vm->run_command("cat $disk");
+
+    return Load($lines);
+}
+
+sub _store_remote($self, $var, $value) {
+    my ($disk) = $self->_config_file();
+
+    my $data = $self->_load_remote();
     $data->{$var} = $value;
 
-    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.log: $!";
-    _lock($lock);
-    eval { DumpFile($disk, $data) };
+    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.lock: $!";
+    $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
+    $self->_vm->write_file($disk, Dump($data));
     _unlock($lock);
-    chomp $@;
-    confess $@ if $@;
+    unlink("$disk.lock");
+    return $self->_value($var);
+}
+
+sub _value($self,$var){
+
+    my $data = $self->_load();
+    return $data->{$var};
 
 }
 
@@ -133,21 +173,6 @@ sub _unlock {
     my ($fh) = @_;
     flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
 }
-
-sub _value{
-    my $self = shift;
-
-    my ($var) = @_;
-
-    my ($disk) = $self->_config_file();
-
-    my $data = {} ;
-    $data = LoadFile($disk) if -e $disk;
-    
-    return $data->{$var};
-
-}
-
 
 sub shutdown {
     my $self = shift;
@@ -198,19 +223,20 @@ sub list_disks {
 sub _vol_remove {
     my $self = shift;
     my $file = shift;
-    unlink $file or die "$! $file"
-        if -e $file;
+    if ($self->is_local) {
+        unlink $file or die "$! $file"
+            if -e $file;
+    } else {
+        my ($out, $err) = $self->_vm->run_command('ls',$file,'&&','rm',$file);
+        warn $err if $err;
+    }
 }
 
 sub remove_disks {
     my $self = shift;
     my @files = $self->list_disks;
     for my $file (@files) {
-        next if ! -e $file;
         $self->_vol_remove($file);
-        if ( -e $file ) {
-            unlink $file or die "$! $file";
-        }
     }
 
 }
@@ -231,17 +257,16 @@ Adds a new volume to the domain
 sub add_volume {
     my $self = shift;
     confess "Wrong arguments " if scalar@_ % 1;
+
     my %args = @_;
 
     my $suffix = ".img";
     $suffix = '.SWAP.img' if $args{swap};
-    $args{path} = "$DIR_TMP/".$self->name.".$args{name}$suffix"
+    $args{path} = $self->_config_dir."/".$self->name.".$args{name}$suffix"
         if !$args{path};
 
     confess "Volume path must be absolute , it is '$args{path}'"
         if $args{path} !~ m{^/};
-
-
 
     my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap target));
 
@@ -256,24 +281,15 @@ sub add_volume {
     $args{type} = 'file' if !$args{type};
     delete $args{vm}   if defined $args{vm};
 
-    my $data = { };
-    $data = LoadFile($self->_config_file) if -e $self->_config_file;
-    $args{target} = _new_target($data);
+    my $data = $self->_load();
+    $args{target} = _new_target($data) if !$args{target};
 
-    $data->{device}->{$args{name}} = \%args;
-    my $disk = $self->_config_file;
-    open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.log: $!";
-    _lock($lock);
-    eval { DumpFile($self->_config_file, $data) };
-    _unlock($lock);
-    chomp $@;
-    die "readonly=".$self->readonly." ".$@ if $@;
+    my $device = $data->{device};
+    $device->{$args{name}} = \%args;
 
-    return if -e $args{path};
+    $self->_store(device => $device);
 
-    open my $out,'>>',$args{path} or die "$! $args{path}";
-    print $out Dumper($data->{device}->{$args{name}});
-    close $out;
+    $self->_vm->write_file($args{path}, Dumper($data->{device}->{$args{name}}));
 
 }
 
@@ -283,12 +299,18 @@ sub _new_target {
     my %targets;
     for my $dev ( keys %{$data->{device}}) {
         confess "Missing device ".Dumper($data) if !$dev;
-        $targets{$data->{device}->{$dev}->{target}}++
+
+        my $target = $data->{device}->{$dev}->{target};
+        confess "Missing target ".Dumper($data) if !$target || !length($target);
+
+        $targets{$target}++
     }
     return 'vda'    if !keys %targets;
 
     my @targets = sort keys %targets;
     my ($prefix,$a) = $targets[-1] =~ /(.*)(.)/;
+    confess "ERROR: Missing prefix ".Dumper($data)."\n"
+        .Dumper(\%targets) if !$prefix;
     return $prefix.chr(ord($a)+1);
 }
 
@@ -325,8 +347,7 @@ sub disk_device {
 
 sub list_volumes {
     my $self = shift;
-    my $data;
-    $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data = $self->_load();
 
     return () if !exists $data->{device};
     my @vol;
@@ -340,8 +361,7 @@ sub list_volumes {
 
 sub list_volumes_target {
     my $self = shift;
-    my $data;
-    $data = LoadFile($self->_config_file) if -e $self->_config_file;
+    my $data = $self->_load();
 
     return () if !exists $data->{device};
     my @vol;
@@ -370,7 +390,7 @@ sub screenshot {
 
 sub _file_screenshot {
     my $self = shift;
-    return $DIR_TMP."/".$self->name.".png";
+    return $self->_config_dir."/".$self->name.".png";
 }
 
 sub can_screenshot { return $CONVERT; }
@@ -393,6 +413,7 @@ sub _set_default_info {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
+            ,ip => $self->ip
     };
     $self->_store(info => $info);
     my %controllers = $self->list_controllers;
@@ -461,7 +482,7 @@ sub rename {
 
     my $file_yml = $self->_config_file();
 
-    my $file_yml_new = "$DIR_TMP/$new_name.yml";
+    my $file_yml_new = $self->_config_dir."/$new_name.yml";
     copy($file_yml, $file_yml_new) or die "$! $file_yml -> $file_yml_new";
     unlink($file_yml);
 
@@ -492,19 +513,27 @@ sub clean_swap_volumes {
     }
 }
 
-sub can_hibernate { return 1};
 sub hybernate {
     my $self = shift;
-    $self->_store(is_active => 0);
     $self->_store(is_hibernated => 1);
+    $self->_store(is_active => 0);
 }
 
-sub hibernate {
-    my $self= shift;
-    $self->hybernate( @_ );
+sub hibernate($self, $user) {
+    $self->hybernate( $user );
 }
 
 sub type { 'Void' }
+
+sub migrate($self, $node, $request=undef) {
+    $self->rsync(
+           node => $node
+        , files => [$self->_config_file ]
+       ,request => $request
+    );
+    $self->rsync($node);
+
+}
 
 sub is_removed {
     my $self = shift;

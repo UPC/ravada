@@ -116,7 +116,7 @@ sub test_req_create_domain{
 
 sub test_req_create_fail {
     my $vm_name = shift;
-    my ($mem, $disk) = @_;
+    my ($mem, $disk, $fork) = @_;
 
     my $name = new_domain_name();
 
@@ -133,11 +133,16 @@ sub test_req_create_fail {
    
         ok($req,"Expecting request to create_domain");
     }
-    rvd_back->process_requests();
+    if ($fork) {
+        rvd_back->process_requests(0);
+    } else {
+        rvd_back->_process_all_requests_dont_fork();
+    }
 
     wait_request($req);
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
-    ok($req->error,"Expecting error , got '".($req->error or '')."'");
+    ok($req->error,"Expecting error creating $name , got '".($req->error or '')."'"
+        ." with memory: $mem ,  disk: $disk , fork: ".($fork or 0)) or exit;
 
     my $domain = rvd_back->search_domain($name);
     ok(!$domain,"Expecting domain doesn't exist domain '$name'");
@@ -229,10 +234,12 @@ sub test_small {
     test_create_fail($vm_name, 512 * 1024, 1,"Direct");
 
     # fail memory req
-    test_req_create_fail($vm_name, 1 , 2*1024*1024 ,"Direct");
+    test_req_create_fail($vm_name, 1 , 2*1024*1024 );
+    test_req_create_fail($vm_name, 1 , 2*1024*1024 ,"fork");
 
     # fails disk req
-    test_req_create_fail($vm_name, 512 * 1024, 1,"Direct");
+    test_req_create_fail($vm_name, 512 * 1024, 1);
+    test_req_create_fail($vm_name, 512 * 1024, 1,"fork");
 
 }
 

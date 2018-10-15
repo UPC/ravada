@@ -99,11 +99,11 @@ SKIP: {
 
     $freemem =~ s/(\d+\.\d)\d+/$1/;
 
-    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
+#    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
 
     my @domains;
     for ( 0 .. $n_domains ) {
-        diag("Creating domain $_");
+#        diag("Creating domain $_");
         my $domain = test_new_domain($vm) or last;
         push @domains,($domain) if $domain;
     }

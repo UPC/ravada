@@ -72,6 +72,7 @@ sub test_add_volume {
     my $vmb = rvd_back->search_vm($vm_name);
     ok($vmb,"I can't find a VM ".$vm_name) or return;
     my $domainb = $vmb->search_domain($domain->name);
+    ok($domainb,"[$vm_name] Expecting domain ".$domain->name) or return;
     my @volumesb2 = $domainb->list_volumes();
 
     my $domain_xml = '';
@@ -211,7 +212,7 @@ sub test_domain_n_volumes {
     my $vm = $RVD_BACK->search_vm($vm_name);
 
     my $domain = test_create_domain($vm_name);
-    diag("Creating domain ".$domain->name." with $n volumes");
+#    diag("Creating domain ".$domain->name." with $n volumes");
 
     test_add_volume($vm, $domain, 'vdb',"swap");
     for ( reverse 3 .. $n) {
@@ -385,7 +386,7 @@ sub test_search($vm_name) {
     $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
 
     my $file_old = $vm->search_volume_path("file.iso");
-    unlink $file_old if -e $file_old;
+    unlink $file_old if $file_old && -e $file_old;
 
     $vm->default_storage_pool_name('default');
 

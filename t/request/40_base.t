@@ -43,7 +43,7 @@ sub test_swap {
         ,swap => 128*1024*1024
     );
     ok($req);
-    rvd_back()->process_requests();
+    rvd_back()->_process_all_requests_dont_fork();
     wait_request($req);
 
     ok($req->status eq 'done'
@@ -195,7 +195,7 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    rvd_back->process_requests();
+    rvd_back->_process_all_requests_dont_fork();
     rvd_back->process_long_requests(0,1);
     wait_request($req);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");
@@ -375,9 +375,7 @@ sub test_req_remove_base_fail {
     }
 
     ok($req->status eq 'requested' || $req->status eq 'done');
-    rvd_back->process_requests();
-    rvd_back->process_long_requests(0,1);
-    wait_request($req);
+    rvd_back->_process_all_requests_dont_fork();
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
                                 ."'".$req->status."'");
@@ -435,6 +433,21 @@ sub test_req_remove_base {
         ok(!$domain_base->is_base());
     }
     check_files_removed(@files_base);
+}
+
+sub test_req_remove {
+    my ($vm_name, $name_domain, $name_clone ) = @_;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $req = Ravada::Request->remove_domain(
+        uid => $USER->id
+        , name => $name_clone
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+
+    my $clone_gone = $vm->search_domain($name_clone);
+    ok(!$clone_gone);
 }
 
 sub test_shutdown_by_name {
@@ -558,6 +571,7 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
+        test_req_remove($vm_name, $base_name, $clone_name);
 
     };
 }

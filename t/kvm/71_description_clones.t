@@ -24,7 +24,7 @@ sub test_create_domain {
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
-    diag("Test create domain $name");
+#    diag("Test create domain $name");
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
@@ -55,7 +55,7 @@ sub test_files_base {
 
 sub test_prepare_base_active {
     my $vm_name = shift;
-    diag("Test prepare base active $vm_name");
+#    diag("Test prepare base active $vm_name");
 
     my $domain = test_create_domain($vm_name);
 
@@ -78,7 +78,7 @@ sub test_prepare_base_active {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
-    diag("Test prepare base $vm_name");
+#    diag("Test prepare base $vm_name");
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
@@ -176,7 +176,7 @@ sub add_description {
     my $domain = shift;
     my $description = shift;
     my $name = $domain->name;
-    diag("Add description $name");
+#    diag("Add description $name");
 
     $domain->description($description);
 }
@@ -184,7 +184,7 @@ sub add_description {
 sub test_description {
     my $vm_name = shift;
 
-    diag("Testing description $vm_name");
+#    diag("Testing description $vm_name");
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 

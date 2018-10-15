@@ -16,7 +16,7 @@ use_ok('Ravada');
 
 my $RAVADA = rvd_back('t/etc/ravada_kvm.conf');
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
+my ($DOMAIN_NAME) = new_domain_name();
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 $DOMAIN_NAME_SON =~ s/base_//;
 
@@ -38,7 +38,7 @@ sub test_remove_domain {
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         my @files_base = $domain->list_files_base;
         eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") ;
@@ -59,7 +59,7 @@ sub test_new_domain_from_iso {
 
     test_remove_domain($name);
 
-    diag("Creating domain $name from iso");
+#    diag("Creating domain $name from iso");
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
                                         , id_iso => search_id_iso('alpine')
@@ -67,6 +67,7 @@ sub test_new_domain_from_iso {
                                         ,id_owner => $USER->id
             ) 
     };
+    is(''.$@,'') or return;
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -158,7 +159,7 @@ sub test_new_domain_from_base {
     my $name = $DOMAIN_NAME_SON;
     test_remove_domain($name);
 
-    diag("Creating domain $name from ".$base->name);
+#    diag("Creating domain $name from ".$base->name);
     my $domain;
     eval { $domain = $RAVADA->create_domain(
                 name => $name
@@ -255,7 +256,7 @@ sub remove_volume {
     my $file = shift;
 
     return if !-e $file;
-    diag("removing old $file");
+#    diag("removing old $file");
     $RAVADA->remove_volume($file);
     ok(! -e $file,"file $file not removed" );
 }
@@ -287,6 +288,7 @@ SKIP: {
 
     use_ok("Ravada::Domain::$BACKEND");
 
+    clean();
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);
 test_remove_domain($DOMAIN_NAME_SON);

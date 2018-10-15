@@ -10,6 +10,7 @@ WriteMakefile(
             ,'DateTime' => 0
      ,'DBIx::Connector' => 0
   ,'Authen::Passphrase' => 0
+          ,'Date::Calc' => 0
 	      ,'IPC::Run3'  => 0
 	      ,'JSON::XS'   => 0
 	        ,'Moose'    => 0
@@ -27,12 +28,14 @@ WriteMakefile(
     ,'DBD::SQLite'      => 0
     ,'IPTables::ChainMgr' => 0
     ,'Net::DNS' => 0
+    ,'Net::SSH2' => 0
+    ,'File::Rsync' => 0
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
-  clean     => {FILES => 't/.db' }
+  clean     => {FILES => ['t/.db', '/var/tmp/rvd_void'] }
 
 );

@@ -23,11 +23,14 @@ navbar-inverse navbar-fixed-top" role="navigation">
                     <i class="fa fa-wrench"></i>&nbsp;<%=l 'Admin tools' %><span class="caret"></span></a>
                   <ul class="dropdown-menu">
                     <li><a href="/admin/machines">
-                      <i class="fa fa-desktop" aria-hidden="true"></i>&nbsp<%=l 'machines' %></a>
+                      <i class="fa fa-desktop" aria-hidden="true"></i>&nbsp;<%=l 'machines' %></a>
                     </li>
 %                   if ($_user->is_admin || $_user->can_grant || $_user->can_manage_users) {
                         <li><a href="/admin/users">
-                        <i class="fa fa-user" aria-hidden="true"></i>&nbsp<%=l 'users' %></a>
+                        <i class="fa fa-user" aria-hidden="true"></i>&nbsp;<%=l 'users' %></a>
+                        </li>
+                        <li><a href="/admin/nodes">
+                        <i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'nodes' %></a>
                         </li>
 %                   }
                     <li><a href="/admin/messages">

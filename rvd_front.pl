@@ -24,6 +24,7 @@ use feature qw(signatures);
 use lib 'lib';
 
 use Ravada::Front;
+use Ravada::Front::Domain;
 use Ravada::Auth;
 use POSIX qw(locale_h);
 
@@ -34,7 +35,7 @@ my $FILE_CONFIG = "/etc/rvd_front.conf";
 my $error_file_duplicated = 0;
 for my $file ( "/etc/rvd_front.conf" , ($ENV{HOME} or '')."/rvd_front.conf") {
     warn "WARNING: Found config file at $file and at $FILE_CONFIG\n"
-        if -e $file && $FILE_CONFIG;
+        if -e $file && $FILE_CONFIG && $file ne $FILE_CONFIG;
     $FILE_CONFIG = $file if -e $file;
     $error_file_duplicated++;
 }
@@ -266,6 +267,29 @@ get '/list_vm_types.json' => sub {
     $c->render(json => $RAVADA->list_vm_types);
 };
 
+get '/list_nodes.json' => sub {
+    my $c = shift;
+    $c->render(json => [$RAVADA->list_vms]);
+};
+
+get '/node/enable/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),1)});
+};
+
+get '/node/disable/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),0)});
+};
+
+any '/new_node' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    return new_node($c);
+};
+
 get '/list_bases.json' => sub {
     my $c = shift;
 
@@ -356,7 +380,11 @@ get '/machine/info/(:id).(:type)' => sub {
                               || $USER->can_remove_machine($domain->id)
                               || $USER->can_clone_all;
 
-    $c->render(json => $domain->info($USER) );
+    my $info = $domain->info($USER);
+    if ($domain->is_active && !$info->{ip}) {
+        Ravada::Request->refresh_machine(id_domain => $domain->id);
+    }
+    return $c->render(json => $info);
 };
 
 get '/machine/requests/(:id).json' => sub {
@@ -437,6 +465,11 @@ get '/machine/prepare/(:id).(:type)' => sub {
         return prepare_machine($c);
 };
 
+get '/machine/toggle_base_vm/(:id_vm)/(:id_domain).(:type)' => sub {
+    my $c = shift;
+    return toggle_base_vm($c);
+};
+
 get '/machine/remove_b/(:id).(:type)' => sub {
         my $c = shift;
         return remove_base($c);
@@ -492,6 +525,13 @@ get '/machine/exists/#name' => sub {
 
 };
 
+get '/node/exists/#name' => sub {
+    my $c = shift;
+    my $name = $c->stash('name');
+
+    return $c->render(json => $RAVADA->node_exists($name));
+
+};
 get '/machine/rename/#id/#value' => sub {
     my $c = shift;
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
@@ -1062,6 +1102,7 @@ sub admin {
         }
     }
     if ($page eq 'machines') {
+        Ravada::Request->refresh_vms();
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
         $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
 
@@ -1072,6 +1113,9 @@ sub admin {
             }
             $c->stash( monitoring => 1 ) if $c->session('monitoring');
         }
+    }
+    if ($page eq 'nodes') {
+        Ravada::Request->refresh_vms();
     }
     $c->render( template => 'main/admin_'.$page);
 };
@@ -1100,6 +1144,21 @@ sub new_machine {
         , valid_vm => \%valid_vm
     );
 };
+
+sub new_node {
+    my $c = shift;
+
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+
+    if ($c->param('_submit')) {
+        $c->req->params->remove('_submit');
+        my $pairs = $c->req->params()->pairs;
+        $RAVADA->add_node(@$pairs);
+        return $c->render(text => 'node created. <a href ="/admin/nodes/">nodes</a> ');
+    }
+    return $c->render(template => 'main/new_node');
+}
 
 sub req_new_domain {
     my $c = shift;
@@ -1470,6 +1529,7 @@ sub manage_machine {
     $c->stash(messages => \@messages);
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
+        , nodes => [$RAVADA->list_vms($domain->type)]
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
     );
@@ -1619,6 +1679,27 @@ sub copy_screenshot {
         ,filename => $file_screenshot
     );
     $c->render(json => { request => $req->id});
+}
+
+sub toggle_base_vm {
+    my $c = shift;
+
+    my $id_vm = $c->stash('id_vm');
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+
+    if ($USER->id != $domain->id && !$USER->is_admin) {
+        return $c->render(json => {message => 'access denied'});
+    }
+    my $new_value = 0;
+    $new_value = 1 if !$domain->is_base || !$domain->base_in_vm($id_vm);
+
+    my $req = Ravada::Request->set_base_vm(
+          value => $new_value
+        , id_vm => $id_vm
+        , id_domain => $domain->id
+        , uid => $USER->id
+    );
+    return $c->render(json => {message => 'processing request'});
 }
 
 sub prepare_machine {

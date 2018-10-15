@@ -183,10 +183,9 @@ sub test_copy_req_nonbase {
 
 ##########################################################################3
 
-clean();
-
 
 for my $vm_name ('Void', 'KVM') {
+    diag($vm_name);
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {
@@ -199,6 +198,8 @@ for my $vm_name ('Void', 'KVM') {
 
         skip($msg,10)   if !$vm;
 
+        init( { vm => [$vm_name] });
+
         test_copy_clone($vm_name);
         test_copy_clone($vm_name,1);
         test_copy_clone($vm_name,2);
@@ -209,6 +210,7 @@ for my $vm_name ('Void', 'KVM') {
         test_copy_change_ram($vm_name);
 
         test_copy_req_nonbase($vm_name);
+        clean();
     }
 
 }

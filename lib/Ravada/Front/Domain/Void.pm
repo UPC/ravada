@@ -38,7 +38,9 @@ sub _config_file {
     return "$DIR_TMP/".$self->name.".yml";
 }
 
-sub _config_dir { return $DIR_TMP }
+sub _config_dir {
+    return $DIR_TMP;
+}
 
 sub list_controllers {
     return %GET_CONTROLLER_SUB;
