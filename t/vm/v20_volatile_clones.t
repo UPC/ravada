@@ -14,6 +14,57 @@ use Test::Ravada;
 init();
 
 ######################################################################3
+sub test_volatile_clone_req {
+    my $vm = shift;
+    my $remote_ip = '127.0.0.1';
+
+    my $domain = create_domain($vm->type);
+    ok($domain);
+
+    is($domain->volatile_clones, 0);
+
+    $domain->volatile_clones(1);
+    is($domain->volatile_clones, 1);
+    my $clone_name = new_domain_name();
+
+    $domain->prepare_base(user_admin);
+    my $req = Ravada::Request->create_domain(
+        name => $clone_name
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
+        ,start => 1
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my $clone = rvd_back->search_domain($clone_name);
+    is($clone->is_active, 1);
+    is($clone->is_volatile, 1);
+
+    $domain->volatile_clones(0);
+    is($domain->volatile_clones, 0);
+
+    my $clone_name2 = new_domain_name();
+
+    my $req2 = Ravada::Request->create_domain(
+        name => $clone_name2
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
+        ,start => 1
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my $clone2 = rvd_back->search_domain($clone_name2);
+    is($clone2->is_active, 1);
+    is($clone2->is_volatile, 0);
+
+    $clone2->remove(user_admin);
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+
+}
+
 
 sub test_volatile_clone {
     my $vm = shift;
@@ -321,6 +372,9 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
+
+        test_volatile_clone_req($vm);
+        test_volatile_clone($vm);
 
         test_old_machine($vm);
         test_old_machine_req($vm);

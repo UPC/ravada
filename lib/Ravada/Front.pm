@@ -759,11 +759,11 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'refresh_vms'
                 || $command eq 'refresh_storage'
                 || $command eq 'ping_backend'
+                || $command eq 'screenshot'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
                 || $command eq 'shutdown'
-                || $command eq 'screenshot'
                 || $command eq 'hibernate'
                 )
                 && time - $epoch_date_changed > 5

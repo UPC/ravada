@@ -143,6 +143,26 @@ sub _around_create_domain {
     my $base;
     my $id_base = delete $args{id_base};
     $base = Ravada::Domain->open($id_base)  if $id_base;
+     my $id_iso = delete $args{id_iso};
+     my $active = delete $args{active};
+       my $name = delete $args{name};
+       my $swap = delete $args{swap};
+    my $remote_ip = delete $args{remote_ip};
+
+     # args get deleted but kept on @_ so when we call $self->$orig below are passed
+     delete $args{disk};
+     delete $args{memory};
+     delete $args{request};
+     delete $args{iso_file};
+     delete $args{id_template};
+     delete @args{'description','remove_cpu','vm','start'};
+
+    confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
+
+    if ($id_base) {
+        $base = $self->search_domain_by_id($id_base)
+            or confess "Error: I can't find domain $id_base on ".$self->name;
+    }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
         unless $owner->is_admin
@@ -156,7 +176,7 @@ sub _around_create_domain {
 
     my $domain = $self->$orig(@_);
 
-    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    $domain->add_volume_swap( size => $args{swap})  if $swap;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -166,7 +186,6 @@ sub _around_create_domain {
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
 
     my @start_args = ( user => $owner );
-    my $remote_ip = $args{remote_ip};
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
     $domain->_post_start(@start_args) if $domain->is_active;
