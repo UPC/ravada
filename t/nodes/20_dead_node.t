@@ -24,10 +24,15 @@ sub test_down_node($vm, $node) {
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(node => $node, user => user_admin);
 
-    my $clone = $domain->clone(user => user_admin, name => new_domain_name() );
-    $clone->migrate($node);
-    $clone->start(user_admin);
-    is($clone->_vm->id, $node->id );
+    my @clone;
+    for ( 1 .. 3 ) {
+        my $clone = $domain->clone(user => user_admin, name => new_domain_name() );
+        $clone->migrate($node);
+        $clone->start(user_admin);
+        is($clone->_vm->id, $node->id );
+
+        push @clone,($clone);
+    }
 
     shutdown_node($node);
     my $req = Ravada::Request->refresh_vms();
@@ -35,17 +40,23 @@ sub test_down_node($vm, $node) {
     is($req->status, 'done');
     is($req->error, '',"Expecting no error after refresh vms");
 
-    is($clone->is_active, 0, "Expecting clone not active after node shutdown");
+    is($clone[0]->is_active, 0, "Expecting clone not active after node shutdown");
 
-    $clone->remove(user_admin);
+    my@req;
+    for (@clone) {
+        push @req,(Ravada::Request->remove_domain(uid => user_admin->id
+                    , name=> $_->name
+        ));
+    }
+    for my $req (@req) {
+        rvd_back->_process_requests_dont_fork();
+        next if $req->status ne 'done';
+        is($req->error ,'');
+    }
     $domain->remove(user_admin);
 }
 
 sub test_disabled_node($vm, $node) {
-    start_node($node);
-}
-
-sub test_deleted_node($vm, $node) {
     start_node($node);
 
     my $domain = create_domain($vm);
@@ -57,18 +68,29 @@ sub test_deleted_node($vm, $node) {
     $clone->start(user_admin);
     is($clone->_vm->id, $node->id );
 
-    my $sth = connector->dbh->prepare("DELETE FROM vms WHERE id=?");
+    my $sth = connector->dbh->prepare("UPDATE vms set enabled=0 WHERE id=?");
     $sth->execute($node->id);
 
     my $req = Ravada::Request->refresh_vms();
     rvd_back->_process_requests_dont_fork();
+    rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
     is($req->error, '',"Expecting no error after refresh vms");
 
-    is($clone->is_active, 0, "Expecting clone not active after node shutdown");
+    my $clone_f = Ravada::Front::Domain->open($clone->id);
+    is($clone_f->is_active, 0, "Expecting clone in frontend not active after node disabled");
+
+    for ( 1 .. 120 ) {
+        rvd_back->_process_requests_dont_fork(1);
+        last if !$clone->is_active;
+        sleep 1;
+    }
+    is($clone->is_active, 0, "Expecting clone not active after node disabled") or exit;
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
+
+    $node->enabled(1);
 }
 
 ##################################################################################
@@ -110,7 +132,6 @@ for my $vm_name ( 'KVM', 'Void') {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
         test_down_node($vm, $node);
         test_disabled_node($vm, $node);
-        test_deleted_node($vm, $node);
 
         NEXT:
         clean_remote_node($node);
