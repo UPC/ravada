@@ -1664,6 +1664,11 @@ sub _post_shutdown {
 sub _around_is_active($orig, $self) {
     return 0 if $self->is_removed;
 
+    if (!$self->_vm) {
+        return 1 if $self->_data('status') eq 'active';
+        return 0;
+    }
+
     my $is_active = 0;
     $is_active = $self->$orig() if $self->_vm->is_active;
 
