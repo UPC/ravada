@@ -176,7 +176,7 @@ sub _around_create_domain {
 
     my $domain = $self->$orig(@_);
 
-    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    $domain->add_volume_swap( size => $args{swap})  if $swap;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
