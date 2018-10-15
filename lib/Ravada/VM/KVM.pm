@@ -94,7 +94,8 @@ sub _connect {
     if ($self->host eq 'localhost') {
         $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        return if $self->readonly;
+        confess "Error: You can't connect to remote VMs in readonly mode"
+            if $self->readonly;
         my $transport = 'ssh';
         my $address = $con_type."+".$transport
                                             ."://".'root@'.$self->host
@@ -107,20 +108,9 @@ sub _connect {
                                   Sys::Virt::CRED_AUTHNAME,
                                   Sys::Virt::CRED_PASSPHRASE,
                               ]
-                              ,callback => sub {
-                                  my $creds = shift;
-                                  foreach my $cred (@{$creds}) {
-                                      $cred->{result} = $self->security->{user}
-                                          if $cred->{type} == Sys::Virt::CRED_AUTHNAME;
-                                      $cred->{result} = $self->security->{password}
-                                          if $cred->{type} == Sys::Virt::CRED_PASSPHRASE;
-                                  }
-                                  return 0;
-                              }
                           );
          };
-         die $@ if $@ && $@ !~ /libvirt error code: 38/;
-         return if !$vm;
+         confess $@ if $@;
     }
     if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
 	    warn "WARNING: No storage pools creating default\n";
@@ -164,7 +154,7 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return 1 if $self->vm;
+    return 1 if $self->vm && $self->is_alive;
 
     return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
