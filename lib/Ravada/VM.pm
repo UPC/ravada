@@ -143,6 +143,25 @@ sub _around_create_domain {
     my $base;
     my $id_base = delete $args{id_base};
     $base = Ravada::Domain->open($id_base)  if $id_base;
+     my $id_iso = delete $args{id_iso};
+     my $active = delete $args{active};
+       my $name = delete $args{name};
+       my $swap = delete $args{swap};
+
+     # args get deleted but kept on @_ so when we call $self->$orig below are passed
+     delete $args{disk};
+     delete $args{memory};
+     delete $args{request};
+     delete $args{iso_file};
+     delete $args{id_template};
+     delete @args{'description','remove_cpu','vm','start'};
+
+    confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
+
+    if ($id_base) {
+        $base = $self->search_domain_by_id($id_base)
+            or confess "Error: I can't find domain $id_base on ".$self->name;
+    }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
         unless $owner->is_admin
