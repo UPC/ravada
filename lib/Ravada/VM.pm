@@ -147,6 +147,7 @@ sub _around_create_domain {
      my $active = delete $args{active};
        my $name = delete $args{name};
        my $swap = delete $args{swap};
+    my $remote_ip = delete $args{remote_ip};
 
      # args get deleted but kept on @_ so when we call $self->$orig below are passed
      delete $args{disk};
@@ -185,7 +186,6 @@ sub _around_create_domain {
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
 
     my @start_args = ( user => $owner );
-    my $remote_ip = $args{remote_ip};
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
     $domain->_post_start(@start_args) if $domain->is_active;
