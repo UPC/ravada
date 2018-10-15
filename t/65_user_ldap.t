@@ -16,6 +16,7 @@ use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
 my $RAVADA_POSIX_GROUP = "rvd_posix_group";
+
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 init();
@@ -262,6 +263,8 @@ sub _init_config($file_config, $with_admin, $with_posix_group) {
     }
 
     $config->{vm}=['KVM','Void'];
+    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
     my $fly_config = "/var/tmp/$$.config";
     DumpFile($fly_config, $config);
     return $fly_config;

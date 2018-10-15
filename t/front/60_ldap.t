@@ -13,7 +13,7 @@ use_ok('Ravada::Front');
 use_ok('Ravada::Auth');
 use_ok('Ravada::Auth::LDAP');
 
-my $CONFIG_FILE = 't/etc/ravada_ldap_1.conf';
+my $CONFIG_FILE = 't/etc/ravada_ldap.conf';
 
 init( $CONFIG_FILE);
 rvd_back();
@@ -28,6 +28,7 @@ sub test_ldap {
         config => $CONFIG_FILE
         ,connector => connector()
     );
+    delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
     create_ldap_user($USER_DATA->{name}, $USER_DATA->{password});
     my $login_ok;
     eval { $login_ok = Ravada::Auth::login($USER_DATA->{name}, $USER_DATA->{password}) };
@@ -67,6 +68,7 @@ sub test_ldap {
 #########################################################################
 
 SKIP: {
+<<<<<<< HEAD
     my $ravada = Ravada->new(config => $CONFIG_FILE
                         , connector => connector());
     $ravada->_install();
@@ -77,6 +79,28 @@ SKIP: {
 
     if ($@ =~ /Bad credentials/) {
         diag("$@\nFix admin credentials in $CONFIG_FILE");
+||||||| parent of 6811de74... Feature #894 master (#897)
+    my $ok = 1;
+    $USER_DATA = LoadFile($file_test_data)  if -e $file_test_data;
+    if (!-e $file_test_data || !$USER_DATA->{name} || !$USER_DATA->{password}) {
+        my $config = {
+            name => 'ldap.cn', password => '****'
+        };
+        warn "SKIPPED: To test Front LDAP create the file $file_test_data with\n"
+            .YAML::Dump($config);
+        $ok = 0;
+=======
+    my $ravada = Ravada->new(config => $CONFIG_FILE
+                        , connector => connector);
+    $ravada->_install();
+    my $ldap;
+
+
+    eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
+
+    if ($@ =~ /Bad credentials/) {
+        diag("$@\nFix admin credentials in $CONFIG_FILE");
+>>>>>>> 6811de74... Feature #894 master (#897)
     } else {
         diag("Skipped LDAP tests ".($@ or '')) if !$ldap;
     }
