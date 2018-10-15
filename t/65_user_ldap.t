@@ -5,6 +5,9 @@ use Data::Dumper;
 use Test::More;
 use YAML qw(LoadFile DumpFile);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -224,10 +227,9 @@ sub test_user_bind {
 
 }
 
-sub _init_config {
-    my ($file_config, $with_admin) = @_;
-    return if -e $file_config;
-    my $config = {
+sub _init_config($file_config, $with_admin, $with_posix_group) {
+    if ( ! -e $file_config) {
+        my $config = {
         ldap => {
             admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
             ,base => "dc=example,dc=com"
@@ -236,7 +238,84 @@ sub _init_config {
         }
     };
     delete $config->{ldap}->{admin_group}   if !$with_admin;
-    DumpFile($file_config,$config);
+    if ($with_posix_group) {
+        if ( !exists $config->{ldap}->{ravada_posix_group}
+                || !$config->{ldap}->{ravada_posix_group}) {
+            $config->{ldap}->{ravada_posix_group} = $RAVADA_POSIX_GROUP;
+            diag("Adding ravada_posix_group = $RAVADA_POSIX_GROUP in $file_config");
+        }
+    } else {
+        delete $config->{ldap}->{ravada_posix_group};
+    }
+
+    $config->{vm}=['KVM','Void'];
+    my $fly_config = "/var/tmp/$$.config";
+    DumpFile($fly_config, $config);
+    return $fly_config;
+}
+
+sub _add_posix_group {
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+
+    my $base = "ou=groups,".Ravada::Auth::LDAP::_dc_base();
+
+    my $mesg = $ldap->add(
+        cn => $RAVADA_POSIX_GROUP
+        ,dn => "cn=$RAVADA_POSIX_GROUP,$base"
+        ,attrs => [ cn => $RAVADA_POSIX_GROUP
+                    ,objectClass=> [ 'posixGroup' ]
+                    ,gidNumber => 999
+                ]
+    );
+    die "Error ".$mesg->code." adding $RAVADA_POSIX_GROUP ".$mesg->error
+        if $mesg->code && $mesg->code != 68;
+
+    $mesg = $ldap->search( filter => "cn=$RAVADA_POSIX_GROUP",base => $base );
+    my @group = $mesg->entries;
+    ok($group[0],"Expecting group $RAVADA_POSIX_GROUP") or return;
+    return $group[0];
+}
+
+sub _add_to_posix_group {
+    my $user_name = shift;
+    my $group = _add_posix_group();
+
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    $group->add(memberUid => $user_name);
+    my $mesg = $group->update($ldap);
+    die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 20;
+}
+
+sub test_posix_group {
+    my $with_posix_group = shift;
+    my $group = _add_posix_group();
+
+    my ($user_name, $password) = ('mcnulty_'.new_domain_name(), 'jameson');
+    my $user = create_ldap_user($user_name, $password);
+
+    my $user_login;
+    eval { $user_login= Ravada::Auth::LDAP->new(name => $user_name,password => $password) };
+    my $error = $@;
+    if ($with_posix_group) {
+        ok(!$user_login,"Expecting no login $user_name with posix group ".Dumper($Ravada::CONFIG));
+        like($error,qr(Login failed));
+    } else {
+        ok($user_login);
+    }
+    _add_to_posix_group($user_name);
+
+    eval { $user_login= Ravada::Auth::LDAP->new(name => $user_name,password => $password) };
+    is($@,'');
+    ok($user_login);
+
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $mesg = $ldap->delete($user);
+    die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
+
+    $mesg = $ldap->delete($group);
+    die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
+
+>>>>>>> 6cd2432b... test(ldap): fixed ravada posix group test
 }
 
 SKIP: {
@@ -244,9 +323,18 @@ SKIP: {
     for my $file_config ( "t/etc/ravada_ldap_1.conf"
                         , "t/etc/ravada_ldap_2.conf") {
 
-        _init_config($file_config, $with_admin);
-        my $ravada = Ravada->new(config => $file_config
+        my $fly_config = _init_config($file_config, $with_admin, $with_posix_group);
+        my $ravada = Ravada->new(config => $fly_config
                         , connector => connector);
+        $ravada->_install();
+        Ravada::Auth::LDAP::init();
+
+        if ($with_posix_group) {
+            ok($Ravada::CONFIG->{ldap}->{ravada_posix_group},
+                    "Expecting ravada_posix_group on $fly_config\n"
+                        .Dumper($Ravada::CONFIG->{ldap}))
+                or exit;
+        }
         my $ldap;
 
         eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
