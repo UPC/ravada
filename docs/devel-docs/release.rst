@@ -25,7 +25,7 @@ Draft
 Draft the release
 ~~~~~~~~~~~~~~~~~
 
-This step should be done at the very beginning of planning. If you didn't do it, skip it now.
+This step should be done at the very beginning of planning. If you already did it, skip it now.
 
 At code -> releases draft a new release
 
