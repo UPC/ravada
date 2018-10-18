@@ -57,7 +57,7 @@ Update the authors
 
 ::
 
-    $ git checkout master
+    $ git checkout 0.2.2
     $ cd templates/bootstrap/
     $ ./get_authors.sh
 
