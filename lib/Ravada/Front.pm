@@ -10,6 +10,7 @@ Ravada::Front - Web Frontend library for Ravada
 =cut
 
 use Carp qw(carp);
+use DateTime;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
@@ -50,6 +51,7 @@ our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 our %VM;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
+our $LOCAL_TZ = DateTime::TimeZone->new(name => 'local');
 ###########################################################################
 #
 # method modifiers
@@ -150,11 +152,12 @@ sub list_machines_user {
             , id_clone => undef
             , name_clone => undef
             , is_locked => undef
+            , can_hibernate => 0
         );
 
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
-            if ($clone->is_active && !$clone->is_locked) {
+            if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
                 my $req = Ravada::Request->screenshot_domain(
                 id_domain => $clone->id
                 ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
@@ -164,7 +167,10 @@ sub list_machines_user {
             $base{screenshot} = ( $clone->_data('file_screenshot') 
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
-            $base{id_clone} = $clone->id
+            $base{id_clone} = $clone->id;
+            $base{can_remove} = 0;
+            $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
+            $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
@@ -186,21 +192,6 @@ sub list_machines($self, $user) {
         }
         push @list,(@$machines);
     }
-
-=pod
-
-if ($user->can_remove_clone_all()) {
-        my $machines = $self->list_bases( );
-        for my $base (@$machines) {
-            my $clones = $self->list_domains( id_base => $base->{id} );
-            next if !scalar @$clones;
-            push @list, ($base);
-            push @list, @{$clones};
-        }
-
-    }
-
-=cut
 
     push @list,(@{$self->list_clones()}) if $user->can_list_clones;
     if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
@@ -230,6 +221,10 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
+                                    && !$m->{is_volatile};
     }
     return $machines;
 }
@@ -722,16 +717,15 @@ Returns a list of ruquests : ( id , domain_name, status, error )
 
 =cut
 
-sub list_requests {
-    my $self = shift;
+sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
-    my @now = localtime(time-120);
+    my @now = localtime(time-$seconds);
     $now[4]++;
     for (0 .. 4) {
         $now[$_] = "0".$now[$_] if length($now[$_])<2;
     }
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
-        ." ".$now[2].":".$now[1].":00";
+        ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT requests.id, command, args, date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
@@ -740,8 +734,8 @@ sub list_requests {
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    requests.status <> 'done' "
-        ."  OR ( command = 'download' AND date_changed >= ?) "
-        ." ORDER BY date_changed DESC LIMIT 10"
+        ."  OR ( date_changed >= ?) "
+        ." ORDER BY date_changed "
     );
     $sth->execute($time_recent);
     my @reqs;
@@ -751,12 +745,31 @@ sub list_requests {
         , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
-        next if $command eq 'force_shutdown'
+        my $epoch_date_changed;
+        if ($date_changed) {
+            my ($y,$m,$d,$hh,$mm,$ss) = $date_changed =~ /(\d{4})-(\d\d)-(\d\d) (\d+):(\d+):(\d+)/;
+            if ($y)  {
+                $epoch_date_changed = DateTime->new(year => $y, month => $m, day => $d
+                    ,hour => $hh, minute => $mm, second => $ss
+                    ,time_zone => $LOCAL_TZ
+                )->epoch;
+            }
+        }
+        next if $command eq 'enforce_limits'
+                || $command eq 'refresh_vms'
+                || $command eq 'refresh_storage'
+                || $command eq 'ping_backend'
+                || $command eq 'screenshot'
+                ;
+        next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
                 || $command eq 'shutdown'
-                || $command eq 'screenshot'
                 || $command eq 'hibernate'
-                || $command eq 'ping_backend';
+                )
+                && time - $epoch_date_changed > 5
+                && $status eq 'done'
+                && !$error;
+        next if $id_domain_req && defined $id_domain && $id_domain != $id_domain_req;
         my $args;
         $args = decode_json($j_args) if $j_args;
 
@@ -772,6 +785,7 @@ sub list_requests {
             ,domain => $domain
             ,date => $date
             ,message => $message
+            ,error => $error
         };
     }
     $sth->finish;

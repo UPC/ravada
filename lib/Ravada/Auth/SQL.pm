@@ -353,6 +353,7 @@ sub is_operator {
         || $self->can_create_machine
         || $self->can_list_machines
         || $self->can_change_settings_all()
+        || $self->can_grant()
         || 0;
 }
 
@@ -386,6 +387,12 @@ sub can_list_clones {
     return 0;
   
 }
+
+=head2 can_list_clones_from_own_base
+
+Returns true if the user can list all machines that are clones from his bases
+
+=cut
 
 sub can_list_clones_from_own_base($self) {
     return 1 if $self->can_remove_clones || $self->can_remove_clone_all
@@ -581,6 +588,15 @@ sub can_do($self, $grant) {
     return $self->{_grant}->{$grant};
 }
 
+=head2 can_do_domain
+
+Returns if the user is allowed to perform a privileged action in a virtual machine
+
+    if ($user->can_do_domain("remove", $domain)) {
+        ...
+
+=cut
+
 sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
@@ -588,7 +604,7 @@ sub can_do_domain($self, $grant, $domain) {
     return 0 if !$self->can_do($grant) && !$domain->id_base;
 
     return 1 if $self->can_do("${grant}_all");
-    return 1 if $domain->id_owner == $self->id;
+    return 1 if $domain->id_owner == $self->id && $self->can_do($grant);
 
     if ($self->can_do("${grant}_clones") && $domain->id_base) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
@@ -661,7 +677,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'change_settings');
     $self->grant($user, 'remove');
     $self->grant($user, 'shutdown');
-#    $self->grant($user, 'screenshot');
+    $self->grant($user, 'screenshot');
 }
 
 =head2 grant_operator_permissions
@@ -881,6 +897,20 @@ sub can_manage_machine($self, $domain) {
     return 0;
 }
 
+=head2 can_remove_clones
+
+Returns true if the user can remove clones.
+
+Arguments:
+
+=over
+
+=item * id_domain: optional
+
+=back
+
+=cut
+
 sub can_remove_clones($self, $id_domain=undef) {
 
     return $self->can_do('remove_clones') if !$id_domain;
@@ -897,6 +927,20 @@ sub can_remove_clones($self, $id_domain=undef) {
     return 0;
 }
 
+=head2 can_remove_machine
+
+Return true if the user can remove this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
 sub can_remove_machine($self, $domain) {
     return 1 if $self->can_remove_all();
     #return 0 if !$self->can_remove();
@@ -910,6 +954,20 @@ sub can_remove_machine($self, $domain) {
     return $self->can_remove_clones($domain->id) if $domain->id_base;
     return 0;
 }
+
+=head2 can_shutdown_machine
+
+Return true if the user can shutdown this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
 
 sub can_shutdown_machine($self, $domain) {
 
@@ -926,6 +984,12 @@ sub can_shutdown_machine($self, $domain) {
 
     return 0;
 }
+
+=head2 grants
+
+Returns a list of permissions granted to the user in a hash
+
+=cut
 
 sub grants($self) {
     $self->_load_grants();

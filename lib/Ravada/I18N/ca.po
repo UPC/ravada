@@ -632,7 +632,7 @@ msgid "Current Password:"
 msgstr "Contrasenya Actual:"
 
 msgid "For more information, check"
-msgstr "Per més informació, revisa"
+msgstr "Per a més informació, revisa"
 
 msgid "the Windows Clients documentation"
 msgstr "la documentació dels clients de Windows"
@@ -708,3 +708,90 @@ msgstr "La confirmació de la contrasenya ha de tenir com a mínim 5 caràcters"
 msgid "Confirm Password can only contain words and numbers"
 msgstr ""
 "La confirmació de la contrasenya només pot contenir paraules i números"
+
+msgid "This information will be available to the users"
+msgstr "Aquesta informació estarà disponible per als usuaris"
+
+msgid "Volatile Clones"
+msgstr "Clon volàtil"
+
+msgid "Owner"
+msgstr "Propietari"
+
+msgid "Change the owner of the machine"
+msgstr "Canvieu el propietari de la màquina"
+
+msgid "Press SHIFT + F12 to exit"
+msgstr "Premeu SHIFT + F12 per sortir"
+
+msgid ""
+"If you can not see the machine screen in a few seconds check for a file "
+"called"
+msgstr ""
+"Si no podeu veure la pantalla de la màquina en uns segons, consulteu un "
+"fitxer anomenat"
+
+msgid "in your downloads folder."
+msgstr "a la carpeta de descàrregues."
+
+msgid "copied to clipboard"
+msgstr "copiat al porta-retalls"
+
+msgid "Portuguese"
+msgstr "Portuguès"
+
+msgid "Read more."
+msgstr "Llegir més."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "La contrasenya per la connexió d'aquesta màquina virtual és:"
+
+msgid "view"
+msgstr "veure"
+
+msgid "Start again"
+msgstr "Inicia de nou"
+
+msgid "The machine is down."
+msgstr "La màquina està aturada."
+
+msgid "Remove"
+msgstr "Esborra"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "La màquina ha d'estar en marxa per a fer la captura de pantalla."
+
+msgid "Take screenshot"
+msgstr "Fer captura de pantalla"
+
+msgid "Set base picture"
+msgstr "Establir imatge a la base"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Desant la captura de pantalla, espereu un moment si us plau...."
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr ""
+"Necessites la màquina en marxa per a poder fer la captura de pantalla."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Copiant la captura de pantalla, espereu un moment si us plau..."
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr ""
+"Necessites una captura de pantalla per a poder copiar-la a la màquina base."
+
+msgid "Add"
+msgstr "Afegeix"
+
+msgid "The changes will apply on next restart"
+msgstr "Els canvis seran efectius en la pròxima posada en marxa."
+
+msgid "This VM is running and can't be renamed."
+msgstr "Aquesta VM està en marxa i no es pot canviar el nom."
+
+msgid "Thanks to:"
+msgstr "Gràcies a:"
+
+msgid "licensed."
+msgstr "llicenciat."

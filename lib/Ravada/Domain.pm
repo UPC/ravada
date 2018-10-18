@@ -17,7 +17,6 @@ use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use IPC::Run3 qw(run3);
-use Sys::Statistics::Linux;
 use Time::Piece;
 use IPTables::ChainMgr;
 
@@ -82,6 +81,11 @@ requires 'hybernate';
 requires 'hibernate';
 
 requires 'get_driver';
+requires 'get_controller_by_name';
+requires 'list_controllers';
+requires 'set_controller';
+requires 'remove_controller';
+#
 ##########################################################
 
 has 'domain' => (
@@ -180,10 +184,15 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'get_info' => \&_around_get_info;
+around 'set_max_mem' => \&_around_set_mem;
+around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
 around 'autostart' => \&_around_autostart;
+
+after 'set_controller' => \&_post_change_controller;
+after 'remove_controller' => \&_post_change_controller;
 
 ##################################################
 #
@@ -218,14 +227,20 @@ sub _start_preconditions{
     die "Domain ".$self->name." is a base. Bases can't get started.\n"
         if $self->is_base();
 
+    my $request;
     if (scalar @_ %2 ) {
         _allow_manage_args(@_);
+        my @args = @_;
+        shift @args;
+        my %args = @args;
+        $request = $args{request} if exists $args{request};
     } else {
         _allow_manage(@_);
     }
-    $self->_check_free_memory();
+    return if $self->is_active;
     $self->_check_free_vm_memory();
-    _check_used_memory(@_);
+    $self->_check_cpu_usage($request);
+    #_check_used_memory(@_);
 
 }
 
@@ -401,25 +416,46 @@ sub _check_has_clones {
         if $#clones>=0;
 }
 
-sub _check_free_memory{
-    my $self = shift;
-    return if ref($self) =~ /Void/i;
-
-    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
-    my $stat = $lxs->get;
-    die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
-            ." MB out of ".int($MIN_FREE_MEMORY/1024)." MB required." 
-        if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
-}
-
 sub _check_free_vm_memory {
     my $self = shift;
 
     return if !$self->_vm->min_free_memory;
-    return if $self->_vm->free_memory > $self->_vm->min_free_memory;
+    my $vm_free_mem = $self->_vm->free_memory;
 
-    die "ERROR: No free memory. Only "._gb($self->_vm->free_memory)." out of "
+    return if $vm_free_mem > $self->_vm->min_free_memory;
+
+    my $msg = "Error: No free memory. Only "._gb($vm_free_mem)." out of "
         ._gb($self->_vm->min_free_memory)." GB required.\n";
+
+    die $msg;
+}
+
+sub _check_cpu_usage($self, $request=undef){
+
+    return if ref($self) =~ /Void/i;
+    if ($self->_vm->active_limit){
+        chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
+        die "Error: Too many active domains." if (scalar $self->_vm->vm->list_domains() >= $self->_vm->active_limit);
+    }
+    
+    my @cpu;
+    my $msg;
+    for ( 1 .. 10 ) {
+        open( my $stat ,'<','/proc/loadavg') or die "WTF: $!";
+        @cpu = split /\s+/, <$stat>;
+        close $stat;
+
+        if ( $cpu[0] < $self->_vm->max_load ) {
+            $request->error('') if $request;
+            return;
+        }
+        $msg = "Error: CPU Too loaded. ".($cpu[0])." out of "
+        	.$self->_vm->max_load." max specified.";
+        $request->error($msg)   if $request;
+        die "$msg\n" if $cpu[0] > $self->_vm->max_load +1;
+        sleep 1;
+    }
+    die "$msg\n";
 }
 
 sub _gb($mem=0) {
@@ -428,29 +464,6 @@ sub _gb($mem=0) {
     $gb =~ s/(\d+\.\d).*/$1/;
     return ($gb);
 
-}
-
-sub _check_used_memory {
-    my $self = shift;
-    my $used_memory = 0;
-
-    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
-    my $stat = $lxs->get;
-
-    # We get mem total less the used for the system
-    my $mem_total = $stat->{memstats}->{memtotal} - 1*1024*1024;
-
-    for my $domain ( $self->_vm->list_domains ) {
-        my $alive;
-        eval { $alive = 1 if $domain->is_active && !$domain->is_paused };
-        next if !$alive;
-
-        my $info = $domain->get_info;
-        confess "No info memory ".Dumper($info) if !exists $info->{memory};
-        $used_memory += $info->{memory};
-    }
-
-    confess "ERROR: Out of free memory. Using $used_memory RAM of $mem_total available" if $used_memory>= $mem_total;
 }
 
 =pod
@@ -495,7 +508,7 @@ sub _allowed {
     eval { $id_owner = $self->id_owner };
     my $err = $@;
 
-    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->domain
+    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
         ." owned by ".($id_owner or '<UNDEF>')
             if (defined $id_owner && $id_owner != $user->id );
 
@@ -516,6 +529,18 @@ sub _around_get_info($orig, $self) {
         $self->_data(info => encode_json($info));
     }
     return $info;
+}
+
+sub _around_set_mem($orig, $self, $value) {
+    my $ret = $self->$orig($value);
+    if ($self->is_known) {
+        my $info;
+        eval { $info = decode_json($self->_data('info')) if $self->_data('info')};
+        warn $@ if $@ && $@ !~ /malformed JSON/i;
+        $info->{memory} = $value;
+        $self->_data(info => encode_json($info))
+    }
+    return $ret;
 }
 
 ##################################################################################3
@@ -640,9 +665,7 @@ sub open($class, @args) {
     my $vm_class = "Ravada::VM::".$row->{vm};
     bless $vm0, $vm_class;
 
-    my @ro = ();
-    @ro = (readonly => 1 ) if $>;
-    my $vm = $vm0->new( @ro );
+    my $vm = $vm0->new( );
 
     my $domain = $vm->search_domain($row->{name}, $force);
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
@@ -660,6 +683,12 @@ sub is_known {
     return 1    if $self->_select_domain_db(name => $self->name);
     return 0;
 }
+
+=head2 is_known_extra
+
+Returns if the domain has extra fields information known in Ravada.
+
+=cut
 
 sub is_known_extra {
     my $self = shift;
@@ -836,13 +865,18 @@ sub info($self, $user) {
     my $info = {
         id => $self->id
         ,name => $self->name
+        ,is_base => $self->is_base
         ,is_active => $self->is_active
         ,spice_password => $self->spice_password
-        ,display_url => $self->display($user)
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
+        ,needs_restart => ( $self->needs_restart or 0)
     };
+    eval {
+        $info->{display_url} = $self->display($user)    if $self->is_active;
+    };
+    die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         $info->{description} = $base->description;
@@ -853,6 +887,7 @@ sub info($self, $user) {
         $info->{display_ip} = $local_ip;
         $info->{display_port} = $local_port;
     }
+    $info->{hardware} = $self->get_controllers();
 
     return $info;
 }
@@ -1160,20 +1195,6 @@ sub list_files_base_target {
     return $_[0]->list_files_base("target");
 }
 
-=head2 json
-Returns the domain information as json
-=cut
-
-sub json {
-    my $self = shift;
-
-    my $id = $self->_data('id');
-    my $data = $self->{_data};
-    $data->{is_active} = $self->is_active;
-
-    return encode_json($data);
-}
-
 =head2 can_screenshot
 Returns wether this domain can take an screenshot.
 =cut
@@ -1294,7 +1315,6 @@ sub clone {
         ,id_base => $id_base
         ,id_owner => $uid
         ,vm => $self->vm
-        ,_vm => $self->_vm
         ,@args_copy
     );
     return $clone;
@@ -1321,7 +1341,6 @@ sub _copy_clone($self, %args) {
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
-        ,_vm => $self->_vm
         ,@copy_arg
     );
     my @volumes = $self->list_volumes_target;
@@ -1404,7 +1423,12 @@ sub _post_shutdown {
                  , at => time+$timeout 
         );
     }
+    Ravada::Request->enforce_limits();
     $self->_remove_temporary_machine(@_);
+    $self->needs_restart(0) if $self->is_known()
+                                && $self->needs_restart()
+                                && !$self->is_active;
+    _test_iptables_jump();
 }
 
 sub _around_is_active($orig, $self) {
@@ -1419,11 +1443,7 @@ sub _around_is_active($orig, $self) {
     $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
-    eval {
-    $self->display(Ravada::Utils::user_daemon())    if $is_active;
-    };
-    warn "around_is_active display $@"  if $@;
-
+    $self->needs_restart(0) if $self->needs_restart() && !$is_active;
     return $is_active;
 }
 
@@ -1479,6 +1499,7 @@ sub add_volume_swap {
 
 sub _remove_iptables {
     my $self = shift;
+
     my %args = @_;
 
     my $user = delete $args{user};
@@ -1488,7 +1509,7 @@ sub _remove_iptables {
 
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
-    my $ipt_obj = _obj_iptables();
+    my $ipt_obj = _obj_iptables(0);
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iptables SET time_deleted=?"
@@ -1501,10 +1522,25 @@ sub _remove_iptables {
 
     for my $row (@iptables) {
         my ($id, $iptables) = @$row;
-        $ipt_obj->delete_ip_rule(@$iptables);
+        $ipt_obj->delete_ip_rule(@$iptables) if !$>;
         $sth->execute(Ravada::Utils::now(), $id);
     }
 }
+
+sub _test_iptables_jump {
+    my @cmd = ('iptables','-L','INPUT');
+    my ($in, $out, $err);
+
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my $count = 0;
+    for my $line ( split /\n/,$out ) {
+        $count++ if $line =~ /^RAVADA /;
+    }
+    return if !$count || $count == 1;
+    warn "Expecting 0 or 1 RAVADA iptables jump, got: "    .($count or 0);
+}
+
 
 sub _remove_temporary_machine {
     my $self = shift;
@@ -1561,6 +1597,7 @@ sub _post_start {
 
     }
     $self->get_info();
+    Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
 
@@ -1582,6 +1619,7 @@ sub _add_iptable {
     my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
+    return if !$self->is_active;
     my $display = $self->display($user);
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
     $self->_remove_iptables( port => $local_port );
@@ -1596,7 +1634,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-	my ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+	my ($rv, $out_ar, $errs_ar);
+	($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)  if !$>;
 
     $self->_log_iptable(iptables => \@iptables_arg, @_);
 
@@ -1605,7 +1644,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'ACCEPT',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+	    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)
+                                    if !$>;
 
         $self->_log_iptable(iptables => \@iptables_arg, @_);
 
@@ -1614,7 +1654,8 @@ sub _add_iptable {
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
     
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
+    ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg)
+                                if !$>;
     
     $self->_log_iptable(iptables => \@iptables_arg, %args);
 
@@ -1653,18 +1694,22 @@ sub open_iptables {
     $self->_remove_iptables();
 
     if ( !$self->is_active ) {
-        Ravada::Request->start_domain(
-            uid => $user->id
+        eval {
+            $self->start(
+                user => $user
             ,id_domain => $self->id
             ,remote_ip => $args{remote_ip}
-        );
-        die "INFO: Machine ".$self->name." is not active, starting up.\n"
+            );
+        };
+        die $@ if $@ && $@ !~ /already running/i;
+    } else {
+        Ravada::Request->enforce_limits( at => time + 60);
     }
 
     $self->_add_iptable(%args);
 }
 
-sub _obj_iptables {
+sub _obj_iptables($create_chain=1) {
 
 	my %opts = (
     	'use_ipv6' => 0,         # can set to 1 to force ip6tables usage
@@ -1683,9 +1728,20 @@ sub _obj_iptables {
 	                           ### iptables commands (default is 0).
 	);
 
-	my $ipt_obj = IPTables::ChainMgr->new(%opts)
-    	or die "[*] Could not acquire IPTables::ChainMgr object";
+	my $ipt_obj;
+    my $error;
+    for ( 1 .. 10 ) {
+        eval {
+            $ipt_obj = IPTables::ChainMgr->new(%opts)
+                or warn "[*] Could not acquire IPTables::ChainMgr object";
+        };
+        $error = $@;
+        last if !$error;
+        sleep 1;
+    }
+    confess $error if $error;
 
+    return $ipt_obj if !$create_chain || $>;
 	my $rv = 0;
 	my $out_ar = [];
 	my $errs_ar = [];
@@ -1694,13 +1750,26 @@ sub _obj_iptables {
 	($rv, $out_ar, $errs_ar) = $ipt_obj->chain_exists('filter', $IPTABLES_CHAIN);
     if (!$rv) {
 		$ipt_obj->create_chain('filter', $IPTABLES_CHAIN);
-	}
-    ($rv, $out_ar, $errs_ar) = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
-    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
+    }
+    _add_jump($ipt_obj);
 	# set the policy on the FORWARD table to DROP
 #    $ipt_obj->set_chain_policy('filter', 'FORWARD', 'DROP');
 
     return $ipt_obj;
+}
+
+sub _add_jump($ipt_obj) {
+    my $out = `iptables -L INPUT -n`;
+    my $count = 0;
+    for my $line ( split /\n/,$out ) {
+        next if $line !~ /^[A-Z]+ /;
+        $count++;
+        return if $line =~ /^RAVADA/;
+    }
+    my ($rv, $out_ar, $errs_ar)
+            = $ipt_obj->add_jump_rule('filter','INPUT', 1, $IPTABLES_CHAIN);
+    warn join("\n", @$out_ar)   if $out_ar->[0] && $out_ar->[0] !~ /already exists/;
+
 }
 
 sub _log_iptable {
@@ -1845,6 +1914,13 @@ sub is_volatile($self, $value=undef) {
     return $is_volatile;
 }
 
+=head2 is_persistent
+
+Returns true if the virtual machine is persistent. So it is not removed after
+shut down.
+
+=cut
+
 sub is_persistent($self) {
     return !$self->{_is_volatile} if exists $self->{_is_volatile};
     return 0;
@@ -1934,12 +2010,44 @@ sub _post_rename {
      $sth->finish;
  }
 
+=head2 get_controller
 
-sub get_controller {}
+Calls the method to get the specified controller info
 
-sub set_controller {}
+Attributes:
+    name -> name of the controller type
 
-sub remove_controller {}
+=cut
+
+sub get_controller {
+	my $self = shift;
+	my $name = shift;
+
+    my $sub = $self->get_controller_by_name($name);
+#    my $sub = $GET_CONTROLLER_SUB{$name};
+    
+    die "I can't get controller $name for domain ".$self->name
+        if !$sub;
+
+    return $sub->($self);
+}
+
+=head2 get_controllers
+
+Returns a hashref of the hardware controllers for this virtual machine
+
+=cut
+
+
+sub get_controllers($self) {
+    my $info;
+    my %controllers = $self->list_controllers();
+    for my $name ( sort keys %controllers ) {
+        $info->{$name} = [$self->get_controller($name)];
+    }
+    return $info;
+}
+
 =head2 drivers
 
 List the drivers available for a domain. It may filter for a given type.
@@ -2018,8 +2126,7 @@ sub set_driver_id {
     $sth->finish;
 }
 
-sub remote_ip {
-    my $self = shift;
+sub remote_ip($self) {
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT remote_ip FROM iptables "
@@ -2081,6 +2188,29 @@ Returns all the drivers if not passwed
 
 =cut
 
+=head2 get_driver_id
+
+Gets the value of a driver
+
+Argument: name
+
+    my $driver = $domain->get_driver('video');
+
+=cut
+
+sub get_driver_id($self, $name) {
+    my $value = $self->get_driver($name);
+    return if !defined $value;
+
+    my $driver_type = $self->drivers($name) or confess "ERROR: Unknown drivers"
+        ." of type '$name'";
+
+    for my $option ($driver_type->get_options) {
+        return $option->{id} if $option->{value} eq $value;
+    }
+    return;
+}
+
 sub _dbh {
     my $self = shift;
     _init_connector() if !$CONNECTOR || !$$CONNECTOR;
@@ -2105,16 +2235,11 @@ Sets a domain option:
 =cut
 
 sub set_option($self, $option, $value) {
-    if ($option eq 'description') {
-        warn "$option -> $value\n";
-        $self->description($value);
-    } elsif ($option eq 'run_timeout') {
-        $self->run_timeout($value);
-    } elsif ($option eq 'volatile_clones') {
-        $self->volatile_clones($value); 
-    } else {
-        confess "ERROR: Unknown option '$option'";
-    }
+    my %valid_option = map { $_ => 1 } qw( description run_timeout volatile_clones id_owner);
+    die "ERROR: Invalid option '$option'"
+        if !$valid_option{$option};
+
+    return $self->_data($option, $value);
 }
 
 =head2 type
@@ -2207,6 +2332,35 @@ sub status($self, $value=undef) {
     return $self->_data('status', $value);
 }
 
+=head2 client_status
+
+Returns the status of the viewer connection. The virtual machine must be
+active, and the remote ip must be known.
+
+Possible results:
+
+=over
+
+=item * connecting : set at the start of the virtual machine
+
+=item * IP : known remote ip from the current connection
+
+=item * disconnected : the remote client has been closed
+
+=back
+
+This method is used from higher level commands, for example, you can shut down
+or hibernate all the disconnected virtual machines like this:
+
+  # rvd_back --hibernate --disconnected
+  # rvd_back --shutdown --disconnected
+
+You could also set this command on a cron entry to run nightly, hourly or whenever
+you find suitable.
+
+=cut
+
+
 sub client_status($self, $force=0) {
     return if !$self->is_active;
     return if !$self->remote_ip;
@@ -2257,4 +2411,19 @@ sub _client_connection_status($self, $force=undef) {
     return 'disconnected';
 }
 
+=head2 needs_restart
+
+Returns true or false if the virtual machine needs to be restarted so some
+hardware change can be applied.
+
+=cut
+
+sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart',$value);
+}
+
+sub _post_change_controller {
+    my $self = shift;
+    $self->needs_restart(1) if $self->is_active;
+}
 1;

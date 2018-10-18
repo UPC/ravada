@@ -3,21 +3,14 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $TEST_SQL = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my $RVD_BACK = rvd_back($TEST_SQL->connector, $FILE_CONFIG);
-my $RVD_FRONT= rvd_front($TEST_SQL->connector, $FILE_CONFIG);
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $TEST_SQL->connector);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
 my @VMS = ('KVM');
 my $USER = create_user("foo","bar", 1);
@@ -73,7 +66,7 @@ sub test_import {
 
     my $dom_name = $domain->name;
 
-    my $sth = $TEST_SQL->dbh->prepare("DELETE FROM domains WHERE id=?");
+    my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($domain->id);
     $domain = undef;
 
@@ -114,7 +107,7 @@ sub test_import_spinoff {
 
     my $dom_name = $domain->name;
 
-    my $sth = $TEST_SQL->dbh->prepare("DELETE FROM domains WHERE id=?");
+    my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($domain->id);
     $domain = undef;
 

@@ -4,23 +4,15 @@ use strict;
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
 
 use Ravada;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-init($test->connector, $FILE_CONFIG);
+init();
 
 my $USER = create_user("foo","bar", 1);
-
 
 #######################################################################
 

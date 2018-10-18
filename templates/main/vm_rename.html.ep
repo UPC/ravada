@@ -19,16 +19,16 @@
                        <div class="panel-heading"><%= $message_rename %></div>
                     </div>
                 % }
-                <div ng-hide="rename_requested">
+                <div ng-hide="pending_requests">
                     <input class="form-control" type="text" name="new_name" ng-model="new_name"
                              ng-change="validate_new_name(showmachine.name)"
                              ng-disabled="<%= $disable_rename %>"
                 >
                 <button type="button" ng-disabled="<%= $disable_rename %> || new_name_duplicated || new_name_invalid || message_rename"
                              ng-click="rename(showmachine.id, showmachine.name)">
-                                Rename
+                                <%=l 'Rename' %>
                     </button>
-                    <input type="reset" value="Cancel" onclick = "location='/admin/machines'"/>
+                    <input type="reset" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
                     <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"
                                class="control-label" for="new_name">
@@ -41,13 +41,6 @@
                               </label>
                     </div>
                 </div>
-                <div class="panel panel-success" ng-show="rename_requested">
-                    <div class="panel-heading">
-                    Rename requested.
-                    </div>
-                </div>
-                <div ng-show="message_rename"
-                    class="alert alert-warning">Renaming machine </div>
             </div>
             <div class="col-md-6">
 

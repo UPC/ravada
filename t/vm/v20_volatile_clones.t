@@ -5,20 +5,18 @@ use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-init($test->connector);
+init();
 
 ######################################################################3
-
-sub test_volatile_clone {
+sub test_volatile_clone_req {
     my $vm = shift;
+    my $remote_ip = '127.0.0.1';
 
     my $domain = create_domain($vm->type);
     ok($domain);
@@ -29,9 +27,64 @@ sub test_volatile_clone {
     is($domain->volatile_clones, 1);
     my $clone_name = new_domain_name();
 
-    my $clone = $domain->clone(
+    $domain->prepare_base(user_admin);
+    my $req = Ravada::Request->create_domain(
         name => $clone_name
-        ,user => user_admin
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
+        ,start => 1
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my $clone = rvd_back->search_domain($clone_name);
+    is($clone->is_active, 1);
+    is($clone->is_volatile, 1);
+
+    $domain->volatile_clones(0);
+    is($domain->volatile_clones, 0);
+
+    my $clone_name2 = new_domain_name();
+
+    my $req2 = Ravada::Request->create_domain(
+        name => $clone_name2
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
+        ,start => 1
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my $clone2 = rvd_back->search_domain($clone_name2);
+    is($clone2->is_active, 1);
+    is($clone2->is_volatile, 0);
+
+    $clone2->remove(user_admin);
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+
+}
+
+
+sub test_volatile_clone {
+    my $vm = shift;
+    my $remote_ip = '127.0.0.1';
+
+    my $domain = create_domain($vm->type);
+    ok($domain);
+
+    is($domain->volatile_clones, 0);
+
+    $domain->volatile_clones(1);
+    is($domain->volatile_clones, 1);
+    my $clone_name = new_domain_name();
+
+    $domain->prepare_base(user_admin);
+    my $clone = $domain->_vm->create_domain(
+        name => $clone_name
+        ,id_owner => user_admin->id
+        ,id_base => $domain->id
+        ,remote_ip => $remote_ip
     );
 
     is($clone->is_active, 1);
@@ -41,12 +94,25 @@ sub test_volatile_clone {
 
     is($clone->is_active, 1) && do {
 
-#        like($clone->display(user_admin),qr'\w+://');
-
         my $clonef = Ravada::Front::Domain->open($clone->id);
         ok($clonef);
         isa_ok($clonef, 'Ravada::Front::Domain');
         is($clonef->is_active, 1);
+        like($clonef->display(user_admin),qr'.');
+        like($clone->remote_ip,qr(.)) or exit;
+        like($clone->client_status,qr(.));
+
+        my $domains = rvd_front->list_machines(user_admin);
+        my ($clone_listed) = grep {$_->{name} eq $clonef->name } @$domains;
+        ok($clone_listed,"Expecting to find ".$clonef->name." in ".Dumper($domains))
+            and do {
+                is($clone_listed->{can_hibernate},0);
+                ok(exists $clone_listed->{client_status},"Expecting client_status field");
+                like($clone_listed->{client_status},qr(.))
+            };
+
+
+        like($clone->display(user_admin),qr'\w+://');
 
         $clonef = rvd_front->search_domain($clone_name);
         ok($clonef);
@@ -54,6 +120,7 @@ sub test_volatile_clone {
         is($clonef->is_active, 1,"[".$vm->type."] expecting active $clone_name") or exit;
         like($clonef->display(user_admin),qr'\w+://');
 
+        is($clone->spice_password, undef);
         my $list = rvd_front->list_domains();
 
         my @volumes = $clone->list_volumes();
@@ -75,7 +142,7 @@ sub test_volatile_clone {
         my $clone2 = $vm->search_domain($clone_name);
         ok(!$clone2, "[".$vm->type."] volatile clone should be removed on shutdown");
 
-        my $sth = $test->dbh->prepare("SELECT * FROM domains where name=?");
+        my $sth = connector->dbh->prepare("SELECT * FROM domains where name=?");
         $sth->execute($clone_name);
         my $row = $sth->fetchrow_hashref;
         is($row,undef);
@@ -119,7 +186,8 @@ sub test_enforce_limits {
     is($clone2->is_active, 1);
     is($clone2->is_volatile, 1);
 
-    eval { rvd_back->_enforce_limits_active( timeout => 1) };
+    my $req = Ravada::Request->enforce_limits( timeout => 1 );
+    eval { rvd_back->_enforce_limits_active($req) };
     is(''.$@,'');
     for ( 1 .. 10 ){
         last if !$clone->is_active;
@@ -205,10 +273,10 @@ sub test_old_machine {
     my $user = create_user('Roland','Pryzbylewski');
     my $clone = $domain->clone( user => $user , name => $clone_name);
 
-    my $sth = $test->connector->dbh->prepare("DELETE FROM domains_kvm");
+    my $sth = connector->dbh->prepare("DELETE FROM domains_kvm");
     $sth->execute();
 
-    $sth = $test->connector->dbh->prepare("DELETE FROM domains_void ");
+    $sth = connector->dbh->prepare("DELETE FROM domains_void ");
     $sth->execute();
 
     my $clone2 = Ravada::Domain->open($clone->id);
@@ -247,11 +315,11 @@ sub test_old_machine_req {
     my $user = create_user('Roland','Pryzbylewski');
     my $clone = $domain->clone( user => $user , name => $clone_name);
 
-    my $sth = $test->connector->dbh->prepare("DELETE FROM domains_kvm");
+    my $sth = connector->dbh->prepare("DELETE FROM domains_kvm");
     $sth->execute();
     $sth->finish;
 
-    $sth = $test->connector->dbh->prepare("DELETE FROM domains_void ");
+    $sth = connector->dbh->prepare("DELETE FROM domains_void ");
     $sth->execute();
     $sth->finish;
 
@@ -304,6 +372,9 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
+
+        test_volatile_clone_req($vm);
+        test_volatile_clone($vm);
 
         test_old_machine($vm);
         test_old_machine_req($vm);

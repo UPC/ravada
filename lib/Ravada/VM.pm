@@ -138,11 +138,31 @@ sub _around_create_domain {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
-    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
 
     my $base;
     my $id_base = delete $args{id_base};
     $base = Ravada::Domain->open($id_base)  if $id_base;
+     my $id_iso = delete $args{id_iso};
+     my $active = delete $args{active};
+       my $name = delete $args{name};
+       my $swap = delete $args{swap};
+    my $remote_ip = delete $args{remote_ip};
+
+     # args get deleted but kept on @_ so when we call $self->$orig below are passed
+     delete $args{disk};
+     delete $args{memory};
+     delete $args{request};
+     delete $args{iso_file};
+     delete $args{id_template};
+     delete @args{'description','remove_cpu','vm','start'};
+
+    confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
+
+    if ($id_base) {
+        $base = $self->search_domain_by_id($id_base)
+            or confess "Error: I can't find domain $id_base on ".$self->name;
+    }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
         unless $owner->is_admin
@@ -156,7 +176,7 @@ sub _around_create_domain {
 
     my $domain = $self->$orig(@_);
 
-    $domain->add_volume_swap( size => $args{swap})  if $args{swap};
+    $domain->add_volume_swap( size => $args{swap})  if $swap;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -164,13 +184,18 @@ sub _around_create_domain {
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
-    $domain->_post_start($owner) if $domain->is_active;
+
+    my @start_args = ( user => $owner );
+    push @start_args, (remote_ip => $remote_ip) if $remote_ip;
+
+    $domain->_post_start(@start_args) if $domain->is_active;
     eval {
-    $domain->start($owner)      if $domain->is_volatile && ! $domain->is_active;
+           $domain->start(@start_args)      if $domain->is_volatile && ! $domain->is_active;
     };
     die $@ if $@ && $@ !~ /code: 55,/;
 
     $domain->get_info();
+    $domain->display($owner)    if $domain->is_active;
 
     return $domain;
 }
@@ -290,7 +315,7 @@ sub ip {
     return $ip if $ip && $ip !~ /^127/ && $ip =~ /^\d+\.\d+\.\d+\.\d+$/;
 
     warn "WARNING: I can't find the IP of host ".$self->host.", using localhost."
-        ." This virtual machine won't be available from the network.";
+        ." This virtual machine won't be available from the network." if $0 !~ /\.t$/;
 
     return '127.0.0.1';
 }
@@ -359,7 +384,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -474,7 +499,60 @@ sub default_storage_pool_name {
         $sth->execute($value,$id);
         $self->{_data}->{default_storage} = $value;
     }
+    $self->_select_vm_db();
     return $self->_data('default_storage');
+}
+
+=head2 base_storage_pool
+
+Set the storage pool for bases in this Virtual Machine Manager
+
+    $vm->base_storage_pool('pool2');
+
+=cut
+
+sub base_storage_pool {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET base_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{base_storage} = $value;
+    }
+    $self->_select_vm_db();
+    return $self->_data('base_storage');
+}
+
+=head2 clone_storage_pool
+
+Set the storage pool for clones in this Virtual Machine Manager
+
+    $vm->clone_storage_pool('pool3');
+
+=cut
+
+sub clone_storage_pool {
+    my $self = shift;
+    my $value = shift;
+
+    #TODO check pool exists
+    if (defined $value) {
+        my $id = $self->id();
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE vms SET clone_storage=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value,$id);
+        $self->{_data}->{clone_storage} = $value;
+    }
+    $self->_select_vm_db();
+    return $self->_data('clone_storage');
 }
 
 =head2 min_free_memory
@@ -488,6 +566,27 @@ sub min_free_memory {
     return $self->_data('min_free_memory');
 }
 
+=head2 max_load 
+
+Returns the maximum cpu load that the host can handle.
+
+=cut
+
+sub max_load {
+    my $self = shift;
+    return $self->_data('max_load');
+}
+
+=head2 active_limit
+
+Returns the value of 'active_limit' in the BBDD
+
+=cut
+
+sub active_limit {
+    my $self = shift;
+    return $self->_data('active_limit');
+}
 
 =head2 list_drivers
 

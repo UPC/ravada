@@ -1,0 +1,3 @@
+% for my $grant ($_user->list_permissions) {
+    <li><b><%= $grant->[0] %> </b>: <%= $grant->[1] %></li>
+% }

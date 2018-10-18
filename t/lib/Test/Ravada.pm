@@ -7,6 +7,7 @@ use  Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
+use YAML qw(LoadFile);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -32,9 +33,12 @@ create_domain
     clean_remote
     start_node shutdown_node
     start_domain_internal   shutdown_domain_internal
+    connector
+    create_ldap_user
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
+our $DEFAULT_DB_CONFIG = "t/etc/sql.conf";
 our ($CONNECTOR, $CONFIG);
 
 our $CONT = 0;
@@ -115,33 +119,39 @@ sub base_pool_name {
 }
 
 sub new_domain_name {
+    my $post = (shift or '');
+    $post = $post."_" if $post;
     my $cont = $CONT++;
     $cont = "0$cont"    if length($cont)<2;
-    return base_domain_name()."_".$cont;
+    return base_domain_name()."_$post".$cont;
 }
 
 sub new_pool_name {
     return base_pool_name()."_".$CONT_POOL++;
 }
 
-sub rvd_back {
-    my ($connector, $config) = @_;
+sub rvd_back($config=undef) {
 
-    return $RVD_BACK            if $RVD_BACK && !$connector && !$config;
-    init($connector,$config,0)    if $connector;
+    return $RVD_BACK            if $RVD_BACK && !$config;
+
+    $RVD_BACK = 1;
+    init($config or $DEFAULT_CONFIG,0);
 
     my $rvd = Ravada->new(
-            connector => $CONNECTOR
-                , config => ( $CONFIG or $DEFAULT_CONFIG)
+            connector => connector()
+                , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 0
     );
+    $rvd->_install();
     my $login;
+    my $admin_name = base_domain_name();
+    my $admin_pass = "$$ $$";
     eval {
-        $login = Ravada::Auth::SQL->new(name => 'admin',password => 'admin');
+        $login = Ravada::Auth::SQL->new(name => $admin_name );
     };
-    $USER_ADMIN = $login if $login;
-    $USER_ADMIN = create_user('admin','admin',1)
-        if !$USER_ADMIN && !$login;
+    $USER_ADMIN = $login if $login && $login->id;
+    $USER_ADMIN = create_user($admin_name, $admin_pass,1)
+        if !$USER_ADMIN;
 
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
@@ -149,7 +159,7 @@ sub rvd_back {
     return $rvd;
 }
 
-sub rvd_front {
+sub rvd_front() {
 
     return Ravada::Front->new(
             connector => $CONNECTOR
@@ -157,20 +167,17 @@ sub rvd_front {
     );
 }
 
-sub init {
-    my $create_user;
-    ($CONNECTOR, $CONFIG, $create_user) = @_;
+sub init($config=undef, $create_user=1) {
 
     $create_user = 1 if !defined $create_user;
 
-    confess "Missing connector : init(\$connector,\$config)" if !$CONNECTOR;
-
-    $Ravada::CONNECTOR = $CONNECTOR if !$Ravada::CONNECTOR;
+    $Ravada::CONNECTOR = connector() if !$Ravada::CONNECTOR;
     Ravada::Auth::SQL::_init_connector($CONNECTOR);
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-    rvd_back()  if !$RVD_BACK;
+    rvd_back($config)  if !$RVD_BACK;
+    $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
 sub _remove_old_domains_vm {
@@ -314,6 +321,33 @@ sub create_user {
     return $user;
 }
 
+sub create_ldap_user($name, $password) {
+
+    if ( Ravada::Auth::LDAP::search_user($name) ) {
+        diag("Removing $name");
+        Ravada::Auth::LDAP::remove_user($name)  
+    }
+
+    my $user = Ravada::Auth::LDAP::search_user($name);
+    ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
+
+    my $user_db = Ravada::Auth::SQL->new( name => $name);
+    $user_db->remove();
+    # check for the user in the SQL db, he shouldn't be  there
+    #
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM users WHERE name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    ok(!$row->{name},"I shouldn't find $name in the SQL db ".Dumper($row));
+
+    eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
+    is($@,'') or return;
+
+    my @user = Ravada::Auth::LDAP::search_user($name);
+    return $user[0];
+}
+
 sub wait_request {
     my $req = shift;
     for my $cnt ( 0 .. 10 ) {
@@ -405,8 +439,15 @@ sub clean {
     remove_old_pools();
 }
 
+sub remove_old_user {
+    $USER_ADMIN->remove if $USER_ADMIN;
+    confess "Undefined connector" if !defined $CONNECTOR;
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
+    $sth->execute(base_domain_name());
+}
 sub search_id_iso {
     my $name = shift;
+    connector() if !$CONNECTOR;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
@@ -557,4 +598,83 @@ sub start_domain_internal($domain) {
     }
 }
 
+sub _dir_db {
+    my $dir_db= $0;
+    $dir_db =~ s{(t)/(.*)/.*}{$1/.db/$2};
+    $dir_db =~ s{(t)/.*}{$1/.db} if !defined $2;
+    if (! -e $dir_db ) {
+            warn "mkdir $dir_db";
+            mkdir $dir_db,0700 or die "$! $dir_db";
+    }
+    return $dir_db;
+}
+
+sub _file_db {
+    my $file_db = shift;
+    my $dir_db = _dir_db();
+
+    if (! $file_db ) {
+        $file_db = $0;
+        $file_db =~ s{.*/(.*)\.\w+$}{$dir_db/$1\.db};
+        mkpath $dir_db or die "$! '$dir_db'" if ! -d $dir_db;
+    }
+    if ( -e $file_db ) {
+        unlink $file_db or die("$! $file_db");
+    }
+    return $file_db;
+}
+
+sub _execute_sql($connector, $sql) {
+    eval { $connector->dbh->do($sql) };
+    warn $sql   if $@;
+    confess "FAILED SQL:\n$@" if $@;
+}
+sub _load_sql_file {
+    my $connector = shift;
+    my $file_sql = shift;
+
+    open my $h_sql,'<',$file_sql or die "$! $file_sql";
+    my $sql = '';
+    while (my $line = <$h_sql>) {
+        $sql .= $line;
+        if ($line =~ m{;$}) {
+            warn "_load_sql_file: $sql" if $ENV{DEBUG};
+            _execute_sql($connector,$sql);
+            $sql = '';
+        }
+    }
+    close $h_sql;
+
+}
+
+sub _create_db_tables($connector, $file_config = $DEFAULT_DB_CONFIG ) {
+    my $config = LoadFile($file_config);
+    my $sql = $config->{sql};
+
+    for my $file ( @$sql ) {
+        _load_sql_file($connector,"t/etc/$file");
+    }
+}
+
+sub connector {
+    return $CONNECTOR if $CONNECTOR;
+
+    my $file_db = _file_db();
+    my $connector = DBIx::Connector->new("DBI:SQLite:".$file_db
+                ,undef,undef
+                ,{sqlite_allow_multiple_statements=> 1 
+                        , AutoCommit => 1
+                        , RaiseError => 1
+                        , PrintError => 0
+                });
+
+    _create_db_tables($connector);
+
+    $CONNECTOR = $connector;
+    return $connector;
+}
+
+sub END {
+    remove_old_user() if $CONNECTOR;
+}
 1;

@@ -1,12 +1,13 @@
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+% if ( !$fallback ) { 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-resource.min.js"></script>
- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-animate.min.js"></script>
- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-aria.min.js"></script>
- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-messages.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-resource.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-animate.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-aria.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-messages.min.js"></script>
 
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-sanitize.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.js"></script>
@@ -17,11 +18,37 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.js"></script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
+
+% } else {
+<script src="/fallback/jquery/dist/jquery.min.js"></script>
+<script src="/fallback/jqueryui/jquery-ui.min.js"></script>
+<script src="/fallback/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<script src="/fallback/angular/angular.min.js"></script>
+<script src="/fallback/angular-resource/angular-resource.min.js"></script>
+<script src="/fallback/angular-animate/angular-animate.min.js"></script>
+<script src="/fallback/angular-aria/angular-aria.min.js"></script>
+<script src="/fallback/angular-messages/angular-messages.min.js"></script>
+ 
+<script src="/fallback/angular-sanitize/angular-sanitize.min.js"></script>
+<script src="/fallback/angular-material/angular-material.min.js"></script>
+<script src="/fallback/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<script src="/fallback/raphael/raphael-min.js"></script>
+<script src="/fallback/morris/main.js"></script>
+
+<script src="/fallback/bootstrap-select/dist/js/bootstrap-select.js"></script>
+
+<script src="/fallback/intro.js/intro.js"></script>
+% }
+
+
+
 % if ($monitoring && $_user && $_user->is_admin ) {
 <script>var netdataNoBootstrap = true;</script>
 <script type="text/javascript" src="https://<%= $host %>:19999/dashboard.js"></script>
 % }
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
 
 % foreach my $jslink (@$js) {
 <script src="<%= $jslink %>"></script>

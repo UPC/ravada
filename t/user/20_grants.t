@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,12 +12,11 @@ use Test::Ravada;
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my @VMS = vm_names();
-init($test->connector);
+init();
 
 #########################################################3
 
@@ -39,6 +37,7 @@ sub test_defaults {
     ok(!$user->can_change_settings_clones);
 
 
+    is($user->can_screenshot, 1);
 #    ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 
@@ -64,6 +63,8 @@ sub test_defaults {
             is($user->can_do($perm),undef,$perm);
         }
     }
+
+    $user->remove();
 }
 
 sub test_admin {
@@ -72,6 +73,7 @@ sub test_admin {
     for my $perm ($user->list_all_permissions) {
         is($user->can_do($perm->{name}),1);
     }
+    $user->remove();
 }
 
 sub test_grant {
@@ -95,13 +97,14 @@ sub test_grant {
 
     }
 
+    $user->remove();
 }
 
 sub test_alias {
     my @list_permissions = user_admin->list_permissions;
     my @list_all_permissions = user_admin->list_all_permissions;
 
-    my $sth = $test->connector->dbh->prepare("SELECT name, alias FROM grant_types_alias");
+    my $sth = connector->dbh->prepare("SELECT name, alias FROM grant_types_alias");
     $sth->execute;
     while ( my ($name, $alias) = $sth->fetchrow) {
         eval { is(user_admin->can_do($name),1, $name) };
@@ -173,6 +176,9 @@ sub test_remove_clone {
 
     $clone->remove($usera);
     $domain->remove($usera);
+    for $clone ( $domain->clones ) {
+        $clone->remove($usera);
+    }
 
     $user->remove();
     $usera->remove();
@@ -203,6 +209,12 @@ sub test_view_clones {
     $clone->prepare_base($usera);
     eval{ $clones = rvd_front->list_clones() };
     is(scalar @$clones, 0) or return;
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+
+    $usera->remove();
+    $user->remove();
 }
 
 sub test_shutdown_clone {
@@ -295,6 +307,7 @@ sub test_remove {
     eval { $domain2->remove(user_admin())};
     is($@,'');
 
+    $user->remove();
 }
 
 sub test_shutdown_all {
@@ -332,6 +345,8 @@ sub test_shutdown_all {
     is($domain->is_active,1);
 
     $domain->remove($usera);
+    $user->remove();
+    $usera->remove();
 }
 
 sub test_remove_clone_all {
@@ -389,6 +404,11 @@ sub test_remove_clone_all {
 
     $clone->remove($usera);
     $domain->remove($usera);
+    $domain2->remove($usera);
+    $other_domain->remove($usera);
+
+    $user->remove();
+    $usera->remove();
 }
 
 sub test_prepare_base {
@@ -481,12 +501,16 @@ sub test_frontend {
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 1 );
 
-    create_domain($vm_name, $user);
+    my $domain_other = create_domain($vm_name, $user);
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
     is (scalar @$list_machines, 2 );
 
     $clone->remove( $usera );
     $domain->remove( $usera );
+    $domain_other->remove( $usera );
+
+    $usera->remove;
+    $user->remove;
 }
 
 sub test_create_domain {
@@ -510,7 +534,7 @@ sub test_create_domain {
     my $domain_name = new_domain_name();
 
     my %create_args = (
-            id_iso => search_id_iso('debian')
+            id_iso => search_id_iso('alpine')
             ,id_owner => $user->id
             ,name => $domain_name
    );
@@ -558,6 +582,10 @@ sub test_create_domain {
 
     eval { $base->remove($usera)   if $domain };
     is($@,'');
+
+    $base->remove(user_admin)   if !$base->is_removed;
+    $clone->remove(user_admin) if !$clone->is_removed;
+    $domain->remove(user_admin) if !$domain->is_removed;
 
     $user->remove();
     $usera->remove();
@@ -633,7 +661,8 @@ sub test_create_domain2 {
     is($user->can_create_machine,1) or return;
 
     $domain_name = new_domain_name();
-    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id)};
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+        , id_iso => search_id_iso('alpine'))};
     is($@,'');
 
     my $domain3 = $vm->search_domain($domain_name);
@@ -647,7 +676,6 @@ sub test_create_domain2 {
 }
 
 sub test_change_settings($vm_name) {
-
     my $vm = rvd_back->search_vm($vm_name);
 
     my $user = create_user("oper_cs$$","bar");
@@ -680,12 +708,28 @@ sub test_change_settings($vm_name) {
     is($user->can_change_settings($clone->id), 1);
     is($usera->can_change_settings($clone->id), 1);
 
+    $usera->revoke($user,'change_settings');
+    is($user->can_change_settings(), 0);
+    is($user->can_change_settings($clone->id), 0);
+
     $clone->remove(user_admin);
     $domain->remove(user_admin);
 
     $user->remove();
     $usera->remove();
 
+}
+
+sub test_grant_grant {
+    my $usero = create_user("oper$$","bar");
+    is($usero->can_grant, undef);
+
+    user_admin->grant($usero,'grant');
+    is($usero->can_grant,1);
+
+    is($usero->is_operator,1);
+
+    $usero->remove();
 }
 
 sub test_clone_all {
@@ -700,27 +744,45 @@ test_grant();
 
 test_alias();
 
+test_grant_grant();
+
 test_operator();
 
-my $vm_name = 'Void';
+clean();
 
-test_change_settings($vm_name);
+for my $vm_name (vm_names()) {
+    next if $vm_name eq 'KVM' && $>;
 
-test_shutdown_clone('Void');
-test_shutdown_all('Void');
+    my $vm;
+    eval { $vm = rvd_back->search_vm($vm_name) };
+    diag($@) if $@;
+    next if !$vm;
 
-test_remove('Void');
-test_remove_clone('Void');
-#test_remove_all('Void');
+    diag("Testing VM $vm_name");
+    test_change_settings($vm_name);
 
-test_remove_clone_all('Void');
+    test_shutdown_clone($vm_name);
+    test_shutdown_all($vm_name);
 
-test_prepare_base('Void');
-test_frontend('Void');
-test_create_domain('Void');
-test_create_domain2('Void');
-test_view_clones('Void');
+    test_remove($vm_name);
+    test_remove_clone($vm_name);
+    #test_remove_all($vm_name);
 
-test_clone_all($vm_name);
+    test_remove_clone_all($vm_name);
 
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
+
+    test_prepare_base($vm_name);
+    test_frontend($vm_name);
+    test_create_domain($vm_name);
+    test_create_domain2($vm_name);
+    test_view_clones($vm_name);
+    test_clone_all($vm_name);
+
+}
+clean();
 done_testing();

@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use YAML qw(DumpFile);
 
 use lib 't/lib';
@@ -13,13 +12,11 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-init( $test->connector , $FILE_CONFIG );
+init();
 
 my $NAT_IP = 'www.example.com';
 
@@ -82,7 +79,7 @@ sub test_nat($vm_name) {
 
     my $file_config = "/tmp/config_display.yml";
     DumpFile($file_config,{ display_ip => $display_ip });
-    my $rvd_back = rvd_back($test->connector, $file_config);
+    my $rvd_back = rvd_back($file_config);
 
     is($rvd_back->display_ip, $display_ip);
     is($rvd_back->search_vm($vm_name)->ip, $display_ip);
@@ -113,7 +110,7 @@ sub test_nat($vm_name) {
     # Now with Nat
     #
     DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP });
-    $rvd_back = rvd_back($test->connector, $file_config);
+    $rvd_back = rvd_back($file_config);
 
     is($rvd_back->nat_ip, $NAT_IP);
     is($rvd_back->search_vm($vm_name)->nat_ip, $NAT_IP);
@@ -139,10 +136,12 @@ sub test_nat($vm_name) {
 
     unlink($file_config);
 
-    rvd_back($test->connector, $FILE_CONFIG);
+    rvd_back($FILE_CONFIG);
 }
 
 sub test_chain($vm_name, %args) {
+    SKIP: {
+        skip("SKIPPED: iptables test must be run from root user", 2) if $>;
     my $jump =  (delete $args{jump} or 'ACCEPT');
     my $local_ip = delete $args{local_ip}       or confess "Missing local_ip";
     my $remote_ip = delete $args{remote_ip}     or confess "Missing remote_ip";
@@ -165,7 +164,7 @@ sub test_chain($vm_name, %args) {
     ok(!$rule_num,"$msg2 Expecting no rule for $remote_ip -> $local_ip: $local_port"
                         .", found at $rule_num ")
         if !$enabled;
-
+    }
 }
 ##################################################################################
 

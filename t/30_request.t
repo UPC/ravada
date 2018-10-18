@@ -6,7 +6,6 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::Moose::More;
 use Test::More;# tests => 82;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -14,14 +13,12 @@ use_ok('Ravada::Request');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $ravada;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
 my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
 
-init($test->connector, 't/etc/ravada.conf');
+init();
 
 my $RVD_BACK = rvd_back();# $test->connector , 't/etc/ravada.conf');
 my $USER = create_user("foo","bar", 1);
@@ -74,7 +71,7 @@ sub test_req_start_domain {
     );
     ok($req);
     ok($req->status);
-    $ravada->process_requests();
+    $ravada->_process_requests_dont_fork();
     $ravada->_wait_pids();
     wait_request($req);
 
@@ -82,7 +79,7 @@ sub test_req_start_domain {
         ,"Status of request is ".$req->status." it should be done") 
             or return ;
     ok(!$req->error,"Error ".$req->error." creating domain ".$name) 
-            or return ;
+            or return;
 
     my $n_expected = 1;
     test_unread_messages($USER, $n_expected, "[$vm_name] create domain $name");
@@ -328,13 +325,13 @@ for my $vm_name ( qw(Void KVM)) {
     SKIP: {
         my $msg = "SKIPPED: No $vm_name found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
-            $msg = "SKIPPED: Test must run as root";
+            $msg = "SKIPPED $vm_name: Test must run as root";
             $vm = undef;
         }
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
     
-        diag("Testing requests with ".(ref $vm or '<UNDEF>'));
+        diag("Testing $vm_name requests with ".(ref $vm or '<UNDEF>'));
     
         test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);

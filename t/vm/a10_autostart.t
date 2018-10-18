@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use YAML qw(DumpFile);
 
 use lib 't/lib';
@@ -13,13 +12,9 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-init( $test->connector , $FILE_CONFIG );
+init( );
 
 #######################################################################
 

@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -12,9 +11,6 @@ use lib 't/lib';
 
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, 't/etc/ravada.conf');
 my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
@@ -226,7 +222,7 @@ for my $vm_name (qw(KVM Void)) {
 
     SKIP: {
         my $msg = "SKIPPED: Virtual manager $vm_name not found";
-        if ($vmm && $>) {
+        if ($vmm && $vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vmm = undef;
         }

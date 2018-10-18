@@ -3,16 +3,12 @@
 use strict;
 use warnings;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-# create the mock database
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 # init ravada for testing
-init($test->connector);
+init();
 my $USER = create_user("foo","bar", 1);
 
 ##############################################################################

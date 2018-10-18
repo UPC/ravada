@@ -4,7 +4,6 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -13,9 +12,7 @@ my $BACKEND = 'KVM';
 
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-
-my $RAVADA = rvd_back($test->connector , 't/etc/ravada.conf');
+my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
@@ -61,7 +58,7 @@ sub test_remove_domain_by_name {
 sub search_domain_db
  {
     my $name = shift;
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
     my $row =  $sth->fetchrow_hashref;
     return $row;
@@ -107,7 +104,7 @@ sub test_new_domain_iso {
     my $active = shift;
     
     my $vm = rvd_back()->search_vm($BACKEND);
-    my $iso = $vm->_search_iso(1);
+    my $iso = $vm->_search_iso(search_id_iso('alpine'));
     my $name = new_domain_name();
 
     test_remove_domain($name);
@@ -150,7 +147,7 @@ sub test_prepare_base {
     my $domain = shift;
     $domain->prepare_base(user_admin);
 
-    my $sth = $test->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my ($is_base) =  $sth->fetchrow;
     ok($is_base
@@ -180,27 +177,22 @@ sub test_domain{
             ." "
             .join(" * ", sort map { $_->name } @list)
         ) or exit;
-        ok(!$domain->is_base,"Domain shouldn't be base "
-            .Dumper($domain->_select_domain_db()));
+        ok(!$domain->is_base,"Domain shouldn't be base ");
 
         # test list domains
         my @list_domains = $vm->list_domains();
         ok(@list_domains,"No domains in list");
         my $list_domains_data = $RAVADA->list_domains_data();
-        ok($list_domains_data && $list_domains_data->[0],"No list domains data ".Dumper($list_domains_data));
+        ok($list_domains_data && $list_domains_data->[0],"No list domains data ");
         my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
-        ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 "
-            .Dumper($list_domains_data));
+        ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 ");
 
         ok(!$domain->is_active  ,"domain should be inactive") if defined $active && $active==0;
         ok($domain->is_active   ,"domain should be active")   if defined $active && $active==1;
 
         # test prepare base
         test_prepare_base($domain);
-        ok($domain->is_base,"Domain should be base"
-            .Dumper($domain->_select_domain_db())
-
-        );
+        ok($domain->is_base,"Domain should be base");
  
         ok(test_domain_in_virsh($domain->name,$domain->name)," not in virsh list all");
         my $domain2;
@@ -239,7 +231,7 @@ sub test_domain_missing_in_db {
 
     if (ok($domain,"test domain not created")) {
 
-        my $sth = $test->connector->dbh->prepare("DELETE FROM domains WHERE id=?");
+        my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
         $sth->execute($domain->id);
 
         my $domain2 = $RAVADA->search_domain($domain->name);
@@ -282,10 +274,7 @@ sub test_prepare_import {
     if (ok($domain,"test domain not created")) {
 
         test_prepare_base($domain);
-        ok($domain->is_base,"Domain should be base"
-            .Dumper($domain->_select_domain_db())
-
-        );
+        ok($domain->is_base,"Domain should be base");
 
         test_remove_domain($domain->name);
     }

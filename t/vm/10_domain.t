@@ -4,23 +4,20 @@ use strict;
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector() );
 
 my $RVD_BACK;
 
-eval { $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG) };
-ok($RVD_BACK) or exit;
+eval { $RVD_BACK = rvd_back() };
+ok($RVD_BACK,($@ or '')) or BAIL_OUT;
 
 my $USER = create_user("foo","bar", 1);
 ok($USER);
@@ -256,9 +253,7 @@ sub test_json {
 
     my $domain = rvd_back()->search_domain($domain_name);
 
-    my $json = $domain->json();
-    ok($json);
-    my $dec_json = decode_json($json);
+    my $dec_json = $domain->info(user_admin);
     ok($dec_json->{name} && $dec_json->{name} eq $domain->name
         ,"[$vm_name] expecting json->{name} = '".$domain->name."'"
         ." , got ".($dec_json->{name} or '<UNDEF>')." for json ".Dumper($dec_json)
@@ -266,9 +261,7 @@ sub test_json {
 
     my $vm = rvd_back()->search_vm($vm_name);
     my $domain2 = $vm->search_domain_by_id($domain->id);
-    my $json2 = $domain2->json();
-    ok($json2);
-    my $dec_json2 = decode_json($json2);
+    my $dec_json2 = $domain2->info(user_admin);
     ok($dec_json2->{name} && $dec_json2->{name} eq $domain2->name
         ,"[$vm_name] expecting json->{name} = '".$domain2->name."'"
         ." , got ".($dec_json2->{name} or '<UNDEF>')." for json ".Dumper($dec_json2)
@@ -390,7 +383,7 @@ sub test_create_domain_nocd {
 
 sub select_iso {
     my $id = shift;
-    my $sth = $test->connector->dbh->prepare("SELECT * FROM iso_images"
+    my $sth = connector->dbh->prepare("SELECT * FROM iso_images"
         ." WHERE id=?");
     $sth->execute($id);
     return $sth->fetchrow_hashref;

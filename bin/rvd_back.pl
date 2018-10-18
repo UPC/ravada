@@ -12,6 +12,7 @@ use Proc::PID::File;
 use Ravada;
 use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
+use Ravada::Utils;
 
 $|=1;
 
@@ -84,6 +85,7 @@ GetOptions (       help => \$help
                    ,all => \$ALL
                   ,list => \$LIST
                  ,debug => \$DEBUG
+                ,verbose => \$VERBOSE
               ,'no-fork'=> \$NOFORK
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
@@ -130,6 +132,7 @@ my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
 $Ravada::DEBUG=1    if $DEBUG;
+$Ravada::VERBOSE=1      if $VERBOSE;
 $Ravada::CAN_FORK=0    if $NOFORK;
 
 ###################################################################
@@ -150,13 +153,14 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
+    Ravada::Request->enforce_limits();
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
         $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
-        $ravada->enforce_limits();
         if ( time - $t_refresh > 60 ) {
-            $ravada->_cmd_refresh_vms();
+            Ravada::Request->refresh_vms()      if rand(5)<3;
+            Ravada::Request->enforce_limits()   if rand(5)<2;
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
@@ -189,6 +193,7 @@ sub start {
     {
         my $ravada = Ravada->new( %CONFIG );
         $Ravada::CONNECTOR->dbh;
+        $ravada->_install();
         for my $vm (@{$ravada->vm}) {
             $vm->id;
             $vm->vm;
@@ -210,6 +215,7 @@ sub add_user {
     my $login = shift;
 
     my $ravada = Ravada->new( %CONFIG);
+    $ravada->_install();
 
     print "$login password: ";
     my $password = <STDIN>;
@@ -263,7 +269,7 @@ sub make_admin {
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
-    $Ravada::USER_DAEMON->make_admin($user->id);
+    Ravada::Utils::user_daemon()->make_admin($user->id);
     print "USER $login granted admin permissions\n";
 }
 
@@ -274,7 +280,7 @@ sub remove_admin {
     my $user = Ravada::Auth::SQL->new(name => $login);
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
-    $Ravada::USER_DAEMON->remove_admin($user->id);
+    Ravada::Utils::user_daemon()->remove_admin($user->id);
     print "USER $login removed admin permissions, granted normal user permissions.\n";
 }
 
@@ -396,7 +402,7 @@ sub hibernate {
                 next if _verify_connection($domain);
             }
             if ($domain->can_hibernate) {
-                $domain->hibernate( $Ravada::USER_DAEMON);
+                $domain->hibernate( Ravada::Utils::user_daemon() );
                 $down++;
             } else {
                 warn "WARNING: Virtual machine ".$domain->name
@@ -426,7 +432,7 @@ sub start_domain {
                     ." is already up.\n";
                 next;
             }
-            eval { $domain->start(user => $Ravada::USER_DAEMON) };
+            eval { $domain->start(user => Ravada::Utils::user_daemon() ) };
             if ($@) {
                 warn $@;
                 next;
@@ -462,7 +468,11 @@ sub shutdown_domain {
                 next;
             }
             if ($domain->is_hibernated) {
-                $domain->start(user => $Ravada::USER_DAEMON);
+                print "Starting ".$domain->name."\n";
+                eval { $domain->start(user => Ravada::Utils::user_daemon()) };
+                warn $@ if $@;
+                sleep 5 if !$@;
+
             }
             if ($DISCONNECTED && $domain->client_status
                     && $domain->client_status eq 'disconnected') {
@@ -470,9 +480,11 @@ sub shutdown_domain {
                 next DOMAIN if _verify_connection($domain);
             }
             print "Shutting down ".$domain->name.".\n";
-            eval { $domain->shutdown(user => $Ravada::USER_DAEMON, timeout => 300) };
+            eval {
+                $domain->shutdown(user => Ravada::Utils::user_daemon(), timeout => 300);
+                $down++;
+            };
             warn $@ if $@;
-            $down++;
         }
     }
     warn "ERROR: Domain $domain_name not found.\n"

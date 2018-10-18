@@ -4,21 +4,18 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector() );
 my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);
 
@@ -139,7 +136,7 @@ for my $vm_name (reverse sort @VMS) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $>) {
+        if ($vm && $vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }

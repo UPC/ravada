@@ -5,13 +5,11 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-my $RVD_BACK = rvd_back($test->connector);
+my $RVD_BACK = rvd_back();
 my $USER;
 
 $USER = create_user('foo','bar');
@@ -54,7 +52,7 @@ sub test_run_timeout {
     for ( 1 .. 60 ) {
         last if !$clone->is_active;
         sleep 1;
-        rvd_back->_process_all_requests_dont_fork(1);
+        rvd_back->_process_all_requests_dont_fork();
     }
     is($clone->is_active,0);
 

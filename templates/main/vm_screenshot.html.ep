@@ -1,30 +1,37 @@
-<div class="panel-body">
+<div ng-hide="showmachine.is_active" class="panel panel-warning">
+    <div class="panel-heading">
+        <%=l 'The machine must be started to take the screenshot.' %>
+    </div>
+</div>
+<div class="panel-body" ng-show="showmachine.is_active">
     <div class="form-group">
         <div ng-hide= "<%= $domain->is_base %>" class="row" ng-cloak>
             <div class="col-lg-2">
                 <button ng-click="screenshot(<%= $domain->id %>, <%= $domain->is_active %>)">
-                  <%=l "Take screenshot" %></a>   
+                  <%=l "Take screenshot" %></button>
             </div>
 %           if ( $USER->is_admin ) {
             <div class="col-lg-2">
                 <button ng-click="copy_screenshot(<%= $domain->id %>, '<%= $domain->file_screenshot %>')">
-                  <%=l "Set base picture" %></button>
+                  <%=l 'Set base picture' %></button>
             </div>
 %           }
-            <i ng-show="reload_page_msg" ng-cloak><font color="green">Saving the screenshot, please wait a moment...</font></i>
-            <i ng-show="fail_page_msg" ng-cloak><font color="red">You need to run the machine in order to take a screenshot.</font></i>
-            <i ng-show="reload_page_copy_msg" ng-cloak><font color="green">Copying the screenshot, please wait a moment...</font></i>
-            <i ng-show="fail_page_copy_msg" ng-cloak><font color="red">You need a screenshot in order to copy it to the base machine.</font></i>
+            <i ng-show="reload_page_msg" ng-cloak><font color="green"><%=l 'Saving the screenshot, please wait a moment...' %></font></i>
+            <i ng-show="fail_page_msg" ng-cloak><font color="red"><%=l 'You need to run the machine in order to take a screenshot.' %></font></i>
+            <i ng-show="reload_page_copy_msg" ng-cloak><font color="green"><%=l 'Copying the screenshot, please wait a moment...' %></font></i>
+            <i ng-show="fail_page_copy_msg" ng-cloak><font color="red"><%=l 'You need a screenshot in order to copy it to the base machine.' %></font></i>
         </div>
         <div class="row">
             <div class="col-lg-4">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        % my ($screenshot) = $domain->file_screenshot =~ m{/var/www(.*)};
+                        % my $screenshot;
+                        % ($screenshot) = $domain->file_screenshot =~ m{/var/www(.*)}
+                        %                   if defined $domain->file_screenshot;
                         <img src="<%= $screenshot %>" width="260">
                     </div>
                 </div>
             </div>
-        </div>  
+        </div>
     </div>
 </div>

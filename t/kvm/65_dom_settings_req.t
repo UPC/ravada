@@ -4,16 +4,11 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, $FILE_CONFIG);
+init();
 
 my $USER = create_user('foo','bar', 1);
 our $TIMEOUT_SHUTDOWN = 10;
@@ -86,6 +81,8 @@ sub test_drivers_id {
         my $value = $domain->get_driver($type);
         is($value , $option->{value});
 
+        is($domain->needs_restart,0);
+
         {
             my $domain2 = $vm->search_domain($domain->name);
             my $value2 = $domain2->get_driver($type);
@@ -124,6 +121,56 @@ sub test_settings {
     }
 }
 
+sub test_needs_shutdown {
+    my $vm_name = shift;
+
+    my $domain = test_create_domain($vm_name);
+
+    my ($type)  = Ravada::Domain::drivers(undef,undef,$vm_name);
+    my $driver_type = $domain->drivers($type->name);
+
+    ok($driver_type,"Expecting driver of type $type") or exit;
+
+    my @options = $driver_type->get_options();
+    my ($option) = @options;
+
+    $domain->start(user_admin);
+
+    is($domain->is_active,1);
+
+    my $req = Ravada::Request->set_driver( 
+            id_domain => $domain->id
+            , uid => $USER->id
+            , id_option => $option->{id}
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req->status,'done') or next;
+    is($req->error,'') or next;
+
+    ok(!$@,"Expecting no error, got : ".($@ or ''));
+
+
+    {
+        my $domain_f = Ravada::Front::Domain->open($domain->id);
+        my $value = $domain_f->get_driver($type->name);
+        is($value , $option->{value});
+
+        is($domain_f->needs_restart, 1);
+    }
+
+    $domain->shutdown_now(user_admin);
+    is($domain->needs_restart, 0);
+
+    {
+        my $domain_f = Ravada::Front::Domain->open($domain->id);
+        my $value = $domain_f->get_driver($type->name);
+        is($value , $option->{value});
+
+        is($domain_f->needs_restart, 0);
+    }
+    $domain->remove(user_admin);
+}
+
 ################################################################
 
 remove_old_domains();
@@ -138,7 +185,10 @@ SKIP: {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    test_needs_shutdown($vm_name);
+
     test_settings($vm_name);
+
 };
 remove_old_domains();
 remove_old_disks();

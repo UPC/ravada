@@ -4,23 +4,17 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $VMM;
 
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
-
-my $REMOTE_VIEWER = `which remote-viewer`;
-chomp $REMOTE_VIEWER;
+my $RAVADA = rvd_back();
 
 my $USER = create_user('foo','bar', 1);
-
 
 ##############################################################
 #

@@ -5,7 +5,7 @@
     <form class="form-inline" method="post" action="/machine/copy">
         <div class="row">
             <div class="col-md-2">
-                <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}-copy">
+                <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
                     <label class="control-label"
                         for="copy_name_{{showmachine.id}}"><%=l 'Name' %></label>
             </div>
@@ -29,7 +29,7 @@
         <input type="submit" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
         >
 		
-        <button type="reset">Cancel</button>
+        <button type="reset"><%=l 'Cancel' %></button>
     </form>
                         <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"

@@ -5,19 +5,15 @@ use Data::Dumper;
 use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
 use Test::Ravada;
 use Sys::Statistics::Linux;
 
-my $BACKEND = 'KVM';
-
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RVD_BACK = rvd_back( );
 
 my $USER = create_user('foo','bar', 1);
 
@@ -78,13 +74,18 @@ my $vm;
 remove_old_domains();
 remove_old_disks();
 
+for my $vm_name (vm_names()) {
 SKIP: {
-    my $msg = "SKIPPED test: No KVM backend found";
-    my $vm = $RVD_BACK->search_vm('KVM');
+    my $msg = "SKIPPED test: No $vm_name backend found";
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    if ($vm_name eq 'KVM' && $>) {
+        $msg = "SKIPPED test: $vm_name must be run from root";
+        $vm = undef;
+    }
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    use_ok("Ravada::Domain::$BACKEND");
+    use_ok("Ravada::Domain::$vm_name");
 
     my $freemem = _check_free_memory();
     my $n_domains = int($freemem)+2;
@@ -114,6 +115,7 @@ SKIP: {
         $_->remove($USER);
     }
 };
+}
 
 remove_old_domains();
 remove_old_disks();

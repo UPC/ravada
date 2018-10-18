@@ -76,6 +76,9 @@ our $WGET = `which wget`;
 chomp $WGET;
 
 our $CACHE_DOWNLOAD = 1;
+our $VERIFY_ISO = 1;
+
+our %_CREATED_DEFAULT_STORAGE = ();
 ##########################################################################
 
 
@@ -247,6 +250,7 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
         if !ref($pattern) || ref($pattern) ne 'Regexp';
 
+    $self->_connect();
     $self->_refresh_storage_pools()    if $refresh;
 
     my @volume;
@@ -336,6 +340,9 @@ sub dir_img {
 }
 
 sub _storage_path($self, $storage) {
+    if (!ref($storage)) {
+        $storage = $self->vm->get_storage_pool_by_name($storage);
+    }
     my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -375,9 +382,13 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $vm->define_storage_pool($xml);
-    $pool->create();
-    $pool->set_autostart(1);
+    my $pool;
+    eval {
+        $pool = $vm->define_storage_pool($xml);
+        $pool->create();
+        $pool->set_autostart(1);
+    };
+    warn $@ if $@;
 
 }
 
@@ -606,7 +617,7 @@ sub _domain_create_from_iso {
     my $device_cdrom;
 
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso->{device} && !$iso_file;
+        if !$iso->{url} && !$iso_file && !$iso->{device};
 
     if ($iso_file) {
         if ( $iso_file ne "<NONE>") {
@@ -650,7 +661,9 @@ sub _domain_create_from_iso {
 
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args);
-    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;
@@ -666,10 +679,15 @@ sub _domain_create_common {
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
     my $is_volatile = delete $args{is_volatile};
+    my $remote_ip = delete $args{remote_ip};
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "ERROR: User id $id_owner doesn't exist";
 
     my $spice_password = Ravada::Utils::random_name(4);
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $spice_password = undef if !$network->requires_password;
+    }
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
@@ -726,6 +744,8 @@ sub _create_disk_qcow2 {
     confess "Missing name" if !$name;
 
     my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
 
     my @files_out;
 
@@ -832,7 +852,9 @@ sub _domain_create_from_base {
 
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
-    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
     $domain->_set_spice_password($spice_password);
     $domain->xml_description();
     return $domain;
@@ -898,7 +920,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
     confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
-        if $iso->{url} && !$iso->{md5} && !$iso->{sha256};
+        if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
     if (! -e $device || ! -s $device) {
@@ -906,13 +928,19 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                 ,"Downloading ISO file for $iso_name "
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
-        _download_file_external($iso->{url}, $device, $verbose);
+        _fill_url($iso);
+        my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
+            if (!$iso->{$check} && $iso->{"${check}_url"}) {
+                my ($url_path,$url_file) = $url =~ m{(.*)/(.*)};
+                $iso->{"${check}_url"} =~ s/(.*)\$url(.*)/$1$url_path$2/;
+                $self->_fetch_this($iso,$check,$url_file);
+            }
             next if !$iso->{$check};
 
             die "Download failed, $check id=$iso->{id} missmatched for $device."
@@ -921,7 +949,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
-        warn "WARNING: $device signature not verified"    if !$verified;
+        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -934,6 +962,16 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
     }
     $self->_refresh_storage_pools();
     return $device;
+}
+
+sub _fill_url($iso) {
+    return if $iso->{url} =~ m{.*/[^/]+\.[^/]+$};
+    if ($iso->{file_re}) {
+        $iso->{url} .= "/" if $iso->{url} !~ m{/$};
+        $iso->{url} .= $iso->{file_re};
+        return;
+    }
+    confess "Error: Missing field file_re for ".$iso->{name};
 }
 
 sub _check_md5 {
@@ -984,7 +1022,17 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_external($url, $device, $verbose=1) {
+sub _download_file_external($self, $url, $device, $verbose=1) {
+    $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
+    if ( $url =~ m{/$} ) {
+        my ($filename) = $device =~ m{.*/(.*)};
+        $url = "$url$filename";
+    }
+    if ($url =~ m{[^*]}) {
+        my @found = $self->_search_url_file($url);
+        confess "No match for $url" if !scalar @found;
+        $url = $found[-1];
+    }
     confess "ERROR: wget missing"   if !$WGET;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
@@ -996,14 +1044,14 @@ sub _download_file_external($url, $device, $verbose=1) {
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
 
-    return if !$err;
+    return $url if !$err;
 
     if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
         if ( $1 != $2 ) {
             unlink $device or die "$! $device" if -e $device;
             die "ERROR: Expecting $1 , got $2.\n$err"
         }
-        return;
+        return $url;
     }
     unlink $device or die "$! $device" if -e $device;
     die $err;
@@ -1022,8 +1070,10 @@ sub _search_iso {
     return $row if $file_iso;
 
     $self->_fetch_filename($row);#    if $row->{file_re};
-    $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
-    $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
+    if ($VERIFY_ISO) {
+        $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
+        $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
+    }
 
     if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume($row->{filename})) {
@@ -1039,7 +1089,7 @@ sub _search_iso {
 
 sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
-    if ($url =~ m{\*}) {
+    if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
         confess "No match for $url" if !scalar @found;
         $url = $found[-1];
@@ -1068,9 +1118,10 @@ sub _match_url($self,$url) {
     my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
     $url2 = '' if !$url2;
 
+    confess "No url1 from $url" if !defined $url1;
     my $ua = Mojo::UserAgent->new;
     my $res = $ua->get(($url1 or '/'))->res;
-    die "ERROR ".$res->code." ".$res->message." : $url1"
+    confess "ERROR ".$res->code." ".$res->message." : $url1"
         unless $res->code == 200 || $res->code == 301;
 
     my @found;
@@ -1115,7 +1166,7 @@ sub _cache_filename($url) {
     $file =~ s/__+/_/g;
 
     my ($user) = getpwuid($>);
-    my $dir = "/var/tmp/ravada_cache/$user";
+    my $dir = "/var/tmp/$user/ravada_cache/";
     make_path($dir)    if ! -e $dir;
     return "$dir/$file";
 }
@@ -1138,13 +1189,25 @@ sub _fetch_filename {
         confess "No filename in $row->{name} $row->{url}" if !$file;
 
         $row->{url} = $new_url;
-        $row->{file_re} = $file;
+        $row->{file_re} = "^$file";
     }
     confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
-    my @found = $self->_search_url_file($row->{url}, $row->{file_re});
-    die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+    my @found;
+    if ($row->{rename_file}) {
+        @found = $self->search_volume_re(qr("^".$row->{rename_file}));
+    } else {
+        @found = $self->search_volume_re(qr($row->{file_re}));
+    }
+    if (@found) {
+        $row->{device} = $found[0]->get_path;
+        ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
+        return;
+    } else {
+        @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
+        die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+    }
 
     my $url = $found[-1];
     my ($file) = $url =~ m{.*/(.*)};
@@ -1192,7 +1255,7 @@ sub _match_file($self, $url, $file_re) {
         eval { $res = $self->_web_user_agent->get($url)->res(); };
         last if !$@ && $res && defined $res->code;
         next if $@ && $@ =~ /timeout/i;
-        die $@ if $@;
+        confess $@ if $@;
     }
 
     return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
@@ -1209,30 +1272,38 @@ sub _match_file($self, $url, $file_re) {
     return @found;
 }
 
-sub _fetch_this($self,$row,$type){
+sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
-    my ($url,$file) = $row->{url} =~ m{(.*/)(.*)};
-    my ($file2) = $row->{url} =~ m{.*/(.*/.*)};
-    confess "No file for $row->{url}"   if !$file;
+    confess "Error: missing file or filename ".Dumper($row) if !$file;
 
+    $file=~ s{.*/(.*)}{$1} if $file =~ m{/};
+
+    my ($url, $file2) = $row->{url} =~ m{(.*)/(.*)};
     my $url_orig = $row->{"${type}_url"};
+    $file = $file2 if $file2 !~ /\*|\^/;
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
+    confess "error " if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
 
     for my $line (split/\n/,$content) {
         next if $line =~ /^#/;
-        my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
-        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
-        ($value) = $line =~ m{$file2.* ([a-f0-9]+)}i if !$value;
+        my $value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{\s*([a-f0-9]+).*$file}i     if !$value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file} if !$value;
         if ($value) {
             $row->{$type} = $value;
             return $value;
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n".$content;
+    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+        .$url_orig."\n"
+        .$content;
 }
 
 sub _fetch_md5($self,$row) {
@@ -1946,6 +2017,11 @@ sub _free_memory_available($self) {
     for my $domain ( $self->list_domains(active => 1) ) {
         $used += $domain->domain->get_info->{memory};
     }
-    return $info->{total} - $used;
+    my $free_mem = $info->{total} - $used;
+    my $free_real = $self->_free_memory_overcommit;
+
+    $free_mem = $free_real if $free_real < $free_mem;
+
+    return $free_mem;
 }
 1;

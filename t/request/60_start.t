@@ -5,7 +5,6 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -17,8 +16,7 @@ use_ok('Ravada::Request');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-init($test->connector, 't/etc/ravada.conf');
+init();
 
 ###############################################################################
 
@@ -33,9 +31,42 @@ sub test_request_start($vm_name) {
     is($req->status, 'done');
     is($req->error,'');
 
+    is($domain->remote_ip,'127.0.0.1');
+
+    $req = Ravada::Request->start_domain(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,remote_ip => '127.0.0.2'
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status, 'done');
+    is($req->error,'');
+
+    is($domain->remote_ip,'127.0.0.2');
+
     $domain->remove(user_admin);
 }
 
+sub test_request_create_start($vm_name) {
+    my $base = create_domain($vm_name);
+    $base->prepare_base(user_admin);
+
+    my $domain_name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        id_base => $base->id
+        ,id_owner => user_admin->id
+        ,remote_ip => '127.0.0.1'
+        ,start => 1
+        ,name => $domain_name
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status, 'done');
+    is($req->error,'');
+
+    my $domain = rvd_back->search_domain($domain_name);
+    is($domain->remote_ip,'127.0.0.1');
+    is($domain->is_active,1);
+}
 sub test_request_iptables($vm_name) {
     my $domain = create_domain($vm_name);
     my $req = Ravada::Request->open_iptables(
@@ -45,10 +76,11 @@ sub test_request_iptables($vm_name) {
     );
     rvd_back->_process_all_requests_dont_fork();
     is($req->status, 'done');
-    like($req->error,qr/is not active/);
+    is($req->error,'');
 
-    is(scalar($domain->list_requests), 1);
-    rvd_back->_process_all_requests_dont_fork();
+    is(scalar($domain->list_requests), 0);
+
+    is($domain->remote_ip,'127.0.0.1');
 
     $domain->remove(user_admin);
 }
@@ -74,6 +106,7 @@ for my $vm_name ( vm_names() ) {
 
         test_request_start($vm_name);
         test_request_iptables($vm_name);
+        test_request_create_start($vm_name);
     }
 }
 
