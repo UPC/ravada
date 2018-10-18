@@ -454,8 +454,9 @@ get '/machine/screenshot/(:id).(:type)' => sub {
 };
 
 get '/machine/copy_screenshot/(:id).(:type)' => sub {
-        my $c = shift;
-        return access_denied($c) if !$USER->is_admin() || $domain->is_base();
+        my $c = shift; 
+        my $domain = _search_requested_machine($c);
+        return access_denied($c) if (!$USER->is_admin() || $domain->is_base());
         return copy_screenshot($c);
 };
 
