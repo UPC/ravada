@@ -40,7 +40,15 @@ You can install ravada using the 'dnf' package manager.
 
 ::
 
-    $ sudo dnf install ravada
+    sudo dnf install ravada
+    
+Add link to kvm-spice
+~~~~~~~~~~~~~~~~~~~~~
+This may change in the future but actually a link to kvm-spice is required. Create it this way:
+
+::
+
+    ln -s /usr/bin/qemu-kvm /usr/bin/kvm-spice
 
 MySQL server
 ~~~~~~~~~~~~
@@ -49,14 +57,14 @@ installed in another host or in the same as the ravada package.
 
 ::
 
-    $ sudo dnf install mariadb mariadb-server
+    sudo dnf install mariadb mariadb-server
 
 And don't forget to enable and start the server process:
 
 ::
 
-    $ sudo systemctl enable --now mariadb.service
-    $ sudo systemctl start mariadb.service
+    sudo systemctl enable --now mariadb.service
+    sudo systemctl start mariadb.service
 
 MySQL database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,13 +79,13 @@ Create the database:
 
 ::
 
-    $ sudo mysqladmin -u root -p create ravada
+    sudo mysqladmin -u root -p create ravada
 
 Grant all permissions on this database to the *rvd_user*:
 
 ::
 
-    $ sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
+    sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
 
 Config file
 ~~~~~~~~~~~
@@ -89,7 +97,7 @@ example.
 
 ::
 
-    $ sudoedit /etc/ravada.conf
+    sudo vi /etc/ravada.conf
     db:
       user: rvd_user
       password: changeme
@@ -103,7 +111,7 @@ When asked if this user is admin answer *yes*.
 
 ::
 
-    $ sudo /usr/sbin/rvd_back --add-user user.name
+    sudo /usr/sbin/rvd_back --add-user user.name
 
 Firewall (Optional)
 -------------------
@@ -116,7 +124,7 @@ First we try to find out what is the new internal network:
 
 ::
 
-    $  sudo route -n
+    sudo route -n
     ...
     192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
 
