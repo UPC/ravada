@@ -235,7 +235,7 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/admin/(#type)' => sub {
+any '/admin/#type' => sub {
   my $c = shift;
 
   return admin($c)  if $c->stash('type') eq 'machines'
