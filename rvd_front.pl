@@ -1870,6 +1870,13 @@ sub _new_anonymous_user {
     return $name;
 }
 
+my $routes = app->routes->children;
+for my $route (@$routes){
+    $route->pattern->quote_start('(');
+    $route->pattern->quote_end(')');
+    $route->pattern->parse($route->pattern->unparsed);
+}
+
 app->secrets($CONFIG_FRONT->{secrets})  if $CONFIG_FRONT->{secrets};
 app->start;
 __DATA__
