@@ -4,7 +4,7 @@
           <br>
           <a href="https://www.upc.edu/"><img src="https://www.upc.edu/content/assets/images/logoUPC.png"></a>
           <a href="https://ravada.upc.edu/"><img src="https://img.shields.io/badge/Website-Ravada-orange.svg"></a>
-%if ($version =~ /(alpha|beta)/) {
+%if ($version =~ /(alpha|beta|rc\d+)/) {
           <a href="https://github.com/UPC/ravada/releases"><%= $version %></a>
 % } else {
           <a href="https://github.com/UPC/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>

@@ -13,7 +13,7 @@ use_ok('Ravada::Front');
 use_ok('Ravada::Auth');
 use_ok('Ravada::Auth::LDAP');
 
-my $CONFIG_FILE = 't/etc/ravada_ldap_1.conf';
+my $CONFIG_FILE = 't/etc/ravada_ldap.conf';
 
 init( $CONFIG_FILE);
 rvd_back();
@@ -28,6 +28,7 @@ sub test_ldap {
         config => $CONFIG_FILE
         ,connector => connector()
     );
+    delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
     create_ldap_user($USER_DATA->{name}, $USER_DATA->{password});
     my $login_ok;
     eval { $login_ok = Ravada::Auth::login($USER_DATA->{name}, $USER_DATA->{password}) };
@@ -68,7 +69,7 @@ sub test_ldap {
 
 SKIP: {
     my $ravada = Ravada->new(config => $CONFIG_FILE
-                        , connector => $test->connector);
+                        , connector => connector);
     $ravada->_install();
     my $ldap;
 

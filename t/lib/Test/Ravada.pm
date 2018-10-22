@@ -34,6 +34,7 @@ create_domain
     start_node shutdown_node
     start_domain_internal   shutdown_domain_internal
     connector
+    create_ldap_user
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
