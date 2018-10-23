@@ -7,7 +7,7 @@ TEST::SQL::DATA module.
 
 In project root run:
 
-:: prompt:: bash $
+.. prompt:: bash $
 
     perl Makefile.PL
     sudo make test 
@@ -19,6 +19,6 @@ If something goes wrong you see: Result: FAIL
 Run a single test
 -----------------
 
-:: prompt:: bash $,# auto
+.. prompt:: bash $,# auto
 
     make && sudo prove -b t/lxc/*t
