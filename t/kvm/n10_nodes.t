@@ -297,27 +297,6 @@ sub test_remove_domain_node {
 
 }
 
-sub test_domain_starts_in_same_vm {
-    my ($vm_name, $node) = @_;
-
-    my $domain = test_domain($vm_name, $node);
-
-    my $display = $domain->display(user_admin);
-    $domain->shutdown_now(user_admin)   if $domain->is_active;
-
-    unlike($domain->_vm->host, qr/localhost/)   or return;
-    is($domain->_vm->host, $node->host)         or return;
-
-    my $domain2 = rvd_back->search_domain($domain->name);
-    ok($domain2,"Expecting a domain called ".$domain->name) or return;
-
-    $domain2->start(user => user_admin);
-    is($domain2->_vm->host, $node->host);
-    is($domain2->display(user_admin), $display);
-
-    $domain->remove(user_admin);
-}
-
 sub test_sync_base {
     my ($vm_name, $node) = @_;
 
@@ -391,6 +370,7 @@ sub test_start_twice {
     is(''.$@,'') or return;
 
     $clone->start(user_admin) if !$clone->is_active();
+    is($clone->_vm->id, $vm->id);
     my $display0 = $clone->display(user_admin);
     $clone->shutdown_now(user_admin) if $clone->is_active();
 
@@ -406,16 +386,17 @@ sub test_start_twice {
     is($clone2->_vm->host, $vm->host);
     is($clone2->is_active,0);
 
-    start_domain_internal($clone2);
+    is($clone->_vm->id, $node->id);
+    start_domain_internal($clone);
 
-    eval { $clone->start(user => user_admin ) };
+    eval { $clone2->start(user => user_admin ) };
     like(''.$@,qr'libvirt error code: 55,',$clone->name)
         if $vm_name eq 'KVM' && $@;
-    is($clone->is_active,1);
-    is($clone->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip)
+    is($clone2->is_active,1);
+    is($clone2->_vm->host, $node->host,"[$vm_name] Expecting ".$clone->name." in ".$node->ip)
         or return;
     is($clone->display(user_admin), $clone2->display(user_admin));
-    isnt($clone->display(user_admin), $display0, $clone->name) or exit;
+    isnt($clone2->display(user_admin), $display0, $clone->name) or exit;
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -527,6 +508,8 @@ sub test_shutdown_internal( $node ) {
                 or exit;
     }
 
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 }
 
 sub _create_clone($node) {
@@ -757,11 +740,14 @@ sub test_bases_different_storage_pools {
 sub test_clone_not_in_node {
     my ($vm_name, $node) = @_;
 
+    diag("[$vm_name] Checking some clones go to other nodes");
+
     my $vm = rvd_back->search_vm($vm_name);
 
     my $domain = create_domain($vm_name);
 
     $domain->prepare_base(user_admin);
+    is($domain->base_in_vm($vm->id), 1);
     $domain->set_base_vm(vm => $node, user => user_admin);
 
     is($domain->base_in_vm($node->id), 1);
@@ -790,7 +776,7 @@ sub test_clone_not_in_node {
 
     isnt($clones[-1]->_vm->host, $clones[0]->_vm->host,"[$vm_name] "
         .$clones[-1]->name
-        ." - ".$clones[0]->name.Dumper({map {$_->name => $_->_vm->host} @clones})) or return;
+        ." - ".$clones[0]->name.Dumper({map {$_->name => $_->_vm->host} @clones})) or exit;
     for (@clones) {
         $_->remove(user_admin);
     }
@@ -1136,6 +1122,8 @@ sub test_status($node) {
     $domain_front = Ravada::Front::Domain->open($clone->id);
     is($domain_front->is_active, 1);
 
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 }
 
 
@@ -1145,7 +1133,7 @@ clean_remote();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('Void', 'KVM' ) {
+for my $vm_name ('KVM', 'Void') {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -1215,7 +1203,6 @@ SKIP: {
     test_remove_domain($vm_name, $node, $domain3)               if $domain3;
 
 
-        test_domain_starts_in_same_vm($vm_name, $node);
         test_prepare_sets_vm($vm_name, $node);
 
     test_remove_base($node);
