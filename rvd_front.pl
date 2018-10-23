@@ -236,7 +236,7 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/admin/(#type)' => sub {
+any '/admin/#type' => sub {
   my $c = shift;
 
   return admin($c)  if $c->stash('type') eq 'machines'
@@ -1956,6 +1956,13 @@ sub _new_anonymous_user {
     Ravada::Auth::SQL::add_user(name => $name, is_temporary => 1);
 
     return $name;
+}
+
+my $routes = app->routes->children;
+for my $route (@$routes){
+    $route->pattern->quote_start('(');
+    $route->pattern->quote_end(')');
+    $route->pattern->parse($route->pattern->unparsed);
 }
 
 app->secrets($CONFIG_FRONT->{secrets})  if $CONFIG_FRONT->{secrets};
