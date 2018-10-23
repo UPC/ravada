@@ -19,6 +19,6 @@ If something goes wrong you see: Result: FAIL
 Run a single test
 -----------------
 
-.. prompt:: bash #
+.. prompt:: bash $
 
     $ make && sudo prove -b t/lxc/*t
