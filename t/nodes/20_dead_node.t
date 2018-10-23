@@ -57,6 +57,7 @@ sub test_down_node($vm, $node) {
 }
 
 sub test_disabled_node($vm, $node) {
+    diag("[".$vm->type."] Test clones should shutdown on disabled nodes");
     start_node($node);
 
     my $domain = create_domain($vm);
@@ -67,9 +68,11 @@ sub test_disabled_node($vm, $node) {
     $clone->migrate($node);
     $clone->start(user_admin);
     is($clone->_vm->id, $node->id );
+    is($clone->is_active, 1);
+    is($clone->_data('id_vm'), $node->id) or exit;
 
-    my $sth = connector->dbh->prepare("UPDATE vms set enabled=0 WHERE id=?");
-    $sth->execute($node->id);
+    $node->enabled(0);
+    is($node->enabled, 0);
 
     my $req = Ravada::Request->refresh_vms();
     rvd_back->_process_requests_dont_fork();
@@ -77,15 +80,16 @@ sub test_disabled_node($vm, $node) {
     is($req->status, 'done');
     is($req->error, '',"Expecting no error after refresh vms");
 
-    my $clone_f = Ravada::Front::Domain->open($clone->id);
-    is($clone_f->is_active, 0, "Expecting clone in frontend not active after node disabled");
-
     for ( 1 .. 120 ) {
-        rvd_back->_process_requests_dont_fork(1);
+        rvd_back->_process_requests_dont_fork();
         last if !$clone->is_active;
         sleep 1;
     }
-    is($clone->is_active, 0, "Expecting clone not active after node disabled") or exit;
+    delete $clone->{_data};
+    is($clone->is_active, 0, "Expecting clone ".$clone->name." not active after node disabled") or exit;
+
+    my $clone_f = Ravada::Front::Domain->open($clone->id);
+    is($clone_f->is_active, 0, "Expecting clone in frontend not active after node disabled");
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
