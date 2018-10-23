@@ -330,7 +330,13 @@ sub _search_already_started($self) {
         my $vm = Ravada::VM->open($id);
         next if !$vm->is_enabled || !$vm->is_active;
 
-        my $domain = $vm->search_domain($self->name);
+        my $domain;
+        eval { $domain = $vm->search_domain($self->name) };
+        if ( $@ ) {
+            warn $@;
+            $vm->enabled(0);
+            next;
+        }
         next if !$domain;
         if ( $domain->is_active || $domain->is_hibernated ) {
             $self->_set_vm($vm,'force');
@@ -419,7 +425,7 @@ sub _allow_remove($self, $user) {
         && $self->id_base
         && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
-        my $base = $self->open($self->id_base);
+        my $base = $self->open(id => $self->id_base, id_vm => $self->_vm->id);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
 
@@ -814,7 +820,6 @@ sub open($class, @args) {
     if (!$vm || !$vm->is_active) {
         $vm = $vm_local->new( );
     }
-
     my $domain = $vm->search_domain($row->{name}, $force);
     if ( !$domain ) {
         return if $vm->is_local;
@@ -822,7 +827,7 @@ sub open($class, @args) {
         $domain = $vm->search_domain($row->{name}, $force) or return;
     }
     if (!$id_vm) {
-        $domain->_search_already_started();
+        $domain->_search_already_started() if !$domain->is_base;
         $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
@@ -1189,8 +1194,9 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
-        my $domain = $vm->search_domain($domain_name) or next;
-        $domain->remove($user, $cascade);
+        my $domain;
+        eval { $domain = $vm->search_domain($domain_name) };
+        $domain->remove($user, $cascade) if $domain;
     }
 }
 
