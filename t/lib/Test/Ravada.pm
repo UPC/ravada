@@ -151,6 +151,7 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 256*1024
+                    , disk => 256 * 1024 * 1024
            );
     };
     is($@,'');
