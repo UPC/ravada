@@ -866,7 +866,29 @@ sub _alias_grants($self) {
 sub _add_grants($self) {
     $self->_add_grant('shutdown', 1);
     $self->_add_grant('screenshot', 1);
+    $self->_insert_grant('start_many',0)
 }
+
+
+sub _insert_grant($self,$grant,$allowed) {
+   
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM grant_types WHERE name=?"
+    );
+    $sth->execute($grant);
+    my ($id) = $sth->fetchrow();
+    $sth->finish;
+
+    return if $id;
+
+   $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
+        ." VALUES (?,?)");
+   $sth->execute($grant,"can have more than one machine opened");
+   $sth->finish;
+   
+
+}
+
 
 sub _add_grant($self, $grant, $allowed) {
 
@@ -931,6 +953,7 @@ sub _enable_grants($self) {
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
+        ,'start_many'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -2551,6 +2574,15 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
+sub _cmd_start_many_domains{
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->args('name');
+
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2798,6 +2830,7 @@ sub _enforce_limits_active($self, $request) {
         next if scalar @{$domains{$id_user}}<2;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
+        next if $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
