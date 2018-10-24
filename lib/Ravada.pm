@@ -2659,6 +2659,15 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
+sub _cmd_start_many_domains{
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->args('name');
+
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2989,6 +2998,7 @@ sub _enforce_limits_active($self, $request) {
         next if scalar @{$domains{$id_user}}<2;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
+        next if $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
