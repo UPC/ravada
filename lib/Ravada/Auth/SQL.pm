@@ -125,8 +125,9 @@ sub add_user {
     my $is_admin = ($args{is_admin} or 0);
     my $is_temporary= ($args{is_temporary} or 0);
     my $is_external= ($args{is_external} or 0);
+    my $external_auth = $args{external_auth};
 
-    delete @args{'name','password','is_admin','is_temporary','is_external'};
+    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
@@ -134,8 +135,8 @@ sub add_user {
 
     my $sth;
     eval { $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary, is_external)"
-            ." VALUES(?,?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth)"
+            ." VALUES(?,?,?,?,?,?)");
     };
     confess $@ if $@;
     if ($password) {
@@ -143,7 +144,7 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external);
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth);
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
@@ -319,6 +320,17 @@ sub remove_admin($self, $id) {
     my $user = $self->search_by_id($id);
     $self->revoke_all_permissions($user);
     $self->grant_user_permissions($user);
+}
+
+sub external_auth($self, $value=undef) {
+    if (!defined $value) {
+        return $self->{_data}->{external_auth};
+    }
+    my $sth = $$CON->dbh->prepare(
+        "UPDATE users set external_auth=? WHERE id=?"
+    );
+    $sth->execute($value, $self->id);
+    $self->_load_data();
 }
 
 =head2 is_admin

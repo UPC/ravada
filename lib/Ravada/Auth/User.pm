@@ -290,4 +290,13 @@ sub _now {
     return "$now[5]-$now[4]-$now[3] $now[2]:$now[1]:$now[0].0";
 }
 
+sub allowed_access {
+    return 1;
+}
+
+sub external_auth {
+    my $self = shift;
+    my $value = shift;
+    return $self->{_data}->{external_auth};
+}
 1;

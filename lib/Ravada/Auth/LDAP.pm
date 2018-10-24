@@ -386,9 +386,15 @@ sub _login_match {
 sub _check_user_profile {
     my $self = shift;
     my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
-    return if $user_sql->id;
+    if ( $user_sql->id ) {
+        if ($user_sql->external_auth ne 'ldap') {
+            $user_sql->external_auth('ldap');
+        }
+        return;
+    }
 
-    Ravada::Auth::SQL::add_user(name => $self->name, is_external => 1, is_temporary => 0);
+    Ravada::Auth::SQL::add_user(name => $self->name, is_external => 1, is_temporary => 0
+        , external_auth => 'ldap');
 }
 
 sub _match_password {
@@ -520,4 +526,7 @@ sub init {
     $LDAP_ADMIN = undef;
 }
 
+sub allowed_access {
+    return 0;
+}
 1;

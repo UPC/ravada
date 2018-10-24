@@ -47,6 +47,7 @@ our $USER_ADMIN;
 our $CHAIN = 'RAVADA';
 
 our $RVD_BACK;
+our $RVD_FRONT;
 
 our %ARG_CREATE_DOM = (
     KVM => []
@@ -159,12 +160,15 @@ sub rvd_back($config=undef) {
     return $rvd;
 }
 
-sub rvd_front() {
+sub rvd_front($config=undef) {
 
-    return Ravada::Front->new(
+    return $RVD_FRONT if $RVD_FRONT;
+
+    $RVD_FRONT = Ravada::Front->new(
             connector => $CONNECTOR
-                , config => ( $CONFIG or $DEFAULT_CONFIG)
+                , config => ( $config or $DEFAULT_CONFIG)
     );
+    return $RVD_FRONT;
 }
 
 sub init($config=undef, $create_user=1) {
@@ -177,6 +181,7 @@ sub init($config=undef, $create_user=1) {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
     rvd_back($config)  if !$RVD_BACK;
+    rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
@@ -674,7 +679,7 @@ sub connector {
     return $connector;
 }
 
-sub END {
+sub DESTROY {
     remove_old_user() if $CONNECTOR;
 }
 1;
