@@ -485,7 +485,62 @@ sub test_domain_limit_noadmin {
     my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or die Dumper(\@list);
     is($list[0]->name, $domain2->name) if $list[0];
+
+    $domain->remove(user_admin);
+    $domain2->remove(user_admin);
 }
+
+sub test_domain_limit_allowed {
+    my $vm_name = shift;
+    my $user = $USER;
+    user_admin->grant($user,'create_machine');
+    user_admin->grant($user,'start_many');
+    is($user->is_admin,0);
+
+    for my $domain ( rvd_back->list_domains()) {
+        $domain->shutdown_now(user_admin);
+    }
+    my $domain = create_domain($vm_name, $user);
+    ok($domain,"Expecting a new domain created") or exit;
+    $domain->shutdown_now($USER)    if $domain->is_active;
+
+    is(rvd_back->list_domains(user => $user, active => 1),0
+        ,Dumper(rvd_back->list_domains())) or exit;
+
+    $domain->start( $user);
+    is($domain->is_active,1);
+
+    ok($domain->start_time <= time,"Expecting start time <= ".time
+                                    ." got ".time);
+
+    sleep 1;
+    is(rvd_back->list_domains(user => $user, active => 1),1);
+
+    my $domain2 = create_domain($vm_name, $user);
+    $domain2->shutdown_now( $user )   if $domain2->is_active;
+    is(rvd_back->list_domains(user => $user, active => 1),1);
+
+    $domain2->start( $user );
+    my $req = Ravada::Request->enforce_limits(timeout => 1);
+    rvd_back->_process_all_requests_dont_fork();
+    sleep 1;
+    rvd_back->_process_all_requests_dont_fork();
+    my @list = rvd_back->list_domains(user => $user, active => 1);
+    is(scalar @list,2) or die Dumper([ map { $_->name } @list]);
+    is($list[0]->name, $domain2->name) if $list[0];
+
+    user_admin->revoke($user,'start_many');
+    $req = Ravada::Request->enforce_limits(timeout => 1);
+    rvd_back->_process_all_requests_dont_fork();
+    sleep 1;
+    rvd_back->_process_all_requests_dont_fork();
+    @list = rvd_back->list_domains(user => $user, active => 1);
+    is(scalar @list,1) or die Dumper([ map { $_->name } @list]);
+ 
+    $domain->remove(user_admin);
+    $domain2->remove(user_admin);
+}
+
 
 sub test_domain_limit_already_requested {
     my $vm_name = shift;
@@ -574,6 +629,7 @@ for my $vm_name ('Void','KVM') {
         test_spinned_off_base($vm_name);
         test_domain_limit_admin($vm_name);
         test_domain_limit_noadmin($vm_name);
+        test_domain_limit_allowed($vm_name);
 
 
         $domain->remove( user_admin );
