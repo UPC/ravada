@@ -870,7 +870,6 @@ sub _add_grants($self) {
 }
 
 sub _add_grant($self, $grant, $allowed, $description) {
-
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM grant_types WHERE name=?"
     );
