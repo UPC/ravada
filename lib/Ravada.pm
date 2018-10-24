@@ -864,34 +864,12 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('shutdown', 1);
-    $self->_add_grant('screenshot', 1);
-    $self->_insert_grant('start_many',0)
+    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines");
+    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines");
+    $self->_add_grant('start_many',0,"Can have more than one machine started")
 }
 
-
-sub _insert_grant($self,$grant,$allowed) {
-   
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM grant_types WHERE name=?"
-    );
-    $sth->execute($grant);
-    my ($id) = $sth->fetchrow();
-    $sth->finish;
-
-    return if $id;
-
-   $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
-        ." VALUES (?,?)");
-   $sth->execute($grant,"can have more than one machine opened");
-   $sth->finish;
-   
-
-}
-
-
-sub _add_grant($self, $grant, $allowed) {
-
+sub _add_grant($self, $grant, $allowed, $description) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM grant_types WHERE name=?"
     );
@@ -903,7 +881,7 @@ sub _add_grant($self, $grant, $allowed) {
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
         ." VALUES (?,?)");
-    $sth->execute($grant,"can shutdown any virtual machine owned by the user");
+    $sth->execute($grant, $description);
     $sth->finish;
 
     return if !$allowed;
