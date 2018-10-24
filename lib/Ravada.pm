@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.3.0-beta6';
+our $VERSION = '0.4.0-alpha2';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -875,12 +875,12 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('shutdown', 1);
-    $self->_add_grant('screenshot', 1);
+    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines");
+    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines");
+    $self->_add_grant('start_many',0,"Can have more than one machine started")
 }
 
-sub _add_grant($self, $grant, $allowed) {
-
+sub _add_grant($self, $grant, $allowed, $description) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM grant_types WHERE name=?"
     );
@@ -892,7 +892,7 @@ sub _add_grant($self, $grant, $allowed) {
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
         ." VALUES (?,?)");
-    $sth->execute($grant,"can shutdown any virtual machine owned by the user");
+    $sth->execute($grant, $description);
     $sth->finish;
 
     return if !$allowed;
@@ -942,6 +942,7 @@ sub _enable_grants($self) {
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
+        ,'start_many'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
