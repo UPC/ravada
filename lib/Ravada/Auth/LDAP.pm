@@ -313,6 +313,7 @@ sub login($self) {
 
     if ($$CONFIG->{ldap}->{ravada_posix_group}) {
         $allowed = search_user (name => $self->name, field => 'memberUid', base => $$CONFIG->{ldap}->{ravada_posix_group}) || 0;
+        $self->{_ldap_entry} = $allowed;
     } else {
         $allowed = 1;
     }
@@ -345,12 +346,24 @@ sub _login_bind {
         my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
         if ( !$mesg->code() ) {
             $self->{_auth} = 'bind';
+            $self->{_ldap_entry} = $user;
             return 1;
         }
         warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn"
             if $Ravada::DEBUG && $mesg->code;
     }
     return 0;
+}
+
+=head2 ldap_entry
+
+Returns the ldap entry as a Net::LDAP::Entry of the user if it has
+LDAP external authentication
+
+=cut
+
+sub ldap_entry($self) {
+    return $self->{_ldap_entry};
 }
 
 sub _login_match {
@@ -373,7 +386,10 @@ sub _login_match {
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
         $user_ok = $self->_match_password($entry, $password);
         warn $entry->dn." : $user_ok" if $Ravada::DEBUG;
-        last if $user_ok;
+        if ( $user_ok ) {
+            $self->{_ldap_entry} = $entry;
+            last;
+        }
     }
 
     if ($user_ok) {
@@ -526,7 +542,4 @@ sub init {
     $LDAP_ADMIN = undef;
 }
 
-sub allowed_access {
-    return 0;
-}
 1;

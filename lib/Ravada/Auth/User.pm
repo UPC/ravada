@@ -13,6 +13,9 @@ use Carp qw(confess croak);
 use Data::Dumper;
 use Moose::Role;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 requires 'add_user';
 requires 'is_admin';
 requires 'is_external';
@@ -47,7 +50,10 @@ Internal OO builder
 =cut
 
 sub BUILD {
+    my $self = shift;
     _init_connector();
+    $self->_load_allowed();
+
 }
 
 #####################################################
@@ -290,13 +296,50 @@ sub _now {
     return "$now[5]-$now[4]-$now[3] $now[2]:$now[1]:$now[0].0";
 }
 
-sub allowed_access {
-    return 1;
+=head2 allowed_access
+
+Return true if the user has access to clone a virtual machine
+
+=cut
+
+sub allowed_access($self,$id_domain) {
+    return 1 if $self->is_admin;
+
+    $self->_load_allowed();
+
+    # this domain has not access checks defined
+    return 1 if ! exists $self->{_allowed}->{$id_domain};
+
+    # return true if this user is allowed
+    return 1 if $self->{_allowed}->{$id_domain};
+
+    return 0;
 }
 
-sub external_auth {
+sub _load_allowed {
     my $self = shift;
-    my $value = shift;
-    return $self->{_data}->{external_auth};
+    my $refresh = shift;
+
+    return if !$refresh && $self->{_load_allowed}++;
+
+    return if !$self->external_auth || $self->external_auth ne 'ldap';
+
+    my $ldap_entry = $self->ldap_entry;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id_domain, attribute, value, allowed "
+        ." FROM access_ldap_attribute"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $attribute, $value, $allowed) = $sth->fetchrow) {
+        if ($ldap_entry && defined $ldap_entry->get_value($attribute)
+                && $ldap_entry->get_value($attribute) eq $value ) {
+            $self->{_allowed}->{$id_domain} = $allowed;
+        } else {
+            $self->{_allowed}->{$id_domain} = 0;
+        }
+    }
+    $sth->finish;
 }
+
 1;
