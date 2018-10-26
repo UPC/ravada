@@ -79,6 +79,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/change_windows_driver_to_virtio
    docs/migrate_manual
    docs/Kiosk_mode
+   docs/volatile
 
 .. _feature-docs:
 
@@ -100,6 +101,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/translations
    docs/monitoring
    docs/guide
+   docs/local_resources
 
 .. _guest-docs:
 
