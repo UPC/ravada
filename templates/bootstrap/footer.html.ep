@@ -7,6 +7,7 @@
 %if ($version =~ /(alpha|beta)/) {
           <a href="https://github.com/UPC/ravada/releases"><%= $version %></a>
 % } else {
+% $version =~ s/-/--/g;
           <a href="https://github.com/UPC/ravada/releases"><img src="https://img.shields.io/badge/version-<%= $version %>-brightgreen.svg"></a>
 % }
           <a href="https://github.com/UPC/ravada/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg"></a>
