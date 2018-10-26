@@ -15,6 +15,7 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
+use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
 use Ravada::Front::Domain::KVM;
 use Ravada::Network;
@@ -140,6 +141,7 @@ sub list_machines_user {
     my @list;
     while ( $sth->fetch ) {
         next if !$is_public && !$user->is_admin;
+        next if !$user->allowed_access($id);
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id

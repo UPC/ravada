@@ -2426,4 +2426,31 @@ sub _post_change_controller {
     my $self = shift;
     $self->needs_restart(1) if $self->is_active;
 }
+
+=head2 Access restrictions
+
+These methods implement access restrictions to clone a domain
+
+=cut
+
+=head2 allow_ldap_attribute
+
+If specified, only the LDAP users with that attribute value can clone these
+virtual machines.
+
+    $base->allow_ldap_attribute( attribute => 'value' );
+
+Example:
+
+    $base->allow_ldap_attribute( tipology => 'student' );
+
+=cut
+
+sub allow_ldap_attribute($self, $attribute, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO access_ldap_attribute "
+        ."(id_domain, attribute, value, allowed) "
+        ."VALUES(?,?,?,?)");
+    $sth->execute($self->id, $attribute, $value, 1);
+}
 1;
