@@ -49,7 +49,7 @@
                          title="<%=l 'Enable' %>">
                           <i class="fa fa-check"></i>
                     </a>
-                    <a type="button" class="btn btn-warning btn-sm"
+                    <a type="button" class="btn btn-warning btn-sm {{node.actions_disabled}}"
                          ng-click="node_disable(node.id)"
                          ng-show="node.enabled"
                          title="<%=l 'Disable' %>">

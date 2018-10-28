@@ -469,6 +469,9 @@ sub list_vms($self, $type=undef) {
         $row->{bases}= $self->_list_bases_vm($row->{id});
         $row->{machines}= $self->_list_machines_vm($row->{id});
         $row->{type} = $row->{vm_type};
+        $row->{actions_disabled} = 'disabled' if length $row->{machines}[0] > 0;
+        $row->{actions_disabled} = 'disabled' if $row->{hostname} eq 'localhost';
+        $row->{actions_disabled} = 'disabled' if length $row->{bases}[0] > 0;
         delete $row->{vm_type};
         lock_hash(%$row);
         push @list,($row);
