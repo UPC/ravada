@@ -388,15 +388,22 @@ sub test_start_twice {
 
     is($clone->_vm->id, $node->id);
     start_domain_internal($clone);
+    is($clone->_vm->id, $node->id);
 
-    eval { $clone2->start(user => user_admin ) };
-    like(''.$@,qr'libvirt error code: 55,',$clone->name)
-        if $vm_name eq 'KVM' && $@;
-    is($clone2->is_active,1);
-    is($clone2->_vm->host, $node->host,"[$vm_name] Expecting ".$clone->name." in ".$node->ip)
+    is($clone->_vm->id, $node->id) or exit;
+
+    eval { $clone->start(user => user_admin ) };
+    is($clone->_vm->id, $node->id);
+    is($clone->is_active,1);
+    is($clone2->is_active,0);
+    $clone2 = $vm->search_domain($clone->name);
+    is($clone2->_vm->host, $vm->host,"[$vm_name] Expecting ".$clone->name." in ".$vm->ip)
         or return;
-    is($clone->display(user_admin), $clone2->display(user_admin));
-    isnt($clone2->display(user_admin), $display0, $clone->name) or exit;
+
+    my $clone_generic = Ravada::Domain->open($clone->id);
+    is($clone_generic->is_active,1);
+    is($clone_generic->_vm->host, $node->host,"[$vm_name] Expecting ".$clone->name
+                                                        ." in ".$node->ip);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
