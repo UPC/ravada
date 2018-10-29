@@ -469,9 +469,9 @@ sub list_vms($self, $type=undef) {
         $row->{bases}= $self->_list_bases_vm($row->{id});
         $row->{machines}= $self->_list_machines_vm($row->{id});
         $row->{type} = $row->{vm_type};
-        $row->{action_remove} = 'disabled' if length $row->{machines}[0] > 0;
+        $row->{action_remove} = 'disabled' if length defined $row->{machines}[0] > 0;
         $row->{action_remove} = 'disabled' if $row->{hostname} eq 'localhost';
-        $row->{action_remove} = 'disabled' if length $row->{bases}[0] > 0;
+        $row->{action_remove} = 'disabled' if length defined $row->{bases}[0] > 0;
         delete $row->{vm_type};
         lock_hash(%$row);
         push @list,($row);
@@ -486,6 +486,7 @@ sub _list_bases_vm($self, $id_node) {
         ." WHERE d.is_base=1"
         ."  AND d.id = bv.id_domain "
         ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
     );
     my @bases;
     $sth->execute($id_node);
