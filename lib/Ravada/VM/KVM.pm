@@ -154,7 +154,8 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return 1 if $self->vm && $self->is_alive;
+    return 1 if $self->vm;
+    return 1 if $self->is_alive;
 
     return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);

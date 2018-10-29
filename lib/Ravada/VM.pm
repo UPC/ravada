@@ -836,7 +836,6 @@ sub ping($self, $option=undef) {
 
     return 1 if $self->is_local();
 
-    warn "trying tcp"   if $debug;
     my $p = Net::Ping->new('tcp',2);
     my $ping_ok;
     eval { $ping_ok = $p->ping($self->host) };
