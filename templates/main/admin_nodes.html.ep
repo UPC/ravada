@@ -55,6 +55,11 @@
                          title="<%=l 'Disable' %>">
                           <i class="fa fa-window-close"></i>
                     </a>
+                    <a type="button" class="btn btn-danger btn-sm {{node.action_remove}}"
+                         ng-click="node_remove(node.id)"
+                         title="<%=l 'Remove' %>">
+                          <i class="glyphicon glyphicon-trash"></i>
+                    </a>
                 </td>
             </tr>
         </tbody>

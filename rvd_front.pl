@@ -283,6 +283,11 @@ get '/node/disable/(:id).json' => sub {
     return access_denied($c) if !$USER->is_admin;
     return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),0)});
 };
+get '/node/remove/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => {remove => $RAVADA->remove_node($c->stash('id'),1)});
+};
 
 any '/new_node' => sub {
     my $c = shift;
