@@ -1025,7 +1025,7 @@ LDAP external authentication
 
 sub ldap_entry($self) {
     confess "Error: User ".$self->name." is not in LDAP external auth"
-        if $self->external_auth ne 'ldap';
+        if !$self->external_auth || $self->external_auth ne 'ldap';
 
     return $self->{_ldap_entry} if $self->{_ldap_entry};
 

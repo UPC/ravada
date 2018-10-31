@@ -316,17 +316,35 @@ sub allowed_access($self,$id_domain) {
     return 0;
 }
 
+sub _list_domains_access($self) {
+
+    my @domains;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT distinct(id_domain) FROM access_ldap_attribute"
+    );
+    $sth->execute();
+    while (my ($id_domain) = $sth->fetchrow) {
+        push @domains, ($id_domain);
+    }
+    $sth->finish;
+
+    return @domains;
+}
+
 sub _load_allowed {
     my $self = shift;
     my $refresh = shift;
 
     return if !$refresh && $self->{_load_allowed}++;
 
-    return if !$self->external_auth || $self->external_auth ne 'ldap';
+    my $ldap_entry;
+    $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
+
+    my @domains = $self->_list_domains_access();
 
     for my $id_domain ( @domains ) {
         my $sth = $$CONNECTOR->dbh->prepare(
-            "SELECT attribute, value, allowed, last "
+            "SELECT attribute, value, allowed "
             ." FROM access_ldap_attribute"
             ." WHERE id_domain=?"
             ." ORDER BY n_order "
@@ -334,20 +352,17 @@ sub _load_allowed {
         $sth->execute($id_domain);
 
         my ($n_allowed, $n_denied) = ( 0,0 );
-        while ( my ($attribute, $value, $allowed, $last) = $sth->fetchrow) {
+        while ( my ($attribute, $value, $allowed) = $sth->fetchrow) {
             $n_allowed++ if $allowed;
             $n_denied++ if !$allowed;
 
-            if ( $value eq '*' ) {
-                $self->{_allowed}->{$id_domain} = $allowed
-                    if !exists $self->{_allowed}->{$id_domain};
-                last;
-            } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
-                    && $ldap_entry->get_value($attribute) eq $value ) {
+            if ( $value eq '*'
+                || ( $ldap_entry && defined $ldap_entry->get_value($attribute)
+                    && $ldap_entry->get_value($attribute) eq $value )) {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
-                last if !$allowed || $last;
+                last if !$allowed;
             }
         }
         $sth->finish;
@@ -359,10 +374,9 @@ sub _load_allowed {
         if ($n_allowed && !$n_denied) {
             $self->{_allowed}->{$id_domain} = 0;
         } else {
-            $self->{_allowed}->{$id_domain} = 0;
+            $self->{_allowed}->{$id_domain} = 1;
         }
     }
-    $sth->finish;
 }
 
 1;
