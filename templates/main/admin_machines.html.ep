@@ -237,33 +237,33 @@
                     </td>
                     <td class="lgMachToggle">
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
-                        <a type="button" class="btn btn-success btn-sm"
+                        <button type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
                          ng-disabled="machine.is_active"
                          ng-show="machine.can_start"
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
-                        </a>
-                        <a type="button" class="btn btn-warning btn-sm"
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hibernate',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_hibernate"
                          title="<%=l 'Hibernate' %>">
                           <i class="fa fa-pause"></i>
-                       </a>
-                        <a type="button" class="btn btn-danger btn-sm"
+                       </button>
+                        <button type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_shutdown"
                          title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
-                       </a>
-                        <a type="button" class="btn btn-primary btn-sm"
+                       </button>
+                        <button type="button" class="btn btn-primary btn-sm"
                          ng-show="machine.can_view"
                          ng-href="/machine/view/{{machine.id}}.html"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
-                        </a>
+                        </button>
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
