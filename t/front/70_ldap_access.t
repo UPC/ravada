@@ -132,6 +132,73 @@ sub test_access_by_attribute_deny($vm, $do_clones=0) {
     _remove_users($data);
 }
 
+sub test_access_by_attribute_several($vm, $do_clones=0) {
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $data = _create_users();
+    is($data->{student}->{user}->allowed_access( $base->id ), 1);
+    is($data->{teacher}->{user}->allowed_access( $base->id ), 1);
+    is($data->{other}->{user}->allowed_access( $base->id ), 1);
+
+    _do_clones($data, $base, $do_clones);
+
+    $base->deny_ldap_attribute( givenName => $data->{student}->{user}->{name});
+    $base->allow_ldap_attribute( givenName => $data->{teacher}->{user}->{name});
+    $base->deny_ldap_attribute( givenName => '*'); #default policy
+    _refresh_users($data);
+    is($data->{student}->{user}->allowed_access( $base->id ), 0);
+    is($data->{teacher}->{user}->allowed_access( $base->id ), 1)
+            or die Dumper($data->{teacher}->{user}->{_allowed});
+    is($data->{other}->{user}->allowed_access( $base->id ), 0);
+
+    my $list_bases = rvd_front->list_machines_user($data->{student}->{user});
+    is(scalar (@$list_bases), 0);
+
+    $list_bases = rvd_front->list_machines_user($data->{teacher}->{user});
+    is(scalar (@$list_bases), 1);
+
+    # other has no external_auth, access denied
+    $list_bases = rvd_front->list_machines_user($data->{other}->{user});
+    is(scalar (@$list_bases), 0);
+
+    $list_bases = rvd_front->list_machines_user(user_admin);
+    is(scalar (@$list_bases), 1);
+
+    _remove_bases($base);
+    _remove_users($data);
+}
+
+
+sub test_2_checks($vm) {
+    my $data = _create_users();
+
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    $base->allow_ldap_attribute( givenName => $data->{student}->{name});
+    $base->deny_ldap_attribute( givenName => $data->{teacher}->{name});
+
+    my $sth = connector->dbh->prepare(
+        "SELECT id,n_order from access_ldap_attribute "
+        ." WHERE id_domain=?"
+        ." ORDER BY n_order"
+    );
+    $sth->execute($base->id);
+    my $n_order_old;
+    while (my ($id, $n_order) = $sth->fetchrow ) {
+        isnt($n_order,$n_order_old,"Expecting new order for access id: $id");
+        $n_order_old = $n_order;
+    }
+
+    _refresh_users($data);
+
+    _remove_bases($base);
+    _remove_users($data);
+}
+
 sub test_access_by_attribute($vm, $do_clones=0) {
 
     my $data = _create_users();
@@ -203,7 +270,19 @@ sub _remove_bases(@bases) {
             my $clone = Ravada::Domain->open($clone_data->{id});
             $clone->remove(user_admin);
         }
+        my $id_domain = $base->id;
         $base->remove(user_admin);
+
+        my $sth = connector->dbh->prepare(
+            "SELECT * from access_ldap_attribute "
+            ." WHERE id_domain=?"
+        );
+        $sth->execute($id_domain);
+
+        my $row = $sth->fetchrow_hashref;
+        ok(!$row,"Expecting removed access_ldap_attribute for remove domain : ".$id_domain
+        ." ".Dumper($row));
+        $sth->finish;
     }
 }
 
@@ -295,6 +374,9 @@ for my $vm_name ('KVM', 'Void') {
         diag("Testing LDAP access for $vm_name");
 
         test_external_auth();
+
+        test_2_checks($vm);
+
         test_access_by_attribute($vm);
         test_access_by_attribute($vm,1); # with clones
         test_access_by_attribute_2bases($vm);
@@ -302,6 +384,9 @@ for my $vm_name ('KVM', 'Void') {
 
         test_access_by_attribute_deny($vm);
         test_access_by_attribute_deny($vm,1); # with clones
+
+        test_access_by_attribute_several($vm);
+
     }
 
 }
