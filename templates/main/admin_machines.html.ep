@@ -258,12 +258,12 @@
                          title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
                        </button>
-                        <button type="button" class="btn btn-primary btn-sm"
+                        <a type="button" class="btn btn-primary btn-sm"
                          ng-show="machine.can_view"
                          ng-href="/machine/view/{{machine.id}}.html"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
-                        </button>
+                        </a>
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
@@ -359,27 +359,27 @@
                       <td class="lgMachToggle">
 
                         <div ng-hide="{{child.is_locked}}">
-                          <a type="button" class="btn btn-success btn-sm"
+                          <button type="button" class="btn btn-success btn-sm"
                            ng-click="action('machine','start',child.id)"
                            ng-disabled="child.is_active"
                            ng-show="child.can_start"
                            title="<%=l 'Start' %>">
                             <i class="fa fa-play"></i>
-                          </a>
-                          <a type="button" class="btn btn-warning btn-sm"
+                          </button>
+                          <button type="button" class="btn btn-warning btn-sm"
                             ng-click="action('machine','hibernate',child.id)"
                             ng-disabled="!child.is_active"
                            ng-show="child.can_hibernate"
                             title="<%=l 'Hibernate' %>">
                             <i class="fa fa-pause"></i>
-                          </a>
-                          <a type="button" class="btn btn-danger btn-sm"
+                          </button>
+                          <button type="button" class="btn btn-danger btn-sm"
                            ng-click="action('machine','shutdown',child.id)"
                            ng-disabled="!child.is_active"
                            ng-show="child.can_shutdown"
                            title="<%=l 'ShutDown' %>">
                             <i class="fa fa-power-off"></i>
-                         </a>
+                         </button>
                           <a type="button" class="btn btn-primary btn-sm"
                            ng-href="/machine/view/{{child.id}}.html"
                            ng-show="child.can_view"
