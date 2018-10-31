@@ -44,6 +44,7 @@ our ($CONNECTOR, $CONFIG);
 our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
+our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
 our $RVD_BACK;
@@ -349,6 +350,8 @@ sub create_ldap_user($name, $password) {
     eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
     is($@,'') or return;
 
+    push @USERS_LDAP,($name);
+
     my @user = Ravada::Auth::LDAP::search_user($name);
     return $user[0];
 }
@@ -450,6 +453,15 @@ sub remove_old_user {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
     $sth->execute(base_domain_name());
 }
+
+sub remove_old_user_ldap {
+    for my $name (@USERS_LDAP ) {
+        if ( Ravada::Auth::LDAP::search_user($name) ) {
+            Ravada::Auth::LDAP::remove_user($name)  
+        }
+    }
+}
+
 sub search_id_iso {
     my $name = shift;
     connector() if !$CONNECTOR;
@@ -679,7 +691,8 @@ sub connector {
     return $connector;
 }
 
-sub DESTROY {
+sub END {
     remove_old_user() if $CONNECTOR;
+    remove_old_user_ldap() if $CONNECTOR;
 }
 1;
