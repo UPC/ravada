@@ -353,6 +353,7 @@ sub _load_allowed {
 
         my ($n_allowed, $n_denied) = ( 0,0 );
         while ( my ($attribute, $value, $allowed) = $sth->fetchrow) {
+
             $n_allowed++ if $allowed;
             $n_denied++ if !$allowed;
 
@@ -362,7 +363,7 @@ sub _load_allowed {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
-                last if !$allowed;
+                last;
             }
         }
         $sth->finish;
