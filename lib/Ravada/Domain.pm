@@ -998,6 +998,7 @@ sub _after_remove_domain {
 
 sub _remove_access_attributes_db($self) {
 
+    return if !$self->{_data}->{id};
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM access_ldap_attribute"
         ." WHERE id_domain=?");
     $sth->execute($self->id);
