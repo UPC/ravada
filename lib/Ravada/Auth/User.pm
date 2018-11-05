@@ -357,13 +357,16 @@ sub _load_allowed {
             $n_allowed++ if $allowed;
             $n_denied++ if !$allowed;
 
-            if ( $value eq '*'
-                || ( $ldap_entry && defined $ldap_entry->get_value($attribute)
-                    && $ldap_entry->get_value($attribute) eq $value )) {
+            if ( $value eq '*' ) {
+                $self->{_allowed}->{$id_domain} = $allowed
+                    if !exists $self->{_allowed}->{$id_domain};
+                last;
+            } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
+                    && $ldap_entry->get_value($attribute) eq $value ) {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
-                last;
+                last if !$allowed;
             }
         }
         $sth->finish;
