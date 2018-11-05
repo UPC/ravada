@@ -734,7 +734,7 @@ get '/list_ldap_access/(#id_domain)' => sub {
 
     my @ldap_access = $domain->list_ldap_access();
     my $default = {};
-    if ($ldap_access[-1]->{value} eq '*') {
+    if (scalar @ldap_access && $ldap_access[-1]->{value} eq '*') {
         $default = pop @ldap_access;
     }
     return $c->render(json => {list => \@ldap_access, default => $default} );
