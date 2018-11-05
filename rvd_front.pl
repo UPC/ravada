@@ -637,6 +637,140 @@ any '/admin/user/(:id).(:type)' => sub {
     return $c->render(template => 'main/manage_user');
 };
 
+get '/list_ldap_attributes/(#cn)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $cn = $c->stash('cn');
+    my $user;
+    eval {
+        ($user) = Ravada::Auth::LDAP::search_user($cn);
+    };
+    return $c->render(json => { error => $@ }) if $@;
+    return $c->render(json => []) if !$user;
+
+    $c->session(ldap_attributes_cn => $cn) if $user;
+    return $c->render(json => {attributes => [$user->attributes]});
+};
+
+get '/count_ldap_entries/(#attribute)/(#value)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my @entries;
+    eval {
+        @entries = Ravada::Auth::LDAP::search_user(
+            field => $c->stash('attribute')
+            ,name => $c->stash('value')
+            ,typesonly => 1
+        );
+    };
+    @entries = [ 'too many' ] if $@ =~ /Sizelimit exceeded/;
+    return $c->render(json => { entries => scalar @entries });
+};
+
+get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my $attribute = $c->stash('attribute');
+    my $value = $c->stash('value');
+    my $allowed = 1;
+    if ($c->stash('allowed') eq 'false') {
+        $allowed = 0;
+    }
+
+    eval { $domain->allow_ldap_access($attribute => $value, $allowed ) };
+    _fix_default_ldap_access($c, $domain, $allowed) if !$@;
+    return $c->render(json => { error => $@ }) if $@;
+    return $c->render(json => { ok => 1 });
+
+};
+
+sub _fix_default_ldap_access($c, $domain, $allowed) {
+    my @list = $domain->list_ldap_access();
+    my $default_found;
+    for ( @list ) {
+        if ( $_->{value} eq '*' ) {
+            $default_found = $_->{id};
+        }
+    }
+    if ( $default_found ) {
+        $domain->move_ldap_access($default_found, +1);
+        return;
+    }
+    my $allowed_default = 0;
+    $allowed_default = 1 if !$allowed;
+    eval { $domain->allow_ldap_access('DEFAULT' => '*', $allowed_default ) };
+    warn $@ if $@;
+}
+
+get '/delete_ldap_access/(#id_domain)/(#id_access)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    $domain->delete_ldap_access($c->stash('id_access'));
+
+    return $c->render(json => { ok => 1 });
+};
+
+get '/list_ldap_access/(#id_domain)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my @ldap_access = $domain->list_ldap_access();
+    my $default = {};
+    if ($ldap_access[-1]->{value} eq '*') {
+        $default = pop @ldap_access;
+    }
+    return $c->render(json => {list => \@ldap_access, default => $default} );
+};
+
+get '/move_ldap_access/(#id_domain)/(#id_access)/(#count)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    $domain->move_ldap_access($c->stash('id_access'), $c->stash('count'));
+
+    return $c->render(json => { ok => 1});
+};
+
+get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my $allowed = $c->stash('allowed');
+    if ($allowed =~ /false/ || !$allowed) {
+        $allowed = 0;
+    } else {
+        $allowed = 1;
+    }
+
+    $domain->set_ldap_access($c->stash('id_access'), $allowed);
+    return $c->render(json => { ok => 1});
+};
 ##############################################
 
 
@@ -1432,6 +1566,7 @@ sub manage_machine {
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
     $c->stash(list_users => $RAVADA->list_users);
+    $c->stash(ldap_attributes_cn => ( $c->session('ldap_attributes_cn') or $USER->name or ''));
 
     $c->stash(  ram => int( $domain->get_info()->{max_mem} / 1024 ));
     $c->stash( cram => int( $domain->get_info()->{memory} / 1024 ));
