@@ -992,7 +992,16 @@ sub _after_remove_domain {
     return if !$self->{_data};
     $self->_finish_requests_db();
     $self->_remove_base_db();
+    $self->_remove_access_attributes_db();
     $self->_remove_domain_db();
+}
+
+sub _remove_access_attributes_db($self) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM access_ldap_attribute"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _remove_domain_db {
@@ -2447,11 +2456,37 @@ Example:
 
 =cut
 
-sub allow_ldap_attribute($self, $attribute, $value) {
+sub allow_ldap_attribute($self, $attribute, $value, $allowed=1 ) {
     my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT max(n_order) FROM access_ldap_attribute "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my ($n_order) = ($sth->fetchrow or 0);
+    $sth->finish;
+
+    $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO access_ldap_attribute "
-        ."(id_domain, attribute, value, allowed) "
-        ."VALUES(?,?,?,?)");
-    $sth->execute($self->id, $attribute, $value, 1);
+        ."(id_domain, attribute, value, allowed, n_order) "
+        ."VALUES(?,?,?,?,?)");
+    $sth->execute($self->id, $attribute, $value, $allowed, $n_order+1);
 }
+
+=head2 deny_ldap_attribute
+
+If specified, only the LDAP users with that attribute value can clone these
+virtual machines.
+
+    $base->deny_ldap_attribute( attribute => 'value' );
+
+Example:
+
+    $base->deny_ldap_attribute( tipology => 'student' );
+
+=cut
+
+sub deny_ldap_attribute($self, $attribute, $value) {
+    $self->allow_ldap_attribute($attribute, $value, 0);
+}
+
 1;
