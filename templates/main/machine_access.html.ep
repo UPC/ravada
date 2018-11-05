@@ -1,0 +1,102 @@
+Type a typical LDAP user name to fetch the attribute list
+<input type="text" ng-model="cn" ng-change="list_ldap_attributes()"
+    ng-init="cn='<%= $ldap_attributes_cn %>';list_ldap_attributes()"
+>
+<span ng-hide="ldap_attributes || !cn">User name <b>{{cn}}</b> not found in LDAP server</span>
+
+<div class="row">
+    <div class="col-md-2">
+        <b>Attribute</b>
+    </div>
+    <div class="col-md-3">
+        <b>Value</b>
+    </div>
+    <div class="col-md-1">
+        <b>Allowed</b>
+    </div>
+</div>
+
+<div class="row" ng-repeat="attribute in ldap_attributes_domain">
+    <div class="col-md-2">
+        {{attribute.attribute}}
+    </div>
+    <div class="col-md-3">
+        {{attribute.value}}
+    </div>
+    <div class="col-md-1">
+        <input type="checkbox" ng-checked="attribute.allowed"
+            ng-click="set_ldap_access(attribute.id, !attribute.allowed)"
+        >
+    </div>
+    <div class="col-md-1" ng-show="ldap_attributes_domain.length>1">
+        <button class="btn" ng-hide="$index == ldap_attributes_domain.length-1"
+            ng-click="move_ldap_access(attribute.id, +1);"
+            ><i class="fa fa-arrow-down"></i></button>
+    </div>
+    <div class="col-md-1" ng-show="ldap_attributes_domain.length>1">
+        <button class="btn" ng-show="$index" ng-click="move_ldap_access(attribute.id,-1)"
+            ><i class="fa fa-arrow-up" ></i></button>
+    </div>
+    <div class="col-md-1">
+        <button class="btn" 
+            ng-click="delete_ldap_access(attribute.id)"><i class="fas fa-times"></i></button>
+    </div>
+</div>
+
+<div class="row" ng-show="ldap_attributes_default.id">
+    <div class="col-md-2">
+        <i>Default</i>
+    </div>
+    <div class="col-md-3"></div>
+    <div class="col-md-1">
+        <input type="checkbox"
+            ng-checked="ldap_attributes_default.allowed"
+            ng-click="set_ldap_access(ldap_attributes_default.id, !ldap_attributes_default.allowed)">
+    </div>
+    <div class="col-md-4">
+        <span ng-show="ldap_attributes_default.allowed">If none of the previous match,
+            access is allowed.</span>
+        <span ng-show="!ldap_attributes_default.allowed">If none of the previous match,
+            access is denied.</span>
+    </div>
+</div>
+<h3>New access restriction</h3>
+<div class="row">
+    <div class="col-md-2">
+        <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false">
+        <option ng-repeat="attribute in ldap_attributes" value="{{attribute}}">
+            {{attribute}}
+        </option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <input ng-model="ldap_attribute_value" type="text"
+            ng-change="ldap_entries=0;ldap_verified=false">
+    </div>
+
+    <div class="col-md-1">
+        <input ng-model="ldap_attribute_allowed" type="checkbox">
+    </div>
+
+    <div class="col-md-2">
+        <button
+            ng-show="ldap_attribute && ldap_attribute_value"
+            ng-disabled="ldap_verifying"
+            ng-click="count_ldap_entries()"
+            class="btn"
+            >verify</button>
+        <button ng-show="ldap_attribute && ldap_attribute_value"
+            ng-disabled="ldap_verifying"
+            ng-click="add_ldap_access()"
+            class="btn"
+            >save</button>
+    </div>
+    <div class="col-md-3">
+        <span ng-show="ldap_verifying">Verifying {{ldap_attribute}} ...</span>
+        <span ng-show="ldap_verified && !ldap_entries">No entries found</span>
+        <span ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}} has at least {{ldap_entries}} entries. </span>
+    </div>
+</div>
+
+

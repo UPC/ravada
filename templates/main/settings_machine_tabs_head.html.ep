@@ -29,6 +29,9 @@
 %   if ( $USER->can_remove_machine($domain->id)) {
         <li class="nav"><a ng-click="refresh_machine()" href="#remove" data-toggle="tab"><%=l 'Remove Machine' %></a></li>
 %   }
+%   if ( $USER->is_admin()) {
+        <li class="nav"><a href="#access" data-toggle="tab"><%=l 'Access' %></a></li>
+%   }
 % if ( $monitoring && $USER->is_admin && $domain->is_active ) {
     <li class="nav"><a ng-click="refresh_machine()" href="#monitoring" data-toggle="tab"><%=l 'System overview' %></a></li>
 %   }
