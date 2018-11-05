@@ -3019,10 +3019,16 @@ Example:
 
 sub allow_ldap_access($self, $attribute, $value, $allowed=1 ) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO access_ldap_attribute "
-        ."(id_domain, attribute, value, allowed) "
-        ."VALUES(?,?,?,?)");
-    $sth->execute($self->id, $attribute, $value, 1);
+        "SELECT * from access_ldap_attribute"
+        ." WHERE id_domain = ? "
+        ." ORDER BY n_order"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @list,($row) if keys %$row;
+    }
+    return @list;
 }
 
 #TODO: check something has been deleted
