@@ -2456,7 +2456,7 @@ Example:
 
 =cut
 
-sub allow_ldap_attribute($self, $attribute, $value, $allowed=1 ) {
+sub allow_ldap_access($self, $attribute, $value, $allowed=1 ) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT max(n_order) FROM access_ldap_attribute "
         ." WHERE id_domain=?"
@@ -2472,7 +2472,30 @@ sub allow_ldap_attribute($self, $attribute, $value, $allowed=1 ) {
     $sth->execute($self->id, $attribute, $value, $allowed, $n_order+1);
 }
 
-=head2 deny_ldap_attribute
+#TODO: check something has been deleted
+sub delete_ldap_access($self, $id_access) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM access_ldap_attribute "
+        ."WHERE id_domain=? AND id=? ");
+    $sth->execute($self->id, $id_access);
+}
+
+sub list_ldap_access($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * from access_ldap_attribute"
+        ." WHERE id_domain = ? "
+        ." ORDER BY n_order"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @list,($row) if keys %$row;
+    }
+    return @list;
+}
+
+
+=head2 deny_ldap_access
 
 If specified, only the LDAP users with that attribute value can clone these
 virtual machines.
@@ -2485,8 +2508,60 @@ Example:
 
 =cut
 
-sub deny_ldap_attribute($self, $attribute, $value) {
-    $self->allow_ldap_attribute($attribute, $value, 0);
+sub deny_ldap_access($self, $attribute, $value) {
+    $self->allow_ldap_access($attribute, $value, 0);
 }
 
+sub _set_access_order($self, $id_access, $n_order) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute "
+        ." SET n_order=? WHERE id=? AND id_domain=?");
+    $sth->execute($n_order, $id_access, $self->id);
+}
+
+sub move_ldap_access($self, $id_access, $position) {
+    confess "Error: You can only move position +1 or -1"
+        if ($position != -1 && $position != 1);
+
+    my @list = $self->list_ldap_access();
+
+    my $index;
+    for my $n (0 .. $#list) {
+        if (defined $list[$n] && $list[$n]->{id} == $id_access ) {
+            $index = $n;
+            last;
+        }
+    }
+    confess "Error: access id: $id_access not found for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $index;
+
+    my ($n_order)   = $list[$index]->{n_order};
+    die "Error: position $index has no n_order for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $n_order;
+
+    my $index2 = $index + $position;
+    die "Error: position $index2 has no id for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $list[$index2] || !defined$list[$index2]->{id};
+
+    my ($id_access2, $n_order2) = ($list[$index2]->{id}, $list[$index2]->{n_order});
+
+    die "Error: position ".$index2." not found for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $id_access2;
+
+    die "Error: n_orders are the same for index $index and ".($index+$position)
+            ."in \n".Dumper(\@list)
+            if $n_order == $n_order2;
+
+    $self->_set_access_order($id_access, $n_order2);
+    $self->_set_access_order($id_access2, $n_order);
+}
+
+sub set_ldap_access($self, $id_access, $allowed) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute SET allowed=?"
+        ." WHERE id=?");
+    $sth->execute($allowed, $id_access);
+}
 1;
