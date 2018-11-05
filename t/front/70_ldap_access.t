@@ -109,7 +109,7 @@ sub test_access_by_attribute_deny($vm, $do_clones=0) {
 
     _do_clones($data, $base, $do_clones);
 
-    $base->deny_ldap_access( givenName => $data->{student}->{user}->{name});
+    $base->deny_ldap_attribute( givenName => $data->{student}->{user}->{name});
     _refresh_users($data);
     is($data->{student}->{user}->allowed_access( $base->id ), 0);
     is($data->{teacher}->{user}->allowed_access( $base->id ), 1);
@@ -144,9 +144,9 @@ sub test_access_by_attribute_several($vm, $do_clones=0) {
 
     _do_clones($data, $base, $do_clones);
 
-    $base->deny_ldap_access( givenName => $data->{student}->{user}->{name});
-    $base->allow_ldap_access( givenName => $data->{teacher}->{user}->{name});
-    $base->deny_ldap_access( givenName => '*'); #default policy
+    $base->deny_ldap_attribute( givenName => $data->{student}->{user}->{name});
+    $base->allow_ldap_attribute( givenName => $data->{teacher}->{user}->{name});
+    $base->deny_ldap_attribute( givenName => '*'); #default policy
     _refresh_users($data);
     is($data->{student}->{user}->allowed_access( $base->id ), 0);
     is($data->{teacher}->{user}->allowed_access( $base->id ), 1)
@@ -165,99 +165,6 @@ sub test_access_by_attribute_several($vm, $do_clones=0) {
 
     $list_bases = rvd_front->list_machines_user(user_admin);
     is(scalar (@$list_bases), 1);
-
-    _remove_bases($base);
-    _remove_users($data);
-}
-sub test_access_by_attribute_several2($vm) {
-    my $base = create_domain($vm->type);
-    $base->prepare_base(user_admin);
-    $base->is_public(1);
-
-    my $data = _create_users();
-    is($data->{student}->{user}->allowed_access( $base->id ), 1);
-    is($data->{teacher}->{user}->allowed_access( $base->id ), 1);
-    is($data->{other}->{user}->allowed_access( $base->id ), 1);
-
-    $base->allow_ldap_access( givenName => $data->{student}->{user}->{name});
-    $base->deny_ldap_access( sn => $data->{student}->{user}->{name});
-    $base->allow_ldap_access( givenName => $data->{teacher}->{user}->{name});
-    $base->deny_ldap_access( givenName => '*'); #default policy
-    _refresh_users($data);
-    is($data->{student}->{user}->allowed_access( $base->id ), 0);
-    is($data->{teacher}->{user}->allowed_access( $base->id ), 1)
-            or die Dumper($data->{teacher}->{user}->{_allowed});
-    is($data->{other}->{user}->allowed_access( $base->id ), 0);
-
-    _remove_bases($base);
-    _remove_users($data);
-}
-
-sub test_access_by_attribute_move($vm, $do_clones=0) {
-    my $base = create_domain($vm->type);
-    $base->prepare_base(user_admin);
-    $base->is_public(1);
-
-    my $data = _create_users();
-    is($data->{student}->{user}->allowed_access( $base->id ), 1);
-    is($data->{teacher}->{user}->allowed_access( $base->id ), 1);
-    is($data->{other}->{user}->allowed_access( $base->id ), 1);
-
-    _do_clones($data, $base, $do_clones);
-
-    $base->allow_ldap_access( givenName => $data->{teacher}->{user}->{name});
-    $base->deny_ldap_access( givenName => '*'); #default policy
-
-    my @list_ldap_attribute = $base->list_ldap_access();
-
-    $base->move_ldap_access($list_ldap_attribute[1]->{id}, -1);
-
-    my @list_ldap_attribute2 = $base->list_ldap_access();
-
-    is($list_ldap_attribute[0]->{id}, $list_ldap_attribute2[1]->{id}) or exit;
-
-    _refresh_users($data);
-    is($data->{teacher}->{user}->allowed_access( $base->id ), 0)
-            or die Dumper($data->{teacher}->{user}->{_allowed});
-    is($data->{other}->{user}->allowed_access( $base->id ), 0);
-
-    my $list_bases = rvd_front->list_machines_user($data->{student}->{user});
-    is(scalar (@$list_bases), 0);
-
-    $list_bases = rvd_front->list_machines_user($data->{teacher}->{user});
-    is(scalar (@$list_bases), 0);
-
-    # other has no external_auth, access denied
-    $list_bases = rvd_front->list_machines_user($data->{other}->{user});
-    is(scalar (@$list_bases), 0);
-
-    $list_bases = rvd_front->list_machines_user(user_admin);
-    is(scalar (@$list_bases), 1);
-
-    _remove_bases($base);
-    _remove_users($data);
-}
-
-sub test_access_by_attribute_move_removed($vm) {
-    my $base = create_domain($vm->type);
-    $base->prepare_base(user_admin);
-    $base->is_public(1);
-
-    my $data = _create_users();
-
-    $base->allow_ldap_access( givenName => $data->{teacher}->{user}->{name});
-    $base->allow_ldap_access( givenName => $data->{student}->{user}->{name});
-    $base->deny_ldap_access( givenName => '*'); #default policy
-
-    my @list_ldap_attribute = $base->list_ldap_access();
-
-    # remove the access #1
-    $base->delete_ldap_access($list_ldap_attribute[1]->{id});
-    $base->move_ldap_access($list_ldap_attribute[2]->{id}, -1);
-
-    my @list_ldap_attribute2 = $base->list_ldap_access();
-
-    is($list_ldap_attribute[2]->{id}, $list_ldap_attribute2[0]->{id}) or exit;
 
     _remove_bases($base);
     _remove_users($data);
@@ -271,8 +178,8 @@ sub test_2_checks($vm) {
     $base->prepare_base(user_admin);
     $base->is_public(1);
 
-    $base->allow_ldap_access( givenName => $data->{student}->{name});
-    $base->deny_ldap_access( givenName => $data->{teacher}->{name});
+    $base->allow_ldap_attribute( givenName => $data->{student}->{name});
+    $base->deny_ldap_attribute( givenName => $data->{teacher}->{name});
 
     my $sth = connector->dbh->prepare(
         "SELECT id,n_order from access_ldap_attribute "
@@ -313,7 +220,7 @@ sub test_access_by_attribute($vm, $do_clones=0) {
     is($data->{other}->{user}->allowed_access( $base->id ), 1);
     is(user_admin->allowed_access( $base->id ), 1);
 
-    $base->allow_ldap_access( givenName => $data->{student}->{name});
+    $base->allow_ldap_attribute( givenName => $data->{student}->{name});
     _refresh_users($data);
 
     #################################################################
@@ -478,11 +385,7 @@ for my $vm_name ('KVM', 'Void') {
         test_access_by_attribute_deny($vm);
         test_access_by_attribute_deny($vm,1); # with clones
 
-        test_access_by_attribute_several2($vm);
         test_access_by_attribute_several($vm);
-
-        test_access_by_attribute_move($vm);
-        test_access_by_attribute_move_removed($vm);
 
     }
 
