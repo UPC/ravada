@@ -73,12 +73,12 @@
 
                         <a type="button" class="label label-default"
                            ng-click="host_action=0"
-                           ><span class="glyphicon glyphicon-arrow-left"></a>
+                           ><span class="glyphicon glyphicon-arrow-left"></span></a>
                     </span>
 %			        if ($user
 %                       && ( $user->can_change_settings || $user->can_change_settings_all)){
                         <a ng-show="machine.id_clone && (host_action != machine.id && host_restore != machine.id_clone)"
-                            align="right" href="/machine/manage/{{machine.id_clone}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></a></i>
+                            align="right" href="/machine/manage/{{machine.id_clone}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></i></a>
 %                   }
 
             </div>
