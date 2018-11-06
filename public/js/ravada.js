@@ -337,7 +337,8 @@
           };
           $scope.add_ldap_access = function() {
               $http.get('/add_ldap_access/'+$scope.showmachine.id+'/'+$scope.ldap_attribute+'/'
-                            +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed)
+                            +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed
+                            +'/'+$scope.ldap_attribute_last)
                     .then(function(response) {
                         $scope.init_ldap_access();
                     });
@@ -354,8 +355,9 @@
                         $scope.init_ldap_access();
                     });
           };
-          $scope.set_ldap_access = function(id_access, allowed) {
-              $http.get('/set_ldap_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed)
+          $scope.set_ldap_access = function(id_access, allowed, last) {
+              $http.get('/set_ldap_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
+                        +'/'+last)
                     .then(function(response) {
                         $scope.init_ldap_access();
                     });

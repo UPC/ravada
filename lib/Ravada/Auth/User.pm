@@ -344,7 +344,7 @@ sub _load_allowed {
 
     for my $id_domain ( @domains ) {
         my $sth = $$CONNECTOR->dbh->prepare(
-            "SELECT attribute, value, allowed "
+            "SELECT attribute, value, allowed, last "
             ." FROM access_ldap_attribute"
             ." WHERE id_domain=?"
             ." ORDER BY n_order "
@@ -352,7 +352,7 @@ sub _load_allowed {
         $sth->execute($id_domain);
 
         my ($n_allowed, $n_denied) = ( 0,0 );
-        while ( my ($attribute, $value, $allowed) = $sth->fetchrow) {
+        while ( my ($attribute, $value, $allowed, $last) = $sth->fetchrow) {
 
             $n_allowed++ if $allowed;
             $n_denied++ if !$allowed;
@@ -366,7 +366,7 @@ sub _load_allowed {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
-                last if !$allowed;
+                last if !$allowed || $last;
             }
         }
         $sth->finish;
