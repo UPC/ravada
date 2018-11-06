@@ -1,8 +1,6 @@
-<div class="row" ng-show="ldap_attributes || change_cn">
+<div class="row">
     <div class="col-md-2">
-        <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false"
-            ng-disabled="ldap_verifying"
-        >
+        <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false">
         <option ng-repeat="attribute in ldap_attributes" value="{{attribute}}">
             {{attribute}}
         </option>
@@ -11,7 +9,6 @@
 
     <div class="col-md-3">
         <input ng-model="ldap_attribute_value" type="text"
-            ng-disabled="ldap_verifying"
             ng-change="ldap_entries=0;ldap_verified=false">
     </div>
 
@@ -30,27 +27,17 @@
             ng-disabled="ldap_verifying"
             ng-click="count_ldap_entries()"
             >verify</button>
-        <button
-            ng-disabled="!ldap_attribute || !ldap_attribute_value || ldap_verifying
-                         || (!ldap_attribute_allowed && !ldap_attribute_last)"
+        <button ng-show="ldap_attribute && ldap_attribute_value"
+            ng-disabled="ldap_verifying || (!ldap_attribute_allowed && ! ldap_attribute_last)"
             ng-click="add_ldap_access()"
-            >add</button>
+            >save</button>
     </div>
-</div>
-<div class="row" ng-show="ldap_attributes">
-        <div class="alert alert-danger"
-                ng-show="!ldap_attribute_allowed && !ldap_attribute_last">
-            Last is mandatory when not allowed.
-        </div>
-        <div class="alert alert-info" ng-show="ldap_verifying">
-            Verifying <i>{{ldap_attribute}} = {{ldap_attribute_value}}</i>
-            in the LDAP server. It may take long ...
-        </div>
-        <div class="alert alert-warning" ng-show="ldap_verified && !ldap_entries">
-            No entries found.
-        </div>
-        <div class="alert alert-success"
-                ng-show="ldap_verified && ldap_entries">
-            {{ldap_attribute}} = {{ldap_attribute_value}} has at least {{ldap_entries}} entries.
-        </div>
+    <div class="col-md-3">
+        <span ng-show="ldap_verifying">Verifying {{ldap_attribute}} ...</span>
+        <span ng-show="ldap_verified && !ldap_entries">No entries found</span>
+        <span ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}} has at least {{ldap_entries}} entries. </span>
+        <span ng-show="!ldap_attribute_allowed && !ldap_attribute_last">
+            Enable last for not allowed restrictions.
+        </span>
+    </div>
 </div>
