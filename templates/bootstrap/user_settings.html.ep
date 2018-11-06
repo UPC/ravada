@@ -56,6 +56,12 @@
                             </p>
                         </form>
 %   }
+%   if ($_user->external_auth eq 'ldap') {
+%       for my $attribute (sort $_user->ldap_entry->attributes ) {
+%           next if $attribute =~ /assword|Pwd/i;
+<b><%= $attribute %></b>: <%= $_user->ldap_entry->get_value($attribute) %><br/>
+%       }
+% }
                   </div>
                   </div>
             </div>

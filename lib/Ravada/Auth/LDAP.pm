@@ -142,6 +142,7 @@ sub search_user {
     my $field = (delete $args{field} or 'uid');
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
+    my $typesonly= (delete $args{typesonly} or 0);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
@@ -152,12 +153,14 @@ sub search_user {
     base   => $base,
     scope  => 'sub',
     filter => "($field=$username)",
+    typesonly => $typesonly,
     attrs  => ['*']
+
     );
 
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
-    if ( $retry <= 3 && $mesg->code ) {
+    if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
@@ -167,6 +170,7 @@ sub search_user {
                 name => $username
               ,field => $field
               ,retry => ++$retry
+              ,typesonly => $typesonly
          );
     }
 

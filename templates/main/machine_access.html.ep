@@ -1,0 +1,39 @@
+<div class="panel panel-default">
+    <div class="panel-body">
+        Type a typical LDAP user name to fetch the attribute list
+        <input type="text" ng-model="cn" ng-change="list_ldap_attributes()"
+        ng-init="cn='<%= $ldap_attributes_cn %>';list_ldap_attributes()">
+        <span ng-hide="ldap_attributes || !cn">
+            User name <b>{{cn}}</b> not found in LDAP server
+        </span>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+
+        <div class="row">
+            <div class="col-md-2">
+                <b>Attribute</b>
+            </div>
+            <div class="col-md-3">
+                <b>Value</b>
+            </div>
+            <div class="col-md-1">
+                <b>Allowed</b>
+            </div>
+            <div class="col-md-1">
+                <b>Last</b>
+            </div>
+        </div>
+    </div><!-- of panel heading -->
+
+    <div class="panel-body">
+%=      include "/main/machine_access_list"
+    </div>
+
+    <div class="panel-footer">
+%=      include "/main/machine_access_new"
+    </div>
+</div>
+
