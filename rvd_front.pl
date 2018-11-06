@@ -651,7 +651,7 @@ get '/list_ldap_attributes/(#cn)' => sub {
     return $c->render(json => []) if !$user;
 
     $c->session(ldap_attributes_cn => $cn) if $user;
-    return $c->render(json => {attributes => [$user->attributes]});
+    return $c->render(json => {attributes => [sort $user->attributes]});
 };
 
 get '/count_ldap_entries/(#attribute)/(#value)' => sub {
@@ -725,6 +725,12 @@ get '/delete_ldap_access/(#id_domain)/(#id_access)' => sub {
     my $domain = Ravada::Front::Domain->open($domain_id);
 
     $domain->delete_ldap_access($c->stash('id_access'));
+
+    # delete default if it is the only one left
+    my @ldap_access = $domain->list_ldap_access();
+    if (scalar @ldap_access == 1 && $ldap_access[0]->{value} eq '*') {
+        $domain->delete_ldap_access($ldap_access[0]->{id});
+    }
 
     return $c->render(json => { ok => 1 });
 };

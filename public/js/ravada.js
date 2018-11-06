@@ -375,6 +375,7 @@
               $scope.ldap_attribute = '';
               $scope.ldap_attribute_value = '';
               $scope.ldap_attribute_allowed=true;
+              $scope.ldap_attribute_last=true;
               $http.get('/list_ldap_access/'+$scope.showmachine.id).then(function(response) {
                   $scope.ldap_attributes_domain  = response.data.list;
                   $scope.ldap_attributes_default = response.data.default;
