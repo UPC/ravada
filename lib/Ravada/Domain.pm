@@ -3022,18 +3022,20 @@ Example:
 
 =cut
 
-sub allow_ldap_access($self, $attribute, $value, $allowed=1 ) {
+sub allow_ldap_access($self, $attribute, $value, $allowed=1, $last=0 ) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * from access_ldap_attribute"
+        "SELECT max(n_order) from access_ldap_attribute"
         ." WHERE id_domain = ? "
-        ." ORDER BY n_order"
     );
     $sth->execute($self->id);
-    my @list;
-    while (my $row = $sth->fetchrow_hashref) {
-        push @list,($row) if keys %$row;
-    }
-    return @list;
+    my ($n_order) = ($sth->fetchrow or 0);
+    $sth->finish;
+
+    $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO access_ldap_attribute "
+        ."(id_domain, attribute, value, allowed, n_order, last) "
+        ."VALUES(?,?,?,?,?,?)");
+    $sth->execute($self->id, $attribute, $value, $allowed, $n_order+1, $last);
 }
 
 #TODO: check something has been deleted
@@ -3053,6 +3055,7 @@ sub list_ldap_access($self) {
     $sth->execute($self->id);
     my @list;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{last} = 1 if !$row->{allowed} && !$row->{last};
         push @list,($row) if keys %$row;
     }
     return @list;
@@ -3123,9 +3126,10 @@ sub move_ldap_access($self, $id_access, $position) {
     $self->_set_access_order($id_access2, $n_order);
 }
 
-sub set_ldap_access($self, $id_access, $allowed) {
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute SET allowed=?"
+sub set_ldap_access($self, $id_access, $allowed, $last) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute "
+        ." SET allowed=?, last=?"
         ." WHERE id=?");
-    $sth->execute($allowed, $id_access);
+    $sth->execute($allowed, $last, $id_access);
 }
 1;

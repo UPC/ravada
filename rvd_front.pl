@@ -671,7 +671,7 @@ get '/count_ldap_entries/(#attribute)/(#value)' => sub {
     return $c->render(json => { entries => scalar @entries });
 };
 
-get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)' => sub {
+get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)/(#last)' => sub {
     my $c = shift;
 
     return _access_denied($c) if !$USER->is_admin;
@@ -685,8 +685,13 @@ get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)' => sub {
     if ($c->stash('allowed') eq 'false') {
         $allowed = 0;
     }
+    my $last = 1;
+    if ($c->stash('last') eq 'false') {
+        $last = 0;
+    }
+    $last = 1 if !$allowed;
 
-    eval { $domain->allow_ldap_access($attribute => $value, $allowed ) };
+    eval { $domain->allow_ldap_access($attribute => $value, $allowed, $last ) };
     _fix_default_ldap_access($c, $domain, $allowed) if !$@;
     return $c->render(json => { error => $@ }) if $@;
     return $c->render(json => { ok => 1 });
@@ -753,7 +758,7 @@ get '/move_ldap_access/(#id_domain)/(#id_access)/(#count)' => sub {
     return $c->render(json => { ok => 1});
 };
 
-get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)' => sub {
+get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
     my $c = shift;
 
     return _access_denied($c) if !$USER->is_admin;
@@ -767,8 +772,15 @@ get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)' => sub {
     } else {
         $allowed = 1;
     }
+    my $last= $c->stash('last');
+    if ($last=~ /false/ || !$last) {
+        $last= 0;
+    } else {
+        $last= 1;
+    }
+    warn "last = $last";
 
-    $domain->set_ldap_access($c->stash('id_access'), $allowed);
+    $domain->set_ldap_access($c->stash('id_access'), $allowed, $last);
     return $c->render(json => { ok => 1});
 };
 ##############################################

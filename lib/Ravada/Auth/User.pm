@@ -324,17 +324,17 @@ sub _load_allowed {
 
     return if !$self->external_auth || $self->external_auth ne 'ldap';
 
-    my $ldap_entry = $self->ldap_entry;
+    for my $id_domain ( @domains ) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "SELECT attribute, value, allowed, last "
+            ." FROM access_ldap_attribute"
+            ." WHERE id_domain=?"
+            ." ORDER BY n_order "
+        );
+        $sth->execute($id_domain);
 
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id_domain, attribute, value, allowed "
-        ." FROM access_ldap_attribute"
-    );
-    $sth->execute();
-    while ( my ($id_domain, $attribute, $value, $allowed) = $sth->fetchrow) {
-        if ($ldap_entry && defined $ldap_entry->get_value($attribute)
-                && $ldap_entry->get_value($attribute) eq $value ) {
-            $self->{_allowed}->{$id_domain} = $allowed;
+        my ($n_allowed, $n_denied) = ( 0,0 );
+        while ( my ($attribute, $value, $allowed, $last) = $sth->fetchrow) {
             $n_allowed++ if $allowed;
             $n_denied++ if !$allowed;
 
@@ -347,7 +347,7 @@ sub _load_allowed {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
-                last if !$allowed;
+                last if !$allowed || $last;
             }
         }
         $sth->finish;

@@ -4,7 +4,8 @@ CREATE TABLE `access_ldap_attribute` (
   `attribute` varchar(64),
   `value` varchar(64),
   `allowed` int not null default 1,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id_base` (`id_domain`,`attribute`,`value`)
+  `n_order` int not null default 1,
+  `last` int not null default 1,
+  PRIMARY KEY (`id`)
 );
 
