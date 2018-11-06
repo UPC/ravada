@@ -3132,4 +3132,5 @@ sub set_ldap_access($self, $id_access, $allowed, $last) {
         ." WHERE id=?");
     $sth->execute($allowed, $last, $id_access);
 }
+
 1;
