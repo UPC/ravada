@@ -1162,7 +1162,8 @@ sub new_node {
         $c->req->params->remove('_submit');
         my $pairs = $c->req->params()->pairs;
         $RAVADA->add_node(@$pairs);
-        return $c->render(text => 'node created. <a href ="/admin/nodes/">nodes</a> ');
+	#return $c->render(text => 'node created. <a href ="/admin/nodes/">nodes</a> ');
+	return $c->render(template => 'main/admin_nodes');
     }
     return $c->render(template => 'main/new_node');
 }
