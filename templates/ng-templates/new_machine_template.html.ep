@@ -163,7 +163,7 @@
       
         <div class="form-group row">
              <input type="submit" class="btn btn-default" name="submit" value="<%=l 'Create' %>"
-                 ng-disabled="new_machineForm.$invalid || (!new_machineForm.id_iso.$viewValue.device && (new_machineForm.iso_file.$modelValue == '<NONE>')) || name_duplicated">
+                 ng-disabled="new_machineForm.$invalid || name_duplicated">
         </div>
     </form>
 </div>
