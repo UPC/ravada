@@ -429,11 +429,17 @@ sub _connect_ldap {
 
     my $host = ($$CONFIG->{ldap}->{server} or 'localhost');
     my $port = ($$CONFIG->{ldap}->{port} or 389);
-
+    my $secure = 0;
+    if (exists $$CONFIG->{ldap}->{secure} && defined $$CONFIG->{ldap}->{secure}) {
+        $secure = $$CONFIG->{ldap}->{secure};
+        $secure = 0 if $secure =~ /false|no/i;
+    } else {
+        $secure = 1 if $port == 636;
+    }
     my $ldap;
     
     for my $retry ( 1 .. 3 ) {
-        if ($port == 636 ) {
+        if ($secure ) {
             $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
         } else {
             $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
