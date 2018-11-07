@@ -331,6 +331,9 @@
               console.log($scope.cn);
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                   $scope.ldap_attributes = response.data.attributes;
+                  if ($scope.ldap_attributes && $scope.ldap_attributes.length) {
+                      $scope.change_cn = 0;
+                  }
               });
           };
           $scope.count_ldap_entries = function() {

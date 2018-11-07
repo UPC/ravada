@@ -7,11 +7,13 @@
     </div>
     <div class="col-md-1">
         <input type="checkbox" ng-checked="attribute.allowed"
+            title="Last is mandatory when not allowed"
             ng-click="set_ldap_access(attribute.id, !attribute.allowed, attribute.last)"
         >
     </div>
     <div class="col-md-1">
         <input type="checkbox" ng-checked="attribute.last"
+            title="Last is mandatory when not allowed"
             ng-disabled="!attribute.allowed"
             ng-click="set_ldap_access(attribute.id, attribute.allowed, !attribute.last)"
         >
@@ -26,7 +28,7 @@
             ><i class="fa fa-arrow-up" ></i></button>
     </div>
     <div class="col-md-1">
-        <button class="btn" 
+        <button class="btn"
             ng-click="delete_ldap_access(attribute.id)"><i class="fas fa-times"></i></button>
     </div>
 </div>

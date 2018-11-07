@@ -1,15 +1,6 @@
-<div class="panel panel-default">
-    <div class="panel-body">
-        Type a typical LDAP user name to fetch the attribute list
-        <input type="text" ng-model="cn" ng-change="list_ldap_attributes()"
-        ng-init="cn='<%= $ldap_attributes_cn %>';list_ldap_attributes()">
-        <span ng-hide="ldap_attributes || !cn">
-            User name <b>{{cn}}</b> not found in LDAP server
-        </span>
-    </div>
-</div>
-
-<div class="panel panel-default">
+<div class="panel panel-default" ng-show="ldap_attributes
+        || !cn_change
+        || ( ldap_attributes_domain && ldap_attributes_domain.length) ">
     <div class="panel-heading">
 
         <div class="row">
@@ -37,3 +28,19 @@
     </div>
 </div>
 
+<div ng-hide="change_cn || !ldap_attributes">
+    Using LDAP attributes from user <i>{{cn}}</i>
+    <button ng-click="change_cn=1">change</button>
+</div>
+<div class="panel panel-default"
+        ng-show="change_cn || !ldap_attributes">
+    <div class="panel-body">
+        Type a typical LDAP user name to fetch the attribute list
+        <input type="text" ng-model="cn" ng-change="list_ldap_attributes()"
+        ng-init="cn='<%= $ldap_attributes_cn %>';list_ldap_attributes()">
+        <br/>
+        <div class="alert alert-danger" ng-hide="ldap_attributes || !cn">
+            User name <b>{{cn}}</b> not found in LDAP server
+        </div>
+    </div>
+</div>
