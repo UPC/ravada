@@ -41,6 +41,7 @@ sub test_crashed($vm, $position) {
 
     is($domain->is_active,1);
 
+    $domain->remove(user_admin);
 }
 
 ##############################################################################
