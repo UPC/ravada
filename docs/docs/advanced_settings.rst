@@ -32,12 +32,17 @@ Configure this option in /etc/ravada.conf
 Auto Start
 ----------
 
-Virtual machines can be configured to auto-start on host boot. This feature
-is available from release 0.2.15
-You must enable the auto-start column at the frontend configuration file at
-/etc/rvd_font.conf .
+Virtual machines can be configured to start automatically when the physical host boots.
+
+.. image:: images/autostart.png
+
+You can enable the auto start column at the frontend configuration file at
+/etc/rvd_front.conf .
+Reboot the frontend with systemctl restart rvd_front to display the changes.
 
 ::
+
+    /etc/rvd_front.conf
 
     {
         admin => {
@@ -45,8 +50,7 @@ You must enable the auto-start column at the frontend configuration file at
         }
     };
 
-Reboot the frontend and auto-start can be setted at the machine list
-page in admin.
+
 
 Choosing Storage Pool
 ---------------------
