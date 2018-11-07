@@ -301,6 +301,10 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.get('/node/disable/'+id+'.json');
             $scope.list_nodes();
         };
+        $scope.node_remove=function(id) {
+            $http.get('/node/remove/'+id+'.json');
+            $scope.list_nodes();
+        };
         $scope.list_nodes();
         $interval($scope.list_nodes,30 * 1000);
     };

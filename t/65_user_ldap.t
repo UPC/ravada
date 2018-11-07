@@ -5,6 +5,9 @@ use Data::Dumper;
 use Test::More;
 use YAML qw(LoadFile DumpFile);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -233,8 +236,7 @@ sub test_user_bind {
 
 }
 
-sub _init_config {
-    my ($file_config, $with_admin, $with_posix_group) = @_;
+sub _init_config($file_config, $with_admin, $with_posix_group) {
     if ( ! -e $file_config) {
         my $config = {
         ldap => {
@@ -249,7 +251,15 @@ sub _init_config {
     }
     my $config = LoadFile($file_config);
     delete $config->{ldap}->{admin_group}   if !$with_admin;
-    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+    if ($with_posix_group) {
+        if ( !exists $config->{ldap}->{ravada_posix_group}
+                || !$config->{ldap}->{ravada_posix_group}) {
+            $config->{ldap}->{ravada_posix_group} = $RAVADA_POSIX_GROUP;
+            diag("Adding ravada_posix_group = $RAVADA_POSIX_GROUP in $file_config");
+        }
+    } else {
+        delete $config->{ldap}->{ravada_posix_group};
+    }
 
     $config->{vm}=['KVM','Void'];
     my $fly_config = "/var/tmp/$$.config";
@@ -325,11 +335,18 @@ SKIP: {
     for my $with_posix_group (0,1) {
     for my $with_admin (0,1) {
 
-        my $fly_config = _init_config($file_config, $with_admin);
+        my $fly_config = _init_config($file_config, $with_admin, $with_posix_group);
         my $ravada = Ravada->new(config => $fly_config
                         , connector => connector);
         $ravada->_install();
         Ravada::Auth::LDAP::init();
+
+        if ($with_posix_group) {
+            ok($Ravada::CONFIG->{ldap}->{ravada_posix_group},
+                    "Expecting ravada_posix_group on $fly_config\n"
+                        .Dumper($Ravada::CONFIG->{ldap}))
+                or exit;
+        }
         my $ldap;
 
         eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };

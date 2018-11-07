@@ -1361,6 +1361,8 @@ sub refresh_machine {
     my $id_requested = _requested('refresh_machine',id_domain => $id_domain);
     return Ravada::Request->open($id_requested) if $id_requested;
 
+    return if done_recently(undef,60,'refresh_machine');
+
     my $req = _new_request($self
         , command => 'refresh_machine'
         , args => $args

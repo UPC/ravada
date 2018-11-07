@@ -283,6 +283,11 @@ get '/node/disable/(:id).json' => sub {
     return access_denied($c) if !$USER->is_admin;
     return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),0)});
 };
+get '/node/remove/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => {remove => $RAVADA->remove_node($c->stash('id'),1)});
+};
 
 any '/new_node' => sub {
     my $c = shift;
@@ -482,13 +487,15 @@ get '/machine/remove_base/(:id).(:type)' => sub {
 
 get '/machine/screenshot/(:id).(:type)' => sub {
         my $c = shift;
-        return access_denied($c)   if !$USER->can_screenshot();
+        my $domain = _search_requested_machine($c);
+        return access_denied($c)   if (!$USER->can_screenshot() || $domain->is_base());
         return screenshot_machine($c);
 };
 
 get '/machine/copy_screenshot/(:id).(:type)' => sub {
-        my $c = shift;
-        return access_denied($c) if !$USER->is_admin();
+        my $c = shift; 
+        my $domain = _search_requested_machine($c);
+        return access_denied($c) if (!$USER->is_admin() || $domain->id_base() == NULL );
         return copy_screenshot($c);
 };
 

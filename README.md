@@ -12,6 +12,11 @@
 
 Ravada is a software that allows the user to connect to a
 remote virtual desktop.
+Ravada is meant for sysadmins who have some background in GNU/Linux, and want to deploy a VDI project.
+
+Its back-end has been designed and implemented in order to allow future hypervisors to be added to the framework. Currently, it supports KVM and LXC is in the works.
+
+The client only requirements are: a web-browser and a remote viewer supporting the spice protocol.
 
 In the current release we use the
 KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual Machines.

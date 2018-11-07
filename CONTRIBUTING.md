@@ -13,7 +13,18 @@ to see if someone else in the community has already created a ticket.
 You can also ask in our [telegram public group](https://t.me/ravadavdi).
 If it is not, go ahead and [create a new issue](https://github.com/UPC/ravada/issues/new)!
 
-## 2. Fork & create a branch
+## 2. Source code
+
+We manage the code with Git. If you already know it, skip this point. If this is the
+first time you work with it, beware it has a learning curve. First of all read some
+introduction. Then please ask questions if you need it, we are more than willing to
+mentor first timers.
+
+* Join the [Ravada Google group](https://groups.google.com/forum/#!forum/ravada).
+* Meet us in our [Telegram public group](http://t.me/ravadavdi).
+
+
+## 3. Fork & create a branch
 
 If this is something you think you can fix, then
 [fork Ravada](https://help.github.com/articles/fork-a-repo)
@@ -26,7 +37,7 @@ A good branch name would be (where issue #77 is the one you're working on):
 git checkout -b 77_start_machine
 ```
 
-## 3. Code Style
+## 4. Code Style
 
 See our
 [editor configuration](http://ravada.readthedocs.io/en/latest/devel-docs/editor-rules.html)
@@ -36,7 +47,7 @@ spaces or spaces converted to tabs.
 Please make sure you don't do that. Run ``git diff`` before commit to see what you are
 exactly contributing.
 
-## 4. Commit Format
+## 5. Commit Format
 
 If you contribute code, *thank you* ! Plase, follow this guide.
 
@@ -66,7 +77,7 @@ before it crashed trying to start the machine
 fixes #77
 ```
 
-### 4.1 Header: Type
+### 5.1 Header: Type
 
 Commits must be prefixed with a type, which consists of a verb, feat, fix, build, followed by a colon and space.
 
@@ -82,7 +93,7 @@ Your options:
 - style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
 - test: Adding missing tests or correcting existing tests.
 
-### 4.2 Header: Optional Scope
+### 5.2 Header: Optional Scope
 
 Refers to the extent, subject matter or contextual information about your changes. A scope is a phrase describing the file modified or a section of the codebase, it is always enclosed in parenthesis.
 
@@ -90,7 +101,7 @@ Example for a (optional scope):
 
     feat(parser): add ability to parse arrays
 
-### 4.3 Header: Description
+### 5.3 Header: Description
 
 A description must immediately follow the type(optional scope): The description is a short description of the commit.
 
@@ -102,11 +113,11 @@ Important:
  - Don't capitalize the first letter.
  - Do not use a dot (.) at the end.
 
-### 4.4 Header Lenghth
+### 5.4 Header Lenghth
 
 The header cannot be longer than 100 characters. This allows the message to be easier to read on GitHub as well as in various git tools.
 
-### 4.5 Writing the optional body
+### 5.5 Writing the optional body
 
 The body should include the motivation for the change and contrast this with previous behavior.
 
@@ -118,7 +129,7 @@ remove out of date paragraph
 fix broken links
  ```
 
-### 4.5 Writing the optional footer
+### 5.6 Writing the optional footer
 
 The <optional footer> should contain a closing reference to an issue if any.
 
@@ -127,11 +138,11 @@ pull request description or commit message. Once the branch is merged into the d
 the issue will close.
 
 
-## 5. Get the tests running
+## 6. Get the tests running
 
 See this documentation about [testing](http://ravada.readthedocs.io/en/latest/devel-docs/commit-rules.html#testing) the project.
 
-## 6. Did you find a bug?
+## 7. Did you find a bug?
 
 * **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/UPC/ravada/issues).
 
@@ -139,7 +150,7 @@ See this documentation about [testing](http://ravada.readthedocs.io/en/latest/de
 Be sure to include a **title and clear description**, as much relevant information as possible,
 and a **code sample**, an **executable test case** or a step by step guide demonstrating the expected behavior that is not occurring.
 
-## 7. Implement your fix or feature
+## 8. Implement your fix or feature
 
 At this point, you're ready to make your changes! Feel free to ask for help;
 everyone is a beginner at first :smile_cat:
@@ -148,7 +159,7 @@ Follow this guide about running [Ravada in development mode](http://ravada.readt
 
 If you change a translation or language file make sure you follow this small [guide](http://ravada.readthedocs.io/en/latest/devel-docs/translations.html?highlight=translate) and don't forget to add the issue number when committing.
 
-## 8. Push your changes
+## 9. Push your changes
 
 Pushing refers to sending your committed changes to a remote repository, such as a repository
 hosted on GitHub. Before that all the changes where local in the computer you are working in.
@@ -157,7 +168,7 @@ After working on your changes you need to Push it (upload) your newly created br
 
     git push
 
-## 9. Create a Pull Request
+## 10. Create a Pull Request
 
 Pull requests or PR are proposed changes to a repository submitted by a user and accepted or rejected by a repository's collaborators.
 
@@ -181,7 +192,7 @@ git push --set-upstream origin 325_boost_performance
 Finally, go to our GitHub repository and
 [create a Pull Request](https://github.com/UPC/ravada/pulls)
 
-### 9.1 How to Write a Title for a Pull Request
+### 10.1 How to Write a Title for a Pull Request
 
 Pull Request should be named in reference to the main fix or feature you provide; minor information can be added to the description. Please be specific and don't use generic terms.
 Keep it concise and don't write more than 50 characters in the title.
@@ -189,7 +200,7 @@ Keep it concise and don't write more than 50 characters in the title.
 Read [more information about PR](https://help.github.com/articles/creating-a-pull-request)
 
 
-### 9.2 Keeping your Pull Request updated
+### 10.2 Keeping your Pull Request updated
 
 If a maintainer asks you to "rebase" your PR, they're saying that a lot of code
 has changed, and that you need to update your branch so it's easier to merge.
@@ -205,7 +216,7 @@ git pull --rebase origin master
 git push --force-with-lease origin 325_boost_performance
 ```
 
-### 9.3 Merging a PR (maintainers only)
+### 10.3 Merging a PR (maintainers only)
 
 A PR can only be merged into master by a maintainer if:
 
