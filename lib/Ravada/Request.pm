@@ -72,7 +72,6 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2}
     ,refresh_storage => { id_vm => 2 }
-    ,refresh_vms => { id_domain => 2 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
@@ -80,9 +79,9 @@ our %VALID_ARG = (
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 1}
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
-    ,refresh_vms => { }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1 }
+    ,refresh_vms => { _force => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -1050,23 +1049,14 @@ sub refresh_vms {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args('refresh_vms', @_ );
-    return if _requested('refresh_vms');
+    if  (!$args->{_force} ) {
+          return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
+    }
 
     my $self = {};
     bless($self,$class);
 
     _init_connector();
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id, date_changed FROM requests WHERE command = 'refresh_vms' "
-        ." AND ( date_changed > ? OR status='requested') "
-    );
-
-    my @now = Today_and_Now();
-    $now[4]-- if $now[4] >1 ;
-    my $before = "$now[0]-$now[1]-$now[2] $now[3]:$now[4]:$now[5]";
-    $sth->execute($before);
-    my ($id, $date) = $sth->fetchrow;
-    return if $id;
     return $self->_new_request(
         command => 'refresh_vms'
         , args => $args

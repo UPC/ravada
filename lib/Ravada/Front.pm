@@ -1050,6 +1050,9 @@ sub add_node($self,%arg) {
     my $sth = $CONNECTOR->dbh->prepare($sql);
     $sth->execute(map { $arg{$_} } sort keys %arg );
     $sth->finish;
+
+    my $req = Ravada::Request->refresh_vms( _force => 1 );
+    return $req->id;
 }
 
 =head2 version
