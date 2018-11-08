@@ -1,93 +1,88 @@
 <div class="panel-body">
-<div class="form-group">
-    <form class="form-inline" action="<%= $action %>" method="post">
-        <div class="row">
-                    <div class="col-md-2">
-                        <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
-                    </div>
-                    <div class="col-md-2">
+    <form class="form" action="<%= $action %>" method="post">
+        <div class="form-group">
+            <div class="row">
+                <div class="col-md-2 mt-3">
+                    <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
+                </div>
+                <div class="col-md-2">
 %   if ($USER->is_admin && !$domain->is_active()){
-                        <input class="form-control" type="text" name="ram" size="5"
-                            value="<%= $ram %>">
+                    <input class="form-control" type="text" name="ram" size="5" value="<%= $ram %>">
 %   }else{
-                        <input class="form-control" type="text" name="ram" size="5" disabled
-                            value="<%= $ram %>">
+                    <input class="form-control" type="text" name="ram" size="5" disabled value="<%= $ram %>">
 %   }
-                    </div>
-                    <!--<div class="col-md-6">
-                        <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
-                                <%=l 'MB available' %>.
-                    </div>-->
-       </div>
-       <div class="row">
-            <div class="col-md-2">
-                <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
+                </div>
+                <!--<div class="col-md-6">
+                    <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
+                            <%=l 'MB available' %>.
+                </div>-->
             </div>
-            <div class="col-md-2">
+           <div class="row">
+                <div class="col-md-2">
+                    <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
+                </div>
+                <div class="col-md-2">
 %   if ($domain->is_active()){
-                <input class="form-control" type="text" name="cram" size="5"
-                            value="<%= $cram %>">
+                    <input class="form-control" type="text" name="cram" size="5" value="<%= $cram %>">
 %   } else {
-                <input class="form-control" type="text" name="cram" size="5" disabled
-                            value="<%= $cram %>">
+                    <input class="form-control" type="text" name="cram" size="5" disabled value="<%= $cram %>">
 %   }
-            </div>
-       
-       </div> 
+                </div>
+           </div> 
 %   if ($USER->is_admin){
-       <div class="row">
-                    <div class="col-md-2">
-                        <label class="control-label" for="timeout">Timeout</label>
-                    </div>
-                    <div class="col-md-2">
-                        <input name="run_timeout" type="text"
-%                           my $timeout = '';
-%                           $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
-%                           $timeout = '' if $timeout eq '0';
-                            value="<%= $timeout %>" size="5">
-                    </div>
-                    <div class="col-md-6"><%=l 'The machine will shutdown after these minutes' %></div>
-        </div>
+            <div class="row">
+                <div class="col-md-2">
+                    <label class="control-label" for="timeout">Timeout</label>
+                </div>
+                <div class="col-md-2">
+                    <input name="run_timeout" type="text"
+%                       my $timeout = '';
+%                       $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
+%                       $timeout = '' if $timeout eq '0';
+                        value="<%= $timeout %>" size="5">
+                </div>
+                <div class="col-md-6"><%=l 'The machine will shutdown after these minutes' %></div>
+            </div>
 %   }
 %   if ($USER->is_admin){
-        <div class="row">
-            <div class="col-md-2">
-                <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
-            </div>
-            <div class="col-md-2">
-                <input type="checkbox" name="volatile_clones"
+            <div class="row">
+                <div class="col-md-2">
+                    <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
+                </div>
+                <div class="col-md-2">
+                    <input type="checkbox" name="volatile_clones"
 %               my $vclones = int($domain->is_volatile_clones);
 %               if ( $vclones ){
                     checked
 %               }
-                value="1">
+                    value="1">
+                </div>
+                <div class="col-md-6">
+                    <%=l 'Clones created from this machine will be removed on shutdown.' %>
+                </div>
             </div>
-            <div class="col-md-6">
-                <%=l 'Clones created from this machine will be removed on shutdown.' %>
-            </div>
-        </div>
 %   }
 %   if ($USER->is_admin){
-        <div class="row">
-                     <div class="col-md-2">
-                         <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
-                     </div>
-                     <div class="col-md-2">
-                        <select id="new_owner" name="id_owner" >
+            <div class="row">
+                <div class="col-md-2">
+                     <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
+                </div>
+                <div class="col-md-2">
+                    <select id="new_owner" name="id_owner" >
 %       for my $user (@$list_users) {
-                          <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
+                        <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
 %        }
-                        </select>
-                     </div>
-                     <div class="col-md-6"><%=l 'Change the owner of the machine' %></div>
-         </div>
-%   }
-        <div class="row">
-            <div class="col-md-4">
-        <input type="submit" name="btn_options">
-        <button type="reset" ><%=l 'Cancel' %></button>
+                    </select>
+                </div>
+                <div class="col-md-6"><%=l 'Change the owner of the machine' %></div>
             </div>
-        </div>
+%   }
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="submit" class="btn btn-primary mt-3" name="btn_options">
+                    <button type="reset" class="btn btn-secondary mt-3"><%=l 'Cancel' %></button>
+                </div>
+            </div>
+        </div><!-- of form-group -->
     </form>
-</div><!-- of form-group -->
 </div><!-- of panel-body -->

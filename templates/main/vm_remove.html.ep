@@ -1,12 +1,12 @@
 
-        <div class="panel-body nav--danger">
+        <div class="card-body nav--danger">
             <h2 class="Subhead-heading">
                     <%=l 'Danger Zone' %>
             </h2>
             <span class="text"><%=l 'Once you delete the machine, there is no going back. Please be certain.' %></span><br>
-            <div class="panel panel-warning" ng-show="showmachine.has_clones">
+            <div class="card card.bg-warning" ng-show="showmachine.has_clones">
 
-                <div class="panel-heading">
+                <div class="card-header">
                     <%=l 'This virtual machine can\'t be removed because it has' %> {{showmachine.has_clones}} <%=l 'clones' %>.
                     <ul>
 %                   for my $clone (sort @$list_clones) {
@@ -55,8 +55,6 @@
                         <a type="button" class="btn btn-danger"
                             ng-click="domain_remove_clones=0"
                         ><%=l 'No' %></a>
-                        <a type="button" class="btn btn-warning"
-                            ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;"
                         <a type="button" class="btn btn-warning" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
                         ><%=l 'Yes, remove all the clones' %></a>
            </div><!-- del domain remove clones-->

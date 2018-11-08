@@ -26,10 +26,8 @@
                 <input class="form-control" name="copy_ram" type="text" size="3" value="1">
             </div>
         </div>
-        <input type="submit" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
-        >
-		
-        <button type="reset"><%=l 'Cancel' %></button>
+        <input type="submit" class="btn btn-primary" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name">
+        <button type="reset" class="btn btn-secondary ml-2"><%=l 'Cancel' %></button>
     </form>
                         <div class="form-group has-error">
                               <label ng-show="new_name_duplicated"

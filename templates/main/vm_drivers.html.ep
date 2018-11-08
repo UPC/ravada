@@ -7,11 +7,11 @@
 % );
 
     <div class="row" ng-hide="pending_requests > 0">
-        <div class="col-md-6"></div><div class="col-md-1"><i>recommended</i></div>
+        <div class="col-md-6"></div><div class="col-md-2"><i>recommended</i></div>
     </div>
 
 <div ng-hide="pending_requests > 0" class="form-group">
-    <form class="form-inline" action="<%= $action %>" method="post">
+    <form class="form" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(network sound video)) {
 %           my $driver = $domain->drivers($driver_name);
 %           if (!$driver) {
@@ -20,21 +20,21 @@
 %           }
             <div class="row">
                 <div class="col-md-2">
-                    <label
-                                class="control-label"
-                                for="driver_<%= $driver_name %>"><%= $driver_name %></label>
+                    <label 
+                        class="control-label"
+                        for="driver_<%= $driver_name %>"><%= $driver_name %></label>
                 </div>
                 <div class="col-md-4">
-                    <select class="selectpicker form-control input-lg"
-                                name="driver_<%= $driver_name %>">
-%                               for my $option( $driver->get_options ) {
-%                                   my $selected;
-%                                   $selected = 'selected' if $option->{id} eq $cur_driver->{$driver_name};
-                                    <option <%= $selected %>
-                                        value="<%= $option->{id} %>">
-                                        <%= $option->{name} %>
-                                    </option>
-%                               }
+                    <select data-live-search="true" class="selectpicker form-control input-lg"
+                            name="driver_<%= $driver_name %>">
+%                           for my $option( $driver->get_options ) {
+%                               my $selected;
+%                               $selected = 'selected' if $option->{id} eq $cur_driver->{$driver_name};
+                                <option <%= $selected %>
+                                    value="<%= $option->{id} %>">
+                                    <%= $option->{name} %>
+                                </option>
+%                           }
 
                    </select>
 		     
@@ -42,7 +42,7 @@
 		
                 <div class="col-md-1">
 %                       if ($recommend{$driver_name}) {
-                            <span class="label label-default">
+                            <span class="badge badge-secondary">
                                 <%= ($recommend{$driver_name} or '') %>
                             </span>
 %                       }
@@ -51,8 +51,8 @@
              </div>
 	
 %        }
-     <input type="submit">
-     <input type="button" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
+     <input type="submit" class="btn btn-primary mt-3">
+     <input type="button" class="btn btn-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
 
     </form>
 </div><!-- del form-group -->
