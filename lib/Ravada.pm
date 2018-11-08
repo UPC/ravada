@@ -501,6 +501,15 @@ sub _update_isos {
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
         }
+       ,empty_32bits => {
+          name => 'Empty Machine 32bits'
+          ,description => 'Empty Machine 32bits Boot PXE'
+          ,xml => 'empty-i386.xml'
+          ,xml_volume => 'jessie-volume.xml'
+          ,min_disk_size => '0'
+        }
+
+
     );
 
     $self->_update_table($table, $field, \%data);
