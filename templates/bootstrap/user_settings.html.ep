@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target=".fixed-top" role="document">
     <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
@@ -9,14 +9,14 @@
         <!--BASES AND DOMAINS LIST-->
         <div ng-controller="user_settings">
             <div class="page-header">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card card-dark">
+                    <div class="card-header">
                         <h2 class="text-center"><%=l 'User Settings' %></h2>
                     </div>
                     <div>
 %                           if (scalar @$errors) {
-                                <div class="panel panel-danger">
-                                    <div class="panel-heading">
+                                <div class="card card.bg-danger.text-white">
+                                    <div class="card-header">
 %                                       for (@$errors) {
                                             <%= $_ %>
 %                                       }
