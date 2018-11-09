@@ -1,4 +1,4 @@
-<nav class="nav">
+<nav>
     <div class="nav nav-tabs" id="nav-tab" role="tablist">
 %   if ($USER->can_change_settings($domain->id)) {
         <a class="nav-item nav-link active" id="nav-description-tab" ng-click="refresh_machine()" href="#nav-description" data-toggle="tab" role="tab" aria-controls="nav-description" aria-selected="true"><%=l 'Description' %></a>

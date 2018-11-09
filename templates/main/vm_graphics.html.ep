@@ -1,4 +1,4 @@
-<div class="panel-body">
+<div class="card-body">
 %=   include "main/needs_restart"
 %   my $driver = $domain->drivers("image");
     <div ng-show="<%= !defined ($domain->get_driver("image")) %>" class="alert alert-danger">
@@ -13,7 +13,7 @@
 % );
 
     <div class="row" ng-hide="pending_requests > 0">
-        <div class="col-md-6"></div><div class="col-md-2"><i><%=l 'recommended' %></i></div>
+        <div class="col-md-6"></div><div class="col-md-2"><span class="badge badge-info"><%=l 'recommended' %></span></div>
     </div>
 
     <div ng-hide="pending_requests > 0" class="form-group">
@@ -21,14 +21,13 @@
     <form class="form-horizontal" action="<%= $action %>" method="post">
 %       for my $driver_name (qw(image jpeg zlib playback streaming)) {
 %           my $driver = $domain->drivers($driver_name) or next;
-
                 <div class="row">
                     <div class="col-md-2">
-                        <label class="control-label"
+                        <label class="col-form-label"
                         for="driver_<%= $driver_name %>"><%= $driver_name %></label>
                     </div>
-                    <div class="col-md-4">
-                    <select class="selectpicker form-control input-lg"
+                    <div class="col-md-4 mt-2">
+                    <select class="selectpicker form-control"
                         id="driver_<%= $driver_name %>" name="driver_<%= $driver_name %>">
 %                       if ( !$domain->get_driver($driver_name)) {
                             <option value="" selected ><%=l 'none' %></option>
@@ -44,18 +43,18 @@
 %                       }
                     </select>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-2 mt-2">
 %                       if ($recomend{$driver_name}) {
-                            <span class="label label-default">
+                            <span class="badge badge-primary">
                                 <%= ($recomend{$driver_name} or '') %>
                             </span>
 %                       }
                     </div>
                 </div><!-- of row -->
 %           }
-         <input type="submit" class="btn btn-primary mt-3">
-         <input type="button" class="btn btn-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
-</form>
+         <input type="button" class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
+         <input type="submit" class="btn btn-primary mt-3" value="<%=l 'Submit' %>">
+    </form>
 </div> <!-- of form group -->
 </div> <!-- of panel-body -->
 

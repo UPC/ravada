@@ -43,7 +43,7 @@
     </div>
 % }
 % if ($domain->type eq 'KVM') {
-    <div class="tab-pane fade" id="nav-graphics" role="tabpanel" aria-labelledby="nav-grraphics-tab">
+    <div class="tab-pane fade" id="nav-graphics" role="tabpanel" aria-labelledby="nav-graphics-tab">
 % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
 % } else {

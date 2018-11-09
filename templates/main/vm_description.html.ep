@@ -14,8 +14,8 @@
                 </div>
             </div>
             <div class="col-md-12">
-                <button type="reset" class="btn btn-outline-secondary"><%=l 'Cancel' %></button>
-                <input type="submit" class="btn btn-primary" name="btn_description">
+                <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
+                <input type="submit" class="btn btn-primary" name="btn_description" value="<%=l 'Submit' %>">
             </div>
         </div>
     </form>

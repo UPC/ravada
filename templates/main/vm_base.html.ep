@@ -1,5 +1,5 @@
 % use Data::Dumper;
-<div class="panel-body">
+<div class="card-body">
     <div class="alert alert-success" ng-show="domain.is_locked">
         <%=l 'This machine is locked by process' %> <a href="/request/{{domain.is_locked}}.html">process</a>
     </div>
@@ -11,7 +11,7 @@
 
 has clones = <%= $domain->has_clones %><br/>
     {{nodes}}
-    <form class="form-inline" action="<%= $action %>" method="post">
+    <form class="form" action="<%= $action %>" method="post">
 %   for my $node (@$nodes) {
 %       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
         <div class="row">
