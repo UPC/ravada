@@ -1,35 +1,37 @@
-<ul class="nav nav-tabs" id="myTab">
+<nav class="nav">
+    <div class="nav nav-tabs" id="nav-tab" role="tablist">
 %   if ($USER->can_change_settings($domain->id)) {
-    <li class="nav active"><a ng-click="refresh_machine()" href="#description" data-toggle="tab"><%=l 'Description' %></a></li>
-%   }
-%   if ($USER->can_change_settings($domain->id) && $USER->is_admin ) {
-    <li class="nav"><a ng-click="refresh_machine()" href="#rename" data-toggle="tab"><%=l 'Rename' %></a></li>
-%   }
-%   if ($USER->can_change_settings($domain->id) ) {
-        <li class="nav"><a  ng-click="refresh_machine()" href="#options" data-toggle="tab"><%=l 'Options' %></a></li>
-%   }
-%   if ($USER->can_change_settings($domain->id) && $domain->drivers) {
-        <li class="nav"><a ng-click="refresh_machine()" href="#drivers" data-toggle="tab"><%=l 'Drivers' %></a></li>
-%   }
-%	if ($USER->can_change_settings($domain->id)){
-		<li class="nav"><a ng-click="refresh_machine()" href="#hardware" data-toggle="tab"><%=l 'Hardware' %></a></li>
-%	}
-%   if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
-        <li class="nav"><a ng-click="refresh_machine()" href="#screenshot" data-toggle="tab"><%=l 'Screenshot' %></a></li>
-%   }
-%   if ($domain->drivers && $USER->can_change_settings($domain->id)) {
-        <li class="nav"><a ng-click="refresh_machine()" href="#graphics" data-toggle="tab"><%=l 'Graphics' %></a></li>
-%   }
-%   if ($USER->is_admin) {
-        <li class="nav"><a href="#base" data-toggle="tab">Base</a></li>
-%   }
-%   if ($USER->is_admin || $USER->can_clone_all ){
-        <li class="nav"><a ng-click="refresh_machine()" href="#copy" data-toggle="tab"><%=l 'Copy' %></a></li>
-%   }
-%   if ( $USER->can_remove_machine($domain->id)) {
-        <li class="nav"><a ng-click="refresh_machine()" href="#remove" data-toggle="tab"><%=l 'Remove Machine' %></a></li>
-%   }
-% if ( $monitoring && $USER->is_admin && $domain->is_active ) {
-    <li class="nav"><a ng-click="refresh_machine()" href="#monitoring" data-toggle="tab"><%=l 'System overview' %></a></li>
-%   }
-</ul>
+        <a class="nav-item nav-link active" id="nav-description-tab" ng-click="refresh_machine()" href="#nav-description" data-toggle="tab" role="tab" aria-controls="nav-description" aria-selected="true"><%=l 'Description' %></a>
+    %   }
+    %   if ($USER->can_change_settings($domain->id) && $USER->is_admin ) {
+        <a class="nav-item nav-link" id="nav-rename-tab" ng-click="refresh_machine()" href="#nav-rename" data-toggle="tab" role="tab" aria-controls="nav-rename" aria-selected="false" ><%=l 'Rename' %></a>
+    %   }
+    %   if ($USER->can_change_settings($domain->id) ) {
+        <a class="nav-item nav-link" id="nav-options-tab" ng-click="refresh_machine()" href="#nav-options" data-toggle="tab"><%=l 'Options' %></a>
+    %   }
+    %   if ($USER->can_change_settings($domain->id) && $domain->drivers) {
+        <a class="nav-item nav-link" id="nav-drivers-tab" ng-click="refresh_machine()" href="#nav-drivers" data-toggle="tab"><%=l 'Drivers' %></a>
+    %   }
+    %	if ($USER->can_change_settings($domain->id)){
+        <a class="nav-item nav-link" id="nav-hardware-tab" ng-click="refresh_machine()" href="#nav-hardware" data-toggle="tab"><%=l 'Hardware' %></a>
+    %	}
+    %   if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
+        <a class="nav-item nav-link" id="nav-screenshot-tab" ng-click="refresh_machine()" href="#nav-screenshot" data-toggle="tab"><%=l 'Screenshot' %></a>
+    %   }
+    %   if ($domain->drivers && $USER->can_change_settings($domain->id)) {
+        <a class="nav-item nav-link" id="nav-graphics-tab" ng-click="refresh_machine()" href="#nav-graphics" data-toggle="tab"><%=l 'Graphics' %></a>
+    %   }
+    %   if ($USER->is_admin) {
+        <a class="nav-item nav-link" id="nav-base-tab" href="#nav-base" data-toggle="tab">Base</a>
+    %   }
+    %   if ($USER->is_admin || $USER->can_clone_all ){
+        <a class="nav-item nav-link" id="nav-copy-tab" ng-click="refresh_machine()" href="#nav-copy" data-toggle="tab"><%=l 'Copy' %></a>
+    %   }
+    %   if ( $USER->can_remove_machine($domain->id)) {
+        <a class="nav-item nav-link" id="nav-remove-tab" ng-click="refresh_machine()" href="#nav-remove" data-toggle="tab"><%=l 'Remove Machine' %></a>
+    %   }
+    % if ( $monitoring && $USER->is_admin && $domain->is_active ) {
+        <a class="nav-item nav-link" id="nav-monitoring-tab" ng-click="refresh_machine()" href="#nav-monitoring" data-toggle="tab"><%=l 'System overview' %></a>
+    %   }
+    </div>
+</nav>
