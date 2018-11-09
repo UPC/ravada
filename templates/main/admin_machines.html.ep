@@ -225,7 +225,9 @@
 
                          
 %                       if ($autostart) {
-                            <td></td>
+                            <td class="lgMachToggle">
+				    <input type="checkbox" ng-hide="machine.has_clones || machine.is_base" ng-model="machine.autostart" ng-true-value="1" ng-false-value="0" ng-change="set_autostart(machine.id,machine.autostart)" title="{{ machine.autostart ? 'Disable' : 'Enable'}} autostart">
+			    </td>
 %                       }
 %                       }
                     <td class="lgMachActions">
