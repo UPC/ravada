@@ -257,13 +257,18 @@ sub _connect_ssh($self, $disconnect=0) {
         $ssh = Net::SSH2->new( timeout => $SSH_TIMEOUT );
         my $connect;
         for ( 1 .. 3 ) {
-            $connect = $ssh->connect($self->host);
+            eval { $connect = $ssh->connect($self->host) };
             last if $connect;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
             sleep 1;
         }
-        $connect = $ssh->connect($self->host)   if !$connect;
-        confess $ssh->error()   if !$connect;
+        if ( !$connect) {
+            eval { $connect = $ssh->connect($self->host) };
+            if (!$connect) {
+                $self->cached_active(0);
+                confess $ssh->error();
+            }
+        }
         $ssh->auth_publickey( 'root'
             , "$home/.ssh/id_rsa.pub"
             , "$home/.ssh/id_rsa"
