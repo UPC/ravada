@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
         <div>
     <div class="page-header">
-        <div class="card"
+        <div class="panel panel-default"
              ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
              <div class="card-header">
 %              if ($domain->is_base) {

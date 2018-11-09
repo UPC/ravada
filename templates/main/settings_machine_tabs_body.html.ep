@@ -1,6 +1,6 @@
 %   if (scalar @$errors) {
-        <div class="card text-white bg-danger">
-            <div class="card-header">
+        <div class="panel panel-danger">
+            <div class="panel-heading">
                 <ul>
 %                   for (@$errors) {
                         <li><%= $_ %></li>
@@ -11,39 +11,38 @@
 %   }
 
 % if ($USER->can_change_settings($domain->id)) {
-<div class="tab-content" id="nav-tabContent">
-    <div class="tab-pane fade show active" id="nav-description" role="tabpanel" aria-labelledby="nav-description-tab">
-        %= include 'main/vm_description'
-    </div>
+<div class="tab-pane fade in active" id="description">
+    %= include 'main/vm_description'
+</div>
 
-    <div class="tab-pane fade" id="nav-rename" role="tabpanel" aria-labelledby="nav-rename-tab">
-% if ($domain->is_base) {
-        %= include 'main/vm_locked_is_base'
-% } else {
-        %= include 'main/vm_rename'
- % }
-    </div>
+<div class="tab-pane fade" id="rename">
+  % if ($domain->is_base) {
+    %= include 'main/vm_locked_is_base'
+  % } else {
+    %= include 'main/vm_rename'
+  % }
+</div>
 
-    <div class="tab-pane fade" id="nav-options" role="tabpanel" aria-labelledby="nav-options-tab">
+    <div class="tab-pane fade" id="options">
         %= include 'main/vm_options'
     </div>
 % }
 % if ($USER->can_change_settings($domain->id) && $domain->drivers) {
-    <div class="tab-pane fade" id="nav-drivers" role="tabpanel" aria-labelledby="nav-drivers-tab">
-% if ($domain->is_base) {
+    <div class="tab-pane fade" id="drivers">
+      % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
-% } else {
+      % } else {
         %= include 'main/vm_drivers'
-% }
+      % }
     </div>
 % }
 % if ($USER->can_change_settings($domain->id) && !$domain->is_base ) {
-    <div class="tab-pane fade" id="nav-screenshot" role="tabpanel" aria-labelledby="nav-screenshot-tab">
+    <div class="tab-pane fade" id="screenshot">
       %= include 'main/vm_screenshot'
     </div>
 % }
 % if ($domain->type eq 'KVM') {
-    <div class="tab-pane fade" id="nav-graphics" role="tabpanel" aria-labelledby="nav-grraphics-tab">
+    <div class="tab-pane fade" id="graphics">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
       % } else {
@@ -52,7 +51,7 @@
     </div>
 % }
 % if ($USER->can_change_settings($domain->id)) {
-    <div class="tab-pane fade" id="nav-hardware" role="tabpanel" aria-labelledby="nav-hardware-tab" >
+    <div class="tab-pane fade" id="hardware">
       % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
       % } else {
@@ -60,24 +59,23 @@
       % }
     </div>
 % }
-    <div class="tab-pane fade" id="nav-copy" role="tabpanel" aria-labelledby="nav-copy-tab">
-        %= include 'main/vm_copy'
-    </div>
+<div class="tab-pane fade" id="copy">
+    %= include 'main/vm_copy'
+</div>
 
 % if ( $USER->can_remove_machine($domain->id)) {
-    <div class="tab-pane fade" id="nav-remove" role="tabpanel" aria-labelledby="nav-remove-tab">
+    <div class="tab-pane fade" id="remove" >
         %= include 'main/vm_remove'
     </div>
 % }
 % if ( $monitoring && $USER->is_admin && $domain->is_active && $domain->internal_id) {
-    <div class="tab-pane fade" id="nav-monitoring" role="tabpanel" aria-labelledby="nav-monitoring-tab">
+    <div class="tab-pane fade" id="monitoring">
         %= include 'main/vm_monitoring'
     </div>
 % }
 
 %if ($USER->is_admin) {
-    <div class="tab-pane fade" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab">
+    <div class="tab-pane fade" id="base">
         %= include 'main/vm_base'
     </div>
 % }
-</div>
