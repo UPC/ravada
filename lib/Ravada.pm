@@ -1562,7 +1562,12 @@ sub search_domain($self, $name, $import = 0) {
         if ( $vm && !$vm->is_active) {
             $vm->disconnect();
         }
-        return $vm->search_domain($name) if $vm;
+        if ($vm && $vm->is_active ) {
+            my $domain;
+            eval { $domain = $vm->search_domain($name)};
+            warn $@ if $@;
+            return $domain if $domain;
+        }
     }
 #    for my $vm (@{$self->vm}) {
 #        warn $vm->name;
