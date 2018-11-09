@@ -1549,22 +1549,20 @@ sub search_domain($self, $name, $import = 0) {
         ."      ON d.id_vm = vms.id "
         ." WHERE "
         ."    d.name=? "
-        ."    AND (  d.id_vm IS NULL "
-        ."          OR ( vms.is_active = 1 AND vms.enabled = 1 )"
-        ."      ) "
         ;
     my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute($name);
-    my ($id, $id_vm) = $sth->fetchrow();
+    my ($id, $id_vm ) = $sth->fetchrow();
 
     return if !$id;
     if ($id_vm) {
-        my $vm = Ravada::VM->open($id_vm);
-        if (!$vm->is_active) {
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        warn $@ if $@;
+        if ( $vm && !$vm->is_active) {
             $vm->disconnect();
-        } else {
-            return $vm->search_domain($name);
         }
+        return $vm->search_domain($name) if $vm;
     }
 #    for my $vm (@{$self->vm}) {
 #        warn $vm->name;
@@ -2020,10 +2018,11 @@ sub _domain_working {
         if (!$id_domain) {
             my $domain_name = $req->defined_arg('name');
             return if !$domain_name;
-            my $domain = $self->search_domain($domain_name) or return;
-            $id_domain = $domain->id;
+            my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+            $sth->execute($domain_name);
+            ($id_domain) = $sth->fetchrow;
             if (!$id_domain) {
-                warn Dumper($req);
+                warn "Error: Domain name $domain_name not found from request $id_request";
                 return;
             }
         }
@@ -2643,6 +2642,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
     }
 
     $self->_refresh_disabled_nodes( $request );
+    $self->_refresh_down_nodes( $request );
 
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
@@ -2717,12 +2717,23 @@ sub _refresh_active_domains($self, $request=undef) {
     return \%active_domain, \%active_vm;
 }
 
+sub _refresh_down_nodes($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        $vm = Ravada::VM->open($id);
+    }
+}
+
 sub _refresh_disabled_nodes($self, $request = undef ) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, d.name, vms.name FROM domains d, vms "
         ." WHERE d.id_vm = vms.id "
-        ."    AND vms.enabled == 0 "
-        ."    AND d.status == 'active'"
+        ."    AND ( vms.enabled = 0 || vms.is_active = 0 )"
+        ."    AND d.status = 'active'"
     );
     $sth->execute();
     while ( my ($id_domain, $domain_name, $vm_name) = $sth->fetchrow ) {
