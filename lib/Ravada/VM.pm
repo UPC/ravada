@@ -1077,9 +1077,14 @@ sub balance_vm($self, $base=undef) {
     my %vm_list;
     for my $vm ($self->list_nodes) {
         next if !$vm->enabled();
-        next if !$vm->is_active || $vm->free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
-        my $key = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
+        next if !$vm->is_active();
+
+        my $free_memory = $vm->free_memory;
+        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+
+        my $key = $vm->count_domains(status => 'active').".".$free_memory;
         $vm_list{$key} = $vm;
+        last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
     my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
 
@@ -1088,6 +1093,15 @@ sub balance_vm($self, $base=undef) {
         return $vm;
     }
     return;
+}
+
+sub count_domains($self, %args) {
+    my $query = "SELECT count(*) FROM domains WHERE id_vm = ? AND ";
+    $query .= join(" AND ",map { "$_ = ?" } sort keys %args );
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute( $self->id, map { $args{$_} } sort keys %args );
+    my ($count) = $sth->fetchrow;
+    return $count;
 }
 
 sub shutdown_domains($self) {

@@ -518,6 +518,7 @@ sub list_domains {
     return if !$self->vm;
 
     my $active = (delete $args{active} or 0);
+    my $read_only = delete $args{read_only};
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
@@ -529,7 +530,12 @@ sub list_domains {
     $sth->execute( $self->id );
     my @list;
     while ( my ($id) = $sth->fetchrow) {
-        my $domain = Ravada::Domain->open($id);
+        my $domain;
+        if ($read_only) {
+            $domain = Ravada::Front::Domain->open( $id );
+        } else {
+            $domain = Ravada::Domain->open( id => $id, vm => $self);
+        }
         push @list,($domain) if $domain;
     }
     return @list;
@@ -2062,8 +2068,8 @@ sub _free_memory_overcommit($self) {
 sub _free_memory_available($self) {
     my $info = $self->vm->get_node_memory_stats();
     my $used = 0;
-    for my $domain ( $self->list_domains(active => 1) ) {
-        $used += $domain->domain->get_info->{memory};
+    for my $domain ( $self->list_domains(active => 1, read_only => 1) ) {
+        $used += $domain->get_info->{memory};
     }
     my $free_mem = $info->{total} - $used;
     my $free_real = $self->_free_memory_overcommit;
