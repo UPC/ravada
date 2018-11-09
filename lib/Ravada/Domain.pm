@@ -778,13 +778,16 @@ sub open($class, @args) {
     my $readonly = 0;
     my $id_vm;
     my $force;
-
+    my $vm;
     if (scalar @args > 1) {
         my %args = @args;
         $id = delete $args{id} or confess "ERROR: Missing field id";
         $readonly = delete $args{readonly} if exists $args{readonly};
         $id_vm = delete $args{id_vm};
         $force = delete $args{_force};
+        $vm = delete $args{vm};
+        confess "ERROR: id_vm and vm don't match. ".($vm->name." id: ".$vm->id)
+            if $id_vm && $vm && $vm->id != $id_vm;
         confess "ERROR: Unknown fields ".join(",", sort keys %args)
             if keys %args;
     }
@@ -802,12 +805,8 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-    my $vm;
-    my $vm_local = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm_local, $vm_class;
 
-    if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
+    if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
         eval {
             $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
                 , readonly => $readonly);
@@ -816,12 +815,24 @@ sub open($class, @args) {
             $vm = Ravada::VM->open( type => $self->type );
         }
     }
+    my $vm_local;
     if (!$vm || !$vm->is_active || !$vm->enabled) {
+        $vm_local = {};
+        my $vm_class = "Ravada::VM::".$row->{vm};
+        bless $vm_local, $vm_class;
+
         $vm = $vm_local->new( );
     }
     my $domain = $vm->search_domain($row->{name}, $force);
     if ( !$domain ) {
         return if $vm->is_local;
+
+        if (!$vm_local) {
+            $vm_local = {};
+            my $vm_class = "Ravada::VM::".$row->{vm};
+            bless $vm_local, $vm_class;
+        }
+
         $vm = $vm_local->new();
         $domain = $vm->search_domain($row->{name}, $force) or return;
     }
