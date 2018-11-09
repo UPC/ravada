@@ -334,7 +334,6 @@ sub _search_already_started($self) {
         eval { $domain = $vm->search_domain($self->name) };
         if ( $@ ) {
             warn $@;
-            $vm->enabled(0);
             next;
         }
         next if !$domain;
@@ -817,7 +816,7 @@ sub open($class, @args) {
             $vm = Ravada::VM->open( type => $self->type );
         }
     }
-    if (!$vm || !$vm->is_active) {
+    if (!$vm || !$vm->is_active || !$vm->enabled) {
         $vm = $vm_local->new( );
     }
     my $domain = $vm->search_domain($row->{name}, $force);
@@ -1621,7 +1620,7 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables();
+    $self->_remove_iptables() if $self->_vm->is_active;
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
 
