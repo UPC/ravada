@@ -7,7 +7,7 @@ use  Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
-use YAML qw(LoadFile);
+use YAML qw(LoadFile DumpFile);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -35,6 +35,7 @@ create_domain
     start_domain_internal   shutdown_domain_internal
     connector
     create_ldap_user
+    init_ldap_config
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -49,6 +50,11 @@ our $CHAIN = 'RAVADA';
 
 our $RVD_BACK;
 our $RVD_FRONT;
+
+#LDAP default values
+my $ADMIN_GROUP = "test.admin.group";
+my $RAVADA_POSIX_GROUP = "rvd_posix_group";
+my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 our %ARG_CREATE_DOM = (
     KVM => []
@@ -689,6 +695,47 @@ sub connector {
 
     $CONNECTOR = $connector;
     return $connector;
+}
+
+sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
+                    , $with_admin=0
+                    , $with_posix_group=0) {
+
+    if ( ! -e $file_config) {
+        my $config = {
+        ldap => {
+            admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
+            ,base => "dc=example,dc=com"
+            ,admin_group => $ADMIN_GROUP
+            ,auth => 'match'
+            ,ravada_posix_group => $RAVADA_POSIX_GROUP
+        }
+        };
+        DumpFile($file_config,$config);
+    }
+    my $config = LoadFile($file_config);
+    delete $config->{ldap}->{admin_group}   if !$with_admin;
+    if ($with_posix_group) {
+        if ( !exists $config->{ldap}->{ravada_posix_group}
+                || !$config->{ldap}->{ravada_posix_group}) {
+            $config->{ldap}->{ravada_posix_group} = $RAVADA_POSIX_GROUP;
+            diag("Adding ravada_posix_group = $RAVADA_POSIX_GROUP in $file_config");
+        }
+    } else {
+        delete $config->{ldap}->{ravada_posix_group};
+    }
+
+    $config->{vm}=['KVM','Void'];
+    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    DumpFile($fly_config, $config);
+
+    $RVD_BACK = undef;
+    $RVD_FRONT = undef;
+
+    init($fly_config);
+    return $fly_config;
 }
 
 sub END {

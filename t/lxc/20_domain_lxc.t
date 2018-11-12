@@ -174,17 +174,6 @@ sub test_domain{
     }
 }
 
-sub remove_old_domains {
-    for ( 0 .. 10 ) {
-        my $dom_name = $DOMAIN_NAME."_$_";
-
-        my $domain = $RAVADA->search_domain($dom_name,1);
-        $domain->shutdown_now() if $domain;
-        test_remove_domain($dom_name);
-    }
-
-}
-
 ################################################################
 eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {

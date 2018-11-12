@@ -12,10 +12,6 @@ use lib 't/lib';
 use Test::Ravada;
 
 use Ravada::Auth::LDAP;
-my $CONFIG_FILE = 't/etc/ravada_ldap.conf';
-
-init( $CONFIG_FILE );
-delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
 
 sub test_external_auth {
     my ($name, $password) = ('jimmy','jameson');
@@ -449,8 +445,8 @@ sub test_access_by_attribute_2bases($vm, $do_clones=0) {
 
 ################################################################################
 
+init();
 clean();
-
 
 for my $vm_name ('KVM', 'Void') {
     my $vm = rvd_back->search_vm($vm_name);
@@ -461,9 +457,22 @@ for my $vm_name ('KVM', 'Void') {
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
+        } else {
+            my $fly_config = init_ldap_config();
+            init($fly_config);
+        }
+        my $ldap;
+
+        eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
+
+        if ($@ =~ /Bad credentials/) {
+            diag("$@\nFix admin credentials in t/etc/ravada_ldap.conf");
+        } else {
+            diag("Skipped LDAP tests ".($@ or '')) if !$ldap;
         }
 
-        skip($msg,10)   if !$vm;
+        $msg = "SKIPPEd: No LDAP server found" if !$ldap && $@ !~ /Bad credentials/;
+        skip($msg,10)   if !$vm || !$ldap;
         diag("Testing LDAP access for $vm_name");
 
         test_external_auth();
