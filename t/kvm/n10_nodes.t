@@ -13,11 +13,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
 init();
 my $USER = create_user("foo","bar");
 
@@ -226,7 +222,7 @@ sub test_domain_on_remote {
         $domain = $node->create_domain(
             name => new_domain_name
             ,id_owner => user_admin->id
-            ,id_iso => 1
+            ,id_iso => search_id_iso('Alpine')
         );
     };
     is($@,'',"Expecting no domain in remote node by now");
@@ -368,11 +364,6 @@ sub test_start_twice {
 
     eval { $base->set_base_vm(vm => $node, user => user_admin); };
     is(''.$@,'') or return;
-
-    $clone->start(user_admin) if !$clone->is_active();
-    is($clone->_vm->id, $vm->id);
-    my $display0 = $clone->display(user_admin);
-    $clone->shutdown_now(user_admin) if $clone->is_active();
 
     eval { $clone->migrate($node); };
     is(''.$@,'')    or return;
