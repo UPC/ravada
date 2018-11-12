@@ -82,7 +82,7 @@ for my $vm_name ( q(KVM) ) {
         }
 
         diag($msg)      if !$vm;
-        skip $msg       if !$vm;
+        skip $msg,10    if !$vm;
 
         diag("Testing free mem on $vm_name");
 

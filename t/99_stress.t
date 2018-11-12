@@ -898,7 +898,7 @@ for my $vm_name ( 'KVM', 'Void' ) {
         if (!$ENV{TEST_STRESS} && !$ENV{"TEST_STRESS_$vm_name"}) {
             diag("Skipped $vm_name stress test. Set environment variable TEST_STRESS or"
                         ." TEST_STRESS_$vm_name to run");
-            skip("Skipping stress $vm_name");
+            skip("Skipping stress $vm_name",1000);
         }
         eval {
             $RVD_BACK= Ravada->new();
