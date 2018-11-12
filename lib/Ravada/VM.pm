@@ -265,7 +265,7 @@ sub _connect_ssh($self, $disconnect=0) {
         if ( !$connect) {
             eval { $connect = $ssh->connect($self->host) };
             if (!$connect) {
-                $self->cached_active(0);
+                $self->_cached_active(0);
                 confess $ssh->error();
             }
         }
