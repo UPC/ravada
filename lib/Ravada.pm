@@ -2027,7 +2027,7 @@ sub _domain_working {
             $sth->execute($domain_name);
             ($id_domain) = $sth->fetchrow;
             if (!$id_domain) {
-                warn "Error: Domain name $domain_name not found from request $id_request";
+                # TODO: maybe this request should be marked down because domain already removed
                 return;
             }
         }
