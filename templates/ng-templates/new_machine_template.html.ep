@@ -1,7 +1,7 @@
-<div class="tab-pane fade in active" id="fromtemplate" >
+<div class="tab-pane fade show active" id="fromtemplate" role="tabpanel">
     <form name="new_machineForm" role="form" method="post" action="/new_machine" novalidate>
         <div class="form-group row">
-            <label for="backend" class="col-lg-3 control-label"><%=l 'Backend' %> <a 
+            <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a 
               title="Choose the virtualization type of the Virtual Machine."><i class="fa fa-info-circle"></i></a></label>
             <div class="col-lg-9">
                 <select class= "form-control"
@@ -16,7 +16,7 @@
 
         <div ng-if="backend == 'KVM'" class="form-group">
             <div class="from-group row">
-                <label for="id_iso" class="col-lg-3 control-label"><%=l 'Select Template' %> <a 
+                <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a 
                   title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
                 <div class="col-lg-9">
                     <select class="form-control"
@@ -38,10 +38,9 @@
                     </div>
                 </div>
             </div>
-            <div class="from-group row">
-                <div ng-show="id_iso.name">
+            <div class="from-group row" ng-show="id_iso.name">
                     <br/>
-                    <label for="iso_file" class="col-lg-3 control-label"><%=l 'Select ISO' %> <a 
+                    <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a 
                       title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                         <select class="form-control"
@@ -52,12 +51,11 @@
 
                         ></select>
                     </div>
-                </div>
             </div>
         </div>
 
         <div class="form-group row">
-            <label for="name" class="col-lg-3 control-label"><%=l 'Name' %></label>
+            <label for="name" class="col-xl-3 col-form-label"><%=l 'Name' %></label>
             <div class="col-lg-9">
                 <input class="form-control" ng-model="name" type="text"
                     name="name" required=""
@@ -68,7 +66,7 @@
         </div>
 
         <div ng-if="backend == 'LXC'" class="from-group row">
-            <label for="id_template" class="col-lg-3 control-label"><%=l 'Template' %></label>
+            <label for="id_template" class="col-xl-3 col-form-label"><%=l 'Template' %></label>
             <div class="col-lg-9">
                 <select name ="id_template"
                     ng-model="id_template"
@@ -79,38 +77,34 @@
         </div>
 
         <div class="form-group row" ng-if="backend == 'KVM'">
-            <label for="disk" class="col-lg-3 control-label"><%=l 'Disk Size: (GB)' %></label>     
+            <label for="disk" class="col-xl-3 col-form-label"><%=l 'Disk Size: (GB)' %></label>     
             <div class="col-lg-2">
                 <input class="slider form-control" ng-model="ddsize" type="range" name="disk"
                     min="{{min_size}}" max="100" required="">
             </div>{{ddsize}}
               <a ng-show="!seeswap"
                   ng-click="show_swap()"
-                  class="label label-primary"
-                  align="right">Add swap</a>
+                  align="right"><span class="badge badge-primary ml-2">Add swap</span></a>
               <a ng-show="seeswap"
                   ng-click="show_swap()"
-                  class="label label-primary"
-                  align="right">Remove swap</a>
+                  align="right"><span class="badge badge-primary ml-2">Remove swap</span></a>
               <div ng-show="showMinSize">
                 <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
             </div>  
         </div>
         <div class="form-group row" ng-show="seeswap" ng-if="backend == 'KVM'">
-            <label for="swap" class="col-lg-3 control-label"><%=l 'Swap Size: (GB)' %></label>
+            <label for="swap" class="col-xl-3 col-form-label"><%=l 'Swap Size: (GB)' %></label>
             <div class="col-lg-2">
                 <input class="slider form-control" ng-model="swapsize.value" 
                 type="range" name="swap" id="swap" min="1" max="4" ng-disabled="!seeswap">
             </div>{{swapsize.value}}
         </div>
-        <div class="form-group row">
-            <div ng-show="backend == 'KVM' || backend == 'LXC'">
-                <label for="memory"  class="col-lg-3 control-label"><%=l 'Ram: (GB)' %></label>
+        <div class="form-group row" ng-show="backend == 'KVM' || backend == 'LXC'">
+                <label for="memory" class="col-xl-3 col-form-label"><%=l 'Ram: (GB)' %></label>
                 <div class="col-lg-2">
                     <input class="slider form-control" ng-model="ramSize" type="range" 
                     name="memory" min="1" max="4" required>
                 </div>{{ramSize}}
-            </div>
         </div>
         <div class="form-group row">
             <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
@@ -162,7 +156,8 @@
         </div>
       
         <div class="form-group row">
-             <input type="submit" class="btn btn-default" name="submit" value="<%=l 'Create' %>"
+            <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
+            <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"
                  ng-disabled="new_machineForm.$invalid || (!new_machineForm.id_iso.$viewValue.device && (new_machineForm.iso_file.$modelValue == '<NONE>')) || name_duplicated">
         </div>
     </form>
