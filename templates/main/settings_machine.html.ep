@@ -6,7 +6,6 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-        <div>
     <div class="page-header">
         <div class="card"
              ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
@@ -25,13 +24,13 @@
 %               }
              </div> <!-- del panel heading-->
              %= include 'main/show_requests'
-             <div class="tab-content">
+             <div>
+            <div class="card-body">
                 %= include 'main/settings_machine_tabs_head'
                 %= include 'main/settings_machine_tabs_body'
             </div>
             <div class="alert alert-danger" ng-show="error">{{error}}</div>
         </div><!-- del panel default-->
-%=   include 'bootstrap/requests'
     </div><!-- del page-header -->
 </div> <!-- del page-wrapper -->
 </div> <!-- del wrapper -->
