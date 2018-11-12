@@ -3,7 +3,6 @@
 
 **Implemented enhancements:**
 
--
 - Overcome failed hibernated machines [\#587]
 - ldap + posix group authentication [\#645]
 - Force SSL in LDAP authentication [\#823]
