@@ -1,13 +1,34 @@
 <ul>
+<li>Amparo Gombau</li>
 <li>Angel Aguilera</li>
 <li>Antonio Mesones</li>
+<li>Dayyan O'Brien</li>
+<li>Dito Baskoro</li>
+<li>Fernando Verdugo</li>
 <li>Fernando Verdugo Arias</li>
 <li>Francesc Guasch</li>
+<li>Gabriel Silva</li>
+<li>Gloria Rodríguez</li>
 <li>Guillermo Miranda</li>
+<li>Jirayu Laungwilawan</li>
 <li>Joan Sanchez</li>
 <li>Joel Alarcón</li>
+<li>Jose López Ramos</li>
 <li>Kimia Mirehbar</li>
 <li>Laura Figuerola</li>
+<li>Luca Bezerra</li>
+<li>Lucas Melin</li>
+<li>Marc Schwede</li>
+<li>Martin McGrath</li>
+<li>Mathias Bertorelli</li>
+<li>Matthew Musgrove</li>
+<li>Meike Hankewicz</li>
+<li>Nelo Tovar</li>
+<li>Pascal Scholz</li>
+<li>Raghav Mittal</li>
+<li>Robert-André Mauchin</li>
+<li>Sanjiv Lobo</li>
+<li>Tim Fechner</li>
 </ul>
-<%=l 'Thanks to:' %>
+Thanks to:
 <ul><li>Jorge Mata</li></ul>
