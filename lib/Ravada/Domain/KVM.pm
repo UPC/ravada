@@ -599,7 +599,16 @@ sub start {
     }
     $self->_set_spice_ip($set_password);
     eval { $self->domain->create() };
-    $request->error($@) if $request && $@ && $@ !~ /already running/i;
+    if ( $@ && $@ !~ /already running/i ) {
+        if ( $self->domain->has_managed_save_image ) {
+            $request->status("removing saved image") if $request;
+            $self->domain->managed_save_remove();
+            $self->domain->create();
+        } elsif ( $request ) {
+            $request->error($@);
+            die $@ if $@;
+        }
+    }
 }
 
 sub _pre_shutdown_domain {

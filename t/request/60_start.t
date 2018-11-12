@@ -102,7 +102,7 @@ for my $vm_name ( vm_names() ) {
         }
 
         diag($msg)      if !$vm;
-        skip $msg       if !$vm;
+        skip $msg,10    if !$vm;
 
         test_request_start($vm_name);
         test_request_iptables($vm_name);

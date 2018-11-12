@@ -70,11 +70,13 @@ sub test_user{
     ok(!$mcnulty->is_admin,"User ".$mcnulty->name." should not be admin "
             .Dumper($mcnulty->{_data}));
 
+    ok($mcnulty->ldap_entry,"Expecting User LDAP entry");
     # try to login
     my $mcnulty_login = Ravada::Auth::login($name,$password);
     ok($mcnulty_login,"No login");
     ok(ref $mcnulty_login && ref($mcnulty_login) eq 'Ravada::Auth::LDAP',
             "ref should be Ravada::Auth::LDAP , got ".ref($mcnulty_login));
+    ok($mcnulty_login->ldap_entry,"Expecting User LDAP entry");
     # check for the user in the SQL db
     # 
     $sth = connector->dbh->prepare("SELECT * FROM users WHERE name=?");

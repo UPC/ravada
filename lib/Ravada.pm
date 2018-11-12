@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.3.1';
+our $VERSION = '0.3.1-beta4';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -864,12 +864,12 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('shutdown', 1);
-    $self->_add_grant('screenshot', 1);
+    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines");
+    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines");
+    $self->_add_grant('start_many',0,"Can have more than one machine started")
 }
 
-sub _add_grant($self, $grant, $allowed) {
-
+sub _add_grant($self, $grant, $allowed, $description) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM grant_types WHERE name=?"
     );
@@ -881,7 +881,7 @@ sub _add_grant($self, $grant, $allowed) {
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
         ." VALUES (?,?)");
-    $sth->execute($grant,"can shutdown any virtual machine owned by the user");
+    $sth->execute($grant, $description);
     $sth->finish;
 
     return if !$allowed;
@@ -931,6 +931,7 @@ sub _enable_grants($self) {
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
+        ,'start_many'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -1112,6 +1113,7 @@ sub _upgrade_tables {
         );
         $sth->execute;
     }
+    $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -2551,6 +2553,15 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
+sub _cmd_start_many_domains{
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->args('name');
+
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2798,6 +2809,7 @@ sub _enforce_limits_active($self, $request) {
         next if scalar @{$domains{$id_user}}<2;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
+        next if $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }

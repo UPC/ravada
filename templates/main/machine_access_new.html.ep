@@ -1,0 +1,44 @@
+<div class="row">
+    <div class="col-md-2">
+        <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false">
+        <option ng-repeat="attribute in ldap_attributes" value="{{attribute}}">
+            {{attribute}}
+        </option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <input ng-model="ldap_attribute_value" type="text"
+            ng-change="ldap_entries=0;ldap_verified=false">
+    </div>
+
+    <div class="col-md-1">
+        <input ng-model="ldap_attribute_allowed" type="checkbox">
+    </div>
+
+    <div class="col-md-1">
+        <input ng-model="ldap_attribute_last" type="checkbox"
+            title="Finish checking permission when this matches"
+        >
+    </div>
+    <div class="col-md-2">
+        <button
+            ng-show="ldap_attribute && ldap_attribute_value"
+            ng-disabled="ldap_verifying"
+            ng-click="count_ldap_entries()"
+            >verify</button>
+        <button ng-show="ldap_attribute && ldap_attribute_value"
+            ng-disabled="ldap_verifying || (!ldap_attribute_allowed && ! ldap_attribute_last)"
+            ng-click="add_ldap_access()"
+            >save</button>
+    </div>
+    <div class="col-md-3">
+        <span ng-show="ldap_verifying">Verifying {{ldap_attribute}} ...</span>
+        <span ng-show="ldap_verified && !ldap_entries">No entries found</span>
+        <span ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}} has at least {{ldap_entries}} entries. </span>
+        <span ng-show="!ldap_attribute_allowed && !ldap_attribute_last">
+            Enable last for not allowed restrictions.
+        </span>
+    </div>
+</div>
+

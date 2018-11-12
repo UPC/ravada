@@ -7,7 +7,7 @@ use  Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
-use YAML qw(LoadFile);
+use YAML qw(LoadFile DumpFile);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -35,6 +35,7 @@ create_domain
     start_domain_internal   shutdown_domain_internal
     connector
     create_ldap_user
+    init_ldap_config
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -44,9 +45,16 @@ our ($CONNECTOR, $CONFIG);
 our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
+our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
 our $RVD_BACK;
+our $RVD_FRONT;
+
+#LDAP default values
+my $ADMIN_GROUP = "test.admin.group";
+my $RAVADA_POSIX_GROUP = "rvd_posix_group";
+my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 our %ARG_CREATE_DOM = (
     KVM => []
@@ -159,12 +167,15 @@ sub rvd_back($config=undef) {
     return $rvd;
 }
 
-sub rvd_front() {
+sub rvd_front($config=undef) {
 
-    return Ravada::Front->new(
+    return $RVD_FRONT if $RVD_FRONT;
+
+    $RVD_FRONT = Ravada::Front->new(
             connector => $CONNECTOR
-                , config => ( $CONFIG or $DEFAULT_CONFIG)
+                , config => ( $config or $DEFAULT_CONFIG)
     );
+    return $RVD_FRONT;
 }
 
 sub init($config=undef, $create_user=1) {
@@ -177,6 +188,7 @@ sub init($config=undef, $create_user=1) {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
     rvd_back($config)  if !$RVD_BACK;
+    rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
@@ -344,6 +356,8 @@ sub create_ldap_user($name, $password) {
     eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
     is($@,'') or return;
 
+    push @USERS_LDAP,($name);
+
     my @user = Ravada::Auth::LDAP::search_user($name);
     return $user[0];
 }
@@ -445,6 +459,15 @@ sub remove_old_user {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
     $sth->execute(base_domain_name());
 }
+
+sub remove_old_user_ldap {
+    for my $name (@USERS_LDAP ) {
+        if ( Ravada::Auth::LDAP::search_user($name) ) {
+            Ravada::Auth::LDAP::remove_user($name)  
+        }
+    }
+}
+
 sub search_id_iso {
     my $name = shift;
     connector() if !$CONNECTOR;
@@ -674,7 +697,49 @@ sub connector {
     return $connector;
 }
 
+sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
+                    , $with_admin=0
+                    , $with_posix_group=0) {
+
+    if ( ! -e $file_config) {
+        my $config = {
+        ldap => {
+            admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
+            ,base => "dc=example,dc=com"
+            ,admin_group => $ADMIN_GROUP
+            ,auth => 'match'
+            ,ravada_posix_group => $RAVADA_POSIX_GROUP
+        }
+        };
+        DumpFile($file_config,$config);
+    }
+    my $config = LoadFile($file_config);
+    delete $config->{ldap}->{admin_group}   if !$with_admin;
+    if ($with_posix_group) {
+        if ( !exists $config->{ldap}->{ravada_posix_group}
+                || !$config->{ldap}->{ravada_posix_group}) {
+            $config->{ldap}->{ravada_posix_group} = $RAVADA_POSIX_GROUP;
+            diag("Adding ravada_posix_group = $RAVADA_POSIX_GROUP in $file_config");
+        }
+    } else {
+        delete $config->{ldap}->{ravada_posix_group};
+    }
+
+    $config->{vm}=['KVM','Void'];
+    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    DumpFile($fly_config, $config);
+
+    $RVD_BACK = undef;
+    $RVD_FRONT = undef;
+
+    init($fly_config);
+    return $fly_config;
+}
+
 sub END {
     remove_old_user() if $CONNECTOR;
+    remove_old_user_ldap() if $CONNECTOR;
 }
 1;

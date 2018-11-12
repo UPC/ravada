@@ -51,7 +51,9 @@ sub login {
             $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
         };
         warn $@ if $@ && $LDAP_OK && !$quiet;
-        return $login_ok if $login_ok;
+        if ( $login_ok ) {
+            return $login_ok;
+        }
     }
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
