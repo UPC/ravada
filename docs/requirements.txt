@@ -1,1 +1,1 @@
-extensions = ['sphinx-prompt']
+extensions == ['sphinx-prompt']
