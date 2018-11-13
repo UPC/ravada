@@ -8,7 +8,7 @@ TEST::SQL::DATA module.
 In project root run:
 
 .. prompt:: bash $
-
+    
     perl Makefile.PL
     sudo make test 
 
