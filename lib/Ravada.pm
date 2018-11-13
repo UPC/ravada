@@ -2659,15 +2659,6 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
-sub _cmd_start_many_domains{
-    my $self = shift;
-    my $request = shift;
-
-    my $uid = $request->args('uid');
-    my $name = $request->args('name');
-
-}
-
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
