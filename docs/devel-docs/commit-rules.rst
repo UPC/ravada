@@ -93,7 +93,7 @@ tests require *root* access, so it must run with *sudo*.
     
 If you want to run only one test:
 
-::
+.. prompt:: bash $
 
     perl Makefile.PL && make && sudo prove -b t/dir/file.t
 
