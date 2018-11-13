@@ -14,7 +14,7 @@ Issues
 Please create a new branch for each issue. Also it would be a good idea
 to call the branch with the number of the issue and a short text, ie:
 
-::
+.. prompt:: bash $
 
     git checkout -b 77_crashonstart
 
