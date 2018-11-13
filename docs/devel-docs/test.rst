@@ -7,10 +7,10 @@ TEST::SQL::DATA module.
 
 In project root run:
 
-::
+.. prompt:: bash $
 
-    $ perl Makefile.PL
-    $ sudo make test 
+    perl Makefile.PL
+    sudo make test 
 
 At the end, in "Test Summary Report" you can check the result.
 
@@ -19,6 +19,6 @@ If something goes wrong you see: Result: FAIL
 Run a single test
 -----------------
 
-::
+.. prompt:: bash $
 
-    $ make && sudo prove -b t/lxc/*t
+    make && sudo prove -b t/lxc/*t
