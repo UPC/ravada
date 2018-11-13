@@ -530,7 +530,9 @@ sub test_domain_limit_allowed {
     is(scalar @list,2) or die Dumper([ map { $_->name } @list]);
 
     user_admin->revoke($user,'start_many');
-    $req = Ravada::Request->enforce_limits(timeout => 1);
+    is($user->can_start_many,0) or exit;
+
+    $req = Ravada::Request->enforce_limits(timeout => 1,_force => 1);
     rvd_back->_process_all_requests_dont_fork();
     sleep 1;
     rvd_back->_process_all_requests_dont_fork();
