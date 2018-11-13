@@ -87,7 +87,7 @@ Before committing, make sure it passes all the tests. This should be run
 specially when changing the *master* and *develop* branches. Notice some
 tests require *root* access, so it must run with *sudo*.
 
-::
+.. prompt:: bash $
 
     perl Makefile.PL && make && sudo make test
     
