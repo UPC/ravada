@@ -7,7 +7,7 @@ Operation
 Create users
 ------------
 
-::
+.. prompt:: bash
 
     sudo ./usr/sbin/rvd_back --add-user=username
 
@@ -19,7 +19,7 @@ Import KVM virtual machines
 Usually, virtual machines are created within ravada, but they can be
 imported from existing KVM domains. Once the domain is created :
 
-::
+.. prompt:: bash
 
     sudo ./usr/sbin/rvd_back --import-domain=a
 
@@ -33,7 +33,7 @@ lets you made different things (like changing the password for an user).
 
 If you want to view the full list, execute:
 
-::
+.. prompt:: bash
 
     sudo rvd_back --help
 
@@ -62,9 +62,9 @@ Option 1: clean ISO and MD5
 -  Remove the ISO file shown at the error message
 -  Clean the MD5 entry in the database:
 
-::
+.. prompt:: bash
 
-    $ mysql -u rvd_user -p ravada mysql > update iso_images set md5='' WHERE id=*ID*
+    mysql -u rvd_user -p ravada mysql > update iso_images set md5='' WHERE id=*ID*
 
 Then you have to create the machine again from scratch and make it
 download the ISO file.
@@ -76,15 +76,15 @@ If you followed *Option 1* and it still fails you may have an old
 version of the information in the *isoimages* table. Remove that entry
 and insert the data again:
 
-::
+.. prompt:: bash
 
-    $ mysql -u rvd_user -p ravada -e "DELETE FROM iso_images WHERE id=_ID_"
+    mysql -u rvd_user -p ravada -e "DELETE FROM iso_images WHERE id=_ID_"
 
 Insert the data from the SQL file installed with the package:
 
-::
+.. prompt:: bash
 
-    $ mysql -u rvd_user -p ravada -f < /usr/share/doc/ravada/sql/data/insert_iso_images.sql
+    mysql -u rvd_user -p ravada -f < /usr/share/doc/ravada/sql/data/insert_iso_images.sql
 
 It will report duplicated entry errors, but the removed row should be
 inserted again.
