@@ -26,10 +26,10 @@ Backup the Database
 As we are going to change the database, any mistake can be fatal. Backup before.
 If you want to have the data handy do it right now:
 
-::
+.. prompt:: bash #
 
-    # mysqldump -u root -p ravada domains > domains.sql
-    # mysqldump -u root -p ravada networks > networks.sql
+    mysqldump -u root -p ravada domains > domains.sql
+    mysqldump -u root -p ravada networks > networks.sql
 
 Define a Network
 ----------------
@@ -37,7 +37,7 @@ Define a Network
 You can allow kiosk mode from any network, but you can define a new network where
 this mode is allowed.
 
-::
+.. prompt:: bash #,(env)... auto
 
     # mysql -u root -p ravada
     mysql> insert into networks (name, address) values ('classroom','10.0.68.0/24');
