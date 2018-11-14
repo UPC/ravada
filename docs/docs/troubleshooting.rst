@@ -115,7 +115,7 @@ This is likely to happen when running Ravad in a Nested Virtual environment.
         </dhcp>
       </ip>
       
- Then reboot the whole system.
+Then reboot the whole system.
 
 Copy & paste integration does not work
 --------------------------------------
