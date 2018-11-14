@@ -38,7 +38,7 @@ Fedora and EPEL7
 
 You can install ravada using the 'dnf' package manager.
 
-::
+.. prompt:: bash $
 
     sudo dnf install ravada
     
@@ -46,7 +46,7 @@ Add link to kvm-spice
 ~~~~~~~~~~~~~~~~~~~~~
 This may change in the future but actually a link to kvm-spice is required. Create it this way:
 
-::
+.. prompt:: bash $
 
     ln -s /usr/bin/qemu-kvm /usr/bin/kvm-spice
 
@@ -55,13 +55,13 @@ MySQL server
 It is required a MySQL server, in Fedora we use MariaDB server. It can be
 installed in another host or in the same as the ravada package.
 
-::
+.. prompt:: bash $
 
     sudo dnf install mariadb mariadb-server
 
 And don't forget to enable and start the server process:
 
-::
+.. prompt:: bash $
 
     sudo systemctl enable --now mariadb.service
     sudo systemctl start mariadb.service
@@ -77,13 +77,13 @@ In this stage the system wants you to set a password for the sql connection.
 
 Create the database:
 
-::
+.. prompt:: bash $
 
     sudo mysqladmin -u root -p create ravada
 
 Grant all permissions on this database to the *rvd_user*:
 
-::
+.. prompt:: bash $
 
     sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
 
@@ -109,7 +109,7 @@ Add a new user for the ravada web. Use rvd\_back to create it. It will perform s
 
 When asked if this user is admin answer *yes*.
 
-::
+.. prompt:: bash $
 
     sudo /usr/sbin/rvd_back --add-user user.name
 
@@ -122,7 +122,7 @@ KVM should be using a virtual interface for the NAT domnains. Look what is the a
 
 First we try to find out what is the new internal network:
 
-::
+.. prompt:: bash $,,
 
     sudo route -n
     ...
@@ -130,13 +130,13 @@ First we try to find out what is the new internal network:
 
 So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
 
-::
+.. prompt:: bash $
 
     sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
 
 To confirm that the configuration was updated, check it with:
 
-::
+.. prompt:: bash $
 
     sudo iptables -S
 
