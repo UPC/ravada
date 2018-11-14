@@ -60,7 +60,7 @@ Then install the ravada package, it will show some errors, it is ok, keep readin
 The last command will show a warning about missing dependencies. Install
 them running:
 
-.. prompt:: bash $:
+.. prompt:: bash $
 
      sudo apt-get update
      sudo apt-get -f install
