@@ -62,7 +62,7 @@ in the database like this.
 First check the id field of the Virtual Manager in the table *vms*, then
 set a default *storage_pool* like this:
 
-.. prompt:: bash $,(env)... auto
+.. prompt:: bash $,(env)...$ auto
 
     mysql -u rvd_user -p ravada
     mysql> select * from vms;
@@ -80,7 +80,7 @@ First check the id field of the Virtual Manager in the table *vms*, then
 set the minimun of free available memory. In this example we require a
 minimun of 2 GB free:
 
-.. prompt:: bash $,(env)... auto
+.. prompt:: bash $,(env)...$ auto
 
     mysql -u rvd_user -p ravada
     mysql> select * from vms;
