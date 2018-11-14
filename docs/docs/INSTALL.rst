@@ -46,13 +46,13 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install *libmojolicious-plugin-renderfile-perl* package:
 
-::
+.. prompt:: bash $
 
      sudo apt-get install libmojolicious-plugin-renderfile-perl
 
 Then install the ravada package, it will show some errors, it is ok, keep reading.
 
-::
+.. prompt:: bash $
 
      wget http://infoteleco.upc.edu/img/debian/ravada_0.3.1_all.deb
      sudo dpkg -i ravada_0.3.1_all.deb
@@ -60,7 +60,7 @@ Then install the ravada package, it will show some errors, it is ok, keep readin
 The last command will show a warning about missing dependencies. Install
 them running:
 
-::
+.. prompt:: bash $:
 
      sudo apt-get update
      sudo apt-get -f install
@@ -75,13 +75,13 @@ MySQL server
 It is required a MySQL server, it can be installed in another host or in
 the same one as the ravada package.
 
-::
+.. prompt:: bash $
 
      sudo apt-get install mysql-server
     
 After completion of mysql installation, run command:
 
-::
+.. prompt:: bash $
 
      sudo mysql_secure_installation
 
@@ -97,13 +97,13 @@ In this stage the system wants you to set a password for the sql connection.
 
 Create the database:
 
-::
+.. prompt:: bash $
 
      sudo mysqladmin -u root -p create ravada
 
 Grant all permissions on this database to the *rvd_user*:
 
-::
+.. prompt:: bash $
 
      sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
 
@@ -129,7 +129,7 @@ Add a new user for the ravada web. Use rvd\_back to create it. It will perform s
 
 When asked if this user is admin answer *yes*.
 
-::
+.. prompt:: bash $
 
      sudo /usr/sbin/rvd_back --add-user user.name
 
