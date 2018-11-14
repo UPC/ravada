@@ -54,8 +54,8 @@ Then install the ravada package, it will show some errors, it is ok, keep readin
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_0.3.1_all.deb
-     sudo dpkg -i ravada_0.3.1_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_0.3.2_all.deb
+     sudo dpkg -i ravada_0.3.2_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
@@ -78,7 +78,7 @@ the same one as the ravada package.
 .. prompt:: bash $
 
      sudo apt-get install mysql-server
-    
+
 After completion of mysql installation, run command:
 
 .. prompt:: bash $
