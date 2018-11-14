@@ -35,7 +35,7 @@ Mount the new partition
 
 Add this new partition to the filesystem table:
 
-.. prompt:: bash $,$, 
+.. prompt:: bash $,(env)...$ auto
 
     sudo mkdir /var/lib/libvirt/images.2
     sudo vim /etc/fstab
