@@ -71,7 +71,7 @@ Create a database named "ravada". in this stage the system wants you to identify
 
 Grant all permissions to your user:
 
-.. prompt:: bash $,(env)...$ auto
+.. prompt:: bash $,(env)... auto
 
     mysql -u root -p
     mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'choose a password';
@@ -118,7 +118,7 @@ KVM should be using a virtual interface for the NAT domnains. Look what is the a
 
 First we try to find out what is the new internal network:
 
-.. prompt:: bash $,(env)...$ auto
+.. prompt:: bash $,(env)... auto
 
     sudo route -n
     ...
