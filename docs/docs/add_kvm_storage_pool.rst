@@ -20,43 +20,43 @@ only one primary partition for all the free space.
 
 Replace *sdX* by the real name of the new device:
 
-::
+.. prompt:: bash $
 
-    $ sudo fdisk /dev/sdX
+    sudo fdisk /dev/sdX
 
 Format it with large files tunning:
 
-::
+.. prompt:: bash $
 
-    $ sudo mkfs.ext4 -m 0.001 -T largefiles /dev/sdX1
+    sudo mkfs.ext4 -m 0.001 -T largefiles /dev/sdX1
 
 Mount the new partition
 -----------------------
 
 Add this new partition to the filesystem table:
 
-::
+.. prompt:: bash $,$, 
 
-    $ sudo mkdir /var/lib/libvirt/images.2
-    $ sudo vim /etc/fstab
+    sudo mkdir /var/lib/libvirt/images.2
+    sudo vim /etc/fstab
     /dev/sdb1   /var/lib/libvirt/images.2 ext4  auto    0   3
 
 It will mount it next time you boot, but it can be used without
 rebooting issuing:
 
-::
+.. prompt:: bash $
 
     sudo mount -a
 
 Add the drive to the Virtual Manager
 ------------------------------------
 
-::
+.. prompt:: bash $
 
-    $ sudo virsh pool-define-as pool2 dir - - - - /var/lib/libvirt/images.2
-    $ sudo virsh pool-autostart pool2
-    $ sudo virsh pool-start pool2
-    $ sudo virsh pool-list
+    sudo virsh pool-define-as pool2 dir - - - - /var/lib/libvirt/images.2
+    sudo virsh pool-autostart pool2
+    sudo virsh pool-start pool2
+    sudo virsh pool-list
  
 
 And that's it, now Ravada will use the pool that has more empty space
