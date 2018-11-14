@@ -13,10 +13,10 @@ The system shows this message on trying to start a virtual Machine:
 That means the host has no virtual capabilities or are disabled. Try
 running:
 
-::
+.. prompt:: bash
 
-    $ sudo tail -f /var/log/syslog
-    $ sudo modprobe kvm-intel
+    sudo tail -f /var/log/syslog
+    sudo modprobe kvm-intel
 
 If it shows a message like this it means the BIOS Virt feature must be
 enabled:
@@ -27,9 +27,9 @@ enabled:
     
 or try: kvm-ok command
 
-::
+.. prompt:: bash #
 
-    # kvm-ok
+    kvm-ok
     INFO: /dev/kvm does not exist
     HINT:   sudo modprobe kvm_intel
     INFO: Your CPU supports KVM extensions
@@ -106,9 +106,9 @@ This is likely to happen when running Ravad in a Nested Virtual environment.
 **Solution:** Change the KVM network definition. Edit the file `/etc/libvirt/qemu/networks/default.xml` and replace all the
  192.168.122 network instances by another one, ie: 192.168.123.
  
-::
+.. prompt:: bash $,(env)...$ auto
 
-     $ sudo virsh net-edit default
+     sudo virsh net-edit default
      <ip address='192.168.122.1' netmask='255.255.255.0'>
         <dhcp>
           <range start='192.168.122.2' end='192.168.122.254'/>
