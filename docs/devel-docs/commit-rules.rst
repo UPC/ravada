@@ -14,7 +14,7 @@ Issues
 Please create a new branch for each issue. Also it would be a good idea
 to call the branch with the number of the issue and a short text, ie:
 
-::
+.. prompt:: bash $
 
     git checkout -b 77_crashonstart
 
@@ -87,13 +87,13 @@ Before committing, make sure it passes all the tests. This should be run
 specially when changing the *master* and *develop* branches. Notice some
 tests require *root* access, so it must run with *sudo*.
 
-::
+.. prompt:: bash $
 
     perl Makefile.PL && make && sudo make test
     
 If you want to run only one test:
 
-::
+.. prompt:: bash $
 
     perl Makefile.PL && make && sudo prove -b t/dir/file.t
 
