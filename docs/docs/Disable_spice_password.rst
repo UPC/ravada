@@ -12,9 +12,9 @@ Define the network
 
 Define a network with no password setting the requires_password field to 0:
 
-::
+.. prompt:: bash #,(env)... auto
 
-    # mysql -u root -p ravada
+    mysql -u root -p ravada
     mysql> insert into networks (name, address, requires_password) values ('classroom','10.0.68.0/24', 0);
 
 Applying settings

@@ -24,10 +24,10 @@ enabled:
 ::
 
     kvm: disabled by bios
-    
+
 or try: kvm-ok command
 
-.. prompt:: bash #
+.. prompt:: bash #,(env)... auto
 
     kvm-ok
     INFO: /dev/kvm does not exist
@@ -81,7 +81,7 @@ Upgrade your MySQL server or change:  ``datetime`` for ``timestamp``
 ::
 
     date_send datetime default now(),
-    
+
 More information `about <https://stackoverflow.com/questions/36882149/error-1067-42000-invalid-default-value-for-created-at>`_.
 
 Spice-Warning Error in certificate chain verification
@@ -105,7 +105,7 @@ This is likely to happen when running Ravad in a Nested Virtual environment.
 
 **Solution:** Change the KVM network definition. Edit the file `/etc/libvirt/qemu/networks/default.xml` and replace all the
  192.168.122 network instances by another one, ie: 192.168.123.
- 
+
 .. prompt:: bash $,(env)...$ auto
 
      sudo virsh net-edit default
@@ -114,7 +114,7 @@ This is likely to happen when running Ravad in a Nested Virtual environment.
           <range start='192.168.122.2' end='192.168.122.254'/>
         </dhcp>
       </ip>
-      
+
 Then reboot the whole system.
 
 Copy & paste integration does not work
@@ -164,8 +164,8 @@ This is due to the parameter:
 
     <clock offset='utc'>  vs    <clock offset='localtime'>
 
-You can modify XML file from the command:  
+You can modify XML file from the command:
 
-::
+.. prompt:: bash #
 
     virsh edit <machine_name>

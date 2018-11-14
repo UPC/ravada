@@ -62,9 +62,9 @@ in the database like this.
 First check the id field of the Virtual Manager in the table *vms*, then
 set a default *storage_pool* like this:
 
-::
+.. prompt:: bash $,(env)... auto
 
-    $ mysql -u rvd_user -p ravada
+    mysql -u rvd_user -p ravada
     mysql> select * from vms;
     mysql> UPDATE vms set storage_pool='pool2' where id=*id*;
 
@@ -80,10 +80,8 @@ First check the id field of the Virtual Manager in the table *vms*, then
 set the minimun of free available memory. In this example we require a
 minimun of 2 GB free:
 
-::
+.. prompt:: bash $,(env)... auto
 
-    $ mysql -u rvd_user -p ravada
+    mysql -u rvd_user -p ravada
     mysql> select * from vms;
     mysql> update vms set min_free_memory=2000000 where id=*id*;
-
-

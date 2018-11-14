@@ -6,16 +6,16 @@ Host Qemu Agent Prerequisits
 
 Execute the following commands on your host:
 
-::
+.. prompt:: bash
 
-	$ sudo mkdir -p /var/lib/libvirt/qemu/channel/target
-	$ sudo chown -R libvirt-qemu:kvm /var/lib/libvirt/qemu/channel
+	sudo mkdir -p /var/lib/libvirt/qemu/channel/target
+	sudo chown -R libvirt-qemu:kvm /var/lib/libvirt/qemu/channel
 
 And edit the file /etc/apparmor.d/abstractions/libvirt-qemu adding the following in the end:
 
-::
+.. prompt:: bash
 
-	$ /var/lib/libvirt/qemu/channel/target/* rw,
+	/var/lib/libvirt/qemu/channel/target/* rw,
 
 
 
@@ -27,23 +27,23 @@ This installation must be done in your guest VM if you want to keep the correct 
 Ubuntu and Debian
 ~~~~~~~~~~~~~~~~~
 
-::
+.. prompt:: bash
 
-	$ sudo apt install qemu-guest-agent
+	sudo apt install qemu-guest-agent
 
 Fedora
 ~~~~~~
 
-::
+.. prompt:: bash
 
-	$ dnf install qemu-guest-agent
+	dnf install qemu-guest-agent
 
 RedHat and CentOS
 ~~~~~~~~~~~~~~~~~
 
-::
+.. prompt:: bash
 
-	$ yum install qemu-guest-agent
+	yum install qemu-guest-agent
 
 Windows
 ~~~~~~~
@@ -56,9 +56,9 @@ For VM's older than this functionality
 
 If you try to use this function on VM's created before this function was implemented you must do one thing to make it work, first open the machine xml:
 
-::
+.. prompt:: bash
 
-	$ virsh edit <name-or-id-of-your-machine>
+	virsh edit <name-or-id-of-your-machine>
 
 And add the following inside the 'devices' section:
 

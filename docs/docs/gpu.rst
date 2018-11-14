@@ -7,15 +7,15 @@ We are going to use Single Root I/O Virtualization (SR-IOV).
 To begin we add a second graphic card to the server, as can be seen below. We have Intel embeded and one AMD PCI card
 We have an integrated graphic card and an AMD PCI.
 
-::
+.. prompt:: bash $,(env)... auto
 
-	$ lspci | grep VGA
+	lspci | grep VGA
 	00:02.0 VGA compatible controller: Intel Corporation HD Graphics 530 (rev 06)
 	01:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Oland GL [FirePro W2100]
 
-::
+.. prompt:: bash $,(env)... auto
 
-	$ lspci -nn | grep 01:00.
+	lspci -nn | grep 01:00.
 	01:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Oland GL [FirePro W2100] [1002:6608]
 	01:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Cape Verde/Pitcairn HDMI Audio [Radeon HD 7700/7800 Series] [1002:aab0]
 
@@ -44,9 +44,9 @@ Then add these additional drivers to ``/etc/modules``:
 	vfio_pci
 	vhost-net
 
-And update ``initramfs``: 
+And update ``initramfs``:
 
-::
+.. prompt:: bash
 
 	update-initramfs -u
 
@@ -55,7 +55,7 @@ Verification
 
 Reboot and try:
 
-::
+.. prompt:: bash
 
 	lsmod | grep vfio
 	dmesg | grep pci-stub
@@ -81,7 +81,7 @@ TODO more information about https://wiki.debian.org/VGAPassthrough
 
 More detail
 -----------
-Intel 
+Intel
 
 ::
 

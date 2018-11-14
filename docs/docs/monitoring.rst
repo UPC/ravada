@@ -1,4 +1,4 @@
-Server Monitoring 
+Server Monitoring
 =================
 
 From VM settings tab you can see the VM system overview:
@@ -18,25 +18,25 @@ Server monitoring is disabled for default. In order to support Ravada server mon
 Install my-netdata.io
 ---------------------
 
-Follow this steps from `my-netdata.io <https://github.com/firehol/netdata/wiki/Installation>`_ 
+Follow this steps from `my-netdata.io <https://github.com/firehol/netdata/wiki/Installation>`_
 
 or execute this on a terminal:
 
-::
+.. prompt:: bash #
 
-    # bash <(curl -Ss https://my-netdata.io/kickstart-static64.sh)
+    bash <(curl -Ss https://my-netdata.io/kickstart-static64.sh)
 
 Linux 64bit, pre-built static binary installation for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
- 
+
 Apache config for netdata with SSL
 ----------------------------------
 
 Enable SSL and proxy in apache:
 
-::
+.. prompt:: bash #
 
-    # a2enmod proxy_http proxy ssl
-    # a2ensite default-ssl
+    a2enmod proxy_http proxy ssl
+    a2ensite default-ssl
 
 
 In ``/opt/netdata/etc/netdata/netdata.conf`` add:
@@ -73,15 +73,15 @@ and adding a new virtualhost for port 19999 in ``/etc/apache2/sites-available/de
                 SSLCertificateKeyFile /etc/ssl/private/server.key
                 SSLCertificateChainFile /etc/ssl/certs/ca.crt
    </VirtualHost>
-   
+
 .. warning ::  Be careful with self-signed certificates. The browser needs to accept the certificate. We recommend the use of `Let's Encrypt <https://letsencrypt.org/>`_ or your trusted SSL provider.
 
 Then restart netdata and apache:
 
-::
+.. prompt:: bash #
 
-    # systemctl restart apache2
-    # systemctl restart netdata
+    systemctl restart apache2
+    systemctl restart netdata
 
 Thanks to `@jlopezramos <https://github.com/jlopezramos>`_ for this contribution.
 
@@ -94,19 +94,19 @@ Monitoring is disabled by default. Add in ``/etc/rvd_front.conf`` file:
 
     monitoring => 1
 
-Restart rvd_front service: 
+Restart rvd_front service:
 
-::
-    
+.. prompt:: bash #
+
     systemctl restart rvd_front.service
-    
+
 Tunning netdata
 ---------------
 
 Disable mail alarms
 ~~~~~~~~~~~~~~~~~~~
 
-Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` or ``/etc/netdata/health_alarm_notify.conf`` and set 
+Edit the file ``/opt/netdata/etc/netdata/health_alarm_notify.conf`` or ``/etc/netdata/health_alarm_notify.conf`` and set
 
 ::
 
@@ -142,7 +142,7 @@ Edit the file ``/opt/netdata/etc/netdata/netdata.conf``:
      send names instead of ids = yes
      send charts matching = *
      send hosts matching = localhost *
-     
+
 Graphana
 --------
 

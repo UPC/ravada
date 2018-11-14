@@ -7,11 +7,11 @@ have a development release of Ravada.
 Install Modules
 ---------------
 
-::
+.. prompt:: bash
 
-    $ sudo apt-get install libtest-spelling-perl
-    $ sudo apt-get install cpanminus
-    $ sudo cpanm Auth::ActiveDirectory
+    sudo apt-get install libtest-spelling-perl
+    sudo apt-get install cpanminus
+    sudo cpanm Auth::ActiveDirectory
 
 Configure Ravada
 ----------------

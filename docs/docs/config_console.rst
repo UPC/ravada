@@ -4,17 +4,17 @@ How to enable KVM virsh console access
 From Debian / Ubuntu guest
 --------------------------
 
-::
-    
-    $ sudo systemctl enable serial-getty@ttyS0.service
-    $ sudo systemctl start serial-getty@ttyS0.service
+.. prompt:: bash
+
+    sudo systemctl enable serial-getty@ttyS0.service
+    sudo systemctl start serial-getty@ttyS0.service
 
 From KVM server
 ---------------
 
-::
+.. prompt:: bash $,(env)...$ auto
 
-    $ virsh list
+    virsh list
     Id    Name                           State
     ----------------------------------------------------
     1     freebsd                        running
@@ -22,15 +22,15 @@ From KVM server
     3     ubuntu-box2                    running
 
 Type the following command from KVM host to login to the guest named ubuntu-box1
-    
-::
-    
-    $ virsh console ubuntu-box1
+
+.. prompt:: bash
+
+    virsh console ubuntu-box1
 
 OR
 
-::
+.. prompt:: bash
 
-    $ virsh console 2
+    virsh console 2
 
 Use ``CTRL + 5`` to exit the console.
