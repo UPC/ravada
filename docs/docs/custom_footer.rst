@@ -31,6 +31,6 @@ Restart frontend
 
 Finally restart rvd\_front:
 
-::
+.. prompt:: bash
 
-    $ sudo systemctl restart rvd_front
+    sudo systemctl restart rvd_front
