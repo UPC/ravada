@@ -122,7 +122,7 @@ KVM should be using a virtual interface for the NAT domnains. Look what is the a
 
 First we try to find out what is the new internal network:
 
-.. prompt:: bash $
+.. prompt:: bash $,(env)...$ auto
 
     sudo route -n
     ...
