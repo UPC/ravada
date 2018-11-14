@@ -18,41 +18,41 @@ There are two services to start and stop the two ravada daemons:
 After install or upgrade you may have to refresh the systemd service
 units:
 
-::
+.. prompt:: bash $
 
-    $ sudo systemctl daemon-reload
+    sudo systemctl daemon-reload
 
 Check the services are enabled to run at startup
 
-::
+.. prompt:: bash $
 
-    $ sudo systemctl enable rvd_back
-    $ sudo systemctl enable rvd_front
+    sudo systemctl enable rvd_back
+    sudo systemctl enable rvd_front
 
 Start
 ~~~~~
 
-::
+.. prompt:: bash $
 
-    $ sudo systemctl start rvd_back
-    $ sudo systemctl start rvd_front
+    sudo systemctl start rvd_back
+    sudo systemctl start rvd_front
 
 Status
 ~~~~~~
 You should check if the daemons started right the very first time with the status command. See troubleshooting frequently problems if it failed to start.
 
-::
+.. prompt:: bash $
     
-    $ sudo systemctl status rvd_back
-    $ sudo systemctl status rvd_front
+    sudo systemctl status rvd_back
+    sudo systemctl status rvd_front
 
 Stop
 ~~~~
 
-::
+.. prompt:: bash $
 
-    $ sudo systemctl stop rvd_back
-    $ sudo systemctl stop rvd_front
+    sudo systemctl stop rvd_back
+    sudo systemctl stop rvd_front
 
 
 
