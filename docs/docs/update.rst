@@ -17,9 +17,9 @@ Step 2
 
 Install the *deb* package.
 
-::
+.. prompt:: bash
 
-    $ sudo dpkg -i <deb file>
+    sudo dpkg -i <deb file>
 
 On some upgrades may be required to install some dependencies. You will see
 because the packaging system will warn about it:
@@ -33,9 +33,9 @@ because the packaging system will warn about it:
 
 If so, install those dependencies automatically running:
 
-::
+.. prompt:: bash
 
-    $ sudo apt-get -f install
+    sudo apt-get -f install
 
 
 Step 3 
@@ -43,16 +43,16 @@ Step 3
 
 Reconfigurate the systemd.
 
-::
+.. prompt:: bash
 
-    $ sudo systemctl daemon-reload
+    sudo systemctl daemon-reload
 
 Step 4
 ~~~~~~
 
 Restart the services.
 
-::
+.. prompt:: bash
 
-    $ sudo systemctl restart rvd_back
-    $ sudo systemctl restart rvd_front
+    sudo systemctl restart rvd_back
+    sudo systemctl restart rvd_front
