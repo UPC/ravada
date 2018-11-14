@@ -31,8 +31,8 @@ remove the swap partitions and the swap configuration in ``/etc/fstab``.
 Some software on Linux requires some swap to run. If so, set the
 *swappiness* to the minimun this way:
 
-::
+.. prompt:: bash
 
-    $ sudo sysctl vm.swappiness=1
+    sudo sysctl vm.swappiness=1
 
 To make this change permanent add it to the file: ``/etc/sysctl.conf``
