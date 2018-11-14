@@ -13,6 +13,11 @@ source_suffix = '.rst'
 # The master toctree document.
 master_doc = 'index'
 
+# General information about the project.
+project = u'RavadaVDI'
+copyright = u'2018, RavadaVDI'
+author = u'Ravada Team'
+
 # Language to be used for generating the HTML full-text search index.
 # Sphinx supports the following languages:
 #   'da', 'de', 'en', 'es', 'fi', 'fr', 'hu', 'it', 'ja'
