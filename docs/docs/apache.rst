@@ -3,25 +3,25 @@ Run Hypnotoad service and Apache as a proxy for it.
 Install Apache
 --------------
 
-::
+.. prompt:: bash #
 
-    # apt-get install apache2
+    apt-get install apache2
 
 Enable apache modules
 ---------------------
 
-::
+.. prompt:: bash #
 
-    # a2enmod ssl proxy proxy_http proxy_connect
+    a2enmod ssl proxy proxy_http proxy_connect
 
 Apache Proxy Configuration
 --------------------------
 
 Link the https configuration and add the proxy lines.
 
-::
+.. prompt:: bash #
 
-    # a2ensite default-ssl
+    a2ensite default-ssl
 
 Edit /etc/apache2/sites-enabled/default-ssl.conf
 
