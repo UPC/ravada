@@ -4,7 +4,7 @@ Local JS and CSS files instead CDN
 Local vs CDN this is the question. 
 For default we used CDN, it's better, but in some specific cases it may be useful to have the libraries JS and CSS locally.
 
-You need to install `yarn <https://yarnpkg.com/en/docs/install#debian-stable>`_ and add the repository.
+You need to `install yarn <https://yarnpkg.com/en/docs/install#debian-stable>`_ and add the repository.
 
 .. note::  Ubuntu 18.04 comes with cmdtest installed by default, and yarn is and old version (0.32 vs 1.7) better add the repository from `yarnpkg.com <https://yarnpkg.com/en/docs/install#debian-stable>`_. 
 

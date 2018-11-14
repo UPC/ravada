@@ -25,6 +25,7 @@ or execute this on a terminal:
 ::
 
     # bash <(curl -Ss https://my-netdata.io/kickstart-static64.sh)
+
 Linux 64bit, pre-built static binary installation for any Linux distro, any kernel version - for Intel/AMD 64bit hosts.
  
 Apache config for netdata with SSL
