@@ -43,9 +43,9 @@ This is the ``cdrom`` disk drive, remove it too.
 
 Remove also the SWAP image file:
 
-::
+.. prompt:: bash
 
-    $ sudo rm /var/lib/libvirt/images-celerra1/EXAMPLE-_G_m.SWAP.img
+    sudo rm /var/lib/libvirt/images-celerra1/EXAMPLE-_G_m.SWAP.img
 
 Convert the image file
 ----------------------
@@ -57,9 +57,9 @@ This converted image wil be used by the empty virtual machine that was created b
 DIRECTLY VDI TO QCOW2
 ~~~~~~~~~~~~~~~~~~~~~
 
-::
+.. prompt:: bash
 
-    $ qemu-img convert -p -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
+    qemu-img convert -p -f vdi -O qcow2 EXAMPLE.vdi EXAMPLE.qcow2
 
 OR IN TWO STEPS
 ~~~~~~~~~~~~~~~
@@ -67,9 +67,9 @@ OR IN TWO STEPS
 1. Convert to raw
 ~~~~~~~~~~~~~~~~~
 
-::
+.. prompt:: bash
 
-    $ VBoxManage clonehd --format RAW EXAMPLE.vdi EXAMPLE.img
+    VBoxManage clonehd --format RAW EXAMPLE.vdi EXAMPLE.img
 
 2. Convert to qcow2
 ~~~~~~~~~~~~~~~~~~~
@@ -77,6 +77,6 @@ OR IN TWO STEPS
 Convert to qcow2 using the name you saw before in the *XML* definition
 of the machine:
 
-::
+.. prompt:: bash
 
-    $ sudo qemu-img convert -p -f raw EXAMPLE.vdi -O qcow2 /var/lib/libvirt/images/EXAMPLE-vda-id8Q.img
+    sudo qemu-img convert -p -f raw EXAMPLE.vdi -O qcow2 /var/lib/libvirt/images/EXAMPLE-vda-id8Q.img
