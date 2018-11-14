@@ -10,18 +10,27 @@ Expanding a Windows 10 guest
 Here we will show how to expand the system partition of a Windows 10 host by 10 GB.
 
 First, retrieve the path to the hard drive file that you want to resize. For a VM named ``Windows10Slim``, we would do the following:
+
 ::
+
   virsh dumpxml Windows10Slim
+
 Here is our image file:
+
 ::
+
   <source file='/var/lib/libvirt/images-celerra1/Windows10Slim-vda-UrQ2.img'/>
 
 As we want to expand a certain partition, the system one, we must find it first
+
 ::
+
   virt-filesystems --long --parts --blkdevs -h -a /var/lib/libvirt/images-celerra1/Windows10Slim-vda-UrQ2.img
 
 The output will look like this:
+
 ::
+
   Name       Type       MBR  Size  Parent
   /dev/sda1  partition  -    500M  /dev/sda
   /dev/sda2  partition  07   20G   /dev/sda
@@ -30,17 +39,26 @@ The output will look like this:
 And that means we are going to resize ``/dev/sda2`` in this example.
 
 Use qemu-img to create a new qcow2 hard drive file. As we want to add 10 GB, the resulting disk will be a 30 GB file
+
 ::
-  qemu-img create -f qcow2 -o preallocation=metadata /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img 30G
+
+    qemu-img create -f qcow2 -o preallocation=metadata /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img 30G
+
 Now virt-resize will expand the image into the new file
+
 ::
- virt-resize --expand /dev/sda2 /var/lib/libvirt/images-celerra1/Windows10Slim-vda-UrQ2.img /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
+
+    virt-resize --expand /dev/sda2 /var/lib/libvirt/images-celerra1/Windows10Slim-vda-UrQ2.img /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
+
 With virsh we can point the VM to use the newly created image
+
 ::
-  virsh edit Windows10Slim
+
+    virsh edit Windows10Slim
 
 
 Finally, fix permissions
+
 ::
-  chown libvirt-qemu:kvm /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
-  chmod 600 /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
+    chown libvirt-qemu:kvm /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img
+    chmod 600 /var/lib/libvirt/images.2/Windows10Slim-vda-UrQ3.img

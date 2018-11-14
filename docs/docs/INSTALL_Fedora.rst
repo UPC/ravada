@@ -34,7 +34,7 @@ Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
 if you are only upgrading Ravada from a previous version already installed.
 
 Fedora and EPEL7
-------
+----------------
 
 You can install ravada using the 'dnf' package manager.
 

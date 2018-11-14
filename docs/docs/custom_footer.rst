@@ -1,5 +1,5 @@
 Create a custom footer template
-==============================
++==============================
 
 If you need custom footer template create one and save it in ``/usr/share/ravada/templates/main/custom/``, e.g. ``custom/custom_footer.html.ep``
 
