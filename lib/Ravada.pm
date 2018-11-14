@@ -2375,7 +2375,8 @@ sub _cmd_prepare_base {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
-    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    my $user = Ravada::Auth::SQL->search_by_id( $uid)
+        or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
     my $domain = $self->search_domain_by_id($id_domain);
 

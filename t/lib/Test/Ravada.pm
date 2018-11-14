@@ -1206,7 +1206,8 @@ sub connector {
     return $connector;
 }
 
-sub END {
+# this must be in DESTROY because users got removed in END
+sub DESTROY {
     remove_old_user() if $CONNECTOR;
     remove_old_user_ldap() if $CONNECTOR;
 }

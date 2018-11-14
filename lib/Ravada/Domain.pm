@@ -1171,11 +1171,6 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         my $domain = $vm->search_domain($domain_name) or next;
         $domain->remove($user, $cascade);
     }
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM access_ldap_attribute"
-        ." WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
 }
 
 sub _remove_access_attributes_db($self) {
