@@ -10,15 +10,15 @@ first place it inside the KVM directory:
 
 Then you have to tell the storage engine that you changed a file manually.
 
-::
+.. prompt:: bash $,(env)...$ auto
 
-    $ sudo virsh pool-list
+    sudo virsh pool-list
      Name                 State      Autostart
      -------------------------------------------
      default              active     yes
      pool2                active     yes
-    $ sudo virsh pool-refresh default
-    $ sudo virsh pool-refresh pool2
+    sudo virsh pool-refresh default
+    sudo virsh pool-refresh pool2
  
 Reload the *new machine* form so the file you just uploaded shows up in the ISO list.
 
@@ -32,9 +32,9 @@ If you want to include a KVM templated instead, use this `guide <http://ravada.r
 
 If you need the xml or the volume (for when you wanna add a new template), you can extract them via virsh using the following commands:
 
-::
+.. prompt:: bash
 
-    $ sudo virsh pool-list #in order to see the list of available pools
-    $ sudo virsh vol-list default #in order to see the list of volumes available
-    $ sudo virsh vol-dumpxml --pool default name_of_the_existing_machine.qcow2 #obtain the dump of a selected volume
-    $ sudo virsh dumpxml name_of_the_existing_machine #obtain the xml of a existing selected machine
+    sudo virsh pool-list #in order to see the list of available pools
+    sudo virsh vol-list default #in order to see the list of volumes available
+    sudo virsh vol-dumpxml --pool default name_of_the_existing_machine.qcow2 #obtain the dump of a selected volume
+    sudo virsh dumpxml name_of_the_existing_machine #obtain the xml of a existing selected machine
