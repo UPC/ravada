@@ -502,15 +502,15 @@ sub _update_isos {
           ,min_disk_size => '21'
         }
        ,empty_32bits => {
-          name => 'Empty Machine 32bits'
-          ,description => 'Empty Machine 32bits Boot PXE'
+          name => 'Empty Machine 32 bits'
+          ,description => 'Empty Machine 32 bits Boot PXE'
           ,xml => 'empty-i386.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
         }
        ,empty_64bits => {
-          name => 'Empty Machine 64bits'
-          ,description => 'Empty Machine 64bits Boot PXE'
+          name => 'Empty Machine 64 bits'
+          ,description => 'Empty Machine 64 bits Boot PXE'
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
