@@ -1,5 +1,5 @@
 <domain type='kvm' id='26'>
-  <name>test-net-boot</name>
+  <name>empty-i386</name>
   <uuid>1805fb4f-ca45-aaaa-bbbb-94124e739131</uuid>
   <memory unit='KiB'>1048576</memory>
   <currentMemory unit='KiB'>1048576</currentMemory>

@@ -508,8 +508,13 @@ sub _update_isos {
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
         }
-
-
+       ,empty_64bits => {
+          name => 'Empty Machine 64bits'
+	 ,description => 'Empty Machine 64bits Boot PXE'
+         ,xml => 'empty-amd64.xml'
+         ,xml_volume => 'jessie-volume.xml'
+	 ,min_disk_size => '0'
+        }
     );
 
     $self->_update_table($table, $field, \%data);
