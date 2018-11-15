@@ -1530,17 +1530,18 @@ sub remove_domain {
 
     lock_hash(%arg);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name = ?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
     $sth->execute($name);
 
-    my ($id)= $sth->fetchrow;
+    my ($id,$vm_type)= $sth->fetchrow;
     confess "Error: Unknown domain $name"   if !$id;
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
-    my $domain = Ravada::Domain->open(id => $id, _force => 1)
+    my $vm = Ravada::VM->open(type => $vm_type);
+    my $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id)
         or do {
             warn "Warning: I can't find domain '$id', maybe already removed.";
             $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
@@ -1558,19 +1559,30 @@ sub remove_domain {
 =cut
 
 sub search_domain($self, $name, $import = 0) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_vm "
-        ." FROM domains WHERE name=?");
+    my $query =
+         "SELECT d.id, d.id_vm "
+        ." FROM domains d LEFT JOIN vms "
+        ."      ON d.id_vm = vms.id "
+        ." WHERE "
+        ."    d.name=? "
+        ;
+    my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute($name);
-    my ($id, $id_vm) = $sth->fetchrow();
+    my ($id, $id_vm ) = $sth->fetchrow();
 
     return if !$id;
     if ($id_vm) {
-        my $vm = Ravada::VM->open($id_vm);
-        if (!$vm->is_active) {
-            warn "Don't search domain $name in inactive VM ".$vm->name;
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        warn $@ if $@;
+        if ( $vm && !$vm->is_active) {
             $vm->disconnect();
-        } else {
-            return $vm->search_domain($name);
+        }
+        if ($vm && $vm->is_active ) {
+            my $domain;
+            eval { $domain = $vm->search_domain($name)};
+            warn $@ if $@;
+            return $domain if $domain;
         }
     }
 #    for my $vm (@{$self->vm}) {
@@ -2027,10 +2039,11 @@ sub _domain_working {
         if (!$id_domain) {
             my $domain_name = $req->defined_arg('name');
             return if !$domain_name;
-            my $domain = $self->search_domain($domain_name) or return;
-            $id_domain = $domain->id;
+            my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+            $sth->execute($domain_name);
+            ($id_domain) = $sth->fetchrow;
             if (!$id_domain) {
-                warn Dumper($req);
+                # TODO: maybe this request should be marked down because domain already removed
                 return;
             }
         }
@@ -2281,7 +2294,6 @@ sub _cmd_remove {
         if !defined $request->args->{uid};
 
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
-
 }
 
 sub _cmd_pause {
@@ -2650,6 +2662,10 @@ sub _cmd_refresh_vms($self, $request=undef) {
     if ($request && (my $id_recent = $request->done_recently(30))) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
+
+    $self->_refresh_disabled_nodes( $request );
+    $self->_refresh_down_nodes( $request );
+
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
@@ -2702,8 +2718,8 @@ sub _refresh_active_domains($self, $request=undef) {
     for my $vm ($self->list_vms) {
         $request->status('working',"checking active domains on ".$vm->name)
             if $request;
-        next if !$vm->enabled();
-        if ( !$vm->is_active ) {
+        if ( !$vm->enabled() || !$vm->is_active ) {
+            $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
             next;
@@ -2721,6 +2737,32 @@ sub _refresh_active_domains($self, $request=undef) {
         }
     }
     return \%active_domain, \%active_vm;
+}
+
+sub _refresh_down_nodes($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        $vm = Ravada::VM->open($id);
+    }
+}
+
+sub _refresh_disabled_nodes($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name, vms.name FROM domains d, vms "
+        ." WHERE d.id_vm = vms.id "
+        ."    AND ( vms.enabled = 0 || vms.is_active = 0 )"
+        ."    AND d.status = 'active'"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $domain_name, $vm_name) = $sth->fetchrow ) {
+        Ravada::Request->shutdown_domain( id_domain => $id_domain, uid => Ravada::Utils::user_daemon->id);
+        $request->status("Shutting down domain $domain_name in disabled node $vm_name");
+    }
+    $sth->finish;
 }
 
 sub _refresh_active_domain($self, $vm, $domain, $active_domain) {

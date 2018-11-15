@@ -154,6 +154,7 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 256*1024
+                    , disk => 256 * 1024 * 1024
            );
     };
     is($@,'');
@@ -729,7 +730,7 @@ sub clean_remote_node {
 
     _remove_old_domains_vm($node);
     _remove_old_disks($node);
-    flush_rules_node($node)  if !$node->is_local();
+    flush_rules_node($node)  if !$node->is_local() && $node->is_active;
 }
 
 sub _remove_old_disks {

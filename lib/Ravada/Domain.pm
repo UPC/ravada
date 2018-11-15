@@ -195,7 +195,7 @@ around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
-around 'is_active' => \&_around_is_active;
+around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
@@ -314,6 +314,9 @@ sub _start_preconditions{
         }
         $self->_balance_vm();
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
+    } elsif (!$self->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
@@ -330,7 +333,12 @@ sub _search_already_started($self) {
         my $vm = Ravada::VM->open($id);
         next if !$vm->is_enabled || !$vm->is_active;
 
-        my $domain = $vm->search_domain($self->name);
+        my $domain;
+        eval { $domain = $vm->search_domain($self->name) };
+        if ( $@ ) {
+            warn $@;
+            next;
+        }
         next if !$domain;
         if ( $domain->is_active || $domain->is_hibernated ) {
             $self->_set_vm($vm,'force');
@@ -419,7 +427,7 @@ sub _allow_remove($self, $user) {
         && $self->id_base
         && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
-        my $base = $self->open($self->id_base);
+        my $base = $self->open(id => $self->id_base, id_vm => $self->_vm->id);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
 
@@ -773,13 +781,16 @@ sub open($class, @args) {
     my $readonly = 0;
     my $id_vm;
     my $force;
-
+    my $vm;
     if (scalar @args > 1) {
         my %args = @args;
         $id = delete $args{id} or confess "ERROR: Missing field id";
         $readonly = delete $args{readonly} if exists $args{readonly};
         $id_vm = delete $args{id_vm};
         $force = delete $args{_force};
+        $vm = delete $args{vm};
+        confess "ERROR: id_vm and vm don't match. ".($vm->name." id: ".$vm->id)
+            if $id_vm && $vm && $vm->id != $id_vm;
         confess "ERROR: Unknown fields ".join(",", sort keys %args)
             if keys %args;
     }
@@ -797,27 +808,39 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-    my $vm;
-    my $vm_local = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm_local, $vm_class;
 
-    if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
-        $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+    if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
+        eval {
+            $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
                 , readonly => $readonly);
+        };
+        if ($@ && $@ =~ /I can't find VM id=/) {
+            $vm = Ravada::VM->open( type => $self->type );
+        }
     }
-    if (!$vm || !$vm->is_active) {
+    my $vm_local;
+    if (!$vm || !$vm->is_active || !$vm->enabled) {
+        $vm_local = {};
+        my $vm_class = "Ravada::VM::".$row->{vm};
+        bless $vm_local, $vm_class;
+
         $vm = $vm_local->new( );
     }
-
     my $domain = $vm->search_domain($row->{name}, $force);
     if ( !$domain ) {
         return if $vm->is_local;
+
+        if (!$vm_local) {
+            $vm_local = {};
+            my $vm_class = "Ravada::VM::".$row->{vm};
+            bless $vm_local, $vm_class;
+        }
+
         $vm = $vm_local->new();
         $domain = $vm->search_domain($row->{name}, $force) or return;
     }
     if (!$id_vm) {
-        $domain->_search_already_started();
+        $domain->_search_already_started() if !$domain->is_base;
         $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
@@ -1131,11 +1154,27 @@ sub _pre_remove_domain($self, $user, @) {
     warn $@ if $@;
 
     $self->_allow_remove($user);
+    $self->_check_active_node();
+
     $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks()         if ($self->is_known && $self->is_known_extra)
     || $self->domain ;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+}
+
+sub _check_active_node($self) {
+    return $self->_vm if $self->_vm->is_active(1);
+
+    for my $node ($self->_vm->list_nodes) {
+        next if !$node->is_local;
+
+        $self->_vm($node);
+        $self->domain($node->search_domain_by_id($self->id)->domain);
+        last;
+    }
+    return $self->_vm;
+
 }
 
 sub _after_remove_domain {
@@ -1168,8 +1207,9 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
-        my $domain = $vm->search_domain($domain_name) or next;
-        $domain->remove($user, $cascade);
+        my $domain;
+        eval { $domain = $vm->search_domain($domain_name) };
+        $domain->remove($user, $cascade) if $domain;
     }
 }
 
@@ -1588,6 +1628,7 @@ sub _pre_shutdown {
 
     $self->_allow_shutdown(@_);
 
+    $self->_vm->connect;
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
@@ -1602,7 +1643,7 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables();
+    $self->_remove_iptables() if $self->_vm->is_active;
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
 
@@ -1650,7 +1691,15 @@ sub _post_shutdown {
 
 sub _around_is_active($orig, $self) {
     return 0 if $self->is_removed;
-    my $is_active = $self->$orig();
+
+    if (!$self->_vm) {
+        return 1 if $self->_data('status') eq 'active';
+        return 0;
+    }
+
+    my $is_active = 0;
+    $is_active = $self->$orig() if $self->_vm->is_active;
+
     return $is_active if $self->readonly
         || !$self->is_known
         || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
@@ -1664,11 +1713,18 @@ sub _around_is_active($orig, $self) {
     return $is_active;
 }
 
+sub _around_is_hibernated($orig, $self) {
+    return if $self->_vm && !$self->_vm->is_active;
+
+    return $self->$orig();
+}
+
 sub _around_shutdown_now {
     my $orig = shift;
     my $self = shift;
     my $user = shift;
 
+    $self->_vm->connect;
     $self->list_disks;
     $self->_pre_shutdown(user => $user);
     if ($self->is_active) {
@@ -1897,6 +1953,8 @@ sub _add_iptable {
 
 sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
 
+    return if !$vm->is_active;
+
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
@@ -1918,7 +1976,8 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
            && ( $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count);
+           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count)
+                if $vm->is_active;
            $removed++;
            $count--;
         }
@@ -2603,7 +2662,7 @@ sub rsync($self, @args) {
                 ." are both local "
                     if $self->_vm->is_local;
         $self->_vm->_connect_ssh()
-            or confess "No Connection to ".$node->host;
+            or confess "No Connection to ".$self->_vm->host;
     } else {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
@@ -2644,7 +2703,7 @@ sub _rsync_volumes_back($self, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
-    $self->_check_equal_storage_pools($node);
+    $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     return if !$self->id_base;
 

@@ -190,9 +190,11 @@ sub test_iptables_close($vm, $node) {
 
 sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     my $clone_local = $base->clone(name => new_domain_name, user => user_admin);
-    $clone_local->migrate($vm) if $clone_local->_vm->id != $vm->id;
+    #TODO: add a flag in start to force node to start in
+    $clone_local->{_migrated} = 1;
     my $clone_remote= $base->clone(name => new_domain_name, user => user_admin);
     $clone_remote->migrate($node);
+
     $clone_local->start(user => user_admin, remote_ip => $ip_local);
     $clone_remote->start(user => user_admin, remote_ip => $ip_remote);
 

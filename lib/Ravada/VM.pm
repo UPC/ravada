@@ -24,6 +24,8 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+use Ravada::Utils;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -255,13 +257,18 @@ sub _connect_ssh($self, $disconnect=0) {
         $ssh = Net::SSH2->new( timeout => $SSH_TIMEOUT );
         my $connect;
         for ( 1 .. 3 ) {
-            $connect = $ssh->connect($self->host);
+            eval { $connect = $ssh->connect($self->host) };
             last if $connect;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
             sleep 1;
         }
-        $connect = $ssh->connect($self->host)   if !$connect;
-        confess $ssh->error()   if !$connect;
+        if ( !$connect) {
+            eval { $connect = $ssh->connect($self->host) };
+            if (!$connect) {
+                $self->_cached_active(0);
+                confess $ssh->error();
+            }
+        }
         $ssh->auth_publickey( 'root'
             , "$home/.ssh/id_rsa.pub"
             , "$home/.ssh/id_rsa"
@@ -834,7 +841,6 @@ sub ping($self, $option=undef) {
 
     return 1 if $self->is_local();
 
-    warn "trying tcp"   if $debug;
     my $p = Net::Ping->new('tcp',2);
     my $ping_ok;
     eval { $ping_ok = $p->ping($self->host) };
@@ -863,12 +869,22 @@ sub _around_ping($orig, $self, $option=undef) {
 
 =head2 is_active
 
-Returns if the domain is active.
+Returns if the domain is active. The active state is cached for some seconds.
+Pass an optional true value to perform a real check.
+
+Arguments: optional force mode
+
+    if ($node->is_active) {
+    }
+
+
+    if ($node->is_active(1)) {
+    }
 
 =cut
 
-sub is_active($self) {
-    return $self->_do_is_active() if $self->is_local;
+sub is_active($self, $force=0) {
+    return $self->_do_is_active() if $self->is_local || $force;
 
     return $self->_cached_active if time - $self->_cached_active_time < 60;
     return $self->_do_is_active();
@@ -909,12 +925,12 @@ Returns if the domain is enabled.
 
 =cut
 
-sub enabled($self) {
-    return $self->_data('enabled');
+sub enabled($self, $value=undef) {
+    return $self->_data('enabled', $value);
 }
 
-sub is_enabled($self) {
-    return $self->enabled();
+sub is_enabled($self, $value=undef) {
+    return $self->enabled($value);
 }
 
 =head2 remove
@@ -1061,9 +1077,14 @@ sub balance_vm($self, $base=undef) {
     my %vm_list;
     for my $vm ($self->list_nodes) {
         next if !$vm->enabled();
-        next if !$vm->is_active || $vm->free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
-        my $key = scalar($vm->list_domains(active => 1)).".".$vm->free_memory;
+        next if !$vm->is_active();
+
+        my $free_memory = $vm->free_memory;
+        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+
+        my $key = $vm->count_domains(status => 'active').".".$free_memory;
         $vm_list{$key} = $vm;
+        last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
     my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
 
@@ -1072,6 +1093,34 @@ sub balance_vm($self, $base=undef) {
         return $vm;
     }
     return;
+}
+
+sub count_domains($self, %args) {
+    my $query = "SELECT count(*) FROM domains WHERE id_vm = ? AND ";
+    $query .= join(" AND ",map { "$_ = ?" } sort keys %args );
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute( $self->id, map { $args{$_} } sort keys %args );
+    my ($count) = $sth->fetchrow;
+    return $count;
+}
+
+sub shutdown_domains($self) {
+    my $sth_inactive
+        = $$CONNECTOR->dbh->prepare("UPDATE domains set status='down' WHERE id=?");
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM domains "
+        ." where status='active'"
+        ."  AND id_vm = ".$self->id
+    );
+    $sth->execute();
+    while ( my ($id_domain) = $sth->fetchrow) {
+        $sth_inactive->execute($id_domain);
+        Ravada::Request->shutdown_domain(
+            id_domain => $id_domain
+                , uid => Ravada::Utils::user_daemon->id
+        );
+    }
+    $sth->finish;
 }
 
 1;

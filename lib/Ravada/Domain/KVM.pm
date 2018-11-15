@@ -162,7 +162,7 @@ sub remove_disks {
     my $id;
     eval { $id = $self->id };
     return if $@ && $@ =~ /No DB info/i;
-    die $@ if $@;
+    confess $@ if $@;
 
     $self->_vm->connect();
     for my $file ($self->list_disks) {
@@ -245,17 +245,17 @@ sub remove {
     }
 
     eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     eval { $self->remove_disks() if $self->is_known };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     for my $file ( @volumes ) {
         $self->_vol_remove($file);
     }
 
     eval { $self->_remove_file_image() };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
@@ -1723,6 +1723,8 @@ sub migrate($self, $node, $request=undef) {
 
 sub is_removed($self) {
     my $is_removed = 0;
+
+    return if !$self->_vm->is_active;
 
     eval {
         $is_removed = 1 if !$self->domain;
