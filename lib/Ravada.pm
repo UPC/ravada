@@ -510,10 +510,10 @@ sub _update_isos {
         }
        ,empty_64bits => {
           name => 'Empty Machine 64bits'
-	 ,description => 'Empty Machine 64bits Boot PXE'
-         ,xml => 'empty-amd64.xml'
-         ,xml_volume => 'jessie-volume.xml'
-	 ,min_disk_size => '0'
+          ,description => 'Empty Machine 64bits Boot PXE'
+          ,xml => 'empty-amd64.xml'
+          ,xml_volume => 'jessie-volume.xml'
+	  ,min_disk_size => '0'
         }
     );
 
