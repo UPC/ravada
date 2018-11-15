@@ -314,6 +314,9 @@ sub _start_preconditions{
         }
         $self->_balance_vm();
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
+    } elsif (!$self->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
