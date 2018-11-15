@@ -513,7 +513,7 @@ sub _update_isos {
           ,description => 'Empty Machine 64bits Boot PXE'
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
-	  ,min_disk_size => '0'
+          ,min_disk_size => '0'
         }
     );
 
