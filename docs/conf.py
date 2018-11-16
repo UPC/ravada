@@ -35,4 +35,4 @@ html_theme_options = {
     # 'navigation_depth': 4,  # Depth of the headers shown in the navigation bar
 }
 
-html_logo = 'img/logo_ravada.png'
+html_logo = '/img/logo_ravada.png'
