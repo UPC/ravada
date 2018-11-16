@@ -1759,6 +1759,23 @@ sub _cmd_copy_screenshot {
     }
 }
 
+sub _cmd_upload_screenshot($self, $request) {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_domain  = $request->args('id_domain');
+    my $fileuploaded = $request->args('file');
+    my $filename = $request->args('filename');
+
+    if (!$domain->can_screenshot) {
+        die "I can't take a screenshot of the domain ".$domain->name;
+    } else {
+      $bytes = $domain->upload_screenshot($request->args('filename'), $request->args('file'));
+      $bytes = $domain->upload_screenshot($request->args('filename'), $request->args('file')) if !$bytes;
+    }
+    $request->error("No data received") if !$bytes;
+}
+
 sub _cmd_create{
     my $self = shift;
     my $request = shift;
@@ -2318,6 +2335,7 @@ sub _req_method {
 ,refresh_storage => \&_cmd_refresh_storage
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
+,upload_screenshot => \&_cmd_upload_screenshot
 
     );
     return $methods{$cmd};

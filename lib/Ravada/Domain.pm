@@ -174,6 +174,7 @@ after 'rename' => \&_post_rename;
 before 'clone' => \&_pre_clone;
 
 after 'screenshot' => \&_post_screenshot;
+after 'upload_screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
 
@@ -326,7 +327,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
 
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
-    # again, just re-attach them 
+    # again, just re-attach them
 #    $self->_check_disk_modified(
     die "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
@@ -402,7 +403,7 @@ sub _check_free_memory{
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
     die "ERROR: No free memory. Only ".int($stat->memstats->{realfree}/1024)
-            ." MB out of ".int($MIN_FREE_MEMORY/1024)." MB required." 
+            ." MB out of ".int($MIN_FREE_MEMORY/1024)." MB required."
         if ( $stat->memstats->{realfree} < $MIN_FREE_MEMORY );
 }
 
@@ -550,7 +551,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
     @field_select = ( id_domain => $self->id )         if $table ne 'domains';
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
-    confess "No DB info for domain @field_select in $table ".$self->name 
+    confess "No DB info for domain @field_select in $table ".$self->name
         if ! exists $self->{$data};
     confess "No field $field in $data @field_select ".Dumper($self->{$data})
         if !exists $self->{$data}->{$field};
@@ -1295,7 +1296,7 @@ sub _post_shutdown {
         my $req = Ravada::Request->force_shutdown_domain(
             id_domain => $self->id
                 , uid => $arg{user}->id
-                 , at => time+$timeout 
+                 , at => time+$timeout
         );
     }
     $self->_remove_temporary_machine(@_);
@@ -1493,9 +1494,9 @@ sub _add_iptable {
     @iptables_arg = ( '0.0.0.0/0'
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, 'DROP',
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
-    
+
     ($rv, $out_ar, $errs_ar) = $ipt_obj->append_ip_rule(@iptables_arg);
-    
+
     $self->_log_iptable(iptables => \@iptables_arg, %args);
 
 }
@@ -1977,7 +1978,7 @@ sub set_option($self, $option, $value) {
     } elsif ($option eq 'run_timeout') {
         $self->run_timeout($value);
     } elsif ($option eq 'volatile_clones') {
-        $self->volatile_clones($value); 
+        $self->volatile_clones($value);
     } else {
         confess "ERROR: Unknown option '$option'";
     }

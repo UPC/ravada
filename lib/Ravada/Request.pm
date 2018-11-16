@@ -65,6 +65,7 @@ our %VALID_ARG = (
     ,refresh_storage => { id_vm => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
     ,change_owner => {uid => 1, id_domain => 1}
+    ,upload_screenshot => { id_domain => 1, file => 1, filename => 1}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -917,6 +918,32 @@ sub change_owner {
 
     return _new_request($self
         , command => 'change_owner'
+        , args =>$args
+    );
+}
+
+=head2 upload_screenshot
+
+Changes the screenshot of a machine with an image uploaded
+
+    my $req = Ravada::Request->upload_screenshot(
+              id_domain => $domain->id
+              ,file => $c->param("myScreenshot")
+    );
+
+=cut
+
+sub upload_screenshot {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('upload_screenshot', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return _new_request($self
+        , command => 'upload_screenshot'
         , args =>$args
     );
 }

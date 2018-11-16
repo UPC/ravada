@@ -219,7 +219,7 @@ sub remove {
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
-    
+
     $self->_post_remove_base_domain() if $self->is_base();
 
     eval { $self->domain->undefine()    if $self->domain };
@@ -559,8 +559,8 @@ sub _pre_shutdown_domain {
     my $self = shift;
     my ($state, $reason) = $self->domain->get_state();
 
-    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN 
-         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN 
+    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN
          || $state == Sys::Virt::Domain::STATE_PMSUSPENDED) {
         $self->domain->pm_wakeup();
         for ( 1 .. 10 ) {
@@ -935,6 +935,23 @@ sub screenshot {
 
     $self->_convert_png($file_tmp,$file);
     unlink $file_tmp or warn "$! removing $file_tmp";
+}
+
+=head2 upload_screenshot
+
+Uploads a screenshot, it stores it in file.
+
+=cut
+
+sub upload_screenshot {
+    my $self = shift;
+    my $filename = (shift or $self->_file_screenshot);
+    my $file = shift;
+
+    my ($path) = $filename =~ m{(.*)/};
+    make_path($path) if ! -e $path;
+
+    $file->move_to($path);
 }
 
 sub _file_screenshot {

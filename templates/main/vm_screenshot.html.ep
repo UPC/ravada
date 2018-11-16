@@ -3,19 +3,28 @@
         <div ng-hide= "<%= $domain->is_base %>" class="row" ng-cloak>
             <div class="col-lg-2">
                 <button ng-click="screenshot(<%= $domain->id %>, <%= $domain->is_active %>)">
-                  <%=l "Take screenshot" %></a>   
+                  <%=l "Take screenshot" %></a>
             </div>
 %           if ( $USER->is_admin ) {
             <div class="col-lg-2">
                 <button ng-click="copy_screenshot(<%= $domain->id %>, '<%= $domain->file_screenshot %>')">
                   <%=l "Set base picture" %></button>
             </div>
+
 %           }
             <i ng-show="reload_page_msg" ng-cloak><font color="green">Saving the screenshot, please wait a moment...</font></i>
             <i ng-show="fail_page_msg" ng-cloak><font color="red">You need to run the machine in order to take a screenshot.</font></i>
             <i ng-show="reload_page_copy_msg" ng-cloak><font color="green">Copying the screenshot, please wait a moment...</font></i>
             <i ng-show="fail_page_copy_msg" ng-cloak><font color="red">You need a screenshot in order to copy it to the base machine.</font></i>
         </div>
+%       if ( $USER->is_admin ) {
+        <div class="row">
+            <form method='post' enctype="multipart/form-data">
+                <div class="col-lg-5"><input type="file"  name="myScreenshot" id="myScreenshot" /></div>
+                <div class="col-lg-2"><input type="submit" onclick='this.form.submit();' name="uploadScreenshot" id="uploadScreenshot" value="<%=l "Upload Screenshot" %>"></input></div>
+            </form>
+        </div>
+%       }
         <div class="row">
             <div class="col-lg-4">
                 <div class="panel panel-default">
@@ -25,6 +34,6 @@
                     </div>
                 </div>
             </div>
-        </div>  
+        </div>
     </div>
 </div>

@@ -12,6 +12,7 @@ use Mojolicious::Lite 'Ravada::I18N';
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
+use Mojo::Upload;
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -1433,6 +1434,24 @@ sub settings_machine {
             ) if $c->param('start') && !$domain->is_active;
 
     _enable_buttons($c, $domain);
+
+    if ($c->req->upload('myScreenshot')) {
+  #   my $filename = $upload->filename;
+#     $upload->filename = "${domain->id}."
+  #   $upload = $upload->move_to('/tmp/${filename}');
+      warn "hey";
+      my $id = $domain->id;
+  #    my $filename =~ s/.*\.(.*)/$id.$1/;
+      my $fileuploaded = $c->req->upload('myScreenshot');
+      my $filename = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.$1;
+      warn "hey";
+
+      $req = Ravada::Request->upload_screenshot(
+                       id_domain => $domain->name
+                  , file => $fileuploaded
+                  , filename => $filename
+      )
+    }
 
     $c->stash(message => '');
     my @reqs = ();
