@@ -31,4 +31,4 @@ html_theme_options = {
 }
 html_static_path = []
 
-html_logo = '/img/logo_ravada.png'
+html_logo = 'docs/../../img/logo_ravada.png'
