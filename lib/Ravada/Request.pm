@@ -1132,7 +1132,7 @@ sub remove_base_vm {
     bless($self,$class);
 
     return $self->_new_request(
-            command => 'set_base_vm'
+            command => 'remove_base_vm'
              , args => encode_json($args)
     );
 

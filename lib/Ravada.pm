@@ -2829,6 +2829,10 @@ sub _refresh_volatile_domains($self) {
     }
 }
 
+sub _cmd_remove_base_vm {
+    return _cmd_set_base_vm(@_);
+}
+
 sub _cmd_set_base_vm {
     my $self = shift;
     my $request = shift;
@@ -2847,6 +2851,8 @@ sub _cmd_set_base_vm {
 
     die "USER $uid not authorized to set base vm"
         if !$user->is_admin;
+
+    $domain->prepare_base($user) if $value && !$domain->is_base;
 
     $domain->set_base_vm(
             id_vm => $id_vm
@@ -2896,6 +2902,7 @@ sub _req_method {
    ,cmd_cleanup => \&_cmd_cleanup
    ,remove_base => \&_cmd_remove_base
    ,set_base_vm => \&_cmd_set_base_vm
+,remove_base_vm => \&_cmd_set_base_vm
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
