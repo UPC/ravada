@@ -18,7 +18,7 @@
             <li class="nav-item" ng-show="base"><a class="nav-link" href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
 %           }
         </ul>
-        <div class="card-body">
+        <div class="tab-content" id="myTabContent">
 %=          include 'ng-templates/new_machine_template'
 %=          include 'ng-templates/new_machine_other'
 
