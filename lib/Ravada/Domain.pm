@@ -1047,6 +1047,7 @@ sub info($self, $user) {
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
         ,needs_restart => ( $self->needs_restart or 0)
+        ,type => $self->type
     };
     eval {
         $info->{display_url} = $self->display($user)    if $self->is_active;
@@ -1070,6 +1071,7 @@ sub info($self, $user) {
         $info->{$_} = $internal_info->{$_};
     }
 
+    $info->{bases} = $self->_bases_vm();
     return $info;
 }
 
@@ -2877,7 +2879,10 @@ sub list_vms($self) {
     $sth->execute($self->id);
     my @vms;
     while (my $id_vm = $sth->fetchrow) {
-        push @vms,(Ravada::VM->open($id_vm));
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        confess "id_domain: ".$self->id."\n".$@ if $@;
+        push @vms,($vm);
     }
     return @vms;
 }
@@ -2909,6 +2914,27 @@ sub base_in_vm($self,$id_vm) {
 #    return 1 if !defined $enabled
 #        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
     return $enabled;
+}
+
+sub _bases_vm($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT vms.id, vms.name, vms.hostname, vms.vm_type, b.enabled, b.id_domain FROM vms"
+        ."  LEFT JOIN bases_vm b ON vms.id = b.id_vm"
+        ."  WHERE "
+        ."      vms.vm_type=? "
+    );
+    $sth->execute($self->type );
+
+    my %base;
+    while ( my ($id_vm , $name, $address, $type, $enabled, $id_domain ) = $sth->fetchrow) {
+        if ( defined $id_domain && $id_domain != $self->id && !$base{$id_vm}) {
+            $enabled = 0;
+        }
+        $enabled = 1 if $self->is_base && $address =~ /localhost|^127/
+            && $type eq $self->type;
+        $base{$id_vm} = ($enabled or 0);
+    }
+    return \%base;
 }
 
 =head2 is_local
