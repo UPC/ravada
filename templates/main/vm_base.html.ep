@@ -7,47 +7,29 @@
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
-<div class="form-group">
+    <div ng-hide="showmachine">
+    ... Loading ...
+    </div>
 
-has clones = <%= $domain->has_clones %><br/>
-    {{nodes}}
-    <form class="form-inline" action="<%= $action %>" method="post">
-%   for my $node (@$nodes) {
-%       my $local = ($node->{hostname} eq 'localhost' || $node->{hostname} eq '127.0.0.1');
-        <div class="row">
-            <div class="col-md-1">
-%               my $node_disabled_msg = '';
-%               if ( $domain->is_locked) {
-%                   $node_disabled_msg = "Domain ".$domain->name." is locked";
-%               }
-%               if ($domain->has_clones && $local) {
-%                   $node_disabled_msg = "Domain has ".$domain->has_clones." clones in local node";
-%               }
-%               if ( !$node->{is_active} ) {
-%                   $node_disabled_msg = "Node inactive";
-%               }
-%               if ( !$node->{enabled} ) {
-%                   $node_disabled_msg = "Node disabled";
-%               }
-%               my $node_disabled = 0;
-%               $node_disabled = 1 if $node_disabled_msg;
-                <input type="checkbox"
-                    ng-disabled="<%= $node_disabled %>"
-%           if ($domain->is_base && $domain->base_in_vm($node->{id})) {
-                checked
-%           }
-                ng-click="toggle_base(<%= $node->{id} %>, <%= $domain->id %>)"
-            ></div>
+{{showmachine.base}}
+<div class="row" ng-repeat="node in nodes">
 
-            <div class="col-md-2">
-                <label class="control-label" for="<%= $node->{id}%>"><%= $node->{name} %></label>
-            </div>
-            <div class="col-md-5">
-            node disabled = <%= $node_disabled_msg %>
-            <br/>
-            </div>
-        </div>
-%   }
-    </form>
+    <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
+        {{node.id}}
+    </div>
+    <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
+        <input type="checkbox" ng-checked="showmachine.bases[node.id]"
+            ng-click="set_base(node.id, showmachine.id, !showmachine.bases[node.id])"
+            ng-disabled="pending_requests || !node.is_active || !node.enabled || ( node.is_local && showmachine.has_clones)">
+    </div>
+    <div class="col-md-2" ng-show="{{node.type == showmachine.type}}">
+        {{node.name}}
+    </div>
+    <div class="col-md-4" ng-show="{{node.type == showmachine.type}}">
+        <div ng-hide="node.is_active">Node down</div>
+        <div ng-hide="node.enabled">Node disabled</div>
+        <div ng-show="node.is_local && showmachine.has_clones">This base has clones</div>
+    </div>
 </div>
+
 </div>
