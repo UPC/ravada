@@ -169,7 +169,6 @@
                     $scope.validate_new_name($scope.showmachine.name);
                     $scope.refresh_machine();
                     $scope.init_ldap_access();
-                    $scope.list_nodes();
                 });
           };
           $scope.domain_remove = 0;
@@ -305,10 +304,15 @@
               if( pending < $scope.pending_before) {
                   if($scope.showmachine) {
                       $scope.init($scope.showmachine.id);
+                      $scope.list_nodes();
                   }
                   setTimeout(function () {
                     $scope.init($scope.showmachine.id);
                   }, 2000);
+              } else {
+                setTimeout(function () {
+                    $scope.refresh_machine();
+                }, 30000);
               }
               $scope.pending_before = pending;
             });
