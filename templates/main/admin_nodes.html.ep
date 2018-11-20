@@ -29,36 +29,36 @@
         <tbody>
             <tr ng-repeat="node in nodes">
                 <td>{{node.type}}</td>
-                <td>{{node.name}}</td>
+                <td><span class="badge badge-info">{{node.name}}</span></td>
                 <td>{{node.hostname}}</td>
                 <td>{{node.bases.length}}</td>
                 <td>{{node.machines.length}}</td>
                 <td>
                     <span ng-show="{{node.is_active}}"
-                          class="label label-success"><%=l 'Active' %></span>
+                          class="badge badge-success"><%=l 'Active' %></span>
                     <span ng-show="{{!node.is_active}}"
-                          class="label label-danger"><%=l 'Shutdown' %></span>
+                          class="badge badge-danger"><%=l 'Shutdown' %></span>
                     <br/>
                     <span ng-show="!node.enabled"
-                          class="label label-warning"><%=l 'Disabled' %></span>
+                          class="badge badge-warning"><%=l 'Disabled' %></span>
                 </td>
                 <td>
-                    <a type="button" class="btn btn-success btn-sm"
+                    <a type="button" class="btn btn-success btn-sm text-white"
                          ng-click="node_enable(node.id)"
                          ng-show="!node.enabled"
                          title="<%=l 'Enable' %>">
-                          <i class="fa fa-check"></i>
+                          <i class="fas fa-check"></i>
                     </a>
                     <a type="button" class="btn btn-warning btn-sm"
                          ng-click="node_disable(node.id)"
                          ng-show="node.enabled"
                          title="<%=l 'Disable' %>">
-                          <i class="fa fa-window-close"></i>
+                          <i class="fas fa-window-close"></i>
                     </a>
-                    <a type="button" class="btn btn-danger btn-sm {{node.action_remove}}"
+                    <a type="button" class="btn btn-danger btn-sm text-white {{node.action_remove}}"
                          ng-click="node_remove(node.id)"
                          title="<%=l 'Remove' %>">
-                          <i class="glyphicon glyphicon-trash"></i>
+                          <i class="far fa-trash-alt"></i>
                     </a>
                 </td>
             </tr>
