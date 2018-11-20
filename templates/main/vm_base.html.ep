@@ -15,12 +15,12 @@
 <div class="row" ng-repeat="node in nodes">
 
     <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
-        {{node.id}}
-    </div>
-    <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
         <input type="checkbox" ng-checked="showmachine.bases[node.id]"
             ng-click="set_base(node.id, showmachine.id, !showmachine.bases[node.id])"
-            ng-disabled="pending_requests || !node.is_active || !node.enabled || ( node.is_local && showmachine.has_clones)">
+            ng-disabled="pending_requests
+                || !node.is_active
+                || showmachine.clones[node.id]
+                || ( node.is_local && showmachine.has_clones)">
     </div>
     <div class="col-md-2" ng-show="{{node.type == showmachine.type}}">
         {{node.name}}
@@ -29,6 +29,7 @@
         <div ng-hide="node.is_active">Node down</div>
         <div ng-hide="node.enabled">Node disabled</div>
         <div ng-show="node.is_local && showmachine.has_clones">This base has clones</div>
+        <div ng-show="!node.is_local && showmachine.clones[node.id]">This node has {{ showmachine.clones[node.id].length }} clones</div>
     </div>
 </div>
 
