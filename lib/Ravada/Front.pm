@@ -474,6 +474,8 @@ sub list_vms($self, $type=undef) {
         $row->{action_remove} = 'disabled' if length defined $row->{machines}[0] > 0;
         $row->{action_remove} = 'disabled' if $row->{hostname} eq 'localhost';
         $row->{action_remove} = 'disabled' if length defined $row->{bases}[0] > 0;
+        $row->{is_local} = 0;
+        $row->{is_local} = 1  if $row->{hostname} =~ /^(localhost|127)/;
         delete $row->{vm_type};
         lock_hash(%$row);
         push @list,($row);

@@ -308,7 +308,14 @@ sub test_volatile_tmp_owner($vm, $node) {
 sub test_clone_remote($vm, $node) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
+
+    my $bases_vm = $base->_bases_vm();
+    is($bases_vm->{$vm->id},1) or exit;
     $base->set_base_vm(user => user_admin, node => $node);
+
+    $bases_vm = $base->_bases_vm();
+    is($bases_vm->{$node->id},1) or exit;
+
     $base->migrate($node);
 
     my $clone = $base->clone(
@@ -316,7 +323,35 @@ sub test_clone_remote($vm, $node) {
         ,user => user_admin
     );
     ok($clone->_vm->name, $node->name);
+
+    _test_old_base($base, $vm);
+    _test_clones($base, $vm);
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 }
+
+sub _test_old_base($base, $vm) {
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM bases_vm "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($base->id, $vm->id);
+
+    my $base_f = Ravada::Front::Domain->open($base->id);
+
+    my $info = $base_f->info(user_admin);
+    is($info->{bases}->{$vm->id},1) ;
+
+    is(scalar keys %{$info->{bases}}, 2);
+}
+
+sub _test_clones($base, $vm) {
+    my $info = $base->info(user_admin);
+    ok($info->{clones}) or return;
+    ok($info->{clones}->{$vm->id}) or return;
+    is(scalar @{$info->{clones}->{$vm->id}},1 );
+}
+
 ##################################################################################
 clean();
 

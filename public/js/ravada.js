@@ -271,10 +271,16 @@
             else value=0;
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-          $scope.toggle_base= function(vmId,machineId) {
-            $http.get("/machine/toggle_base_vm/" +vmId+ "/" +machineId+".json")
+          $scope.set_base= function(vmId,machineId, value) {
+            if (value == 0 || !value) {
+                url = 'remove_base_vm';
+            } else {
+                url = 'set_base_vm';
+            }
+            $http.get("/machine/"+url+"/" +vmId+ "/" +machineId+".json")
               .then(function(response) {
                     $scope.getReqs();
+                    $scope.refresh_machine();
               });
           };
           //On load code
@@ -298,10 +304,15 @@
               if( pending < $scope.pending_before) {
                   if($scope.showmachine) {
                       $scope.init($scope.showmachine.id);
+                      $scope.list_nodes();
                   }
                   setTimeout(function () {
                     $scope.init($scope.showmachine.id);
                   }, 2000);
+              } else {
+                setTimeout(function () {
+                    $scope.refresh_machine();
+                }, 30000);
               }
               $scope.pending_before = pending;
             });
@@ -380,6 +391,12 @@
                   $scope.ldap_attributes_domain  = response.data.list;
                   $scope.ldap_attributes_default = response.data.default;
               });
+          };
+          $scope.list_nodes = function() {
+                $http.get('/list_nodes.json').then(function(response) {
+                $scope.nodes = response.data;
+            });
+
           };
             $scope.removed_hardware = [];
             $scope.pending_before = 10;
