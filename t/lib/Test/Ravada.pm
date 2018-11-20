@@ -4,6 +4,7 @@ use warnings;
 
 use  Carp qw(carp confess);
 use Data::Dumper;
+use File::Path qw(make_path);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -1136,8 +1137,7 @@ sub _dir_db {
     $dir_db =~ s{(t)/(.*)/.*}{$1/.db/$2};
     $dir_db =~ s{(t)/.*}{$1/.db} if !defined $2;
     if (! -e $dir_db ) {
-            warn "mkdir $dir_db";
-            mkdir $dir_db,0700 or die "$! $dir_db";
+            make_path $dir_db or die "$! $dir_db";
     }
     return $dir_db;
 }
