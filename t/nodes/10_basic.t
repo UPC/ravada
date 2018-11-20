@@ -325,6 +325,7 @@ sub test_clone_remote($vm, $node) {
     ok($clone->_vm->name, $node->name);
 
     _test_old_base($base, $vm);
+    _test_clones($base, $vm);
     $clone->remove(user_admin);
     $base->remove(user_admin);
 }
@@ -342,6 +343,13 @@ sub _test_old_base($base, $vm) {
     is($info->{bases}->{$vm->id},1) ;
 
     is(scalar keys %{$info->{bases}}, 2);
+}
+
+sub _test_clones($base, $vm) {
+    my $info = $base->info(user_admin);
+    ok($info->{clones}) or return;
+    ok($info->{clones}->{$vm->id}) or return;
+    is(scalar @{$info->{clones}->{$vm->id}},1 );
 }
 
 ##################################################################################
