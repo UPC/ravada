@@ -1072,6 +1072,7 @@ sub info($self, $user) {
     }
 
     $info->{bases} = $self->_bases_vm();
+    $info->{clones} = $self->_clones_vm();
     return $info;
 }
 
@@ -1367,7 +1368,7 @@ sub clones {
 
     _init_connector();
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, id_vm, name FROM domains "
             ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)");
     $sth->execute($self->id);
     my @clones;
@@ -2935,6 +2936,18 @@ sub _bases_vm($self) {
         $base{$id_vm} = ($enabled or 0);
     }
     return \%base;
+}
+
+sub _clones_vm($self) {
+    return {} if !$self->is_base;
+    my @clones = $self->clones;
+
+    my %clones;
+
+    for my $clone (@clones) {
+        push @{$clones{$clone->{id_vm}}}, (  $clone->{id} );
+    }
+    return \%clones;
 }
 
 =head2 is_local
