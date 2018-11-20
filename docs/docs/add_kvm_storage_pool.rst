@@ -60,4 +60,6 @@ Add the drive to the Virtual Manager
  
 
 And that's it, now Ravada will use the pool that has more empty space
-the next time it needs to create a volume.
+the next time it needs to create a volume. If you want to fine tune
+what storage pool is used by default follow the
+`advanced settings documentation <advanced_settings.html>`__ .
