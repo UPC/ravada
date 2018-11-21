@@ -12,7 +12,7 @@
 %= include 'main/list_bases_ng_head'
     <!--MACHINES SELECTION-->
     <div class="panel-body">
-    <div ng-repeat="machine in machines"
+    <div ng-repeat="machine in machines | orderBy: 'id_clone'"
          class="col-sm-4"
                 ng-show="machine.is_public || (!machine.is_public && !only_public)">
         <div class="panel panel-success">
