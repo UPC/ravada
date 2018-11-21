@@ -165,10 +165,13 @@
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
                             $scope.showmachine=response.data;
-                    $scope.new_name=$scope.showmachine.name+"-2";
-                    $scope.validate_new_name($scope.showmachine.name);
-                    $scope.refresh_machine();
-                    $scope.init_ldap_access();
+                            if (typeof $scope.new_name == 'undefined' ) {
+                                $scope.new_name=$scope.showmachine.name+"-2";
+                                $scope.validate_new_name($scope.showmachine.name);
+                            }
+                            $scope.refresh_machine();
+                            $scope.init_ldap_access();
+                            $scope.list_ldap_attributes();
                 });
           };
           $scope.domain_remove = 0;
@@ -408,7 +411,7 @@
             });
           };
           $scope.getReqs();
-
+          $scope.list_ldap_attributes();
         };
 
     function swListMach() {
