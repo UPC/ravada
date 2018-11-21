@@ -507,7 +507,7 @@ sub list_vms($self, $type=undef) {
         $row->{machines}= $self->_list_machines_vm($row->{id});
         $row->{type} = $row->{vm_type};
         $row->{action_remove} = 'disabled' if length defined $row->{machines}[0];
-        #$row->{action_remove} = 'disabled' if $row->{hostname} eq 'localhost';
+        $row->{action_remove} = 'disabled' if $row->{hostname} eq 'localhost';
         $row->{action_remove} = 'disabled' if length defined $row->{bases}[0];
         $row->{is_local} = 0;
         $row->{is_local} = 1  if $row->{hostname} =~ /^(localhost|127)/;
