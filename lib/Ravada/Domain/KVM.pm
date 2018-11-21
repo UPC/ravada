@@ -162,7 +162,7 @@ sub remove_disks {
     my $id;
     eval { $id = $self->id };
     return if $@ && $@ =~ /No DB info/i;
-    die $@ if $@;
+    confess $@ if $@;
 
     $self->_vm->connect();
     for my $file ($self->list_disks) {
@@ -245,17 +245,17 @@ sub remove {
     }
 
     eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     eval { $self->remove_disks() if $self->is_known };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     for my $file ( @volumes ) {
         $self->_vol_remove($file);
     }
 
     eval { $self->_remove_file_image() };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
@@ -601,9 +601,10 @@ sub start {
     if (!(scalar(@_) % 2))  {
         %arg = @_;
     }
-    my $remote_ip = delete $arg{remote_ip};
 
     my $set_password=0;
+    my $remote_ip = delete $arg{remote_ip};
+    my $request = delete $arg{request};
 
     if ($remote_ip) {
         $set_password = 0;
@@ -612,7 +613,16 @@ sub start {
     }
     $self->_set_spice_ip($set_password);
     eval { $self->domain->create() };
-    die $@ if $@ && $@ !~ /libvirt error code: 55,/;
+    if ( $@ && $@ !~ /already running/i ) {
+        if ( $self->domain->has_managed_save_image ) {
+            $request->status("removing saved image") if $request;
+            $self->domain->managed_save_remove();
+            $self->domain->create();
+        } elsif ( $request ) {
+            $request->error($@);
+            die $@ if $@;
+        }
+    }
 }
 
 sub _pre_shutdown_domain {
@@ -1713,6 +1723,8 @@ sub migrate($self, $node, $request=undef) {
 
 sub is_removed($self) {
     my $is_removed = 0;
+
+    return if !$self->_vm->is_active;
 
     eval {
         $is_removed = 1 if !$self->domain;

@@ -2,7 +2,7 @@
     <div class="card-body">
         <form name="new_machineForm" role="form" method="post" action="/new_machine" novalidate>
             <div class="form-group row">
-                <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a 
+                <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
                   title="Choose the virtualization type of the Virtual Machine."><i class="fa fa-info-circle"></i></a></label>
                 <div class="col-lg-9">
                     <select class= "form-control"
@@ -17,7 +17,7 @@
 
             <div ng-if="backend == 'KVM'" class="form-group">
                 <div class="from-group row">
-                    <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a 
+                    <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a
                       title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9">
                         <select class="form-control"
@@ -41,7 +41,7 @@
                 </div>
                 <div class="from-group row" ng-show="id_iso.name">
                         <br/>
-                        <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a 
+                        <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
                           title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                             <select class="form-control"
@@ -78,7 +78,7 @@
             </div>
 
             <div class="form-group row" ng-if="backend == 'KVM'">
-                <label for="disk" class="col-xl-3 col-form-label"><%=l 'Disk Size: (GB)' %></label>     
+                <label for="disk" class="col-xl-3 col-form-label"><%=l 'Disk Size: (GB)' %></label>
                 <div class="col-lg-2">
                     <input class="slider form-control" ng-model="ddsize" type="range" name="disk"
                         min="{{min_size}}" max="100" required="">
@@ -91,19 +91,19 @@
                       align="right"><span class="badge badge-primary ml-2">Remove swap</span></a>
                   <div ng-show="showMinSize">
                     <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
-                </div>  
+                </div>
             </div>
             <div class="form-group row" ng-show="seeswap" ng-if="backend == 'KVM'">
                 <label for="swap" class="col-xl-3 col-form-label"><%=l 'Swap Size: (GB)' %></label>
                 <div class="col-lg-2">
-                    <input class="slider form-control" ng-model="swapsize.value" 
+                    <input class="slider form-control" ng-model="swapsize.value"
                     type="range" name="swap" id="swap" min="1" max="4" ng-disabled="!seeswap">
                 </div>{{swapsize.value}}
             </div>
             <div class="form-group row" ng-show="backend == 'KVM' || backend == 'LXC'">
                     <label for="memory" class="col-xl-3 col-form-label"><%=l 'Ram: (GB)' %></label>
                     <div class="col-lg-2">
-                        <input class="slider form-control" ng-model="ramSize" type="range" 
+                        <input class="slider form-control" ng-model="ramSize" type="range"
                         name="memory" min="1" max="4" required>
                     </div>{{ramSize}}
             </div>
@@ -155,7 +155,7 @@
                         <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
                 </div>
             </div>
-          
+
             <div class="form-group row">
                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
                 <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"

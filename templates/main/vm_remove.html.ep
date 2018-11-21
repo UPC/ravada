@@ -25,7 +25,7 @@
                           <%=l 'Remove Clones' %>
                     </a>
 %               }
-%               if ($USER->can_remove_machine($domain->id)) { 
+%               if ($USER->can_remove_machine($domain->id)) {
                 <a type="button" class="btn btn-danger text-white font-weight-bold"
                               ng-hide="showmachine.has_clones > 0"
                               ng-click="domain_remove=1"

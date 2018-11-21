@@ -45,13 +45,13 @@
                 <td>
                     <a type="button" class="btn btn-success btn-sm text-white"
                          ng-click="node_enable(node.id)"
-                         ng-show="!node.enabled"
+                         ng-disabled="node.enabled"
                          title="<%=l 'Enable' %>">
                           <i class="fas fa-check"></i>
                     </a>
                     <a type="button" class="btn btn-warning btn-sm"
                          ng-click="node_disable(node.id)"
-                         ng-show="node.enabled"
+                         ng-disabled="!node.enabled"
                          title="<%=l 'Disable' %>">
                           <i class="fas fa-window-close"></i>
                     </a>

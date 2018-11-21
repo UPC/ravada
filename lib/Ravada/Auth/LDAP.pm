@@ -142,6 +142,7 @@ sub search_user {
     my $field = (delete $args{field} or 'uid');
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
+    my $typesonly= (delete $args{typesonly} or 0);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
@@ -152,12 +153,14 @@ sub search_user {
     base   => $base,
     scope  => 'sub',
     filter => "($field=$username)",
+    typesonly => $typesonly,
     attrs  => ['*']
+
     );
 
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
-    if ( $retry <= 3 && $mesg->code ) {
+    if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
@@ -167,6 +170,7 @@ sub search_user {
                 name => $username
               ,field => $field
               ,retry => ++$retry
+              ,typesonly => $typesonly
          );
     }
 
@@ -313,6 +317,7 @@ sub login($self) {
 
     if ($$CONFIG->{ldap}->{ravada_posix_group}) {
         $allowed = search_user (name => $self->name, field => 'memberUid', base => $$CONFIG->{ldap}->{ravada_posix_group}) || 0;
+        $self->{_ldap_entry} = $allowed;
     } else {
         $allowed = 1;
     }
@@ -345,12 +350,24 @@ sub _login_bind {
         my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
         if ( !$mesg->code() ) {
             $self->{_auth} = 'bind';
+            $self->{_ldap_entry} = $user;
             return 1;
         }
         warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn"
             if $Ravada::DEBUG && $mesg->code;
     }
     return 0;
+}
+
+=head2 ldap_entry
+
+Returns the ldap entry as a Net::LDAP::Entry of the user if it has
+LDAP external authentication
+
+=cut
+
+sub ldap_entry($self) {
+    return $self->{_ldap_entry};
 }
 
 sub _login_match {
@@ -373,7 +390,10 @@ sub _login_match {
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
         $user_ok = $self->_match_password($entry, $password);
         warn $entry->dn." : $user_ok" if $Ravada::DEBUG;
-        last if $user_ok;
+        if ( $user_ok ) {
+            $self->{_ldap_entry} = $entry;
+            last;
+        }
     }
 
     if ($user_ok) {
@@ -386,9 +406,15 @@ sub _login_match {
 sub _check_user_profile {
     my $self = shift;
     my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
-    return if $user_sql->id;
+    if ( $user_sql->id ) {
+        if ($user_sql->external_auth ne 'ldap') {
+            $user_sql->external_auth('ldap');
+        }
+        return;
+    }
 
-    Ravada::Auth::SQL::add_user(name => $self->name, is_external => 1, is_temporary => 0);
+    Ravada::Auth::SQL::add_user(name => $self->name, is_external => 1, is_temporary => 0
+        , external_auth => 'ldap');
 }
 
 sub _match_password {
@@ -429,11 +455,17 @@ sub _connect_ldap {
 
     my $host = ($$CONFIG->{ldap}->{server} or 'localhost');
     my $port = ($$CONFIG->{ldap}->{port} or 389);
-
+    my $secure = 0;
+    if (exists $$CONFIG->{ldap}->{secure} && defined $$CONFIG->{ldap}->{secure}) {
+        $secure = $$CONFIG->{ldap}->{secure};
+        $secure = 0 if $secure =~ /false|no/i;
+    } else {
+        $secure = 1 if $port == 636;
+    }
     my $ldap;
     
     for my $retry ( 1 .. 3 ) {
-        if ($port == 636 ) {
+        if ($secure ) {
             $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
         } else {
             $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 

@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.3.0-beta6';
+our $VERSION = '0.4.0-alpha2';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -501,6 +501,20 @@ sub _update_isos {
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
         }
+       ,empty_32bits => {
+          name => 'Empty Machine 32 bits'
+          ,description => 'Empty Machine 32 bits Boot PXE'
+          ,xml => 'empty-i386.xml'
+          ,xml_volume => 'jessie-volume.xml'
+          ,min_disk_size => '0'
+        }
+       ,empty_64bits => {
+          name => 'Empty Machine 64 bits'
+          ,description => 'Empty Machine 64 bits Boot PXE'
+          ,xml => 'empty-amd64.xml'
+          ,xml_volume => 'jessie-volume.xml'
+          ,min_disk_size => '0'
+        }
     );
 
     $self->_update_table($table, $field, \%data);
@@ -875,12 +889,12 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('shutdown', 1);
-    $self->_add_grant('screenshot', 1);
+    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines");
+    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines");
+    $self->_add_grant('start_many',0,"Can have more than one machine started")
 }
 
-sub _add_grant($self, $grant, $allowed) {
-
+sub _add_grant($self, $grant, $allowed, $description) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM grant_types WHERE name=?"
     );
@@ -892,7 +906,7 @@ sub _add_grant($self, $grant, $allowed) {
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
         ." VALUES (?,?)");
-    $sth->execute($grant,"can shutdown any virtual machine owned by the user");
+    $sth->execute($grant, $description);
     $sth->finish;
 
     return if !$allowed;
@@ -942,6 +956,7 @@ sub _enable_grants($self) {
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
+        ,'start_many'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -1134,6 +1149,7 @@ sub _upgrade_tables {
         );
         $sth->execute;
     }
+    $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -1514,17 +1530,18 @@ sub remove_domain {
 
     lock_hash(%arg);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name = ?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
     $sth->execute($name);
 
-    my ($id)= $sth->fetchrow;
+    my ($id,$vm_type)= $sth->fetchrow;
     confess "Error: Unknown domain $name"   if !$id;
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
-    my $domain = Ravada::Domain->open(id => $id, _force => 1)
+    my $vm = Ravada::VM->open(type => $vm_type);
+    my $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id)
         or do {
             warn "Warning: I can't find domain '$id', maybe already removed.";
             $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
@@ -1542,19 +1559,30 @@ sub remove_domain {
 =cut
 
 sub search_domain($self, $name, $import = 0) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_vm "
-        ." FROM domains WHERE name=?");
+    my $query =
+         "SELECT d.id, d.id_vm "
+        ." FROM domains d LEFT JOIN vms "
+        ."      ON d.id_vm = vms.id "
+        ." WHERE "
+        ."    d.name=? "
+        ;
+    my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute($name);
-    my ($id, $id_vm) = $sth->fetchrow();
+    my ($id, $id_vm ) = $sth->fetchrow();
 
     return if !$id;
     if ($id_vm) {
-        my $vm = Ravada::VM->open($id_vm);
-        if (!$vm->is_active) {
-            warn "Don't search domain $name in inactive VM ".$vm->name;
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        warn $@ if $@;
+        if ( $vm && !$vm->is_active) {
             $vm->disconnect();
-        } else {
-            return $vm->search_domain($name);
+        }
+        if ($vm && $vm->is_active ) {
+            my $domain;
+            eval { $domain = $vm->search_domain($name)};
+            warn $@ if $@;
+            return $domain if $domain;
         }
     }
 #    for my $vm (@{$self->vm}) {
@@ -2011,10 +2039,11 @@ sub _domain_working {
         if (!$id_domain) {
             my $domain_name = $req->defined_arg('name');
             return if !$domain_name;
-            my $domain = $self->search_domain($domain_name) or return;
-            $id_domain = $domain->id;
+            my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+            $sth->execute($domain_name);
+            ($id_domain) = $sth->fetchrow;
             if (!$id_domain) {
-                warn Dumper($req);
+                # TODO: maybe this request should be marked down because domain already removed
                 return;
             }
         }
@@ -2265,7 +2294,6 @@ sub _cmd_remove {
         if !defined $request->args->{uid};
 
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
-
 }
 
 sub _cmd_pause {
@@ -2373,7 +2401,8 @@ sub _cmd_prepare_base {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
-    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    my $user = Ravada::Auth::SQL->search_by_id( $uid)
+        or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
     my $domain = $self->search_domain_by_id($id_domain);
 
@@ -2633,6 +2662,10 @@ sub _cmd_refresh_vms($self, $request=undef) {
     if ($request && (my $id_recent = $request->done_recently(30))) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
+
+    $self->_refresh_disabled_nodes( $request );
+    $self->_refresh_down_nodes( $request );
+
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
@@ -2685,8 +2718,8 @@ sub _refresh_active_domains($self, $request=undef) {
     for my $vm ($self->list_vms) {
         $request->status('working',"checking active domains on ".$vm->name)
             if $request;
-        next if !$vm->enabled();
-        if ( !$vm->is_active ) {
+        if ( !$vm->enabled() || !$vm->is_active ) {
+            $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
             next;
@@ -2704,6 +2737,32 @@ sub _refresh_active_domains($self, $request=undef) {
         }
     }
     return \%active_domain, \%active_vm;
+}
+
+sub _refresh_down_nodes($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        $vm = Ravada::VM->open($id);
+    }
+}
+
+sub _refresh_disabled_nodes($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name, vms.name FROM domains d, vms "
+        ." WHERE d.id_vm = vms.id "
+        ."    AND ( vms.enabled = 0 || vms.is_active = 0 )"
+        ."    AND d.status = 'active'"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $domain_name, $vm_name) = $sth->fetchrow ) {
+        Ravada::Request->shutdown_domain( id_domain => $id_domain, uid => Ravada::Utils::user_daemon->id);
+        $request->status("Shutting down domain $domain_name in disabled node $vm_name");
+    }
+    $sth->finish;
 }
 
 sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
@@ -2770,6 +2829,10 @@ sub _refresh_volatile_domains($self) {
     }
 }
 
+sub _cmd_remove_base_vm {
+    return _cmd_set_base_vm(@_);
+}
+
 sub _cmd_set_base_vm {
     my $self = shift;
     my $request = shift;
@@ -2788,6 +2851,8 @@ sub _cmd_set_base_vm {
 
     die "USER $uid not authorized to set base vm"
         if !$user->is_admin;
+
+    $domain->prepare_base($user) if $value && !$domain->is_base;
 
     $domain->set_base_vm(
             id_vm => $id_vm
@@ -2837,6 +2902,7 @@ sub _req_method {
    ,cmd_cleanup => \&_cmd_cleanup
    ,remove_base => \&_cmd_remove_base
    ,set_base_vm => \&_cmd_set_base_vm
+,remove_base_vm => \&_cmd_set_base_vm
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
@@ -2988,6 +3054,7 @@ sub _enforce_limits_active($self, $request) {
         next if scalar @{$domains{$id_user}}<2;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
+        next if $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }

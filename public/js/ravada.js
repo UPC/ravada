@@ -165,9 +165,13 @@
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
                             $scope.showmachine=response.data;
-                    $scope.new_name=$scope.showmachine.name+"-2";
-                    $scope.validate_new_name($scope.showmachine.name);
-                    $scope.refresh_machine();
+                            if (typeof $scope.new_name == 'undefined' ) {
+                                $scope.new_name=$scope.showmachine.name+"-2";
+                                $scope.validate_new_name($scope.showmachine.name);
+                            }
+                            $scope.refresh_machine();
+                            $scope.init_ldap_access();
+                            $scope.list_ldap_attributes();
                 });
           };
           $scope.domain_remove = 0;
@@ -270,10 +274,16 @@
             else value=0;
             $http.get("/machine/public/"+machineId+"/"+value);
           };
-          $scope.toggle_base= function(vmId,machineId) {
-            $http.get("/machine/toggle_base_vm/" +vmId+ "/" +machineId+".json")
+          $scope.set_base= function(vmId,machineId, value) {
+            if (value == 0 || !value) {
+                url = 'remove_base_vm';
+            } else {
+                url = 'set_base_vm';
+            }
+            $http.get("/machine/"+url+"/" +vmId+ "/" +machineId+".json")
               .then(function(response) {
                     $scope.getReqs();
+                    $scope.refresh_machine();
               });
           };
           //On load code
@@ -297,10 +307,15 @@
               if( pending < $scope.pending_before) {
                   if($scope.showmachine) {
                       $scope.init($scope.showmachine.id);
+                      $scope.list_nodes();
                   }
                   setTimeout(function () {
                     $scope.init($scope.showmachine.id);
                   }, 2000);
+              } else {
+                setTimeout(function () {
+                    $scope.refresh_machine();
+                }, 30000);
               }
               $scope.pending_before = pending;
             });
@@ -324,6 +339,68 @@
                       });
 
           };
+          $scope.list_ldap_attributes= function() {
+              $scope.ldap_entries = 0;
+              $scope.ldap_verified = 0;
+              console.log($scope.cn);
+              $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
+                  $scope.ldap_attributes = response.data.attributes;
+              });
+          };
+          $scope.count_ldap_entries = function() {
+              $scope.ldap_verifying = true;
+              $http.get('/count_ldap_entries/'+$scope.ldap_attribute+'/'+$scope.ldap_attribute_value)
+                    .then(function(response) {
+                  $scope.ldap_entries = response.data.entries;
+                  $scope.ldap_verified = true;
+                  $scope.ldap_verifying = false;
+              });
+          };
+          $scope.add_ldap_access = function() {
+              $http.get('/add_ldap_access/'+$scope.showmachine.id+'/'+$scope.ldap_attribute+'/'
+                            +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed
+                            +'/'+$scope.ldap_attribute_last)
+                    .then(function(response) {
+                        $scope.init_ldap_access();
+                    });
+          };
+           $scope.delete_ldap_access= function(id_access) {
+              $http.get('/delete_ldap_access/'+$scope.showmachine.id+'/'+id_access)
+                    .then(function(response) {
+                        $scope.init_ldap_access();
+                    });
+          };
+          $scope.move_ldap_access= function(id_access, count) {
+              $http.get('/move_ldap_access/'+$scope.showmachine.id+'/'+id_access+'/'+count)
+                    .then(function(response) {
+                        $scope.init_ldap_access();
+                    });
+          };
+          $scope.set_ldap_access = function(id_access, allowed, last) {
+              $http.get('/set_ldap_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
+                        +'/'+last)
+                    .then(function(response) {
+                        $scope.init_ldap_access();
+                    });
+          };
+          $scope.init_ldap_access = function() {
+              $scope.ldap_entries = 0;
+              $scope.ldap_verified = 0;
+              $scope.ldap_attribute = '';
+              $scope.ldap_attribute_value = '';
+              $scope.ldap_attribute_allowed=true;
+              $scope.ldap_attribute_last=true;
+              $http.get('/list_ldap_access/'+$scope.showmachine.id).then(function(response) {
+                  $scope.ldap_attributes_domain  = response.data.list;
+                  $scope.ldap_attributes_default = response.data.default;
+              });
+          };
+          $scope.list_nodes = function() {
+                $http.get('/list_nodes.json').then(function(response) {
+                $scope.nodes = response.data;
+            });
+
+          };
             $scope.removed_hardware = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
@@ -334,7 +411,7 @@
             });
           };
           $scope.getReqs();
-
+          $scope.list_ldap_attributes();
         };
 
     function swListMach() {

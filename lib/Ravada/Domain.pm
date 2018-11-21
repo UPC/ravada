@@ -195,7 +195,7 @@ around 'set_memory' => \&_around_set_mem;
 
 around 'is_active' => \&_around_is_active;
 
-around 'is_active' => \&_around_is_active;
+around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
@@ -314,6 +314,9 @@ sub _start_preconditions{
         }
         $self->_balance_vm();
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
+    } elsif (!$self->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
@@ -330,7 +333,12 @@ sub _search_already_started($self) {
         my $vm = Ravada::VM->open($id);
         next if !$vm->is_enabled || !$vm->is_active;
 
-        my $domain = $vm->search_domain($self->name);
+        my $domain;
+        eval { $domain = $vm->search_domain($self->name) };
+        if ( $@ ) {
+            warn $@;
+            next;
+        }
         next if !$domain;
         if ( $domain->is_active || $domain->is_hibernated ) {
             $self->_set_vm($vm,'force');
@@ -419,7 +427,7 @@ sub _allow_remove($self, $user) {
         && $self->id_base
         && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
-        my $base = $self->open($self->id_base);
+        my $base = $self->open(id => $self->id_base, id_vm => $self->_vm->id);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
 
@@ -773,13 +781,16 @@ sub open($class, @args) {
     my $readonly = 0;
     my $id_vm;
     my $force;
-
+    my $vm;
     if (scalar @args > 1) {
         my %args = @args;
         $id = delete $args{id} or confess "ERROR: Missing field id";
         $readonly = delete $args{readonly} if exists $args{readonly};
         $id_vm = delete $args{id_vm};
         $force = delete $args{_force};
+        $vm = delete $args{vm};
+        confess "ERROR: id_vm and vm don't match. ".($vm->name." id: ".$vm->id)
+            if $id_vm && $vm && $vm->id != $id_vm;
         confess "ERROR: Unknown fields ".join(",", sort keys %args)
             if keys %args;
     }
@@ -797,27 +808,39 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-    my $vm;
-    my $vm_local = {};
-    my $vm_class = "Ravada::VM::".$row->{vm};
-    bless $vm_local, $vm_class;
 
-    if ($id_vm || ( $self->_data('id_vm') && !$self->is_base) ) {
-        $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+    if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
+        eval {
+            $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
                 , readonly => $readonly);
+        };
+        if ($@ && $@ =~ /I can't find VM id=/) {
+            $vm = Ravada::VM->open( type => $self->type );
+        }
     }
-    if (!$vm || !$vm->is_active) {
+    my $vm_local;
+    if (!$vm || !$vm->is_active || !$vm->enabled) {
+        $vm_local = {};
+        my $vm_class = "Ravada::VM::".$row->{vm};
+        bless $vm_local, $vm_class;
+
         $vm = $vm_local->new( );
     }
-
     my $domain = $vm->search_domain($row->{name}, $force);
     if ( !$domain ) {
         return if $vm->is_local;
+
+        if (!$vm_local) {
+            $vm_local = {};
+            my $vm_class = "Ravada::VM::".$row->{vm};
+            bless $vm_local, $vm_class;
+        }
+
         $vm = $vm_local->new();
         $domain = $vm->search_domain($row->{name}, $force) or return;
     }
     if (!$id_vm) {
-        $domain->_search_already_started();
+        $domain->_search_already_started() if !$domain->is_base;
         $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
@@ -1024,6 +1047,7 @@ sub info($self, $user) {
         ,msg_timeout => ( $self->_msg_timeout or undef)
         ,has_clones => ( $self->has_clones or undef)
         ,needs_restart => ( $self->needs_restart or 0)
+        ,type => $self->type
     };
     eval {
         $info->{display_url} = $self->display($user)    if $self->is_active;
@@ -1047,6 +1071,8 @@ sub info($self, $user) {
         $info->{$_} = $internal_info->{$_};
     }
 
+    $info->{bases} = $self->_bases_vm();
+    $info->{clones} = $self->_clones_vm();
     return $info;
 }
 
@@ -1131,11 +1157,27 @@ sub _pre_remove_domain($self, $user, @) {
     warn $@ if $@;
 
     $self->_allow_remove($user);
+    $self->_check_active_node();
+
     $self->is_volatile()        if $self->is_known || $self->domain;
     $self->list_disks()         if ($self->is_known && $self->is_known_extra)
     || $self->domain ;
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+}
+
+sub _check_active_node($self) {
+    return $self->_vm if $self->_vm->is_active(1);
+
+    for my $node ($self->_vm->list_nodes) {
+        next if !$node->is_local;
+
+        $self->_vm($node);
+        $self->domain($node->search_domain_by_id($self->id)->domain);
+        last;
+    }
+    return $self->_vm;
+
 }
 
 sub _after_remove_domain {
@@ -1152,10 +1194,10 @@ sub _after_remove_domain {
     return if !$self->{_data};
     $self->_finish_requests_db();
     $self->_remove_base_db();
+    $self->_remove_access_attributes_db();
     $self->_remove_domain_db();
 }
 
-# removes domain in other VMs
 sub _remove_domain_cascade($self,$user, $cascade = 1) {
 
     return if !$self->_vm;
@@ -1168,9 +1210,19 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     while ($sth->fetchrow) {
         next if $id == $self->_vm->id;
         my $vm = Ravada::VM->open($id);
-        my $domain = $vm->search_domain($domain_name) or next;
-        $domain->remove($user, $cascade);
+        my $domain;
+        eval { $domain = $vm->search_domain($domain_name) };
+        $domain->remove($user, $cascade) if $domain;
     }
+}
+
+sub _remove_access_attributes_db($self) {
+
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM access_ldap_attribute"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _remove_domain_db {
@@ -1316,7 +1368,7 @@ sub clones {
 
     _init_connector();
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, id_vm, name FROM domains "
             ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)");
     $sth->execute($self->id);
     my @clones;
@@ -1579,6 +1631,7 @@ sub _pre_shutdown {
 
     $self->_allow_shutdown(@_);
 
+    $self->_vm->connect;
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
@@ -1593,7 +1646,7 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables();
+    $self->_remove_iptables() if $self->_vm->is_active;
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$self->is_active;
 
@@ -1641,7 +1694,15 @@ sub _post_shutdown {
 
 sub _around_is_active($orig, $self) {
     return 0 if $self->is_removed;
-    my $is_active = $self->$orig();
+
+    if (!$self->_vm) {
+        return 1 if $self->_data('status') eq 'active';
+        return 0;
+    }
+
+    my $is_active = 0;
+    $is_active = $self->$orig() if $self->_vm->is_active;
+
     return $is_active if $self->readonly
         || !$self->is_known
         || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
@@ -1655,11 +1716,18 @@ sub _around_is_active($orig, $self) {
     return $is_active;
 }
 
+sub _around_is_hibernated($orig, $self) {
+    return if $self->_vm && !$self->_vm->is_active;
+
+    return $self->$orig();
+}
+
 sub _around_shutdown_now {
     my $orig = shift;
     my $self = shift;
     my $user = shift;
 
+    $self->_vm->connect;
     $self->list_disks;
     $self->_pre_shutdown(user => $user);
     if ($self->is_active) {
@@ -1888,6 +1956,8 @@ sub _add_iptable {
 
 sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
 
+    return if !$vm->is_active;
+
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
@@ -1909,7 +1979,8 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
            && ( $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count);
+           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count)
+                if $vm->is_active;
            $removed++;
            $count--;
         }
@@ -2594,7 +2665,7 @@ sub rsync($self, @args) {
                 ." are both local "
                     if $self->_vm->is_local;
         $self->_vm->_connect_ssh()
-            or confess "No Connection to ".$node->host;
+            or confess "No Connection to ".$self->_vm->host;
     } else {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
@@ -2635,7 +2706,7 @@ sub _rsync_volumes_back($self, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
-    $self->_check_equal_storage_pools($node);
+    $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     return if !$self->id_base;
 
@@ -2809,7 +2880,10 @@ sub list_vms($self) {
     $sth->execute($self->id);
     my @vms;
     while (my $id_vm = $sth->fetchrow) {
-        push @vms,(Ravada::VM->open($id_vm));
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        confess "id_domain: ".$self->id."\n".$@ if $@;
+        push @vms,($vm);
     }
     return @vms;
 }
@@ -2841,6 +2915,39 @@ sub base_in_vm($self,$id_vm) {
 #    return 1 if !defined $enabled
 #        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
     return $enabled;
+}
+
+sub _bases_vm($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT vms.id, vms.name, vms.hostname, vms.vm_type, b.enabled, b.id_domain FROM vms"
+        ."  LEFT JOIN bases_vm b ON vms.id = b.id_vm"
+        ."  WHERE "
+        ."      vms.vm_type=? "
+    );
+    $sth->execute($self->type );
+
+    my %base;
+    while ( my ($id_vm , $name, $address, $type, $enabled, $id_domain ) = $sth->fetchrow) {
+        if ( defined $id_domain && $id_domain != $self->id && !$base{$id_vm}) {
+            $enabled = 0;
+        }
+        $enabled = 1 if $self->is_base && $address =~ /localhost|^127/
+            && $type eq $self->type;
+        $base{$id_vm} = ($enabled or 0);
+    }
+    return \%base;
+}
+
+sub _clones_vm($self) {
+    return {} if !$self->is_base;
+    my @clones = $self->clones;
+
+    my %clones;
+
+    for my $clone (@clones) {
+        push @{$clones{$clone->{id_vm}}}, (  $clone->{id} );
+    }
+    return \%clones;
 }
 
 =head2 is_local
@@ -2997,4 +3104,135 @@ sub _post_change_controller {
     my $self = shift;
     $self->needs_restart(1) if $self->is_active;
 }
+
+=head2 Access restrictions
+
+These methods implement access restrictions to clone a domain
+
+=cut
+
+=head2 allow_ldap_attribute
+
+If specified, only the LDAP users with that attribute value can clone these
+virtual machines.
+
+    $base->allow_ldap_attribute( attribute => 'value' );
+
+Example:
+
+    $base->allow_ldap_attribute( tipology => 'student' );
+
+=cut
+
+sub allow_ldap_access($self, $attribute, $value, $allowed=1, $last=0 ) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT max(n_order) FROM access_ldap_attribute "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my ($n_order) = ($sth->fetchrow or 0);
+    $sth->finish;
+
+    $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO access_ldap_attribute "
+        ."(id_domain, attribute, value, allowed, n_order, last) "
+        ."VALUES(?,?,?,?,?,?)");
+    $sth->execute($self->id, $attribute, $value, $allowed, $n_order+1, $last);
+}
+
+#TODO: check something has been deleted
+sub delete_ldap_access($self, $id_access) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM access_ldap_attribute "
+        ."WHERE id_domain=? AND id=? ");
+    $sth->execute($self->id, $id_access);
+}
+
+sub list_ldap_access($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * from access_ldap_attribute"
+        ." WHERE id_domain = ? "
+        ." ORDER BY n_order"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{last} = 1 if !$row->{allowed} && !$row->{last};
+        push @list,($row) if keys %$row;
+    }
+    return @list;
+}
+
+
+=head2 deny_ldap_access
+
+If specified, only the LDAP users with that attribute value can clone these
+virtual machines.
+
+    $base->deny_ldap_attribute( attribute => 'value' );
+
+Example:
+
+    $base->deny_ldap_attribute( tipology => 'student' );
+
+=cut
+
+sub deny_ldap_access($self, $attribute, $value) {
+    $self->allow_ldap_access($attribute, $value, 0);
+}
+
+sub _set_access_order($self, $id_access, $n_order) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute "
+        ." SET n_order=? WHERE id=? AND id_domain=?");
+    $sth->execute($n_order, $id_access, $self->id);
+}
+
+sub move_ldap_access($self, $id_access, $position) {
+    confess "Error: You can only move position +1 or -1"
+        if ($position != -1 && $position != 1);
+
+    my @list = $self->list_ldap_access();
+
+    my $index;
+    for my $n (0 .. $#list) {
+        if (defined $list[$n] && $list[$n]->{id} == $id_access ) {
+            $index = $n;
+            last;
+        }
+    }
+    confess "Error: access id: $id_access not found for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $index;
+
+    my ($n_order)   = $list[$index]->{n_order};
+    die "Error: position $index has no n_order for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $n_order;
+
+    my $index2 = $index + $position;
+    die "Error: position $index2 has no id for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $list[$index2] || !defined$list[$index2]->{id};
+
+    my ($id_access2, $n_order2) = ($list[$index2]->{id}, $list[$index2]->{n_order});
+
+    die "Error: position ".$index2." not found for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $id_access2;
+
+    die "Error: n_orders are the same for index $index and ".($index+$position)
+            ."in \n".Dumper(\@list)
+            if $n_order == $n_order2;
+
+    $self->_set_access_order($id_access, $n_order2);
+    $self->_set_access_order($id_access2, $n_order);
+}
+
+sub set_ldap_access($self, $id_access, $allowed, $last) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute "
+        ." SET allowed=?, last=?"
+        ." WHERE id=?");
+    $sth->execute($allowed, $last, $id_access);
+}
+
 1;

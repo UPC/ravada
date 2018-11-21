@@ -15,6 +15,7 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Moose;
 use Ravada;
+use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
 use Ravada::Front::Domain::KVM;
 use Ravada::Network;
@@ -141,6 +142,7 @@ sub list_machines_user {
     my @list;
     while ( $sth->fetch ) {
         next if !$is_public && !$user->is_admin;
+        next if !$user->allowed_access($id);
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
@@ -472,6 +474,8 @@ sub list_vms($self, $type=undef) {
         $row->{action_remove} = 'disabled' if length defined $row->{machines}[0] > 0;
         $row->{action_remove} = 'disabled' if $row->{hostname} eq 'localhost';
         $row->{action_remove} = 'disabled' if length defined $row->{bases}[0] > 0;
+        $row->{is_local} = 0;
+        $row->{is_local} = 1  if $row->{hostname} =~ /^(localhost|127)/;
         delete $row->{vm_type};
         lock_hash(%$row);
         push @list,($row);
@@ -866,11 +870,11 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'refresh_storage'
                 || $command eq 'ping_backend'
                 || $command eq 'cleanup'
+                || $command eq 'screenshot'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
                 || $command eq 'shutdown'
-                || $command eq 'screenshot'
                 || $command eq 'hibernate'
                 )
                 && time - $epoch_date_changed > 5
@@ -1050,6 +1054,9 @@ sub add_node($self,%arg) {
     my $sth = $CONNECTOR->dbh->prepare($sql);
     $sth->execute(map { $arg{$_} } sort keys %arg );
     $sth->finish;
+
+    my $req = Ravada::Request->refresh_vms( _force => 1 );
+    return $req->id;
 }
 
 =head2 version

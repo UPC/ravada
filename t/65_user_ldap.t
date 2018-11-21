@@ -16,6 +16,7 @@ use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
 my $RAVADA_POSIX_GROUP = "rvd_posix_group";
+
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 init();
@@ -70,11 +71,13 @@ sub test_user{
     ok(!$mcnulty->is_admin,"User ".$mcnulty->name." should not be admin "
             .Dumper($mcnulty->{_data}));
 
+    ok($mcnulty->ldap_entry,"Expecting User LDAP entry");
     # try to login
     my $mcnulty_login = Ravada::Auth::login($name,$password);
     ok($mcnulty_login,"No login");
     ok(ref $mcnulty_login && ref($mcnulty_login) eq 'Ravada::Auth::LDAP',
             "ref should be Ravada::Auth::LDAP , got ".ref($mcnulty_login));
+    ok($mcnulty_login->ldap_entry,"Expecting User LDAP entry");
     # check for the user in the SQL db
     # 
     $sth = connector->dbh->prepare("SELECT * FROM users WHERE name=?");
@@ -262,6 +265,8 @@ sub _init_config($file_config, $with_admin, $with_posix_group) {
     }
 
     $config->{vm}=['KVM','Void'];
+    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
     my $fly_config = "/var/tmp/$$.config";
     DumpFile($fly_config, $config);
     return $fly_config;

@@ -4,11 +4,12 @@ use warnings;
 
 use  Carp qw(carp confess);
 use Data::Dumper;
+use File::Path qw(make_path);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
-use YAML qw(LoadFile);
+use YAML qw(LoadFile DumpFile);
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -49,6 +50,8 @@ create_domain
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
+    create_ldap_user
+    init_ldap_config
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -62,9 +65,16 @@ our $DEFAULT_DB_CONFIG = "t/etc/sql.conf";
 our $CONT = 0;
 our $CONT_POOL= 0;
 our $USER_ADMIN;
+our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
 our $RVD_BACK;
+our $RVD_FRONT;
+
+#LDAP default values
+my $ADMIN_GROUP = "test.admin.group";
+my $RAVADA_POSIX_GROUP = "rvd_posix_group";
+my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 our %ARG_CREATE_DOM = (
     KVM => []
@@ -151,6 +161,7 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 256*1024
+                    , disk => 256 * 1024 * 1024
            );
     };
     is($@,'');
@@ -208,12 +219,15 @@ sub rvd_back($config=undef) {
     return $rvd;
 }
 
-sub rvd_front() {
+sub rvd_front($config=undef) {
 
-    return Ravada::Front->new(
+    return $RVD_FRONT if $RVD_FRONT;
+
+    $RVD_FRONT = Ravada::Front->new(
             connector => $CONNECTOR
-                , config => ( $CONFIG or $DEFAULT_CONFIG)
+                , config => ( $config or $DEFAULT_CONFIG)
     );
+    return $RVD_FRONT;
 }
 
 sub init($config=undef) {
@@ -242,6 +256,7 @@ sub init($config=undef) {
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
     rvd_back($config)  if !$RVD_BACK;
+    rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
@@ -537,6 +552,8 @@ sub create_ldap_user($name, $password) {
     eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
     is($@,'') or return;
 
+    push @USERS_LDAP,($name);
+
     my @user = Ravada::Auth::LDAP::search_user($name);
     return $user[0];
 }
@@ -720,7 +737,7 @@ sub clean_remote_node {
 
     _remove_old_domains_vm($node);
     _remove_old_disks($node);
-    flush_rules_node($node)  if !$node->is_local();
+    flush_rules_node($node)  if !$node->is_local() && $node->is_active;
 }
 
 sub _remove_old_disks {
@@ -740,6 +757,15 @@ sub remove_old_user {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
     $sth->execute(base_domain_name());
 }
+
+sub remove_old_user_ldap {
+    for my $name (@USERS_LDAP ) {
+        if ( Ravada::Auth::LDAP::search_user($name) ) {
+            Ravada::Auth::LDAP::remove_user($name)  
+        }
+    }
+}
+
 sub search_id_iso {
     my $name = shift;
     connector() if !$CONNECTOR;
@@ -1117,8 +1143,7 @@ sub _dir_db {
     $dir_db =~ s{(t)/(.*)/.*}{$1/.db/$2};
     $dir_db =~ s{(t)/.*}{$1/.db} if !defined $2;
     if (! -e $dir_db ) {
-            warn "mkdir $dir_db";
-            mkdir $dir_db,0700 or die "$! $dir_db";
+            make_path $dir_db or die "$! $dir_db";
     }
     return $dir_db;
 }
@@ -1188,9 +1213,51 @@ sub connector {
     return $connector;
 }
 
+# this must be in DESTROY because users got removed in END
 sub DESTROY {
     remove_old_user() if $CONNECTOR;
-    _clean_file_config();
+    remove_old_user_ldap() if $CONNECTOR;
+}
+
+sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
+                    , $with_admin=0
+                    , $with_posix_group=0) {
+
+    if ( ! -e $file_config) {
+        my $config = {
+        ldap => {
+            admin_user => { dn => $LDAP_USER , password => $LDAP_PASS }
+            ,base => "dc=example,dc=com"
+            ,admin_group => $ADMIN_GROUP
+            ,auth => 'match'
+            ,ravada_posix_group => $RAVADA_POSIX_GROUP
+        }
+        };
+        DumpFile($file_config,$config);
+    }
+    my $config = LoadFile($file_config);
+    delete $config->{ldap}->{admin_group}   if !$with_admin;
+    if ($with_posix_group) {
+        if ( !exists $config->{ldap}->{ravada_posix_group}
+                || !$config->{ldap}->{ravada_posix_group}) {
+            $config->{ldap}->{ravada_posix_group} = $RAVADA_POSIX_GROUP;
+            diag("Adding ravada_posix_group = $RAVADA_POSIX_GROUP in $file_config");
+        }
+    } else {
+        delete $config->{ldap}->{ravada_posix_group};
+    }
+
+    $config->{vm}=['KVM','Void'];
+    delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    DumpFile($fly_config, $config);
+
+    $RVD_BACK = undef;
+    $RVD_FRONT = undef;
+
+    init($fly_config);
+    return $fly_config;
 }
 
 1;

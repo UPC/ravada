@@ -236,7 +236,7 @@ get '/anonymous/(#base_id).html' => sub {
     return quick_start_domain($c,$base->id, $USER->name);
 };
 
-any '/admin/(#type)' => sub {
+any '/admin/#type' => sub {
   my $c = shift;
 
   return admin($c)  if $c->stash('type') eq 'machines'
@@ -470,9 +470,14 @@ get '/machine/prepare/(:id).(:type)' => sub {
         return prepare_machine($c);
 };
 
-get '/machine/toggle_base_vm/(:id_vm)/(:id_domain).(:type)' => sub {
+get '/machine/set_base_vm/(:id_vm)/(:id_domain).(:type)' => sub {
     my $c = shift;
-    return toggle_base_vm($c);
+    return set_base_vm($c, 1);
+};
+
+get '/machine/remove_base_vm/(:id_vm)/(:id_domain).(:type)' => sub {
+    my $c = shift;
+    return set_base_vm($c, 0);
 };
 
 get '/machine/remove_b/(:id).(:type)' => sub {
@@ -637,6 +642,158 @@ any '/admin/user/(:id).(:type)' => sub {
     return $c->render(template => 'main/manage_user');
 };
 
+get '/list_ldap_attributes/(#cn)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $cn = $c->stash('cn');
+    my $user;
+    eval {
+        ($user) = Ravada::Auth::LDAP::search_user($cn);
+    };
+    return $c->render(json => { error => $@ }) if $@;
+    return $c->render(json => []) if !$user;
+
+    $c->session(ldap_attributes_cn => $cn) if $user;
+    return $c->render(json => {attributes => [sort $user->attributes]});
+};
+
+get '/count_ldap_entries/(#attribute)/(#value)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my @entries;
+    eval {
+        @entries = Ravada::Auth::LDAP::search_user(
+            field => $c->stash('attribute')
+            ,name => $c->stash('value')
+            ,typesonly => 1
+        );
+    };
+    @entries = [ 'too many' ] if $@ =~ /Sizelimit exceeded/;
+    return $c->render(json => { entries => scalar @entries });
+};
+
+get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)/(#last)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my $attribute = $c->stash('attribute');
+    my $value = $c->stash('value');
+    my $allowed = 1;
+    if ($c->stash('allowed') eq 'false') {
+        $allowed = 0;
+    }
+    my $last = 1;
+    if ($c->stash('last') eq 'false') {
+        $last = 0;
+    }
+    $last = 1 if !$allowed;
+
+    eval { $domain->allow_ldap_access($attribute => $value, $allowed, $last ) };
+    _fix_default_ldap_access($c, $domain, $allowed) if !$@;
+    return $c->render(json => { error => $@ }) if $@;
+    return $c->render(json => { ok => 1 });
+
+};
+
+sub _fix_default_ldap_access($c, $domain, $allowed) {
+    my @list = $domain->list_ldap_access();
+    my $default_found;
+    for ( @list ) {
+        if ( $_->{value} eq '*' ) {
+            $default_found = $_->{id};
+        }
+    }
+    if ( $default_found ) {
+        $domain->move_ldap_access($default_found, +1);
+        return;
+    }
+    my $allowed_default = 0;
+    $allowed_default = 1 if !$allowed;
+    eval { $domain->allow_ldap_access('DEFAULT' => '*', $allowed_default ) };
+    warn $@ if $@;
+}
+
+get '/delete_ldap_access/(#id_domain)/(#id_access)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    $domain->delete_ldap_access($c->stash('id_access'));
+
+    # delete default if it is the only one left
+    my @ldap_access = $domain->list_ldap_access();
+    if (scalar @ldap_access == 1 && $ldap_access[0]->{value} eq '*') {
+        $domain->delete_ldap_access($ldap_access[0]->{id});
+    }
+
+    return $c->render(json => { ok => 1 });
+};
+
+get '/list_ldap_access/(#id_domain)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my @ldap_access = $domain->list_ldap_access();
+    my $default = {};
+    if (scalar @ldap_access && $ldap_access[-1]->{value} eq '*') {
+        $default = pop @ldap_access;
+    }
+    return $c->render(json => {list => \@ldap_access, default => $default} );
+};
+
+get '/move_ldap_access/(#id_domain)/(#id_access)/(#count)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    $domain->move_ldap_access($c->stash('id_access'), $c->stash('count'));
+
+    return $c->render(json => { ok => 1});
+};
+
+get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my $allowed = $c->stash('allowed');
+    if ($allowed =~ /false/ || !$allowed) {
+        $allowed = 0;
+    } else {
+        $allowed = 1;
+    }
+    my $last= $c->stash('last');
+    if ($last=~ /false/ || !$last) {
+        $last= 0;
+    } else {
+        $last= 1;
+    }
+    warn "last = $last";
+
+    $domain->set_ldap_access($c->stash('id_access'), $allowed, $last);
+    return $c->render(json => { ok => 1});
+};
 ##############################################
 
 
@@ -729,15 +886,6 @@ any '/requirements' => sub {
     my $c = shift;
 
     $c->render(template => 'main/requirements');
-};
-
-
-any '/settings' => sub {
-    my $c = shift;
-
-    $c->stash(version => $RAVADA->version );
-
-    $c->render(template => 'main/settings');
 };
 
 any '/admin/monitoring' => sub {
@@ -1432,6 +1580,7 @@ sub manage_machine {
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
     $c->stash(list_users => $RAVADA->list_users);
+    $c->stash(ldap_attributes_cn => ( $c->session('ldap_attributes_cn') or $USER->name or ''));
 
     $c->stash(  ram => int( $domain->get_info()->{max_mem} / 1024 ));
     $c->stash( cram => int( $domain->get_info()->{memory} / 1024 ));
@@ -1688,8 +1837,7 @@ sub copy_screenshot {
     $c->render(json => { request => $req->id});
 }
 
-sub toggle_base_vm {
-    my $c = shift;
+sub set_base_vm( $c, $new_value) {
 
     my $id_vm = $c->stash('id_vm');
     my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
@@ -1697,15 +1845,20 @@ sub toggle_base_vm {
     if ($USER->id != $domain->id && !$USER->is_admin) {
         return $c->render(json => {message => 'access denied'});
     }
-    my $new_value = 0;
-    $new_value = 1 if !$domain->is_base || !$domain->base_in_vm($id_vm);
 
-    my $req = Ravada::Request->set_base_vm(
-          value => $new_value
-        , id_vm => $id_vm
+    if ($new_value) {
+        my $req = Ravada::Request->set_base_vm(
+        id_vm => $id_vm
         , id_domain => $domain->id
         , uid => $USER->id
-    );
+        );
+    } else {
+        my $req = Ravada::Request->remove_base_vm(
+            id_vm => $id_vm
+            , id_domain => $domain->id
+            , uid => $USER->id
+        );
+    }
     return $c->render(json => {message => 'processing request'});
 }
 
@@ -1956,6 +2109,13 @@ sub _new_anonymous_user {
     Ravada::Auth::SQL::add_user(name => $name, is_temporary => 1);
 
     return $name;
+}
+
+my $routes = app->routes->children;
+for my $route (@$routes){
+    $route->pattern->quote_start('(');
+    $route->pattern->quote_end(')');
+    $route->pattern->parse($route->pattern->unparsed);
 }
 
 app->secrets($CONFIG_FRONT->{secrets})  if $CONFIG_FRONT->{secrets};

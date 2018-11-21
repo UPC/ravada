@@ -248,6 +248,9 @@ msgstr "Tidak dapat menghapus dasar, mesin memiliki klon"
 msgid "For spice redirection you'll need to install"
 msgstr "Untuk pengalihan spice Anda harus memasang"
 
+msgid "in your computer."
+msgstr "di komputer Anda"
+
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Cari di distribusi Anda, mis. di Debia /Ubuntu dengan"
 
@@ -387,6 +390,12 @@ msgstr "Kata sandi tidak cocok"
 msgid "Some of the password fields are empty"
 msgstr "Beberapa kata sandi kosong"
 
+msgid "Status"
+msgstr "Status"
+
+msgid "Actions"
+msgstr "Aksi"
+
 msgid "Machine locked by request"
 msgstr "Mesin terkunci atas permintaan"
 
@@ -414,6 +423,9 @@ msgstr "Untuk pengalihan Spice anda butuh untuk memasang"
 msgid "in your computer."
 msgstr "dikomputer anda"
 
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Cari di distro anda, contoh di Debian/Ubuntu dengan"
+
 msgid "You will need to install"
 msgstr "Anda akan butuh untuk memasang"
 
@@ -426,6 +438,16 @@ msgid ""
 msgstr ""
 "Perlu diketahui dalam Windows, pengalihan Spice adalah tidak otomatis"
 "diperlukan untuk mengasosiasikan protokol dengan program."
+
+msgid "To make this possible, download"
+msgstr "Untuk memungkinkan, unduh "
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+"atau salin baris ini dalam ASCII dan simpan dengan ekstensien .reg, "
+"lalu eksekusi file ini."
 
 msgid "A viewer is required to run the virtual machines."
 msgstr "Penonton dibutuhkan untuk menjalankan mesin virtual."
@@ -629,8 +651,17 @@ msgstr "mengubah status publik"
 msgid "Changing Base State"
 msgstr "Mengubah status basis"
 
+msgid "action"
+msgstr "aksi"
+
 msgid "Grants"
 msgstr "Hibah"
+
+msgid "public"
+msgstr "publik"
+
+msgid "New Base"
+msgstr "Basis Baru"
 
 msgid "Version"
 msgstr "Versi"
@@ -652,6 +683,9 @@ msgstr "Kodenya adalah"
 
 msgid "License"
 msgstr "Lisensi"
+
+msgid "Machine locked by"
+msgstr "Mesin terkunci oleh"
 
 msgid "This Machine is a base"
 msgstr "Mesin ini adalah basis"

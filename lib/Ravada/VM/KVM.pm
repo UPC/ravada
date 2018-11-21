@@ -94,7 +94,8 @@ sub _connect {
     if ($self->host eq 'localhost') {
         $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        return if $self->readonly;
+        confess "Error: You can't connect to remote VMs in readonly mode"
+            if $self->readonly;
         my $transport = 'ssh';
         my $address = $con_type."+".$transport
                                             ."://".'root@'.$self->host
@@ -107,20 +108,9 @@ sub _connect {
                                   Sys::Virt::CRED_AUTHNAME,
                                   Sys::Virt::CRED_PASSPHRASE,
                               ]
-                              ,callback => sub {
-                                  my $creds = shift;
-                                  foreach my $cred (@{$creds}) {
-                                      $cred->{result} = $self->security->{user}
-                                          if $cred->{type} == Sys::Virt::CRED_AUTHNAME;
-                                      $cred->{result} = $self->security->{password}
-                                          if $cred->{type} == Sys::Virt::CRED_PASSPHRASE;
-                                  }
-                                  return 0;
-                              }
                           );
          };
-         die $@ if $@ && $@ !~ /libvirt error code: 38/;
-         return if !$vm;
+         confess $@ if $@;
     }
     if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
 	    warn "WARNING: No storage pools creating default\n";
@@ -165,6 +155,7 @@ Connect to the Virtual Machine Manager
 sub connect {
     my $self = shift;
     return 1 if $self->vm;
+    return 1 if $self->is_alive;
 
     return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
@@ -527,6 +518,7 @@ sub list_domains {
     return if !$self->vm;
 
     my $active = (delete $args{active} or 0);
+    my $read_only = delete $args{read_only};
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
@@ -538,7 +530,12 @@ sub list_domains {
     $sth->execute( $self->id );
     my @list;
     while ( my ($id) = $sth->fetchrow) {
-        my $domain = Ravada::Domain->open($id);
+        my $domain;
+        if ($read_only) {
+            $domain = Ravada::Front::Domain->open( $id );
+        } else {
+            $domain = Ravada::Domain->open( id => $id, vm => $self);
+        }
         push @list,($domain) if $domain;
     }
     return @list;
@@ -2047,6 +2044,7 @@ sub is_alive($self) {
 }
 
 sub list_storage_pools($self) {
+    confess "No VM " if !$self->vm;
     return
         map { $_->get_name }
         grep { $_-> is_active }
@@ -2070,8 +2068,8 @@ sub _free_memory_overcommit($self) {
 sub _free_memory_available($self) {
     my $info = $self->vm->get_node_memory_stats();
     my $used = 0;
-    for my $domain ( $self->list_domains(active => 1) ) {
-        $used += $domain->domain->get_info->{memory};
+    for my $domain ( $self->list_domains(active => 1, read_only => 1) ) {
+        $used += $domain->get_info->{memory};
     }
     my $free_mem = $info->{total} - $used;
     my $free_real = $self->_free_memory_overcommit;

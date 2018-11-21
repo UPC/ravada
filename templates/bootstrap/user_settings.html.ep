@@ -31,9 +31,9 @@
                                 <option <%= $c->param("tongue") eq 'ja' ? "selected" : "" %> value="ja" ><%=l 'Japanese' %></option>
                              </select>
 %                            if ($changed_lang) {
-                                 <font color="green">   <%=l 'Your language has been changed successfully' %></font> 
-%                            }     
-                        </form>                
+                                 <font color="green">   <%=l 'Your language has been changed successfully' %></font>
+%                            }
+                        </form>
                         </div>
 %   if (!$_user->is_external) {
                         <div class="card-body">
