@@ -888,15 +888,6 @@ any '/requirements' => sub {
     $c->render(template => 'main/requirements');
 };
 
-
-any '/settings' => sub {
-    my $c = shift;
-
-    $c->stash(version => $RAVADA->version );
-
-    $c->render(template => 'main/settings');
-};
-
 any '/admin/monitoring' => sub {
     my $c = shift;
 
