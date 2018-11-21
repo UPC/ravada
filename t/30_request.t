@@ -45,7 +45,7 @@ sub test_remove_domain {
     $domain = $vm->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
@@ -90,7 +90,7 @@ sub test_req_create_domain_iso {
     my $vm_name = shift;
 
     my $name = new_domain_name();
-    diag("Requesting create domain $name");
+#    diag("Requesting create domain $name");
 
     $USER->mark_all_messages_read();
     test_unread_messages($USER,0, "[$vm_name] create domain $name");
@@ -244,10 +244,7 @@ sub test_requests_by_domain {
     my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
     ok($domain->list_requests == 3);
 
-    eval {
-            rvd_back->_process_all_requests_dont_fork();
-    };
-
+    rvd_back->_process_all_requests_dont_fork();
 
     is($req1->status , 'done');
     is($req2->status , 'done');
@@ -315,7 +312,7 @@ ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;
@@ -343,6 +340,8 @@ for my $vm_name ( qw(Void KVM)) {
         my $domain_base = test_req_create_base($vm);
         if ($domain_base) {
             $domain_base->is_public(1);
+            is ($domain_base->_vm->readonly, 0) or next;
+
             my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
             $domain_clone = Ravada::Domain->open($domain_clone->id);
             meta_ok($domain_clone,'Ravada::Domain::KVM');

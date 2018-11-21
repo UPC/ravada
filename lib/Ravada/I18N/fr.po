@@ -31,7 +31,7 @@ msgid "Choose a Machine to Start"
 msgstr "Choisir une machine pour démarrer"
 
 msgid "Start"
-msgstr "Commencer"
+msgstr "Démarrer"
 
 msgid "Stop"
 msgstr "Arrêter"
@@ -259,7 +259,7 @@ msgid "in your computer."
 msgstr "sur votre ordinateur."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Cherchez dans votre distro, par exemple dans Debian/Ubuntu avec"
+msgstr "Cherchez dans votre distribution, par exemple dans Debian/Ubuntu avec"
 
 msgid "You will need to install"
 msgstr "Vous devrez installer"
@@ -282,7 +282,7 @@ msgid ""
 "then execute the file."
 msgstr ""
 "ou copiez les lignes suivantes dans un fichier ASCII et enregistrez le avec "
-"l'extension .reg, ensuite exécutez le fichier"
+"l'extension .reg, puis exécutez le fichier"
 
 msgid "Login"
 msgstr "Connexion"
@@ -338,18 +338,18 @@ msgid "can create virtual machines."
 msgstr "peut créer des machines virtuelles."
 
 msgid "can grant permissions to other users"
-msgstr "peut donner des permissions à d'autres utilisateurs"
+msgstr "peut accorder des permissions à d'autres utilisateurs"
 
 msgid "can hibernate any virtual machine."
-msgstr "peut hiberner n'importe quelle machine virtuelle."
+msgstr "peut mettre en veille n'importe quelle machine virtuelle."
 
 msgid "can hibernate clones from virtual machines owned by the user."
 msgstr ""
-"peut hiberner les clones des machines virtuelles appartenant à "
+"peut mettre en veille les clones des machines virtuelles appartenant à "
 "l'utilisateur."
 
 msgid "can hibernate any clone."
-msgstr "peut hiberner n'importe quel clone."
+msgstr "peut mettre en veille n'importe quel clone."
 
 msgid "can remove any virtual machines owned by the user."
 msgstr ""
@@ -381,7 +381,7 @@ msgstr "peut éteindre n'importe quelle machine virtuelle."
 
 msgid "can shutdown clones from virtual machines owned by the user."
 msgstr ""
-"peut éteindre les clones des machines virtuelles appartenant à l'utilizateur"
+"peut éteindre les clones des machines virtuelles appartenant à l'utilisateur"
 
 msgid "Submit Query"
 msgstr "Soumettre la requête"
@@ -493,7 +493,7 @@ msgid "Create a new account"
 msgstr "Créer un nouveau compte"
 
 msgid "Username"
-msgstr "nom d'utilisateur"
+msgstr "Nom d'utilisateur"
 
 msgid "Hide Private"
 msgstr "Masquer privée"
@@ -502,16 +502,16 @@ msgid "Show All"
 msgstr "Tout afficher"
 
 msgid "Shutting down ..."
-msgstr "Mise hors service..."
+msgstr "Arrêt en cours..."
 
 msgid "It may take a couple of minutes."
 msgstr "Cela peut prendre quelques minutes."
 
 msgid "Hybernating ..."
-msgstr "Mise en hibernation..."
+msgstr "Mise en veille..."
 
 msgid "Description"
-msgstr "Description"
+msgstr "Déscription"
 
 msgid "Rename"
 msgstr "Renommer"
@@ -580,19 +580,19 @@ msgid "This machine has not Graphics parameters!"
 msgstr "Cette machine n'a pas de paramètres graphiques !"
 
 msgid "recommended"
-msgstr "recommander"
+msgstr "conseillé"
 
 msgid "to"
 msgstr "pour"
 
 msgid "Changing Public State"
-msgstr "Changement d'État public"
+msgstr "Changement d'état public"
 
 msgid "Changing Base State"
 msgstr "Changement d'état de la base"
 
 msgid "action"
-msgstr "Action"
+msgstr "action"
 
 msgid "Grants"
 msgstr "Octroyer"
@@ -620,13 +620,13 @@ msgid "The code is available on "
 msgstr "Le code est disponible à l'adresse suivante "
 
 msgid "The code is "
-msgstr "le code est"
+msgstr "Le code est"
 
 msgid "License"
 msgstr "Licence "
 
 msgid "Machine locked by"
-msgstr "Machine verrouiller par"
+msgstr "Machine verrouillée par"
 
 msgid "This Machine is a base"
 msgstr "Cette machine est une base"
@@ -686,7 +686,7 @@ msgid "Confirm Password"
 msgstr "Confirmer votre mot de passe"
 
 msgid "Username is required"
-msgstr "le nom d'utilisateur est requis "
+msgstr "Le nom d'utilisateur est requis "
 
 msgid "Username can not exceed 20 characters"
 msgstr "Le nom d'utilisateur ne peut pas dépasser 20 caractères."
@@ -709,7 +709,7 @@ msgid "Password must be at least 5 characters"
 msgstr "Le mot de passe doit comporter au moins 5 caractères "
 
 msgid "Password can only contain words and numbers"
-msgstr "Le mot de passe peut seulement contenir des chiffres et des lettres"
+msgstr "Le mot de passe peut uniquement contenir des chiffres et des lettres"
 
 msgid "Confirm Password is required"
 msgstr "Confirmer que le mot de passe est requis"
@@ -747,10 +747,10 @@ msgstr ""
 " recherchez un fichier nommé"
 
 msgid "in your downloads folder."
-msgstr "dans votre dossier de téléchargements."
+msgstr "dans votre dossier de téléchargement."
 
 msgid "copied to clipboard"
 msgstr "copié dans le presse-papiers"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "Portugais"

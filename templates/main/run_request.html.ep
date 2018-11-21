@@ -28,6 +28,7 @@
                 </span>
             </div>
             <div "panel-body" ng-show="domain.is_active">
+            <h3>Connection</h3>
             <ul ng-show="domain.is_active">
                 <li ng-show="domain.spice_password">
                     <%=l 'The password for this virtual machine connection is :'%>
@@ -46,6 +47,15 @@
                 </li>
                 <li><b>Display IP :</b> 192.168.1.106</li>
                 <li><b>Display Port :</b> 5900</li>
+            </ul>
+            <h3>Machine Information</h3>
+            <ul>
+                <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
+                    <span ng-hide="domain.ip"><i>waiting for network to come up</i></span>
+                </li>
+                <li><b>Max Memory:</b> {{domain.max_mem}}</li>
+                <li><b>Memory:</b> {{domain.memory}}</li>
+                <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
             </div>
             <div ng-show="domain.is_active">

@@ -6,6 +6,9 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("machinesPage", machinesPageC)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
+        .controller("manage_nodes",manage_nodes)
+        .controller("new_node", newNodeCtrl)
+    ;
 
   function swMach() {
     return {
@@ -284,4 +287,49 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
 
+    function manage_nodes($scope, $http, $interval) {
+        $scope.list_nodes = function() {
+            $http.get('/list_nodes.json').then(function(response) {
+                $scope.nodes = response.data;
+            });
+        };
+        $scope.node_enable=function(id) {
+            $http.get('/node/enable/'+id+'.json');
+            $scope.list_nodes();
+        };
+        $scope.node_disable=function(id) {
+            $http.get('/node/disable/'+id+'.json');
+            $scope.list_nodes();
+        };
+        $scope.node_remove=function(id) {
+            $http.get('/node/remove/'+id+'.json');
+            $scope.list_nodes();
+        };
+        $scope.list_nodes();
+        $interval($scope.list_nodes,30 * 1000);
+    };
+
+    function newNodeCtrl($scope, $http, $interval) {
+        $http.get('/list_vm_types.json').then(function(response) {
+            $scope.backends = response.data;
+            $scope.backend = response.data[0];
+        });
+        $scope.validate_node_name = function() {
+            console.log($scope.name);
+
+            $http.get('/node/exists/'+$scope.name)
+                .then(duplicated_callback, unique_callback);
+
+            function duplicated_callback(response) {
+                if ( response.data ) {
+                    $scope.name_duplicated=true;
+                } else {
+                    $scope.name_duplicated=false;
+                }
+            };
+            function unique_callback() {
+                $scope.name_duplicated=false;
+            }
+        };
+    };
 }());

@@ -34,7 +34,7 @@ has 'domain' => (
 );
 
 has '_vm' => (
-    is => 'ro'
+    is => 'rw'
     ,isa => 'Ravada::VM::KVM'
     ,required => 0
 );
@@ -86,12 +86,8 @@ Returns the name of the domain
 
 sub name {
     my $self = shift;
-    return $self->{_name}           if $self->{_name};
-    return $self->{_data}->{name}   if $self->{_data};
 
-    $self->{_name} = $self->domain->get_name if $self->domain;
-
-    return $self->{_name}   if $self->{_name};
+    return $self->domain->get_name if $self->domain;
 
     confess "ERROR: Unknown domain name";
 }
@@ -124,9 +120,11 @@ sub list_disks {
 }
 
 sub xml_description($self, $inactive=0) {
-    return $self->_data_extra('xml')    if !$self->domain && $self->is_known;
+    return $self->_data_extra('xml')
+        if ($self->is_removed || !$self->domain )
+            && $self->is_known;
 
-    confess "ERROR: KVM domain not available"   if !$self->domain;
+    confess "ERROR: KVM domain not available ".$self->is_known   if !$self->domain;
     my $xml;
     eval {
         my @flags;
@@ -161,6 +159,11 @@ sub remove_disks {
 
     my $removed = 0;
 
+    my $id;
+    eval { $id = $self->id };
+    return if $@ && $@ =~ /No DB info/i;
+    die $@ if $@;
+
     $self->_vm->connect();
     for my $file ($self->list_disks) {
         if (! -e $file ) {
@@ -169,9 +172,10 @@ sub remove_disks {
             next;
         }
         $self->_vol_remove($file);
-        if ( -e $file ) {
-            unlink $file or die "$! $file";
-        }
+        $self->_vol_remove($file);
+#        if ( -e $file ) {
+#            unlink $file or die "$! $file";
+#        }
         $removed++;
 
     }
@@ -192,6 +196,7 @@ Cleanup operations executed before removing this domain
 
 sub pre_remove_domain {
     my $self = shift;
+    return if $self->is_removed;
     $self->xml_description();
     $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
 }
@@ -204,10 +209,18 @@ sub _vol_remove {
     my $name;
     ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
-    #TODO: do a remove_volume in the VM
-    my @vols = $self->_vm->storage_pool->list_volumes();
-    for my $vol ( @vols ) {
-        $vol->delete() if$vol->get_name eq $name;
+    my $removed = 0;
+    for my $pool ( $self->_vm->vm->list_storage_pools ) {
+        $pool->refresh;
+        my $vol;
+        eval { $vol = $pool->get_volume_by_name($name) };
+        if (! $vol ) {
+            warn "VOLUME $name not found in $pool \n".($@ or '')
+                if $@ !~ /libvirt error code: 50,/i;
+            next;
+        }
+        $vol->delete();
+        $pool->refresh;
     }
     return 1;
 }
@@ -222,8 +235,9 @@ sub remove {
     my $self = shift;
     my $user = shift;
 
+    my @volumes;
     if (!$self->is_removed ) {
-        $self->list_disks();
+        @volumes = $self->list_disks();
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
@@ -235,7 +249,10 @@ sub remove {
 
     eval { $self->remove_disks() if $self->is_known };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
-#    warn "WARNING: Problem removing disks for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
+
+    for my $file ( @volumes ) {
+        $self->_vol_remove($file);
+    }
 
     eval { $self->_remove_file_image() };
     die $@ if $@ && $@ !~ /libvirt error code: 42/;
@@ -243,11 +260,8 @@ sub remove {
 
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
-    
-    $self->_post_remove_base_domain() if $self->is_base();
 
-    eval { $self->domain->undefine()    if $self->domain };
-    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+    $self->_post_remove_base_domain() if $self->is_base();
 
 }
 
@@ -530,8 +544,7 @@ Returns the display URI
 
 =cut
 
-sub display {
-    my $self = shift;
+sub display($self, $user) {
 
     my $xml = XML::LibXML->load_xml(string => $self->xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics')
@@ -542,7 +555,7 @@ sub display {
     my ($address) = $graph->getAttribute('listen');
     $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
-    confess "ERROR: Machine ".$self->name." is not active\n"
+    confess "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
@@ -588,17 +601,18 @@ sub start {
     if (!(scalar(@_) % 2))  {
         %arg = @_;
     }
+    my $remote_ip = delete $arg{remote_ip};
 
     my $set_password=0;
-    my $remote_ip = $arg{remote_ip};
-    my $request = delete $arg{request};
 
     if ($remote_ip) {
+        $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
     eval { $self->domain->create() };
+<<<<<<< HEAD
     if ( $@ && $@ !~ /already running/i ) {
         if ( $self->domain->has_managed_save_image ) {
             $request->status("removing saved image") if $request;
@@ -609,6 +623,9 @@ sub start {
             die $@ if $@;
         }
     }
+=======
+    die $@ if $@ && $@ !~ /libvirt error code: 55,/;
+>>>>>>> c746a4990c05199c191f5611f367b57c3f4c912c
 }
 
 sub _pre_shutdown_domain {
@@ -1072,9 +1089,17 @@ sub get_info {
     $info->{memory} = $info->{memory};
     $info->{cpu_time} = $info->{cpuTime};
     $info->{n_virt_cpu} = $info->{nVirtCpu};
+    $info->{ip} = $self->ip()   if $self->is_active();
 
     lock_keys(%$info);
     return $info;
+}
+
+sub ip($self) {
+    my @ip;
+    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+    warn $@ if $@;
+    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 }
 
 =head2 set_max_mem
@@ -1275,15 +1300,13 @@ sub spinoff_volumes {
 }
 
 
-sub _set_spice_ip {
-    my $self = shift;
-    my $set_password = shift;
+sub _set_spice_ip($self, $set_password, $ip=undef) {
 
     my $doc = XML::LibXML->load_xml(string
-                            => $self->domain->get_xml_description) ;
+                            => $self->domain->get_xml_description);
     my @graphics = $doc->findnodes('/domain/devices/graphics');
 
-    my $ip = $self->_vm->ip();
+    $ip = $self->_vm->ip()  if !defined $ip;
 
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
@@ -1330,6 +1353,7 @@ sub _find_base {
     run3(\@cmd,\$in, \$out, \$err);
 
     my ($base) = $out =~ m{^backing file: (.*)}mi;
+    confess "No base for $file in $out" if !$base;
 
     return $base;
 }
@@ -1342,8 +1366,10 @@ Clean swap volumes. It actually just creates an empty qcow file from the base
 
 sub clean_swap_volumes {
     my $self = shift;
+    return if !$self->is_local;
     for my $file ($self->list_volumes) {
         next if $file !~ /\.SWAP\.\w+/;
+        next if ! -e $file;
         my $base = $self->_find_base($file) or next;
 
     	my @cmd = ('qemu-img','create'
@@ -1645,6 +1671,54 @@ In KVM it removes saved images.
 
 sub pre_remove {
     my $self = shift;
+    return if $self->is_removed;
+    $self->domain->managed_save_remove
+        if $self->domain && $self->domain->has_managed_save_image;
+}
+
+sub _check_uuid($self, $doc, $node) {
+
+    my ($uuid) = $doc->findnodes('/domain/uuid/text()');
+
+    my @other_uuids;
+    for my $domain ($node->vm->list_all_domains, $self->_vm->vm->list_all_domains) {
+        push @other_uuids,($domain->get_uuid_string);
+    }
+    return if !(grep /^$uuid$/,@other_uuids);
+
+    my $new_uuid = $self->_vm->_unique_uuid($uuid
+            ,@other_uuids
+    );
+    $uuid->setData($new_uuid);
+
+}
+
+sub _check_machine($self,$doc) {
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    $os_type->setAttribute( machine => 'pc');
+}
+
+sub migrate($self, $node, $request=undef) {
+    my $dom;
+    eval { $dom = $node->vm->get_domain_by_name($self->name) };
+    die $@ if $@ && $@ !~ /libvirt error code: 42/;
+
+    if ($dom) {
+        #dom already in remote node
+        $self->domain($dom);
+    } else {
+        my $xml = $self->domain->get_xml_description();
+
+        my $doc = XML::LibXML->load_xml(string => $xml);
+        $self->_check_uuid($doc, $node);
+        $self->_check_machine($doc);
+        $dom = $node->vm->define_domain($doc->toString());
+        $self->domain($dom);
+    }
+    $self->_set_spice_ip(1,$node->ip);
+
+    $self->rsync(node => $node, request => $request);
+
     return if $self->is_removed;
     $self->domain->managed_save_remove
         if $self->domain && $self->domain->has_managed_save_image;

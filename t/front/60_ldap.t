@@ -28,7 +28,10 @@ sub test_ldap {
         config => $CONFIG_FILE
         ,connector => connector()
     );
+<<<<<<< HEAD
     delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
+=======
+>>>>>>> c746a4990c05199c191f5611f367b57c3f4c912c
     create_ldap_user($USER_DATA->{name}, $USER_DATA->{password});
     my $login_ok;
     eval { $login_ok = Ravada::Auth::login($USER_DATA->{name}, $USER_DATA->{password}) };
@@ -69,7 +72,11 @@ sub test_ldap {
 
 SKIP: {
     my $ravada = Ravada->new(config => $CONFIG_FILE
+<<<<<<< HEAD
                         , connector => connector);
+=======
+                        , connector => connector());
+>>>>>>> c746a4990c05199c191f5611f367b57c3f4c912c
     $ravada->_install();
     my $ldap;
 

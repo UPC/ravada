@@ -51,7 +51,7 @@ sub add_description {
 sub test_description {
     my $vm_name = shift;
 
-    diag("Testing add description $vm_name");
+#    diag("Testing add description $vm_name");
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 

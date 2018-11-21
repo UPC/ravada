@@ -108,7 +108,7 @@ sub test_volatile_clone {
             and do {
                 is($clone_listed->{can_hibernate},0);
                 ok(exists $clone_listed->{client_status},"Expecting client_status field");
-                like($clone_listed->{client_status},qr(.))
+                like($clone_listed->{client_status},qr(.));
             };
 
 
@@ -186,7 +186,7 @@ sub test_enforce_limits {
     is($clone2->is_active, 1);
     is($clone2->is_volatile, 1);
 
-    my $req = Ravada::Request->enforce_limits( timeout => 1 );
+    my $req = Ravada::Request->enforce_limits( timeout => 1, _force => 1 );
     eval { rvd_back->_enforce_limits_active($req) };
     is(''.$@,'');
     for ( 1 .. 10 ){

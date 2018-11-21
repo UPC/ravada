@@ -31,8 +31,8 @@
             </div>
             <div class="alert alert-danger" ng-show="error">{{error}}</div>
         </div><!-- del panel default-->
+%=   include 'bootstrap/requests'
     </div><!-- del page-header -->
-</div><!-- del ng-controller -->
 </div> <!-- del page-wrapper -->
 </div> <!-- del wrapper -->
     %= include 'bootstrap/scripts'

@@ -14,11 +14,14 @@ and password of the Directory Manager.
 
     $ sudo systemctl start dirsrv.target
 
+<<<<<<< HEAD
 or you may have to start the specific instance, that is probably the hostname
 
     $ sudo systemctl start dirsrv@instance.target
 
 
+=======
+>>>>>>> c746a4990c05199c191f5611f367b57c3f4c912c
 # Add a test config file
 
 We need to run the tests on this LDAP server,
