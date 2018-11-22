@@ -64,7 +64,7 @@
         %= include 'main/vm_copy'
     </div>
 % if ( $USER->is_admin) {
-    <div class="tab-pane fade" id="clones" >
+    <div class="tab-pane fade" id="nav-clones" >
         %= include 'main/vm_clones'
     </div>
 % }
