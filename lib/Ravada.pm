@@ -1938,6 +1938,7 @@ sub process_requests {
     );
     $sth->execute(time);
 
+    my @reqs;
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
@@ -1950,6 +1951,12 @@ sub process_requests {
 
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
+
+        push @reqs,($req);
+    }
+
+    for my $req (@reqs) {
+        next if $req eq 'refresh_vms' && scalar@reqs > 2;
 
         warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
             .$req->command
