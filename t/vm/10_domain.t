@@ -65,9 +65,20 @@ sub test_start_clones {
     is($clone3->is_active,0);
     my $req = Ravada::Request->start_clones(uid => $USER->id, id_domain => $domain->id, remote_ip => '127.0.0.1' );
     rvd_back->_process_all_requests_dont_fork(); #we make sure that the sql has updated.
+    is($req->status,'done');
+    is($req->error,'');
+
+    # The first requests creates 3 more requests, process them
+    rvd_back->_process_all_requests_dont_fork();
     is($clone1->is_active,1);
     is($clone2->is_active,1);
     is($clone3->is_active,1);
+
+    $clone1->remove(user_admin);
+    $clone2->remove(user_admin);
+    $clone3->remove(user_admin);
+
+    $domain->remove(user_admin);
 }
 
 sub test_vm_connect {
