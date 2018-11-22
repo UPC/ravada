@@ -1,5 +1,5 @@
 % use Data::Dumper;
-<div class="panel-body">
+<div class="card-body">
     <div class="alert alert-success" ng-show="domain.is_locked">
         <%=l 'This machine is locked by process' %> <a href="/request/{{domain.is_locked}}.html">process</a>
     </div>
