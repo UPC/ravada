@@ -31,9 +31,9 @@
                 <div class="col-md-1">{{node.machines.length}}</div>
                 <div class="col-md-2">
                     <span ng-show="{{node.is_active}}"
-                          class="label label-success"><%=l 'Active' %></span>
+                          class="badge badge-success"><%=l 'Active' %></span>
                     <span ng-show="{{!node.is_active}}"
-                          class="label label-danger"><%=l 'Shutdown' %></span>
+                          class="badge badge-danger"><%=l 'Shutdown' %></span>
                     <br/>
                     <span ng-show="!node.enabled"
                           class="label label-warning"><%=l 'Disabled' %></span>

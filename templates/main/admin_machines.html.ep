@@ -113,24 +113,24 @@
 
 %=      include 'bootstrap/requests'
 
-        <table class="table table-striped admin-cont-body" border="0">
+        <table class="table admin-cont-body" border="0">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"
                      ng-click="orderMachineList('name','')">
-                      <i class="fa fa-exchange fa-rotate-90"
+                      <i class="fas fa-exchange fa-rotate-90"
                        ng-hide="orderParam[0] === 'name' || orderParam[0] === '-name'"></i>
-                      <i class="fa fa-arrow-down" ng-cloak
+                      <i class="fas fa-arrow-down" ng-cloak
                        ng-hide="orderParam[0] !== 'name'"></i>
-                      <i class="fa fa-arrow-up" ng-cloak
+                      <i class="fas fa-arrow-up" ng-cloak
                        ng-hide="orderParam[0] !== '-name'"></i>
                       <%=l 'Machine Name' %></div>
                         <div style="float:right" ng-show="n_clones">
                             <a ng-show="hide_clones" ng-click="hideClones()"
-                              class="label label-primary"
+                              class="badge badge-primary dropdown-toggle text-white"
                               align="right"><%=l 'show clones' %></a>
                             <a ng-show="!hide_clones" ng-click="hideClones()"
-                              class="label label-primary"
+                              class="badge badge-primary dropdown-toggle text-white"
                               align="right"><%=l 'hide clones' %></a>
                         </div>
                     </th>
@@ -145,17 +145,17 @@
 %                   }
                     <th class="lgMachToggle machine-button"
                      ng-click="orderMachineList('is_active','is_paused')">
-                      <i class="fas fa-exchange-alt fa-rotate-90"
-                       ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i><i class="fa fa-arrow-down" ng-cloak
-                       ng-hide="orderParam[0] !== 'is_active'"></i><i class="fa fa-arrow-up"
-                                                                      ng-cloak
-                       ng-hide="orderParam[0] !== '-is_active'"></i><%=l 'Status' %></th>
+                      <div style="float:right">
+                        <i class="fas fa-exchange-alt fa-rotate-90" ng-hide="orderParam[0] === 'is_active' || orderParam[0] === '-is_active'"></i>
+                        <i class="fas fa-arrow-down" ng-cloak ng-hide="orderParam[0] !== 'is_active'"></i>
+                        <i class="fas fa-arrow-up" ng-cloak ng-hide="orderParam[0] !== '-is_active'"></i>
+                        <%=l 'Status' %></div></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
                     <th class="lgMachNode"><%=l 'Node' %></th>
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat-start="machine in list_machines | orderBy : orderParam">
+                <tr ng-repeat-start="machine in list_machines | orderBy : orderParam" class="bg-light">
                     <td class="lgMachName">
                         <a align="right" href="/machine/manage/{{machine.id}}.html"
                                          ng-class="{disabled: !machine.can_manage}"
@@ -189,7 +189,7 @@
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',machine.id)" ng-show="can_prepare_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
@@ -215,7 +215,7 @@
                                  <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{(machine.is_public==0)}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
@@ -231,11 +231,11 @@
 %                       }
 %                       }
                     <td class="lgMachActions">
-                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
-                        <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
-                        <span style="float:right;" ng-show="{{!machine.is_active && !machine.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
-                        <span style="float:right;" ng-show="{{machine.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                        <br><span style="float:right;" ng-show="{{machine.is_active}}" class="label label-default">{{machine.remote_ip}}</span>
+                        <span style="float:right;" ng-show="{{machine.is_paused && machine.is_active}}" class="badge label-warning" ng-cloak><%=l 'Paused' %></span>
+                        <span style="float:right;" ng-show="{{!machine.is_paused && machine.is_active}}" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="{{!machine.is_active && !machine.is_hibernated}}" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
+                        <span style="float:right;" ng-show="{{machine.is_hibernated}}" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
+                        <br><span style="float:right;" ng-show="{{machine.is_active}}" class="badge badge-secondary">{{machine.remote_ip}}</span>
                     </td>
                     <td class="lgMachToggle">
                       <div ng-hide="{{machine.is_locked||machine.is_base}}">
@@ -269,19 +269,19 @@
                       </div>
                       <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
-                          ng-cloak><%=l 'This Machine is a base' %></div>
+                          ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
-                    <td class="lgMachNode"></tg>
+                    <td class="lgMachNode"></td>
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
                           &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
+                          <i class="far fa-clone" title="Cloned"></i>
                           <a align="right" href="/machine/manage/{{child.id}}.html"
                                          ng-class="{disabled: !child.can_manage}"
                           title ="Manage machine"><i
                              ng-cloak>&nbsp;{{child.name}}</i></a>
-                          <span class="comment">[ Cloned ]</span>
                       </td>
                       <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
@@ -311,7 +311,7 @@
                                  <p><%=l 'Are you sure you want to prepare the Base of' %> {{child.name}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',child.id)" ng-show="can_remove_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',child.id)" ng-show="can_prepare_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
@@ -336,7 +336,7 @@
                                  <p><%=l 'Are you sure you want to change the Public state of' %> {{child.name}} to {{(child.is_public==0)}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(child.id, child.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
@@ -352,11 +352,11 @@
 %                   }
 %                       }
                       <td class="lgMachActions">
-                          <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="label label-warning" ng-cloak><%=l 'Paused' %></span>
-                          <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="label label-success" ng-cloak><%=l 'Running' %></span>
-                          <span style="float:right;" ng-show="{{!child.is_active && !child.is_hibernated}}" class="label label-danger" ng-cloak><%=l 'Down' %></span>
-                          <span style="float:right;" ng-show="{{child.is_hibernated}}" class="label label-warning" ng-cloak><%=l 'Hibernated' %></span>
-                          <br/><span style="float:right;" ng-show="{{child.is_active}}" class="label label-default">{{child.remote_ip}}</span>
+                          <span style="float:right;" ng-show="{{child.is_paused && child.is_active}}" class="badge badge-warning" ng-cloak><%=l 'Paused' %></span>
+                          <span style="float:right;" ng-show="{{!child.is_paused && child.is_active}}" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                          <span style="float:right;" ng-show="{{!child.is_active && !child.is_hibernated}}" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
+                          <span style="float:right;" ng-show="{{child.is_hibernated}}" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
+                          <br/><span style="float:right;" ng-show="{{child.is_active}}" class="badge badge-secondary">{{child.remote_ip}}</span>
                       </td>
                       <td class="lgMachToggle">
 
@@ -391,7 +391,7 @@
                         </div>
                         <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine locked by' %><a href="/request/{{child.is_locked}}.html"> <%=l 'process' %></a></div>
                       </td>
-                      <td class="lgMachToggle">{{child.node}}</td>
+                      <td class="lgMachToggle"><span class="badge badge-info" title="<%=l 'Node'%>">{{child.node}}</span></td>
                     </tr>
                     <tr ng-repeat-end ng-hide="true"></tr>
             </tbody>
