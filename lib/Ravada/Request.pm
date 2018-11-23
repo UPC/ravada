@@ -82,7 +82,10 @@ our %VALID_ARG = (
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1 }
+    # Virtual Managers or Nodes
     ,refresh_vms => { _force => 2 }
+    ,shutdown_node => { id_node => 1, at => 2 }
+    ,start_node => { id_node => 1, at => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -93,6 +96,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver
             set_base_vm
+            shutdown_node start_node
     );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -1376,6 +1380,44 @@ sub refresh_machine {
 
     my $req = _new_request($self
         , command => 'refresh_machine'
+        , args => $args
+    );
+
+    return $req;
+
+}
+
+sub shutdown_node {
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('shutdown_node', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    my $req = _new_request($self
+        , command => 'shutdown_node'
+        , args => $args
+    );
+
+    return $req;
+
+}
+
+sub start_node{
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('start_node', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    my $req = _new_request($self
+        , command => 'start_node'
         , args => $args
     );
 

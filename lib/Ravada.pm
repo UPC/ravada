@@ -2104,8 +2104,11 @@ sub _execute {
 
     my $sub = $self->_req_method($request->command);
 
-    confess "Unknown command ".$request->command
-            if !$sub;
+    if (!$sub) {
+        $request->error("Unknown command ".$request->command);
+        $request->status('done');
+        return;
+    }
 
     $request->pid($$);
     $request->start_time(time);
@@ -2728,6 +2731,18 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
+sub _cmd_shutdown_node($self, $request) {
+    my $id_node = $request->args('id_node');
+    my $node = Ravada::VM->open($id_node);
+    $node->shutdown();
+}
+
+sub _cmd_start_node($self, $request) {
+    my $id_node = $request->args('id_node');
+    my $node = Ravada::VM->open($id_node);
+    $node->start();
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2958,6 +2973,9 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
+# Virtual Managers or Nodes
+    ,shutdown_node  => \&_cmd_shutdown_node
+    ,start_node  => \&_cmd_start_node
 
     );
     return $methods{$cmd};
