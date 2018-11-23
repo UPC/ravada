@@ -1165,14 +1165,14 @@ sub _store_mac_address($self, $force=0 ) {
     close $arp;
 }
 
-sub _wake_on_lan( $self, $force=0 ) {
+sub _wake_on_lan( $self ) {
     return if $self->is_local;
-    return if !$force && $self->_data('mac');
 
+    warn $self->_data('mac');
     die "Error: I don't know the MAC address for node ".$self->name
         if !$self->_data('mac');
 
-    my $sock = new IO::Socket::INET(Proto=>'udp')
+    my $sock = new IO::Socket::INET(Proto=>'udp', Timeout => 60)
         or die "Error: I can't create an UDP socket";
     my $host = '255.255.255.255';
     my $port = 9;
@@ -1184,8 +1184,9 @@ sub _wake_on_lan( $self, $force=0 ) {
     my $packet = pack('C6H*', 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, $mac_addr x 16);
 
     setsockopt($sock, SOL_SOCKET, SO_BROADCAST, 1);
-    send($sock, $packet, 0, $sock_addr);
+    send($sock, $packet, MSG_DONTWAIT , $sock_addr);
     close ($sock);
+
 }
 
 sub start($self) {
@@ -1195,8 +1196,7 @@ sub start($self) {
 sub shutdown($self) {
     die "Error: local VM can't be shut down\n" if $self->is_local;
     $self->is_active(0);
-    my ($out, $err) = $self->run_command("/sbin/poweroff");
-    warn $err if $err;
+    $self->run_command_nowait('/sbin/poweroff');
 }
 
 1;
