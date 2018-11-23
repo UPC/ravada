@@ -42,24 +42,16 @@ for my $vm_name ( 'KVM') {
         diag("Testing WOL node in $vm_name");
         my $node = remote_node($vm_name)  or next;
         for ( 1 .. 60 ) {
-            diag("[$_] Waiting for ".$node->name." to answer ping") if $ENV{TERM};
             last if $node->ping;
+            diag("Waiting for ".$node->name." to answer ping") if $ENV{TERM} && ! $_ % 10;
             sleep 1;
         }
         like($node->_data('mac'),qr(\d\d:\d\d:\d\d:\d\d:)) or next;
 
-        is( $node->is_active, 1 );
         $node->shutdown();
-        for ( 1 .. 60 ) {
-            last if !$node->ping;
-            sleep 1;
-        }
-        is( $node->ping, 0 );
         is( $node->is_active, 0 );
 
-        # it actually dows nothing on virtual machines, just check it won't fail
-        eval { $node->_wake_on_lan() };
-        is($@,'');
+        $node->_start_wake_on_lan();
 #        KVM testing machines can't Wake On LAN
 #        sleep 1;
 #        $node->start();
