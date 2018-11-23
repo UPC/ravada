@@ -302,7 +302,7 @@ get '/node/shutdown/(:id).json' => sub {
     for ( @$machines ) {
         my $req = Ravada::Request->shutdown_domain(
                     uid => $USER->id
-            , id_domain => $_
+            , id_domain => $_->{id}
         );
     }
     my $at = 0;
