@@ -3007,7 +3007,7 @@ Valid values are:
 sub status($self, $value=undef) {
     confess "ERROR: the status can't be updated on read only mode."
         if $self->readonly;
-    my %valid_value = map { $_ => 1 } qw(active shutdown STARTING);
+    my %valid_value = map { $_ => 1 } qw(active shutdown starting);
     confess "ERROR: invalid value '$value'" if $value && !$valid_value{$value};
     return $self->_data('status', $value);
 }
