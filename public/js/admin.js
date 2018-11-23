@@ -320,6 +320,19 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.node_disable(id);
             }
         };
+        $scope.node_start=function(id) {
+            $scope.modal_open = false;
+            $http.get('/node/start/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
+
+        };
+        $scope.node_shutdown=function(id) {
+            $scope.modal_open = false;
+            $http.get('/node/shutdown/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
+        };
 
         $scope.modal_open = false;
         $scope.list_nodes();
