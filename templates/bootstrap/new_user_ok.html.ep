@@ -6,18 +6,18 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
            <div class="page-header">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card">
+                    <div class="card-header">
                         <h2>Congrats
                             <!--<button style="float: right; margin: 0 10px;" onclick="location='/users'" ><i class="fa fa-arrow-circle-left" aria-hidden="true"></i></button>-->
                         </h2>
                     </div>
-                    <div class="alert alert-success">
-                        <h3>The new user <strong><%= $username %> </strong> has been added successfully!<h3>
+                    <div class="card-text alert alert-success">
+                        The new user <strong><%= $username %> </strong> has been added successfully!
                     </div>
-                   <div class="panel-body">
+                   <div class="card-body">
                         <h4>What do you want to do now?</h4>
-                        <button style="float: center; " onclick="location='/users/register'" ><i class="fa fa-plus-circle fa-3x" aria-hidden="true"></i>Add another user</button>
+                        <button class="btn btn-success" style="float: center; " onclick="location='/users/register'" ><i class="fas fa-plus-circle fa-2x" aria-hidden="true"></i>Add another user</button>
                     </div>
                       
                 </div>

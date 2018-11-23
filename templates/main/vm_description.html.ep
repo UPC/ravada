@@ -1,22 +1,22 @@
-<div class="panel-body">
-    <div class="form-group">
-        <form class="form-inline" action="<%= $action %>" accept-charset="ISO-8859-1" method="post">
+<div class="card-body">
+    <form class="form" action="<%= $action %>" accept-charset="ISO-8859-1" method="post">
+        <div class="form-group">
             <div class="row">
                 <div class="col-md-12">
-                    <label for="description"><%=l 'This information will be available to the users' %>.</label>
-                    <br/>
-                    <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
-                    <script>
-                        CKEDITOR.replace( 'editor' );
-                    </script>
+                    <div class="form-group">
+                        <strong><label for="description"><%=l 'This information will be available to the users' %>.</label></strong>
+                        <br/>
+                        <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
+                        <script>
+                            CKEDITOR.replace( 'editor' );
+                        </script>
+                    </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <input type="submit" name="btn_description">
-                    <button type="reset"><%=l 'Cancel' %></button>
-                </div>
+            <div class="col-md-12">
+                <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
+                <input type="submit" class="btn btn-primary" name="btn_description" value="<%=l 'Submit' %>">
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>

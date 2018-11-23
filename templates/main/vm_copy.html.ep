@@ -1,48 +1,42 @@
-
-<div class="panel-body">
-
-<div class="form-group">
-    <form class="form-inline" method="post" action="/machine/copy">
-        <div class="row">
-            <div class="col-md-2">
-                <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
+<div class="card-body">
+    <form method="post" action="/machine/copy">    
+        <div class="form-group">
+            <div class="form-group row">
+                <div class="col-md-2">
+                    <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
                     <label class="control-label"
                         for="copy_name_{{showmachine.id}}"><%=l 'Name' %></label>
-            </div>
-            <div class="col-md-10">
+                </div>
+                <div class="col-md-5">
                     <input class="form-control" name="copy_name_{{showmachine.id}}" type="text" size="40"
                     value="{{showmachine.name}}-copy"
                     ng-model="new_name"
                     ng-change="validate_new_name(showmachine.name)"
                     >
                     <!-- todo check unique name -->
-           </div>
-        </div>
-        <div class="row">
-            <div class="col-md-2">
-                <label class="control-label" for="copy_ram">RAM (Gb)</label>
+               </div>
             </div>
-            <div class="col-md-1">
-                <input class="form-control" name="copy_ram" type="text" size="3" value="1">
+            <div class="form-group row">
+                <div class="col-md-2">
+                    <label class="control-label" for="copy_ram">RAM (Gb)</label>
+                </div>
+                <div class="col-md-1">
+                    <input class="form-control" name="copy_ram" type="text" size="3" value="1">
+                </div>
             </div>
+            <button type="reset" class="btn btn-outline-secondary mr-2"><%=l 'Cancel' %></button>
+            <input type="submit" class="btn btn-primary" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name" value="<%=l 'Submit' %>">
         </div>
-        <input type="submit" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name"
-        >
-		
-        <button type="reset"><%=l 'Cancel' %></button>
     </form>
-                        <div class="form-group has-error">
-                              <label ng-show="new_name_duplicated"
-                               class="control-label" for="new_name">
-                               This name is duplicated
-                              </label>
-                              <label ng-show="new_name_invalid"
-                               class="control-label" for="new_name">
-                               This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
-                               and must start by a letter.
-                              </label>
-                    </div>
-
-</div>
-
+    <div class="form-group has-error">
+        <label ng-show="new_name_duplicated"
+               class="alert alert-danger col-form-label" for="new_name">
+               This name is duplicated
+        </label>
+        <label ng-show="new_name_invalid"
+               class="alert alert-danger col-form-label" for="new_name">
+               This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
+               and must start by a letter.
+        </label>
+    </div>
 </div>
