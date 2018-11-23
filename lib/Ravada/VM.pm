@@ -41,6 +41,10 @@ our $MIN_MEMORY_MB = 128 * 1024;
 our $SSH_TIMEOUT = 20 * 1000;
 
 our %SSH;
+
+our $ARP = `which arp`;
+chomp $ARP;
+
 # domain
 requires 'create_domain';
 requires 'search_domain';
@@ -845,6 +849,8 @@ sub ping($self, $option=undef) {
     my $ping_ok;
     eval { $ping_ok = $p->ping($self->host) };
     warn $@ if $@;
+
+    $self->_store_mac_address() if $ping_ok;
     return 1 if $ping_ok;
     $p->close();
 
@@ -853,6 +859,7 @@ sub ping($self, $option=undef) {
     $p= Net::Ping->new('icmp',2);
     eval { $ping_ok = $p->ping($self->host) };
     warn $@ if $@;
+    $self->_store_mac_address() if $ping_ok;
     return 1 if $ping_ok;
 
     return 0;
@@ -1121,6 +1128,55 @@ sub shutdown_domains($self) {
         );
     }
     $sth->finish;
+}
+
+sub _store_mac_address($self) {
+    die "Error: I can't find arp" if !$ARP;
+
+    my $ip = $self->ip;
+
+    CORE::open (my $arp,'-|',"$ARP -n ".$self->ip) or die "$! $ARP";
+    while (my $line = <$arp>) {
+        chomp $line;
+        my ($mac) = $line =~ /(..:..:..:..:..:..)/ or next;
+
+        $self->_data(mac => $mac);
+        last;
+    }
+    close $arp;
+}
+
+sub _wake_on_lan( $self, $force=0 ) {
+    return if $self->is_local;
+    return if !$force && $self->_data('mac');
+
+    die "Error: I don't know the MAC address for node ".$self->name
+        if !$self->_data('mac');
+
+    my $sock = new IO::Socket::INET(Proto=>'udp')
+        or die "Error: I can't create an UDP socket";
+    my $host = '255.255.255.255';
+    my $port = 9;
+    my $mac_addr = $self->_data('mac');
+
+    my $ip_addr = inet_aton($host);
+    my $sock_addr = sockaddr_in($port, $ip_addr);
+    $mac_addr =~ s/://g;
+    my $packet = pack('C6H*', 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, $mac_addr x 16);
+
+    setsockopt($sock, SOL_SOCKET, SO_BROADCAST, 1);
+    send($sock, $packet, 0, $sock_addr);
+    close ($sock);
+}
+
+sub start($self) {
+    $self->_wake_on_lan();
+}
+
+sub shutdown($self) {
+    die "Error: local VM can't be shut down\n" if $self->is_local;
+    my ($out, $err) = $self->run_command("/sbin/poweroff");
+    warn $err if $err;
 }
 
 1;
