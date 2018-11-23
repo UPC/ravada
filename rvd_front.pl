@@ -289,6 +289,38 @@ get '/node/remove/(:id).json' => sub {
     return $c->render(json => {remove => $RAVADA->remove_node($c->stash('id'),1)});
 };
 
+get '/node/shutdown/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+
+    my $machines = $RAVADA->_list_machines_vm($c->stash('id'));
+    for ( @$machines ) {
+        my $req = Ravada::Request->shutdown_domain(
+                    uid => $USER->id
+            , id_domain => $_
+        );
+    }
+    my $at = 0;
+    if (@$machines) {
+        $at = time + 60 + scalar @$machines;
+    }
+    my $req = Ravada::Request->shutdown_node(
+                id_node => $c->stash('id')
+                ,at => $at
+    );
+    return $c->render(json => {req => $req->id });
+};
+
+get '/node/start/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    my $req = Ravada::Request->start_node(
+                id_node => $c->stash('id')
+    );
+    return $c->render(json => {req => $req->id });
+
+};
+
 any '/new_node' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER->is_admin;
