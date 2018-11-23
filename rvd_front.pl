@@ -281,6 +281,11 @@ get '/node/enable/(:id).json' => sub {
 get '/node/disable/(:id).json' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->is_admin;
+
+    my $machines = $RAVADA->_list_machines_vm($c->stash('id'));
+    for ( @$machines ) {
+        my $req = Ravada::Request->shutdown_domain( uid => $USER->id , id_domain => $_->{id} );
+    }
     return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),0)});
 };
 get '/node/remove/(:id).json' => sub {

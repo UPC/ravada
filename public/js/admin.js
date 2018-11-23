@@ -289,22 +289,39 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function manage_nodes($scope, $http, $interval) {
         $scope.list_nodes = function() {
-            $http.get('/list_nodes.json').then(function(response) {
-                $scope.nodes = response.data;
-            });
+            if (!$scope.modal_open) {
+                $http.get('/list_nodes.json').then(function(response) {
+                    $scope.nodes = response.data;
+                });
+            }
         };
         $scope.node_enable=function(id) {
-            $http.get('/node/enable/'+id+'.json');
-            $scope.list_nodes();
+            $scope.modal_open = false;
+            $http.get('/node/enable/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
+
         };
         $scope.node_disable=function(id) {
-            $http.get('/node/disable/'+id+'.json');
-            $scope.list_nodes();
+            $scope.modal_open = false;
+            $http.get('/node/disable/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
         };
         $scope.node_remove=function(id) {
             $http.get('/node/remove/'+id+'.json');
             $scope.list_nodes();
         };
+        $scope.confirm_disable_node = function(id , n_machines) {
+            if (n_machines > 0 ) {
+                $scope.modal_open = true;
+                $('#confirm_disable_'+id).modal({show:true})
+            } else {
+                $scope.node_disable(id);
+            }
+        };
+
+        $scope.modal_open = false;
         $scope.list_nodes();
         $interval($scope.list_nodes,30 * 1000);
     };

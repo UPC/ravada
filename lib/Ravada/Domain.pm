@@ -308,7 +308,7 @@ sub _start_preconditions{
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
-        if ( !$self->is_local && !$self->_vm->ping ) {
+        if ( !$self->is_local && ( !$self->_vm->enabled || !$self->_vm->ping) ) {
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
@@ -819,7 +819,7 @@ sub open($class, @args) {
         }
     }
     my $vm_local;
-    if (!$vm || !$vm->is_active || !$vm->enabled) {
+    if ( !$vm || !$vm->is_active ) {
         $vm_local = {};
         my $vm_class = "Ravada::VM::".$row->{vm};
         bless $vm_local, $vm_class;
@@ -1638,6 +1638,7 @@ sub _pre_shutdown {
         $self->resume(user => Ravada::Utils::user_daemon);
     }
     $self->list_disks;
+
 }
 
 sub _post_shutdown {
@@ -2811,7 +2812,7 @@ sub set_base_vm($self, %args) {
             $self->_set_base_vm_db($vm->id, $value);
             $self->remove_base($user);
         } else {
-            $self->prepare_base($user);
+            $self->prepare_base($user) if !$self->is_base();
             $request->status("working","Preparing base")    if $request;
         }
     } elsif ($value) {

@@ -503,14 +503,14 @@ sub _list_bases_vm($self, $id_node) {
 
 sub _list_machines_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT d.id FROM domains d"
+        "SELECT d.id, name FROM domains d"
         ." WHERE d.status='active'"
         ."  AND d.id_vm=?"
     );
     my @bases;
     $sth->execute($id_node);
-    while ( my ($id_domain) = $sth->fetchrow ) {
-        push @bases,($id_domain);
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @bases,({ id => $id_domain, name => $name });
     }
     $sth->finish;
     return \@bases;
