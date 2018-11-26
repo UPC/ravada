@@ -55,7 +55,19 @@ Stop
     sudo systemctl stop rvd_front
 
 
+Qemu
+----
 
+Ravada uses Qemu to manage the virtual machines. We encourage change
+this settings so hibernated machines are stored compressed. This way
+you will save a large amount of disk space on your server.
+
+Edit the file /etc/libvirt/qemu.conf and add uncomment and
+change this line:
+
+::
+
+    save_image_format = "bzip2"
 
 Apache
 ------
