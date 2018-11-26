@@ -1288,7 +1288,7 @@ sub _set_spice_ip {
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
         $graphics->setAttribute('listen' => $ip);
 
-        if ( !$self->is_hibernated() ) {
+        if ( !$self->is_hibernated() && !$self->domain->is_active ) {
             my $password;
             if ($set_password) {
                 $password = Ravada::Utils::random_name(4);
