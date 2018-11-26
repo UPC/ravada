@@ -1,9 +1,9 @@
-<div class="card card.bg-primary.text-white" ng-show="requests.length > 0">
-    <div class="card-header">
+<div class="card alert alert-primary" ng-show="requests.length > 0">
+    <div class="card-body font-weight-bold">
         <span ng-show="pending_requests"><%=l 'Waiting for requests to complete' %> ... </span>
         <span ng-show="pending_requests<1"><%=l 'Recent requests' %> ... </span>
     </div>
-    <div class="card-body">
+    <div class="card-text alert alert-warning">
         <div ng-repeat="request in requests">
         <font color="darkgray">{{request.date}} |</font>
         {{request.command}}

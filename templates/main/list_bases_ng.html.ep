@@ -21,7 +21,7 @@
                     <a class="btn btn-link"
                         href="/machine/clone/{{machine.id}}.html"
                         role="button">{{machine.name}}</a>
-                    <i ng-show="!machine.is_public"><i class="far fa-eye-slash fa-xs" title="<%=l 'not public' %>"></i></i>
+                    <i ng-show="!machine.is_public"><span class="d-inline align-baseline h6 font-weight-bold">(<%=l 'not public' %>)</span></i>
                 </h3>
                 <a ng-show="machine.screenshot" href="/machine/clone/{{machine.id}}.html"><img
                     ng-src="{{machine.screenshot}}" class="img-thumbnail" width="260"
@@ -50,24 +50,24 @@
                             ><%=l 'Yes' %></a>
                     </div>
                  <a ng-show="machine.is_active && host_action != machine.id"
-                        class="btn btn-light"
+                        class="btn btn-secondary text-white"
                         ng-click="host_action=machine.id;$parent.refresh=20"
                         type="button"><%=l 'action'%></a>
                     <div class="btn-group"
                             ng-show="host_action == machine.id && !host_restore"
                             >
-                        <a type="button" class="btn btn-light btn-sm"
+                        <a type="button" class="btn btn-secondary text-white btn-sm"
                             ng-show="machine.can_remove"
                             ng-click="host_restore=machine.id_clone"
                         ><%=l 'Restore' %></a>
 
                         <a ng-show="machine.is_active" type="button"
-                                                       class="btn btn-light btn-sm"
+                                                       class="btn btn-secondary text-white btn-sm"
                             ng-click="action(machine.id_clone,'shutdown');host_action=-1"
                         ><%=l 'Shutdown'%></a>
 
                         <a ng-show="machine.is_active && machine.can_hibernate" type="button"
-                                                       class="btn btn-light btn-sm"
+                                                       class="btn btn-secondary text-white btn-sm"
                             ng-click="action(machine.id_clone,'hibernate');host_action=-1"
                         ><%=l 'Hibernate' %></a>
 

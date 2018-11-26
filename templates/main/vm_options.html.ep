@@ -30,26 +30,28 @@
                 </div>
            </div> 
 %   if ($USER->is_admin){
+            <hr/>
             <div class="row">
                 <div class="col-lg-2">
                     <label class="control-label" for="timeout">Timeout</label>
                 </div>
-                <div class="col-lg-2">
+                <div class="col-lg-3">
                     <input name="run_timeout" type="text"
 %                       my $timeout = '';
 %                       $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
 %                       $timeout = '' if $timeout eq '0';
                         value="<%= $timeout %>" size="5">
                 </div>
-                <div class="col-lg-6"><%=l 'The machine will shutdown after these minutes' %></div>
+                <div class="col-lg-7"><%=l 'The machine will shutdown after these minutes' %></div>
             </div>
 %   }
 %   if ($USER->is_admin){
-            <div class="row">
+                <hr/>
+                <div class="row">
                 <div class="col-lg-2">
                     <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
                 </div>
-                <div class="col-lg-2">
+                <div class="col-lg-3">
                     <input type="checkbox" name="volatile_clones"
 %               my $vclones = int($domain->is_volatile_clones);
 %               if ( $vclones ){
@@ -57,26 +59,28 @@
 %               }
                     value="1">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-7">
                     <%=l 'Clones created from this machine will be removed on shutdown.' %>
                 </div>
             </div>
 %   }
 %   if ($USER->is_admin){
+            <hr/>
             <div class="row">
                 <div class="col-lg-2">
                      <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
                 </div>
-                <div class="col-lg-2">
+                <div class="col-lg-3">
                     <select id="new_owner" name="id_owner" >
 %       for my $user (@$list_users) {
                         <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
 %        }
                     </select>
                 </div>
-                <div class="col-md-6"><%=l 'Change the owner of the machine' %></div>
+                <div class="col-md-7"><%=l 'Change the owner of the machine' %></div>
             </div>
 %   }
+            <hr/>
             <div class="row">
                 <div class="col-md-4">
                     <input type="button" class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
