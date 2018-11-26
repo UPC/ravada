@@ -120,12 +120,6 @@ has '_vm' => (
     ,required => 0
 );
 
-has 'tls' => (
-    is => 'rw'
-    ,isa => 'Int'
-    ,default => 0
-);
-
 has 'description' => (
     is => 'rw'
     ,isa => 'Str'
@@ -143,6 +137,7 @@ has 'description' => (
 #
 
 around 'display' => \&_around_display;
+around 'display_file' => \&_around_display_file;
 
 around 'add_volume' => \&_around_add_volume;
 
@@ -659,10 +654,12 @@ sub _allowed {
 
 }
 
-sub _around_display($orig,$self,$user) {
+sub _around_display($orig,$self,$user ) {
     $self->_allowed($user);
     my $display = $self->$orig($user);
-    $self->_data(display => $display)   if !$self->readonly;
+    if (!$self->readonly) {
+        $self->_data(display => encode_json($display));
+    }
     return $display;
 }
 
@@ -989,21 +986,31 @@ sub display_file($self,$user) {
     return $self->_display_file_spice($user);
 }
 
+sub _around_display_file($orig, $self, $user) {
+    my $display_file = $self->$orig($user);
+    if (!$self->readonly) {
+        warn $display_file;
+        $self->_data(display_file => $display_file);
+    }
+    return $display_file;
+}
 # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
 sub _display_file_spice($self,$user) {
 
-    my ($ip,$port) = $self->display($user) =~ m{spice://(\d+\.\d+\.\d+\.\d+):(\d+)};
+    #    my ($ip,$port) = $self->display($user) =~ m{spice://(\d+\.\d+\.\d+\.\d+):(\d+)};
 
-    die "I can't find ip port in ".$self->display   if !$ip ||!$port;
+    my $display = $self->display($user);
+
+    die "I can't find ip port in ".$self->display if !$display->{address} || !$display->{port};
 
     my $ret =
         "[virt-viewer]\n"
         ."type=spice\n"
-        ."host=$ip\n";
-    if ($self->tls) {
-        $ret .= "tls-port=%s\n";
+        ."host=".$display->{address}."\n";
+    if ($display->{tls_port}) {
+        $ret .= "tls-port=".$display->{tls_port}."\n";
     } else {
-        $ret .= "port=$port\n";
+        $ret .= "port=".$display->{port}."\n";
     }
     $ret .="password=%s\n"  if $self->spice_password();
 
@@ -1013,18 +1020,18 @@ sub _display_file_spice($self,$user) {
         ."enable-smartcard=0\n"
         ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=1\n";
+        ."delete-this-file=0\n";
 
-    $ret .=";" if !$self->tls;
-    $ret .= "tls-ciphers=DEFAULT\n"
-        .";host-subject=O=".$ip.",CN=?\n";
+    if ( $display->{tls_port} ) {
+        $ret .= "tls-ciphers=DEFAULT\n"
+        ."host-subject=".$self->_vm->tls_host_subject."\n"
+        .="ca=".$self->_vm->tls_ca."\n"
+    }
 
-    $ret .=";"  if !$self->tls;
-    $ret .="ca=CA\n"
-        ."release-cursor=shift+f11\n"
+    $ret .="release-cursor=shift+f11\n"
         ."toggle-fullscreen=shift+f12\n"
         ."secure-attention=ctrl+alt+end\n";
-    $ret .=";" if !$self->tls;
+    $ret .=";" if !$display->{tls_port};
     $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
 
     return $ret;
@@ -1051,6 +1058,7 @@ sub info($self, $user) {
     };
     eval {
         $info->{display_url} = $self->display($user)    if $self->is_active;
+        $self->display_file($user)  if $self->is_active && !$self->_data('display_file');
     };
     die $@ if $@ && $@ !~ /not allowed/i;
     if (!$info->{description} && $self->id_base) {
@@ -1059,6 +1067,7 @@ sub info($self, $user) {
     }
     if ($self->is_active) {
         my $display = $self->display($user);
+        $self->display_file($user) if !$self->_data('display_file');
         my ($local_ip, $local_port) = $display =~ m{\w+://(.*):(\d+)};
         $info->{display_ip} = $local_ip;
         $info->{display_port} = $local_port;
@@ -1911,6 +1920,7 @@ sub _post_start {
 
     # get the display so it is stored for front access
     $self->display($arg{user})  if $self->is_active;
+    $self->display_file($arg{user})  if $self->is_active;
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
@@ -1945,6 +1955,7 @@ sub _add_iptable {
 
     return if !$self->is_active;
     my $display = $self->display($user);
+    $self->display_file($user) if !$self->_data('display_file');
     my ($local_port) = $display =~ m{\w+://.*:(\d+)};
     $self->_remove_iptables( port => $local_port );
 

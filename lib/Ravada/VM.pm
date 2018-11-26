@@ -58,6 +58,9 @@ requires 'import_domain';
 requires 'is_alive';
 
 requires 'free_memory';
+
+requires '_fetch_dir_cert';
+
 ############################################################
 
 has 'host' => (
@@ -80,6 +83,27 @@ has 'readonly' => (
     isa => 'Str'
     , is => 'ro'
     ,default => 0
+);
+
+has 'tls_host_subject' => (
+    isa => 'Str'
+    , is => 'ro'
+    , builder => '_fetch_tls_host_subject'
+    , lazy => 1
+);
+
+has 'tls_ca' => (
+    isa => 'Str'
+    , is => 'ro'
+    , builder => '_fetch_tls_ca'
+    , lazy => 1
+);
+
+has dir_cert => (
+    isa => 'Str'
+    ,is => 'ro'
+    ,lazy => 1
+    ,builder => '_fetch_dir_cert'
 );
 
 ############################################################
@@ -1121,6 +1145,26 @@ sub shutdown_domains($self) {
         );
     }
     $sth->finish;
+}
+
+sub _fetch_tls_host_subject($self) {
+    my @cmd= qw(/usr/bin/openssl x509 -noout -text -in );
+    push @cmd, ( $self->dir_cert."/server-cert.pem" );
+
+    my ($out, $err) = $self->run_command(@cmd);
+    die $err if $err;
+
+    for my $line (split /\n/,$out) {
+        chomp $line;
+        next if $line !~ /^\s+Subject:\s+(.*)/;
+        return $1;
+    }
+}
+
+sub _fetch_tls_ca($self) {
+    my ($out, $err) = $self->run_command("/bin/cat", $self->dir_cert."/server-cert.pem");
+
+    return join('\n', (split /\n/,$out) );
 }
 
 1;

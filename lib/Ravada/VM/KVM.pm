@@ -62,6 +62,8 @@ has type => (
 our $DIR_XML = "etc/xml";
 $DIR_XML = "/var/lib/ravada/xml/" if $0 =~ m{^/usr/sbin};
 
+our $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
+
 our $XML = XML::LibXML->new();
 
 #-----------
@@ -2078,4 +2080,17 @@ sub _free_memory_available($self) {
 
     return $free_mem;
 }
+
+sub _fetch_dir_cert($self) {
+    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
+    while(my $line = <$in>) {
+        chomp $line;
+        $line =~ s/#.*//;
+        next if !length($line);
+        next if $line !~ /^\s*spice_tls_x509_cert_dir\s*=\s*"(.*)"\s*/;
+        return $1 if $1;
+    }
+    close $in;
+}
+
 1;

@@ -291,6 +291,9 @@ sub free_memory {
     return $memory;
 }
 
+sub _fetch_dir_cert {
+    confess "TODO";
+}
 #########################################################################3
 
 1;
