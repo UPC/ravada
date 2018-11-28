@@ -66,7 +66,7 @@ sub test_tls {
 =cut
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my $file_f = $domain_f->display_file(user_admin);
+    my $file_f = $domain_f->display_file_tls(user_admin);
     is($file_f, $display_file);
 
     $domain->remove(user_admin);
