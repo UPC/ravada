@@ -21,4 +21,4 @@ Run a single test
 
 .. prompt:: bash $
 
-    make && sudo prove -b t/lxc/*t
+    make; sudo prove -b t/lxc/*t

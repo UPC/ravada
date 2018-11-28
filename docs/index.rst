@@ -10,7 +10,7 @@ The chances are you're here because you've been searching for free Virtual Deskt
 Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you
 do want to start your VDI project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
 
-`Ravada VDI`_ is an open-source project that allows users to connect to a virtual desktop. So it is a VDI broker.
+`Ravada VDI`_ is a free and open-source project that allows users to connect to a virtual desktop. So it is a VDI broker.
 
 Ravada delivers
 ---------------
