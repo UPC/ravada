@@ -929,7 +929,7 @@ sub start_node($node) {
 
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
-    for ( 1 .. 30 ) {
+    for ( 1 .. 60 ) {
         last if $node->ping ;
         sleep 1;
         diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
@@ -937,7 +937,7 @@ sub start_node($node) {
 
     is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
-    for ( 1 .. 20 ) {
+    for ( 1 .. 60 ) {
         last if $node->_do_is_active;
         sleep 1;
         diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
