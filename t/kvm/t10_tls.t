@@ -48,9 +48,8 @@ sub test_tls {
         $display = $domain->display(user_admin);
     };
     is($@,'') or return;
-    isa_ok($display,'HASH');
 
-    my $display_file = $domain->display_file(user_admin);
+    my $display_file = $domain->display_file_tls(user_admin);
     my @lines = split /\n/,$display_file;
     ok(grep(/^ca=-+BEGIN/, @lines),"Expecting ca on ".Dumper(\@lines));
     ok(grep(/^tls-port=.+/, @lines),"Expecting tls-port on ".Dumper(\@lines));
@@ -66,11 +65,9 @@ sub test_tls {
 
 =cut
 
-    my $file_b = $domain->display_file(user_admin);
-
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $file_f = $domain_f->display_file(user_admin);
-    is($file_f, $file_b);
+    is($file_f, $display_file);
 
     $domain->remove(user_admin);
 }
