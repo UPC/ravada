@@ -539,13 +539,13 @@ sub post_resume_aux($self) {
     }
 }
 
-=head2 display
+=head2 display_info
 
-Returns the display URI
+Returns the display information as a hashref. The display URI is in the display entry
 
 =cut
 
-sub display($self, $user) {
+sub display_info($self, $user) {
 
     my $xml = XML::LibXML->load_xml(string => $self->xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics')
