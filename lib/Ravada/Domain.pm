@@ -1076,7 +1076,8 @@ sub info($self, $user) {
     if ($self->is_active) {
         my $display = $self->display_info($user);
         $self->display_file($user) if !$self->_data('display_file');
-        $self->display_file_tls($user) if !$self->_data('display_file');
+        $self->display_file_tls($user)
+            if $display->{tls_port} && !$self->_data('display_file');
         $info->{display} = $display;
     }
     $info->{hardware} = $self->get_controllers();
