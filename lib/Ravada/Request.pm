@@ -67,6 +67,7 @@ our %VALID_ARG = (
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
     ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
+    ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
@@ -292,6 +293,26 @@ sub start_domain {
     bless($self,$class);
 
     return $self->_new_request(command => 'start' , args => $args);
+}
+
+=head2 start_clones
+
+Requests to start the clones of a base
+
+  my $req = Ravada::Request->start_clones( name => 'name', uid => $user->id );
+
+=cut
+
+sub start_clones {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('start_clones', @_);
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'start_clones' , args => encode_json($args));
 }
 
 =head2 pause_domain
