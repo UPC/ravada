@@ -30,6 +30,9 @@
     %   if ( $USER->can_remove_machine($domain->id)) {
         <a class="nav-item nav-link" id="nav-remove-tab" ng-click="refresh_machine()" href="#nav-remove" data-toggle="tab" role="tab" aria-controls="nav-remove" aria-selected="false"><%=l 'Remove' %></a>
     %   }
+    %   if ($USER->is_admin && $domain->is_base){
+        <a class="nav-item nav-link" id="nav-remove-tab" ng-click="refresh_machine()" href="#nav-clones" data-toggle="tab" role="tab" aria-controls="nav-clones" aria-selected="false"><%=l 'Clones' %></a>
+%   }
     % if ( $monitoring && $USER->is_admin && $domain->is_active ) {
         <a class="nav-item nav-link" id="nav-monitoring-tab" ng-click="refresh_machine()" href="#nav-monitoring" data-toggle="tab" role="tab" aria-controls="nav-monitoring" aria-selected="false"><%=l 'System overview' %></a>
     %   }

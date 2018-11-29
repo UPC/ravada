@@ -1082,7 +1082,10 @@ sub balance_vm($self, $base=undef) {
         my $free_memory = $vm->free_memory;
         next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
 
-        my $key = $vm->count_domains(status => 'active').".".$free_memory;
+        my $active = $vm->count_domains(status => 'active')
+                        + $vm->count_domains(status => 'starting');
+
+        my $key = $active.".".$free_memory;
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }

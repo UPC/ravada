@@ -1613,6 +1613,13 @@ sub manage_machine {
         }
     }
 
+    if ($c->param("start-clones") ne "") {
+        my $req = Ravada::Request->start_clones(
+            id_domain => $domain->id,
+            ,uid => $USER->id
+            ,remote_ip => _remote_ip($c)
+        );
+    }
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
 

@@ -612,6 +612,7 @@ sub start {
         $set_password = 1 if $network->requires_password();
     }
     $self->_set_spice_ip($set_password);
+    $self->status('starting');
     eval { $self->domain->create() };
     if ( $@ && $@ !~ /already running/i ) {
         if ( $self->domain->has_managed_save_image ) {

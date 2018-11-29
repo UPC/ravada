@@ -307,12 +307,14 @@ sub _start_preconditions{
     return if $self->_search_already_started();
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
+        $self->status('starting');
 #        $self->_set_last_vm(1)
         if ( !$self->is_local && ( !$self->_vm->enabled || !$self->_vm->ping) ) {
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
         $self->_balance_vm();
+        $self->status('starting');
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
     } elsif (!$self->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
@@ -3006,7 +3008,7 @@ Valid values are:
 sub status($self, $value=undef) {
     confess "ERROR: the status can't be updated on read only mode."
         if $self->readonly;
-    my %valid_value = map { $_ => 1 } qw(active shutdown);
+    my %valid_value = map { $_ => 1 } qw(active shutdown starting);
     confess "ERROR: invalid value '$value'" if $value && !$valid_value{$value};
     return $self->_data('status', $value);
 }
