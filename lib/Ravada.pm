@@ -23,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada::Auth;
 use Ravada::Request;
+use Ravada::Repository::ISO;
 use Ravada::VM::Void;
 
 our %VALID_VM;
@@ -2112,6 +2113,7 @@ sub _execute {
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
         $request->error($err) if $err;
+        warn $err if $err;
         return;
     }
 
@@ -2921,6 +2923,8 @@ sub _req_method {
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
 
+    #users
+    ,post_login => \&_cmd_post_login
     );
     return $methods{$cmd};
 }
@@ -3093,6 +3097,26 @@ sub _clean_volatile_machines($self, %args) {
         $domain_real->remove($USER_DAEMON);
 
         $sth_remove->execute($domain->{id});
+    }
+}
+
+sub _cmd_post_login($self, $request) {
+    $self->_post_login_locale($request);
+}
+
+sub _post_login_locale($self, $request) {
+    return if ! $request->defined_arg('locale');
+
+    my @locales;
+
+    my $locales = $request->args('locale');
+    if (ref($locales)) {
+        @locales = @$locales;
+    } else {
+        @locales = @$locales;
+    }
+    for my $locale ( @locales ) {
+        Ravada::Repository::ISO::insert_iso_locale($locale);
     }
 }
 

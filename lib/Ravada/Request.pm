@@ -82,6 +82,8 @@ our %VALID_ARG = (
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1 }
     ,refresh_vms => { _force => 2 }
+    #users
+    ,post_login => { uid => 1, locale => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -106,7 +108,7 @@ our %COMMAND = (
     }
     ,priority => {
         limit => 20
-        ,commands => ['clone','start']
+        ,commands => ['clone','start','create_domain','open_iptables']
     }
 );
 lock_hash %COMMAND;
@@ -1360,6 +1362,29 @@ sub refresh_machine {
 
     return $req;
 
+}
+
+
+sub post_login {
+    return _new_request_generic('post_login',@_);
+}
+
+sub _new_request_generic {
+    my $command = shift;
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args($command, @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    my $req = _new_request($self
+        ,command => $command
+        ,args => $args
+    );
+    return $req;
 }
 
 =head2 done_recently
