@@ -534,32 +534,6 @@ sub list_iso_images {
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
-
-        delete $row->{device} if $row->{device} && !-e $row->{device};
-        next if $row->{device};
-
-        my ($file);
-        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
-        my $file_re = $row->{file_re};
-        next if !$file_re && !$file || !$vm_name;
-
-        $vm = $self->search_vm($vm_name)    if !$vm;
-
-        next if $row->{device};
-        if ($file) {
-            my $iso_file = $vm->search_volume_path($file);
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-                next;
-            }
-        }
-        if ($file_re) {
-            my $iso_file = $vm->search_volume_path_re(qr($file_re));
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-                next;
-            }
-        }
     }
     $sth->finish;
     return \@iso;
