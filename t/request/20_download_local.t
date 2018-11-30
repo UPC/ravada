@@ -54,6 +54,7 @@ sub test_download {
 
     is($iso2->{rename_file}, $iso2->{filename}) if $iso2->{rename_file};
 
+    like($iso2->{device},qr'.',"Expecting something in device field ");
 }
 
 sub test_download_fail {
