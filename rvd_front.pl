@@ -13,6 +13,8 @@ use Mojo::JSON qw(decode_json encode_json);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
+
+use I18N::LangTags::Detect;
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -1095,7 +1097,6 @@ sub _logged_in {
 
 sub login {
     my $c = shift;
-
     $c->session(login => undef);
 
     my $login = $c->param('login');
@@ -1129,6 +1130,11 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+
+            Ravada::Request->post_login(
+                uid => $auth_ok->id
+                , locale => [ I18N::LangTags::Detect::detect() ]
+            );
 
             $c->session(expiration => $expiration);
             return $c->redirect_to($url);
