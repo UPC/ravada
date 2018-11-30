@@ -3113,7 +3113,7 @@ sub _post_login_locale($self, $request) {
     if (ref($locales)) {
         @locales = @$locales;
     } else {
-        @locales = @$locales;
+        @locales = $locales;
     }
     for my $locale ( @locales ) {
         Ravada::Repository::ISO::insert_iso_locale($locale);
