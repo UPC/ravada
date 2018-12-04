@@ -49,6 +49,8 @@ my $SHUTDOWN_DOMAIN;
 
 my $IMPORT_DOMAIN_OWNER;
 
+my $ADD_LOCALE_REPOSITORY;
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
@@ -104,6 +106,8 @@ GetOptions (       help => \$help
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
 ,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
+
+    ,'add-locale-repository=s' => \$ADD_LOCALE_REPOSITORY
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -511,6 +515,15 @@ sub test_ldap {
     exit;
 }
 
+sub add_locale_repository {
+    my $locale = shift;
+    for my $lang ( split /,/, $locale ) {
+        print "Adding locales for $lang.\n";
+        my $found = Ravada::Repository::ISO::insert_iso_locale($lang, 'verbose');
+        print "$found found.\n";
+    }
+}
+
 sub DESTROY {
 }
 
@@ -537,6 +550,7 @@ start_domain($START_DOMAIN)         if $START_DOMAIN;
 shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
                                     if defined $SHUTDOWN_DOMAIN;
 
+add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
 }
 
 

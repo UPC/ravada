@@ -730,14 +730,17 @@ sub _update_domain_drivers_options($self) {
     $self->_update_table('domain_drivers_options','id',$data);
 }
 
-sub _update_table($self, $table, $field, $data) {
+sub _update_table($self, $table, $field, $data, $verbose=0) {
 
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %$data) {
+    for my $name (sort keys %$data) {
         my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
-        next if $id;
+        if ( $id ) {
+            warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
+            next;
+        }
         warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
