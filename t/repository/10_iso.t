@@ -15,24 +15,24 @@ init();
 ##################################################################
 
 sub test_insert_locale {
-    my $sth = connector->dbh->prepare("DELETE FROM iso_images WHERE name = 'Linkat 18.04'");
+    my $sth = connector->dbh->prepare("DELETE FROM iso_images WHERE name like 'Linkat %'");
     $sth->execute();
 
     my $row = $sth->fetchrow_hashref();
     is($row->{name}, undef);
 
-    Ravada::Repository::ISO::insert_iso_locale('ca');
+    Ravada::Repository::ISO::insert_iso_locale('ca',1);
 
-    $sth = connector->dbh->prepare("SELECT * FROM iso_images WHERE name = 'Linkat 18.04'");
+    $sth = connector->dbh->prepare("SELECT * FROM iso_images WHERE name like 'Linkat %'");
     $sth->execute();
 
     $row = $sth->fetchrow_hashref();
-    like($row->{name},qr(Linkat));
+    like($row->{name},qr(Linkat),Dumper($row));
 
 }
 
 sub test_insert_request {
-    my $sth = connector->dbh->prepare("DELETE FROM iso_images WHERE name = 'Linkat 18.04'");
+    my $sth = connector->dbh->prepare("DELETE FROM iso_images WHERE name like 'Linkat %'");
     $sth->execute();
 
     my $row = $sth->fetchrow_hashref();
@@ -44,7 +44,7 @@ sub test_insert_request {
 
     is($req->status, 'done');
     is($req->error, '');
-    $sth = connector->dbh->prepare("SELECT * FROM iso_images WHERE name = 'Linkat 18.04'");
+    $sth = connector->dbh->prepare("SELECT * FROM iso_images WHERE name like 'Linkat %'");
     $sth->execute();
 
     $row = $sth->fetchrow_hashref();
