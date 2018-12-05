@@ -67,6 +67,7 @@ my $USAGE = "$0 "
         ." --no-fork : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
+        .' --add-locale-repository LOCALE : adds ISO repositories for this locale'
         ."\n"
         ."Operations on Virtual Machines:\n"
         ." --list\n"
