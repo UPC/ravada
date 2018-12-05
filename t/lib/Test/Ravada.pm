@@ -198,24 +198,24 @@ sub new_pool_name {
     return base_pool_name()."_".$CONT_POOL++;
 }
 
-sub rvd_back($config=undef) {
+sub rvd_back($config=undef, $init=1) {
 
     return $RVD_BACK            if $RVD_BACK && !$config;
 
     $RVD_BACK = 1;
-    init($config or $DEFAULT_CONFIG);
+    init($config or $DEFAULT_CONFIG) if $init;
 
     my $rvd = Ravada->new(
             connector => connector()
                 , config => ( $config or $DEFAULT_CONFIG)
-                , warn_error => 0
+                , warn_error => 1
     );
     $rvd->_install();
 
     user_admin();
+    $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
-    $RVD_BACK = $rvd;
     return $rvd;
 }
 
@@ -255,7 +255,7 @@ sub init($config=undef) {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-    rvd_back($config)  if !$RVD_BACK;
+    rvd_back($config, 0)  if !$RVD_BACK;
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
@@ -769,6 +769,7 @@ sub remove_old_user_ldap {
 sub search_id_iso {
     my $name = shift;
     connector() if !$CONNECTOR;
+    rvd_back();
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
@@ -1204,7 +1205,7 @@ sub connector {
                 ,{sqlite_allow_multiple_statements=> 1 
                         , AutoCommit => 1
                         , RaiseError => 1
-                        , PrintError => 0
+                        , PrintError => 1
                 });
 
     _create_db_tables($connector);

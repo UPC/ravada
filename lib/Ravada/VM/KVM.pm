@@ -322,6 +322,47 @@ Refreshes all the storage pools
 
 sub refresh_storage($self) {
     $self->_refresh_storage_pools();
+    $self->_refresh_isos();
+}
+
+sub _refresh_isos($self) {
+    $self->_init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images ORDER BY name"
+    );
+    my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE iso_images set device=? WHERE id=?");
+
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+
+        if ( $row->{device} && !-e $row->{device} ) {
+            delete $row->{device};
+            $sth_update->execute($row->{device}, $row->{id});
+            next;
+        }
+        next if $row->{device};
+
+        my ($file);
+        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
+        my $file_re = $row->{file_re};
+
+        next if $row->{device};
+        if ($file) {
+            my $iso_file = $self->search_volume_path($file);
+            if ($iso_file) {
+                $row->{device} = $iso_file;
+            }
+        }
+        if (!$row->{device} && $file_re) {
+            my $iso_file = $self->search_volume_path_re(qr($file_re));
+            if ($iso_file) {
+                $row->{device} = $iso_file;
+            }
+        }
+        warn $row->{device} if $row->{device};
+        $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
+    }
+    $sth->finish;
 }
 
 =head2 search_volume_path_re
