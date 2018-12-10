@@ -313,7 +313,7 @@ get '/node/shutdown/(:id).json' => sub {
                 id_node => $c->stash('id')
                 ,at => $at
     );
-    return $c->render(json => {req => $req->id });
+    return $c->render(json => {id_req => $req->id });
 };
 
 get '/node/start/(:id).json' => sub {
@@ -322,7 +322,7 @@ get '/node/start/(:id).json' => sub {
     my $req = Ravada::Request->start_node(
                 id_node => $c->stash('id')
     );
-    return $c->render(json => {req => $req->id });
+    return $c->render(json => {id_req => $req->id });
 
 };
 
@@ -331,6 +331,26 @@ any '/new_node' => sub {
     return access_denied($c)    if !$USER->is_admin;
     return new_node($c);
 };
+
+get '/node/connect/(#backend)/(#hostname)' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    my $req = Ravada::Request->connect_node(
+                backend => $c->stash('backend')
+                    ,hostname => $c->stash('hostname')
+    );
+    return $c->render(json => {id_req => $req->id });
+};
+
+get '/node/connect/(#id)' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    my $req = Ravada::Request->connect_node(
+        id_node => $c->stash('id')
+    );
+    return $c->render(json => {id_req => $req->id });
+};
+
 
 get '/list_bases.json' => sub {
     my $c = shift;
@@ -1645,6 +1665,13 @@ sub manage_machine {
         }
     }
 
+    if ($c->param("start-clones") ne "") {
+        my $req = Ravada::Request->start_clones(
+            id_domain => $domain->id,
+            ,uid => $USER->id
+            ,remote_ip => _remote_ip($c)
+        );
+    }
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
 

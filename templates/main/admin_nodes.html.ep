@@ -14,6 +14,8 @@
                   </h2>
               </div>
           </div>
+          {{id_req}}
+          {{request.error}}
         <div class="row">
             <div class="col-md-1"><b><%=l 'Type' %></b></div>
             <div class="col-md-2"><b><%=l 'Name' %></b></div>
@@ -42,6 +44,11 @@
                     <%= l 'This node is local' %>
                 </div>
                 <div class="col-md-3" ng-show="!node.is_local">
+                     <button type="button" class="btn btn-success btn-sm"
+                         ng-click="node_connect(node.id)"
+                         title="<%=l 'Refresh' %>">
+                          <i class="fa fa-sync-alt"></i>
+                    </button>
                     <button type="button" class="btn btn-success btn-sm"
                          ng-click="node_enable(node.id)"
                          ng-disabled="node.enabled"

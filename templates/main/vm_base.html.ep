@@ -7,11 +7,10 @@
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
-    <div ng-hide="showmachine">
+    <div ng-hide="showmachine && nodes">
     ... Loading ...
     </div>
 
-{{showmachine.base}}
 <div class="row" ng-repeat="node in nodes">
 
     <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
