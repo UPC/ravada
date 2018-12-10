@@ -1186,17 +1186,19 @@ sub _store_mac_address($self, $force=0 ) {
     return if !$force && $self->_data('mac');
     die "Error: I can't find arp" if !$ARP;
 
-    my $ip = $self->ip;
+    for my $ip ($self->hostname,$self->ip, $self->public_ip) {
+        next if !$ip;
+        warn $ip;
+        CORE::open (my $arp,'-|',"$ARP -n ".$ip) or die "$! $ARP";
+        while (my $line = <$arp>) {
+            chomp $line;
+            my ($mac) = $line =~ /(..:..:..:..:..:..)/ or next;
 
-    CORE::open (my $arp,'-|',"$ARP -n ".$self->ip) or die "$! $ARP";
-    while (my $line = <$arp>) {
-        chomp $line;
-        my ($mac) = $line =~ /(..:..:..:..:..:..)/ or next;
-
-        $self->_data(mac => $mac);
-        last;
+            $self->_data(mac => $mac);
+            return;
+        }
+        close $arp;
     }
-    close $arp;
 }
 
 sub _wake_on_lan( $self ) {
