@@ -68,6 +68,35 @@ The master ravada node needs to access to the secondary nodes through SSH. So pa
 access must be configured between them. This is an example of configuring in Debian and
 Ubuntu servers. Other flavours of linux should be quite the same.
 
+Before you start
+~~~~~~~~~~~~~~~~
+
+Most of the usual mistakes come from not running the commands from the root user.
+Follow the guide carefully and double check you are following the instructions exactly.
+When you see a code like this it means it must run
+from the root user in the master node:
+
+.. code-block:: bash
+
+    root@master:~#
+
+This means you must run as the root user in the node.
+
+.. code-block:: bash
+
+    root@node:~#
+
+To become root user you must either login as such or run sudo to become root:
+
+
+.. code-block:: bash
+
+    frankie@master:~ sudo bash
+
+
+Configure Node
+~~~~~~~~~~~~~~
+
 First, temporary allow *root* access with *ssh* to the remote node.
 
 .. code-block:: bash
@@ -75,7 +104,9 @@ First, temporary allow *root* access with *ssh* to the remote node.
     root@node:~# vi /etc/ssh/sshd_config
     PermitRootLogin yes
 
-Then set a root password and restart ssh service:
+Then set a root password and restart ssh service. Warning: only do this if you haven't
+already set a password for the root user in this host. If you are using an Ubuntu server
+you probably haven't, but debian based distributions usually set the root user on install.
 
 .. code-block:: bash
 
@@ -83,11 +114,14 @@ Then set a root password and restart ssh service:
     Enter new UNIX password: *******
     root@node:~# systemctl restart ssh
 
+Configure Master
+~~~~~~~~~~~~~~~~
+
 Check you can access with *root* from master to node:
 
 .. code-block:: bash
 
-    root@master:~# ssh nenufar
+    root@master:~# ssh node
 
 
 You may already have a public/private key created in the master node. Check if there
@@ -95,6 +129,7 @@ are id*pub files in /root/.ssh directory. Create the keys otherwise:
 
 .. code-block:: bash
 
+    frankie@master:~ sudo bash
     root@master:~# ls /root/.ssh/id*pub || ssh-keygen
 
 Now you must copy the public ssh key from master to node:
@@ -131,6 +166,23 @@ at the *Base* tab.
 
 Now try to create multiple clones from a base, they should get balanced
 among all the nodes including the master one.
+
+TroubleShooting
+===============
+
+..
+
+    libvirt error code: 38, message: End of file while reading data: nc: unix connect failed: No such file or directory
+
+It means you didn't install libvirt in the node. Fix it this way:
+
+
+.. code-block:: bash
+
+    root@node:~# apt get install libvirt-bin
+
+
+
 
 TODO
 ====
