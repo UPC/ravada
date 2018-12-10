@@ -86,6 +86,11 @@ has 'readonly' => (
     ,default => 0
 );
 
+has 'store' => (
+    isa => 'Bool'
+    , is => 'rw'
+    , default => 1
+);
 ############################################################
 #
 # Method Modifiers definition
@@ -101,6 +106,7 @@ before 'create_volume' => \&_connect;
 around 'import_domain' => \&_around_import_domain;
 
 around 'ping' => \&_around_ping;
+around 'connect' => \&_around_connect;
 
 #############################################################
 #
@@ -163,6 +169,9 @@ sub BUILD {
     my $id = delete $args->{id};
     my $host = delete $args->{host};
     my $name = delete $args->{name};
+    my $store = delete $args->{store};
+    $store = 1 if !defined $store;
+
     delete $args->{readonly};
     delete $args->{security};
     delete $args->{public_ip};
@@ -173,7 +182,7 @@ sub BUILD {
     lock_hash(%$args);
 
     confess "ERROR: Unknown args ".join (",", keys (%$args)) if keys %$args;
-
+    return if !$store;
     if ($id) {
         $self->_select_vm_db(id => $id)
     } else {
@@ -207,7 +216,6 @@ sub _open_type {
     my $vm = $proto->new(%args);
     eval { $vm->vm };
     warn $@ if $@;
-    return if $@;
 
     return $vm;
 
@@ -222,7 +230,23 @@ sub _check_readonly {
 
 sub _connect {
     my $self = shift;
-    $self->connect();
+    my $result = $self->connect();
+    if ($result) {
+        $self->is_active(1);
+    } else {
+        $self->is_active(0);
+    }
+    return $result;
+}
+
+sub _around_connect($orig, $self) {
+    my $result = $self->$orig();
+    if ($result) {
+        $self->is_active(1);
+    } else {
+        $self->is_active(0);
+    }
+    return $result;
 }
 
 sub _pre_create_domain {
@@ -587,7 +611,7 @@ sub id {
 }
 
 sub _data($self, $field, $value=undef) {
-    if (defined $value) {
+    if (defined $value && $self->store ) {
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -601,6 +625,8 @@ sub _data($self, $field, $value=undef) {
 #    _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
+    return if !$self->store();
+
     $self->{_data} = $self->_select_vm_db( name => $self->name);
 
     confess "No DB info for VM ".$self->name    if !$self->{_data};
@@ -623,6 +649,7 @@ sub _do_select_vm_db {
         }
     }
 
+    confess Dumper(\%args) if !keys %args;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM vms WHERE ".join(" AND ",map { "$_=?" } sort keys %args )
     );
@@ -646,6 +673,8 @@ sub _select_vm_db {
 
 sub _insert_vm_db {
     my $self = shift;
+    return if !$self->store();
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO vms (name, vm_type, hostname, public_ip)"
         ." VALUES(?, ?, ?, ?)"
@@ -686,7 +715,7 @@ sub default_storage_pool_name {
         $sth->execute($value,$id);
         $self->{_data}->{default_storage} = $value;
     }
-    $self->_select_vm_db();
+    $self->_select_vm_db() if $self->store();
     return $self->_data('default_storage');
 }
 
@@ -839,27 +868,32 @@ Returns if the virtual manager connection is available
 
 sub ping($self, $option=undef) {
     confess "ERROR: option unknown" if defined $option && $option ne 'debug';
-    
+
+    return 1 if $self->is_local();
     my $debug = 0;
     $debug = 1 if defined $option && $option eq 'debug';
 
-    return 1 if $self->is_local();
+    return $self->_do_ping($self->host, $debug);
+}
+
+sub _do_ping($self, $host, $debug=0) {
 
     my $p = Net::Ping->new('tcp',2);
     my $ping_ok;
-    eval { $ping_ok = $p->ping($self->host) };
-    warn $@ if $@;
+    eval { $ping_ok = $p->ping($host) };
+    confess $@ if $@;
+    warn "$@ pinging host $host" if $@;
 
-    $self->_store_mac_address() if $ping_ok;
+    $self->_store_mac_address() if $ping_ok && $self;
     return 1 if $ping_ok;
     $p->close();
 
     return if $>; # icmp ping requires root privilege
     warn "trying icmp"   if $debug;
     $p= Net::Ping->new('icmp',2);
-    eval { $ping_ok = $p->ping($self->host) };
+    eval { $ping_ok = $p->ping($host) };
     warn $@ if $@;
-    $self->_store_mac_address() if $ping_ok;
+    $self->_store_mac_address() if $ping_ok && $self;
     return 1 if $ping_ok;
 
     return 0;
