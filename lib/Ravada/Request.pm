@@ -86,6 +86,7 @@ our %VALID_ARG = (
     ,refresh_vms => { _force => 2 }
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
+    ,connect_node => { backend => 2, hostname => 2, id_node =>2, timeout => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -1423,6 +1424,25 @@ sub start_node{
 
     return $req;
 
+}
+
+sub connect_node {
+    my $proto = shift;
+
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args('connect_node', @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+    $args->{timeout} = 10 if !exists $args->{timeout};
+    my $req = _new_request($self
+        , command => 'connect_node'
+        , args => $args
+    );
+
+    return $req;
 }
 
 =head2 done_recently

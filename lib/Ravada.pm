@@ -1976,6 +1976,85 @@ sub process_requests {
 
     }
     $sth->finish;
+
+    $self->_timeout_requests();
+}
+
+sub _date_now($seconds = 0) {
+    confess "Error, can't search what changed in the future "
+        if $seconds > 0;
+    my @now = localtime(time + $seconds);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":".$now[0];
+
+    return $time_recent;
+}
+
+sub _timeout_requests($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid, start_time, date_changed "
+        ." FROM requests "
+        ." WHERE status = 'working'"
+        ."  AND date_changed >= ? "
+        ." ORDER BY date_req "
+    );
+    $sth->execute(_date_now(-30));
+
+    my @requests;
+    while (my ($id, $pid, $start_time) = $sth->fetchrow()) {
+        my $req = Ravada::Request->open($id);
+        my $timeout = $req->defined_arg('timeout') or next;
+        next if time - $start_time <= $timeout;
+        warn "request ".$req->pid." ".$req->command." timeout";
+        push @requests,($req);
+    }
+    $sth->finish;
+
+    $self->_kill_requests(@requests);
+}
+
+sub _kill_requests($self, @requests) {
+    for my $req (@requests) {
+        warn "killing request ".$req->id." ".$req->command." pid: ".$req->pid;
+        $req->status('stopping');
+        my @procs = $self->_process_sons($req->pid);
+        if ( @procs) {
+            for my $current (@procs) {
+                my ($pid, $cmd) = @$current;
+                my $signal = 15;
+                $signal = 9 if $cmd =~ /<defunct>$/;
+                warn "sending $signal to $pid $cmd";
+                kill($signal, $pid);
+            }
+        } else {
+            if ($req->pid == $$) {
+                warn "I'm not gonna kill myself $$";
+            } else {
+                kill(15, $req->pid);
+            }
+        }
+    }
+}
+
+sub _process_sons($self, $pid) {
+    my @process;
+
+    my $cmd = "ps -eo 'ppid pid cmd'";
+
+    open my $ps,'-|', $cmd or die "$! $cmd";
+    while (my $line = <$ps>) {
+        warn "looking for $pid in ".$line if $line =~ /$pid/;
+        my ($pid_son, $cmd) = $line =~ /^\s*$pid\s+(\d+)\s+(.*)/;
+        next if !$pid_son;
+        warn "$cmd\n";
+        push @process,[$pid_son, $cmd] if $pid_son;
+    }
+
+    return @process;
 }
 
 =head2 process_long_requests
@@ -2743,6 +2822,46 @@ sub _cmd_start_node($self, $request) {
     $node->start();
 }
 
+sub _cmd_connect_node($self, $request) {
+    my $backend = $request->defined_arg('backend');
+    my $hostname = $request->defined_arg('hostname');
+    my $id_node = $request->defined_arg('id_node');
+
+    my $node;
+
+    if ($id_node) {
+        $node = Ravada::VM->open($id_node);
+        $hostname = $node->host;
+    } else {
+        $node = Ravada::VM->open( type => $backend
+            , host => $hostname
+            , store => 0
+        );
+    }
+
+    die "Invalid hostname '$hostname'"
+        if !$id_node && $hostname !~ /\d+\.\d+\.\d+\.\d+/;
+
+    die "I can't ping $hostname\n"
+        if ! $node->ping();
+
+    $request->error("Ping ok. Trying to connect to $hostname");
+    my ($out, $err);
+    eval {
+        ($out, $err) = $node->run_command('/bin/true');
+    };
+    $err = $@ if $@ && !$err;
+    warn "out: $out" if $out;
+    if ($err) {
+        warn $err;
+        $err =~ s/(.*?) at lib.*/$1/s;
+        chomp $err;
+        $err .= "\n";
+        die $err if $err;
+    }
+    $node->connect() && $request->error("Connection OK");
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2976,6 +3095,7 @@ sub _req_method {
 # Virtual Managers or Nodes
     ,shutdown_node  => \&_cmd_shutdown_node
     ,start_node  => \&_cmd_start_node
+    ,connect_node  => \&_cmd_connect_node
 
     );
     return $methods{$cmd};
