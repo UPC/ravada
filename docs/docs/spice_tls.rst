@@ -171,7 +171,7 @@ See this .vv file as an example reproduced below:
     delete-this-file=0
     usb-filter=-1,-1,-1,-1,0
     tls-ciphers=DEFAULT
-    host-subject=C=XX, L=XXX, O=XXXX, CN=<ravada_servername>
+    host-subject=C=XX,L=XXX,O=XXXX,CN=<ravada_servername>
     ca=-----BEGIN CERTIFICATE-----\nMIICUDCCAbmgAwIBAgIJAOgNQo8MIorJMA0GSGSIb3DQEBCwUAMEExCzAJBgNV\nBAYTAklMMRAwDgYDVQQHDAdSYWFuYW5hMRAwDgYDVQQKDAdSZWQgSGF0MQ4wDAYD\nVQQDDAVteSBDQTAeFw0xNzA2MDcxODDlaFw0yMDA2MDYxODI2NDlaMEExCzAJ\nBgNVBAYTAklMMRAwDgYDVQQHDAdSYWFuYW5hMRAwDgYDVQQKDAdSZWQgSGF0MQ4w\nDAYDVQQDDAVteSBDQTCBnzANBkhkiG9w0BAQEFAAOBjQAwgYkCgYEAq2QtZdu7\nCLuGhagxwS8d7U4EEQjzgiMKcm8/fLE+rliV/wFMtwYD+7TtDEFDrafQC8Y7Zd1B\nrdBT9VC+orAc9PqpImXJ3pN152P9rvyZvI3OxKkVTkGFQi+9z3M1AmxTp5nmKA\nrazPM6t/YzV3vraynBXp4x65qLdc2yF2A0cCAwEAAaNQME4wHQYDVR0OBBYEFFGm\nvI6T/86+cpQZ7ob3xd0PgCMB8GA1UdIwQYMBaAFFGmvI6T/86+cpQZ7zohb3xd\n0PgCMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADgYEALG0TBhPTQwXNpUGi\nia/zxdOh0r7mJWeYcRgZ2lZtesCozYyZz9P2CDb5OnZlu75qs6Ws/fjztRLG/0j\n4r51Og212Up+mQ8eaq2Lox7S/7Ao0P8QWgHZNviltSBb3l9eaYpHENZjW9mMB/JH\nYmIRDdTW1bYuXIsinDPBk0OS20=\n-----END CERTIFICATE-----
     toggle-fullscreen=shift+f11
     release-cursor=shift+f12
@@ -179,4 +179,4 @@ See this .vv file as an example reproduced below:
     disable-effects=all
     secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard
 
-More information `about <https://www.spice-space.org/documentation.html>`_.
+More information `about <https://www.spice-space.org/spice-user-manual.html>`_.
