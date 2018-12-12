@@ -54,15 +54,21 @@
                     </div>
             </form>
             <br/>
-            <div ng-show="id_req && !request">Testing connection to ̣{{hostname}}</div>
-            <div ng-show="request">{{request.error || "Waiting ... "}}</div>
             <div class="form-group row"
                 ng-hide="id_req &&( !request || request.status != 'done')">
+                <div>
                     <a type="button" class="btn btn-warning" ng-show="vm_type && hostname"
                                                      ng-click="connect_node(vm_type,hostname)">
                         Check connection to {{hostname}}
                     </a>
                 </div>
+            </div>
+            <div ng-show="request || id_req" class=" form-group row border border-primary">
+            <div class="d-flex p-2 bd-highlight bg-light text-dark">
+                <div ng-show="id_req && !request">Testing connection to ̣{{hostname}}</div>
+                <div ng-show="request">{{request.error || "Waiting ... "}}</div>
+            </div>
+            </div>
 
         </div>
     </div>
