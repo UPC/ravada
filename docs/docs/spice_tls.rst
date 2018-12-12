@@ -119,7 +119,7 @@ For example in this VM with id 1, the connection is possible both through TLS an
 
     <graphics type='spice' autoport='yes' listen='172.17.0.1' keymap='es'>
 
-.. prompt:: bash $
+.. prompt:: bash $,(env)...$ auto
 
     virsh domdisplay 1
     spice://172.17.0.1:5901?tls-port=5902
@@ -130,7 +130,7 @@ For example in VM with id 2, you can edit the libvirt graphics node if you want 
 
     <graphics type='spice' autoport='yes’ listen='171.17.0.1' defaultMode='secure'>
 
-.. prompt:: bash $
+.. prompt:: bash $,(env)...$ auto
 
     virsh domdisplay 2
     spice://171.17.0.1?tls-port=5900
