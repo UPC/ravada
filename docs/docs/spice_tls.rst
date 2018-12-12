@@ -8,7 +8,7 @@ Change libvirtd configuration
 
 The certificate must be specified in libvirtd configuration file in /etc/libvirt/qemu.conf 
 
-Uncomment the lines: *spice_tls = 1*  and *spice_tls_x509_cert_dir = "/etc/pki/libvirt-spice"*
+Uncomment the lines: *spice_listen="0.0.0.0"*, *spice_tls=1*  and *spice_tls_x509_cert_dir="/etc/pki/libvirt-spice"*
 
 ::
 
