@@ -140,8 +140,8 @@ From command line
 
 With self-signed certificates, it's necessary pass to the client the certificate of the authority which signed the host certificate.
 
-.. prompt:: bash $
-        
+::
+
     remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.pem spice://<ravada_servername>?tls-port=5902
     
 .. note:: 
