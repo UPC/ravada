@@ -1186,9 +1186,9 @@ sub _store_mac_address($self, $force=0 ) {
     return if !$force && $self->_data('mac');
     die "Error: I can't find arp" if !$ARP;
 
-    for my $ip ($self->hostname,$self->ip, $self->public_ip) {
-        next if !$ip;
-        warn $ip;
+    my %done;
+    for my $ip ($self->host,$self->ip, $self->public_ip) {
+        next if !$ip || $done{$ip}++;
         CORE::open (my $arp,'-|',"$ARP -n ".$ip) or die "$! $ARP";
         while (my $line = <$arp>) {
             chomp $line;
@@ -1204,7 +1204,6 @@ sub _store_mac_address($self, $force=0 ) {
 sub _wake_on_lan( $self ) {
     return if $self->is_local;
 
-    warn $self->_data('mac');
     die "Error: I don't know the MAC address for node ".$self->name
         if !$self->_data('mac');
 
