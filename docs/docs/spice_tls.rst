@@ -141,10 +141,12 @@ From command line
 With self-signed certificates, it's necessary pass to the client the certificate of the authority which signed the host certificate.
 
 ::
+        
+    remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.pem spice://<ravada_servername>?tls-port=5902
     
-    SUBJECT=`openssl x509 -noout -text -in /etc/pki/libvirt-spice/server-cert.pem | grep Subject: | cut -f 10- -d " "`
-    
-    remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.pem spice://172.17.0.1?tls-port=5902 "--spice-host-subject=$SUBJECT"
+.. note:: 
+    If you connect directly to IP address the following error occurs:  ``ssl: hostname '171.17.0.1' verification failed``
+     
 
 Configuration in .vv file
 -------------------------
