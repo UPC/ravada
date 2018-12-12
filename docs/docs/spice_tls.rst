@@ -119,9 +119,9 @@ For example in this VM with id 1, the connection is possible both through TLS an
 
     <graphics type='spice' autoport='yes' listen='172.17.0.1' keymap='es'>
 
-::
+.. prompt:: bash $
 
-    $ virsh domdisplay 1
+    virsh domdisplay 1
     spice://172.17.0.1:5901?tls-port=5902
 
 For example in VM with id 2, you can edit the libvirt graphics node if you want to change that behaviour and only allow connections through TLS: 
@@ -130,9 +130,9 @@ For example in VM with id 2, you can edit the libvirt graphics node if you want 
 
     <graphics type='spice' autoport='yes’ listen='171.17.0.1' defaultMode='secure'>
 
-::
+.. prompt:: bash $
 
-    $ virsh domdisplay 2
+    virsh domdisplay 2
     spice://171.17.0.1?tls-port=5900
 
 From command line
@@ -140,7 +140,7 @@ From command line
 
 With self-signed certificates, it's necessary pass to the client the certificate of the authority which signed the host certificate.
 
-::
+.. prompt:: bash $
         
     remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.pem spice://<ravada_servername>?tls-port=5902
     
