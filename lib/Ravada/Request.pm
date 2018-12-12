@@ -112,7 +112,7 @@ our %COMMAND = (
     }
     ,priority => {
         limit => 20
-        ,commands => ['clone','start']
+        ,commands => ['clone','start','start_clones','open_iptables']
     }
 );
 lock_hash %COMMAND;
@@ -1078,6 +1078,8 @@ sub refresh_vms {
     if  (!$args->{_force} ) {
           return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
     }
+
+    $args->{timeout} = 120 if ! $args->{timeout};
 
     my $self = {};
     bless($self,$class);

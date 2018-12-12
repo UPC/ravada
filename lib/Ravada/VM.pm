@@ -1129,9 +1129,15 @@ sub iptables_list($self) {
     return $ret;
 }
 
+sub _random_list(@list) {
+    return @list if rand(5) < 2;
+    return reverse @list if rand(5) < 2;
+    return (sort { $a cmp $b } @list);
+}
+
 sub balance_vm($self, $base=undef) {
     my %vm_list;
-    for my $vm ($self->list_nodes) {
+    for my $vm (_random_list($self->list_nodes)) {
         next if !$vm->enabled();
         next if !$vm->is_active();
 
@@ -1146,7 +1152,6 @@ sub balance_vm($self, $base=undef) {
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
     my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
-
     for my $vm (@sorted_vm) {
         next if $base && !$base->base_in_vm($vm->id);
         return $vm;

@@ -307,19 +307,18 @@ sub _start_preconditions{
     return if $self->_search_already_started();
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
-        $self->status('starting');
 #        $self->_set_last_vm(1)
         if ( !$self->is_local && ( !$self->_vm->enabled || !$self->_vm->ping) ) {
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
         $self->_balance_vm();
-        $self->status('starting');
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
     } elsif (!$self->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
+    $self->status('starting');
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
     #$self->_check_cpu_usage($request);
@@ -1710,7 +1709,9 @@ sub _around_is_active($orig, $self) {
         || !$self->is_known
         || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
 
-    my $status = 'shutdown';
+    my $status = $self->_data('status');
+    $status = 'shutdown' if $status eq 'active';
+
     $status = 'active'  if $is_active;
     $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
