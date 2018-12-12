@@ -12,6 +12,14 @@ Uncomment the lines: *spice_tls = 1*  and *spice_tls_x509_cert_dir = "/etc/pki/l
 
 ::
 
+    # SPICE is configured to listen on 127.0.0.1 by default.
+    # To make it listen on all public interfaces, uncomment
+    # this next option.
+    #
+    # NB, strong recommendation to enable TLS + x509 certificate
+    # verification when allowing public access
+    #
+    spice_listen = "0.0.0.0"
     # Enable use of TLS encryption on the SPICE server.
     #
     # It is necessary to setup CA and issue a server certificate
