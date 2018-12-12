@@ -195,6 +195,13 @@
             });
           };
             */
+          $scope.machine_info = function(id) {
+               $http.get('/machine/info/'+$scope.showmachineId+'.json')
+                    .then(function(response) {
+                            $scope.showmachine=response.data;
+                            $scope.list_nodes();
+                    });
+          };
           $scope.remove = function(machineId) {
             $http.get('/machine/remove/'+machineId+'.json');
           };
@@ -289,8 +296,10 @@
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.refresh_machine = function() {
-            if(!$scope.showmachine) { return }
+            if(!$scope.showmachine || $scope.refreshing_machine) { return }
+            $scope.refreshing_machine = true;
             $http.get('/machine/requests/'+$scope.showmachine.id+'.json').then(function(response) {
+              $scope.refreshing_machine = false;
               $scope.requests = response.data;
               var pending = 0;
               for (var i in response.data) {
@@ -306,12 +315,12 @@
               }
               if( pending < $scope.pending_before) {
                   if($scope.showmachine) {
-                      $scope.init($scope.showmachine.id);
-                      $scope.list_nodes();
+                      $scope.machine_info($scope.showmachine.id);
                   }
                   setTimeout(function () {
-                    $scope.init($scope.showmachine.id);
+                    $scope.machine_info($scope.showmachine.id);
                   }, 2000);
+
               } else {
                 setTimeout(function () {
                     $scope.refresh_machine();
@@ -342,7 +351,6 @@
           $scope.list_ldap_attributes= function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
-              console.log($scope.cn);
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                   $scope.ldap_attributes = response.data.attributes;
               });
