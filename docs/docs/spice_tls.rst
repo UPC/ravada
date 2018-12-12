@@ -151,9 +151,9 @@ With self-signed certificates, it's necessary pass to the client the certificate
 Configuration in .vv file
 -------------------------
 
-.. tip:: Use the following command ``openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "`` to copy in ``host-subject=``.
+.. tip:: Use the following command ``openssl x509 -noout -text -in ca-cert.pem | grep Subject: | cut -f 10- -d " "`` to copy in ``host-subject=``.
 
-.. tip:: Use the following command ``awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' server-cert.pem`` to convert ``server-cert.pem`` file to a value that can copy in ``ca=``.
+.. tip:: Use the following command ``awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' ca-cert.pem`` to convert ``server-cert.pem`` file to a value that can copy in ``ca=``.
 
 See this .vv file as an example reproduced below:
 
