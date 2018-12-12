@@ -1998,7 +1998,7 @@ sub _timeout_requests($self) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid, start_time, date_changed "
         ." FROM requests "
-        ." WHERE status = 'working'"
+        ." WHERE ( status = 'working' or status = 'stopping' )"
         ."  AND date_changed >= ? "
         ." ORDER BY date_req "
     );
@@ -2036,6 +2036,7 @@ sub _kill_requests($self, @requests) {
             } else {
                 kill(15, $req->pid);
             }
+            $req->status('done');
         }
     }
 }
@@ -2838,9 +2839,6 @@ sub _cmd_connect_node($self, $request) {
             , store => 0
         );
     }
-
-    die "Invalid hostname '$hostname'"
-        if !$id_node && $hostname !~ /\d+\.\d+\.\d+\.\d+/;
 
     die "I can't ping $hostname\n"
         if ! $node->ping();
