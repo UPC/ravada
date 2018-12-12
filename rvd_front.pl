@@ -313,6 +313,10 @@ get '/node/shutdown/(:id).json' => sub {
                 id_node => $c->stash('id')
                 ,at => $at
     );
+    Ravada::Request->connect_node(
+                id_node => $c->stash('id')
+                ,at => $at + 10
+    );
     return $c->render(json => {id_req => $req->id });
 };
 
@@ -322,6 +326,13 @@ get '/node/start/(:id).json' => sub {
     my $req = Ravada::Request->start_node(
                 id_node => $c->stash('id')
     );
+    for my $seconds ( 30,60,90,120 ) {
+        Ravada::Request->connect_node(
+            id_node => $c->stash('id')
+            ,at => time + $seconds
+        );
+    }
+
     return $c->render(json => {id_req => $req->id });
 
 };
