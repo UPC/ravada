@@ -254,20 +254,22 @@ sub _set_vm($self, $vm, $force=0) {
 
 }
 
-sub _check_equal_storage_pools($self, $vm) {
-     confess "ERROR: ".$vm->name." and ".$self->_vm->name
-        ." have different storage pools "
-        .Dumper([$vm->list_storage_pools],[$self->_vm->list_storage_pools])
-            if !_equal_storage_pools($vm, $self->_vm);
-}
+sub _check_equal_storage_pools($self, $vm2) {
+    my $vm1 = $self->_vm;
+    my %sp1 = map { $_ => 1 }
+        ($vm1->default_storage_pool_name
+        , ($vm1->base_storage_pool or '')
+        , ($vm1->clone_storage_pool or '')
 
-sub _equal_storage_pools($vm1, $vm2) {
-    my @sp1 = sort $vm1->list_storage_pools();
-    my @sp2 = sort $vm2->list_storage_pools();
-    return 0 if scalar @sp1 != scalar @sp2;
+    );
+    my @sp1 = grep /./,keys %sp1;
 
-    for ( 0 .. $#sp1 ) {
-        return 0 if $sp1[$_] ne $sp2[$_];
+    my %sp2 = map { $_ => 1 } $vm2->list_storage_pools();
+
+    for my $pool ( @sp1 ) {
+        next if $sp2{ $pool };
+        die "Error: Storage pool '$pool' not found on node ".$vm2->name."\n"
+            .Dumper([keys %sp2]);
     }
     return 1;
 }
