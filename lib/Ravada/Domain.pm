@@ -1484,7 +1484,18 @@ sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
-    $self->_set_base_vm_db($self->_vm->id,1);
+
+    $self->_remove_all_bases();
+}
+
+sub _remove_all_bases($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm "
+            ." WHERE id_domain=? AND enabled=1"
+    );
+    $sth->execute($self->id);
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        $self->remove_base_vm( id_vm => $id_vm );
+    }
 }
 
 sub _pre_shutdown_domain {}
