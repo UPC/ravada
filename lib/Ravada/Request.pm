@@ -1439,6 +1439,10 @@ sub connect_node {
     my $class = ref($proto) || $proto;
     my $args = _check_args('connect_node', @_ );
     $args->{timeout} = 10 if !exists $args->{timeout};
+
+    my $self = {};
+    bless($self, $class);
+
     return _new_request($self
         , command => 'connect_node'
         , args => $args
@@ -1456,6 +1460,11 @@ sub _new_request_generic {
     my $class = ref($proto) || $proto;
 
     my $args = _check_args($command, @_ );
+
+    my $self = {};
+    bless($self, $class);
+
+
     my $req = _new_request($self
         ,command => $command
         ,args => $args
