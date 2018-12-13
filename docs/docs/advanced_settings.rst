@@ -84,6 +84,8 @@ Specific Storage Pools
 Specific storages for bases and clones can be defined. This way you can
 use small and fast disk drives for bases and big but slower disks for clones.
 
+.. Warning:: If you set base and clone storages here, the default storage setting is ignored.
+
 Add and define the storage pools as described in the
 `add kvm storage pool <add_kvm_storage_pool.html>`__ manual. Then change the
 values in the database directly.
@@ -110,6 +112,8 @@ set a *base_storage* or *clone_storage* pools this way:
     mysql> UPDATE vms set base_storage='pool_ssd' where id=1;
     mysql> UPDATE vms set clone_storage='pool_sata' where id=1;
 
+.. Warning:: These change will apply to new virtual machines. Old virtual machines
+    have already the disk volumes defined and can't be easily changed.
 
 Chek free memory ( from v0.3 )
 ------------------------------
