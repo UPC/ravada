@@ -190,8 +190,8 @@ before 'migrate' => \&_pre_migrate;
 after 'migrate' => \&_post_migrate;
 
 around 'get_info' => \&_around_get_info;
-around 'set_max_mem' => \&_around_set_mem;
-around 'set_memory' => \&_around_set_mem;
+around 'set_max_mem' => \&_around_set_max_mem;
+around 'set_memory' => \&_around_set_memory;
 
 around 'is_active' => \&_around_is_active;
 
@@ -676,13 +676,25 @@ sub _around_get_info($orig, $self) {
     return $info;
 }
 
-sub _around_set_mem($orig, $self, $value) {
+sub _around_set_memory($orig, $self, $value) {
     my $ret = $self->$orig($value);
     if ($self->is_known) {
         my $info;
         eval { $info = decode_json($self->_data('info')) if $self->_data('info')};
         warn $@ if $@ && $@ !~ /malformed JSON/i;
         $info->{memory} = $value;
+        $self->_data(info => encode_json($info));
+    }
+    return $ret;
+}
+
+sub _around_set_max_mem($orig, $self, $value) {
+    my $ret = $self->$orig($value);
+    if ($self->is_known) {
+        my $info;
+        eval { $info = decode_json($self->_data('info')) if $self->_data('info')};
+        warn $@ if $@ && $@ !~ /malformed JSON/i;
+        $info->{max_mem} = $value;
         $self->_data(info => encode_json($info))
     }
     return $ret;
