@@ -84,9 +84,14 @@ our %VALID_ARG = (
     ,refresh_machine => { id_domain => 1 }
     # Virtual Managers or Nodes
     ,refresh_vms => { _force => 2 }
+
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
     ,connect_node => { backend => 2, hostname => 2, id_node =>2, timeout => 2 }
+
+    #users
+    ,post_login => { uid => 1, locale => 2 }
+
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -112,7 +117,7 @@ our %COMMAND = (
     }
     ,priority => {
         limit => 20
-        ,commands => ['clone','start','start_clones','open_iptables']
+        ,commands => ['clone','start','start_clones','create_domain','open_iptables']
     }
 );
 lock_hash %COMMAND;
@@ -1432,18 +1437,29 @@ sub connect_node {
     my $proto = shift;
 
     my $class = ref($proto) || $proto;
-
     my $args = _check_args('connect_node', @_ );
-
-    my $self = {};
-    bless($self, $class);
-
     $args->{timeout} = 10 if !exists $args->{timeout};
-    my $req = _new_request($self
+    return _new_request($self
         , command => 'connect_node'
         , args => $args
     );
+}
 
+sub post_login {
+    return _new_request_generic('post_login',@_);
+}
+
+sub _new_request_generic {
+    my $command = shift;
+
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+
+    my $args = _check_args($command, @_ );
+    my $req = _new_request($self
+        ,command => $command
+        ,args => $args
+    );
     return $req;
 }
 
