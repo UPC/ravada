@@ -90,7 +90,7 @@ sub test_new_domain_req {
         ,id_domain => $domain->id
         ,remote_ip => '127.0.0.1'
     );
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
     ok($req_start->status, 'done');
     is($domain->is_active, 0 );
     like($req_start->error,qr(.));

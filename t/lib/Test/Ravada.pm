@@ -919,7 +919,9 @@ sub start_node($node) {
 
     $node->disconnect;
     if ( $node->_do_is_active ) {
-        $node->connect && return;
+        my $connect;
+        eval { $connect = $node->connect };
+        return if $connect;
         warn "I can't connect";
     }
 
