@@ -614,14 +614,14 @@ sub start {
     $self->_set_spice_ip($set_password);
     $self->status('starting');
     eval { $self->domain->create() };
-    if ( $@ && $@ !~ /already running/i ) {
+    my $error = $@;
+    if ( $error && $error !~ /already running/i ) {
         if ( $self->domain->has_managed_save_image ) {
             $request->status("removing saved image") if $request;
             $self->domain->managed_save_remove();
             $self->domain->create();
-        } elsif ( $request ) {
-            $request->error($@);
-            die $@ if $@;
+        } else {
+            die $error;
         }
     }
 }

@@ -845,6 +845,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'ping_backend'
                 || $command eq 'cleanup'
                 || $command eq 'screenshot'
+                || $command eq 'connect_node'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'

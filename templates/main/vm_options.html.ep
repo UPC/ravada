@@ -6,7 +6,7 @@
                     <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
-%   if ($USER->is_admin && !$domain->is_active()){
+%   if ($USER->is_admin ){
                     <input class="form-control" type="text" name="ram" size="5" value="<%= $ram %>">
 %   }else{
                     <input class="form-control" type="text" name="ram" size="5" disabled value="<%= $ram %>">
@@ -22,11 +22,7 @@
                     <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
-%   if ($domain->is_active()){
                     <input class="form-control" type="text" name="cram" size="5" value="<%= $cram %>">
-%   } else {
-                    <input class="form-control" type="text" name="cram" size="5" disabled value="<%= $cram %>">
-%   }
                 </div>
            </div> 
 %   if ($USER->is_admin){

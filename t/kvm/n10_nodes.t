@@ -885,6 +885,27 @@ sub test_remove_base($node) {
     $domain->remove(user_admin);
 }
 
+sub test_remove_base_main($node) {
+
+    my $vm = rvd_back->search_vm($node->type, 'localhost');
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),1);
+
+    $domain->remove_base(user_admin);
+    $domain->prepare_base(user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),0) or exit;
+
+    $domain->remove(user_admin);
+}
+
+
 sub test_node_inactive($vm_name, $node) {
 
     start_node($node);
@@ -1163,6 +1184,7 @@ SKIP: {
     };
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+    test_remove_base_main($node);
     test_status($node);
     test_bases_node($vm_name, $node);
     test_clone_not_in_node($vm_name, $node);

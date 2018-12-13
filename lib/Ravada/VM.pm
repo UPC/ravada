@@ -19,7 +19,7 @@ use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
 use Net::Ping;
-use Net::SSH2;
+use Net::SSH2 qw(LIBSSH2_FLAG_SIGPIPE);
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
@@ -41,6 +41,10 @@ our $MIN_MEMORY_MB = 128 * 1024;
 our $SSH_TIMEOUT = 20 * 1000;
 
 our %SSH;
+
+our $ARP = `which arp`;
+chomp $ARP;
+
 # domain
 requires 'create_domain';
 requires 'search_domain';
@@ -82,6 +86,11 @@ has 'readonly' => (
     ,default => 0
 );
 
+has 'store' => (
+    isa => 'Bool'
+    , is => 'rw'
+    , default => 1
+);
 ############################################################
 #
 # Method Modifiers definition
@@ -97,6 +106,7 @@ before 'create_volume' => \&_connect;
 around 'import_domain' => \&_around_import_domain;
 
 around 'ping' => \&_around_ping;
+around 'connect' => \&_around_connect;
 
 #############################################################
 #
@@ -159,6 +169,9 @@ sub BUILD {
     my $id = delete $args->{id};
     my $host = delete $args->{host};
     my $name = delete $args->{name};
+    my $store = delete $args->{store};
+    $store = 1 if !defined $store;
+
     delete $args->{readonly};
     delete $args->{security};
     delete $args->{public_ip};
@@ -169,7 +182,7 @@ sub BUILD {
     lock_hash(%$args);
 
     confess "ERROR: Unknown args ".join (",", keys (%$args)) if keys %$args;
-
+    return if !$store;
     if ($id) {
         $self->_select_vm_db(id => $id)
     } else {
@@ -203,7 +216,6 @@ sub _open_type {
     my $vm = $proto->new(%args);
     eval { $vm->vm };
     warn $@ if $@;
-    return if $@;
 
     return $vm;
 
@@ -218,7 +230,23 @@ sub _check_readonly {
 
 sub _connect {
     my $self = shift;
-    $self->connect();
+    my $result = $self->connect();
+    if ($result) {
+        $self->is_active(1);
+    } else {
+        $self->is_active(0);
+    }
+    return $result;
+}
+
+sub _around_connect($orig, $self) {
+    my $result = $self->$orig();
+    if ($result) {
+        $self->is_active(1);
+    } else {
+        $self->is_active(0);
+    }
+    return $result;
 }
 
 sub _pre_create_domain {
@@ -583,7 +611,7 @@ sub id {
 }
 
 sub _data($self, $field, $value=undef) {
-    if (defined $value) {
+    if (defined $value && $self->store ) {
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -597,6 +625,8 @@ sub _data($self, $field, $value=undef) {
 #    _init_connector();
 
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
+    return if !$self->store();
+
     $self->{_data} = $self->_select_vm_db( name => $self->name);
 
     confess "No DB info for VM ".$self->name    if !$self->{_data};
@@ -619,6 +649,7 @@ sub _do_select_vm_db {
         }
     }
 
+    confess Dumper(\%args) if !keys %args;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM vms WHERE ".join(" AND ",map { "$_=?" } sort keys %args )
     );
@@ -642,6 +673,8 @@ sub _select_vm_db {
 
 sub _insert_vm_db {
     my $self = shift;
+    return if !$self->store();
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO vms (name, vm_type, hostname, public_ip)"
         ." VALUES(?, ?, ?, ?)"
@@ -682,7 +715,7 @@ sub default_storage_pool_name {
         $sth->execute($value,$id);
         $self->{_data}->{default_storage} = $value;
     }
-    $self->_select_vm_db();
+    $self->_select_vm_db() if $self->store();
     return $self->_data('default_storage');
 }
 
@@ -835,24 +868,32 @@ Returns if the virtual manager connection is available
 
 sub ping($self, $option=undef) {
     confess "ERROR: option unknown" if defined $option && $option ne 'debug';
-    
+
+    return 1 if $self->is_local();
     my $debug = 0;
     $debug = 1 if defined $option && $option eq 'debug';
 
-    return 1 if $self->is_local();
+    return $self->_do_ping($self->host, $debug);
+}
+
+sub _do_ping($self, $host, $debug=0) {
 
     my $p = Net::Ping->new('tcp',2);
     my $ping_ok;
-    eval { $ping_ok = $p->ping($self->host) };
-    warn $@ if $@;
+    eval { $ping_ok = $p->ping($host) };
+    confess $@ if $@;
+    warn "$@ pinging host $host" if $@;
+
+    $self->_store_mac_address() if $ping_ok && $self;
     return 1 if $ping_ok;
     $p->close();
 
     return if $>; # icmp ping requires root privilege
     warn "trying icmp"   if $debug;
     $p= Net::Ping->new('icmp',2);
-    eval { $ping_ok = $p->ping($self->host) };
+    eval { $ping_ok = $p->ping($host) };
     warn $@ if $@;
+    $self->_store_mac_address() if $ping_ok && $self;
     return 1 if $ping_ok;
 
     return 0;
@@ -976,6 +1017,21 @@ sub run_command($self, @command) {
     return ($out, $err);
 }
 
+sub run_command_nowait($self, @command) {
+
+    return $self->_run_command_local(@command) if $self->is_local();
+
+    my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
+
+    my $command = join(" ",@command);
+    $chan->exec($command);# or $self->{_ssh}->die_with_error;
+
+    $chan->send_eof();
+
+    return;
+}
+
+
 sub _run_command_local($self, @command) {
     my ( $in, $out, $err);
     my ($exec) = $command[0];
@@ -1073,9 +1129,15 @@ sub iptables_list($self) {
     return $ret;
 }
 
+sub _random_list(@list) {
+    return @list if rand(5) < 2;
+    return reverse @list if rand(5) < 2;
+    return (sort { $a cmp $b } @list);
+}
+
 sub balance_vm($self, $base=undef) {
     my %vm_list;
-    for my $vm ($self->list_nodes) {
+    for my $vm (_random_list($self->list_nodes)) {
         next if !$vm->enabled();
         next if !$vm->is_active();
 
@@ -1090,7 +1152,6 @@ sub balance_vm($self, $base=undef) {
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
     my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
-
     for my $vm (@sorted_vm) {
         next if $base && !$base->base_in_vm($vm->id);
         return $vm;
@@ -1124,6 +1185,58 @@ sub shutdown_domains($self) {
         );
     }
     $sth->finish;
+}
+
+sub _store_mac_address($self, $force=0 ) {
+    return if !$force && $self->_data('mac');
+    die "Error: I can't find arp" if !$ARP;
+
+    my %done;
+    for my $ip ($self->host,$self->ip, $self->public_ip) {
+        next if !$ip || $done{$ip}++;
+        CORE::open (my $arp,'-|',"$ARP -n ".$ip) or die "$! $ARP";
+        while (my $line = <$arp>) {
+            chomp $line;
+            my ($mac) = $line =~ /(..:..:..:..:..:..)/ or next;
+
+            $self->_data(mac => $mac);
+            return;
+        }
+        close $arp;
+    }
+}
+
+sub _wake_on_lan( $self ) {
+    return if $self->is_local;
+
+    die "Error: I don't know the MAC address for node ".$self->name
+        if !$self->_data('mac');
+
+    my $sock = new IO::Socket::INET(Proto=>'udp', Timeout => 60)
+        or die "Error: I can't create an UDP socket";
+    my $host = '255.255.255.255';
+    my $port = 9;
+    my $mac_addr = $self->_data('mac');
+
+    my $ip_addr = inet_aton($host);
+    my $sock_addr = sockaddr_in($port, $ip_addr);
+    $mac_addr =~ s/://g;
+    my $packet = pack('C6H*', 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, $mac_addr x 16);
+
+    setsockopt($sock, SOL_SOCKET, SO_BROADCAST, 1);
+    send($sock, $packet, MSG_DONTWAIT , $sock_addr);
+    close ($sock);
+
+}
+
+sub start($self) {
+    $self->_wake_on_lan();
+}
+
+sub shutdown($self) {
+    die "Error: local VM can't be shut down\n" if $self->is_local;
+    $self->is_active(0);
+    $self->run_command_nowait('/sbin/poweroff');
 }
 
 1;

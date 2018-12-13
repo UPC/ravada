@@ -307,19 +307,18 @@ sub _start_preconditions{
     return if $self->_search_already_started();
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
-        $self->status('starting');
 #        $self->_set_last_vm(1)
         if ( !$self->is_local && ( !$self->_vm->enabled || !$self->_vm->ping) ) {
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
         $self->_balance_vm();
-        $self->status('starting');
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
     } elsif (!$self->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
+    $self->status('starting');
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
     #$self->_check_cpu_usage($request);
@@ -1485,7 +1484,18 @@ sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
-    $self->_set_base_vm_db($self->_vm->id,1);
+
+    $self->_remove_all_bases();
+}
+
+sub _remove_all_bases($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm "
+            ." WHERE id_domain=? AND enabled=1"
+    );
+    $sth->execute($self->id);
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        $self->remove_base_vm( id_vm => $id_vm );
+    }
 }
 
 sub _pre_shutdown_domain {}
@@ -1710,7 +1720,9 @@ sub _around_is_active($orig, $self) {
         || !$self->is_known
         || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
 
-    my $status = 'shutdown';
+    my $status = $self->_data('status');
+    $status = 'shutdown' if $status eq 'active';
+
     $status = 'active'  if $is_active;
     $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
