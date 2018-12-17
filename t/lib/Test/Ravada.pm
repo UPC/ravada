@@ -52,6 +52,8 @@ create_domain
     connector
     create_ldap_user
     init_ldap_config
+
+    create_storage_pool
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -1263,6 +1265,48 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
 
     init($fly_config);
     return $fly_config;
+}
+
+sub create_storage_pool($vm) {
+    if (!ref($vm)) {
+        $vm = rvd_back->search_vm($vm);
+    }
+    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
+        .int(rand(10)).int(rand(10)));
+
+    my $capacity = 1 * 1024 * 1024;
+
+    my $pool_name = new_pool_name();
+    my $dir = "/var/tmp/$pool_name";
+
+    mkdir $dir if ! -e $dir;
+
+    my $xml =
+"<pool type='dir'>
+  <name>$pool_name</name>
+  <uuid>$uuid</uuid>
+  <capacity unit='bytes'>$capacity</capacity>
+  <allocation unit='bytes'></allocation>
+  <available unit='bytes'>$capacity</available>
+  <source>
+  </source>
+  <target>
+    <path>$dir</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>"
+;
+    my $pool;
+    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
+    ok($pool,"Expecting a pool , got ".($pool or ''));
+
+    return $pool_name;
+
 }
 
 1;
