@@ -941,7 +941,9 @@ sub start_node($node) {
     is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
     for ( 1 .. 20 ) {
-        last if $node->_do_is_active;
+        my $is_active;
+        eval { $is_active = $node->_do_is_active };
+        last if $is_active;
         sleep 1;
         diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
     }
