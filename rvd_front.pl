@@ -600,7 +600,7 @@ get '/machine/display/(:id).vv' => sub {
     return $c->render(data => $domain->display_file($USER), format => 'vv');
 };
 
-get '/machine/display-tls/(:id).vv' => sub {
+get '/machine/display-tls/(:id)-tls.vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');

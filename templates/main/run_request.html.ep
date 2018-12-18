@@ -67,7 +67,7 @@
 
                 <a type="button" class="btn btn-success" ng-view="domain,display.tls_port"
                     ng-click="view_clicked_tls=true; copy_password(); redirect();"
-                    href="/machine/display-tls/{{domain.id}}.vv">
+                    href="/machine/display-tls/{{domain.id}}-tls.vv">
                         <b><%=l 'secure view'%></b></a>
                 </div>
                 <div>
