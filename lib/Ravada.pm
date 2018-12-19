@@ -23,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada::Auth;
 use Ravada::Request;
+use Ravada::Repository::ISO;
 use Ravada::VM::Void;
 
 our %VALID_VM;
@@ -729,14 +730,17 @@ sub _update_domain_drivers_options($self) {
     $self->_update_table('domain_drivers_options','id',$data);
 }
 
-sub _update_table($self, $table, $field, $data) {
+sub _update_table($self, $table, $field, $data, $verbose=0) {
 
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %$data) {
+    for my $name (sort keys %$data) {
         my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
-        next if $id;
+        if ( $id ) {
+            warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
+            next;
+        }
         warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
@@ -1180,6 +1184,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
+    $self->_upgrade_table('vms','mac','char(18)');
 }
 
 
@@ -1939,6 +1944,7 @@ sub process_requests {
     );
     $sth->execute(time);
 
+    my @reqs;
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
@@ -1951,6 +1957,12 @@ sub process_requests {
 
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
+
+        push @reqs,($req);
+    }
+
+    for my $req (@reqs) {
+        next if $req eq 'refresh_vms' && scalar@reqs > 2;
 
         warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
             .$req->command
@@ -1969,6 +1981,86 @@ sub process_requests {
 
     }
     $sth->finish;
+
+    $self->_timeout_requests();
+}
+
+sub _date_now($seconds = 0) {
+    confess "Error, can't search what changed in the future "
+        if $seconds > 0;
+    my @now = localtime(time + $seconds);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":".$now[0];
+
+    return $time_recent;
+}
+
+sub _timeout_requests($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid, start_time, date_changed "
+        ." FROM requests "
+        ." WHERE ( status = 'working' or status = 'stopping' )"
+        ."  AND date_changed >= ? "
+        ." ORDER BY date_req "
+    );
+    $sth->execute(_date_now(-30));
+
+    my @requests;
+    while (my ($id, $pid, $start_time) = $sth->fetchrow()) {
+        my $req = Ravada::Request->open($id);
+        my $timeout = $req->defined_arg('timeout') or next;
+        next if time - $start_time <= $timeout;
+        warn "request ".$req->pid." ".$req->command." timeout";
+        push @requests,($req);
+    }
+    $sth->finish;
+
+    $self->_kill_requests(@requests);
+}
+
+sub _kill_requests($self, @requests) {
+    for my $req (@requests) {
+        warn "killing request ".$req->id." ".$req->command." pid: ".$req->pid;
+        $req->status('stopping');
+        my @procs = $self->_process_sons($req->pid);
+        if ( @procs) {
+            for my $current (@procs) {
+                my ($pid, $cmd) = @$current;
+                my $signal = 15;
+                $signal = 9 if $cmd =~ /<defunct>$/;
+                warn "sending $signal to $pid $cmd";
+                kill($signal, $pid);
+            }
+        } else {
+            if ($req->pid == $$) {
+                warn "I'm not gonna kill myself $$";
+            } else {
+                kill(15, $req->pid);
+            }
+            $req->status('done');
+        }
+    }
+}
+
+sub _process_sons($self, $pid) {
+    my @process;
+
+    my $cmd = "ps -eo 'ppid pid cmd'";
+
+    open my $ps,'-|', $cmd or die "$! $cmd";
+    while (my $line = <$ps>) {
+        warn "looking for $pid in ".$line if $line =~ /$pid/;
+        my ($pid_son, $cmd) = $line =~ /^\s*$pid\s+(\d+)\s+(.*)/;
+        next if !$pid_son;
+        warn "$cmd\n";
+        push @process,[$pid_son, $cmd] if $pid_son;
+    }
+
+    return @process;
 }
 
 =head2 process_long_requests
@@ -2097,8 +2189,11 @@ sub _execute {
 
     my $sub = $self->_req_method($request->command);
 
-    confess "Unknown command ".$request->command
-            if !$sub;
+    if (!$sub) {
+        $request->error("Unknown command ".$request->command);
+        $request->status('done');
+        return;
+    }
 
     $request->pid($$);
     $request->start_time(time);
@@ -2113,6 +2208,7 @@ sub _execute {
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
         $request->error($err) if $err;
+        warn $err if $err;
         return;
     }
 
@@ -2393,6 +2489,35 @@ sub _cmd_start {
         ;
     $request->status('done', $msg);
 
+}
+
+sub _cmd_start_clones {
+    my $self = shift;
+    my $request = shift;
+
+    my $remote_ip = $request->args('remote_ip');
+    my $id_domain = $request->defined_arg('id_domain');
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+    );
+    $sth->execute($id_domain);
+    while ( my ($id, $name, $is_base) = $sth->fetchrow) {
+        if ($is_base == 0) {
+            my $domain2 = $self->search_domain_by_id($id);
+            if (!$domain2->is_active) {
+                my $req = Ravada::Request->start_domain(
+                    uid => $uid
+                   ,name => $name
+                   ,remote_ip => $remote_ip);
+            }
+        }
+    }
 }
 
 sub _cmd_prepare_base {
@@ -2693,6 +2818,55 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
+sub _cmd_shutdown_node($self, $request) {
+    my $id_node = $request->args('id_node');
+    my $node = Ravada::VM->open($id_node);
+    $node->shutdown();
+}
+
+sub _cmd_start_node($self, $request) {
+    my $id_node = $request->args('id_node');
+    my $node = Ravada::VM->open($id_node);
+    $node->start();
+}
+
+sub _cmd_connect_node($self, $request) {
+    my $backend = $request->defined_arg('backend');
+    my $hostname = $request->defined_arg('hostname');
+    my $id_node = $request->defined_arg('id_node');
+
+    my $node;
+
+    if ($id_node) {
+        $node = Ravada::VM->open($id_node);
+        $hostname = $node->host;
+    } else {
+        $node = Ravada::VM->open( type => $backend
+            , host => $hostname
+            , store => 0
+        );
+    }
+
+    die "I can't ping $hostname\n"
+        if ! $node->ping();
+
+    $request->error("Ping ok. Trying to connect to $hostname");
+    my ($out, $err);
+    eval {
+        ($out, $err) = $node->run_command('/bin/true');
+    };
+    $err = $@ if $@ && !$err;
+    warn "out: $out" if $out;
+    if ($err) {
+        warn $err;
+        $err =~ s/(.*?) at lib.*/$1/s;
+        chomp $err;
+        $err .= "\n";
+        die $err if $err;
+    }
+    $node->connect() && $request->error("Connection OK");
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -2889,6 +3063,7 @@ sub _req_method {
 
           clone => \&_cmd_clone
          ,start => \&_cmd_start
+  ,start_clones => \&_cmd_start_clones
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
@@ -2922,7 +3097,13 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
+# Virtual Managers or Nodes
+    ,shutdown_node  => \&_cmd_shutdown_node
+    ,start_node  => \&_cmd_start_node
+    ,connect_node  => \&_cmd_connect_node
 
+    #users
+    ,post_login => \&_cmd_post_login
     );
     return $methods{$cmd};
 }
@@ -3095,6 +3276,26 @@ sub _clean_volatile_machines($self, %args) {
         $domain_real->remove($USER_DAEMON);
 
         $sth_remove->execute($domain->{id});
+    }
+}
+
+sub _cmd_post_login($self, $request) {
+    $self->_post_login_locale($request);
+}
+
+sub _post_login_locale($self, $request) {
+    return if ! $request->defined_arg('locale');
+
+    my @locales;
+
+    my $locales = $request->args('locale');
+    if (ref($locales)) {
+        @locales = @$locales;
+    } else {
+        @locales = $locales;
+    }
+    for my $locale ( @locales ) {
+        Ravada::Repository::ISO::insert_iso_locale($locale);
     }
 }
 

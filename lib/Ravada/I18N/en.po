@@ -543,6 +543,9 @@ msgstr ""
 msgid "clones"
 msgstr ""
 
+msgid "Clones"
+msgstr ""
+
 msgid "This machine has not Graphics parameters!"
 msgstr ""
 
@@ -784,4 +787,7 @@ msgid "Change password"
 msgstr ""
 
 msgid "Update password"
+msgstr ""
+
+msgid "Start all clones"
 msgstr ""

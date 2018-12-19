@@ -249,20 +249,22 @@ sub _set_vm($self, $vm, $force=0) {
 
 }
 
-sub _check_equal_storage_pools($self, $vm) {
-     confess "ERROR: ".$vm->name." and ".$self->_vm->name
-        ." have different storage pools "
-        .Dumper([$vm->list_storage_pools],[$self->_vm->list_storage_pools])
-            if !_equal_storage_pools($vm, $self->_vm);
-}
+sub _check_equal_storage_pools($self, $vm2) {
+    my $vm1 = $self->_vm;
+    my %sp1 = map { $_ => 1 }
+        ($vm1->default_storage_pool_name
+        , ($vm1->base_storage_pool or '')
+        , ($vm1->clone_storage_pool or '')
 
-sub _equal_storage_pools($vm1, $vm2) {
-    my @sp1 = sort $vm1->list_storage_pools();
-    my @sp2 = sort $vm2->list_storage_pools();
-    return 0 if scalar @sp1 != scalar @sp2;
+    );
+    my @sp1 = grep /./,keys %sp1;
 
-    for ( 0 .. $#sp1 ) {
-        return 0 if $sp1[$_] ne $sp2[$_];
+    my %sp2 = map { $_ => 1 } $vm2->list_storage_pools();
+
+    for my $pool ( @sp1 ) {
+        next if $sp2{ $pool };
+        die "Error: Storage pool '$pool' not found on node ".$vm2->name."\n"
+            .Dumper([keys %sp2]);
     }
     return 1;
 }
@@ -313,6 +315,7 @@ sub _start_preconditions{
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
+    $self->status('starting');
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
     #$self->_check_cpu_usage($request);
@@ -1500,7 +1503,18 @@ sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
-    $self->_set_base_vm_db($self->_vm->id,1);
+
+    $self->_remove_all_bases();
+}
+
+sub _remove_all_bases($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm "
+            ." WHERE id_domain=? AND enabled=1"
+    );
+    $sth->execute($self->id);
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        $self->remove_base_vm( id_vm => $id_vm );
+    }
 }
 
 sub _pre_shutdown_domain {}
@@ -1726,7 +1740,9 @@ sub _around_is_active($orig, $self) {
         || !$self->is_known
         || (defined $self->_data('id_vm') && (defined $self->_vm) && $self->_vm->id != $self->_data('id_vm'));
 
-    my $status = 'shutdown';
+    my $status = $self->_data('status');
+    $status = 'shutdown' if $status eq 'active';
+
     $status = 'active'  if $is_active;
     $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
@@ -3030,7 +3046,7 @@ Valid values are:
 sub status($self, $value=undef) {
     confess "ERROR: the status can't be updated on read only mode."
         if $self->readonly;
-    my %valid_value = map { $_ => 1 } qw(active shutdown);
+    my %valid_value = map { $_ => 1 } qw(active shutdown starting);
     confess "ERROR: invalid value '$value'" if $value && !$valid_value{$value};
     return $self->_data('status', $value);
 }

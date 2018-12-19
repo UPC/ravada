@@ -13,6 +13,8 @@ use Mojo::JSON qw(decode_json encode_json);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
+
+use I18N::LangTags::Detect;
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -294,11 +296,74 @@ get '/node/remove/(:id).json' => sub {
     return $c->render(json => {remove => $RAVADA->remove_node($c->stash('id'),1)});
 };
 
+get '/node/shutdown/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+
+    my $machines = $RAVADA->_list_machines_vm($c->stash('id'));
+    for ( @$machines ) {
+        my $req = Ravada::Request->shutdown_domain(
+                    uid => $USER->id
+            , id_domain => $_->{id}
+        );
+    }
+    my $at = 0;
+    if (@$machines) {
+        $at = time + 60 + scalar @$machines;
+    }
+    my $req = Ravada::Request->shutdown_node(
+                id_node => $c->stash('id')
+                ,at => $at
+    );
+    Ravada::Request->connect_node(
+                id_node => $c->stash('id')
+                ,at => $at + 10
+    );
+    return $c->render(json => {id_req => $req->id });
+};
+
+get '/node/start/(:id).json' => sub {
+    my $c = shift;
+    return access_denied($c) if !$USER->is_admin;
+    my $req = Ravada::Request->start_node(
+                id_node => $c->stash('id')
+    );
+    for my $seconds ( 30,60,90,120 ) {
+        Ravada::Request->connect_node(
+            id_node => $c->stash('id')
+            ,at => time + $seconds
+        );
+    }
+
+    return $c->render(json => {id_req => $req->id });
+
+};
+
 any '/new_node' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER->is_admin;
     return new_node($c);
 };
+
+get '/node/connect/(#backend)/(#hostname)' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    my $req = Ravada::Request->connect_node(
+                backend => $c->stash('backend')
+                    ,hostname => $c->stash('hostname')
+    );
+    return $c->render(json => {id_req => $req->id });
+};
+
+get '/node/connect/(#id)' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    my $req = Ravada::Request->connect_node(
+        id_node => $c->stash('id')
+    );
+    return $c->render(json => {id_req => $req->id });
+};
+
 
 get '/list_bases.json' => sub {
     my $c = shift;
@@ -992,6 +1057,7 @@ sub user_settings {
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
+        Ravada::Request->post_login(uid => $USER->id, locale => $changed_lang);
         _logged_in($c);
     }
     $c->param('tongue' => $USER->language);
@@ -1115,7 +1181,6 @@ sub _logged_in {
 
 sub login {
     my $c = shift;
-
     $c->session(login => undef);
 
     my $login = $c->param('login');
@@ -1149,6 +1214,11 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+
+            Ravada::Request->post_login(
+                uid => $auth_ok->id
+                , locale => [ I18N::LangTags::Detect::detect() ]
+            );
 
             $c->session(expiration => $expiration);
             return $c->redirect_to($url);
@@ -1633,6 +1703,13 @@ sub manage_machine {
         }
     }
 
+    if ($c->param("start-clones") ne "") {
+        my $req = Ravada::Request->start_clones(
+            id_domain => $domain->id,
+            ,uid => $USER->id
+            ,remote_ip => _remote_ip($c)
+        );
+    }
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
 
