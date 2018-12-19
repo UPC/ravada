@@ -61,14 +61,16 @@
             <div ng-show="domain.is_active">
                 <div>
                 <a type="button" class="btn btn-success"
+                    ng-show="!domain.display.tls_port"
                     ng-click="view_clicked=true; copy_password(); redirect();"
                     href="/machine/display/{{domain.id}}.vv">
                         <b><%=l 'view'%></b></a>
 
                 <a type="button" class="btn btn-success" ng-view="domain,display.tls_port"
+                    ng-show="domain.display.tls_port"
                     ng-click="view_clicked_tls=true; copy_password(); redirect();"
                     href="/machine/display-tls/{{domain.id}}-tls.vv">
-                        <b><%=l 'secure view'%></b></a>
+                        <b><%=l 'view'%></b></a>
                 </div>
                 <div>
                 <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
