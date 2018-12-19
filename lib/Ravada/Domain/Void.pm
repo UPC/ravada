@@ -63,11 +63,12 @@ sub name {
     return $self->domain;
 };
 
-sub display {
+sub display_info {
     my $self = shift;
 
     my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
-    return "void://$ip:5990/";
+    my $display="void://$ip:5990/";
+    return { display => $display , type => 'void', address => $ip, port => 5990 };
 }
 
 sub is_active {

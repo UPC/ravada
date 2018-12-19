@@ -665,6 +665,26 @@ get '/machine/display/(:id).vv' => sub {
     return $c->render(data => $domain->display_file($USER), format => 'vv');
 };
 
+get '/machine/display-tls/(:id)-tls.vv' => sub {
+    my $c = shift;
+
+    my $id = $c->stash('id');
+
+    my $domain = $RAVADA->search_domain_by_id($id);
+    return $c->render(text => "unknown machine id=$id") if !$id;
+
+    return access_denied($c)
+        if $USER->id ne $domain->id_owner
+        && !$USER->is_admin;
+
+    $c->res->headers->content_type('application/x-virt-viewer');
+        $c->res->headers->content_disposition(
+        "inline;filename=".$domain->id."-tls.vv");
+
+    return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
+};
+
+
 # Users ##########################################################3
 
 ##add user

@@ -13,7 +13,7 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
 use File::Path qw(make_path);
-use Hash::Util qw(lock_keys);
+use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
 use Moose;
 use Sys::Virt::Stream;
@@ -48,6 +48,7 @@ has readonly => (
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
+
 our $OUT;
 
 our %SET_DRIVER_SUB = (
@@ -538,13 +539,13 @@ sub post_resume_aux($self) {
     }
 }
 
-=head2 display
+=head2 display_info
 
-Returns the display URI
+Returns the display information as a hashref. The display URI is in the display entry
 
 =cut
 
-sub display($self, $user) {
+sub display_info($self, $user) {
 
     my $xml = XML::LibXML->load_xml(string => $self->xml_description);
     my ($graph) = $xml->findnodes('/domain/devices/graphics')
@@ -552,6 +553,7 @@ sub display($self, $user) {
 
     my ($type) = $graph->getAttribute('type');
     my ($port) = $graph->getAttribute('port');
+    my ($tls_port) = $graph->getAttribute('tlsPort');
     my ($address) = $graph->getAttribute('listen');
     $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
@@ -560,7 +562,17 @@ sub display($self, $user) {
     die "Unable to get port for domain ".$self->name." ".$graph->toString
         if !$port;
 
-    return "$type://$address:$port";
+    my $display = $type."://$address:$port";
+
+    my %display = (
+                type => $type
+               ,port => $port
+            ,address => $address
+            ,display => $display
+          ,tls_port => $tls_port
+    );
+    lock_hash(%display);
+    return \%display;
 }
 
 =head2 is_active

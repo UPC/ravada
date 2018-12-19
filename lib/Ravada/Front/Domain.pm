@@ -73,7 +73,16 @@ sub disk_device         { confess "TODO" }
 sub disk_size           { confess "TODO" }
 
 sub display($self, $user) {
-    return $self->_data('display');
+    my $info = $self->display_info($user);
+    return $info->{display};
+}
+
+sub display_info($self, $user) {
+    return decode_json($self->_data('display'));
+}
+
+sub display_file_tls($self, $user) {
+    return $self->_data('display_file');
 }
 
 sub force_shutdown      { confess "TODO" }
