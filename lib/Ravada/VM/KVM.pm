@@ -359,7 +359,6 @@ sub _refresh_isos($self) {
                 $row->{device} = $iso_file;
             }
         }
-        warn $row->{device} if $row->{device};
         $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
     }
     $sth->finish;
