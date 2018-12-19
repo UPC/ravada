@@ -1028,7 +1028,7 @@ sub _display_file_spice($self,$user, $tls = 0) {
         ."enable-smartcard=0\n"
         ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=0\n";
+        ."delete-this-file=1\n";
 
     if ( $tls ) {
         $ret .= "tls-ciphers=DEFAULT\n"
@@ -1699,6 +1699,7 @@ sub _post_shutdown {
     $info = {} if !$info;
     delete $info->{ip};
     $self->_data(info => encode_json($info));
+    $self->_data(display_file => '');
     # only if not volatile
     my $request;
     $request = $arg{request} if exists $arg{request};
@@ -1927,8 +1928,11 @@ sub _post_start {
     $self->get_info();
 
     # get the display so it is stored for front access
-    $self->display($arg{user})  if $self->is_active;
-    $self->display_file($arg{user})  if $self->is_active;
+    if ($self->is_active) {
+        $self->display($arg{user});
+        $self->display_file($arg{user});
+        $self->info($arg{user});
+    }
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
@@ -2108,6 +2112,7 @@ sub open_iptables {
     }
 
     $self->_add_iptable(%args);
+    $self->info($user);
 }
 
 sub _log_iptable {

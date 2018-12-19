@@ -2635,6 +2635,7 @@ sub _cmd_refresh_machine($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain);
     $domain->get_info();
+    $domain->info(Ravada::Utils::user_daemon);
 
 }
 

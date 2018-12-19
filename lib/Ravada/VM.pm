@@ -1157,12 +1157,15 @@ sub _fetch_tls_host_subject($self) {
     for my $line (split /\n/,$out) {
         chomp $line;
         next if $line !~ /^\s+Subject:\s+(.*)/;
-        return $1;
+        my $subject = $1;
+        $subject =~ s/ = /=/g;
+        $subject =~ s/, /,/g;
+        return $subject;
     }
 }
 
 sub _fetch_tls_ca($self) {
-    my ($out, $err) = $self->run_command("/bin/cat", $self->dir_cert."/server-cert.pem");
+    my ($out, $err) = $self->run_command("/bin/cat", $self->dir_cert."/ca-cert.pem");
 
     return join('\n', (split /\n/,$out) );
 }
