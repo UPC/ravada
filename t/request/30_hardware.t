@@ -6,6 +6,9 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -113,9 +116,22 @@ sub test_remove_hardware {
     }
 }
 
+sub test_remove_almost_all_hardware {
+	my $vm = shift;
+	my $domain = shift;
+	my $hardware = shift;
+
+    my $total_hardware = $domain->get_controller($hardware);
+    for my $index ( reverse 1 .. $total_hardware-1) {
+        test_remove_hardware($vm, $domain, $hardware, $index);
+        $domain->list_volumes();
+    }
+}
+
 sub test_front_hardware {
     my ($vm, $domain, $hardware ) = @_;
 
+    $domain->list_volumes();
     my $domain_f = Ravada::Front::Domain->open($domain->id);
 
         my @controllers = $domain_f->get_controller($hardware);
@@ -127,6 +143,53 @@ sub test_front_hardware {
         ok(exists $info->{hardware},"Expecting \$info->{hardware}") or next;
         ok(exists $info->{hardware}->{$hardware},"Expecting \$info->{hardware}->{$hardware}");
         is_deeply($info->{hardware}->{$hardware},[@controllers]);
+}
+
+sub test_change_disk($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'disk';
+
+    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    $index = 0;
+    my $new_capacity = int($info->{hardware}->{$hardware}->[$index]->{info}->{capacity} * 1.2);
+    my $file = $info->{hardware}->{$hardware}->[$index]->{file};
+    ok($new_capacity) or exit;
+    isnt( $info->{hardware}->{$hardware}->[$index]->{info}->{capacity}, $new_capacity );
+
+    my $req = Ravada::Request->change_hardware(
+        id_domain => $domain->id
+        ,hardware => 'disk'
+           ,index => $index
+            ,data => { capacity => $new_capacity, file => $file }
+             ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork(1);
+
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+    my $domain_b = Ravada::Domain->open($domain->id);
+    $domain_b->info(user_admin);
+    $domain_f = Ravada::Front::Domain->open($domain->id);
+    $info = $domain_f->info(user_admin);
+    is( int( $info->{hardware}->{$hardware}->[$index]->{info}->{capacity}/1024)
+        ,int( $new_capacity/1024) );
+}
+
+sub test_change_usb($vm, $domain) {
+}
+
+sub test_change_hardware($vm, $domain, $hardware) {
+    my %sub = (
+         disk => \&test_change_disk
+        ,mock => sub {}
+         ,usb => sub {}
+    );
+    my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
+    $exec->($vm, $domain);
 }
 
 ########################################################################
@@ -143,7 +206,8 @@ remove_old_domains();
 remove_old_disks();
 
 for my $vm_name ( qw(Void KVM)) {
-    my $vm= rvd_back->search_vm($vm_name)  if rvd_back();
+    my $vm;
+    $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm ) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
@@ -162,6 +226,24 @@ for my $vm_name ( qw(Void KVM)) {
         test_front_hardware($vm, $domain_b, $hardware);
         test_add_hardware_request($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
+
+        $domain_b->start(user_admin) if !$domain_b->is_active;
+        ok($domain_b->is_active) or next;
+
+        test_add_hardware_request($vm, $domain_b, $hardware);
+
+        if ( $hardware ne 'usb' ) {
+            for (1 .. 3 ) {
+                test_add_hardware_request($vm, $domain_b, $hardware);
+            }
+        }
+
+        test_change_hardware($vm, $domain_b, $hardware);
+
+        test_remove_almost_all_hardware($vm, $domain_b, $hardware);
+        $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
+        ok(!$domain_b->is_active);
+
     }
 }
 
