@@ -2605,13 +2605,14 @@ sub _cmd_add_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $number = $request->args('number');
 
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: User ".$user->name." not allowed to add hardware to machine ".$domain->name
+        if !$user->is_admin;
 
-    $domain->set_controller($hardware, $number);
+    $domain->set_controller($hardware, $request->defined_arg('number'), $request->defined_arg('data'));
 }
 
 sub _cmd_remove_hardware {
@@ -2628,6 +2629,28 @@ sub _cmd_remove_hardware {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
     $domain->remove_controller($hardware, $index);
+}
+
+sub _cmd_change_hardware {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('hardware') or confess "Missing argument hardware";
+    my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
+
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: User ".$user->name." not allowed\n"
+        if !$user->is_admin;
+
+    $domain->change_hardware(
+         $request->args('hardware')
+        ,$request->args('index')
+        ,$request->args('data')
+    );
 }
 
 sub _cmd_shutdown {
@@ -2760,7 +2783,6 @@ sub _cmd_refresh_machine($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain);
     $domain->get_info();
-    $domain->info(Ravada::Utils::user_daemon);
 
 }
 
@@ -3075,6 +3097,7 @@ sub _req_method {
     ,set_driver => \&_cmd_set_driver
     ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
+    ,add_disk => \&_cmd_add_disk
     ,copy_screenshot => \&_cmd_copy_screenshot
    ,cmd_cleanup => \&_cmd_cleanup
    ,remove_base => \&_cmd_remove_base
@@ -3095,6 +3118,7 @@ sub _req_method {
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
+,change_hardware => \&_cmd_change_hardware
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
 # Virtual Managers or Nodes
