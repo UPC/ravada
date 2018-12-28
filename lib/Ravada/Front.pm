@@ -846,6 +846,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'cleanup'
                 || $command eq 'screenshot'
                 || $command eq 'connect_node'
+                || $command eq 'post_login'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'

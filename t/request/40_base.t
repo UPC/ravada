@@ -436,18 +436,20 @@ sub test_req_remove_base {
 }
 
 sub test_req_remove {
-    my ($vm_name, $name_domain, $name_clone ) = @_;
+    my ($vm_name, $name_domain ) = @_;
     my $vm = rvd_back->search_vm($vm_name);
 
     my $req = Ravada::Request->remove_domain(
         uid => $USER->id
-        , name => $name_clone
+        , name => $name_domain
     );
 
     rvd_back->_process_all_requests_dont_fork();
+    is($req->status,'done');
+    is($req->error,'');
 
-    my $clone_gone = $vm->search_domain($name_clone);
-    ok(!$clone_gone);
+    my $domain = $vm->search_domain($name_domain);
+    ok(!$domain);
 }
 
 sub test_shutdown_by_name {
@@ -571,7 +573,7 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
-        test_req_remove($vm_name, $base_name, $clone_name);
+        test_req_remove($vm_name, $base_name);
 
     };
 }
