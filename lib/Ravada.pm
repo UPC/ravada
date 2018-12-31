@@ -2781,8 +2781,10 @@ sub _cmd_refresh_storage($self, $request=undef) {
 sub _cmd_refresh_machine($self, $request) {
 
     my $id_domain = $request->args('id_domain');
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
     my $domain = Ravada::Domain->open($id_domain);
-    $domain->get_info();
+    $domain->list_volumes_info();
+    $domain->info($user);
 
 }
 
