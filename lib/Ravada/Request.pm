@@ -82,7 +82,7 @@ our %VALID_ARG = (
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 1, data => 1 }
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
-    ,refresh_machine => { id_domain => 1 }
+    ,refresh_machine => { id_domain => 1, uid => 1 }
     # Virtual Managers or Nodes
     ,refresh_vms => { _force => 2 }
 
