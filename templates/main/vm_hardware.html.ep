@@ -3,18 +3,51 @@
     <div ng-repeat="(name,value) in showmachine.hardware">
         <h2>{{name}}</h2>
         <ul ng-show="value">
-            <li ng-repeat="item in value track by $index">{{item}}
-                <button class="label label-danger" title="remove {{name}} {{$index+1}}"
+            <li ng-repeat="item in value track by $index">
+                <button title="edit {{name}} {{$index+1}}"
+                    ng-show="name == 'disk'"
+                    ng-disabled="pending_requests > 0"
+                    ng-click="disk_edit[$index]=!disk_edit[$index]"
+                            ><i class="fa fa-sticky-note"></i>
+                </button>
+                <button title="remove {{name}} {{$index+1}}"
                     ng-disabled="pending_requests > 0"
                     ng-click="remove_hardware(name, $index)"><i class="fa fa-times"></i>
                 </button>
+            {{item.name || item}}
+                <div ng-show="name == 'disk' && disk_edit[$index]">
+                    <label for "capacity"><%=l 'capacity' %>
+                    <input type="text"
+                        name="capacity"
+                        ng-model="item.info.capacity"
+                    >
+                    <label for "bus"><%=l 'bus' %>
+                    <select ng-model="item.driver"
+                        ng-options="model for model in showmachine.drivers['disk']"
+                        >
+                    </select>
+                    <button ng-click="change_disk(showmachine.id, $index)">ok</button>
+                    <button ng-click="disk_edit[$index]=false">cancel</button>
+                </div>
             </li>
         </ul>
         <div ng-show="value.length == 0">
             No {{name}} hardware found.
         </div>
         <button ng-disabled="pending_requests > 0"
-            ng-click="add_hardware(name, value.length+1)" class="btn btn-primary"><%=l 'Add' %> {{name}}</button>
+            ng-hide="name=='disk' && show_new_disk"
+            ng-click="add_hardware(name, value.length+1)"
+            class="btn btn-primary"><%=l 'Add' %> {{name}}</button>
+        <div ng-show="name == 'disk' && show_new_disk">
+            <label for="capacity">size</label>
+            <input type="text" name="capacity" ng-model="add_disk.capacity">
+
+            <label for="allocation">allocation</label>
+            <input type="text" name="allocation" ng-model="add_disk.allocation">
+
+            <button ng-click="add_hardware('disk', value.length+1, add_disk);show_new_disk=false">ok</button>
+            <button ng-click="show_new_disk=false">cancel</button>
+        </div>
     </div>
 
 </div>

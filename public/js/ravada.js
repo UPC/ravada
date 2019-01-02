@@ -329,9 +329,16 @@
               $scope.pending_before = pending;
             });
           };
-          $scope.add_hardware = function(hardware, number) {
+          $scope.add_hardware = function(hardware, number, extra) {
+              console.log(extra);
+              if (hardware == 'disk' && ! extra) {
+                  $scope.show_new_disk = true;
+                  return;
+              }
               $http.get('/machine/hardware/add/'
-                      +$scope.showmachine.id+'/'+hardware+'/'+number).then(function(response) {
+                      +$scope.showmachine.id+'/'+hardware+'/'+number+'/'
+                      +JSON.stringify(extra)
+              ).then(function(response) {
                           $scope.pending_before++;
                           if (!$scope.requests || !$scope.requests.length) {
                             $scope.refresh_machine();
@@ -409,6 +416,25 @@
             });
 
           };
+            $scope.change_disk = function(id_machine, index ) {
+                $scope.disk_edit[index] = false;
+                var new_settings={
+                  driver: $scope.showmachine.hardware.disk[index].driver,
+                  capacity: $scope.showmachine.hardware.disk[index].info.capacity,
+                };
+                console.log(new_settings);
+                $http.get('/machine/change_hardware/disk/'+id_machine
+                  +'/'+index+'/'+JSON.stringify(new_settings))
+                  .then(function(response) {
+                      $scope.getReqs();
+                });
+
+            };
+            $scope.add_disk = {
+                capacity: '1G',
+                allocation: '0.1G'
+            };
+            $scope.disk_edit = [];
             $scope.removed_hardware = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
