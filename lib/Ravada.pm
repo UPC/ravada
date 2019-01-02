@@ -557,6 +557,12 @@ sub _update_domain_drivers_types($self) {
            ,vm => 'KVM'
 
         }
+        ,disk => {
+            id => 9
+            ,name => 'disk'
+            ,vm => 'KVM'
+        }
+
     };
     $self->_update_table('domain_drivers_types','id',$data);
 
@@ -730,6 +736,23 @@ sub _update_domain_drivers_options($self) {
     $self->_update_table('domain_drivers_options','id',$data);
 }
 
+sub _update_domain_drivers_options_disk($self) {
+
+    my @options = ('virtio', 'usb','ide', 'sata', 'scsi');
+
+    my $id = 28;
+    my %data = map {
+        $_ => {
+            id => $id++
+            ,id_driver_type => 9,
+            ,name => $_
+            ,value => $_
+        }
+    } @options;
+
+    $self->_update_table('domain_drivers_options','id',\%data);
+}
+
 sub _update_table($self, $table, $field, $data, $verbose=0) {
 
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
@@ -793,6 +816,7 @@ sub _update_data {
 
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
+    $self->_update_domain_drivers_options_disk();
     $self->_update_old_qemus();
 
     $self->_add_indexes();
