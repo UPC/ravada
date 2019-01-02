@@ -231,13 +231,13 @@ sub test_domain_n_volumes {
 
     my $domain_clone = test_clone($vm_name, $domain);
 
-    my @volumes_clone = $domain_clone->list_volumes_target;
+    my @volumes_clone = $domain_clone->list_volumes_info;
     ok(scalar @volumes_clone ==$n
         ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes_clone));
 
     return if $vm_name =~ /void/i;
     for my $vol ( @volumes_clone ) {
-        my ($file, $target) = @$vol;
+        my ($file, $target) = ($vol->{file}, $vol->{target});
         like($file,qr/-$target-/);
     }
 }
@@ -256,7 +256,7 @@ sub test_add_volume_path {
     print $out "hi\n";
     close $out;
 
-    $domain->add_volume(path => $file_path);
+    $domain->add_volume(file => $file_path);
 
     my $domain2 = $vm->search_domain($domain->name);
     my @volumes2 = $domain2->list_volumes();
@@ -345,7 +345,7 @@ sub test_domain_swap {
                                 ." should be active");
 
     my $min_size = 197120 if $vm_name eq 'KVM';
-    $min_size = 529 if $vm_name eq 'Void';
+    $min_size = 470 if $vm_name eq 'Void';
     # after start, all the files should be there
      my $found_swap = 0;
     for my $file ( $domain_clone->list_volumes) {
@@ -356,10 +356,11 @@ sub test_domain_swap {
             my $size = -s $file;
             copy($file, "$file.tmp");
             `/bin/cat $file.tmp >> $file`;
+            unlink "$file.tmp";
             ok(-s $file > $size);
             ok(-s $file > $min_size
-                , "Expecting swap file bigger than $min_size, got :"
-                    .-s $file);
+                , "Expecting swap file $file bigger than $min_size, got :"
+                    .-s $file) or exit;
         }
     }
     $domain_clone->shutdown_now($USER);
@@ -375,7 +376,7 @@ sub test_domain_swap {
         next if ( $file!~ /SWAP/);
 
         ok(-s $file <= $min_size
-            ,"[$vm_name] Expecting swap $file size <= $min_size , got :".-s $file)
+            ,"[$vm_name] Expecting swap $file size <= $min_size , got :".-s $file) or exit;
 
     }
 
