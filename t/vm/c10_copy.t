@@ -55,10 +55,10 @@ sub test_copy_clone {
 
     is(scalar($copy->list_volumes),scalar($clone->list_volumes));
 
-    my @copy_volumes = $copy->list_volumes_target();
-    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
-    my @clone_volumes = $clone->list_volumes_target();
-    my %clone_volumes = map { $_->[1] => $_->[0] } @clone_volumes;
+    my @copy_volumes = $copy->list_volumes_info();
+    my %copy_volumes = map { $_->{target} => $_->{file} } @copy_volumes;
+    my @clone_volumes = $clone->list_volumes_info();
+    my %clone_volumes = map { $_->{target} => $_->{file} } @clone_volumes;
 
     for my $target ( keys %copy_volumes ) {
         isnt($copy_volumes{$target}, $clone_volumes{$target});
