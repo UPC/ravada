@@ -93,17 +93,20 @@ sub create_domain {
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
 
         for my $file_base ($domain_base->list_files_base) {
-            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*?)(\..*)};
-            my $new_name = "$vol_name-$args{name}$ext";
+            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.SWAP\..*)};
+            ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.*)} if !$dir;
+            my $new_name = "$vol_name-$args{name}-".Ravada::Utils::random_name(2).$ext;
             $domain->add_volume(name => $new_name
-                                , path => "$dir/$new_name"
+                                , capacity => 1024
+                                , file => "$dir/$new_name"
                                  ,type => 'file');
         }
         $domain->start(user => $owner)    if $owner->is_temporary;
     } else {
         my ($file_img) = $domain->disk_device();
-        $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
-                        , path => $file_img
+        $domain->add_volume(name => 'void-diska-'.Ravada::Utils::random_name(2)
+                        , capacity => ( $args{disk} or 1024)
+                        , file => $file_img
                         , type => 'file'
                         , target => 'vda'
         );

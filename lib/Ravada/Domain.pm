@@ -61,7 +61,9 @@ requires 'rename';
 
 #storage
 requires 'add_volume';
+requires 'remove_volume';
 requires 'list_volumes';
+requires 'list_volumes_info';
 
 requires 'disk_device';
 
@@ -88,6 +90,7 @@ requires 'get_controller_by_name';
 requires 'list_controllers';
 requires 'set_controller';
 requires 'remove_controller';
+requires 'change_hardware';
 #
 ##########################################################
 
@@ -140,6 +143,8 @@ around 'display_info' => \&_around_display_info;
 around 'display_file_tls' => \&_around_display_file_tls;
 
 around 'add_volume' => \&_around_add_volume;
+around 'remove_volume' => \&_around_remove_volume;
+around 'list_volumes_info' => \&_around_list_volumes_info;
 
 before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
@@ -194,8 +199,9 @@ around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
-after 'set_controller' => \&_post_change_controller;
-after 'remove_controller' => \&_post_change_controller;
+after 'set_controller' => \&_post_change_hardware;
+after 'remove_controller' => \&_post_change_hardware;
+after 'change_hardware' => \&_post_change_hardware;
 
 around 'name' => \&_around_name;
 
@@ -462,13 +468,63 @@ sub _around_add_volume {
     my %args = @_;
 
     my $path = $args{path};
+    my $name = $args{name};
+    my $size = $args{size};
+    my $target = $args{target};
     if ( $path ) {
-        my $name = $args{name};
+        $self->_check_volume_added($path);
         if (!$name) {
             ($args{name}) = $path =~ m{.*/(.*)};
+            $name = $args{name};
         }
     }
-    return $self->$orig(%args);
+    $args{size} = Ravada::Utils::size_to_number($size) if defined $size;
+
+    my $ok = $self->$orig(%args);
+    confess "Error adding ".Dumper(\%args) if !$ok;
+    $path = $ok if ! $path;
+
+    return $ok;
+}
+
+sub _check_volume_added($self, $file) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain FROM volumes "
+        ." WHERE file=?"
+    );
+    $sth->execute($file);
+    my ($id, $id_domain) = $sth->fetchrow();
+    $sth->finish;
+
+    return if !$id;
+
+    confess "Volume $file already in domain id $id_domain";
+}
+
+sub _around_remove_volume {
+    my $orig = shift;
+    my $self = shift;
+    my ($file) = @_;
+
+    my $ok = $self->$orig(@_);
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM volumes "
+        ." WHERE id_domain=? AND file=?"
+    );
+    $sth->execute($self->id, $file);
+    return $ok;
+}
+
+sub _around_list_volumes_info($orig, $self) {
+
+    return $self->$orig() if ref($self) =~ /^Ravada::Front/i;
+
+    my @volumes = $self->$orig();
+
+    for my $vol (@volumes) {
+        $self->cache_volume_info(%$vol);
+    }
+    return @volumes;
 }
 
 sub _pre_prepare_base($self, $user, $request = undef ) {
@@ -1090,7 +1146,9 @@ sub info($self, $user) {
         die "Field $_ already in info" if exists $info->{$_};
         $info->{$_} = $internal_info->{$_};
     }
-
+    for (qw(disk network)) {
+        $info->{drivers}->{$_} = $self->drivers($_,undef,1);
+    }
     $info->{bases} = $self->_bases_vm();
     $info->{clones} = $self->_clones_vm();
     return $info;
@@ -1180,8 +1238,10 @@ sub _pre_remove_domain($self, $user, @) {
     $self->_check_active_node();
 
     $self->is_volatile()        if $self->is_known || $self->domain;
-    $self->list_disks()         if ($self->is_known && $self->is_known_extra)
-    || $self->domain ;
+    if (($self->is_known && $self->is_known_extra)
+        || $self->domain ) {
+        $self->{_volumes} = [$self->list_disks()];
+    }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
 }
@@ -1215,7 +1275,14 @@ sub _after_remove_domain {
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
+    $self->_remove_all_volumes();
     $self->_remove_domain_db();
+}
+
+sub _remove_all_volumes($self) {
+    for my $vol (@{$self->{_volumes}}) {
+        $self->remove_volume($vol);
+    }
 }
 
 sub _remove_domain_cascade($self,$user, $cascade = 1) {
@@ -1621,11 +1688,11 @@ sub _copy_clone($self, %args) {
         ,id_owner => $user->id
         ,@copy_arg
     );
-    my @volumes = $self->list_volumes_target;
-    my @copy_volumes = $copy->list_volumes_target;
+    my @volumes = $self->list_volumes_info;
+    my @copy_volumes = $copy->list_volumes_info;
 
-    my %volumes = map { $_->[1] => $_->[0] } @volumes;
-    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
+    my %volumes = map { $_->{target} => $_->{file} } @volumes;
+    my %copy_volumes = map { $_->{target} => $_->{file} } @copy_volumes;
     for my $target (keys %volumes) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
@@ -2431,10 +2498,7 @@ List the drivers available for a domain. It may filter for a given type.
 
 =cut
 
-sub drivers {
-    my $self = shift;
-    my $name = shift;
-    my $type = shift;
+sub drivers($self, $name=undef, $type=undef, $list=0) {
     $type = $self->type         if $self && !$type;
     $type = $self->_vm->type    if $self && !$type;
 
@@ -2466,7 +2530,16 @@ sub drivers {
 
     my @drivers;
     while ( my ($id) = $sth->fetchrow) {
-        push @drivers,Ravada::Domain::Driver->new(id => $id, domain => $self);
+        my $cur_driver = Ravada::Domain::Driver->new(id => $id, domain => $self);
+        if ($list) {
+            my @options;
+            for my $option ( $cur_driver->get_options ) {
+                push @options,($option->{name});
+            }
+            push @drivers, \@options;
+        } else {
+            push @drivers,($cur_driver);
+        }
     }
     return $drivers[0] if !wantarray && $name && scalar@drivers< 2;
     return @drivers;
@@ -3141,8 +3214,9 @@ sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
 }
 
-sub _post_change_controller {
+sub _post_change_hardware {
     my $self = shift;
+    $self->info(Ravada::Utils::user_daemon) if $self->is_known();
     $self->needs_restart(1) if $self->is_active;
 }
 
@@ -3274,6 +3348,53 @@ sub set_ldap_access($self, $id_access, $allowed, $last) {
         ." SET allowed=?, last=?"
         ." WHERE id=?");
     $sth->execute($allowed, $last, $id_access);
+}
+
+sub _get_volume_info($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * from volumes "
+        ." WHERE name=?"
+    );
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref();
+
+    confess "Error: volume $name belongs to domain $row->{id_domain}. "
+            ."This is domain ".$self->id
+        if defined $row->{id_domain} && $self->id != $row->{id_domain};
+    return if !$row || !keys %$row;
+    if ( $row->{info} ) {
+        $row->{info} = decode_json($row->{info})
+    }
+    return $row;
+}
+
+sub cache_volume_info($self, %info) {
+    my $name = delete $info{name} or confess "No name in info ".Dumper(\%info);
+    confess if $name eq 'tst_request_30_hardware_01';
+    my $row = $self->_get_volume_info($name);
+    if (!$row) {
+        my $file = $info{file} or
+            confess "Error: Missing file field ".Dumper(\%info);
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "INSERT INTO volumes (id_domain, name, file, info) "
+            ."VALUES(?,?,?,?)"
+        );
+        $sth->execute($self->id
+            ,$name
+            ,$file
+            ,encode_json(\%info));
+        return;
+    }
+    for (keys %{$row->{info}}) {
+        $info{$_} = $row->{info}->{$_} if !exists $info{$_};
+    }
+    my $file = ($info{file} or $row->{file});
+    confess "Error: Missing file field ".Dumper(\%info, $row)
+        if !defined $file || !length($file);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE volumes set info=?, name=?,file=?,id_domain=? WHERE id=?"
+    );
+    $sth->execute(encode_json(\%info), $name, $file, $self->id, $row->{id});
 }
 
 1;
