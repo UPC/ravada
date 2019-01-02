@@ -17,7 +17,7 @@ use_ok('Ravada');
 my $RAVADA = rvd_back('t/etc/ravada_kvm.conf');
 
 my ($DOMAIN_NAME) = new_domain_name();
-my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
+my $DOMAIN_NAME_SON= new_domain_name();
 $DOMAIN_NAME_SON =~ s/base_//;
 
 my $USER = create_user('foo','bar', 1);
@@ -274,6 +274,7 @@ sub test_dont_allow_remove_base_before_sons {
 ################################################################
 my $vm;
 
+clean();
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 
 SKIP: {
@@ -307,5 +308,5 @@ if (ok($domain,"test domain not created")) {
 }
 
 };
-
+clean();
 done_testing();
