@@ -11,6 +11,7 @@ use feature qw(signatures);
 
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
+    ,disk => \&_get_controller_disk
     );
 
 our %GET_DRIVER_SUB = (
@@ -22,6 +23,7 @@ our %GET_DRIVER_SUB = (
      ,zlib => \&_get_driver_zlib
      ,playback => \&_get_driver_playback
      ,streaming => \&_get_driver_streaming
+     ,disk => \&_get_driver_disk
 );
 
 
@@ -48,6 +50,10 @@ sub _get_controller_usb {
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_controller_disk($self) {
+    return $self->list_volumes_info();
 }
 
 =head2 get_driver
@@ -171,4 +177,9 @@ sub _get_driver_sound {
 
 }
 
+sub _get_driver_disk {
+    my $self = shift;
+    my @volumes = $self->list_volumes_info();
+    return $volumes[0]->{driver};
+}
 1;

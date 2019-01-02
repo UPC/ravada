@@ -3,6 +3,8 @@ package Ravada::Utils;
 use warnings;
 use strict;
 
+use Carp qw(confess);
+
 =head1 NAME
 
 Ravada::Utils - Misc util libraries for Ravada
@@ -64,6 +66,39 @@ sub user_daemon {
         $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
     }
     return $USER_DAEMON;
+}
+
+sub size_to_number {
+    my $size = shift;
+
+    my ($n, $unit) = $size =~ /(\d+\.?\d*)([kmg])/i;
+    return $size if !defined $n || !$unit;
+    $unit = lc($unit);
+
+    my %mult = ( k => 1024 , m => 1024*1024, g => 1024*1024*1024 );
+    confess "Error: unknown unit $unit" if !exists $mult{$unit};
+
+    return $n * $mult{$unit};
+}
+
+sub number_to_size {
+    my $size = shift;
+
+    confess "Undefined size" if !defined $size;
+    confess "Not a number '$size'" if $size !~ /^\d+$/ && $size !~ /^\d+\.\d+$/;
+
+    my $div = 1024;
+    my $previous_unit = '';
+    my $previous_ret = $size;
+    for my $unit ( 'K','M','G' ) {
+        my $ret = $size / $div;
+        my ($n,$d) = $ret =~ m/(\d+)\.?(\d*)/;
+        return $previous_ret.$previous_unit if length($d)>3;
+        return $ret.$unit if $n<1024;
+        $div *= 1024;
+        $previous_unit = $unit;
+        $previous_ret = $ret;
+    }
 }
 
 1;

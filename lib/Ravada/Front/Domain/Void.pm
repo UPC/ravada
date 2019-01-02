@@ -9,6 +9,8 @@ my $DIR_TMP = "/var/tmp/rvd_void/".getpwuid($>);
 
 our %GET_CONTROLLER_SUB = (
     'mock' => \&_get_controller_mock
+    ,'disk' => \&_get_controller_disk
+
 );
 
 sub get_driver {
@@ -56,6 +58,11 @@ sub _get_controller_mock {
     my $hardware = $self->_value('hardware');
     return if !exists $hardware->{mock};
     return @{$hardware->{mock}};
+}
+
+sub _get_controller_disk {
+    my $self = shift;
+    return $self->list_volumes_info;
 }
 
 1;

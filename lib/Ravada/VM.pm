@@ -374,6 +374,7 @@ sub _around_create_domain {
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
+    $self->_check_duplicate_name($name);
     if ($id_base) {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
@@ -408,10 +409,19 @@ sub _around_create_domain {
     };
     die $@ if $@ && $@ !~ /code: 55,/;
 
-    $domain->get_info();
+    $domain->info($owner);
     $domain->display($owner)    if $domain->is_active;
 
     return $domain;
+}
+
+sub _check_duplicate_name($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    confess "Error: machine with name '$name' already exists ".Dumper($row)
+        if $row->{id};
+    return 1;
 }
 
 sub _around_import_domain {
@@ -1212,6 +1222,8 @@ sub shutdown_domains($self) {
 }
 
 sub _fetch_tls_host_subject($self) {
+    return '' if !$self->dir_cert();
+
     my @cmd= qw(/usr/bin/openssl x509 -noout -text -in );
     push @cmd, ( $self->dir_cert."/server-cert.pem" );
 
