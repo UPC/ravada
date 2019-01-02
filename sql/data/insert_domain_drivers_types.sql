@@ -7,3 +7,4 @@ INSERT INTO `domain_drivers_types` VALUES (6,'zlib','Graphics Options','qemu');
 INSERT INTO `domain_drivers_types` VALUES (7,'playback','Graphics Options','qemu');
 INSERT INTO `domain_drivers_types` VALUES (8,'streaming','Graphics Options','qemu');
 INSERT INTO `domain_drivers_types` VALUES (100,'video','Video Card','Void');
+INSERT INTO `domain_drivers_types` VALUES (101,'disk','Disk Device','Void');
