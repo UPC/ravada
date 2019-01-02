@@ -56,7 +56,8 @@ sub test_drivers_type {
 
     if (!$HAS_NOT_VALUE{$type}) {
         my $value = $driver_type->get_value();
-        ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value");
+        ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value")
+            or exit;
     }
 
     my @options = $driver_type->get_options();
