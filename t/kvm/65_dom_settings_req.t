@@ -144,8 +144,8 @@ sub test_needs_shutdown {
             , id_option => $option->{id}
     );
     rvd_back->_process_requests_dont_fork();
-    is($req->status,'done') or next;
-    is($req->error,'') or next;
+    is($req->status,'done') or return;
+    is($req->error,'') or return;
 
     ok(!$@,"Expecting no error, got : ".($@ or ''));
 
