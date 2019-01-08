@@ -881,7 +881,8 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size vm xml swap target file allocation));
+    my $bus = (delete $args{driver} or 'virtio');
+    my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -912,41 +913,51 @@ sub add_volume {
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
 #
-    my $pci_slot = $self->_new_pci_slot();
     my $driver_type = 'qcow2';
     my $cache = 'default';
-    my $bus = 'virtio';
 
     if ( $args{swap} ) {
         $cache = 'none';
         $driver_type = 'raw';
     }
 
-    my $xml_device =<<EOT;
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='$driver_type' cache='$cache'/>
-      <source file='$path'/>
-      <backingStore/>
-      <target bus='$bus' dev='$target_dev'/>
-      <alias name='virtio-disk1'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>
-    </disk>
-EOT
+    my $xml_device = $self->_xml_new_device(
+            bus => $bus
+          ,file => $path
+          ,type => $driver_type
+         ,cache => $cache
+        ,target => $target_dev
+    );
+
 
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
     die $@."\n".$self->domain->get_xml_description if$@;
 
-    $self->cache_volume_info(
-        name => $name
-        ,capacity => $args{size}
-        ,driver => $driver_type
-        ,target => $target_dev
-        ,file => $path
-    );
     return $path;
 }
 
+sub _xml_new_device($self , %arg) {
+    my $bus = delete $arg{bus} or confess "Missing bus.";
+    my $file = delete $arg{file} or confess "Missing target.";
 
+    my $xml = <<EOT;
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='$arg{type}' cache='$arg{cache}'/>
+      <source file='$file'/>
+      <backingStore/>
+      <target bus='$bus' dev='$arg{target}'/>
+      <address type=''/>
+    </disk>
+EOT
+
+    my $device=XML::LibXML->load_xml(string => $xml);
+    my ($address) = $device->findnodes('/disk/address') or die "No address in ".$device->toString();
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    $self->_change_xml_address($doc, $address, $bus);
+
+    return $device->toString();
+}
 
 sub _new_target_dev {
     my $self = shift;
@@ -956,7 +967,7 @@ sub _new_target_dev {
 
     my %target;
 
-    my $dev;
+    my $dev='vd';
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk'
@@ -974,7 +985,7 @@ sub _new_target_dev {
             }
         }
     }
-    for ('b' .. 'z') {
+    for ('a' .. 'z') {
         my $new = "$dev$_";
         return $new if !$target{$new};
     }
@@ -1716,11 +1727,11 @@ sub _set_controller_usb($self,$numero, $data={}) {
     my $count = 0;
     for my $controller ($devices->findnodes('redirdev')) {
         $count=$count+1;
-        if ($numero < $count) {
+        if (defined $numero && $numero < $count) {
             $devices->removeChild($controller);
         }
     }
-    
+    $numero = $count+1 if !defined $numero;
     if ( $numero > $count ) {
         my $missing = $numero-$count-1;
         
@@ -1921,10 +1932,6 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
-    open my $out, '>','pre.xml' or die $!;
-    print $out $doc->toString;
-    close $out;
-
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
         next if $count++ != $index;
@@ -1937,7 +1944,7 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
         $self->_change_xml_address($doc, $address, $bus);
 
     }
-    die "Error: disk $index not found in ".$self->name if !$changed;
+    confess "Error: disk $index not found in ".$self->name if !$changed;
 
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
@@ -1987,10 +1994,6 @@ sub _change_xml_address_ide($self, $doc, $address, $max_bus=2, $max_unit=9) {
     for my $attrib ($address->attributes) {
         $address->removeAttribute($attrib->getName);
     }
-
-    open $out, '>','post.xml';
-    print $out $address->toString();
-    close $out;
 
     my $diff = `diff pre.xml post.xml`;
     die $diff if $diff !~ /\w/;
