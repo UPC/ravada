@@ -35,21 +35,39 @@ sub create_args {
     return %{$CREATE_ARGS{$backend}};
 }
 
-sub test_add_hardware_request {
+sub test_add_hardware_request_drivers {
 	my $vm = shift;
 	my $domain = shift;
 	my $hardware = shift;
 
-    $domain->shutdown_now(user_admin)   if $domain->is_active;
-	
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain->info(user_admin);
+
+    my $options = $info->{drivers}->{$hardware};
+
+    for my $driver (@$options) {
+        diag("Testing new $hardware $driver");
+        test_add_hardware_request($vm, $domain, $hardware, $driver);
+        my $info = $domain->info(user_admin);
+        is($info->{hardware}->{$hardware}->[-1]->{driver}, $driver) or exit;
+        test_remove_hardware($vm, $domain, $hardware
+            , scalar(@{$info->{hardware}->{$hardware}})-1);
+    }
+}
+
+sub test_add_hardware_request($vm, $domain, $hardware, $driver=undef) {
+
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
 	my $req;
 	eval {
+        my @data;
+        @data = ( data => { driver => $driver } ) if defined $driver;
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
                 , name => $hardware
                 , number => $numero
+                , @data
             );
 	};
 	is($@,'') or return;
@@ -235,7 +253,7 @@ sub test_change_drivers($domain, $hardware) {
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         $info = $domain_f->info(user_admin);
         is ($info->{hardware}->{$hardware}->[$index]->{driver}, $option
-        ,Dumper($info->{hardware}->{$hardware}->[$index])) or exit;
+        ,Dumper($domain_f->name,$info->{hardware}->{$hardware}->[$index])) or exit;
 
         my $domain_b = Ravada::Domain->open($domain->id);
         my $info_b = $domain_b->info(user_admin);
@@ -304,10 +322,10 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
+for my $vm_name ( qw(KVM Void)) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
-	if ( !$vm ) {
+	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
@@ -323,16 +341,22 @@ for my $vm_name ( qw(Void KVM)) {
     for my $hardware ( sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
 
         test_add_hardware_request($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
 
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+        test_add_hardware_request_drivers($vm, $domain_b, $hardware);
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+
+        # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
         ok($domain_b->is_active) or next;
 
         test_add_hardware_request($vm, $domain_b, $hardware);
+
+        $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
+        is($domain_b->is_active,0) or next;
 
         if ( $hardware ne 'usb' ) {
             for (1 .. 3 ) {
@@ -343,6 +367,7 @@ for my $vm_name ( qw(Void KVM)) {
         test_change_hardware($vm, $domain_b, $hardware);
 
         test_remove_almost_all_hardware($vm, $domain_b, $hardware);
+
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         ok(!$domain_b->is_active);
 

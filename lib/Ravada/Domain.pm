@@ -469,6 +469,7 @@ sub _around_add_volume {
 
     my $path = $args{path};
     my $name = $args{name};
+    $args{size} = delete $args{capacity} if exists $args{capacity} && !exists $args{size};
     my $size = $args{size};
     my $target = $args{target};
     if ( $path ) {
@@ -479,6 +480,8 @@ sub _around_add_volume {
         }
     }
     $args{size} = Ravada::Utils::size_to_number($size) if defined $size;
+    $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
+        if exists $args{allocation} && defined $args{allocation};
 
     my $ok = $self->$orig(%args);
     confess "Error adding ".Dumper(\%args) if !$ok;
