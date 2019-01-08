@@ -1049,11 +1049,13 @@ get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)/(#data)' => sub {
     @data = ( data => decode_json($c->stash('data'))) 
         if $c->stash('data') && $c->stash('data') ne 'undefined';
 
+    my $number => $c->stash('number');
+    push @data,( number => $number ) if defined $number;
+
     my $req = Ravada::Request->add_hardware(
         uid => $USER->id
         ,name => $c->stash('hardware')
         ,id_domain => $c->stash('id_domain')
-        ,number => $c->stash('number')
         ,@data
     );
     return $c->render( json => { request => $req->id } );
