@@ -573,19 +573,7 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
-<<<<<<< HEAD
-<<<<<<< HEAD
         test_req_remove($vm_name, $base_name);
-||||||| merged common ancestors
-        test_req_remove($vm_name, $base_name, $clone_name);
-=======
-        test_req_remove($vm_name, $domain_name);
->>>>>>> refactor(test); fixed remove test
-||||||| merged common ancestors
-        test_req_remove($vm_name, $base_name, $clone_name);
-=======
-        test_req_remove($vm_name, $domain_name);
->>>>>>> bc7305e5907603366fa46ebcd79657f86943fa4c
 
     };
 }
