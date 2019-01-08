@@ -12,9 +12,21 @@
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
                     ng-disabled="pending_requests > 0"
-                    ng-click="remove_hardware(name, $index)"><i class="fa fa-times"></i>
+                    ng-click="remove_hardware(name,$index)"><i class="fa fa-times"></i>
                 </button>
             {{item.name || item}}
+                <div ng-show="name == 'disk' && disk_remove[$index]">
+                    <label for "confirm_remove">This will destroy data permantently.
+                        Type the name of the volume disk to confirm:
+                    </label>
+                    <input name="confirm_remove" ng-model="confirm_remove" type="text"
+                        ng-value=""
+                    />
+                    <button ng-click="remove_hardware(name, $index, true)"
+                        ng-disabled="confirm_remove !== item.name"
+                    >ok</button>
+                    <button ng-click="disk_remove[$index]=false">cancel</button>
+                </div>
                 <div ng-show="name == 'disk' && disk_edit[$index]">
                     <label for "capacity"><%=l 'capacity' %>
                     <input type="text"
@@ -34,20 +46,32 @@
         <div ng-show="value.length == 0">
             No {{name}} hardware found.
         </div>
-        <button ng-disabled="pending_requests > 0"
-            ng-hide="name=='disk' && show_new_disk"
-            ng-click="add_hardware(name, value.length+1)"
-            class="btn btn-primary"><%=l 'Add' %> {{name}}</button>
-        <div ng-show="name == 'disk' && show_new_disk">
-            <label for="capacity">size</label>
-            <input type="text" name="capacity" ng-model="add_disk.capacity">
+    </div>
 
-            <label for="allocation">allocation</label>
-            <input type="text" name="allocation" ng-model="add_disk.allocation">
+    <button ng-disabled="pending_requests > 0"
+            ng-click="add_hardware(new_hardware)"
+            class="btn btn-primary">
+        <%=l 'Afegeix '%>
+    </button>
+    <select ng-model="new_hardware"
+        ng-options="type for type in hardware_types"
+    >
+    </select>
+    <div ng-show="show_new_disk">
+        <label for="capacity">size</label>
+        <input type="text" name="capacity" ng-model="add_disk.capacity">
 
-            <button ng-click="add_hardware('disk', value.length+1, add_disk);show_new_disk=false">ok</button>
-            <button ng-click="show_new_disk=false">cancel</button>
-        </div>
+        <label for="allocation">allocation</label>
+        <input type="text" name="allocation" ng-model="add_disk.allocation">
+        <br/>
+        <label for "bus"><%=l 'bus' %>
+        <select ng-model="add_disk.driver"
+            ng-options="model for model in showmachine.drivers['disk']"
+        >
+        </select>
+        <br/>
+        <button ng-click="add_hardware('disk', value.length+1, add_disk);show_new_disk=false">ok</button>
+        <button ng-click="show_new_disk=false">cancel</button>
     </div>
 
 </div>

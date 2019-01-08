@@ -104,7 +104,7 @@ sub create_domain {
         $domain->start(user => $owner)    if $owner->is_temporary;
     } else {
         my ($file_img) = $domain->disk_device();
-        $domain->add_volume(name => 'void-diska-'.Ravada::Utils::random_name(2)
+        $domain->add_volume(name => 'void-diska-'.Ravada::Utils::random_name(4)
                         , capacity => ( $args{disk} or 1024)
                         , file => $file_img
                         , type => 'file'

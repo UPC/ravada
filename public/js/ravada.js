@@ -172,6 +172,7 @@
                             $scope.refresh_machine();
                             $scope.init_ldap_access();
                             $scope.list_ldap_attributes();
+                            $scope.hardware_types = Object.keys(response.data.hardware);
                 });
           };
           $scope.domain_remove = 0;
@@ -345,7 +346,15 @@
                           }
                       });
           };
-          $scope.remove_hardware = function(hardware, index) {
+          $scope.remove_hardware = function(hardware, index, confirmation) {
+            if (hardware == 'disk') {
+                if (!confirmation) {
+                    $scope.disk_remove[index] = true;
+                    return;
+                } else {
+                    $scope.disk_remove[index] = false;
+                }
+            }
               $http.get('/machine/hardware/remove/'
                       +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
                             $scope.pending_before++;
@@ -431,11 +440,12 @@
 
             };
             $scope.add_disk = {
+                driver: 'virtio',
                 capacity: '1G',
                 allocation: '0.1G'
             };
             $scope.disk_edit = [];
-            $scope.removed_hardware = [];
+            $scope.disk_remove = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
