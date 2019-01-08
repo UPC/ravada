@@ -1995,8 +1995,6 @@ sub _change_xml_address_ide($self, $doc, $address, $max_bus=2, $max_unit=9) {
         $address->removeAttribute($attrib->getName);
     }
 
-    my $diff = `diff pre.xml post.xml`;
-    die $diff if $diff !~ /\w/;
     my %attribute = (
         type => 'drive'
         ,controller => 0
