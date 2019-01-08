@@ -18,7 +18,13 @@ sub get_driver {
     my $name = shift;
 
     my $drivers = $self->_value('drivers');
-    return $drivers->{$name};
+    return $drivers->{$name} if exists $drivers->{$name};
+
+    my $hardware = $self->_value('hardware');
+
+    $name = 'device' if $name eq 'disk';
+    return $hardware->{$name}->[0]->{driver}
+        if $hardware->{$name} && $hardware->{$name}->[0];
 }
 
 sub _value{

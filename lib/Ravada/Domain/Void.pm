@@ -134,7 +134,10 @@ sub _load($self) {
     my $data = {};
 
     my $disk = $self->_config_file();
-    $data = LoadFile($disk)   if -e $disk;
+    eval {
+        $data = LoadFile($disk)   if -e $disk;
+    };
+    confess $@ if $@;
 
     return $data;
 }
@@ -279,7 +282,9 @@ sub add_volume {
     $args{capacity} = delete $args{size} if exists $args{size} && ! exists $args{capacity};
     $args{capacity} = 1024 if !exists $args{capacity};
 
-    my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation));
+    my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation
+        driver
+    ));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
@@ -291,24 +296,26 @@ sub add_volume {
 
     my $data = $self->_load();
     $args{target} = _new_target($data) if !$args{target};
+    $args{driver} = 'foo' if !exists $args{driver};
 
     my $hardware = $data->{hardware};
     my $device = $hardware->{device};
+    my $file = delete $args{file};
     push @$device, {
         name => $args{name}
-        ,file => $args{file}
+        ,file => $file
         ,type => $args{type}
         ,target => $args{target}
-        ,driver => 'foo'
+        ,driver => $args{driver}
     };
     $hardware->{device} = $device;
     $self->_store(hardware => $hardware);
 
-    $self->_vm->write_file($args{file}, Dump(\%args));
+    delete @args{'name', 'target', 'driver'};
+    $args{a} = 'a'x400;
+    $self->_vm->write_file($file, Dump(\%args)),
 
-    $self->cache_volume_info(%args);
-
-    return $args{file};
+    return $file;
 }
 
 sub remove_volume($self, $file) {
@@ -320,11 +327,11 @@ sub remove_volume($self, $file) {
     my $hardware = $data->{hardware};
 
     my @devices_new;
-    for my $info (@{$hardware->{device}->{disk}}) {
+    for my $info (@{$hardware->{device}}) {
         next if $info->{file} eq $file;
         push @devices_new,($info);
     }
-    $hardware->{device}->{disk} = \@devices_new;
+    $hardware->{device} = \@devices_new;
     $self->_store(hardware => $hardware);
 }
 
@@ -405,10 +412,14 @@ sub list_volumes_info {
     return () if !exists $data->{hardware}->{device};
     my @vol;
     for my $dev (@{$data->{hardware}->{device}}) {
-        my $vol;
-        push @vol,($dev)
-            if ! exists $dev->{type}
-                || $dev->{type} ne 'base';
+        next if exists $dev->{type}
+                && $dev->{type} eq 'base';
+
+        my $info;
+        eval { $info = LoadFile($dev->{file}) };
+        confess "Error loading $dev->{file} ".$@ if $@;
+        $info = {} if !defined $info;
+        push @vol,({%$dev,%$info})
     }
     return @vol;
 
@@ -615,6 +626,7 @@ sub _set_controller_disk($self, $data) {
 
 sub _remove_disk {
     my ($self, $index) = @_;
+    confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
     my @volumes = $self->list_volumes();
     $self->remove_volume($volumes[$index]);
 }
@@ -666,7 +678,6 @@ sub _change_hardware_disk($self, $index, $data_new) {
         $data->{$_} = $data_new->{$_};
     }
     $self->_vm->write_file($file, Dump($data));
-    $self->cache_volume_info(name => $data->{name}, %$data_new);
 }
 
 sub change_hardware($self, $hardware, $index, $data) {
