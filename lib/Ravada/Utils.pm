@@ -70,6 +70,7 @@ sub user_daemon {
 
 sub size_to_number {
     my $size = shift;
+    confess "Undefined size" if !defined $size;
 
     my ($n, $unit) = $size =~ /(\d+\.?\d*)([kmg])/i;
     return $size if !defined $n || !$unit;
