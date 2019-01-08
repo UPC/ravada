@@ -3,6 +3,7 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
+use YAML qw(DumpFile);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -36,11 +37,9 @@ sub test_copy_clone {
         ,user => user_admin
     );
 
-    is($clone->is_base,0);
+    is($clone->is_base,0,$clone->name." is base");
     for ( $clone->list_volumes ) {
-        open my $out,'>',$_ or die $!;
-        print $out "hola $_\n";
-        close $out;
+        DumpFile($_,{ data  => 'hola' } );
     }
 
     my $name_copy = new_domain_name();
