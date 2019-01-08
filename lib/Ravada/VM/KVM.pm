@@ -623,6 +623,10 @@ sub create_volume {
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
 
     confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+
+    confess "Invalid capacity"
+        if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
+
     confess "Capacity and size are the same, give only one of them"
         if defined $capacity && defined $size;
 
@@ -653,7 +657,7 @@ sub create_volume {
 
     if ($capacity) {
         confess "Size '$capacity' too small" if $capacity< 1024*10;
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData($allocation);
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
     my $vol = $self->storage_pool->create_volume($doc->toString)
