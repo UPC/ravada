@@ -68,6 +68,7 @@ sub open($self, $id) {
 sub autostart($self )    { return $self->_data('autostart') }
 sub _do_force_shutdown  { confess "TODO" }
 sub add_volume          { confess "TODO" }
+sub remove_volume       { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }
 sub disk_device         { confess "TODO" }
 sub disk_size           { confess "TODO" }
@@ -115,7 +116,31 @@ sub is_paused($self) {
 }
 
 sub is_removed          { return 0 }
-sub list_volumes        { confess "TODO" }
+sub list_volumes($self)
+{
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM volumes "
+        ." WHERE id_domain=?"
+        ." ORDER BY id"
+    );
+    $sth->execute($self->id);
+    my @volumes;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{info} = decode_json($row->{info}) if $row->{info};
+        $row->{info}->{capacity} = Ravada::Utils::number_to_size($row->{info}->{capacity})
+            if defined $row->{info}->{capacity} && $row->{info}->{capacity} =~ /^\d+$/;
+        $row->{info}->{allocation} = Ravada::Utils::number_to_size($row->{info}->{allocation})
+            if defined $row->{info}->{allocation} && $row->{info}->{allocation} =~ /^\d+$/;
+        $row->{driver} = delete $row->{info}->{driver};
+        push @volumes, ($row);
+    }
+    $sth->finish;
+    return @volumes;
+}
+
+sub list_volumes_info($self) { return $self->list_volumes() }
+
 sub migrate             { confess "TODO" }
 
 sub name($self) {
@@ -153,4 +178,5 @@ sub list_controllers {}
 
 sub set_controller {}
 sub remove_controller {}
+sub change_hardware { die "TODO" }
 1;

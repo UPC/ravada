@@ -230,7 +230,21 @@ list of all the volumes.
 
 sub search_volume($self,$file,$refresh=0) {
     confess "ERROR: undefined file" if !defined $file;
-    return $self->search_volume_re(qr(^$file$),$refresh);
+
+    my ($name) = $file =~ m{.*/(.*)};
+    $name = $file if !defined $name;
+
+    my $vol;
+    for my $pool ($self->vm->list_storage_pools) {
+        if ($refresh) {
+            $pool->refresh();
+            sleep 1;
+        }
+        eval { $vol = $pool->get_volume_by_name($name) };
+        die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+    }
+
+    return $self->search_volume_re(qr(^$name$),$refresh);
 }
 
 =head2 search_volume_path
@@ -609,6 +623,10 @@ sub create_volume {
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
 
     confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+
+    confess "Invalid capacity"
+        if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
+
     confess "Capacity and size are the same, give only one of them"
         if defined $capacity && defined $size;
 
@@ -638,8 +656,8 @@ sub create_volume {
                         $img_file);
 
     if ($capacity) {
-        confess "Size '$capacity' too small" if $capacity< 1024*512;
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData($allocation);
+        confess "Size '$capacity' too small" if $capacity< 1024*10;
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
     my $vol = $self->storage_pool->create_volume($doc->toString)
@@ -2122,7 +2140,10 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
-    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
+    open my $in,'<',$FILE_CONFIG_QEMU or do {
+        warn "$! $FILE_CONFIG_QEMU";
+        return '';
+    };
     while(my $line = <$in>) {
         chomp $line;
         $line =~ s/#.*//;

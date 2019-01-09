@@ -6,6 +6,9 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -32,21 +35,39 @@ sub create_args {
     return %{$CREATE_ARGS{$backend}};
 }
 
-sub test_add_hardware_request {
+sub test_add_hardware_request_drivers {
 	my $vm = shift;
 	my $domain = shift;
 	my $hardware = shift;
 
-    $domain->shutdown_now(user_admin)   if $domain->is_active;
-	
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain->info(user_admin);
+
+    my $options = $info->{drivers}->{$hardware};
+
+    for my $driver (@$options) {
+        diag("Testing new $hardware $driver");
+        test_add_hardware_request($vm, $domain, $hardware, $driver);
+        my $info = $domain->info(user_admin);
+        is($info->{hardware}->{$hardware}->[-1]->{driver}, $driver) or exit;
+        test_remove_hardware($vm, $domain, $hardware
+            , scalar(@{$info->{hardware}->{$hardware}})-1);
+    }
+}
+
+sub test_add_hardware_request($vm, $domain, $hardware, $driver=undef) {
+
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
 	my $req;
 	eval {
+        my @data;
+        @data = ( data => { driver => $driver } ) if defined $driver;
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
                 , name => $hardware
                 , number => $numero
+                , @data
             );
 	};
 	is($@,'') or return;
@@ -61,7 +82,8 @@ sub test_add_hardware_request {
     my @list_hardware2 = $domain_f->get_controller($hardware);
     is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
         ,"Adding hardware $numero\n"
-            .Dumper(\@list_hardware2, \@list_hardware1));
+            .Dumper(\@list_hardware2, \@list_hardware1))
+            or exit;
     }
 
     {
@@ -69,7 +91,7 @@ sub test_add_hardware_request {
         my @list_hardware2 = $domain_2->get_controller($hardware);
         is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
             ,"Adding hardware $numero\n"
-                .Dumper(\@list_hardware2, \@list_hardware1));
+                .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
 }
 
@@ -84,7 +106,7 @@ sub test_remove_hardware {
     my @list_hardware1 = $domain->get_controller($hardware);
 
 	my $req;
-	eval {
+	{
 		$req = Ravada::Request->remove_hardware(uid => $USER->id
 				, id_domain => $domain->id
 				, name => $hardware
@@ -101,7 +123,7 @@ sub test_remove_hardware {
         my $domain2 = Ravada::Domain->open($domain->id);
         my @list_hardware2 = $domain2->get_controller($hardware);
         is(scalar @list_hardware2 , scalar(@list_hardware1) - 1
-        ,"Removing hardware $index ".$domain->name."\n"
+        ,"Removing hardware $hardware\[$index] ".$domain->name."\n"
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     {
@@ -113,9 +135,22 @@ sub test_remove_hardware {
     }
 }
 
+sub test_remove_almost_all_hardware {
+	my $vm = shift;
+	my $domain = shift;
+	my $hardware = shift;
+
+    my $total_hardware = $domain->get_controller($hardware);
+    for my $index ( reverse 1 .. $total_hardware-1) {
+        test_remove_hardware($vm, $domain, $hardware, $index);
+        $domain->list_volumes();
+    }
+}
+
 sub test_front_hardware {
     my ($vm, $domain, $hardware ) = @_;
 
+    $domain->list_volumes();
     my $domain_f = Ravada::Front::Domain->open($domain->id);
 
         my @controllers = $domain_f->get_controller($hardware);
@@ -127,6 +162,151 @@ sub test_front_hardware {
         ok(exists $info->{hardware},"Expecting \$info->{hardware}") or next;
         ok(exists $info->{hardware}->{$hardware},"Expecting \$info->{hardware}->{$hardware}");
         is_deeply($info->{hardware}->{$hardware},[@controllers]);
+}
+
+sub test_change_disk_field($vm, $domain, $field='capacity') {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'disk';
+
+    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    my $capacity = Ravada::Utils::size_to_number(
+        $info->{hardware}->{$hardware}->[$index]->{info}->{$field}
+    );
+    ok(defined $capacity,"Expecting some $field") or exit;
+    my $new_capacity = int(( $capacity +1 ) * 2);
+    isnt($new_capacity, $capacity) or exit;
+
+    my $file = $info->{hardware}->{$hardware}->[$index]->{file};
+    ok($new_capacity) or exit;
+    isnt( $info->{hardware}->{$hardware}->[$index]->{info}->{$field}, $new_capacity );
+    my @volumes = $domain->list_volumes();
+    is($volumes[$index], $file) or exit;
+
+    my $req = Ravada::Request->change_hardware(
+        id_domain => $domain->id
+        ,hardware => 'disk'
+           ,index => $index
+            ,data => { $field=> $new_capacity }
+             ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '',"Changing $field from $capacity to $new_capacity") or exit;
+
+    my $domain_b = Ravada::Domain->open($domain->id);
+    my $info_b = $domain_b->info(user_admin);
+    $domain_f = Ravada::Front::Domain->open($domain->id);
+    $info = $domain_f->info(user_admin);
+
+    my $found_capacity
+    = Ravada::Utils::size_to_number($info->{hardware}->{$hardware}->[$index]->{info}->{$field});
+    is( int($found_capacity/1024)
+        ,int($new_capacity/1024), $domain_b->name." $field \n"
+        .Dumper($info->{hardware}->{$hardware}->[$index]) ) or exit;
+    is( $info->{hardware}->{$hardware}->[$index]->{file}, $file);
+}
+
+sub test_change_usb($vm, $domain) {
+}
+
+sub test_change_disk($vm, $domain) {
+    test_change_disk_field($vm, $domain, 'capacity');
+}
+
+sub test_change_hardware($vm, $domain, $hardware) {
+    my %sub = (
+         disk => \&test_change_disk
+        ,mock => sub {}
+         ,usb => sub {}
+    );
+    my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
+    $exec->($vm, $domain);
+}
+
+sub test_change_drivers($domain, $hardware) {
+
+    my $info = $domain->info(user_admin);
+    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    my $options = $info->{drivers}->{$hardware};
+    ok(scalar @$options,"No driver options for $hardware") or exit;
+
+    for my $option (@$options) {
+        diag("Testing $hardware type $option");
+        $option = lc($option);
+        my $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware => $hardware
+            ,index => $index
+            ,data => { driver => $option }
+            ,uid => user_admin->id
+        );
+
+        rvd_back->_process_requests_dont_fork();
+
+        is($req->status,'done');
+        is($req->error, '') or exit;
+
+        my $domain_f = Ravada::Front::Domain->open($domain->id);
+        $info = $domain_f->info(user_admin);
+        is ($info->{hardware}->{$hardware}->[$index]->{driver}, $option
+        ,Dumper($domain_f->name,$info->{hardware}->{$hardware}->[$index])) or exit;
+
+        my $domain_b = Ravada::Domain->open($domain->id);
+        my $info_b = $domain_b->info(user_admin);
+        is ($info_b->{hardware}->{$hardware}->[$index]->{driver}, $option
+        ,Dumper($info_b->{hardware}->{$hardware}->[$index])) or exit;
+
+        $domain_b->start(user_admin);
+        is($domain_b->is_active,1);
+        $info_b = $domain_b->info(user_admin);
+        is ($info_b->{hardware}->{$hardware}->[$index]->{driver}, $option
+        ,Dumper($info_b->{hardware}->{$hardware}->[$index])) or exit;
+        $domain_b->shutdown_now(user_admin);
+    }
+}
+
+sub test_all_drivers($domain, $hardware) {
+    my $info = $domain->info(user_admin);
+    my $options = $info->{drivers}->{$hardware};
+    ok(scalar @$options,"No driver options for $hardware") or exit;
+    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+
+    my $domain_b = Ravada::Domain->open($domain->id);
+    for my $option1 (@$options) {
+        for my $option2 (@$options) {
+            diag("Testing $hardware type from $option1 to $option2");
+            my $req = Ravada::Request->change_hardware(
+                id_domain => $domain->id
+                ,hardware => $hardware
+                ,index => $index
+                ,data => { driver => lc($option1) }
+                ,uid => user_admin->id
+            );
+            rvd_back->_process_requests_dont_fork();
+
+            is($req->status,'done');
+            is($req->error, '') or exit;
+            $req = Ravada::Request->change_hardware(
+                id_domain => $domain->id
+                ,hardware => $hardware
+                ,index => $index
+                ,data => { driver => lc($option2) }
+                ,uid => user_admin->id
+            );
+            rvd_back->_process_requests_dont_fork();
+
+            is($req->status,'done');
+            is($req->error, '') or exit;
+
+            $domain->start(user_admin);
+            is($domain->is_active,1);
+            $domain->shutdown_now(user_admin);
+        }
+    }
 }
 
 ########################################################################
@@ -142,9 +322,10 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
-    my $vm= rvd_back->search_vm($vm_name)  if rvd_back();
-	if ( !$vm ) {
+for my $vm_name ( qw(KVM Void)) {
+    my $vm;
+    $vm = rvd_back->search_vm($vm_name)  if rvd_back();
+	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
@@ -160,8 +341,36 @@ for my $vm_name ( qw(Void KVM)) {
     for my $hardware ( sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
+
         test_add_hardware_request($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
+
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+        test_add_hardware_request_drivers($vm, $domain_b, $hardware);
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+
+        # try to add with the machine started
+        $domain_b->start(user_admin) if !$domain_b->is_active;
+        ok($domain_b->is_active) or next;
+
+        test_add_hardware_request($vm, $domain_b, $hardware);
+
+        $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
+        is($domain_b->is_active,0) or next;
+
+        if ( $hardware ne 'usb' ) {
+            for (1 .. 3 ) {
+                test_add_hardware_request($vm, $domain_b, $hardware);
+            }
+        }
+
+        test_change_hardware($vm, $domain_b, $hardware);
+
+        test_remove_almost_all_hardware($vm, $domain_b, $hardware);
+
+        $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
+        ok(!$domain_b->is_active);
+
     }
 }
 

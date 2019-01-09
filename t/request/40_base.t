@@ -448,8 +448,8 @@ sub test_req_remove {
     is($req->status,'done');
     is($req->error,'');
 
-    my $domain = $vm->search_domain($name_domain);
-    ok(!$domain);
+    my $clone_gone = $vm->search_domain($name_domain);
+    ok(!$clone_gone);
 }
 
 sub test_shutdown_by_name {
