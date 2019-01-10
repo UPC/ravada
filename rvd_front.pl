@@ -1697,11 +1697,13 @@ sub manage_machine {
 
     $c->stash(  ram => int( $domain->get_info()->{max_mem} / 1024 ));
     $c->stash( cram => int( $domain->get_info()->{memory} / 1024 ));
+    $c->stash( needs_restart => $domain->needs_restart );
     my @messages;
     my @errors;
     my @reqs = ();
 
     if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
+        $c->stash( needs_restart => 1 ) if $domain->is_active;
         my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
         push @reqs,($req_mem);
         $c->stash(ram => $c->param('ram'));
@@ -1709,7 +1711,7 @@ sub manage_machine {
         push @messages,("MAx memory changed from "
                     .int($domain->get_info()->{max_mem}/1024)." to ".$c->param('ram'));
     }
-    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024){
+    if ($c->param("cram") && int($domain->get_info()->{memory} / 1024) !=$c->param("cram")){
         $c->stash(cram => $c->param('cram'));
         if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
             my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);

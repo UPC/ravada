@@ -15,6 +15,7 @@ use File::Copy;
 use File::Path qw(make_path);
 use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
+use JSON::XS;
 use Moose;
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
@@ -1195,8 +1196,18 @@ sub get_info {
         $info->{actual_ballon} = $mem_stats->{actual_balloon};
     }
 
+    my $doc = XML::LibXML->load_xml(
+        string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+
+    my ($mem_node) = $doc->findnodes('/domain/currentMemory/text()');
+    my $mem_xml = $mem_node->getData();
+    $info->{memory} = $mem_xml if $mem_xml ne $info->{memory};
+
     $info->{max_mem} = $info->{maxMem};
-    $info->{memory} = $info->{memory};
+    ($mem_node) = $doc->findnodes('/domain/memory/text()');
+    $mem_xml = $mem_node->getData();
+    $info->{max_mem} = $mem_xml if $mem_xml ne $info->{max_mem};
+
     $info->{cpu_time} = $info->{cpuTime};
     $info->{n_virt_cpu} = $info->{nVirtCpu};
     $info->{ip} = $self->ip()   if $self->is_active();
@@ -1222,10 +1233,12 @@ sub set_max_mem {
     my $self = shift;
     my $value = shift;
 
-    confess "ERROR: Requested operation is not valid: domain is already running"
-        if $self->domain->is_active();
+    $self->_set_max_memory_xml($value);
+    if ( $self->is_active ) {
+        $self->needs_restart(1);
+    }
 
-    $self->domain->set_max_memory($value);
+    $self->domain->set_max_memory($value) if !$self->is_active;
 
 }
 
@@ -1235,8 +1248,8 @@ Get the maximum memory for the domain
 
 =cut
 
-sub get_max_mem {
-    return $_[0]->domain->get_max_memory();
+sub get_max_mem($self) {
+    return $self->get_info->{max_mem};
 }
 
 =head2 set_memory
@@ -1254,19 +1267,39 @@ sub set_memory {
             ." ($max_mem)"
         if $value > $max_mem;
 
-    confess "ERROR: Requested operation is not valid: domain is not running"
-        if !$self->domain->is_active();
+    $self->_set_memory_xml($value);
 
-    $self->domain->set_memory($value,Sys::Virt::Domain::MEM_CONFIG);
-#    if (!$self->is_active) {
-#        $self->domain->set_memory($value,Sys::Virt::Domain::MEM_MAXIMUM);
-#        return;
-#    }
+    if ($self->is_active) {
 
-    $self->domain->set_memory($value,Sys::Virt::Domain::MEM_LIVE);
-    $self->domain->set_memory($value,Sys::Virt::Domain::MEM_CURRENT);
-#    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_HARD_LIMIT);
-#    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_SOFT_LIMIT);
+        $self->domain->set_memory($value,Sys::Virt::Domain::MEM_CONFIG);
+
+        $self->domain->set_memory($value,Sys::Virt::Domain::MEM_LIVE);
+        $self->domain->set_memory($value,Sys::Virt::Domain::MEM_CURRENT);
+        #    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_HARD_LIMIT);
+        #    $self->domain->set_memory($value,Sys::Virt::Domain::MEMORY_SOFT_LIMIT);
+    }
+}
+
+sub _set_memory_xml($self, $value) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my ($mem) = $doc->findnodes('/domain/currentMemory/text()');
+    $mem->setData($value);
+
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
+}
+
+sub _set_max_memory_xml($self, $value) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+
+    my ($mem) = $doc->findnodes('/domain/memory/text()');
+    $mem->setData($value);
+
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+
 }
 
 =head2 rename
