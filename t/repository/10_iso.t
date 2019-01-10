@@ -38,7 +38,7 @@ sub test_insert_request {
     my $row = $sth->fetchrow_hashref();
     is($row->{name}, undef);
 
-    my $req = Ravada::Request->post_login( uid => user_admin->id, locale => ['en','ca'] );
+    my $req = Ravada::Request->post_login( user => user_admin->name, locale => ['en','ca'] );
 
     rvd_back->_process_all_requests_dont_fork();
 
