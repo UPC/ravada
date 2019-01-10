@@ -2020,10 +2020,6 @@ sub _change_xml_address_ide($self, $doc, $address, $max_bus=2, $max_unit=9) {
         && $address->getAttribute('bus') <= $max_bus
         && $address->getAttribute('unit') <= $max_unit;
 
-    open my $out, '>','pre.xml';
-    print $out $address->toString();
-    close $out;
-
     for my $attrib ($address->attributes) {
         $address->removeAttribute($attrib->getName);
     }
