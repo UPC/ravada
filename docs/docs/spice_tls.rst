@@ -112,4 +112,5 @@ Perform the following script, to generate the cert files for ssl , and then copy
 
 Disable Spice Password
 ----------------------
-	 Removing SPICE password for all the networks, link to https://ravada.readthedocs.io/en/latest/docs/Disable_spice_password.html
+
+More information about `removing SPICE password <https://ravada.readthedocs.io/en/latest/docs/Disable_spice_password.html>`_ for all the networks. 
