@@ -51,8 +51,8 @@ Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-q
 
 .. note:: Remmember restart the services: ``systemctl restart apparmor.service`` & ``systemctl restart libvirtd.service``
 
-Generate certificates
----------------------
+Create self signed certificate
+------------------------------
 
 Perform the following script, to generate the cert files for ssl , and then copy ``*.pem`` file into ``/etc/pkil/libvirt-spice`` directory: (`source <http://fedoraproject.org/w/index.php?title=QA:Testcase_Virtualization_Manually_set_spice_listening_port_with_TLS_port_set>`_)
 
@@ -110,73 +110,6 @@ Perform the following script, to generate the cert files for ssl , and then copy
 .. warning::
     Whatever method you use to generate the certificate and key files, the Common Name value used for the server and client certificates/keys must each differ from the Common Name value used for the CA certificate. Otherwise, the certificate and key files will not work for servers compiled using OpenSSL.
 
-Configuration in XML
---------------------
-
-For example in this VM with id 1, the connection is possible both through TLS and without any encryption:
-
-::
-
-    <graphics type='spice' autoport='yes' listen='172.17.0.1' keymap='es'>
-
-::
-
-    virsh domdisplay 1
-    spice://172.17.0.1:5901?tls-port=5902
-
-For example in VM with id 2, you can edit the libvirt graphics node if you want to change that behaviour and only allow connections through TLS: 
-
-::
-
-    <graphics type='spice' autoport='yes’ listen='171.17.0.1' defaultMode='secure'>
-
-::
-
-    virsh domdisplay 2
-    spice://171.17.0.1?tls-port=5900
-
-From command line
------------------
-
-With self-signed certificates, it's necessary pass to the client the certificate of the authority which signed the host certificate.
-
-::
-
-    remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.pem spice://<ravada_servername>?tls-port=5902
-    
-.. note:: 
-    If you connect directly to IP address the following error occurs:  ``ssl: hostname '171.17.0.1' verification failed``
-     
-
-Configuration in .vv file
--------------------------
-
-.. tip:: Use the following command ``openssl x509 -noout -text -in ca-cert.pem | grep Subject: | cut -f 10- -d " "`` to copy in ``host-subject=``.
-
-.. tip:: Use the following command ``awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' ca-cert.pem`` to convert ``ca-cert.pem`` file to a value that can copy in ``ca=``.
-
-See this .vv file as an example reproduced below:
-
-::
-
-    [virt-viewer]
-    type=spice
-    host=<ravada_servername>
-    tls-port=5902
-    fullscreen=1
-    title=Acme - Press SHIFT+F12 to exit
-    enable-usbredir=1
-    enable-smartcard=0
-    enable-usb-autoshare=1
-    delete-this-file=0
-    usb-filter=-1,-1,-1,-1,0
-    tls-ciphers=DEFAULT
-    host-subject=C=XX,L=XXX,O=XXXX,CN=<ravada_servername>
-    ca=-----BEGIN CERTIFICATE-----\nMIICUDCCAbmgAwIBAgIJAOgNQo8MIorJMA0GSGSIb3DQEBCwUAMEExCzAJBgNV\nBAYTAklMMRAwDgYDVQQHDAdSYWFuYW5hMRAwDgYDVQQKDAdSZWQgSGF0MQ4wDAYD\nVQQDDAVteSBDQTAeFw0xNzA2MDcxODDlaFw0yMDA2MDYxODI2NDlaMEExCzAJ\nBgNVBAYTAklMMRAwDgYDVQQHDAdSYWFuYW5hMRAwDgYDVQQKDAdSZWQgSGF0MQ4w\nDAYDVQQDDAVteSBDQTCBnzANBkhkiG9w0BAQEFAAOBjQAwgYkCgYEAq2QtZdu7\nCLuGhagxwS8d7U4EEQjzgiMKcm8/fLE+rliV/wFMtwYD+7TtDEFDrafQC8Y7Zd1B\nrdBT9VC+orAc9PqpImXJ3pN152P9rvyZvI3OxKkVTkGFQi+9z3M1AmxTp5nmKA\nrazPM6t/YzV3vraynBXp4x65qLdc2yF2A0cCAwEAAaNQME4wHQYDVR0OBBYEFFGm\nvI6T/86+cpQZ7ob3xd0PgCMB8GA1UdIwQYMBaAFFGmvI6T/86+cpQZ7zohb3xd\n0PgCMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADgYEALG0TBhPTQwXNpUGi\nia/zxdOh0r7mJWeYcRgZ2lZtesCozYyZz9P2CDb5OnZlu75qs6Ws/fjztRLG/0j\n4r51Og212Up+mQ8eaq2Lox7S/7Ao0P8QWgHZNviltSBb3l9eaYpHENZjW9mMB/JH\nYmIRDdTW1bYuXIsinDPBk0OS20=\n-----END CERTIFICATE-----
-    toggle-fullscreen=shift+f11
-    release-cursor=shift+f12
-    secure-attention=ctrl+alt+end
-    disable-effects=all
-    secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard
-
-More information `about <https://www.spice-space.org/spice-user-manual.html>`_.
+Disable Spice Password
+----------------------
+	 Removing SPICE password for all the networks, link to https://ravada.readthedocs.io/en/latest/docs/Disable_spice_password.html
