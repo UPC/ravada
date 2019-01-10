@@ -6,12 +6,11 @@
                     <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
-%   if ($USER->is_admin ){
                     <input class="form-control" type="text" name="ram" size="5" value="<%= $ram %>">
-%   }else{
-                    <input class="form-control" type="text" name="ram" size="5" disabled value="<%= $ram %>">
-%   }
                 </div>
+%               if ( $needs_restart) {
+                    <%=l 'The changes will apply on next restart' %>
+%               }
                 <!--<div class="col-md-6">
                     <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
                             <%=l 'MB available' %>.

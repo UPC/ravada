@@ -32,6 +32,10 @@ has '_ip' => (
     ,default => sub { return '1.1.1.'.int rand(255)}
 );
 
+our %CHANGE_HARDWARE_SUB = (
+    disk => \&_change_hardware_disk
+);
+
 our $CONVERT = `which convert`;
 chomp $CONVERT;
 #######################################3
@@ -130,7 +134,10 @@ sub _load($self) {
     my $data = {};
 
     my $disk = $self->_config_file();
-    $data = LoadFile($disk)   if -e $disk;
+    eval {
+        $data = LoadFile($disk)   if -e $disk;
+    };
+    confess $@ if $@;
 
     return $data;
 }
@@ -153,6 +160,7 @@ sub _store_remote($self, $var, $value) {
     open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.lock: $!";
     $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
     $self->_vm->write_file($disk, Dump($data));
+
     _unlock($lock);
     unlink("$disk.lock");
     return $self->_value($var);
@@ -251,7 +259,7 @@ sub remove_disk {
 
 Adds a new volume to the domain
 
-    $domain->add_volume(size => $size);
+    $domain->add_volume(capacity => $capacity);
 
 =cut
 
@@ -263,45 +271,78 @@ sub add_volume {
 
     my $suffix = ".img";
     $suffix = '.SWAP.img' if $args{swap};
-    $args{path} = $self->_config_dir."/".$self->name.".$args{name}$suffix"
-        if !$args{path};
 
-    confess "Volume path must be absolute , it is '$args{path}'"
-        if $args{path} !~ m{^/};
+    $args{name} = Ravada::Utils::random_name(4) if !$args{name};
+    $args{file} = $self->_config_dir."/".$self->name.".$args{name}$suffix"
+        if !$args{file};
 
-    my %valid_arg = map { $_ => 1 } ( qw( name size path vm type swap target));
+    confess "Volume path must be absolute , it is '$args{file}'"
+        if $args{file} !~ m{^/};
+
+    $args{capacity} = delete $args{size} if exists $args{size} && ! exists $args{capacity};
+    $args{capacity} = 1024 if !exists $args{capacity};
+
+    my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation
+        driver
+    ));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
             if !$valid_arg{$arg_name};
     }
-    confess "Missing name " if !$args{name};
-#    TODO
-#    confess "Missing size " if !$args{size};
 
     $args{type} = 'file' if !$args{type};
     delete $args{vm}   if defined $args{vm};
 
     my $data = $self->_load();
     $args{target} = _new_target($data) if !$args{target};
+    $args{driver} = 'foo' if !exists $args{driver};
 
-    my $device = $data->{device};
-    $device->{$args{name}} = \%args;
+    my $hardware = $data->{hardware};
+    my $device = $hardware->{device};
+    my $file = delete $args{file};
+    push @$device, {
+        name => $args{name}
+        ,file => $file
+        ,type => $args{type}
+        ,target => $args{target}
+        ,driver => $args{driver}
+    };
+    $hardware->{device} = $device;
+    $self->_store(hardware => $hardware);
 
-    $self->_store(device => $device);
+    delete @args{'name', 'target', 'driver'};
+    $args{a} = 'a'x400;
+    $self->_vm->write_file($file, Dump(\%args)),
 
-    $self->_vm->write_file($args{path}, Dumper($data->{device}->{$args{name}}));
+    return $file;
+}
 
+sub remove_volume($self, $file) {
+    confess "Missing file" if ! defined $file || !length($file);
+    return if ! -e $file;
+    unlink $file or die "$! $file";
+
+    my $data = $self->_load();
+    my $hardware = $data->{hardware};
+
+    my @devices_new;
+    for my $info (@{$hardware->{device}}) {
+        next if $info->{file} eq $file;
+        push @devices_new,($info);
+    }
+    $hardware->{device} = \@devices_new;
+    $self->_store(hardware => $hardware);
 }
 
 sub _new_target {
     my $data = shift;
     return 'vda'    if !$data or !keys %$data;
     my %targets;
-    for my $dev ( keys %{$data->{device}}) {
+    for my $dev ( @{$data->{hardware}->{device}}) {
         confess "Missing device ".Dumper($data) if !$dev;
 
-        my $target = $data->{device}->{$dev}->{target};
+        my $target = $dev->{target};
         confess "Missing target ".Dumper($data) if !$target || !length($target);
 
         $targets{$target}++
@@ -348,31 +389,37 @@ sub disk_device {
 
 sub list_volumes {
     my $self = shift;
-    my $data = $self->_load();
+    my $all_data = $self->_load();
+    my $data = $all_data->{hardware};
 
     return () if !exists $data->{device};
     my @vol;
-    for my $dev (keys %{$data->{device}}) {
-        push @vol,($data->{device}->{$dev}->{path})
-            if ! exists $data->{device}->{$dev}->{type}
-                || $data->{device}->{$dev}->{type} ne 'base';
+    confess "Error in ".Dumper($self->name
+        ,$data->{device}) if !ref($data->{device}) || ref($data->{device}) ne 'ARRAY';
+    for my $dev (@{$data->{device}}) {
+        push @vol,($dev->{file})
+            if ! exists $dev->{type}
+                || $dev->{type} ne 'base';
     }
+    die Dumper($data) if !@vol;
     return @vol;
 }
 
-sub list_volumes_target {
+sub list_volumes_info {
     my $self = shift;
     my $data = $self->_load();
 
-    return () if !exists $data->{device};
+    return () if !exists $data->{hardware}->{device};
     my @vol;
-    for my $dev (keys %{$data->{device}}) {
-        my $vol;
-        $vol = ($data->{device}->{$dev}->{path})
-            if ! exists $data->{device}->{$dev}->{type}
-                || $data->{device}->{$dev}->{type} ne 'base';
-        next if !$vol;
-        push @vol,[$vol, $data->{device}->{$dev}->{target}];
+    for my $dev (@{$data->{hardware}->{device}}) {
+        next if exists $dev->{type}
+                && $dev->{type} eq 'base';
+
+        my $info;
+        eval { $info = LoadFile($dev->{file}) };
+        confess "Error loading $dev->{file} ".$@ if $@;
+        $info = {} if !defined $info;
+        push @vol,({%$dev,%$info})
     }
     return @vol;
 
@@ -419,6 +466,7 @@ sub _set_default_info {
     $self->_store(info => $info);
     my %controllers = $self->list_controllers;
     for my $name ( sort keys %controllers) {
+        next if $name eq 'disk';
         $self->set_controller($name,2);
     }
     return $info;
@@ -551,10 +599,14 @@ sub autostart {
     return $self->_value('autostart');
 }
 
-sub set_controller {
-    my ($self, $name, $number) = @_;
+sub set_controller($self, $name, $number=undef, $data=undef) {
     my $hardware = $self->_value('hardware');
+
+    return $self->_set_controller_disk($data) if $name eq 'disk';
+
     my $list = ( $hardware->{$name} or [] );
+
+    $number = $#$list if !defined $number;
 
     if ($number > $#$list) {
         for ( $#$list+1 .. $number-1 ) {
@@ -568,18 +620,81 @@ sub set_controller {
     $self->_store(hardware => $hardware );
 }
 
+sub _set_controller_disk($self, $data) {
+    return $self->add_volume(%$data);
+}
+
+sub _remove_disk {
+    my ($self, $index) = @_;
+    confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
+    my @volumes = $self->list_volumes();
+    $self->remove_volume($volumes[$index]);
+}
+
 sub remove_controller {
     my ($self, $name, $index) = @_;
+
+    return $self->_remove_disk($index) if $name eq 'disk';
+
     my $hardware = $self->_value('hardware');
     my $list = ( $hardware->{$name} or [] );
 
     my @list2 ;
-    for ( 0 .. $#$list ) {
-        next if $_ == $index;
-        push @list2, ( $list->[$_]);
+    for my $count ( 0 .. $#$list ) {
+        if ( $count == $index ) {
+            next;
+        }
+        push @list2, ( $list->[$count]);
     }
     $hardware->{$name} = \@list2;
     $self->_store(hardware => $hardware );
+}
+
+sub _change_driver_disk($self, $index, $driver) {
+    my $hardware = $self->_value('hardware');
+    $hardware->{device}->[$index]->{driver} = $driver;
+
+    $self->_store(hardware => $hardware);
+}
+
+sub _change_hardware_disk($self, $index, $data_new) {
+    my @volumes = $self->list_volumes();
+
+    my $driver = delete $data_new->{driver};
+    return $self->_change_driver_disk($index, $driver) if $driver;
+
+    my $file = $volumes[$index]
+        or die "Error: volume $index not found, only ".scalar(@volumes)." found.";
+
+    my $data;
+    if ($self->is_local) {
+        $data = LoadFile($file);
+    } else {
+        my ($lines, $err) = $self->_vm->run_command("cat $file");
+        $data = Load($lines);
+    }
+
+    for (keys %$data_new) {
+        $data->{$_} = $data_new->{$_};
+    }
+    $self->_vm->write_file($file, Dump($data));
+}
+
+sub change_hardware($self, $hardware, $index, $data) {
+    my $sub = $CHANGE_HARDWARE_SUB{$hardware};
+    return $sub->($self, $index, $data) if $sub;
+
+    my $hardware_def = $self->_value('hardware');
+
+    my $devices = $hardware_def->{$hardware};
+
+    die "Error: Missing hardware $hardware\[$index], only ".scalar(@$devices)." found"
+        if $index > scalar(@$devices);
+
+    for (keys %$data) {
+        $hardware_def->{$hardware}->[$index]->{$_} = $data->{$_};
+    }
+    $self->_store(hardware => $hardware_def );
 }
 
 1;

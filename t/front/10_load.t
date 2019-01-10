@@ -86,6 +86,7 @@ sub test_vm_types {
 
 my $ping = $RVD_FRONT->ping_backend();
 
+clean();
 SKIP: {
     diag("SKIPPING: No backend found at ping")    if !$ping;
     skip("No backend found at ping",10) if !$ping;
@@ -95,5 +96,6 @@ SKIP: {
         test_vm_types();
     }
 }
+clean();
  
 done_testing();

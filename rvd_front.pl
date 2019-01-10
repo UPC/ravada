@@ -456,7 +456,7 @@ get '/machine/info/(:id).(:type)' => sub {
 
     my $info = $domain->info($USER);
     if ($domain->is_active && !$info->{ip}) {
-        Ravada::Request->refresh_machine(id_domain => $domain->id);
+        Ravada::Request->refresh_machine(id_domain => $domain->id, uid => $USER->id);
     }
     return $c->render(json => $info);
 };
@@ -471,6 +471,7 @@ get '/machine/requests/(:id).json' => sub {
 
 any '/machine/manage/(:id).(:type)' => sub {
    	 my $c = shift;
+     Ravada::Request->refresh_machine(id_domain => $c->stash('id'), uid => $USER->id);
      return manage_machine($c);
 };
 
@@ -604,6 +605,18 @@ get '/machine/exists/#name' => sub {
 
     return $c->render(json => $RAVADA->domain_exists($name));
 
+};
+
+get '/machine/change_hardware/(:hardware)/(:id)/(:index)/(#data)' => sub {
+    my $c = shift;
+    return $c->render(json => { req => Ravada::Request->change_hardware(
+                id_domain => $c->stash('id')
+                ,hardware => $c->stash('hardware')
+                ,index => $c->stash('index')
+                ,data => decode_json($c->stash('data'))
+                ,uid => $USER->id
+            )
+    });
 };
 
 get '/node/exists/#name' => sub {
@@ -1025,18 +1038,24 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
-get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)' => sub {
+get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)/(#data)' => sub {
     my $c = shift;
 
     my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
     return access_denied($c)
         unless $USER->id == $domain->id_owner || $USER->is_admin;
+    my @data;
+    @data = ( data => decode_json($c->stash('data'))) 
+        if $c->stash('data') && $c->stash('data') ne 'undefined';
+
+    my $number => $c->stash('number');
+    push @data,( number => $number ) if defined $number;
 
     my $req = Ravada::Request->add_hardware(
         uid => $USER->id
         ,name => $c->stash('hardware')
         ,id_domain => $c->stash('id_domain')
-        ,number => $c->stash('number')
+        ,@data
     );
     return $c->render( json => { request => $req->id } );
 };
@@ -1678,11 +1697,13 @@ sub manage_machine {
 
     $c->stash(  ram => int( $domain->get_info()->{max_mem} / 1024 ));
     $c->stash( cram => int( $domain->get_info()->{memory} / 1024 ));
+    $c->stash( needs_restart => $domain->needs_restart );
     my @messages;
     my @errors;
     my @reqs = ();
 
     if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
+        $c->stash( needs_restart => 1 ) if $domain->is_active;
         my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
         push @reqs,($req_mem);
         $c->stash(ram => $c->param('ram'));
@@ -1690,7 +1711,7 @@ sub manage_machine {
         push @messages,("MAx memory changed from "
                     .int($domain->get_info()->{max_mem}/1024)." to ".$c->param('ram'));
     }
-    if ($c->param("cram") && ($domain->get_info())->{memory}!=$c->param("cram")*1024){
+    if ($c->param("cram") && int($domain->get_info()->{memory} / 1024) !=$c->param("cram")){
         $c->stash(cram => $c->param('cram'));
         if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
             my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);
