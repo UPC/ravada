@@ -91,7 +91,7 @@ our %VALID_ARG = (
     ,connect_node => { backend => 2, hostname => 2, id_node =>2, timeout => 2 }
 
     #users
-    ,post_login => { uid => 1, locale => 2 }
+    ,post_login => { user => 1, locale => 2 }
 
 );
 

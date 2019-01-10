@@ -1234,7 +1234,7 @@ sub login {
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
 
             Ravada::Request->post_login(
-                uid => $auth_ok->id
+                user => $auth_ok->name
                 , locale => [ I18N::LangTags::Detect::detect() ]
             );
 
