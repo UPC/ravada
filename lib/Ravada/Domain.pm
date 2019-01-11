@@ -1676,7 +1676,6 @@ sub clone {
         ,id_owner => $uid
         ,@args_copy
     );
-    die if $clone->_data('id_vm') ne $vm->id;
     return $clone;
 }
 

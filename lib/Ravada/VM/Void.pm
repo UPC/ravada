@@ -270,7 +270,7 @@ sub refresh_storage_pools {
 }
 
 sub list_storage_pools {
-    return dir_img();
+    return 'default';
 }
 
 sub is_alive($self) {

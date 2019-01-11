@@ -1100,6 +1100,19 @@ sub _write_file_local( $self, $file, $contents ) {
     close $out or die "$! $file";
 }
 
+sub read_file( $self, $file ) {
+    return $self->_read_file_local($file) if $self->is_local;
+
+    my ($content, $err) = $self->run_command("cat $file");
+    confess $err if $err;
+    return $content;
+}
+
+sub _read_file_local( $self, $file ) {
+    CORE::open my $in,'<',$file or die "$! $file";
+    return join('',<$in>);
+}
+
 sub create_iptables_chain($self,$chain) {
     my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
 

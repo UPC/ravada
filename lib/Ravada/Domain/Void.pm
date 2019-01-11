@@ -416,7 +416,7 @@ sub list_volumes_info {
                 && $dev->{type} eq 'base';
 
         my $info;
-        eval { $info = LoadFile($dev->{file}) };
+        eval { $info = Load($self->_vm->read_file($dev->{file})) };
         confess "Error loading $dev->{file} ".$@ if $@;
         $info = {} if !defined $info;
         push @vol,({%$dev,%$info})

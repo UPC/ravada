@@ -727,7 +727,7 @@ sub test_bases_different_storage_pools {
     is($domain->base_in_vm($node->id), undef);
 
     eval {$domain->migrate($node) };
-    like($@, qr'storage pools');
+    like($@, qr'storage pool.*not found'i);
     is($domain->base_in_vm($node->id), undef);
 
     _enable_storage_pools($node);
