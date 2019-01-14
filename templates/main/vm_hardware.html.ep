@@ -1,6 +1,6 @@
 <div class="panel-body">
 %=   include "main/needs_restart"
-    <div ng-repeat="(name,value) in showmachine.hardware">
+    <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk">
         <h2>{{name}}</h2>
         <ul ng-show="value">
             <li ng-repeat="item in value track by $index">
@@ -48,6 +48,7 @@
         </div>
     </div>
 
+    <div ng-hide="show_new_disk">
     <button ng-disabled="pending_requests > 0"
             ng-click="add_hardware(new_hardware)"
             class="btn btn-primary">
@@ -57,21 +58,34 @@
         ng-options="type for type in hardware_types"
     >
     </select>
+    </div>
     <div ng-show="show_new_disk">
-        <label for="capacity">size</label>
-        <input type="text" name="capacity" ng-model="add_disk.capacity">
-
-        <label for="allocation">allocation</label>
-        <input type="text" name="allocation" ng-model="add_disk.allocation">
-        <br/>
-        <label for "bus"><%=l 'bus' %>
-        <select ng-model="add_disk.driver"
+        <div class="row">
+            <label for="device">device</label>
+            <select name="device" ng-model="add_disk.device">
+                <option>disk</option>
+                <option>cdrom</option>
+            </select>
+        </div>
+        <div class="row" ng-show="add_disk.device == 'disk'">
+            <label for="capacity">size</label>
+            <input type="text" name="capacity" ng-model="add_disk.capacity">
+        </div>
+        <div class="row" ng-show="add_disk.device == 'disk'">
+            <label for="allocation">allocation</label>
+            <input type="text" name="allocation" ng-model="add_disk.allocation">
+        </div>
+        <div class="row" ng-show="add_disk.device == 'disk'">
+            <label for="bus"><%=l 'bus' %></label>
+            <select name="bus" ng-model="add_disk.driver"
             ng-options="model for model in showmachine.drivers['disk']"
-        >
-        </select>
-        <br/>
-        <button ng-click="add_hardware('disk', value.length+1, add_disk);show_new_disk=false">ok</button>
-        <button ng-click="show_new_disk=false">cancel</button>
+            >
+            </select>
+        </div>
+        <div class="row">
+            <button ng-click="add_hardware('disk', value.length+1, add_disk);show_new_disk=false">ok</button>
+            <button ng-click="show_new_disk=false">cancel</button>
+        </div>
     </div>
 
 </div>
