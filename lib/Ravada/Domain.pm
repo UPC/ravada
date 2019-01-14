@@ -545,6 +545,11 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     $sth->execute($self->id);
     $sth->finish;
 
+    #TODO make these atomic
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+
     for my $vol (@volumes) {
         $self->cache_volume_info(%$vol);
     }
