@@ -15,7 +15,6 @@ use File::Copy;
 use File::Path qw(make_path);
 use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
-use JSON::XS;
 use Moose;
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
@@ -175,6 +174,7 @@ sub remove_disks {
 
     $self->_vm->connect();
     for my $file ($self->list_disks) {
+        confess if$file =~ /iso$/;
         if (! -e $file ) {
             warn "WARNING: $file already removed for ".$self->name."\n"
                 if $0 !~ /.t$/;
@@ -250,7 +250,9 @@ sub remove {
 
     my @volumes;
     if (!$self->is_removed ) {
-        @volumes = $self->list_disks();
+        for my $vol ( $self->list_volumes_info ) {
+            push @volumes,($vol->{file}) if $vol->{device} eq 'file';
+        }
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
@@ -312,30 +314,29 @@ sub _disk_device {
         or die "ERROR: $!\n";
 
     my @img;
-    my $list_disks = '';
 
+    my $n_order = 0;
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
+        my ($source_node) = $disk->findnodes('source');
+        my $file;
+        $file = $source_node->getAttribute('file')  if $source_node;
 
-        $list_disks .= $disk->toString();
+        my ($target_node) = $disk->findnodes('target');
+        my $device = $disk->getAttribute('device');
+        my $target = $target_node->getAttribute('dev');
+        my $bus = $target_node->getAttribute('bus');
 
-        my ($file,$target, $bus);
-        for my $child ($disk->childNodes) {
-            if ($child->nodeName eq 'source') {
-                $file = $child->getAttribute('file');
-            }
-            if ($child->nodeName eq 'target') {
-                $target = $child->getAttribute('dev');
-                $bus = $child->getAttribute('bus');
-            }
-        }
         if (!$with_info) {
             push @img,($file);
             next;
         }
-        my $info = $self->_volume_info($file);
+        my $info = {};
+        $info = $self->_volume_info($file) if $file && $device eq 'disk';
+        $info->{device} = $device;
+        $info->{name} = $target."-".$info->{device} if !$info->{name};
         $info->{target} = $target;
         $info->{driver} = $bus;
+        $info->{n_order} = $n_order++;
         push @img,$info;
     }
     return @img;
@@ -375,8 +376,6 @@ sub _disk_devices_xml {
     my @devices;
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
-
         my $is_disk = 0;
         for my $child ($disk->childNodes) {
             $is_disk++ if $child->nodeName eq 'source';
@@ -406,6 +405,7 @@ sub _create_qcow_base {
     my @base_img;
 
     for  my $vol_data ( $self->list_volumes_info()) {
+        next if $vol_data->{device} eq 'cdrom';
         my ($file_img,$target) = ($vol_data->{file}, $vol_data->{target});
         my $base_img = $file_img;
 
@@ -883,6 +883,7 @@ sub add_volume {
     my %args = @_;
 
     my $bus = (delete $args{driver} or 'virtio');
+    my $device = (delete $args{device} or 'disk');
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
@@ -930,7 +931,6 @@ sub add_volume {
         ,target => $target_dev
     );
 
-
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
     die $@."\n".$self->domain->get_xml_description if$@;
 
@@ -971,10 +971,6 @@ sub _new_target_dev {
     my $dev='vd';
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk'
-            && $disk->getAttribute('device') ne 'cdrom';
-
-
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'target') {
 #                die $child->toString();
@@ -1511,7 +1507,7 @@ sub clean_swap_volumes {
     my $self = shift;
     return if !$self->is_local;
     for my $file ($self->list_volumes) {
-        next if $file !~ /\.SWAP\.\w+/;
+        next if !$file || $file !~ /\.SWAP\.\w+/;
         next if ! -e $file;
         my $base = $self->_find_base($file) or next;
 
@@ -1796,24 +1792,26 @@ sub remove_controller($self, $name, $index=0) {
     return $ret;
 }
 
-sub _remove_device($self, $index, $device, $attribute_name, $attribute_value) {
+sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_value=undef) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
     for my $controller ($devices->findnodes($device)) {
-        if ($controller->getAttribute($attribute_name) eq $attribute_value){
-            if( $ind==$index ){
-                $devices->removeChild($controller);
-                $self->_vm->connect if !$self->_vm->vm;
-                my $new_domain = $self->_vm->vm->define_domain($doc->toString);
-                $self->domain($new_domain);
-                return;
-            }
-            $ind++;
+        next if defined $attribute_name
+            && $controller->getAttribute($attribute_name) ne $attribute_value;
+
+        if( $ind++==$index ){
+            $devices->removeChild($controller);
+            $self->_vm->connect if !$self->_vm->vm;
+            my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+            $self->domain($new_domain);
+            return;
         }
     }
 
-    die "ERROR: $device $attribute_name=$attribute_value ".($index+1)
+    my $msg = "";
+    $msg = " $attribute_name=$attribute_value " if defined $attribute_name;
+    confess "ERROR: $device $msg $index"
         ." not removed, only ".($ind)." found\n";
 }
 
@@ -1823,7 +1821,7 @@ sub _remove_controller_usb($self, $index) {
 
 sub _remove_controller_disk($self, $index) {
     my @volumes = $self->list_volumes();
-    $self->_remove_device($index,'disk', device => 'disk');
+    $self->_remove_device($index,'disk');
 
     $self->remove_volume( $volumes[$index]);
     $self->info(Ravada::Utils::user_daemon);

@@ -110,6 +110,11 @@ sub create_domain {
                         , type => 'file'
                         , target => 'vda'
         );
+        $domain->add_volume(name => 'void-cdrom-'.Ravada::Utils::random_name(4)
+                        , file => $domain->_config_dir()."/".$args{name}."-cdrom.iso"
+                        , device => 'cdrom'
+                        , target => 'hdc'
+        );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
         $domain->_store( is_active => 0 );

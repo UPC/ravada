@@ -524,6 +524,11 @@ sub _around_list_volumes_info($orig, $self) {
 
     my @volumes = $self->$orig();
 
+    #TODO make these atomic
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+
     for my $vol (@volumes) {
         $self->cache_volume_info(%$vol);
     }
@@ -1296,6 +1301,7 @@ sub _after_remove_domain {
 
 sub _remove_all_volumes($self) {
     for my $vol (@{$self->{_volumes}}) {
+        next if $vol =~ /iso$/;
         $self->remove_volume($vol);
     }
 }
@@ -3367,14 +3373,13 @@ sub set_ldap_access($self, $id_access, $allowed, $last) {
 sub _get_volume_info($self, $name) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * from volumes "
-        ." WHERE name=?"
+        ." WHERE name=? "
+        ."   AND id_domain=? "
+        ." ORDER by n_order"
     );
-    $sth->execute($name);
+    $sth->execute($name, $self->id);
     my $row = $sth->fetchrow_hashref();
 
-    confess "Error: volume $name belongs to domain $row->{id_domain}. "
-            ."This is domain ".$self->id
-        if defined $row->{id_domain} && $self->id != $row->{id_domain};
     return if !$row || !keys %$row;
     if ( $row->{info} ) {
         $row->{info} = decode_json($row->{info})
@@ -3384,31 +3389,37 @@ sub _get_volume_info($self, $name) {
 
 sub cache_volume_info($self, %info) {
     my $name = delete $info{name} or confess "No name in info ".Dumper(\%info);
-    confess if $name eq 'tst_request_30_hardware_01';
     my $row = $self->_get_volume_info($name);
     if (!$row) {
-        my $file = $info{file} or
-            confess "Error: Missing file field ".Dumper(\%info);
+        my $file = (delete $info{file} or '');
+        confess "Error: Missing n_order field ".Dumper(\%info) if !exists $info{n_order};
+        my $n_order = delete $info{n_order};
+
+        eval {
         my $sth = $$CONNECTOR->dbh->prepare(
-            "INSERT INTO volumes (id_domain, name, file, info) "
-            ."VALUES(?,?,?,?)"
+            "INSERT INTO volumes (id_domain, name, file, n_order, info) "
+            ."VALUES(?,?,?,?,?)"
         );
         $sth->execute($self->id
             ,$name
             ,$file
+            ,$n_order
             ,encode_json(\%info));
+        };
+        confess "$name / $n_order \n".$@ if $@;
         return;
     }
     for (keys %{$row->{info}}) {
         $info{$_} = $row->{info}->{$_} if !exists $info{$_};
     }
-    my $file = ($info{file} or $row->{file});
+    my $file = (delete $info{file} or $row->{file});
+    my $n_order = (delete $info{n_order} or $row->{n_order});
     confess "Error: Missing file field ".Dumper(\%info, $row)
         if !defined $file || !length($file);
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE volumes set info=?, name=?,file=?,id_domain=? WHERE id=?"
+        "UPDATE volumes set info=?, name=?,file=?,id_domain=?,n_order=? WHERE id=?"
     );
-    $sth->execute(encode_json(\%info), $name, $file, $self->id, $row->{id});
+    $sth->execute(encode_json(\%info), $name, $file, $self->id, $n_order, $row->{id});
 }
 
 1;

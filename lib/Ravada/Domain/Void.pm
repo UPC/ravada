@@ -112,12 +112,31 @@ sub is_paused {
     return $self->_value('is_paused');
 }
 
+sub _check_value_disk($self, $value)  {
+    return if !exists $value->{device};
+
+    my %target;
+    my %file;
+
+    confess "Not hash ".ref($value)."\n".Dumper($value) if ref($value) ne 'HASH';
+
+    for my $device (@{$value->{device}}) {
+        confess "Duplicated target ".Dumper($value)
+            if $target{$device->{target}}++;
+
+        confess "Duplicated file" .Dumper($value)
+            if $file{$device->{file}}++;
+    }
+}
+
 sub _store {
     my $self = shift;
 
     return $self->_store_remote(@_) if !$self->_vm->is_local;
 
     my ($var, $value) = @_;
+
+    $self->_check_value_disk($value) if $var eq 'hardware';
 
     my $data = $self->_load();
     $data->{$var} = $value;
@@ -211,7 +230,9 @@ sub start {
 sub prepare_base {
     my $self = shift;
 
-    for my $file_qcow ($self->list_volumes) {;
+    for my $volume ($self->list_volumes_info) {;
+        next if $volume->{device} ne 'disk';
+        my $file_qcow = $volume->{file};
         my $file_base = $file_qcow.".qcow";
 
         if ( $file_qcow =~ /.SWAP.img$/ ) {
@@ -269,6 +290,8 @@ sub add_volume {
 
     my %args = @_;
 
+    my $device = ( delete $args{device} or 'disk' );
+
     my $suffix = ".img";
     $suffix = '.SWAP.img' if $args{swap};
 
@@ -299,16 +322,17 @@ sub add_volume {
     $args{driver} = 'foo' if !exists $args{driver};
 
     my $hardware = $data->{hardware};
-    my $device = $hardware->{device};
+    my $device_list = $hardware->{device};
     my $file = delete $args{file};
-    push @$device, {
+    push @$device_list, {
         name => $args{name}
         ,file => $file
         ,type => $args{type}
         ,target => $args{target}
         ,driver => $args{driver}
+        ,device => $device
     };
-    $hardware->{device} = $device;
+    $hardware->{device} = $device_list;
     $self->_store(hardware => $hardware);
 
     delete @args{'name', 'target', 'driver'};
@@ -411,6 +435,7 @@ sub list_volumes_info {
 
     return () if !exists $data->{hardware}->{device};
     my @vol;
+    my $n_order = 0;
     for my $dev (@{$data->{hardware}->{device}}) {
         next if exists $dev->{type}
                 && $dev->{type} eq 'base';
@@ -419,6 +444,7 @@ sub list_volumes_info {
         eval { $info = Load($self->_vm->read_file($dev->{file})) };
         confess "Error loading $dev->{file} ".$@ if $@;
         $info = {} if !defined $info;
+        $info->{n_order} = $n_order++;
         push @vol,({%$dev,%$info})
     }
     return @vol;
