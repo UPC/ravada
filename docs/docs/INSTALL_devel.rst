@@ -43,7 +43,7 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ a
     libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl \
     wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl \
     debconf adduser libdigest-sha-perl qemu-kvm libnet-ssh2-perl libfile-rsync-perl \
-    libdate-calc-perl libparallel-forkmanager-perl libproc-pid-file-perl
+    libdate-calc-perl libparallel-forkmanager-perl
     
 In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__ and install it this way:
