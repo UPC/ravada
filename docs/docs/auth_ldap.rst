@@ -3,6 +3,42 @@ Configure LDAP Authentication
 
 Ravada can use LDAP as the authencation engine.
 
+Configuration
+-------------
+
+The configuration file is /etc/ravada.conf. The format is YML, make sure you
+edit this file with spaces, no tabs.
+
+Add a section ldap like this:
+
+::
+
+  ldap:
+    server: 192.168.1.44
+    port: 389 # or 636 for secure connections
+    secure: 0 # defaults to 1 if port is 636
+    base: dc=domain,dc=com
+    admin_user:
+        dn: cn=admin.user,dc=domain,dc=com
+        password: secretpassword
+
+
+The _secure_ setting is optional. It defaults to 0 for port 389 (ldap) and to 1 for
+port 636 ( ldaps ). It can be enabled so secure connections can be forced for other
+ports.
+
+The LDAP admin user can be a low level account with minimal privileges.
+
+Another optional setting can be used to force the authentication method.
+By default Ravada tries first to bind to the LDAP as the user. If that fails
+then it
+tries to match the encrypted password. You can force the method
+with:
+
+::
+
+  auth: all # defaults to all, can be all, bind, match
+
 Example: All users
 ------------------
 
