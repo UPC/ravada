@@ -9,6 +9,12 @@ Install and configure 389-ds
     sudo apt-get install 389-ds-base
     sudo setup-ds
 
+When requested the server name, answer with the full qualified
+domain name of the host: hostname.domainname.
+In the next step you must supply the domain name as base for the
+configuration. So if your domain name is "foobar.com", the base
+will be "dc=foobar,dc=com".
+
 Add a LDAP section in the config file
 -------------------------------------
 
@@ -21,7 +27,7 @@ The config file usually is /etc/ravada.conf. Add this configuration:
         admin_user:
             dn: cn=Directory Manager
             password: thepasswordyouusedwhensetup-ds
-        base: 'dc=telecom,dc=bcn'
+        base: 'dc=foobar,dc=com'
 
 Insert one test user
 --------------------
