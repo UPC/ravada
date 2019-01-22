@@ -40,34 +40,41 @@ sub test_add_hardware_request_drivers {
 	my $domain = shift;
 	my $hardware = shift;
 
-    my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my $info = $domain->info(user_admin);
+    test_remove_almost_all_hardware($vm, $domain, $hardware);
 
-    my $options = $info->{drivers}->{$hardware};
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info0 = $domain->info(user_admin);
+
+    my $options = $info0->{drivers}->{$hardware};
 
     for my $driver (@$options) {
         diag("Testing new $hardware $driver");
-        test_add_hardware_request($vm, $domain, $hardware, $driver);
+
         my $info = $domain->info(user_admin);
-        is($info->{hardware}->{$hardware}->[-1]->{driver}, $driver) or exit;
+        my @targets = map { $_->{n_order} } @{$info->{hardware}->{$hardware}};
+        test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
+
+        $info = $domain->info(user_admin);
+
+        is($info->{hardware}->{$hardware}->[-1]->{driver}, $driver) or confess( $domain->name
+            , Dumper($info->{hardware}->{$hardware}));
         test_remove_hardware($vm, $domain, $hardware
             , scalar(@{$info->{hardware}->{$hardware}})-1);
     }
 }
 
-sub test_add_hardware_request($vm, $domain, $hardware, $driver=undef) {
+sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 
+    confess if !ref($data) || ref($data) ne 'HASH';
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
 	my $req;
 	eval {
-        my @data;
-        @data = ( data => { driver => $driver } ) if defined $driver;
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
                 , name => $hardware
                 , number => $numero
-                , @data
+                , data => $data
             );
 	};
 	is($@,'') or return;
@@ -75,7 +82,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $driver=undef) {
 	ok($req, 'Request');
 	rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
-    is($req->error(),'');
+    is($req->error(),'') or exit;
 
     {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -93,6 +100,87 @@ sub test_add_hardware_request($vm, $domain, $hardware, $driver=undef) {
             ,"Adding hardware $numero\n"
                 .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
+    my $info = $domain->info(user_admin);
+    is(scalar(@{$info->{hardware}->{$hardware}}), $numero) or exit;
+}
+
+sub test_add_cdrom($domain) {
+    my $n = 0;
+    for my $device ( $domain->list_volumes_info ) {
+        if ($device->{device} eq 'cdrom') {
+            test_remove_hardware($domain->_vm, $domain, 'disk', $n);
+        }
+        $n++;
+    }
+
+    my $data = { device => 'cdrom' , boot => 2 };
+    if ($domain->type eq 'KVM') {
+        eval { $domain->_set_boot_hd(1) };
+        is(''.$@,'') or exit;
+        eval { $domain->_set_boot_hd(0) };
+        is(''.$@,'') or exit;
+        my $iso = $domain->_vm->_search_iso(search_id_iso('Alpine'));
+        $data->{file} = $iso->{device};
+    } else {
+        $data->{file} = "/var/tmp/a.iso";
+    }
+    my $found = 0;
+    test_add_hardware_request($domain->_vm, $domain,'disk', $data);
+
+    test_cdrom_kvm($domain) if $domain->type eq 'KVM';
+    #############
+    # test device cdrom just added
+    for my $device ( $domain->list_volumes_info ) {
+        if ($device->{device} eq 'cdrom') {
+            $found++;
+            like($device->{name}, qr/\.iso/,$domain->type." ".$domain->name) or exit;
+            is($device->{boot}, 2, $domain->name) or exit;
+        }
+    }
+
+}
+
+sub test_cdrom_kvm($domain) {
+    diag("Testing cdrom KVM ");
+    #########
+    # test XML without boot
+    {
+        my $xml = XML::LibXML->load_xml(
+            string => $domain->domain->get_xml_description()
+        );
+        my ($boot) = $xml->findnodes('/os/boot');
+        ok(!$boot) or do {
+            my ($os) = $xml->findnodes('/os');
+            die $os->toString();
+        };
+    }
+    #########
+    # test XML inactive without boot
+    {
+        my $xml = XML::LibXML->load_xml(
+            string => $domain->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE)
+        );
+        my ($boot) = $xml->findnodes('/os/boot');
+        ok(!$boot) or do {
+            my ($os) = $xml->findnodes('/os');
+            die $os->toString();
+        };
+    }
+}
+
+sub test_add_disk($domain) {
+    test_add_cdrom($domain);
+}
+
+sub test_add_hardware_custom($domain, $hardware) {
+    my %sub = (
+        disk => \&test_add_disk
+        ,usb => sub {}
+        ,mock => sub {}
+    );
+
+    my $exec = $sub{$hardware} or die "No custom add $hardware";
+    return $exec->($domain);
 }
 
 sub test_remove_hardware {
@@ -342,6 +430,7 @@ for my $vm_name ( qw(KVM Void)) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
 
+        test_add_hardware_custom($domain_b, $hardware);
         test_add_hardware_request($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
 
@@ -366,7 +455,6 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_change_hardware($vm, $domain_b, $hardware);
 
-        test_remove_almost_all_hardware($vm, $domain_b, $hardware);
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         ok(!$domain_b->is_active);

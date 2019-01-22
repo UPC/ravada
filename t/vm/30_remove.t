@@ -56,7 +56,11 @@ sub test_remove_domain {
     ok(!$domain_missing,"Domain ".$domain->name." should be missing");
 
     for my $vol (@volumes) {
-        ok(!-e $vol,"[$vm_name] volume $vol should be removed");
+        if ($vol =~ /\.iso$/) {
+            ok(-e $vol,"[$vm_name] volume $vol should not be removed");
+        } else {
+            ok(!-e $vol,"[$vm_name] volume $vol should be removed");
+        }
     }
 }
 

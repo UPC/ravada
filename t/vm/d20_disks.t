@@ -19,7 +19,7 @@ sub test_frontend {
     my $domain = create_domain($vm);
 
     my @volumes = $domain->list_volumes();
-    is(scalar@volumes,1) or die $domain->name;
+    is(scalar@volumes,2);
 
     $domain->info(user_admin);
     my $domain_f = rvd_front->search_domain($domain->name);
@@ -95,6 +95,39 @@ sub test_add_disk {
     isa_ok($info->{hardware}->{disk}->[1]->{info},'HASH') or exit;
     $domain->remove(user_admin);
 }
+
+sub test_add_disk_boot_order {
+    my $vm = shift;
+    return if $vm->type ne 'KVM';
+    my $domain = create_domain($vm);
+    $domain->add_volume( boot => 1 , name => 'troy' );
+    my @volumes = $domain->list_volumes_info();
+    my ($troy) = grep { $_->{name} =~ m/^troy/ } @volumes;
+    is($troy->{boot}, 1);
+
+    $domain->add_volume( boot => 1 , name => 'abed');
+    @volumes = $domain->list_volumes_info();
+    my ($abed) = grep { $_->{name} =~ /^abed/ } @volumes;
+    is($abed->{boot}, 1);
+    ($troy) = grep { $_->{name} =~ m/^troy/ } @volumes;
+    is($troy->{boot}, 2);
+
+
+    $domain->add_volume( boot => 2 , name => 'jeff');
+    @volumes = $domain->list_volumes_info();
+    my ($jeff) = grep { $_->{name} =~ /^jeff/ } @volumes;
+
+    ($abed) = grep { $_->{name} =~ m/^abed/ } @volumes;
+    is($abed->{boot}, 1);
+
+    ($troy) = grep { $_->{name} =~ m/^troy/ } @volumes;
+    is($troy->{boot}, 3);
+
+    $domain->change_hardware('disk',0,{ boot => 1 });
+    @volumes = $domain->list_volumes_info();
+    is($volumes[0]->{boot}, 1 );
+}
+
 #############################################################################
 
 clean();
@@ -115,11 +148,14 @@ for my $vm_name ('Void', 'KVM') {
         skip($msg,10)   if !$vm;
         diag("Testing volatile for $vm_name");
 
+        test_add_disk_boot_order($vm);
+
         test_frontend($vm);
         test_frontend_refresh($vm);
 
         test_add_disk($vm);
         test_add_disk($vm , 1); # swap file
+
 	}
 }
 
