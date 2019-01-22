@@ -518,11 +518,13 @@ sub _around_remove_volume {
     return $ok;
 }
 
-sub _around_list_volumes_info($orig, $self) {
+sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
+    confess "Error: value must be supplied for filter attribute"
+    if defined $attribute && !defined $value;
 
-    return $self->$orig() if ref($self) =~ /^Ravada::Front/i;
+    return $self->$orig($attribute, $value) if ref($self) =~ /^Ravada::Front/i;
 
-    my @volumes = $self->$orig();
+    my @volumes = $self->$orig($attribute => $value);
 
     #TODO make these atomic
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
@@ -1708,8 +1710,8 @@ sub _copy_clone($self, %args) {
         ,id_owner => $user->id
         ,@copy_arg
     );
-    my @volumes = $self->list_volumes_info;
-    my @copy_volumes = $copy->list_volumes_info;
+    my @volumes = $self->list_volumes_info(device => 'disk');
+    my @copy_volumes = $copy->list_volumes_info(device => 'disk');
 
     my %volumes = map { $_->{target} => $_->{file} } @volumes;
     my %copy_volumes = map { $_->{target} => $_->{file} } @copy_volumes;

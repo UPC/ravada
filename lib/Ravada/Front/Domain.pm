@@ -116,7 +116,7 @@ sub is_paused($self) {
 }
 
 sub is_removed          { return 0 }
-sub list_volumes($self)
+sub list_volumes($self, $attribute=undef, $value=undef)
 {
     _init_connector();
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -133,13 +133,17 @@ sub list_volumes($self)
         $row->{info}->{allocation} = Ravada::Utils::number_to_size($row->{info}->{allocation})
             if defined $row->{info}->{allocation} && $row->{info}->{allocation} =~ /^\d+$/;
         $row->{driver} = delete $row->{info}->{driver};
+
+        next if defined $attribute
+        && ( !exists $row->{$attribute}
+                || $row->{$attribute} != $value);
         push @volumes, ($row);
     }
     $sth->finish;
     return @volumes;
 }
 
-sub list_volumes_info($self) { return $self->list_volumes() }
+sub list_volumes_info($self, @args) { return $self->list_volumes(@args) }
 
 sub migrate             { confess "TODO" }
 

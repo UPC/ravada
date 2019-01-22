@@ -120,6 +120,7 @@ sub list_disks {
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 my $file = $child->getAttribute('file');
+                next if $file =~ /\.iso$/;
                 push @disks,($file);
             }
         }
@@ -173,8 +174,8 @@ sub remove_disks {
     confess $@ if $@;
 
     $self->_vm->connect();
-    for my $file ($self->list_disks) {
-        confess if$file =~ /iso$/;
+    for my $file ($self->list_disks( device => 'disk')) {
+        confess $file if $file =~ /iso$/;
         if (! -e $file ) {
             warn "WARNING: $file already removed for ".$self->name."\n"
                 if $0 !~ /.t$/;
@@ -304,10 +305,7 @@ sub _remove_file_image {
     }
 }
 
-sub _disk_device {
-    my $self = shift;
-    my $with_info = shift;
-
+sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
     my $doc = XML::LibXML->load_xml(string
             => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
@@ -326,17 +324,30 @@ sub _disk_device {
         my $target = $target_node->getAttribute('dev');
         my $bus = $target_node->getAttribute('bus');
 
-        if (!$with_info) {
-            push @img,($file);
-            next;
-        }
+        my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
         $info = $self->_volume_info($file) if $file && $device eq 'disk';
         $info->{device} = $device;
-        $info->{name} = $target."-".$info->{device} if !$info->{name};
+        if (!$info->{name} ) {
+            if ($file) {
+                ($info->{name}) = $file =~ m{.*/(.*)};
+            } else {
+                $info->{name} = $target."-".$info->{device};
+            }
+        }
         $info->{target} = $target;
         $info->{driver} = $bus;
         $info->{n_order} = $n_order++;
+        $info->{boot} = $boot_node->getAttribute('order') if $boot_node;
+
+        next if defined $attribute
+           && (!exists $info->{$attribute}
+                || $info->{$attribute} ne $value);
+
+        if (!$with_info) {
+            push @img,($file) if $file;
+            next;
+        }
         push @img,$info;
     }
     return @img;
@@ -357,7 +368,10 @@ sub _volume_info($self, $file, $refresh=0) {
         return $self->_volume_info($file, ++$refresh);
     }
 
-    confess "Error: Volume $file not found" if !$vol;
+    if (!$vol) {
+        warn "Error: Volume $file not found";
+        return;
+    }
 
     my $info = $vol->get_info;
     $info->{file} = $file;
@@ -404,8 +418,7 @@ sub _create_qcow_base {
 
     my @base_img;
 
-    for  my $vol_data ( $self->list_volumes_info()) {
-        next if $vol_data->{device} eq 'cdrom';
+    for  my $vol_data ( $self->list_volumes_info( device => 'disk')) {
         my ($file_img,$target) = ($vol_data->{file}, $vol_data->{target});
         my $base_img = $file_img;
 
@@ -883,6 +896,7 @@ sub add_volume {
     my %args = @_;
 
     my $bus = (delete $args{driver} or 'virtio');
+    my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
@@ -918,7 +932,7 @@ sub add_volume {
     my $driver_type = 'qcow2';
     my $cache = 'default';
 
-    if ( $args{swap} ) {
+    if ( $args{swap} || $device eq 'cdrom' ) {
         $cache = 'none';
         $driver_type = 'raw';
     }
@@ -928,36 +942,125 @@ sub add_volume {
           ,file => $path
           ,type => $driver_type
          ,cache => $cache
+        ,device => $device
         ,target => $target_dev
     );
 
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
-    die $@."\n".$self->domain->get_xml_description if$@;
+    die $@ if $@;
 
+    $self->_set_boot_order($path, $boot) if $boot;
     return $path;
 }
+
+sub _set_boot_hd($self, $value) {
+    my $doc;
+    if ($value ) {
+        $doc = $self->_remove_boot_order() if $value;
+    } else {
+        $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    }
+    my ($os) = $doc->findnodes('/domain/os');
+    my ($boot) = $os->findnodes('boot');
+    if (!$value) {
+        $os->removeChild($boot) or die "Error removing ".$boot->toString();
+    } else {
+        if (!$boot) {
+            $boot = $os->addNewChild(undef,'boot');
+        }
+        $boot->setAttribute(dev => 'hd');
+    }
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+};
+
+sub _remove_boot_order($self, $index=undef) {
+    return $self->_cmd_boot_order(0,$index,0);
+}
+
+sub _set_boot_order($self, $index, $order) {
+    my $doc = $self->_cmd_boot_order(1,$index, $order);
+
+    my ($os) = $doc->findnodes('/domain/os');
+    my ($boot) = $os->findnodes('boot');
+
+    $os->removeChild($boot) if $boot;
+
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+}
+
+sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my $count = 0;
+
+    # if index is not numeric is the file, search the real index
+    $index = $self->_search_volume_index($index) if defined $index && $index !~ /^\d+$/;
+
+    for my $device ($doc->findnodes('/domain/devices/disk')) {
+        my ($boot) = $device->findnodes('boot');
+        if ( defined $index && $count++ != $index) {
+            next if !$set || !$boot;
+            my $this_order = $boot->getAttribute('order');
+            next if $this_order < $order;
+            $boot->setAttribute( order => $this_order+1);
+            warn "[$count] $this_order -> ".($this_order + 1);
+            next;
+        }
+        if (!$set) {
+            next if !$boot;
+            $device->removeChild($boot);
+        } else {
+            $boot = $device->addNewChild(undef,'boot')  if !$boot;
+            $boot->setAttribute( order => $order );
+        }
+    }
+    return $doc;
+}
+
+sub _search_volume_index($self, $file) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my $index = 0;
+    for my $device ($doc->findnodes('/domain/devices/disk')) {
+        my ($source) = $device->findnodes('source');
+        return $index if $source->getAttribute('file') eq $file;
+        $index++;
+    }
+    confess "I can't find file $file in ".$self->name;
+}
+
 
 sub _xml_new_device($self , %arg) {
     my $bus = delete $arg{bus} or confess "Missing bus.";
     my $file = delete $arg{file} or confess "Missing target.";
+    my $boot = delete $arg{boot};
+    my $device = delete $arg{device};
 
     my $xml = <<EOT;
-    <disk type='file' device='disk'>
+    <disk type='file' device='$device'>
       <driver name='qemu' type='$arg{type}' cache='$arg{cache}'/>
       <source file='$file'/>
       <backingStore/>
       <target bus='$bus' dev='$arg{target}'/>
       <address type=''/>
+      <boot/>
     </disk>
 EOT
 
-    my $device=XML::LibXML->load_xml(string => $xml);
-    my ($address) = $device->findnodes('/disk/address') or die "No address in ".$device->toString();
+    my $xml_device=XML::LibXML->load_xml(string => $xml);
+    my ($address) = $xml_device->findnodes('/disk/address') or die "No address in ".$xml_device->toString();
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     $self->_change_xml_address($doc, $address, $bus);
 
-    return $device->toString();
+    my ($boot_xml) = $xml_device->findnodes('/disk/boot');
+    if ($boot) {
+        $boot_xml->setAttribute( order => $boot );
+    } else {
+        my ($disk) = $xml_device->findnodes('/disk');
+        $disk->removeChild($boot_xml) or die "I can't remove boot node from disk";
+    }
+    return $xml_device->toString();
 }
 
 sub _new_target_dev {
@@ -1065,7 +1168,7 @@ For KVM it reads from the XML definition of the domain.
 
 sub list_volumes {
     my $self = shift;
-    return $self->disk_device();
+    return $self->disk_device(0,@_);
 }
 
 =head2 list_volumes_info
@@ -1079,7 +1182,7 @@ For KVM it reads from the XML definition of the domain.
 
 sub list_volumes_info {
     my $self = shift;
-    return $self->disk_device("info");
+    return $self->disk_device("info",@_);
 }
 
 =head2 screenshot
@@ -1820,10 +1923,19 @@ sub _remove_controller_usb($self, $index) {
 }
 
 sub _remove_controller_disk($self, $index) {
-    my @volumes = $self->list_volumes();
+    my @volumes = $self->list_volumes_info();
+    confess "Error: domain ".$self->name
+        ." trying to remove $index"
+        ." has only ".scalar(@volumes)
+        if $index >= scalar(@volumes);
+
+    confess "Error: undefined volume $index ".Dumper(\@volumes)
+        if !defined $volumes[$index];
+
     $self->_remove_device($index,'disk');
 
-    $self->remove_volume( $volumes[$index]);
+    my $file = $volumes[$index]->{file};
+    $self->remove_volume( $file ) if $file && $file !~ /\.iso$/;
     $self->info(Ravada::Utils::user_daemon);
 }
 
@@ -1940,8 +2052,10 @@ sub _change_hardware_disk($self, $index, $data) {
     die "Error: Volume file $file not found in ".$self->_vm->name    if !$volume;
 
     my $driver = delete $data->{driver};
+    my $boot = delete $data->{boot};
 
     $self->_change_hardware_disk_bus($index, $driver)   if $driver;
+    $self->_set_boot_order($index, $boot)               if $boot;
 
     my $capacity = delete $data->{'capacity'};
     if ($capacity) {
@@ -1964,7 +2078,6 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
-        next if $disk->getAttribute('device') ne 'disk';
         next if $count++ != $index;
 
         my ($target) = $disk->findnodes('target') or die "No target";
