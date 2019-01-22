@@ -98,6 +98,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
+plugin 'RenderFile';
 
 my %config;
 %config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
@@ -1038,24 +1039,27 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
-get '/machine/hardware/add/(#id_domain)/(#hardware)/(#number)/(#data)' => sub {
+post '/machine/hardware/add' => sub {
     my $c = shift;
+    my $arg = decode_json($c->req->body);
 
-    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    my $domain = Ravada::Front::Domain->open($arg->{id_domain});
     return access_denied($c)
         unless $USER->id == $domain->id_owner || $USER->is_admin;
-    my @data;
-    @data = ( data => decode_json($c->stash('data'))) 
-        if $c->stash('data') && $c->stash('data') ne 'undefined';
 
-    my $number => $c->stash('number');
-    push @data,( number => $number ) if defined $number;
+    my $hardware = delete $arg->{hardware} or die "Missing hardware name";
+    my $number = ( $arg->{number} or undef );
+
+    my @fields;
+    push @fields, ( number => $arg->{number} )
+        if exists $arg->{number} && defined $arg->{number};
+    push @fields, ( data => $arg->{data} ) if exists $arg->{data};
 
     my $req = Ravada::Request->add_hardware(
         uid => $USER->id
-        ,name => $c->stash('hardware')
-        ,id_domain => $c->stash('id_domain')
-        ,@data
+        ,name => $hardware
+        ,id_domain => $domain->id
+        ,@fields
     );
     return $c->render( json => { request => $req->id } );
 };
@@ -1808,6 +1812,7 @@ sub manage_machine {
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
+        , isos => $RAVADA->iso_file()
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
     );
