@@ -331,14 +331,19 @@
             });
           };
           $scope.add_hardware = function(hardware, number, extra) {
-              console.log(extra);
               if (hardware == 'disk' && ! extra) {
                   $scope.show_new_disk = true;
                   return;
               }
-              $http.get('/machine/hardware/add/'
-                      +$scope.showmachine.id+'/'+hardware+'/'+number+'/'
-                      +JSON.stringify(extra)
+              if ( hardware == 'disk' && extra.device == 'cdrom') {
+                  extra.driver = 'ide';
+              }
+              $http.post('/machine/hardware/add/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                            ,'hardware': hardware
+                            ,'number': number
+                            ,'data': extra
+                      })
               ).then(function(response) {
                           $scope.pending_before++;
                           if (!$scope.requests || !$scope.requests.length) {
@@ -346,15 +351,14 @@
                           }
                       });
           };
-          $scope.remove_hardware = function(hardware, index, confirmation) {
+          $scope.remove_hardware = function(hardware, index, item, confirmation) {
             if (hardware == 'disk') {
                 if (!confirmation) {
-                    $scope.disk_remove[index] = true;
+                    item.remove = !item.remove;
                     return;
-                } else {
-                    $scope.disk_remove[index] = false;
                 }
             }
+            item.remove = false;
               $http.get('/machine/hardware/remove/'
                       +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
                             $scope.pending_before++;
@@ -430,6 +434,7 @@
                 var new_settings={
                   driver: $scope.showmachine.hardware.disk[index].driver,
                   capacity: $scope.showmachine.hardware.disk[index].info.capacity,
+                  boot: $scope.showmachine.hardware.disk[index].info.boot,
                 };
                 console.log(new_settings);
                 $http.get('/machine/change_hardware/disk/'+id_machine
@@ -440,6 +445,7 @@
 
             };
             $scope.add_disk = {
+                device: 'disk',
                 driver: 'virtio',
                 capacity: '1G',
                 allocation: '0.1G'

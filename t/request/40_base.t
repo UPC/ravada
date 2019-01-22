@@ -318,7 +318,7 @@ sub test_volumes {
     my @volumes1 = $domain1->list_volumes();
     my @volumes2 = $domain2->list_volumes();
 
-    my %volumes1 = map { $_ => 1 } @volumes1;
+    my %volumes1 = map { $_ => 1 } grep { !/iso$/} @volumes1;
     my %volumes2 = map { $_ => 1 } @volumes2;
 
     ok(scalar keys %volumes1 == scalar keys %volumes2

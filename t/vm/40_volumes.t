@@ -117,7 +117,7 @@ sub test_clone {
     my $vm_name = shift;
     my $domain = shift;
 
-    my @volumes = $domain->list_volumes();
+    my @volumes = grep { !/iso$/ } $domain->list_volumes();
 
     my $name_clone = new_domain_name();
 #    diag("[$vm_name] going to clone from ".$domain->name);
@@ -153,8 +153,8 @@ sub test_clone {
 sub test_files_base {
     my ($vm_name, $domain, $volumes) = @_;
     my @files_base= $domain->list_files_base();
-    ok(scalar @files_base == scalar @$volumes, "[$vm_name] Domain ".$domain->name
-            ." expecting ".scalar @$volumes." files base, got ".scalar(@files_base)) or exit;
+    is(scalar @files_base, scalar(@$volumes) -1, "[$vm_name] Domain ".$domain->name."\n"
+            .Dumper($volumes,[@files_base])) or confess;
 
     my %files_base = map { $_ => 1 } @files_base;
 
@@ -166,7 +166,11 @@ sub test_files_base {
         for my $volume ($domain->list_volumes) {
             my $info = `qemu-img info $volume`;
             my ($backing) = $info =~ m{(backing.*)}gm;
-            like($backing,qr{^backing file\s*:\s*.+},$info) or exit;
+            if ($volume =~ /iso$/) {
+                is($backing,undef) or exit;
+            } else {
+                like($backing,qr{^backing file\s*:\s*.+},$info) or exit;
+            }
         }
     }
 
@@ -186,8 +190,8 @@ sub test_domain_2_volumes {
     test_add_volume($vm, $domain2, 'vdb');
 
     my @volumes = $domain2->list_volumes;
-    ok(scalar @volumes == 2
-        ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
+    my $exp_volumes = 3;
+    is(scalar @volumes,$exp_volumes, $vm_name);
 
     ok(test_prepare_base($vm_name, $domain2));
     ok($domain2->is_base,"[$vm_name] Domain ".$domain2->name
@@ -199,8 +203,7 @@ sub test_domain_2_volumes {
     test_add_volume($vm, $domain2, 'vdc');
 
     @volumes = $domain2->list_volumes;
-    ok(scalar @volumes == 3
-        ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
+    is(scalar @volumes,$exp_volumes+1)
 
 }
 
@@ -221,7 +224,7 @@ sub test_domain_n_volumes {
     }
 
     my @volumes = $domain->list_volumes;
-    ok(scalar @volumes == $n
+    ok(scalar @volumes == $n+1
         ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes));
 
     ok(test_prepare_base($vm_name, $domain));
@@ -231,9 +234,10 @@ sub test_domain_n_volumes {
 
     my $domain_clone = test_clone($vm_name, $domain);
 
-    my @volumes_clone = $domain_clone->list_volumes_info;
-    ok(scalar @volumes_clone ==$n
-        ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes_clone));
+    my @volumes_clone = $domain_clone->list_volumes_info(device => 'disk');
+    my @volumes_clone_all = $domain_clone->list_volumes_info();
+    is(scalar @volumes_clone, $n
+        ,"[$vm_name] Expecting $n volumes, got ".Dumper([@volumes_clone],[@volumes_clone_all])) or exit;
 
     return if $vm_name =~ /void/i;
     for my $vol ( @volumes_clone ) {

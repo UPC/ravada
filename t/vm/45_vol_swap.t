@@ -19,7 +19,7 @@ sub test_domain_with_swap {
     $domain->add_volume_swap( size => 1000 * 1024);
 
     my @vol = $domain->list_volumes();
-    is(scalar(@vol),2);
+    is(scalar(@vol),3);
 
     my $clone = $domain->clone(
          name => new_domain_name
