@@ -1042,7 +1042,6 @@ sub _search_volume_index($self, $file) {
     confess "I can't find file $file in ".$self->name;
 }
 
-
 sub _xml_new_device($self , %arg) {
     my $bus = delete $arg{bus} or confess "Missing bus.";
     my $file = delete $arg{file} or confess "Missing target.";
