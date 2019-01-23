@@ -797,6 +797,7 @@ sub _domain_create_common {
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
+    $self->_xml_clean_machine_type($xml) if !$self->is_local;
 
     my $dom;
 
@@ -1834,6 +1835,11 @@ sub _xml_add_guest_agent {
     $target->setAttribute(type => 'virtio');
     $target->setAttribute(name => 'org.qemu.guest_agent.0');
     
+}
+
+sub _xml_clean_machine_type($self, $doc) {
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    $os_type->setAttribute( machine => 'pc');
 }
 
 sub _xml_remove_cdrom {
