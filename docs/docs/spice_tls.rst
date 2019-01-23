@@ -76,7 +76,7 @@ Perform the following script, to generate the cert files for ssl , and then copy
     fi
     # create a certificate signing request (csr)
     if [ ! -e server-key.csr ]; then
-        openssl req -new -key $SERVER_KEY -out server-key.csr -subj "/C=IL/L=Raanana/O=Red Hat/CN=my server"
+        openssl req -new -key $SERVER_KEY -out server-key.csr -subj "/C=IL/L=Raanana/O=Red Hat/CN=<server IP>"
     fi
     # signing our server certificate with this ca
     if [ ! -e server-cert.pem ]; then
@@ -94,13 +94,14 @@ Perform the following script, to generate the cert files for ssl , and then copy
     openssl req -noout -text -in server-key.csr
     openssl x509 -noout -text -in server-cert.pem
     openssl x509 -noout -text -in ca-cert.pem
-
+    chown :kvm ./*.pem
+    
     # copy *.pem file to /etc/pki/libvirt-spice
     if [[ -d "/etc/pki/libvirt-spice" ]] 
     then    
         cp ./*.pem /etc/pki/libvirt-spice
     else
-        mkdir /etc/pki/libvirt-spice
+        mkdir -p /etc/pki/libvirt-spice
         cp ./*.pem /etc/pki/libvirt-spice
     fi
 
