@@ -19,11 +19,11 @@
 %               next;
 %           }
         <div class="row">
-            <div class="col-md-2">
+            <div class="col-md-2 mt-3">
                 <label class="control-label"
                     for="driver_<%= $driver_name %>"><%= $driver_name %></label>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 mt-2">
                 <select data-live-search="true" class="selectpicker form-control show-tick"
                         name="driver_<%= $driver_name %>">
 %              for my $option( $driver->get_options ) {
