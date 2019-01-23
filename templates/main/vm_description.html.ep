@@ -33,7 +33,7 @@
 %# if $domain->is_paused || $domain->domain->has_managed_save_image;
 
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-12">
                 % if ($message_rename) {
                 <div class="alert alert-danger" role="alert">
                    <%= $message_rename %>
