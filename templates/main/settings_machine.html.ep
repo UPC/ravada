@@ -27,10 +27,10 @@
              <div>
             <div class="card-body">
 				<div class="row">
-					<div class="col-3">
+					<div class="col-2">
 						%= include 'main/settings_machine_tabs_head'
 					</div>
-					<div class="col-9">
+					<div class="col-10">
 						%= include 'main/settings_machine_tabs_body'
 					</div>
 				</div>

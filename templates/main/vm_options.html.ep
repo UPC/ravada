@@ -36,7 +36,7 @@
 %                       $timeout = '' if $timeout eq '0';
                         value="<%= $timeout %>" size="5">
                 </div>
-                <div class="col-lg-6"><%=l 'The machine will shutdown after these minutes' %></div>
+                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
             </div>
 %   }
 %   if ($USER->is_admin){
@@ -52,8 +52,8 @@
 %               }
                     value="1">
                 </div>
-                <div class="col-md-8">
-                    <%=l 'Clones created from this machine will be removed on shutdown.' %>
+                <div class="col-md-8"><small class="text-secondary">
+                    <%=l 'Clones created from this machine will be removed on shutdown.' %></small>
                 </div>
             </div>
 %   }
@@ -69,7 +69,7 @@
 %        }
                     </select>
                 </div>
-                <div class="col-md-5"><%=l 'Change the owner of the machine' %></div>
+                <div class="col-md-5"><small class="text-secondary"><%=l 'Change the owner of the machine' %></small></div>
             </div>
 %   }
             <div class="row">
