@@ -1079,7 +1079,9 @@ sub user_settings {
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
-        Ravada::Request->post_login(uid => $USER->id, locale => $changed_lang);
+        Ravada::Request->post_login(
+                user => $USER->name
+            , locale => $changed_lang);
         _logged_in($c);
     }
     $c->param('tongue' => $USER->language);
