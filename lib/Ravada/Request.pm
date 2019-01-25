@@ -111,14 +111,24 @@ our $TIMEOUT_SHUTDOWN = 120;
 our $CONNECTOR;
 
 our %COMMAND = (
-    long => { limit => 2 } #default
+    long => {
+        limit => 4
+        ,priority => 4
+    } #default
     ,huge => {
         limit => 1
         ,commands => ['download']
+        ,priority => 5
     }
-    ,priority => {
+    ,important=> {
         limit => 20
+        ,priority => 1
         ,commands => ['clone','start','start_clones','create_domain','open_iptables']
+    }
+    ,secondary => {
+        limit => 50
+        ,priority => 2
+        ,commands => ['shutdown','shutdown_now']
     }
 );
 lock_hash %COMMAND;
@@ -178,6 +188,8 @@ sub open {
     $row->{args} = $args;
 
     bless ($row, $class);
+    $row->{priority} = $row->_set_priority();
+
     return $row;
 }
 
@@ -1185,6 +1197,17 @@ sub type($self) {
     return 'long';
 }
 
+sub _set_priority ($self) {
+    my $command = $self;
+    $command = $self->command if ref($self);
+    for my $type ( keys %COMMAND ) {
+        next if  !grep /^$command$/, @{$COMMAND{$type}->{commands}};
+        return $COMMAND{$type}->{priority} if exists $COMMAND{$type}->{priority};
+        return 10;
+    }
+}
+
+
 =head2 working_requests
 
 Returns the number of working requests of the same type
@@ -1207,6 +1230,7 @@ sub count_requests($self) {
 }
 
 sub requests_limit($self, $type = $self->type) {
+    confess "Error: no requests of type $type" if !exists $COMMAND{$type};
     return $COMMAND{$type}->{limit};
 }
 
@@ -1542,6 +1566,10 @@ sub stop($self) {
            .(time - $self->start_time)." seconds\n");
     }
 
+}
+
+sub priority($self) {
+    return $self->{priority};
 }
 
 sub AUTOLOAD {
