@@ -335,12 +335,25 @@ sub _search_already_started($self) {
     my %started;
     while (my ($id) = $sth->fetchrow) {
         my $vm = Ravada::VM->open($id);
-        next if !$vm->is_enabled || !$vm->is_active;
+        next if !$vm->is_enabled;
+
+        eval {
+            if ( !$vm->is_active ) {
+                next;
+            }
+        };
+        my $error = $@;
+        if ($error) {
+            warn $error;
+            $vm->enabled(0);
+            next;
+        }
 
         my $domain;
         eval { $domain = $vm->search_domain($self->name) };
         if ( $@ ) {
             warn $@;
+            $vm->enabled(0);
             next;
         }
         next if !$domain;
@@ -885,7 +898,6 @@ sub open($class, @args) {
 
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
-
 
     if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
         eval {

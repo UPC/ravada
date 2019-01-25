@@ -1492,7 +1492,7 @@ sub create_domain {
     $request->status("creating machine")    if $request;
     if ( $base && $base->volatile_clones
                                     || $user->is_temporary ) {
-        $vm = $vm->balance_vm($base);
+        $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name);
     }
 
@@ -1728,10 +1728,13 @@ sub list_domains {
     for my $row (@$domains_data) {
         my $domain =  Ravada::Domain->open($row->{id});
         next if !$domain;
-            next if defined $active && !$domain->is_removed &&
-                ( $domain->is_active && !$active
-                    || !$domain->is_active && $active );
-
+        my $is_active;
+        $is_active = $domain->is_active;
+            if ( defined $active && !$domain->is_removed &&
+                ( $is_active && !$active
+                    || !$is_active && $active )) {
+                next;
+            }
             next if $user && $domain->id_owner != $user->id;
 
             push @domains,($domain);
@@ -1985,7 +1988,7 @@ sub process_requests {
         push @reqs,($req);
     }
 
-    for my $req (@reqs) {
+    for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
 
         warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
@@ -2048,7 +2051,6 @@ sub _timeout_requests($self) {
 
 sub _kill_requests($self, @requests) {
     for my $req (@requests) {
-        warn "killing request ".$req->id." ".$req->command." pid: ".$req->pid;
         $req->status('stopping');
         my @procs = $self->_process_sons($req->pid);
         if ( @procs) {
@@ -2059,14 +2061,8 @@ sub _kill_requests($self, @requests) {
                 warn "sending $signal to $pid $cmd";
                 kill($signal, $pid);
             }
-        } else {
-            if ($req->pid == $$) {
-                warn "I'm not gonna kill myself $$";
-            } else {
-                kill(15, $req->pid);
-            }
-            $req->status('done');
         }
+        $req->stop();
     }
 }
 
@@ -2243,7 +2239,7 @@ sub _execute {
 
     $request->status('working','');
     if (!$self->{fork_manager}) {
-        my $fm = Parallel::ForkManager->new($request->requests_limit('priority'));
+        my $fm = Parallel::ForkManager->new($request->requests_limit('important'));
         $self->{fork_manager} = $fm;
     }
     $self->{fork_manager}->reap_finished_children;
@@ -2704,6 +2700,7 @@ sub _cmd_shutdown {
         die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
             if $domain && $domain->name ne $domain2->name;
         $domain = $domain2;
+        die "Unknown domain '$name'\n" if !$domain;
     }
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);

@@ -177,8 +177,6 @@ sub remove_disks {
     for my $file ($self->list_disks( device => 'disk')) {
         confess $file if $file =~ /iso$/;
         if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->name."\n"
-                if $0 !~ /.t$/;
             next;
         }
         $self->_vol_remove($file);
@@ -679,7 +677,8 @@ sub start {
     $self->status('starting');
     eval { $self->domain->create() };
     my $error = $@;
-    if ( $error && $error !~ /already running/i ) {
+    return if !$error;
+    if ( $error !~ /already running/i ) {
         if ( $self->domain->has_managed_save_image ) {
             $request->status("removing saved image") if $request;
             $self->domain->managed_save_remove();
@@ -687,6 +686,10 @@ sub start {
         } else {
             die $error;
         }
+    } elsif ($error =~ /libvirt error code: 38,/) {
+        warn "Disabling node ".$self->_vm->name();
+        $self->_vm->enabled(0);
+        die $error;
     }
 }
 
@@ -735,7 +738,9 @@ sub shutdown {
 
 sub _do_shutdown {
     my $self = shift;
-    $self->domain->shutdown();
+    return if !$self->domain->is_active;
+    eval { $self->domain->shutdown() };
+    die $@ if $@ && $@ !~ /libvirt error code: 55,/;
 
 }
 
