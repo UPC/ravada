@@ -27,6 +27,7 @@ sub test_create_domain_xml {
 
     my $device_disk = $vm->create_volume(
         name => $name
+        ,size => 1024 * 1024
         ,xml => "etc/xml/dsl-volume.xml");
     ok($device_disk,"Expecting a device disk") or return;
     ok(-e $device_disk);

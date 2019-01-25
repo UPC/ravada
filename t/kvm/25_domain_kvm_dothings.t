@@ -55,6 +55,7 @@ test_remove_domain($name, user_admin());
 
 my $domain = $VMM->create_domain(
           name => $name
+        , disk => 1024 * 1024
       , id_iso => search_id_iso('alpine')
       , active => 0
     , id_owner => $USER->id

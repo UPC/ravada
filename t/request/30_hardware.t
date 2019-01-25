@@ -153,6 +153,7 @@ for my $vm_name ( qw(Void KVM)) {
 	my $domain_b = $vm->create_domain(
         name => $name
         ,active => 0
+        ,disk => 1024 * 1024
         ,create_args($vm_name)
     );
     my %controllers = $domain_b->list_controllers;
