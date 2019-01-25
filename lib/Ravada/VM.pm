@@ -40,6 +40,7 @@ our $MIN_MEMORY_MB = 128 * 1024;
 
 our $SSH_TIMEOUT = 20 * 1000;
 
+our %VM; # cache Virtual Manager Connection
 our %SSH;
 
 our $ARP = `which arp`;
@@ -167,6 +168,8 @@ sub open {
     }
     my $class=ref($proto) || $proto;
 
+    return $VM{$args{id}} if $VM{$args{id}};
+
     my $self = {};
     bless($self, $class);
     my $row = $self->_do_select_vm_db( id => $args{id});
@@ -181,7 +184,9 @@ sub open {
     $args{host} = $row->{hostname};
     $args{security} = decode_json($row->{security}) if $row->{security};
 
-    return $self->new(%args);
+    my $vm = $self->new(%args);
+    $VM{$args{id}} = $vm;
+    return $vm;
 
 }
 
@@ -616,9 +621,11 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    if (my @requests = grep { $_->command ne 'clone' } $base->list_requests) {
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine);
+    if (my @requests = grep { !$ignore_requests{$_->command} } $base->list_requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
+                            .Dumper([$base->list_requests])
             unless scalar @requests == 1 && $request
                 && $requests[0]->id eq $request->id;
     }
@@ -1183,24 +1190,48 @@ sub _random_list(@list) {
 }
 
 sub balance_vm($self, $base=undef) {
+
+    my $min_memory = $Ravada::Domain::MIN_FREE_MEMORY;
+    $min_memory = $base->get_info->{memory} if $base;
+
     my %vm_list;
+    my @status;
     for my $vm (_random_list($self->list_nodes)) {
         next if !$vm->enabled();
-        next if !$vm->is_active();
+        my $active = 0;
+        eval { $active = $vm->is_active() };
+        my $error = $@;
+        if ($error) {
+            warn "disabling ".$vm->name." $error";
+            $vm->enabled(0);
+        }
 
-        my $free_memory = $vm->free_memory;
-        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+        next if !$vm->enabled();
+        next if !$active;
+        next if $base && !$base->base_in_vm($vm->id);
 
-        my $active = $vm->count_domains(status => 'active')
+        my $free_memory;
+        eval { $free_memory = $vm->free_memory };
+        if ($@) {
+            push @status,($vm->name." disabled ".$@);
+            warn $@;
+            $vm->enabled(0);
+            next;
+        }
+
+        if ( $free_memory < $min_memory ) {
+            push @status, ($vm->name." low free memory : $free_memory");
+        }
+
+        my $n_active = $vm->count_domains(status => 'active')
                         + $vm->count_domains(status => 'starting');
 
-        my $key = $active.".".$free_memory;
+        my $key = $n_active.".".$free_memory;
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
     my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
     for my $vm (@sorted_vm) {
-        next if $base && !$base->base_in_vm($vm->id);
         return $vm;
     }
     return;
