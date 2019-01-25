@@ -74,7 +74,7 @@
     </div>
 </div><!-- page wrapper -->
 </div><!-- wrapper -->
-%=      include 'bootstrap/footer'
+%=      include $footer
 %=      include 'bootstrap/scripts'
 </body>
 </html>
