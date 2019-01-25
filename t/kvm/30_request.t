@@ -128,6 +128,7 @@ sub test_req_create_domain_iso {
             name => $name
          ,id_iso => search_id_iso('alpine')
        ,id_owner => $USER->id
+          , disk => 1024 * 1024
              ,vm => $BACKEND
     );
     ok($req);
@@ -159,6 +160,7 @@ sub test_force_kvm {
         ,id_iso => search_id_iso('alpine')
       ,id_owner => $USER->id
         ,vm => 'kvm'
+        ,disk => 1024 * 1024
     );
     ok($req);
     ok($req->status);

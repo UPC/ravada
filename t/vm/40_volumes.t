@@ -37,6 +37,7 @@ sub test_create_domain {
     my @arg_create = (arg_create_dom($vm_name)
         ,id_owner => $USER->id
         ,name => $name
+	,disk => 1024 * 1024
     );
     push @arg_create, (swap => 128*1024*1024)   if $create_swap;
 
@@ -385,7 +386,7 @@ sub test_search($vm_name) {
     $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
 
     my $file_old = $vm->search_volume_path("file.iso");
-    unlink $file_old if -e $file_old;
+    unlink $file_old if $file_old && -e $file_old;
 
     $vm->default_storage_pool_name('default');
 

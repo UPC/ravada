@@ -56,7 +56,7 @@ sub test_new_domain {
 
     diag("[$vm_name] Creating domain $name");
     $vm->connect();
-    my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0);
+    my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0, disk => 1024 * 1024);
 
     ok($domain,"Domain not created");
 

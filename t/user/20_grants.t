@@ -537,6 +537,7 @@ sub test_create_domain {
             id_iso => search_id_iso('alpine')
             ,id_owner => $user->id
             ,name => $domain_name
+            ,disk => 1024 * 1024
    );
 
 
@@ -650,7 +651,8 @@ sub test_create_domain2 {
 
     my $domain_name = new_domain_name();
     my $domain;
-    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id )};
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+            ,disk => 1024 * 1024 )};
     like($@,qr'not allowed');
 
     my $domain2 = $vm->search_domain($domain_name);
@@ -662,6 +664,7 @@ sub test_create_domain2 {
 
     $domain_name = new_domain_name();
     eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+        , disk => 1024 * 1024
         , id_iso => search_id_iso('alpine'))};
     is($@,'');
 

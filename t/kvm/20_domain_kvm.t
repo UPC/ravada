@@ -77,6 +77,7 @@ sub test_new_domain {
         , active => $active
         , id_owner => $USER->id
         , vm => $BACKEND
+        , disk => 1024 * 1024
     );
 
     ok($domain,"Domain not created");
@@ -115,6 +116,7 @@ sub test_new_domain_iso {
       $domain = $RAVADA->create_domain(name => $name, id_iso => search_id_iso('alpine')
           , active => $active
         , id_owner => $USER->id , iso_file => $iso->{device}
+        , disk => 1024 * 1024
         , vm => $BACKEND
         );
       };

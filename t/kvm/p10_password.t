@@ -26,6 +26,7 @@ sub test_domain_no_password {
     ok(!$net->requires_password);
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -72,6 +73,7 @@ sub test_domain_password2 {
     ok(!$net->requires_password) or return;
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -120,6 +122,7 @@ sub test_domain_password1 {
     ok($net2->requires_password,"Expecting net requires password ")
         or return;
     my $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '10.0.0.1');
@@ -151,6 +154,7 @@ sub test_any_network_password {
     add_network_any(1);
 
     my $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -181,6 +185,7 @@ sub test_any_network_password_hybernate{
     add_network_any(1);
 
     my $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -203,6 +208,7 @@ sub test_any_network_password_hybernate{
 
     # create another domain to start from far away
     $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     eval {

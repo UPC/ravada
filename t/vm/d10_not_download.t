@@ -39,6 +39,7 @@ sub test_dont_download {
         $vm->create_domain(
                  name => $name
                   ,vm => $vm
+                ,disk => 1024 * 1024
               ,id_iso => search_id_iso('test')
             ,id_owner => user_admin->id
         );
