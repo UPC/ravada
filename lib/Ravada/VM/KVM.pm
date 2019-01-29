@@ -530,25 +530,34 @@ sub search_domain($self, $name, $force=undef) {
     };
     if ($@ && $@ =~ /libvirt error code: 38,/) {
         warn $@;
-        warn "DISABLING NODE ".$self->name;
-        $self->enabled(0);
+        if (!$self->is_local) {
+            warn "DISABLING NODE ".$self->name;
+            $self->enabled(0);
+        }
         return;
     }
 
     my $dom;
     eval { $dom = $self->vm->get_domain_by_name($name); };
-    if ($@ && $@ =~ /libvirt error code: 38,/) {
-        warn $@;
-        warn "DISABLING NODE ".$self->name;
-        $self->enabled(0);
-        return;
+    my $error = $@;
+    return if $error =~  /error code: 42,/ && !$force;
+
+    if ($error && $error =~ /libvirt error code: 38,/ ) {
+        eval {
+            $self->disconnect;
+            $self->connect;
+        };
+        confess "Error connecting to ".$self->name." $@" if $@;
+        eval { $dom = $self->vm->get_domain_by_name($name); };
+        confess $@ if $@ && $@ !~  /error code: 42,/;
+    } elsif ($error && $error !~ /error code: 42,/) {
+        confess $error;
     }
-    confess $@ if $@ && $@ !~ /error code: 42,/;
+
     if (!$dom) {
         return if !$force;
         return if !$self->_domain_in_db($name);
     }
-    return if !$force && !$self->_domain_in_db($name);
 
     my $domain;
 
@@ -1529,19 +1538,26 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
             push @uuids,($dom->get_uuid_string);
         }
     }
-    my ($pre,$first,$last) = $uuid =~ m{(.{6})(.*)([0-9a-f]{12})};
+    my ($pre,$first,$last) = $uuid =~ m{^([0-9a0-f]{6})(.*)([0-9a-f]{6})$};
+    confess "I can't split model uuid '$uuid'" if !$first;
 
     for my $domain ($self->vm->list_all_domains) {
         push @uuids,($domain->get_uuid_string);
     }
 
     for (1..100) {
-        my $new_pre = substr(int(rand(0x1000000)),0,6);
-        my $new_last = substr(int(rand(0x1000000)).(int(rand(0x1000000))),0,12);
-        my $new_uuid = sprintf("%s%s%s",$new_pre,$first,$new_last);
+        my $new_pre = substr(sprintf("%x",int(rand(0x1000000))),0,6);
+        $new_pre = sprintf("%x",int(rand(0x10))).$new_pre while length($new_pre)<6;
+
+        my $new_last = substr(sprintf("%x",int(rand(0x1000000))),0,6);
+        $new_last = sprintf("%x",int(rand(0x10))).$new_last while length($new_last)<6;
+
+        my $new_uuid = "$new_pre$first$new_last";
         die "Wrong length ".length($new_uuid)." should be ".length($uuid)
             ."\n"
             .$new_uuid
+            ."\n"
+            .$uuid
         if length($new_uuid) != length($uuid);
 
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
