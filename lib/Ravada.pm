@@ -11,7 +11,6 @@ use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash);
 use Moose;
-use Parallel::ForkManager;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
@@ -1961,6 +1960,7 @@ sub process_requests {
             ." or priority"
         if $request_type !~ /^(long|huge|priority|all)$/;
 
+    $self->_wait_pids();
     $self->_kill_stale_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
@@ -2162,7 +2162,8 @@ sub _domain_working {
         }
     }
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
-        ." WHERE id <> ? AND id_domain=? AND (status <> 'requested' AND status <> 'done')");
+        ." WHERE id <> ? AND id_domain=? "
+        ." AND (status <> 'requested' AND status <> 'done' AND command <> 'set_base_vm')");
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -2232,30 +2233,22 @@ sub _execute {
         return;
     }
 
-    if ( $self->_wait_requests($request) ) {
-         $request->status("requested","Server loaded, queuing request");
-         return;
-     }
+    $self->_wait_pids;
+    return if !$self->_can_fork($request);
 
-    $request->status('working','');
-    if (!$self->{fork_manager}) {
-        my $fm = Parallel::ForkManager->new($request->requests_limit('important'));
-        $self->{fork_manager} = $fm;
-    }
-    $self->{fork_manager}->reap_finished_children;
-    my $pid = $self->{fork_manager}->start;
+    my $pid = fork();
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
+        $request->status('working','');
         my $t0 = [gettimeofday];
         $self->_do_execute_command($sub, $request);
-        $self->{fork_manager}->finish; # Terminates the child process
         my $elapsed = tv_interval($t0,[gettimeofday]);
         $request->run_time($elapsed) if !$request->run_time();
         exit;
     }
+    $self->_add_pid($pid, $request);
     $request->pid($pid);
-    $self->{fork_manager}->reap_finished_children;
 }
 
 sub _do_execute_command {
@@ -2363,44 +2356,62 @@ sub _cmd_create{
 
 }
 
-sub _wait_requests {
+sub _can_fork {
     my $self = shift;
     my $req = shift or confess "Missing request";
 
     # don't wait for priority requests
     return if $req->type eq 'priority';
 
-    my $try = 0;
-    for ( 1 .. $SECONDS_WAIT_CHILDREN ) {
+    my $type = $req->type;
 
-        my $msg;
+    my $n_pids = scalar(keys %{$self->{pids}->{$type}});
+    return 1 if $n_pids <= $req->requests_limit();
 
-        my $n_pids = $req->count_requests();
-
-        $msg = $req->command
+    my $msg = $req->command
                 ." waiting for processes to finish $n_pids"
-                ." of ".$req->requests_limit;
-        return if $n_pids < $req->requests_limit();
-        return 1 if $n_pids > $req->requests_limit + 2;
-        sleep 1;
+                ." limit ".$req->requests_limit
+                ."\n"
+                .Dumper($self->{pids}->{$type});
 
-        next if $try++;
+    warn $msg if $DEBUG;
 
-        $req->error($msg);
-        $req->status('waiting') if $req->status() !~ 'waiting';
-    }
-    return 1;
+    $req->error($msg);
+    $req->status('waiting') if $req->status() !~ 'waiting';
+    return 0;
 }
 
-sub _set_req_done {
+sub _wait_pids {
+    my $self = shift;
+
+    for my $type ( keys %{$self->{pids}} ) {
+        for my $pid ( keys %{$self->{pids}->{$type}}) {
+            my $kid = waitpid($pid , WNOHANG);
+            last if $kid <= 0 ;
+            my $request = Ravada::Request->open($self->{pids}->{$type}->{$kid});
+            if ($request) {
+                $request->status('done') if $request->status =~ /working/i;
+            };
+            delete $self->{pids}->{$type}->{$kid};
+        }
+    }
+}
+
+sub _add_pid($self, $pid, $request) {
+
+    my $type = $request->type;
+    $self->{pids}->{$type}->{$pid} = $request->id;
+
+}
+
+
+sub _delete_pid {
     my $self = shift;
     my $pid = shift;
 
-    my $id_request = $self->{pids}->{$pid};
-    return if !$id_request;
-
-    my $req = Ravada::Request->open($id_request);
-    $req->status('done')    if $req->status =~ /working/i;
+    for my $type ( keys %{$self->{pids}} ) {
+        delete $self->{pids}->{$type}->{$pid}
+    }
 }
 
 sub _cmd_remove {
@@ -2700,7 +2711,7 @@ sub _cmd_shutdown {
         die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
             if $domain && $domain->name ne $domain2->name;
         $domain = $domain2;
-        die "Unknown domain '$name'\n" if !$domain;
+        die "Unknown domain '$id_domain'\n" if !$domain
     }
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
@@ -3037,8 +3048,10 @@ sub _refresh_volatile_domains($self) {
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
-            $domain->_post_shutdown(user => $USER_DAEMON);
-            $domain->remove($USER_DAEMON);
+            if ($domain) {
+                $domain->_post_shutdown(user => $USER_DAEMON);
+                $domain->remove($USER_DAEMON);
+            }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
@@ -3087,17 +3100,6 @@ sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_requests('cleanup', $request);
     $self->_wait_pids();
-}
-
-sub _wait_pids($self) {
-    $self->{fork_manager}->reap_finished_children   if $self->{fork_manager};
-    my $procs = `ps -eo "pid cmd"`;
-    for my $line (split /\n/, $procs ) {
-        my ($pid, $cmd) = $line =~ m{\s*(\d+)\s+.*(rvd_back).*defunct};
-        next if !$pid;
-        next if $cmd !~ /rvd_back/;
-        my $kid = waitpid($pid , WNOHANG);
-    }
 }
 
 sub _req_method {
@@ -3318,9 +3320,11 @@ sub _clean_volatile_machines($self, %args) {
             id => $domain->{id}
             ,_force => 1
         );
-        next if $domain_real->domain && $domain_real->is_active;
-        $domain_real->_post_shutdown();
-        $domain_real->remove($USER_DAEMON);
+        if ($domain_real) {
+            next if $domain_real->domain && $domain_real->is_active;
+            $domain_real->_post_shutdown();
+            $domain_real->remove($USER_DAEMON);
+        }
 
         $sth_remove->execute($domain->{id});
     }
@@ -3347,7 +3351,7 @@ sub _post_login_locale($self, $request) {
 }
 
 sub DESTROY($self) {
-    $self->{fork_manager}->reap_finished_children   if $self->{fork_manager}
+    $self->_wait_pids();
 }
 
 =head2 version
