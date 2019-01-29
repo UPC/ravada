@@ -1560,11 +1560,8 @@ sub stop($self) {
         ." , pid: ".$self->pid
         .", stale for ".(time - $self->start_time)." seconds\n";
     my $ok = kill (15,$self->pid);
-    warn "exit = $ok\n";
-    if (!$ok) {
-       $self->status('done',"Killed start process after "
+    $self->status('done',"Killed start process after "
            .(time - $self->start_time)." seconds\n");
-    }
 
 }
 
