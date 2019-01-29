@@ -168,13 +168,13 @@ sub open {
     }
     my $class=ref($proto) || $proto;
 
-    return $VM{$args{id}} if $VM{$args{id}};
-
     my $self = {};
     bless($self, $class);
     my $row = $self->_do_select_vm_db( id => $args{id});
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
+
+    return $VM{$args{id}} if $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name};
 
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
@@ -621,7 +621,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm);
     if (my @requests = grep { !$ignore_requests{$_->command} } $base->list_requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
@@ -1024,6 +1024,8 @@ Remove the virtual machine manager.
 sub remove($self) {
     #TODO stop the active domains
     #
+    delete $VM{$self->id};
+
     $self->disconnect();
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($self->id);
