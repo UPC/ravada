@@ -337,23 +337,23 @@ sub _search_already_started($self) {
         my $vm = Ravada::VM->open($id);
         next if !$vm->is_enabled;
 
+        my $vm_active;
         eval {
-            if ( !$vm->is_active ) {
-                next;
-            }
+            $vm_active = $vm->is_active;
         };
         my $error = $@;
         if ($error) {
             warn $error;
-            $vm->enabled(0);
+            $vm->enabled(0) if !$vm->is_local;
             next;
         }
+        next if !$vm_active;
 
         my $domain;
         eval { $domain = $vm->search_domain($self->name) };
         if ( $@ ) {
             warn $@;
-            $vm->enabled(0);
+            $vm->enabled(0) if !$vm->is_local;
             next;
         }
         next if !$domain;
@@ -435,6 +435,8 @@ sub _allow_manage {
 sub _allow_remove($self, $user) {
 
     confess "ERROR: Undefined user" if !defined $user;
+
+    return if !$self->is_known(); # already removed
 
     die "ERROR: remove not allowed for user ".$user->name
         unless $user->can_remove_machine($self);
@@ -1302,7 +1304,7 @@ sub _after_remove_domain {
     $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_known && $self->is_base) {
-        $self->_do_remove_base(@_);
+        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
     return if !$self->{_data};
@@ -1580,13 +1582,14 @@ sub _convert_png {
 Makes the domain a regular, non-base virtual machine and removes the base files.
 =cut
 
-sub remove_base {
-    my $self = shift;
-    return $self->_do_remove_base();
+sub remove_base($self, $user) {
+    return $self->_do_remove_base($user);
 }
 
-sub _do_remove_base {
-    my $self = shift;
+sub _do_remove_base($self, $user) {
+    for my $vm ( $self->list_vms ) {
+        $self->remove_base_vm(vm => $vm, user => $user) if !$vm->is_local;
+    }
     $self->is_base(0);
     for my $file ($self->list_files_base) {
         next if ! -e $file;
@@ -2804,7 +2807,7 @@ sub rsync($self, @args) {
         if ($self->is_base) {
             push @files_base,($self->list_files_base);
         }
-        $files = [ $self->list_volumes(), @files_base ];
+        $files = [ $self->list_volumes( device => 'disk'), @files_base ];
     }
 
     $request->status("working") if $request;
@@ -2818,7 +2821,7 @@ sub rsync($self, @args) {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
     }
-    my $rsync = File::Rsync->new(update => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1);
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
@@ -2966,6 +2969,14 @@ sub set_base_vm($self, %args) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
         $self->migrate($vm, $request);
+    } else {
+        for my $file ($self->list_files_base()) {
+            confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
+            my ($out, $err) = $vm->run_command("test -e $file && rm $file");
+            confess $err if $err;
+        }
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
     }
     return $self->_set_base_vm_db($vm->id, $value);
 }
@@ -2985,6 +2996,7 @@ Removes a base in a Virtual Machine Manager node.
 sub remove_base_vm($self, %args) {
     my $user = delete $args{user};
     my $vm = delete $args{vm};
+    $vm = delete $args{node} if !$vm;
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
