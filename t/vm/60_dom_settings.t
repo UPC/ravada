@@ -198,9 +198,10 @@ sub test_drivers_clone {
         is($domain->get_driver($type), $option->{value}) or next;
         _domain_shutdown($domain);
         is($domain->get_driver($type), $option->{value}) or next;
-        $domain->remove_base($USER);
+        $domain->remove_base($USER) if $domain->is_base;
         $domain->prepare_base( user_admin );
         $domain->is_public(1);
+        is($domain->is_base,1);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         isa_ok($clone,"Ravada::Domain::$vm_name");
         is($domain->get_driver($type), $option->{value}) or next;
