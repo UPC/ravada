@@ -352,12 +352,50 @@ sub _test_clones($base, $vm) {
     is(scalar @{$info->{clones}->{$vm->id}},1 );
 }
 
+sub test_remove_base($vm, $node) {
+    my $base = create_domain($vm);
+    my @volumes0 = $base->list_volumes( device => 'disk');
+    ok(!grep(/iso$/,@volumes0),"Expecting no iso files on device list ".Dumper(\@volumes0))
+        or exit;
+    $base->prepare_base(user_admin);
+
+    my @volumes = $base->list_files_base();
+    $base->set_base_vm(node => $node, user => user_admin);
+    for my $file ( @volumes ) {
+        my ($out, $err) = $node->run_command("ls $file");
+        ok($out, "Expecting file '$file' in ".$node->name) or exit;
+    }
+
+    $base->remove_base_vm(node => $node, user => user_admin);
+    for my $file ( @volumes ) {
+        my ($out, $err) = $node->run_command("ls $file");
+        ok(!$out, "Expecting no file '$file' in ".$node->name) or exit;
+    }
+    isnt($base->_data('id_vm'), $node->id);
+
+    for my $file ( @volumes0 ) {
+        my ($out, $err) = $node->run_command("ls $file");
+        ok($out, "Expecting file '$file' in ".$node->name) or exit;
+    }
+    $base->set_base_vm(node => $node, user => user_admin);
+    $base->remove_base(user_admin);
+
+    for my $file ( @volumes ) {
+        ok(!-e $file, "Expecting no file '$file' in local") or exit;
+        my ($out, $err) = $node->run_command("ls $file");
+        ok(!$out, "Expecting no file '$file' in ".$node->name) or exit;
+    }
+
+    $base->remove(user_admin);
+
+}
+
 ##################################################################################
 clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ( 'KVM', 'Void') {
+for my $vm_name ( 'Void', 'KVM') {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -389,6 +427,8 @@ for my $vm_name ( 'KVM', 'Void') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
+        test_remove_base($vm, $node);
         test_clone_remote($vm, $node);
         test_volatile_req($vm, $node);
         test_volatile_tmp_owner($vm, $node);
