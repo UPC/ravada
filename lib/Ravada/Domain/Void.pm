@@ -230,7 +230,7 @@ sub start {
 sub prepare_base {
     my $self = shift;
 
-    for my $volume ($self->list_volumes_info) {;
+    for my $volume ($self->list_volumes_info(device => 'disk')) {;
         next if $volume->{device} ne 'disk';
         my $file_qcow = $volume->{file};
         my $file_base = $file_qcow.".qcow";
@@ -300,7 +300,7 @@ sub add_volume {
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/".$vol_name.".$suffix"
+        $args{file} = $self->_config_dir."/$vol_name$suffix"
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
@@ -599,11 +599,16 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
-    $self->rsync(
-           node => $node
-        , files => [$self->_config_file ]
-       ,request => $request
-    );
+    my $config_remote;
+    $config_remote = $self->_load();
+    my $device = $config_remote->{hardware}->{device}
+        or confess "Error: no device hardware in ".Dumper($config_remote);
+    my @device_remote;
+    for my $item (@$device) {
+        push @device_remote,($item) if $item->{device} ne 'cdrom';
+    }
+    $config_remote->{hardware}->{device} = \@device_remote;
+    $node->write_file($self->_config_file, Dump($config_remote));
     $self->rsync($node);
 
 }
