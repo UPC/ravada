@@ -104,14 +104,19 @@ sub create_domain {
         $domain->start(user => $owner)    if $owner->is_temporary;
     } else {
         my ($file_img) = $domain->disk_device();
-        $domain->add_volume(name => 'void-diska-'.Ravada::Utils::random_name(4)
+        my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".img";
+        $file_img =~ m{.*/(.*)} if $file_img;
+        $domain->add_volume(name => $vda_name
                         , capacity => ( $args{disk} or 1024)
                         , file => $file_img
                         , type => 'file'
                         , target => 'vda'
         );
-        $domain->add_volume(name => 'void-cdrom-'.Ravada::Utils::random_name(4)
-                        , file => $domain->_config_dir()."/".$args{name}."-cdrom.iso"
+        my $cdrom_file = $domain->_config_dir()."/$args{name}-cdrom-"
+            .Ravada::Utils::random_name(4).".iso";
+        my ($cdrom_name) = $cdrom_file =~ m{.*/(.*)};
+        $domain->add_volume(name => $cdrom_name
+                        , file => $cdrom_file
                         , device => 'cdrom'
                         , target => 'hdc'
         );
