@@ -2,8 +2,7 @@ Set access restrictions to Virtual Machines
 ===========================================
 
 When a base is set as public , all the users have access to create clones by default.
-If you want to set access restrictions to base you can filter by LDAP attributes from
-Ravada version 0.3.1.
+If you want to set access restrictions to base you can filter by LDAP attributes.
 
 Access restrictions
 -------------------

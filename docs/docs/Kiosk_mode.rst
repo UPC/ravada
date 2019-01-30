@@ -4,10 +4,6 @@ Kiosk Mode
 Kiosk ( or anonymous ) allows any user, not logged in, to create a volatile
 virtual machine. Once this machine is shut down, it is destroyed automatically.
 
-This feature is only available on Ravada 0.3. You can get it from here:
-
-http://infoteleco.upc.edu/img/debian/
-
 Setting
 -------
 
