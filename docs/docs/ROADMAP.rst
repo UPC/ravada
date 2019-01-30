@@ -13,18 +13,13 @@ v0.2
 ----
 
 - Polish the frontend, basic features with KVM.
-- x2go support
-- TCP ports exposure
 
 
 v0.3
 ----
 
 - Implement specific permissions for the users
-- Manage LXC containers
-- Add more features for virtual machines like snapshots
 - Improve machine creation options: ease the addition of ISOs , etc.
-- Virtual Applications on top of X2GO
 
 
 v0.4
@@ -32,4 +27,17 @@ v0.4
 
 - Automatic management: hibernate idle domains, clean downs, ...
 - Manage remote nodes and farming
+
+v0.5
+----
+
+- Add more features for virtual machines like snapshots
+- Manage LXC containers
+- TCP ports exposure
+- x2go support
+
+v0.6
+----
+
 - Virtual Applications on top of Windows RDP
+- Virtual Applications on top of X2GO
