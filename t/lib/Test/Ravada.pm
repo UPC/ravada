@@ -166,7 +166,7 @@ sub create_domain {
                     , disk => 256 * 1024 * 1024
            );
     };
-    is('',$@,'');
+    is('',''.$@);
 
     return $domain;
 

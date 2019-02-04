@@ -227,7 +227,8 @@ sub test_volatile($vm, $node) {
     my @clones;
     for ( 1 .. 4 ) {
         my $clone = $base->clone(user => user_admin, name => new_domain_name);
-        $clone->start(user_admin) if !$clone->is_active;
+        is($clone->_vm->is_active,1);
+        is($clone->is_active(1),1,"Expecting clone ".$clone->name." active on ".$clone->_vm->name);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
@@ -259,7 +260,8 @@ sub test_volatile_req($vm, $node) {
         is($req->error,'');
 
         my $clone = rvd_back->search_domain($clone_name);
-        $clone->start(user_admin) if !$clone->is_active;
+        is($clone->is_active(1),1,"[".$vm->type."] expecting clone ".$clone->name
+            ." active on node ".$clone->_vm->name);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
@@ -274,6 +276,7 @@ sub test_volatile_req($vm, $node) {
 sub test_volatile_tmp_owner($vm, $node) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
+    $base->is_public(1);
     $base->set_base_vm(user => user_admin, node => $node);
 
     my $user = Ravada::Auth::SQL::add_user(name => 'mcnulty', is_temporary => 1);
@@ -284,14 +287,15 @@ sub test_volatile_tmp_owner($vm, $node) {
         my $req = Ravada::Request->create_domain(
            id_base => $base->id
              ,name => $clone_name
-            ,id_owner => user_admin->id
+            ,id_owner => $user->id
         );
         rvd_back->_process_all_requests_dont_fork();
         is($req->status, 'done');
         is($req->error,'');
 
         my $clone = rvd_back->search_domain($clone_name);
-        $clone->start(user_admin) if !$clone->is_active;
+        is($clone->is_active,1,"[".$node->type."] expecting ".$clone->name." active "
+                                    ." in ".$clone->_vm->name) or exit;
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
@@ -348,12 +352,13 @@ sub _test_old_base($base, $vm) {
 sub _test_clones($base, $vm) {
     my $info = $base->info(user_admin);
     ok($info->{clones}) or return;
-    ok($info->{clones}->{$vm->id}) or return;
+    ok($info->{clones}->{$vm->id}) or confess;
     is(scalar @{$info->{clones}->{$vm->id}},1 );
 }
 
-sub test_remove_base($vm, $node) {
+sub test_remove_base($vm, $node, $volatile) {
     my $base = create_domain($vm);
+    $base->volatile_clones($volatile);
     my @volumes0 = $base->list_volumes( device => 'disk');
     ok(!grep(/iso$/,@volumes0),"Expecting no iso files on device list ".Dumper(\@volumes0))
         or exit;
@@ -428,11 +433,15 @@ for my $vm_name ( 'Void', 'KVM') {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
-        test_remove_base($vm, $node);
+        test_volatile($vm, $node);
+
+        for my $volatile (1,0) {
+        test_remove_base($vm, $node, $volatile);
+        }
+
         test_clone_remote($vm, $node);
         test_volatile_req($vm, $node);
         test_volatile_tmp_owner($vm, $node);
-        test_volatile($vm, $node);
 
         test_iptables_close($vm, $node);
 
