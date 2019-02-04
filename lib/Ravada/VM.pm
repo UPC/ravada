@@ -363,6 +363,7 @@ sub _around_create_domain {
 
     my $base;
     my $remote_ip = delete $args{remote_ip};
+    my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
      my $id_iso = delete $args{id_iso};
      my $active = delete $args{active};
@@ -383,6 +384,7 @@ sub _around_create_domain {
     if ($id_base) {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
+        $volatile = 1 if $base->volatile_clones;
     }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
@@ -395,7 +397,7 @@ sub _around_create_domain {
 
     $self->_pre_create_domain(@_);
 
-    my $domain = $self->$orig(@_);
+    my $domain = $self->$orig(@_, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
@@ -1198,12 +1200,20 @@ sub balance_vm($self, $base=undef) {
 
     my %vm_list;
     my @status;
-    for my $vm (_random_list($self->list_nodes)) {
+
+    my @vms;
+    if ($base) {
+        @vms = $base->list_vms();
+    } else {
+        @vms = $self->list_nodes();
+    }
+    return $self if !@vms;
+    for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
         my $active = 0;
         eval { $active = $vm->is_active() };
         my $error = $@;
-        if ($error) {
+        if ($error && !$vm->is_local) {
             warn "disabling ".$vm->name." $error";
             $vm->enabled(0);
         }
@@ -1215,9 +1225,8 @@ sub balance_vm($self, $base=undef) {
         my $free_memory;
         eval { $free_memory = $vm->free_memory };
         if ($@) {
-            push @status,($vm->name." disabled ".$@);
             warn $@;
-            $vm->enabled(0);
+            $vm->enabled(0) if !$vm->is_local();
             next;
         }
 
@@ -1236,7 +1245,7 @@ sub balance_vm($self, $base=undef) {
     for my $vm (@sorted_vm) {
         return $vm;
     }
-    return;
+    return $self;
 }
 
 sub count_domains($self, %args) {

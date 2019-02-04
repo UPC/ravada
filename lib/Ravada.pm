@@ -1489,10 +1489,10 @@ sub create_domain {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
     $request->status("creating machine")    if $request;
-    if ( $base && $base->volatile_clones
-                                    || $user->is_temporary ) {
+    if ( $base && $base->is_base ) {
+        $request->status("balancing")                       if $request;
         $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
-        $request->status("creating machine on ".$vm->name);
+        $request->status("creating machine on ".$vm->name)  if $request;
     }
 
     confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
@@ -2369,10 +2369,8 @@ sub _can_fork {
     return 1 if $n_pids <= $req->requests_limit();
 
     my $msg = $req->command
-                ." waiting for processes to finish $n_pids"
-                ." limit ".$req->requests_limit
-                ."\n"
-                .Dumper($self->{pids}->{$type});
+                ." waiting for processes to finish"
+                ." limit ".$req->requests_limit;
 
     warn $msg if $DEBUG;
 
