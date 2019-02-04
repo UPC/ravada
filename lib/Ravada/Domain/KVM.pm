@@ -675,20 +675,29 @@ sub start {
     }
     $self->_set_spice_ip($set_password);
     $self->status('starting');
-    eval { $self->domain->create() };
-    my $error = $@;
-    return if !$error;
-    if ( $error !~ /already running/i ) {
-        if ( $self->domain->has_managed_save_image ) {
-            $request->status("removing saved image") if $request;
-            $self->domain->managed_save_remove();
-            $self->domain->create();
-        } else {
-            die $error;
+
+    my $error;
+    for ( ;; ) {
+        eval { $self->domain->create() };
+        $error = $@;
+        next if $error && $error =~ /libvirt error code: 1, .* pool .* asynchronous/;
+        last;
+    }
+    return if !$error || $error =~ /already running/i;
+    if ($error =~ /libvirt error code: 38,/) {
+        if (!$self->_vm->is_local) {
+            warn "Disabling node ".$self->_vm->name();
+            $self->_vm->enabled(0);
         }
-    } elsif ($error =~ /libvirt error code: 38,/) {
-        warn "Disabling node ".$self->_vm->name();
-        $self->_vm->enabled(0);
+        die $error;
+        sleep 1;
+    } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
+        die "TODO";
+    } elsif ( $self->domain->has_managed_save_image ) {
+        $request->status("removing saved image") if $request;
+        $self->domain->managed_save_remove();
+        $self->domain->create();
+    } else {
         die $error;
     }
 }
@@ -1009,7 +1018,6 @@ sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
             my $this_order = $boot->getAttribute('order');
             next if $this_order < $order;
             $boot->setAttribute( order => $this_order+1);
-            warn "[$count] $this_order -> ".($this_order + 1);
             next;
         }
         if (!$set) {
@@ -1996,9 +2004,18 @@ sub migrate($self, $node, $request=undef) {
         my $xml = $self->domain->get_xml_description();
 
         my $doc = XML::LibXML->load_xml(string => $xml);
-        $self->_check_uuid($doc, $node);
         $self->_check_machine($doc);
-        $dom = $node->vm->define_domain($doc->toString());
+        for ( ;; ) {
+            $self->_check_uuid($doc, $node);
+            eval { $dom = $node->vm->define_domain($doc->toString()) };
+            my $error = $@;
+            last if !$error;
+            die $error if $error !~ /libvirt error code: 9, .*already defined with uuid/;
+            my $msg = "migrating ".$self->name." ".$error;
+            warn $msg;
+            $request->error($msg) if $request;
+            sleep 1;
+        }
         $self->domain($dom);
     }
     $self->_set_spice_ip(1,$node->ip);

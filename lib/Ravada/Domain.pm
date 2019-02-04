@@ -214,7 +214,6 @@ sub BUILD {
 
     my $name;
     $name = $args->{name}               if exists $args->{name};
-    $name = $args->{domain}->get_name   if !$name && $args->{domain};
 
     $self->{_name} = $name  if $name;
 
@@ -3263,7 +3262,7 @@ sub needs_restart($self, $value=undef) {
 sub _post_change_hardware {
     my $self = shift;
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->needs_restart(1) if $self->is_active;
+    $self->needs_restart(1) if $self->is_known && $self->is_active;
 }
 
 =head2 Access restrictions
