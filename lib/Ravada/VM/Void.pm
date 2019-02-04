@@ -74,20 +74,32 @@ sub create_domain {
     my %args = @_;
 
     croak "argument name required"       if !$args{name};
-    croak "argument id_owner required"       if !$args{id_owner};
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
 
+    my $volatile = delete $args{volatile};
+    my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
                                            , _vm => $self
     );
+    my ($out, $err) = $self->run_command("/usr/bin/test",
+         "-e ".$domain->_config_file." && echo 1" );
+    chomp $out;
+    die "Error: Domain $args{name} already exists " if $out;
+    $domain->_set_default_info();
+    $domain->_store( autostart => 0 );
+    $domain->_store( is_active => $active );
+    $domain->set_memory($args{memory}) if $args{memory};
 
-    $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
+    $domain->_insert_db(name => $args{name} , id_owner => $user->id
         , id_vm => $self->id
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {
-        my $owner = Ravada::Auth::SQL->search_by_id($args{id_owner});
+        my $owner = $user;
         my $domain_base = $self->search_domain_by_id($args{id_base});
 
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
@@ -101,7 +113,9 @@ sub create_domain {
                                 , file => "$dir/$new_name"
                                  ,type => 'file');
         }
-        $domain->start(user => $owner)    if $owner->is_temporary;
+        my $drivers = {};
+        $drivers = $domain_base->_value('drivers');
+        $domain->_store( drivers => $drivers );
     } else {
         my ($file_img) = $domain->disk_device();
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".img";
@@ -123,6 +137,8 @@ sub create_domain {
         $domain->_set_default_drivers();
         $domain->_set_default_info();
         $domain->_store( is_active => 0 );
+
+        $domain->_store( is_active => 1 ) if $volatile || $user->is_temporary;
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
