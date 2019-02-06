@@ -1586,8 +1586,10 @@ sub remove_base($self, $user) {
 }
 
 sub _do_remove_base($self, $user) {
-    for my $vm ( $self->list_vms ) {
-        $self->remove_base_vm(vm => $vm, user => $user) if !$vm->is_local;
+    if ($self->is_base) {
+        for my $vm ( $self->list_vms ) {
+            $self->remove_base_vm(vm => $vm, user => $user) if !$vm->is_local;
+        }
     }
     $self->is_base(0);
     for my $file ($self->list_files_base) {
