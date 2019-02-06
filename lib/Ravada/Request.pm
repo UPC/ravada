@@ -84,7 +84,7 @@ our %VALID_ARG = (
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
     # Virtual Managers or Nodes
-    ,refresh_vms => { _force => 2 }
+    ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
 
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }

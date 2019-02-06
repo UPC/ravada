@@ -2981,6 +2981,10 @@ sub _refresh_down_nodes($self, $request = undef ) {
 }
 
 sub _refresh_disabled_nodes($self, $request = undef ) {
+    my @timeout = ();
+    @timeout = ( timeout => $request->args('timeout_shutdown') )
+        if $request->defined_arg('timeout_shutdown');
+
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, d.name, vms.name FROM domains d, vms "
         ." WHERE d.id_vm = vms.id "
@@ -2989,7 +2993,10 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
     );
     $sth->execute();
     while ( my ($id_domain, $domain_name, $vm_name) = $sth->fetchrow ) {
-        Ravada::Request->shutdown_domain( id_domain => $id_domain, uid => Ravada::Utils::user_daemon->id);
+        Ravada::Request->shutdown_domain( id_domain => $id_domain
+            , uid => Ravada::Utils::user_daemon->id
+            , @timeout
+        );
         $request->status("Shutting down domain $domain_name in disabled node $vm_name");
     }
     $sth->finish;
