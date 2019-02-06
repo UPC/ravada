@@ -228,7 +228,7 @@ sub test_volatile($vm, $node) {
     for ( 1 .. 4 ) {
         my $clone = $base->clone(user => user_admin, name => new_domain_name);
         is($clone->_vm->is_active,1);
-        is($clone->is_active(1),1,"Expecting clone ".$clone->name." active on ".$clone->_vm->name);
+        is($clone->is_active(),1,"Expecting clone ".$clone->name." active on ".$clone->_vm->name);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
@@ -260,7 +260,7 @@ sub test_volatile_req($vm, $node) {
         is($req->error,'');
 
         my $clone = rvd_back->search_domain($clone_name);
-        is($clone->is_active(1),1,"[".$vm->type."] expecting clone ".$clone->name
+        is($clone->is_active(),1,"[".$vm->type."] expecting clone ".$clone->name
             ." active on node ".$clone->_vm->name);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
