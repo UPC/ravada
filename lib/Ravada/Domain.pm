@@ -1829,13 +1829,14 @@ sub _post_shutdown {
 }
 
 sub _around_is_active($orig, $self) {
-    return 0 if $self->is_removed;
 
     if (!$self->_vm) {
         return 1 if $self->_data('status') eq 'active';
         return 0;
     }
-
+    if ($self->_vm && $self->_vm->is_active ) {
+        return 0 if $self->is_removed;
+    }
     my $is_active = 0;
     $is_active = $self->$orig() if $self->_vm->is_active;
 
@@ -1847,7 +1848,8 @@ sub _around_is_active($orig, $self) {
     $status = 'shutdown' if $status eq 'active';
 
     $status = 'active'  if $is_active;
-    $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
+    $status = 'hibernated'  if !$is_active
+        && $self->_vm->is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
     $self->needs_restart(0) if $self->needs_restart() && !$is_active;
@@ -2969,10 +2971,17 @@ sub set_base_vm($self, %args) {
             if $request;
         $self->migrate($vm, $request);
     } else {
-        for my $file ($self->list_files_base()) {
-            confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
-            my ($out, $err) = $vm->run_command("test -e $file && rm $file");
-            confess $err if $err;
+        if ($vm->is_active) {
+            for my $file ($self->list_files_base()) {
+                confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
+                my ($out, $err);
+                eval {
+                    my ($out, $err) = $vm->run_command("test -e $file && rm $file");
+                };
+                next if $@ && $@ =~ / ssh /i;
+                $err = $@ if $@;
+                confess $err if $err;
+            }
         }
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
