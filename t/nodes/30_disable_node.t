@@ -31,17 +31,31 @@ sub test_disable_node($vm, $node) {
 
     is($clone->_vm->name, $node->name);
 
-    my $timeout = 20;
+    my $timeout = 3;
     my $req = Ravada::Request->shutdown_domain(
                 uid => user_admin->id
-           ,timeout => 20
+           ,timeout => $timeout
         , id_domain => $clone->id
     );
     rvd_back->_process_requests_dont_fork();
     is($req->status,'done');
     is($req->error,'');
 
-    for ( 0 .. $timeout + 1 ) {
+    my @reqs = $clone->list_requests();
+    if (!@reqs) {
+        my $req2 = Ravada::Request->shutdown_domain(
+            uid => user_admin->id
+            ,timeout => $timeout
+            , id_domain => $clone->id
+        );
+        rvd_back->_process_requests_dont_fork();
+        is($req2->status,'done');
+        is($req2->error,'');
+        @reqs = $clone->list_requests();
+    }
+    ok(@reqs,"Expecting request to force shutdown after shutdown") or exit;
+
+    for ( 0 .. $timeout + 3 ) {
         last if !$clone->is_active;
         sleep 1;
         rvd_back->_process_requests_dont_fork();
