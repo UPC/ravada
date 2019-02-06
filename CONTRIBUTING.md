@@ -34,7 +34,7 @@ the branch so it is easier to follow.
 A good branch name would be (where issue #77 is the one you're working on):
 
 ```sh
-git checkout -b 77_start_machine
+git checkout -b fix/77_start_machine
 ```
 
 ## 4. Code Style
