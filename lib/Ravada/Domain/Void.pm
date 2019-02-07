@@ -40,28 +40,6 @@ our $CONVERT = `which convert`;
 chomp $CONVERT;
 #######################################3
 
-sub BUILD {
-    my $self = shift;
-
-    my $args = $_[0];
-
-    my $drivers = {};
-    if ($args->{id_base}) {
-        my $base = Ravada::Domain->open($args->{id_base});
-
-        confess "ERROR: Wrong base ".ref($base)." ".$base->type
-                ."for domain in vm ".$self->_vm->type
-            if $base->type ne $self->_vm->type;
-        $drivers = $base->_value('drivers');
-    }
-    if ( ! -e $self->_config_file ) {
-        $self->_set_default_info();
-        $self->_store( autostart => 0 );
-        $self->_store( drivers => $drivers );
-    }
-    $self->set_memory($args->{memory}) if $args->{memory};
-}
-
 sub name { 
     my $self = shift;
     return $self->domain;
@@ -156,7 +134,7 @@ sub _load($self) {
     eval {
         $data = LoadFile($disk)   if -e $disk;
     };
-    confess $@ if $@;
+    confess "Error in $disk: $@" if $@;
 
     return $data;
 }
@@ -230,7 +208,7 @@ sub start {
 sub prepare_base {
     my $self = shift;
 
-    for my $volume ($self->list_volumes_info) {;
+    for my $volume ($self->list_volumes_info(device => 'disk')) {;
         next if $volume->{device} ne 'disk';
         my $file_qcow = $volume->{file};
         my $file_base = $file_qcow.".qcow";
@@ -300,7 +278,7 @@ sub add_volume {
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/".$vol_name.".$suffix"
+        $args{file} = $self->_config_dir."/$vol_name$suffix"
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
@@ -599,18 +577,32 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
-    $self->rsync(
-           node => $node
-        , files => [$self->_config_file ]
-       ,request => $request
-    );
+    my $config_remote;
+    $config_remote = $self->_load();
+    my $device = $config_remote->{hardware}->{device}
+        or confess "Error: no device hardware in ".Dumper($config_remote);
+    my @device_remote;
+    for my $item (@$device) {
+        push @device_remote,($item) if $item->{device} ne 'cdrom';
+    }
+    $config_remote->{hardware}->{device} = \@device_remote;
+    $node->write_file($self->_config_file, Dump($config_remote));
     $self->rsync($node);
 
 }
 
 sub is_removed {
     my $self = shift;
-    return !-e $self->_config_file();
+
+    return !-e $self->_config_file()    if $self->is_local();
+
+    my ($out, $err) = $self->_vm->run_command("/usr/bin/test",
+         " -e ".$self->_config_file." && echo 1" );
+    chomp $out;
+    warn $self->name." ".$self->_vm->name." ".$err if $err;
+
+    return 0 if $out;
+    return 1;
 }
 
 sub autostart {

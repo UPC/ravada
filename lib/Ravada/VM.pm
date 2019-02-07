@@ -40,6 +40,7 @@ our $MIN_MEMORY_MB = 128 * 1024;
 
 our $SSH_TIMEOUT = 20 * 1000;
 
+our %VM; # cache Virtual Manager Connection
 our %SSH;
 
 our $ARP = `which arp`;
@@ -173,6 +174,8 @@ sub open {
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
+    return $VM{$args{id}} if $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name};
+
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
     $class .= "::$type";
@@ -181,7 +184,9 @@ sub open {
     $args{host} = $row->{hostname};
     $args{security} = decode_json($row->{security}) if $row->{security};
 
-    return $self->new(%args);
+    my $vm = $self->new(%args);
+    $VM{$args{id}} = $vm;
+    return $vm;
 
 }
 
@@ -358,6 +363,7 @@ sub _around_create_domain {
 
     my $base;
     my $remote_ip = delete $args{remote_ip};
+    my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
      my $id_iso = delete $args{id_iso};
      my $active = delete $args{active};
@@ -378,6 +384,7 @@ sub _around_create_domain {
     if ($id_base) {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
+        $volatile = 1 if $base->volatile_clones;
     }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
@@ -390,7 +397,7 @@ sub _around_create_domain {
 
     $self->_pre_create_domain(@_);
 
-    my $domain = $self->$orig(@_);
+    my $domain = $self->$orig(@_, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
@@ -616,9 +623,11 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    if (my @requests = grep { $_->command ne 'clone' } $base->list_requests) {
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm);
+    if (my @requests = grep { !$ignore_requests{$_->command} } $base->list_requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
+                            .Dumper([$base->list_requests])
             unless scalar @requests == 1 && $request
                 && $requests[0]->id eq $request->id;
     }
@@ -1017,6 +1026,8 @@ Remove the virtual machine manager.
 sub remove($self) {
     #TODO stop the active domains
     #
+    delete $VM{$self->id};
+
     $self->disconnect();
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($self->id);
@@ -1183,27 +1194,58 @@ sub _random_list(@list) {
 }
 
 sub balance_vm($self, $base=undef) {
+
+    my $min_memory = $Ravada::Domain::MIN_FREE_MEMORY;
+    $min_memory = $base->get_info->{memory} if $base;
+
     my %vm_list;
-    for my $vm (_random_list($self->list_nodes)) {
+    my @status;
+
+    my @vms;
+    if ($base) {
+        @vms = $base->list_vms();
+    } else {
+        @vms = $self->list_nodes();
+    }
+    return $self if !@vms;
+    for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
-        next if !$vm->is_active();
+        my $active = 0;
+        eval { $active = $vm->is_active() };
+        my $error = $@;
+        if ($error && !$vm->is_local) {
+            warn "disabling ".$vm->name." $error";
+            $vm->enabled(0);
+        }
 
-        my $free_memory = $vm->free_memory;
-        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+        next if !$vm->enabled();
+        next if !$active;
+        next if $base && !$base->base_in_vm($vm->id);
 
-        my $active = $vm->count_domains(status => 'active')
+        my $free_memory;
+        eval { $free_memory = $vm->free_memory };
+        if ($@) {
+            warn $@;
+            $vm->enabled(0) if !$vm->is_local();
+            next;
+        }
+
+        if ( $free_memory < $min_memory ) {
+            push @status, ($vm->name." low free memory : $free_memory");
+        }
+
+        my $n_active = $vm->count_domains(status => 'active')
                         + $vm->count_domains(status => 'starting');
 
-        my $key = $active.".".$free_memory;
+        my $key = $n_active.".".$free_memory;
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
     my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
     for my $vm (@sorted_vm) {
-        next if $base && !$base->base_in_vm($vm->id);
         return $vm;
     }
-    return;
+    return $self;
 }
 
 sub count_domains($self, %args) {

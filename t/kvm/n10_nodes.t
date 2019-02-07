@@ -1075,7 +1075,7 @@ sub _shutdown_nicely($clone) {
 
 sub _write_in_volumes($clone) {
     for my $file ($clone->list_volumes) {
-        $clone->_vm->run_command("echo hola > $file");
+        $clone->_vm->run_command("echo 'foo: hola' >> $file");
     }
 }
 

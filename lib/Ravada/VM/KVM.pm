@@ -525,16 +525,39 @@ Returns true or false if domain exists.
 
 sub search_domain($self, $name, $force=undef) {
 
-    $self->connect();
+    eval {
+        $self->connect();
+    };
+    if ($@ && $@ =~ /libvirt error code: 38,/) {
+        warn $@;
+        if (!$self->is_local) {
+            warn "DISABLING NODE ".$self->name;
+            $self->enabled(0);
+        }
+        return;
+    }
 
     my $dom;
     eval { $dom = $self->vm->get_domain_by_name($name); };
-    confess $@ if $@ && $@ !~ /error code: 42,/;
+    my $error = $@;
+    return if $error =~  /error code: 42,/ && !$force;
+
+    if ($error && $error =~ /libvirt error code: 38,/ ) {
+        eval {
+            $self->disconnect;
+            $self->connect;
+        };
+        confess "Error connecting to ".$self->name." $@" if $@;
+        eval { $dom = $self->vm->get_domain_by_name($name); };
+        confess $@ if $@ && $@ !~  /error code: 42,/;
+    } elsif ($error && $error !~ /error code: 42,/) {
+        confess $error;
+    }
+
     if (!$dom) {
         return if !$force;
         return if !$self->_domain_in_db($name);
     }
-    return if !$force && !$self->_domain_in_db($name);
 
     my $domain;
 
@@ -699,7 +722,7 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
-    for (qw(disk swap active request vm memory iso_file id_template)) {
+    for (qw(disk swap active request vm memory iso_file id_template volatile)) {
         delete $args2{$_};
     }
 
@@ -793,7 +816,7 @@ sub _domain_create_common {
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
-    $self->_xml_modify_uuid($xml);
+    my $uuid = $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
@@ -801,14 +824,27 @@ sub _domain_create_common {
 
     my $dom;
 
-    eval {
-        if ($user->is_temporary || $is_volatile ) {
-            $dom = $self->vm->create_domain($xml->toString());
+    for ( 1 .. 10 ) {
+        eval {
+            if ($user->is_temporary || $is_volatile ) {
+                $dom = $self->vm->create_domain($xml->toString());
+            } else {
+                $dom = $self->vm->define_domain($xml->toString());
+                $dom->create if $args{active};
+            }
+        };
+
+        last if !$@;
+        if ($@ =~ /libvirt error code: 9, .*already defined with uuid/) {
+            warn $@;
+            my $new_uuid = $self->_xml_modify_uuid($xml);
+
+        } elsif ($@ =~ /libvirt error code: 1, .* pool .* asynchronous/) {
+            sleep 1;
         } else {
-            $dom = $self->vm->define_domain($xml->toString());
-            $dom->create if $args{active};
+            last ;
         }
-    };
+    }
     if ($@) {
         my $out;
 		warn $self->name."\n".$@;
@@ -1506,6 +1542,8 @@ sub _xml_modify_uuid {
 
     my $new_uuid = $self->_unique_uuid($uuid);
     $uuid->setData($new_uuid);
+
+    return $new_uuid;
 }
 
 sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
@@ -1515,18 +1553,26 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
             push @uuids,($dom->get_uuid_string);
         }
     }
-    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+    my ($pre,$first,$last) = $uuid =~ m{^([0-9a0-f]{6})(.*)([0-9a-f]{6})$};
+    confess "I can't split model uuid '$uuid'" if !$first;
 
     for my $domain ($self->vm->list_all_domains) {
         push @uuids,($domain->get_uuid_string);
     }
 
     for (1..100) {
-        my $new_last = substr(int(rand(0x1000000)),0,6);
-        my $new_uuid = sprintf("%s%06d",$first,$new_last);
-        die "Wrong length ".length($new_uuid)
+        my $new_pre = '';
+        $new_pre = sprintf("%x",int(rand(0x10))).$new_pre while length($new_pre)<6;
+
+        my $new_last = '';
+        $new_last = sprintf("%x",int(rand(0x10))).$new_last while length($new_last)<6;
+
+        my $new_uuid = "$new_pre$first$new_last";
+        die "Wrong length ".length($new_uuid)." should be ".length($uuid)
             ."\n"
             .$new_uuid
+            ."\n"
+            .$uuid
         if length($new_uuid) != length($uuid);
 
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
@@ -1904,7 +1950,6 @@ sub _unique_mac {
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
             if ( $mac eq lc($nic_mac) ) {
-                warn "mac clashes with domain ".$dom->get_name;
                 return 0;
             }
         }
@@ -1929,7 +1974,7 @@ sub _xml_modify_mac {
         or exit;
     my $mac = $if_mac->getAttribute('address');
 
-    my @macparts = split/:/,$mac;
+    my @macparts0 = split/:/,$mac;
 
     my @old_macs;
 
@@ -1945,23 +1990,27 @@ sub _xml_modify_mac {
 
     my $new_mac;
 
-    for my $cont ( 1 .. 1000 ) {
-        my $pos = int(rand(2))+4;
-        my $num =sprintf "%02X", rand(0xff);
-        die "Missing num " if !defined $num;
-        $macparts[$pos] = $num;
-        $new_mac = lc(join(":",@macparts));
-        my $n_part = scalar(@macparts) -2;
+    my @tried;
+    for ( 1 .. 1000 ) {
+        for my $cont ( 1 .. 1000 ) {
+            my @macparts = @macparts0;
+            my $pos = int(rand(scalar(@macparts)-1))+1;
+            my $num =sprintf "%02X", rand(0xff);
+            die "Missing num " if !defined $num;
+            $macparts[$pos] = $num;
+            $new_mac = lc(join(":",@macparts));
+            push @tried,($new_mac);
 
-        last if (! grep /^$new_mac$/i,@old_macs);
-    }
+            last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
+            push @old_macs,($new_mac);
+        }
 
-    if ( $self->_unique_mac($new_mac) ) {
-                $if_mac->setAttribute(address => $new_mac);
-                return;
-    } else {
-        die "I can't find a new unique mac";
+        if ( $self->_unique_mac($new_mac) ) {
+            $if_mac->setAttribute(address => $new_mac);
+            return;
+        }
     }
+    die "I can't find a new unique mac '$new_mac'\n".Dumper(\@tried);
 }
 
 
@@ -2120,7 +2169,12 @@ sub list_storage_pools($self) {
 sub free_memory($self) {
     confess "ERROR: VM ".$self->name." inactive"
         if !$self->is_alive;
-    return $self->_free_memory_available();
+    my $free_available = $self->_free_memory_available();
+    my $free_stats = $self->_free_memory_overcommit();
+
+    $free_available = $free_stats if $free_stats < $free_available;
+
+    return $free_available;
 }
 
 # TODO: enable this check from free memory with a config flag
@@ -2135,7 +2189,9 @@ sub _free_memory_available($self) {
     my $info = $self->vm->get_node_memory_stats();
     my $used = 0;
     for my $domain ( $self->list_domains(active => 1, read_only => 1) ) {
-        $used += $domain->get_info->{memory};
+        my $info = $domain->get_info();
+        my $memory = ($info->{memory} or $info->{max_mem} or 0);
+        $used += $memory;
     }
     my $free_mem = $info->{total} - $used;
     my $free_real = $self->_free_memory_overcommit;
