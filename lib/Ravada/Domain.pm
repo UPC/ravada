@@ -2623,14 +2623,19 @@ sub remote_ip($self) {
         ." ORDER BY time_req DESC "
     );
     $sth->execute($self->id);
+    my @ip;
     while ( my ($remote_ip, $iptables_json ) = $sth->fetchrow() ) {
         my $iptables = decode_json($iptables_json);
         next if $iptables->[4] ne 'ACCEPT';
-        # TODO check multiple IPs
-        return $remote_ip;
+        push @ip,($remote_ip);
     }
     $sth->finish;
-    return;
+    return @ip if wantarray;
+
+    for my $ip (@ip) {
+        return $ip if $ip eq '127.0.0.1';
+    }
+    return $ip[0];
 
 }
 
