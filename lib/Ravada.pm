@@ -2983,7 +2983,7 @@ sub _refresh_down_nodes($self, $request = undef ) {
 sub _refresh_disabled_nodes($self, $request = undef ) {
     my @timeout = ();
     @timeout = ( timeout => $request->args('timeout_shutdown') )
-        if $request->defined_arg('timeout_shutdown');
+        if defined $request && $request->defined_arg('timeout_shutdown');
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, d.name, vms.name FROM domains d, vms "
