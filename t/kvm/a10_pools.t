@@ -27,7 +27,6 @@ sub create_pool {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
 
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
     my $capacity = 1 * 1024 * 1024;
 
@@ -36,27 +35,31 @@ sub create_pool {
 
     mkdir $dir if ! -e $dir;
 
-    my $xml =
-"<pool type='dir'>
-  <name>$pool_name</name>
-  <uuid>$uuid</uuid>
-  <capacity unit='bytes'>$capacity</capacity>
-  <allocation unit='bytes'></allocation>
-  <available unit='bytes'>$capacity</available>
-  <source>
-  </source>
-  <target>
-    <path>$dir</path>
-    <permissions>
-      <mode>0711</mode>
-      <owner>0</owner>
-      <group>0</group>
-    </permissions>
-  </target>
-</pool>"
-;
     my $pool;
-    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    for ( ;; ) {
+        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $xml =
+                    "<pool type='dir'>
+                    <name>$pool_name</name>
+                    <uuid>$uuid</uuid>
+                    <capacity unit='bytes'>$capacity</capacity>
+                    <allocation unit='bytes'></allocation>
+                    <available unit='bytes'>$capacity</available>
+                    <source>
+                    </source>
+                    <target>
+                    <path>$dir</path>
+                    <permissions>
+                    <mode>0711</mode>
+                    <owner>0</owner>
+                    <group>0</group>
+                    </permissions>
+                    </target>
+                    </pool>"
+                    ;
+        eval { $pool = $vm->vm->create_storage_pool($xml) };
+        last if !$@ || $@ !~ /libvirt error code: 9,/;
+    };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
 

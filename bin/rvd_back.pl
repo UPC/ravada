@@ -155,8 +155,8 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
-    Ravada::Request->enforce_limits();
-    Ravada::Request->refresh_vms();
+    #    Ravada::Request->enforce_limits();
+    #Ravada::Request->refresh_vms();
     for (;;) {
         my $t0 = time;
         $ravada->process_priority_requests();
@@ -439,7 +439,8 @@ sub shutdown_domain {
     my $down = 0;
     my $found = 0;
     DOMAIN:
-    for my $domain ($rvd_back->list_domains) {
+    for my $domain_data ($rvd_back->list_domains_data) {
+        my $domain = Ravada::Front::Domain->open($domain_data->{id});
         if ((defined $domain_name && $domain->name eq $domain_name)
             || ($hibernated && $domain->is_hibernated)
             || ($DISCONNECTED
@@ -465,10 +466,11 @@ sub shutdown_domain {
                 next DOMAIN if _verify_connection($domain);
             }
             print "Shutting down ".$domain->name.".\n";
-            eval {
-                $domain->shutdown(user => Ravada::Utils::user_daemon(), timeout => 300);
-                $down++;
-            };
+            Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
+                ,id_domain => $domain->id
+                , timeout => 300
+            );
+            $down++;
             warn $@ if $@;
         }
     }

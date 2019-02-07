@@ -214,7 +214,6 @@ sub BUILD {
 
     my $name;
     $name = $args->{name}               if exists $args->{name};
-    $name = $args->{domain}->get_name   if !$name && $args->{domain};
 
     $self->{_name} = $name  if $name;
 
@@ -335,12 +334,25 @@ sub _search_already_started($self) {
     my %started;
     while (my ($id) = $sth->fetchrow) {
         my $vm = Ravada::VM->open($id);
-        next if !$vm->is_enabled || !$vm->is_active;
+        next if !$vm->is_enabled;
+
+        my $vm_active;
+        eval {
+            $vm_active = $vm->is_active;
+        };
+        my $error = $@;
+        if ($error) {
+            warn $error;
+            $vm->enabled(0) if !$vm->is_local;
+            next;
+        }
+        next if !$vm_active;
 
         my $domain;
         eval { $domain = $vm->search_domain($self->name) };
         if ( $@ ) {
             warn $@;
+            $vm->enabled(0) if !$vm->is_local;
             next;
         }
         next if !$domain;
@@ -422,6 +434,8 @@ sub _allow_manage {
 sub _allow_remove($self, $user) {
 
     confess "ERROR: Undefined user" if !defined $user;
+
+    return if !$self->is_known(); # already removed
 
     die "ERROR: remove not allowed for user ".$user->name
         unless $user->can_remove_machine($self);
@@ -886,7 +900,6 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-
     if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
         eval {
             $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
@@ -1290,7 +1303,7 @@ sub _after_remove_domain {
     $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_known && $self->is_base) {
-        $self->_do_remove_base(@_);
+        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
     return if !$self->{_data};
@@ -1568,13 +1581,16 @@ sub _convert_png {
 Makes the domain a regular, non-base virtual machine and removes the base files.
 =cut
 
-sub remove_base {
-    my $self = shift;
-    return $self->_do_remove_base();
+sub remove_base($self, $user) {
+    return $self->_do_remove_base($user);
 }
 
-sub _do_remove_base {
-    my $self = shift;
+sub _do_remove_base($self, $user) {
+    if ($self->is_base) {
+        for my $vm ( $self->list_vms ) {
+            $self->remove_base_vm(vm => $vm, user => $user) if !$vm->is_local;
+        }
+    }
     $self->is_base(0);
     for my $file ($self->list_files_base) {
         next if ! -e $file;
@@ -1815,13 +1831,14 @@ sub _post_shutdown {
 }
 
 sub _around_is_active($orig, $self) {
-    return 0 if $self->is_removed;
 
     if (!$self->_vm) {
         return 1 if $self->_data('status') eq 'active';
         return 0;
     }
-
+    if ($self->_vm && $self->_vm->is_active ) {
+        return 0 if $self->is_removed;
+    }
     my $is_active = 0;
     $is_active = $self->$orig() if $self->_vm->is_active;
 
@@ -1833,7 +1850,8 @@ sub _around_is_active($orig, $self) {
     $status = 'shutdown' if $status eq 'active';
 
     $status = 'active'  if $is_active;
-    $status = 'hibernated'  if !$is_active && !$self->is_removed && $self->is_hibernated;
+    $status = 'hibernated'  if !$is_active
+        && $self->_vm->is_active && !$self->is_removed && $self->is_hibernated;
     $self->_data(status => $status);
 
     $self->needs_restart(0) if $self->needs_restart() && !$is_active;
@@ -2605,14 +2623,19 @@ sub remote_ip($self) {
         ." ORDER BY time_req DESC "
     );
     $sth->execute($self->id);
+    my @ip;
     while ( my ($remote_ip, $iptables_json ) = $sth->fetchrow() ) {
         my $iptables = decode_json($iptables_json);
         next if $iptables->[4] ne 'ACCEPT';
-        # TODO check multiple IPs
-        return $remote_ip;
+        push @ip,($remote_ip);
     }
     $sth->finish;
-    return;
+    return @ip if wantarray;
+
+    for my $ip (@ip) {
+        return $ip if $ip eq '127.0.0.1';
+    }
+    return $ip[0];
 
 }
 
@@ -2792,7 +2815,7 @@ sub rsync($self, @args) {
         if ($self->is_base) {
             push @files_base,($self->list_files_base);
         }
-        $files = [ $self->list_volumes(), @files_base ];
+        $files = [ $self->list_volumes( device => 'disk'), @files_base ];
     }
 
     $request->status("working") if $request;
@@ -2806,7 +2829,7 @@ sub rsync($self, @args) {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
     }
-    my $rsync = File::Rsync->new(update => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1);
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
@@ -2954,6 +2977,21 @@ sub set_base_vm($self, %args) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
         $self->migrate($vm, $request);
+    } else {
+        if ($vm->is_active) {
+            for my $file ($self->list_files_base()) {
+                confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
+                my ($out, $err);
+                eval {
+                    my ($out, $err) = $vm->run_command("test -e $file && rm $file");
+                };
+                next if $@ && $@ =~ / ssh /i;
+                $err = $@ if $@;
+                confess $err if $err;
+            }
+        }
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
     }
     return $self->_set_base_vm_db($vm->id, $value);
 }
@@ -2973,6 +3011,7 @@ Removes a base in a Virtual Machine Manager node.
 sub remove_base_vm($self, %args) {
     my $user = delete $args{user};
     my $vm = delete $args{vm};
+    $vm = delete $args{node} if !$vm;
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
@@ -3239,7 +3278,7 @@ sub needs_restart($self, $value=undef) {
 sub _post_change_hardware {
     my $self = shift;
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->needs_restart(1) if $self->is_active;
+    $self->needs_restart(1) if $self->is_known && $self->is_active;
 }
 
 =head2 Access restrictions
