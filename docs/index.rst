@@ -56,6 +56,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
 
    docs/INSTALL
    docs/INSTALL_Fedora
+   docs/INSTALL_ubuntu_xenial.rst
    docs/production
    docs/recomendations
    docs/INSTALL_devel
