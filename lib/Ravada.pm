@@ -2959,7 +2959,10 @@ sub _refresh_active_domains($self, $request=undef) {
             my $domain = $vm->search_domain_by_id($id_domain);
             $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
          } else {
-            for my $domain ($vm->list_domains( )) {
+            my @domains;
+            eval { @domains = $vm->list_domains };
+            warn $@ if $@;
+            for my $domain (@domains) {
                 next if $active_domain{$domain->id};
                 next if $domain->is_hibernated;
                 $self->_refresh_active_domain($vm, $domain, \%active_domain);
@@ -2976,7 +2979,8 @@ sub _refresh_down_nodes($self, $request = undef ) {
     $sth->execute();
     while ( my ($id) = $sth->fetchrow()) {
         my $vm;
-        $vm = Ravada::VM->open($id);
+        eval { $vm = Ravada::VM->open($id) };
+        warn $@ if $@;
     }
 }
 
