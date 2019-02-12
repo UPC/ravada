@@ -292,6 +292,9 @@ msgstr "Bienvenido"
 msgid "A viewer is required to run the virtual machines."
 msgstr "Se precisa de un visualizador para encender la máquina virtual."
 
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Se precisa de un visualizador para encender la máquina virtual."
+
 msgid "Virtual Machines"
 msgstr "Máquinas Virtuales"
 

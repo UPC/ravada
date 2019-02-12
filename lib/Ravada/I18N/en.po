@@ -286,6 +286,9 @@ msgstr ""
 msgid "A viewer is required to run the virtual machines."
 msgstr ""
 
+msgid "It is required a viewer to run the virtual machines."
+msgstr ""
+
 msgid "Virtual Machines"
 msgstr ""
 
@@ -767,4 +770,3 @@ msgstr ""
 
 msgid "licensed."
 msgstr ""
-
