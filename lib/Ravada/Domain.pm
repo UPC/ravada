@@ -900,11 +900,12 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-    if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
+    if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
         eval {
-            $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+            $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
                 , readonly => $readonly);
         };
+        warn $@ if $@;
         if ($@ && $@ =~ /I can't find VM id=/) {
             $vm = Ravada::VM->open( type => $self->type );
         }
