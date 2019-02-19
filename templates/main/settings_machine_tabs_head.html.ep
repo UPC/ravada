@@ -3,7 +3,7 @@
 %   if ($USER->can_change_settings($domain->id)) {
         <a class="nav-item nav-link active" id="nav-description-tab" ng-click="refresh_machine()" href="#nav-description" data-toggle="tab" role="tab" aria-controls="nav-description" aria-selected="true"><%=l 'Description' %></a>
     %   }
-    %   if ($USER->can_change_settings($domain->id) && $USER->is_admin ) {
+    %   if ($USER->can_rename($domain->id) ) {
         <a class="nav-item nav-link" id="nav-rename-tab" ng-click="refresh_machine()" href="#nav-rename" data-toggle="tab" role="tab" aria-controls="nav-rename" aria-selected="false"><%=l 'Rename' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id) ) {
