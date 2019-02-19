@@ -934,15 +934,7 @@ sub _add_grant($self, $grant, $allowed, $description) {
 
     if ($id && $current_description ne $description) {
         my $sth = $CONNECTOR->dbh->prepare(
-<<<<<<< HEAD
-<<<<<<< HEAD
             "UPDATE grant_types SET description = ? WHERE id = ?;"
-=======
-            "UPDATE ravada.grant_types SET description = ? WHERE id = ?;"
->>>>>>> feat: rename permission & _add_grant update description
-=======
-            "UPDATE grant_types SET description = ? WHERE id = ?;"
->>>>>>> test: test for rename grants
         );
         $sth->execute($description, $id);
         $sth->finish;
