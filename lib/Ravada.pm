@@ -917,19 +917,29 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines");
-    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines");
-    $self->_add_grant('start_many',0,"Can have more than one machine started")
+    $self->_add_grant('rename', 0,"Can rename any virtual machine owned by the user.");
+    $self->_add_grant('rename_all', 0,"Can rename any virtual machine.");
+    $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
+    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
+    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
+    $self->_add_grant('start_many',0,"Can have more than one machine started.")
 }
 
 sub _add_grant($self, $grant, $allowed, $description) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM grant_types WHERE name=?"
+        "SELECT id, description FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id) = $sth->fetchrow();
+    my ($id, $current_description) = $sth->fetchrow();
     $sth->finish;
 
+    if ($id && $current_description ne $description) {
+        my $sth = $CONNECTOR->dbh->prepare(
+            "UPDATE ravada.grant_types SET description = ? WHERE id = ?;"
+        );
+        $sth->execute($description, $id);
+        $sth->finish;
+    }
     return if $id;
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
@@ -980,6 +990,7 @@ sub _enable_grants($self) {
         ,'clone',           'clone_all',            'create_base', 'create_machine'
         ,'grant'
         ,'manage_users'
+        ,'rename', 'rename_all', 'rename_clones'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
