@@ -449,11 +449,7 @@ get '/machine/info/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
-    return access_denied($c,"Access denied to user ".$USER->name) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id
-                              || $USER->can_change_settings($domain->id)
-                              || $USER->can_remove_machine($domain->id)
-                              || $USER->can_clone_all;
+    return access_denied($c,"Access denied to user ".$USER->name) unless $USER->can_manage_machine($domain->id);
 
     my $info = $domain->info($USER);
     if ($domain->is_active && !$info->{ip}) {
@@ -465,7 +461,7 @@ get '/machine/info/(:id).(:type)' => sub {
 get '/machine/requests/(:id).json' => sub {
     my $c = shift;
     my $id_domain = $c->stash('id');
-    return access_denied($c) if !$USER->can_manage_machine($id_domain);
+    return access_denied($c) unless $USER->can_manage_machine($id_domain);
 
     $c->render(json => $RAVADA->list_requests($id_domain,10));
 };
