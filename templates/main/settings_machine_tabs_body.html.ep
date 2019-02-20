@@ -20,11 +20,20 @@
     
 % if ($USER->can_rename($domain->id)) {
     <div class="tab-pane fade" id="nav-rename" role="tabpanel" aria-labelledby="nav-rename-tab">
+<<<<<<< HEAD
     % if ($domain->is_base) {
             %= include 'main/vm_locked_is_base'
     % } else {
             %= include 'main/vm_rename'
     % }
+=======
+% if ($domain->is_base) {
+        %= include 'main/vm_locked_is_base'
+% } else {
+        %= include 'main/vm_rename'
+% }
+% }
+>>>>>>> feat: permission to rename machine
     </div>
 % }
 
