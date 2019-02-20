@@ -10,17 +10,21 @@
         </div>
 %   }
 
-% if ($USER->can_change_settings($domain->id)) {
+% if ($USER->can_change_settings($domain->id) || $USER->can_rename($domain->id)) {
 <div class="tab-content" id="nav-tabContent">
+    % if ($USER->can_change_settings($domain->id)) {
     <div class="tab-pane fade show active" id="nav-description" role="tabpanel" aria-labelledby="nav-description-tab">
         %= include 'main/vm_description'
     </div>
-
+    %}
+    
+% if ($USER->can_rename($domain->id)) {
     <div class="tab-pane fade" id="nav-rename" role="tabpanel" aria-labelledby="nav-rename-tab">
 % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
 % } else {
         %= include 'main/vm_rename'
+% }
 % }
     </div>
 
