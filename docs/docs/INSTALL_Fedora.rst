@@ -85,7 +85,15 @@ Grant all permissions on this database to the *rvd_user*:
 
 .. prompt:: bash $
 
-    sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'changeme'"
+    sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'Pword12345*'"
+    
+    The password chosen must fulfill the following characteristics:
+
+       - At least 8 characters.
+       - At least 1 number.
+       - At least 1 special character.
+
+
 
 Config file
 ~~~~~~~~~~~
@@ -100,7 +108,7 @@ example.
     sudo vi /etc/ravada.conf
     db:
       user: rvd_user
-      password: changeme
+      password: Pword12345*
 
 Ravada web user
 ---------------
