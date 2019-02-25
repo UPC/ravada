@@ -87,11 +87,11 @@ Grant all permissions on this database to the *rvd_user*:
 
     sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'Pword12345*'"
     
-    The password chosen must fulfill the following characteristics:
+The password chosen must fulfill the following characteristics:
 
-       - At least 8 characters.
-       - At least 1 number.
-       - At least 1 special character.
+    - At least 8 characters.
+    - At least 1 number.
+    - At least 1 special character.
 
 
 
