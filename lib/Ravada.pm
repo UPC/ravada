@@ -1602,12 +1602,20 @@ sub search_domain($self, $name, $import = 0) {
     return if !$id;
     if ($id_vm) {
         my $vm;
-        eval { $vm = Ravada::VM->open($id_vm) };
+        my $vm_is_active;
+        eval {
+            $vm = Ravada::VM->open($id_vm);
+            $vm_is_active = $vm->is_active if $vm;
+        };
         warn $@ if $@;
-        if ( $vm && !$vm->is_active) {
-            $vm->disconnect();
+        if ( $vm && !$vm_is_active) {
+            eval {
+                $vm->disconnect();
+                $vm->connect;
+            };
+            warn $@ if $@;
         }
-        if ($vm && $vm->is_active ) {
+        if ($vm && $vm_is_active ) {
             my $domain;
             eval { $domain = $vm->search_domain($name)};
             warn $@ if $@;
@@ -2538,8 +2546,14 @@ sub _cmd_start_clones {
     $sth->execute($id_domain);
     while ( my ($id, $name, $is_base) = $sth->fetchrow) {
         if ($is_base == 0) {
-            my $domain2 = $self->search_domain_by_id($id);
-            if (!$domain2->is_active) {
+            my $domain2;
+            my $is_active;
+            eval {
+                $domain2 = $self->search_domain_by_id($id);
+                $is_active = $domain2->is_active;
+            };
+            warn $@ if $@;
+            if (!$is_active) {
                 my $req = Ravada::Request->start_domain(
                     uid => $uid
                    ,name => $name
