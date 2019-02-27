@@ -249,10 +249,6 @@ sub test_requests_by_domain {
     is($req1->status , 'done');
     is($req2->status , 'done');
 
-    is($@,'');
-    like($req_clone->error,qr(has \d req)) or exit;
-    is($req_clone->status , 'retry');
-
     is($req4->status , 'done');
     is($domain->is_base,1) or exit;
 
