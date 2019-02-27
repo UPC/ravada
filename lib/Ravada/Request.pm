@@ -123,7 +123,7 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','create_domain','open_iptables']
+        ,commands => ['clone','start','start_clones','create','open_iptables']
     }
     ,secondary => {
         limit => 50
