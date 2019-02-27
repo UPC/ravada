@@ -944,7 +944,11 @@ sub start_node($node) {
 
     for ( 1 .. 60 ) {
         my $is_active;
-        eval { $is_active = $node->is_active(1) };
+        eval {
+            $node->connect();
+            $is_active = $node->is_active(1)
+        };
+        warn $@ if $@;
         last if $is_active;
         sleep 1;
         diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
