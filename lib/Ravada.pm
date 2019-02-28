@@ -2386,7 +2386,6 @@ sub _can_fork {
     $req->status('waiting') if $req->status() !~ 'waiting';
     return 0;
 }
-
 sub _wait_pids {
     my $self = shift;
 

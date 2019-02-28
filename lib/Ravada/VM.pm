@@ -1231,10 +1231,6 @@ sub balance_vm($self, $base=undef) {
             next;
         }
 
-        if ( $free_memory < $min_memory ) {
-            push @status, ($vm->name." low free memory : $free_memory");
-        }
-
         my $n_active = $vm->count_domains(status => 'active')
                         + $vm->count_domains(status => 'starting');
 
