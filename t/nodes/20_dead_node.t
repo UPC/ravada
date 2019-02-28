@@ -59,6 +59,15 @@ sub test_down_node($vm, $node) {
 sub test_disabled_node($vm, $node) {
     diag("[".$vm->type."] Test clones should shutdown on disabled nodes");
     start_node($node);
+    Ravada::VM::_clean_cache();
+    my $node2 = Ravada::VM->open($node->id);
+    $node2->_cached_active_time(0);
+    for ( 1 .. 60 ) {
+        last if $node2->is_active;
+        sleep 1;
+    }
+    $node->enabled(1);
+    is($node->enabled, 1) or exit;
 
     my $domain = create_domain($vm);
     $domain->prepare_base(user_admin);
@@ -74,22 +83,28 @@ sub test_disabled_node($vm, $node) {
     $node->enabled(0);
     is($node->enabled, 0);
 
-    my $timeout = 3;
+    my $clone2 = Ravada::Domain->open( id => $clone->id, id_vm => $clone->_vm->id );
+    is($clone2->_vm->name, $clone->_vm->name) or exit;
+
+    my $timeout = 4;
     my $req = Ravada::Request->refresh_vms( timeout_shutdown => $timeout );
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
     is($req->error, '',"Expecting no error after refresh vms");
 
     my @reqs = $clone->list_requests();
-    ok(@reqs,"Expecting requests for clone to shutdown") or exit;
+    delete $clone->{_data};
+    if ( !$clone->is_active ) {
+        ok(@reqs,"Expecting requests for clone to shutdown") or exit;
+    }
 
     for ( 1 .. $timeout * 2 ) {
         delete $clone->{_data};
-        rvd_back->_process_requests_dont_fork(1);
+        rvd_back->_process_requests_dont_fork();
         is($clone->_vm->id, $node->id ) or exit;
         last if !$clone->is_active;
         sleep 1;
-        diag("Waiting for clone ".$clone->name." down");
+        diag("Waiting for ".$clone->name." to shutdown on disabled node");
     }
     is($clone->is_active, 0, "Expecting clone ".$clone->name." not active in ".$clone->_vm->name
         ." after node disabled") or exit;
@@ -140,6 +155,7 @@ for my $vm_name ( 'KVM', 'Void') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
         test_down_node($vm, $node);
         test_disabled_node($vm, $node);
 

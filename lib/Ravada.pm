@@ -1602,12 +1602,20 @@ sub search_domain($self, $name, $import = 0) {
     return if !$id;
     if ($id_vm) {
         my $vm;
-        eval { $vm = Ravada::VM->open($id_vm) };
+        my $vm_is_active;
+        eval {
+            $vm = Ravada::VM->open($id_vm);
+            $vm_is_active = $vm->is_active if $vm;
+        };
         warn $@ if $@;
-        if ( $vm && !$vm->is_active) {
-            $vm->disconnect();
+        if ( $vm && !$vm_is_active) {
+            eval {
+                $vm->disconnect();
+                $vm->connect;
+            };
+            warn $@ if $@;
         }
-        if ($vm && $vm->is_active ) {
+        if ($vm && $vm_is_active ) {
             my $domain;
             eval { $domain = $vm->search_domain($name)};
             warn $@ if $@;
@@ -2378,7 +2386,6 @@ sub _can_fork {
     $req->status('waiting') if $req->status() !~ 'waiting';
     return 0;
 }
-
 sub _wait_pids {
     my $self = shift;
 
@@ -2538,8 +2545,14 @@ sub _cmd_start_clones {
     $sth->execute($id_domain);
     while ( my ($id, $name, $is_base) = $sth->fetchrow) {
         if ($is_base == 0) {
-            my $domain2 = $self->search_domain_by_id($id);
-            if (!$domain2->is_active) {
+            my $domain2;
+            my $is_active;
+            eval {
+                $domain2 = $self->search_domain_by_id($id);
+                $is_active = $domain2->is_active;
+            };
+            warn $@ if $@;
+            if (!$is_active) {
                 my $req = Ravada::Request->start_domain(
                     uid => $uid
                    ,name => $name
@@ -2959,7 +2972,10 @@ sub _refresh_active_domains($self, $request=undef) {
             my $domain = $vm->search_domain_by_id($id_domain);
             $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
          } else {
-            for my $domain ($vm->list_domains( )) {
+            my @domains;
+            eval { @domains = $vm->list_domains };
+            warn $@ if $@;
+            for my $domain (@domains) {
                 next if $active_domain{$domain->id};
                 next if $domain->is_hibernated;
                 $self->_refresh_active_domain($vm, $domain, \%active_domain);
@@ -2976,7 +2992,8 @@ sub _refresh_down_nodes($self, $request = undef ) {
     $sth->execute();
     while ( my ($id) = $sth->fetchrow()) {
         my $vm;
-        $vm = Ravada::VM->open($id);
+        eval { $vm = Ravada::VM->open($id) };
+        warn $@ if $@;
     }
 }
 

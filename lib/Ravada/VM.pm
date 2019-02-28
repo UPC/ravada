@@ -190,6 +190,10 @@ sub open {
 
 }
 
+sub _clean_cache {
+    %VM = ();
+}
+
 sub BUILD {
     my $self = shift;
 
@@ -984,9 +988,6 @@ sub _do_is_active($self) {
         } else {
             if ( $self->is_alive ) {
                 $ret = 1;
-            }  else {
-                $self->connect();
-                $ret = 1 if $self->is_alive;
             }
         }
     }
@@ -1214,7 +1215,7 @@ sub balance_vm($self, $base=undef) {
         eval { $active = $vm->is_active() };
         my $error = $@;
         if ($error && !$vm->is_local) {
-            warn "disabling ".$vm->name." $error";
+            warn "[balance] disabling ".$vm->name." ".$vm->enabled()." $error";
             $vm->enabled(0);
         }
 
@@ -1228,10 +1229,6 @@ sub balance_vm($self, $base=undef) {
             warn $@;
             $vm->enabled(0) if !$vm->is_local();
             next;
-        }
-
-        if ( $free_memory < $min_memory ) {
-            push @status, ($vm->name." low free memory : $free_memory");
         }
 
         my $n_active = $vm->count_domains(status => 'active')

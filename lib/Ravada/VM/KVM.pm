@@ -836,9 +836,7 @@ sub _domain_create_common {
 
         last if !$@;
         if ($@ =~ /libvirt error code: 9, .*already defined with uuid/) {
-            warn $@;
-            my $new_uuid = $self->_xml_modify_uuid($xml);
-
+            $self->_xml_modify_uuid($xml);
         } elsif ($@ =~ /libvirt error code: 1, .* pool .* asynchronous/) {
             sleep 1;
         } else {

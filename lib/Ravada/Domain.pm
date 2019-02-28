@@ -900,11 +900,12 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
-    if (!$vm && ( $id_vm || ( $self->_data('id_vm') && !$self->is_base) ) ) {
+    if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
         eval {
-            $vm = Ravada::VM->open(id => ( $id_vm or $self->_data('id_vm') )
+            $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
                 , readonly => $readonly);
         };
+        warn $@ if $@;
         if ($@ && $@ =~ /I can't find VM id=/) {
             $vm = Ravada::VM->open( type => $self->type );
         }
@@ -917,18 +918,18 @@ sub open($class, @args) {
 
         $vm = $vm_local->new( );
     }
-    my $domain = $vm->search_domain($row->{name}, $force);
+    my $domain;
+    eval { $domain = $vm->search_domain($row->{name}, $force) };
     if ( !$domain ) {
         return if $vm->is_local;
 
-        if (!$vm_local) {
-            $vm_local = {};
-            my $vm_class = "Ravada::VM::".$row->{vm};
-            bless $vm_local, $vm_class;
-        }
+        $vm_local = {};
+        my $vm_class = "Ravada::VM::".$row->{vm};
+        bless $vm_local, $vm_class;
 
         $vm = $vm_local->new();
         $domain = $vm->search_domain($row->{name}, $force) or return;
+        $domain->_data(id_vm => $vm->id);
     }
     if (!$id_vm) {
         $domain->_search_already_started() if !$domain->is_base;
@@ -2846,7 +2847,9 @@ sub rsync($self, @args) {
     }
     if ($rsync->err) {
         $request->status("done",join(" ",@{$rsync->err}))   if $request;
-        confess $rsync->err;
+        confess "error syncing to ".$node->host."\n"
+            .Dumper($files)."\n"
+            .join(' ',@{$rsync->err});
     }
     $node->refresh_storage_pools();
 }
