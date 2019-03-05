@@ -301,7 +301,7 @@ sub test_list_others_clone {
     is(scalar @$list , 0);
 
     user_admin->grant($user, 'remove_clone_all');
-    is($user->can_list_machines, 1);
+    is($user->can_list_clones, 1);
 
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 2 ) and do {

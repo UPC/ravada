@@ -354,6 +354,19 @@ sub is_admin {
     return ($self->{_data}->{is_admin} or 0);
 }
 
+=head2 is_user_manager
+
+Returns true if the user is user manager
+
+=cut
+
+sub is_user_manager {
+    my $self = shift;
+    return 1 if $self->can_grant()
+            || $self->can_manage_users();
+    return 0;
+}
+
 =head2 is_operator
 
 Returns true if the user is admin or has been granted special permissions
@@ -362,83 +375,79 @@ Returns true if the user is admin or has been granted special permissions
 
 sub is_operator {
     my $self = shift;
-    return $self->is_admin()
-        || $self->can_shutdown_clones()
-#	|| $self->can_hibernate_clone()
-        || $self->can_change_settings_clones()
-        || $self->can_rename_all()
-        || $self->can_rename_clones()
-        || $self->can_remove_clones()
-        || $self->can_remove_clone_all()
-        || $self->can_create_base()
-        || $self->can_create_machine
-        || $self->can_list_machines
-        || $self->can_change_settings_all()
-        || $self->can_grant()
-        || 0;
+    return 1 if $self->can_list_own_machines()
+            || $self->can_list_clones()
+            || $self->can_list_clones_from_own_base()
+            || $self->can_list_machines()
+            || $self->is_user_manager();
+    return 0;
 }
 
 =head2 can_list_own_machines
 
 Returns true if the user can list her own virtual machines at the web frontend
+(can_XXXXX)
 
 =cut
 
 sub can_list_own_machines {
     my $self = shift;
-    return 1
-        if $self->can_create_base()
+    return 1 if $self->can_create_base()
             || $self->can_create_machine()
-            || $self->can_remove_clone_all()
-            || $self->is_operator()
-        ;
+            || $self->can_rename()
+            || $self->can_list_clones_from_own_base()
+            || $self->can_list_clones()
+            || $self->can_list_machines();
+    return 0;
+}
+
+=head2 can_list_clones_from_own_base
+
+Returns true if the user can list all machines that are clones from his bases
+(can_XXXXX_clones)
+
+=cut
+
+sub can_list_clones_from_own_base($self) {
+    return 1 if $self->can_change_settings_clones()
+            || $self->can_remove_clones()
+            || $self->can_rename_clones()
+            || $self->can_shutdown_clones()
+            || $self->can_list_clones()
+            || $self->can_list_machines();
     return 0;
 }
 
 =head2 can_list_clones
 
 Returns true if the user can list all machines that are clones and its bases
+(can_XXXXX_clones_all)
 
 =cut
 
 sub can_list_clones {
     my $self = shift;
-    return 1 if $self->is_admin()
-                || $self->can_rename_clones
-                || $self->can_remove_clone_all;
+    return 1 if $self->can_remove_clone_all()
+            || $self->can_list_machines();
     return 0;
   
 }
 
-=head2 can_list_clones_from_own_base
-
-Returns true if the user can list all machines that are clones from his bases
-
-=cut
-
-sub can_list_clones_from_own_base($self) {
-    return 1 if  $self->can_remove_clones || $self->can_remove_clone_all
-        || $self->can_shutdown_clones
-        || $self->can_change_settings_clones;
-    return 0;
-}
-
-
 =head2 can_list_machines
 
 Returns true if the user can list all the virtual machines at the web frontend
+(can_XXXXX_all or is_admin)
 
 =cut
 
 sub can_list_machines {
     my $self = shift;
     return 1 if $self->is_admin()
-            || $self->can_rename_all()
-            || $self->can_remove_all || $self->can_remove_clone_all
-            || $self->can_shutdown_all
             || $self->can_change_settings_all()
-            || $self->can_change_settings_clones()
-            || $self->can_clone_all();
+            || $self->can_clone_all()
+            || $self->can_remove_all()
+            || $self->can_rename_all()
+            || $self->can_shutdown_all();
     return 0;
 }
 
