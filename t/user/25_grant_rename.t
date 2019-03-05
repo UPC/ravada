@@ -66,7 +66,7 @@ sub test_list_clones_from_own_base {
     
     my $list = rvd_front->list_machines($user);
     ok(grep { $_->{'name'} eq $domain_name_1} @$list );
-    ok(grep { $_->{'name'} eq $domain_name_2 } @$list );
+    ok(grep { $_->{'name'} eq $domain_name_2} @$list );
     is(scalar @$list, 2);
     
     $domain_hash_2->remove(user_admin);
