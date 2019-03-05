@@ -183,28 +183,14 @@ sub list_machines_user {
     return \@list;
 }
 
+
 sub list_machines($self, $user) {
-    return $self->list_domains() if $user->can_list_machines;
-
+    return $self->list_domains() if $user->can_list_machines() || $user->can_list_clones();
+    
     my @list = ();
-    if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
-        my $machines = $self->list_bases( id_owner => $user->id );
-        for my $base (@$machines) {
-            confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
-            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
-        }
-        push @list,(@$machines);
-    }
-
-    push @list,(@{$self->list_clones()}) if $user->can_list_clones;
-    if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
-        my $machines = $self->list_domains(id_owner => $user->id);
-        for my $clone (@$machines) {
-            next if !$clone->{id_base};
-            push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
-        }
-        push @list,(@$machines);
-    }
+    push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
+    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines() || $user->is_operator();
+    
     return [@list] if scalar @list < 2;
 
     my %uniq = map { $_->{name} => $_ } @list;
@@ -325,6 +311,26 @@ sub list_domains($self, %args) {
 
     return \@domains;
 }
+
+sub list_own_clones($self, $user) {
+    my $machines = $self->list_bases( id_owner => $user->id );
+    for my $base (@$machines) {
+        confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
+        push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+    }
+    return $machines;
+}
+
+sub list_own($self, $user) {
+    my $machines = $self->list_domains(id_owner => $user->id);
+    for my $clone (@$machines) {
+        next if !$clone->{id_base};
+        push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
+    }
+    return $machines;
+}
+
+
 sub _where(%args) {
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -352,7 +358,6 @@ sub list_clones {
   }
   return \@clones;
 }
-
 sub _remove_domain_db($self, $id) {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($id);
