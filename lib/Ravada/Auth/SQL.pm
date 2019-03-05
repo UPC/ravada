@@ -365,7 +365,9 @@ sub is_operator {
     return $self->is_admin()
         || $self->can_shutdown_clones()
 #	|| $self->can_hibernate_clone()
-	|| $self->can_change_settings_clones()
+        || $self->can_change_settings_clones()
+        || $self->can_rename_all()
+        || $self->can_rename_clones()
         || $self->can_remove_clones()
         || $self->can_remove_clone_all()
         || $self->can_create_base()
@@ -402,7 +404,8 @@ Returns true if the user can list all machines that are clones and its bases
 sub can_list_clones {
     my $self = shift;
     return 1 if $self->is_admin()
-                || $self->can_remove_clone_all();
+                || $self->can_rename_clones
+                || $self->can_remove_clone_all;
     return 0;
   
 }
@@ -414,7 +417,7 @@ Returns true if the user can list all machines that are clones from his bases
 =cut
 
 sub can_list_clones_from_own_base($self) {
-    return 1 if $self->can_remove_clones || $self->can_remove_clone_all
+    return 1 if  $self->can_remove_clones || $self->can_remove_clone_all
         || $self->can_shutdown_clones
         || $self->can_change_settings_clones;
     return 0;
@@ -430,6 +433,7 @@ Returns true if the user can list all the virtual machines at the web frontend
 sub can_list_machines {
     my $self = shift;
     return 1 if $self->is_admin()
+            || $self->can_rename_all()
             || $self->can_remove_all || $self->can_remove_clone_all
             || $self->can_shutdown_all
             || $self->can_change_settings_all()
@@ -617,7 +621,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown rename);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 0 if !$self->can_do($grant) && !$domain->id_base;
@@ -898,18 +902,15 @@ sub can_manage_machine($self, $domain) {
 
     $domain = Ravada::Front::Domain->open($domain)  if !ref $domain;
 
-    return 1 if $self->can_change_settings($domain);
+    return 1 if $self->can_clone_all
+                || $self->can_change_settings($domain)
+                || $self->can_rename_all
+                || $self->can_remove_all
+                || ($self->can_remove_clone_all && $domain->id_base)
+                || ($self->can_remove && $domain->id_owner == $self->id);
 
-    return 1 if $self->can_remove_all;
-
-    return 1 if $self->can_remove_clone_all
-        && $domain->id_base;
-    
-    return 1 if $self->can_clone_all;
-
-    return 1 if $self->can_remove && $domain->id_owner == $self->id;
-
-    if ( ($self->can_remove_clones || $self->can_change_settings_clones) && $domain->id_base ) {
+    if ( ($self->can_remove_clones || $self->can_change_settings_clones || $self->can_rename_clones) 
+         && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
     }
