@@ -395,7 +395,6 @@ sub can_list_own_machines {
     return 1 if $self->can_create_base()
             || $self->can_create_machine()
             || $self->can_rename()
-            || $self->can_list_clones_from_own_base()
             || $self->can_list_clones()
             || $self->can_list_machines();
     return 0;

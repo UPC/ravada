@@ -189,7 +189,7 @@ sub list_machines($self, $user) {
     
     my @list = ();
     push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
-    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines() || $user->is_operator();
+    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
     
     return [@list] if scalar @list < 2;
 
