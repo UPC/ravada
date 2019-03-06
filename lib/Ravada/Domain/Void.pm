@@ -673,6 +673,13 @@ sub _change_driver_disk($self, $index, $driver) {
     $self->_store(hardware => $hardware);
 }
 
+sub _change_disk_data($self, $index, $field, $value) {
+    my $hardware = $self->_value('hardware');
+    $hardware->{device}->[$index]->{$field} = $value;
+
+    $self->_store(hardware => $hardware);
+}
+
 sub _change_hardware_disk($self, $index, $data_new) {
     my @volumes = $self->list_volumes();
 
@@ -682,9 +689,13 @@ sub _change_hardware_disk($self, $index, $data_new) {
     my $file = $volumes[$index]
         or die "Error: volume $index not found, only ".scalar(@volumes)." found.";
 
+    my $new_file = $data_new->{file};
+    return $self->_change_disk_data($index, file => $new_file) if $new_file;
+
     my $data;
     if ($self->is_local) {
-        $data = LoadFile($file);
+        eval { $data = LoadFile($file) };
+        confess "Error reading file $file : $@" if $@;
     } else {
         my ($lines, $err) = $self->_vm->run_command("cat $file");
         $data = Load($lines);
