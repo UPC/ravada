@@ -65,6 +65,19 @@
                             >
                         </div>
                     </div>
+                    <div class="row" ng-show="item.info.device == 'cdrom'">
+                        <div class="col-lg-2">
+                            <p class="text-right"><%=l 'ISO file' %></p>
+                        </div>
+                        <div class="col-lg-2">
+                                {{item}}
+                            <select name="file" ng-model="item.file">
+%                           for (@$isos) {
+                            <option value="<%= $_ %>"><%= $_ %></option>
+%                           }
+                            </select>
+                        </div>
+                    </div>
                    <div class="row">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'boot order' %></p>

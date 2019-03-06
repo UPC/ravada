@@ -5,6 +5,7 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
+use YAML qw(Dump);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -258,7 +259,12 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 
     my $hardware = 'disk';
 
-    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    my $index;
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) ) {
+        $index = $count;
+        last if exists $info->{hardware}->{$hardware}->[$index]->{info}->{$field};
+    }
+    die if !defined $index;
     my $capacity = Ravada::Utils::size_to_number(
         $info->{hardware}->{$hardware}->[$index]->{info}->{$field}
     );
@@ -301,8 +307,77 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 sub test_change_usb($vm, $domain) {
 }
 
+sub test_change_disk_cdrom($vm, $domain) {
+    my ($index,$cdrom) = _search_cdrom($domain);
+    ok($cdrom) or exit;
+    ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
+
+    my $file_old = $cdrom->{file};
+    my $file_new = '/tmp/test.iso';
+    open my $out,'>',$file_new or die "$! $file_new";
+    print $out Dump({ data => $$ });
+    close $out;
+
+    my $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware =>'disk'
+            ,index => $index
+            ,data => { file => $file_new }
+            ,uid => user_admin->id
+        );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $info = $domain2->info(user_admin);
+
+    my $cdrom2 = $info->{hardware}->{disk}->[$index];
+    is ($cdrom2->{file}, $file_new) or exit;
+
+    $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware =>'disk'
+            ,index => $index
+            ,data => { file => $file_old }
+            ,uid => user_admin->id
+        );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+    $domain2 = Ravada::Domain->open($domain->id);
+    $info = $domain2->info(user_admin);
+
+    $cdrom2 = $info->{hardware}->{disk}->[$index];
+    is ($cdrom2->{file}, $file_old) or exit;
+
+}
+
+sub _search_cdrom($domain) {
+    my $count=0;
+    for my $device ( $domain->list_volumes_info ) {
+        return ($count,$device) if ($device->{device} eq 'cdrom');
+        $count++;
+    }
+}
+
+sub _search_disk($domain) {
+    my $count=0;
+    for my $device ( $domain->list_volumes_info ) {
+        return ($count,$device) if ($device->{device} eq 'disk');
+        $count++;
+    }
+}
+
+
 sub test_change_disk($vm, $domain) {
     test_change_disk_field($vm, $domain, 'capacity');
+    test_change_disk_cdrom($vm, $domain);
 }
 
 sub test_change_hardware($vm, $domain, $hardware) {
@@ -318,12 +393,12 @@ sub test_change_hardware($vm, $domain, $hardware) {
 sub test_change_drivers($domain, $hardware) {
 
     my $info = $domain->info(user_admin);
-    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    my ($index) = _search_disk($domain);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
 
     for my $option (@$options) {
-        diag("Testing $hardware type $option");
+        diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
             id_domain => $domain->id
@@ -410,7 +485,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(KVM Void)) {
+for my $vm_name ( qw(Void KVM)) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -432,6 +507,7 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_add_hardware_custom($domain_b, $hardware);
         test_add_hardware_request($vm, $domain_b, $hardware);
+        test_change_hardware($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
 
         test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
@@ -453,7 +529,6 @@ for my $vm_name ( qw(KVM Void)) {
             }
         }
 
-        test_change_hardware($vm, $domain_b, $hardware);
 
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
