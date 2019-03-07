@@ -65,6 +65,29 @@ sub test_list_allowed($user, $grant='', $base=undef , $base_other=undef) {
     }
 }
 
+sub test_grant_list_clone_on_clone_not_owned($grant, $vm, $user_A, $user_B) {
+    #create
+    user_admin->grant($user_A,'create_machine');
+    user_admin->grant($user_A,'create_base');
+    my $base = create_domain($vm->type, $user_A);
+    
+    my $clone = clone($base, $user_B);
+    user_admin->grant($user_A,$grant);
+    my $list = rvd_front->list_machines($user_A);
+    
+    #test
+    ok(grep { $_->{'name'} eq $base->{'_data'}->{'name'} } @$list );
+    ok(grep { $_->{'name'} eq $clone->{'_data'}->{'name'} } @$list );
+    is(scalar @$list, 2);
+    
+    #delete things
+    user_admin->revoke($user_A,'create_machine');
+    user_admin->revoke($user_A,'create_base');
+    user_admin->revoke($user_A, $grant);
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub clone($base, $user) {
     $base->prepare_base(user_admin) if !$base->is_base;
     $base->is_public(1);
@@ -105,6 +128,8 @@ clean();
 
 use_ok('Ravada');
 
+use Data::Dumper;
+
 my $oper = create_user("operator","whatever");
 my $user = create_user("ken","whatever");
 
@@ -122,7 +147,10 @@ for my $vm_name ( vm_names() ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
-
+        for my $grant ( list_grants_clone()) {
+            test_grant_list_clone_on_clone_not_owned($grant, $vm, $oper, $user);
+        }
+        
         diag("Testing machine listing on $vm_name");
 
         user_admin->grant($oper,'create_machine');
