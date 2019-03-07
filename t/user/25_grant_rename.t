@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -12,8 +11,6 @@ use Ravada;
 
 use Ravada::Domain;
 use Data::Dumper;
-# create the mock database
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 # init ravada for testing
 init();
