@@ -538,18 +538,7 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
 
     return $self->$orig($attribute, $value) if ref($self) =~ /^Ravada::Front/i;
 
-<<<<<<< HEAD
     my @volumes = $self->$orig($attribute => $value);
-
-    #TODO make these atomic
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-||||||| merged common ancestors
-    return $self->$orig() if ref($self) =~ /^Ravada::Front/i;
-=======
-    my @volumes = $self->$orig($attribute => $value);
->>>>>>> b42b823ebbaa593bfb228af4c4f02ae1b6a85df9
 
     #TODO make these atomic
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
