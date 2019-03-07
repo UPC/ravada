@@ -337,6 +337,7 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
         $info->{driver} = $bus;
         $info->{n_order} = $n_order++;
         $info->{boot} = $boot_node->getAttribute('order') if $boot_node;
+        $info->{file} = $file if defined $file;
 
         next if defined $attribute
            && (!exists $info->{$attribute}
@@ -1041,7 +1042,6 @@ sub _search_volume_index($self, $file) {
     }
     confess "I can't find file $file in ".$self->name;
 }
-
 
 sub _xml_new_device($self , %arg) {
     my $bus = delete $arg{bus} or confess "Missing bus.";
@@ -2061,17 +2061,10 @@ sub change_hardware($self, $hardware, @args) {
 }
 
 sub _change_hardware_disk($self, $index, $data) {
-    my @volumes = $self->list_volumes();
-    my $file = $volumes[$index] or confess "Error: Unknown volume $index, only ".scalar(@volumes)." found";
-    my ($name) = $file =~ m{.*/(.*)};
-
-    $self->_vm->refresh_storage_pools();
-    my $volume = $self->_vm->search_volume($file);
-    if (!$volume ) {
-        $self->_vm->refresh_storage_pools();
-        $volume = $self->_vm->search_volume($file);
-    }
-    die "Error: Volume file $file not found in ".$self->_vm->name    if !$volume;
+    my @volumes = $self->list_volumes_info();
+    confess "Error: Unknown volume $index, only ".(scalar(@volumes)-1)." found"
+        .Dumper(\@volumes)
+        if $index>=scalar(@volumes);
 
     my $driver = delete $data->{driver};
     my $boot = delete $data->{boot};
@@ -2080,16 +2073,57 @@ sub _change_hardware_disk($self, $index, $data) {
     $self->_set_boot_order($index, $boot)               if $boot;
 
     my $capacity = delete $data->{'capacity'};
-    if ($capacity) {
-        my $new_capacity = Ravada::Utils::size_to_number($capacity);
-        my $old_capacity = $volume->get_info->{'capacity'};
-        $self->cache_volume_info(name => $name, capacity => $old_capacity)   if $old_capacity;
-        $volume->resize($new_capacity);
-        $self->cache_volume_info(name => $name, capacity => $new_capacity);
-    }
+    $self->_change_hardware_disk_capacity($index, $capacity) if $capacity;
+
+    my $file_new = delete $data->{'file'};
+    $self->_change_hardware_disk_file($index, $file_new)    if defined $file_new;
 
     die "Error: I don't know how to change ".Dumper($data) if keys %$data;
 
+}
+
+sub _change_hardware_disk_capacity($self, $index, $capacity) {
+    my @volumes = $self->list_volumes_info();
+    my $file = $volumes[$index]->{file};
+
+    my $volume = $self->_vm->search_volume($file);
+    if (!$volume ) {
+            $self->_vm->refresh_storage_pools();
+            $volume = $self->_vm->search_volume($file);
+    }
+    die "Error: Volume file $file not found in ".$self->_vm->name    if !$volume;
+
+    my ($name) = $file =~ m{.*/(.*)};
+    my $new_capacity = Ravada::Utils::size_to_number($capacity);
+    my $old_capacity = $volume->get_info->{'capacity'};
+    $self->cache_volume_info(name => $name, capacity => $old_capacity)   if $old_capacity;
+    $volume->resize($new_capacity);
+    $self->cache_volume_info(name => $name, capacity => $new_capacity);
+}
+
+sub _change_hardware_disk_file($self, $index, $file) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+        my $disk = $self->_search_device_xml($doc,'disk',$index);
+
+    if (defined $file && length $file) {
+        my ($source) = $disk->findnodes('source');
+        $source = $disk->addNewChild(undef,'source') if !$source;
+        $source->setAttribute(file => $file);
+    } else {
+        my ($source) = $disk->findnodes('source');
+        $disk->removeChild($source);
+    }
+
+    $self->_post_change_hardware($doc);
+}
+
+sub _search_device_xml($self, $doc, $device, $index) {
+    my $count = 0;
+    for my $disk ($doc->findnodes("/domain/devices/$device")) {
+        return $disk if $count++ == $index;
+    }
+    confess "Error: $device $index not found in ".$self->name;
 }
 
 sub _change_hardware_disk_bus($self, $index, $bus) {
@@ -2112,6 +2146,10 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     }
     confess "Error: disk $index not found in ".$self->name if !$changed;
 
+    $self->_post_change_hardware($doc);
+}
+
+sub _post_change_hardware($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
     $self->info(Ravada::Utils::user_daemon);

@@ -65,6 +65,18 @@
                             >
                         </div>
                     </div>
+                    <div class="row" ng-show="item.info.device == 'cdrom'">
+                        <div class="col-lg-2">
+                            <p class="text-right"><%=l 'ISO file' %></p>
+                        </div>
+                        <div class="col-lg-2">
+                            <select name="file" ng-model="item.file">
+%                           for (@$isos) {
+                            <option value="<%= $_ %>"><%= $_ %></option>
+%                           }
+                            </select>
+                        </div>
+                    </div>
                    <div class="row">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'boot order' %></p>
@@ -77,7 +89,7 @@
                         <div class="col-lg-2">
                         </div>
                         <div class="col-lg-2">
-                            <button ng-click="change_disk(showmachine.id, $index)"
+                            <button ng-click="item.edit=false;change_disk(showmachine.id, $index)"
                                 class="btn btn-primary"
                             >ok</button>
                             <button ng-click="item.edit=false"
