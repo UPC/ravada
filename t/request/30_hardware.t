@@ -307,17 +307,7 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 sub test_change_usb($vm, $domain) {
 }
 
-sub test_change_disk_cdrom($vm, $domain) {
-    my ($index,$cdrom) = _search_cdrom($domain);
-    ok($cdrom) or exit;
-    ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
-
-    my $file_old = $cdrom->{file};
-    my $file_new = '/tmp/test.iso';
-    open my $out,'>',$file_new or die "$! $file_new";
-    print $out Dump({ data => $$ });
-    close $out;
-
+sub test_cdrom($domain, $index, $file_new) {
     my $req = Ravada::Request->change_hardware(
             id_domain => $domain->id
             ,hardware =>'disk'
@@ -335,27 +325,27 @@ sub test_change_disk_cdrom($vm, $domain) {
     my $info = $domain2->info(user_admin);
 
     my $cdrom2 = $info->{hardware}->{disk}->[$index];
-    is ($cdrom2->{file}, $file_new) or exit;
+    if ($file_new) {
+        is ($cdrom2->{file}, $file_new);
+    } else {
+        ok(!exists $cdrom2->{file},"[".$domain->type."] Expecting no file. ".Dumper($cdrom2));
+    }
 
-    $req = Ravada::Request->change_hardware(
-            id_domain => $domain->id
-            ,hardware =>'disk'
-            ,index => $index
-            ,data => { file => $file_old }
-            ,uid => user_admin->id
-        );
+}
+sub test_change_disk_cdrom($vm, $domain) {
+    my ($index,$cdrom) = _search_cdrom($domain);
+    ok($cdrom) or exit;
+    ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
 
-    rvd_back->_process_requests_dont_fork();
+    my $file_old = $cdrom->{file};
+    my $file_new = '/tmp/test.iso';
+    open my $out,'>',$file_new or die "$! $file_new";
+    print $out Dump({ data => $$ });
+    close $out;
 
-    is($req->status,'done');
-    is($req->error, '') or exit;
-
-    $domain2 = Ravada::Domain->open($domain->id);
-    $info = $domain2->info(user_admin);
-
-    $cdrom2 = $info->{hardware}->{disk}->[$index];
-    is ($cdrom2->{file}, $file_old) or exit;
-
+    test_cdrom($domain, $index, $file_new);
+    test_cdrom($domain, $index, '');
+    test_cdrom($domain, $index, $file_old);
 }
 
 sub _search_cdrom($domain) {

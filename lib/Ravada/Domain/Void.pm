@@ -103,7 +103,7 @@ sub _check_value_disk($self, $value)  {
             if $target{$device->{target}}++;
 
         confess "Duplicated file" .Dumper($value)
-            if $file{$device->{file}}++;
+            if exists $device->{file} && $file{$device->{file}}++;
     }
 }
 
@@ -415,10 +415,13 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && $dev->{type} eq 'base';
 
         my $info;
-        eval { $info = Load($self->_vm->read_file($dev->{file})) };
-        confess "Error loading $dev->{file} ".$@ if $@;
-        next if defined $attribute
-            && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
+
+        if (exists $dev->{file} ) {
+            eval { $info = Load($self->_vm->read_file($dev->{file})) };
+            confess "Error loading $dev->{file} ".$@ if $@;
+            next if defined $attribute
+                && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
+        }
         $info = {} if !defined $info;
         $info->{n_order} = $n_order++;
         push @vol,({%$dev,%$info})
@@ -675,23 +678,29 @@ sub _change_driver_disk($self, $index, $driver) {
 
 sub _change_disk_data($self, $index, $field, $value) {
     my $hardware = $self->_value('hardware');
-    $hardware->{device}->[$index]->{$field} = $value;
+    if (defined $value && length $value ) {
+        $hardware->{device}->[$index]->{$field} = $value;
+    } else {
+        delete $hardware->{device}->[$index]->{$field};
+    }
 
     $self->_store(hardware => $hardware);
 }
 
 sub _change_hardware_disk($self, $index, $data_new) {
-    my @volumes = $self->list_volumes();
+    my @volumes = $self->list_volumes_info();
 
     my $driver = delete $data_new->{driver};
     return $self->_change_driver_disk($index, $driver) if $driver;
 
-    my $file = $volumes[$index]
-        or die "Error: volume $index not found, only ".scalar(@volumes)." found.";
+    die "Error: volume $index not found, only ".scalar(@volumes)." found."
+        if $index >= scalar(@volumes);
 
+    my $file = $volumes[$index]->{file};
     my $new_file = $data_new->{file};
-    return $self->_change_disk_data($index, file => $new_file) if $new_file;
+    return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
+    return if !$file;
     my $data;
     if ($self->is_local) {
         eval { $data = LoadFile($file) };

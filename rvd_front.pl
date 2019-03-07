@@ -604,13 +604,25 @@ get '/machine/exists/#name' => sub {
 
 };
 
-get '/machine/change_hardware/(:hardware)/(:id)/(:index)/(#data)' => sub {
+post '/machine/hardware/change' => sub {
     my $c = shift;
+    my $arg = decode_json($c->req->body);
+
+    my $domain = Ravada::Front::Domain->open(delete $arg->{id_domain});
+
+    return access_denied($c)
+        unless $USER->id == $domain->id_owner || $USER->is_admin;
+
+    my $hardware = delete $arg->{hardware} or die "Missing hardware name";
+    my $index = delete $arg->{index};
+    my $data = delete $arg->{data};
+
+    die "Unknown fields in request ".Dumper($arg) if keys %{$arg};
     return $c->render(json => { req => Ravada::Request->change_hardware(
-                id_domain => $c->stash('id')
-                ,hardware => $c->stash('hardware')
-                ,index => $c->stash('index')
-                ,data => decode_json($c->stash('data'))
+                id_domain => $domain->id
+                ,hardware => $hardware
+                ,index => $index
+                ,data => $data
                 ,uid => $USER->id
             )
     });
