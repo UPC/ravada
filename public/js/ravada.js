@@ -430,16 +430,21 @@
 
           };
             $scope.change_disk = function(id_machine, index ) {
-                $scope.disk_edit[index] = false;
                 var new_settings={
                   driver: $scope.showmachine.hardware.disk[index].driver,
                   capacity: $scope.showmachine.hardware.disk[index].info.capacity,
                   boot: $scope.showmachine.hardware.disk[index].info.boot,
+                  file: $scope.showmachine.hardware.disk[index].file,
                 };
                 console.log(new_settings);
-                $http.get('/machine/change_hardware/disk/'+id_machine
-                  +'/'+index+'/'+JSON.stringify(new_settings))
-                  .then(function(response) {
+                $http.post('/machine/hardware/change'
+                    ,JSON.stringify({
+                        'id_domain': id_machine
+                        ,'hardware': 'disk'
+                           ,'index': index
+                            ,'data': new_settings
+                    })
+                ).then(function(response) {
                       $scope.getReqs();
                 });
 
@@ -450,7 +455,6 @@
                 capacity: '1G',
                 allocation: '0.1G'
             };
-            $scope.disk_edit = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();

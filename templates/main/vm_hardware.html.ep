@@ -70,7 +70,6 @@
                             <p class="text-right"><%=l 'ISO file' %></p>
                         </div>
                         <div class="col-lg-2">
-                                {{item}}
                             <select name="file" ng-model="item.file">
 %                           for (@$isos) {
                             <option value="<%= $_ %>"><%= $_ %></option>
@@ -90,7 +89,7 @@
                         <div class="col-lg-2">
                         </div>
                         <div class="col-lg-2">
-                            <button ng-click="change_disk(showmachine.id, $index)"
+                            <button ng-click="item.edit=false;change_disk(showmachine.id, $index)"
                                 class="btn btn-primary"
                             >ok</button>
                             <button ng-click="item.edit=false"

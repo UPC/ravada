@@ -2106,8 +2106,15 @@ sub _change_hardware_disk_file($self, $index, $file) {
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
         my $disk = $self->_search_device_xml($doc,'disk',$index);
-    my ($source) = $disk->findnodes('source') or die "No source";
-    $source->setAttribute(file => $file);
+
+    if (defined $file && length $file) {
+        my ($source) = $disk->findnodes('source');
+        $source = $disk->addNewChild(undef,'source') if !$source;
+        $source->setAttribute(file => $file);
+    } else {
+        my ($source) = $disk->findnodes('source');
+        $disk->removeChild($source);
+    }
 
     $self->_post_change_hardware($doc);
 }
