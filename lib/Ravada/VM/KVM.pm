@@ -695,6 +695,8 @@ sub _domain_create_common {
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
+    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
     my $dom;
 
@@ -1730,6 +1732,42 @@ sub _xml_add_guest_agent {
     $target->setAttribute(type => 'virtio');
     $target->setAttribute(name => 'org.qemu.guest_agent.0');
     
+}
+
+sub _xml_clean_machine_type($self, $doc) {
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    $os_type->setAttribute( machine => 'pc');
+}
+
+sub _xml_add_sysinfo($self,$doc) {
+    my ($smbios) = $doc->findnodes('/domain/os/smbios');
+    if (!$smbios) {
+        my ($os) = $doc->findnodes('/domain/os');
+        $smbios = $os->addNewChild(undef,'smbios');
+    }
+    $smbios->setAttribute(mode => 'sysinfo');
+
+}
+
+sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
+    $self->_xml_add_sysinfo($doc);
+    my ($oemstrings) = $doc->findnodes('/domain/sysinfo/oemStrings');
+    if (!$oemstrings) {
+        my ($domain) = $doc->findnodes('/domain');
+        my $sysinfo = $domain->addNewChild(undef,'sysinfo');
+        $sysinfo->setAttribute( type => 'smbios' );
+        $oemstrings = $sysinfo->addNewChild(undef,'oemStrings');
+    }
+    my @entries = $oemstrings->findnodes('entry');
+    my $hostname;
+    for (@entries) {
+        $hostname = $_ if $_->textContent =~ /^$field/;
+    }
+    if ($hostname) {
+        $oemstrings->removeChild($hostname);
+    }
+    ($hostname) = $oemstrings->addNewChild(undef,'entry');
+    $hostname->appendText("$field: $value");
 }
 
 sub _xml_remove_cdrom {
