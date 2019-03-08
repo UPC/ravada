@@ -279,7 +279,7 @@ sub test_list_clones_from_own_base_2 {
     };
 
     for my $m (@$list) {
-        next if !$m->{id_base};
+        next if !exists $m->{id_base};
 
         my $machine = $vm->search_domain($m->{name});
         $machine->start(user_admin) if !$machine->is_active;
