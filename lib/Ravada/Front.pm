@@ -213,7 +213,9 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
-                                    && !$m->{is_volatile};
+        && !$m->{is_volatile};
+
+        $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
     return $machines;
