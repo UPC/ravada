@@ -12,6 +12,7 @@ use feature qw(signatures);
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
+    ,network => \&_get_controller_network
     );
 
 our %GET_DRIVER_SUB = (
@@ -54,6 +55,30 @@ sub _get_controller_usb {
 
 sub _get_controller_disk($self) {
     return $self->list_volumes_info();
+}
+
+sub _get_controller_network($self) {
+    $self->xml_description if !$self->readonly();
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    my @ret;
+
+    for my $interface ($doc->findnodes('/domain/devices/interface')) {
+        next if $interface->getAttribute('type') !~ /^(bridge|network)/;
+
+        my ($model) = $interface->findnodes('model') or die "No model";
+        my ($source) = $interface->findnodes('source') or die "No source";
+        my $type = 'NAT';
+        $type = 'bridge' if $source->getAttribute('bridge');
+        push @ret,({
+                     type => $type
+                  ,driver => $model->getAttribute('type')
+                  ,bridge => $source->getAttribute('bridge')
+                 ,network => $source->getAttribute('network')
+        });
+    }
+
+    return @ret;
 }
 
 =head2 get_driver
