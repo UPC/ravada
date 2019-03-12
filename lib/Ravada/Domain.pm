@@ -1791,13 +1791,16 @@ sub _post_shutdown {
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$is_active;
 
-    if ($self->{_swap_volumes} && $self->is_known && $self->id_base) {
-        for ( 1 ..  5 ) {
-            last if !$is_active;
-            sleep 1;
-            $is_active = $self->is_active;
+    if ($self->is_known && $self->id_base) {
+        my @disks = $self->list_disks();
+        if (grep /\.SWAP\./,@disks) {
+            for ( 1 ..  5 ) {
+                last if !$is_active;
+                sleep 1;
+                $is_active = $self->is_active;
+            }
+            $self->clean_swap_volumes(@_) if !$is_active;
         }
-        $self->clean_swap_volumes(@_) if !$is_active;
     }
 
     if (defined $timeout && !$self->is_removed && $is_active) {
