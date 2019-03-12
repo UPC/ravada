@@ -1,0 +1,52 @@
+Set Hostname
+============
+
+The hostname of a virtual machine can be changed on startup. The name of
+the virtual domain is passed in a smbios string and can be used to rename.
+
+This feature is available from release 0.3.4.
+
+Linux
+-----
+
+The virtual machine name can be read with dmidecode
+
+.. prompt:: bash $
+
+    dmidecode | grep hostname | awk -F: '{ print $3}'
+
+
+To set the hostname you must create a script that runs on startup, this one line should
+be enough for most cases:
+
+.. prompt:: bash $
+
+    hostname `dmidecode | grep hostname | awk -F: '{ print $3}'`
+
+Some tools may read the hostname from the config file, set it like this:
+
+.. prompt:: bash $
+
+    dmidecode | grep hostname | awk -F: '{ print $3}' | sed -e 's/^ //' > /etc/hostname
+
+
+rc.local
+~~~~~~~~
+
+If you Linux system supports rc.local just add this lines to it and the hostname
+will be updated on boot:
+
+
+::
+
+
+    hostname `dmidecode | grep hostname | awk -F: '{ print $3}'`
+    hostname > /etc/hostname
+
+Windows
+-------
+
+SMBios information is available in Windows too. The data is stored in the
+registry and also can be shown with a tool called WMI.
+
+Contributed information would be appreciated.
