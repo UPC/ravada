@@ -1184,6 +1184,9 @@ SKIP: {
     };
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+    is($vm->shared_storage($node,'/var/tmp/'),0) or exit;
+    test_migrate_back($node);
+
     test_remove_base_main($node);
     test_status($node);
     test_bases_node($vm_name, $node);

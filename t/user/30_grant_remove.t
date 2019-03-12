@@ -267,7 +267,7 @@ sub test_list_clones_from_own_base_2 {
 
     for my $m (@$list) {
         is($user->can_manage_machine($m->{id}), 1);
-        next if !exists $m->{id_base};
+        next if !exists $m->{id_base} || !$m->{id_base};
 
         my $machine = $vm->search_domain($m->{name});
         eval { $machine->remove($user) };
