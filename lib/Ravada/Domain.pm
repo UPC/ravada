@@ -1147,11 +1147,12 @@ Return information about the domain.
 =cut
 
 sub info($self, $user) {
+    my $is_active = $self->is_active;
     my $info = {
         id => $self->id
         ,name => $self->name
         ,is_base => $self->is_base
-        ,is_active => $self->is_active
+        ,is_active => $is_active
         ,spice_password => $self->spice_password
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
@@ -1159,21 +1160,21 @@ sub info($self, $user) {
         ,needs_restart => ( $self->needs_restart or 0)
         ,type => $self->type
     };
-    eval {
-        $info->{display_url} = $self->display($user)    if $self->is_active;
-        $self->display_file($user)  if $self->is_active && !$self->_data('display_file');
-    };
-    die $@ if $@ && $@ !~ /not allowed/i;
+    if ($is_active) {
+        eval {
+            $info->{display_url} = $self->display($user);
+            $self->display_file($user)  if !$self->_data('display_file');
+
+            my $display = $self->display_info($user);
+            $self->display_file_tls($user)
+                if $display->{tls_port} && !$self->_data('display_file');
+            $info->{display} = $display;
+        };
+        die $@ if $@ && $@ !~ /not allowed/i;
+    }
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         $info->{description} = $base->description;
-    }
-    if ($self->is_active) {
-        my $display = $self->display_info($user);
-        $self->display_file($user) if !$self->_data('display_file');
-        $self->display_file_tls($user)
-            if $display->{tls_port} && !$self->_data('display_file');
-        $info->{display} = $display;
     }
     $info->{hardware} = $self->get_controllers();
 
@@ -1785,22 +1786,29 @@ sub _post_shutdown {
     my $timeout = delete $arg{timeout};
 
     $self->_remove_iptables() if $self->_vm->is_active;
+
+    my $is_active = $self->is_active;
     $self->_data(status => 'shutdown')
-        if $self->is_known && !$self->is_volatile && !$self->is_active;
+        if $self->is_known && !$self->is_volatile && !$is_active;
 
     if ($self->is_known && $self->id_base) {
-        for ( 1 ..  5 ) {
-            last if !$self->is_active;
-            sleep 1;
+        my @disks = $self->list_disks();
+        if (grep /\.SWAP\./,@disks) {
+            for ( 1 ..  5 ) {
+                last if !$is_active;
+                sleep 1;
+                $is_active = $self->is_active;
+            }
+            $self->clean_swap_volumes(@_) if !$is_active;
         }
-        $self->clean_swap_volumes(@_) if !$self->is_active;
     }
 
-    if (defined $timeout && !$self->is_removed && $self->is_active) {
+    if (defined $timeout && !$self->is_removed && $is_active) {
         if ($timeout<2) {
             sleep $timeout;
-            $self->_data(status => 'shutdown')    if !$self->is_active;
-            return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
+            $is_active = $self->is_active;
+            $self->_data(status => 'shutdown')    if !$is_active;
+            return $self->_do_force_shutdown() if !$self->is_removed && $is_active;
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
@@ -1824,11 +1832,11 @@ sub _post_shutdown {
     my $request;
     $request = $arg{request} if exists $arg{request};
     $self->_rsync_volumes_back( $request )
-        if !$self->is_local && !$self->is_active && !$self->is_volatile;
+        if !$self->is_local && !$is_active && !$self->is_volatile;
 
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
-                                && !$self->is_active;
+                                && !$is_active;
 }
 
 sub _around_is_active($orig, $self) {
@@ -3281,7 +3289,7 @@ sub needs_restart($self, $value=undef) {
 sub _post_change_hardware {
     my $self = shift;
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->needs_restart(1) if $self->is_known && $self->is_active;
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
 =head2 Access restrictions
