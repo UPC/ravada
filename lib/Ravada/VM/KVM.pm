@@ -695,7 +695,7 @@ sub _domain_create_common {
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    $self->_xml_clean_machine_type($xml);
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
     my $dom;
