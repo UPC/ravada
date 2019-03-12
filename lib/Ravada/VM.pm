@@ -1107,7 +1107,7 @@ sub _write_file_local( $self, $file, $contents ) {
     my ($path) = $file =~ m{(.*)/};
     make_path($path) or die "$! $path"
         if ! -e $path;
-    CORE::open(my $out,">",$file) or die "$! $file";
+    CORE::open(my $out,">",$file) or confess "$! $file";
     print $out $contents;
     close $out or die "$! $file";
 }
@@ -1123,6 +1123,22 @@ sub read_file( $self, $file ) {
 sub _read_file_local( $self, $file ) {
     CORE::open my $in,'<',$file or die "$! $file";
     return join('',<$in>);
+}
+
+sub file_exists( $self, $file ) {
+    return -e $file if $self->is_local;
+
+    my ( $out, $err) = $self->run_command("/usr/bin/test",
+        "-e $file ; echo \$?");
+
+    chomp $out;
+    return 1 if $out eq 0;
+    return 0;
+}
+
+sub remove_file( $self, $file ) {
+    unlink $file if $self->is_local;
+    $self->run_command("/bin/rm", $file);
 }
 
 sub create_iptables_chain($self,$chain) {
@@ -1208,6 +1224,7 @@ sub balance_vm($self, $base=undef) {
     } else {
         @vms = $self->list_nodes();
     }
+#    warn Dumper([ map { $_->name } @vms]);
     return $self if !@vms;
     for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
@@ -1221,7 +1238,7 @@ sub balance_vm($self, $base=undef) {
 
         next if !$vm->enabled();
         next if !$active;
-        next if $base && !$base->base_in_vm($vm->id);
+        next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
 
         my $free_memory;
         eval { $free_memory = $vm->free_memory };
@@ -1238,7 +1255,9 @@ sub balance_vm($self, $base=undef) {
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
-    my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
+    my @sorted_vm = map { $vm_list{$_} } sort { $a <=> $b } keys %vm_list;
+#    warn Dumper([ map {  [$_ , $vm_list{$_}->name ] } keys %vm_list]);
+#    warn "sorted ".Dumper([ map { $_->name } @sorted_vm ]);
     for my $vm (@sorted_vm) {
         return $vm;
     }
@@ -1273,6 +1292,21 @@ sub shutdown_domains($self) {
     $sth->finish;
 }
 
+sub shared_storage($self, $node, $dir) {
+    $dir .= '/' if $dir !~ m{/$};
+    my $file;
+    for ( ;; ) {
+        $file = $dir.Ravada::Utils::random_name(4).".tmp";
+        next if $self->file_exists($file);
+        next if $node->file_exists($file);
+        last;
+    }
+    $self->write_file($file,''.localtime(time));
+    my $shared = $node->file_exists($file);
+    $self->remove_file($file);
+
+    return $shared;
+}
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
