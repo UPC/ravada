@@ -2830,6 +2830,7 @@ sub rsync($self, @args) {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
     }
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     my $rsync = File::Rsync->new(update => 1, sparse => 1);
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
@@ -2840,8 +2841,11 @@ sub rsync($self, @args) {
         my $src = $file;
         my $dst = 'root@'.$node->host.":".$file;
         if ($node->is_local) {
+            next if $self->_vm->shared_storage($node, $path);
             $src = 'root@'.$self->_vm->host.":".$file;
             $dst = $file;
+        } else {
+            next if $vm_local->shared_storage($node, $path);
         }
         $rsync->exec(src => $src, dest => $dst);
     }
@@ -2856,7 +2860,10 @@ sub rsync($self, @args) {
 
 sub _rsync_volumes_back($self, $request=undef) {
     my $rsync = File::Rsync->new(update => 1);
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $file ( $self->list_volumes() ) {
+        my ($dir) = $file =~ m{(.*)/.*};
+        next if $vm_local->shared_storage($self->_vm,$dir);
         $rsync->exec(src => 'root@'.$self->_vm->host.":".$file ,dest => $file );
         if ( $rsync->err ) {
             $request->status("done",join(" ",@{$rsync->err}))   if $request;
@@ -3062,6 +3069,11 @@ sub list_vms($self) {
         eval { $vm = Ravada::VM->open($id_vm) };
         confess "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm);
+    }
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    if ( !grep { $_->name eq $vm_local->name } @vms) {
+        push @vms,($vm_local);
+        $self->set_base_vm(vm => $vm_local, user => Ravada::Utils::user_daemon);
     }
     return @vms;
 }
