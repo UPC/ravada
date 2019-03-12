@@ -185,8 +185,6 @@ sub list_machines_user {
 
 
 sub list_machines($self, $user) {
-    # diag(Dumper(filter_base_without_clones($self->list_domains())));
-    # diag(Dumper($self->list_domains()));
     return $self->list_domains() if $user->can_list_machines();
     return filter_base_without_clones($self->list_domains()) if $user->can_list_clones();
     
