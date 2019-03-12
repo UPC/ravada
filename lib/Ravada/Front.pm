@@ -186,9 +186,9 @@ sub list_machines_user {
 
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines();
-    return filter_base_without_clones($self->list_domains()) if $user->can_list_clones();
-    
+
     my @list = ();
+    push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
     push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
     push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
     
