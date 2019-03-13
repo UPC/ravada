@@ -28,20 +28,27 @@ sub test_sysinfo($domain) {
     my ($smbios) = $doc->findnodes($path_smbios);
     ok($smbios,"Expecting $path_smbios entry in XML");
 
-    my $path_oemstrings='/domain/sysinfo/oemStrings';
-    my ($oemstrings) = $doc->findnodes($path_oemstrings);
-    ok($oemstrings,"Expecting $path_oemstrings entry in XML");
+    SKIP: {
+        my $sys_virt_version = $Sys::Virt::VERSION;
+        my $req_sys_virt_version = '4.6';
+        $sys_virt_version =~ s/(\d+\.\d+).*/$1/;
+        skip("Sys::Virt Version > than $req_sys_virt_version required"
+                    .", found $sys_virt_version",3)
+            if $sys_virt_version < $req_sys_virt_version;
+        my $path_oemstrings='/domain/sysinfo/oemStrings';
+        my ($oemstrings) = $doc->findnodes($path_oemstrings);
+        ok($oemstrings,"Expecting $path_oemstrings entry in XML ") or return;
 
-    my $hostname;
-    for my $entry ($oemstrings->findnodes('entry')) {
-        $hostname = $entry if $entry->textContent =~ /^hostname/;
+        my $hostname;
+        for my $entry ($oemstrings->findnodes('entry')) {
+            $hostname = $entry if $entry->textContent =~ /^hostname/;
+        }
+        ok($hostname,"Expecting a hostname entry in ".$oemstrings->toString) and do {
+            my $hostname_text = $hostname->textContent();
+            my $domain_name = $domain->name;
+            like($hostname_text, qr{^hostname: $domain_name$});
+        };
     }
-    ok($hostname,"Expecting a hostname entry in ".$oemstrings->toString) and do {
-        my $hostname_text = $hostname->textContent();
-        my $domain_name = $domain->name;
-        like($hostname_text, qr{^hostname: $domain_name$});
-    };
-
 }
 
 ###################################################################################3
