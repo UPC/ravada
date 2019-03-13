@@ -90,8 +90,14 @@ sub create_domain {
     }
     confess "Missing id_iso" if !defined $id_iso;
 
-    my $vm = rvd_back()->search_vm($vm_name);
-    ok($vm,"Expecting VM $vm_name") or return;
+    my $vm;
+    if (ref($vm_name)) {
+        $vm = $vm_name;
+        $vm_name = $vm->type;
+    } else {
+        $vm = rvd_back()->search_vm($vm_name);
+        ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
+    }
 
     my $name = new_domain_name();
 
