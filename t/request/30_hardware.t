@@ -375,10 +375,13 @@ sub test_change_disk($vm, $domain) {
 }
 
 sub test_change_network_bridge($domain, $index) {
+    SKIP: {
+    my $bridges = rvd_front->list_bridges();
+
+    skip("No bridges found in this system",6) if !scalar @$bridges;
     my $info = $domain->info(user_admin);
     is ($info->{hardware}->{network}->[$index]->{type}, 'NAT') or exit;
 
-    my $bridges = rvd_front->list_bridges();
     ok(scalar @$bridges,"No network bridges defined in this host") or return;
 
     my $req = Ravada::Request->change_hardware(
@@ -399,11 +402,11 @@ sub test_change_network_bridge($domain, $index) {
     is ($info->{hardware}->{network}->[$index]->{type}, 'bridge', $domain->name) or exit;
     is ($info->{hardware}->{network}->[$index]->{bridge}, $bridges->[0] );
 
+    }
 }
 
 sub test_change_network_nat($domain, $index) {
     my $info = $domain->info(user_admin);
-    is ($info->{hardware}->{network}->[$index]->{type}, 'bridge') or return;
 
     my $nat = rvd_front->list_nat_networks();
     ok(scalar @$nat,"No NAT network defined in this host") or return;
