@@ -4,7 +4,25 @@ Set Hostname
 The hostname of a virtual machine can be changed on startup. The name of
 the virtual domain is passed in a smbios string and can be used to rename.
 
-This feature is available from release 0.3.4.
+Requirements
+------------
+
+This feature is available from release 0.3.4 and requires libvirt-4.6.
+
+Packages
+~~~~~~~~
+- Ravada: 0.3.4
+- libvirt: 4.6
+
+Distributions
+~~~~~~~~~~~~~
+This feature has been reported to work with these Linux distributions. Any
+other distribution with libvirt 4.6 or bigger will work too. Please report
+if you successfully tested it.
+
+Supported distributions:
+
+- Ubuntu 18.10
 
 Linux
 -----
