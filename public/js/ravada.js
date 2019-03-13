@@ -488,7 +488,7 @@
             }
         };
         $scope.redirect = function() {
-            if (!$scope.redirect_done && window.location.pathname!="/anonymous") {
+            if (!$scope.redirect_done && (typeof $_anonymous == "undefined" || !$_anonymous)) {
                 $timeout(function() {
                     window.location.href="/logout";
                 }, 60000);
@@ -585,7 +585,7 @@
       $http.get('/unshown_messages.json').then(function(response) {
               $scope.alerts= response.data;
       },function error(response) {
-               if ( response.status == 403 && window.location.pathname!="/anonymous") {
+               if ( response.status == 403 && (typeof $_anonymous == "undefined" || !$_anonymous)) {
                    window.location.href="/logout";
                }
       });
