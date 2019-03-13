@@ -174,6 +174,15 @@
                             $scope.list_ldap_attributes();
                             $scope.hardware_types = Object.keys(response.data.hardware);
                 });
+                $http.get('/network/nat_networks.json')
+                    .then(function(response) {
+                        $scope.nat_networks = response.data;
+                });
+                $http.get('/network/bridges.json')
+                    .then(function(response) {
+                        $scope.network_bridges= response.data;
+                });
+
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
@@ -448,6 +457,21 @@
                       $scope.getReqs();
                 });
 
+            };
+            $scope.change_network = function(id_machine, index ) {
+                var new_settings ={
+                    driver: $scope.showmachine.hardware.network[index].driver,
+                };
+                $http.post('/machine/hardware/change'
+                    ,JSON.stringify({
+                        'id_domain': id_machine
+                        ,'hardware': 'network'
+                           ,'index': index
+                            ,'data': new_settings
+                    })
+                ).then(function(response) {
+                      $scope.getReqs();
+                });
             };
             $scope.add_disk = {
                 device: 'disk',

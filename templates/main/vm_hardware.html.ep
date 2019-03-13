@@ -7,7 +7,7 @@
                 ng-class='{"border rounded border-primary mb-4 p-4": item.edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="name == 'disk' && !item.edit && !item.remove"
+                    ng-show="(name == 'network' ||name == 'disk') && !item.edit && !item.remove"
                     ng-disabled="pending_requests > 0"
                     ng-click="item.edit=!item.edit"
                             ><i class="fa fa-sticky-note"></i>
@@ -42,6 +42,7 @@
                     >cancel</button>
                     </p>
                 </div>
+                %= include 'main/manage_machine_edit_net'
                 <div ng-show="name == 'disk' && item.edit" class="form-group mt-4">
                     <div class="row" ng-show="item.info.device == 'disk'">
                         <div class="col-lg-2">

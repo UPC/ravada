@@ -63,6 +63,7 @@ sub _get_controller_network($self) {
 
     my @ret;
 
+    my $count = 0;
     for my $interface ($doc->findnodes('/domain/devices/interface')) {
         next if $interface->getAttribute('type') !~ /^(bridge|network)/;
 
@@ -70,8 +71,18 @@ sub _get_controller_network($self) {
         my ($source) = $interface->findnodes('source') or die "No source";
         my $type = 'NAT';
         $type = 'bridge' if $source->getAttribute('bridge');
+        my ($address) = $interface->findnodes('address');
+        my $name = "en";
+        if ($address->getAttribute('type') eq 'pci') {
+            my $slot = $address->getAttribute('slot');
+            $name .="s".hex($slot);
+        } else {
+            $name .="o$count";
+        }
+        $count++;
         push @ret,({
                      type => $type
+                    ,name => $name
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')

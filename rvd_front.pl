@@ -705,6 +705,19 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
     return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
 };
 
+# Network ##########################################################3
+
+get '/network/nat_networks.json' => sub {
+    my $c = shift;
+
+    return $c->render( json => $RAVADA->list_nat_networks );
+};
+
+get '/network/bridges.json' => sub {
+    my $c = shift;
+
+    return $c->render( json => $RAVADA->list_bridges);
+};
 
 # Users ##########################################################3
 

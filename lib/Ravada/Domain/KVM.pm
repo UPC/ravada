@@ -1125,16 +1125,17 @@ sub _new_pci_slot{
             for my $child ($disk->childNodes) {
                 if ($child->nodeName eq 'address') {
 #                    die $child->toString();
-                    $target{ $child->getAttribute('slot') }++
-                        if $child->getAttribute('slot');
+                    my $hex = $child->getAttribute('slot');
+                    next if !defined $hex;
+                    my $dec = hex($hex);
+                    $target{$dec}++;
                 }
             }
         }
     }
-    for ( 1 .. 99) {
-        $_ = "0$_" if length $_ < 2;
-        my $new = '0x'.$_;
-        return $new if !$target{$new};
+    for my $dec ( 1 .. 99) {
+        next if $target{$dec};
+        return sprintf("0x%X", $dec);
     }
 }
 
@@ -1911,7 +1912,7 @@ sub _set_controller_network($self, $number, $data) {
         <mac address='52:54:00:a7:49:71'/>
         <source network='default'/>
         <model type='$driver'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x1'/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>
       </interface>";
 
       $self->domain->attach_device($device, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG);
