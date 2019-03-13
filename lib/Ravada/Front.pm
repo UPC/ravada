@@ -885,13 +885,29 @@ sub list_bases_anonymous {
 
     my $net = Ravada::Network->new(address => $ip);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name, id_base, is_public FROM domains where is_base=1 AND is_public=1");
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, id_base, is_public, file_screenshot "
+        ."FROM domains where is_base=1 "
+        ."AND is_public=1");
     $sth->execute();
-    
-    my @bases = ();
-    while ( my $row = $sth->fetchrow_hashref) {
-        next if !$net->allowed_anonymous($row->{id});
-        push @bases, ($row);
+    my ($id, $name, $id_base, $is_public, $screenshot);
+    $sth->bind_columns(\($id, $name, $id_base, $is_public, $screenshot));
+
+    my @bases;
+    while ( $sth->fetch) {
+        next if !$net->allowed_anonymous($id);
+        my %base = ( id => $id, name => $name
+            , is_public => ($is_public or 0)
+            , screenshot => ($screenshot or '')
+            , is_active => 0
+            , id_clone => undef
+            , name_clone => undef
+            , is_locked => undef
+            , can_hibernate => 0
+        );
+        $base{screenshot} =~ s{^/var/www}{};
+        lock_hash(%base);
+        push @bases, (\%base);
     }
     $sth->finish;
 

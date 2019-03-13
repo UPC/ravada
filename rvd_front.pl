@@ -965,7 +965,7 @@ get '/img/screenshots/:file' => sub {
         warn"ERROR : no id domain in $path";
         return $c->reply->not_found;
     }
-    if (!$USER->is_admin) {
+    if ($USER && !$USER->is_admin) {
         my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
