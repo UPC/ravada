@@ -88,6 +88,65 @@ sub test_grant_list_clone_on_clone_not_owned($grant, $vm, $user_A, $user_B) {
     $base->remove(user_admin);
 }
 
+sub test_clones_all_only_available_machine($grant, $vm, $user_A, $user_B) {
+    #setup
+    user_admin->grant($user_A,'create_machine');
+    user_admin->grant($user_A,'create_base');
+    user_admin->revoke_all_permissions($user_B);
+    user_admin->grant($user_B, $grant);
+    user_admin->grant($user_B,'create_machine');
+    user_admin->grant($user_B,'create_base');
+    user_admin->grant($user_B, 'clone');
+    
+    #3 machines non visibles for clones_all
+    my $base1 = create_domain($vm->type, $user_A);
+    $base1->prepare_base($user_A);
+    my $base2 = create_domain($vm->type, $user_A);
+    $base2->prepare_base($user_A);
+    my $base3 = create_domain($vm->type, $user_A);
+    $base3->prepare_base($user_A);
+    
+    #5 machines visibles for clones_all
+    my $base_with_clones_A = create_domain($vm->type, $user_A);
+    $base_with_clones_A->prepare_base($user_A);
+    my $base_with_clones_B = create_domain($vm->type, $user_B);
+    $base_with_clones_B->prepare_base($user_B);
+    my $clone_from_A_1 = clone($base_with_clones_A, $user_A);
+    my $clone_from_A_2 = clone($base_with_clones_B, $user_A);
+    my $clone_from_B_1 = clone($base_with_clones_A, $user_B);
+    my $clone_from_B_2 = clone($base_with_clones_B, $user_B); 
+    user_admin->revoke($user_B, 'create_machine');
+    user_admin->revoke($user_B, 'create_base');
+    user_admin->revoke($user_B, 'clone');
+    
+    my $list = rvd_front->list_machines($user_B);
+    #test
+
+    is(scalar @$list, 6);
+    ok(grep { $_->{'name'} eq $base_with_clones_A->{'_data'}->{'name'} } @$list );
+    ok(grep { $_->{'name'} eq $clone_from_A_1->{'_data'}->{'name'} } @$list );
+    ok(grep { $_->{'name'} eq $clone_from_A_2->{'_data'}->{'name'} } @$list );
+    ok(grep { $_->{'name'} eq $base_with_clones_B->{'_data'}->{'name'} } @$list );
+    ok(grep { $_->{'name'} eq $clone_from_B_1->{'_data'}->{'name'} } @$list );
+    ok(grep { $_->{'name'} eq $clone_from_B_2->{'_data'}->{'name'} } @$list );
+    
+    #clean
+    user_admin->revoke($user_B, $grant);
+    user_admin->grant($user_B,'create_machine');
+    user_admin->grant($user_B,'create_base');
+    
+    $clone_from_A_1->remove(user_admin);
+    $clone_from_A_2->remove(user_admin);
+    $clone_from_B_1->remove(user_admin);
+    $clone_from_B_2->remove(user_admin);
+    
+    $base1->remove(user_admin);
+    $base2->remove(user_admin);
+    $base3->remove(user_admin);
+    $base_with_clones_A->remove(user_admin);
+    $base_with_clones_B->remove(user_admin);
+}
+
 sub clone($base, $user) {
     $base->prepare_base(user_admin) if !$base->is_base;
     $base->is_public(1);
@@ -109,10 +168,10 @@ sub remove_machine(@bases) {
     }
 }
 
-sub list_grants_clone {
+sub list_grants($grant_like) {
     my $sth = connector->dbh->prepare(
         "SELECT name from grant_types"
-        ." WHERE name like '%_clone%'"
+        ." WHERE name like '%" . $grant_like . "'"
         ." AND enabled=1");
     $sth->execute();
     my @list;
@@ -120,6 +179,14 @@ sub list_grants_clone {
         push @list,($grant);
     }
     return @list;
+}
+
+sub list_grants_clone {
+    return list_grants('_clone');
+}
+
+sub list_grants_clone_all {
+    return list_grants('_clone_all');
 }
 
 ###################################################################
@@ -149,6 +216,10 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
         for my $grant ( list_grants_clone()) {
             test_grant_list_clone_on_clone_not_owned($grant, $vm, $oper, $user);
+        }
+        
+        for my $grant ( list_grants_clone_all()) {
+            test_clones_all_only_available_machine($grant, $vm, $oper, $user);
         }
         
         diag("Testing machine listing on $vm_name");
