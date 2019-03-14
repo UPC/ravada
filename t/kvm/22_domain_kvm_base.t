@@ -100,7 +100,7 @@ sub test_usb {
 
     my @redir = $devices->findnodes('redirdev');
     my $expect = 3;
-    ok(scalar @redir == $expect,"Expecting $expect redirdev, got ".scalar(@redir)
+    ok(scalar @redir >= $expect,"Expecting $expect redirdev, got ".scalar(@redir)
         ." in ".$devices->toString);
 
     for my $model ( 'nec-xhci') {
