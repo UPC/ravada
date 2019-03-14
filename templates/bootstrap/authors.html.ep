@@ -15,6 +15,7 @@
 <li>Laura Figuerola</li>
 <li>Luca Bezerra</li>
 <li>Lucas Melin</li>
+<li>Marc Prat Mas&oacute;</li>
 <li>Marc Schwede</li>
 <li>Martin McGrath</li>
 <li>Matthew Musgrove</li>
@@ -27,4 +28,7 @@
 <li>Tim Fechner</li>
 </ul>
 <%=l 'Thanks to:' %>
-<ul><li>Jorge Mata</li></ul>
+<ul>
+    <li>Jorge Mata</li>
+    <li>Francesc Oller</li>
+</ul>
