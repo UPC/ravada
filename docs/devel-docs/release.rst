@@ -16,8 +16,8 @@ MAJOR.MINOR.PATCH, increment the:
 ::
 
     $ git checkout master
-    $ git checkout -b 0.2.2
-    $ git push --set-upstream origin 0.2.2
+    $ git checkout -b release/0.2.2
+    $ git push --set-upstream origin release/0.2.2
 
 Draft
 -----
@@ -88,7 +88,7 @@ Changelog file:
 
 ::
 
-    $ git checkout master
+    $ git checkout release/0.2.2
     $ gvim Changelog.md
     $ git commit -a
 
