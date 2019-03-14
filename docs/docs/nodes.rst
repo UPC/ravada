@@ -37,9 +37,9 @@ they are disabled and shut down nicely from the Ravada node administation fronte
 Storage
 =======
 
-Shared storage is not necessary nor supported in this current release. All the nodes
-must have their own isolated storage. It is advisable to have it on local fast drives
-for better performance. When bases are created, the administrator can configure on
+Shared storage is not necessary. The base volumes will be synced across the nodes
+by Ravada itself.
+When bases are created, the administrator can configure on
 which nodes will be available for the virtual machines.
 
 All the master and nodes must have the same storage pools configuration.
@@ -189,8 +189,11 @@ TODO
 
 We already know we have to improve:
 
-- administration forms in the web front end
+- administration forms in the web front
 - check if nodes storage gets filled
+- documentation
 
 This is a new feature, we are currently testing. Feedback welcome through our
-Telegram public forum http://t.me/ravadavdi
+Telegram public forum http://t.me/ravadavdi or
+`github issues <https://github.com/UPC/ravada/issues>`_ .
+
