@@ -41,6 +41,11 @@ sub test_add_hardware_request {
 	
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
+    while ($hardware eq 'usb' && $numero > 4) {
+        test_remove_hardware($vm, $domain, $hardware, 0);
+        @list_hardware1 = $domain->get_controller($hardware);
+	    $numero = scalar(@list_hardware1)+1;
+    }
 	my $req;
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
