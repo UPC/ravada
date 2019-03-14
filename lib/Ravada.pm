@@ -217,17 +217,6 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
                 ,min_disk_size => '10'
         },
-        alpine_37 => {
-                    name => 'Alpine 3.7'
-            ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
-                ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
-                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.\d-x86_64.iso.sha256'
-                ,min_disk_size => '1'
-        }
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
