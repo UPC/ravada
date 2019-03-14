@@ -490,7 +490,12 @@
         $scope.redirect = function() {
             if (!$scope.redirect_done) {
                 $timeout(function() {
-                    window.location.href="/logout";
+                    if(typeof $_anonymous != "undefined" && $_anonymous){
+                        window.location.href="/anonymous";                        
+                    }
+                    else {
+                        window.location.href="/logout";
+                    }
                 }, 60000);
                 $scope.redirect_done = true;
             }
@@ -585,7 +590,7 @@
       $http.get('/unshown_messages.json').then(function(response) {
               $scope.alerts= response.data;
       },function error(response) {
-               if ( response.status == 403 ) {
+               if ( response.status == 403 && (typeof $_anonymous == "undefined" || !$_anonymous)) {
                    window.location.href="/logout";
                }
       });
