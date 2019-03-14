@@ -1680,7 +1680,7 @@ sub clone_machine($c, $anonymous=0) {
         $c->stash( error => "Unknown base ") if !$c->stash('error');
         return $c->render(template => 'main/fail');
     };
-    return quick_start_domain($c, $base->id, $anonymous);
+    return quick_start_domain($c, $base->id, $USER->name, $anonymous);
 }
 
 sub shutdown_machine {
