@@ -11,7 +11,6 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
-use Date::Calc qw(Today_and_Now);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
@@ -30,7 +29,7 @@ Request a command to the ravada backend
 
 =cut
 
-our %FIELD = map { $_ => 1 } qw(error);
+our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
@@ -92,6 +91,9 @@ our %VALID_ARG = (
 
     #users
     ,post_login => { user => 1, locale => 2 }
+
+    #networks
+    ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
 );
 
@@ -544,6 +546,11 @@ sub domdisplay {
 
 sub _new_request {
     my $self = shift;
+    if (!ref($self)) {
+        my $class = $self;
+        $self = {};
+        bless ($self, $class);
+    }
     my %args = @_;
 
     $args{status} = 'requested';
@@ -1574,6 +1581,13 @@ sub AUTOLOAD {
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
+
+    if(!ref($self) && $VALID_ARG{$name} ) {
+        return _new_request($self
+            , command => $name
+            , args => _check_args($name, @_)
+        );
+    }
 
     confess "Can't locate object method $name via package $self"
         if !ref($self);

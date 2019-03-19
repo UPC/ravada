@@ -2214,4 +2214,73 @@ sub _fetch_dir_cert($self) {
     close $in;
 }
 
+sub list_network_interfaces($self, $type) {
+    my $sub = {
+        nat => \&_list_nat_interfaces
+        ,bridge => \&_list_bridges
+    };
+
+    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
+    return $cmd->($self);
+}
+
+sub _list_nat_interfaces($self) {
+
+    my ($in, $out, $err);
+    my @cmd = ( '/usr/bin/virsh','net-list');
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my @lines = split /\n/,$out;
+    shift @lines;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        /\s*(.*?)\s+.*/;
+        push @networks,($1) if $1;
+    }
+    return @networks;
+}
+
+sub _get_nat_bridge($net) {
+    my ($in, $out, $err);
+    my @cmd = ( '/usr/bin/virsh','net-info', $net);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    for my $line (split /\n/, $out) {
+        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
+        return $bridge if $bridge;
+    }
+}
+
+sub _list_qemu_bridges($self) {
+    my %bridge;
+    my @networks = $self->_list_nat_interfaces();
+    for my $net (@networks) {
+        my $nat_bridge = _get_nat_bridge($net);
+        $bridge{$nat_bridge}++;
+    }
+    return keys %bridge;
+}
+
+sub _list_bridges($self) {
+
+    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
+
+    my @cmd = ( '/sbin/brctl','show');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    die $err if $err;
+    my @lines = split /\n/,$out;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
+        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
+    }
+    $self->{_bridges} = \@networks;
+    return @networks;
+}
+
 1;

@@ -1937,7 +1937,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     my $ind=0;
     for my $controller ($devices->findnodes($device)) {
         next if defined $attribute_name
-            && $controller->getAttribute($attribute_name) ne $attribute_value;
+            && $controller->getAttribute($attribute_name) !~ $attribute_value;
 
         if( $ind++==$index ){
             $devices->removeChild($controller);
@@ -1951,7 +1951,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     my $msg = "";
     $msg = " $attribute_name=$attribute_value " if defined $attribute_name;
     confess "ERROR: $device $msg $index"
-        ." not removed, only ".($ind)." found\n";
+        ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
 sub _remove_controller_usb($self, $index) {
@@ -1976,7 +1976,7 @@ sub _remove_controller_disk($self, $index) {
 }
 
 sub _remove_controller_network($self, $index) {
-    $self->_remove_device($index,'interface', type => 'network');
+    $self->_remove_device($index,'interface', type => qr'(bridge|network)');
 }
 
 =head2 pre_remove
