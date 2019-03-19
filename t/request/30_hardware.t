@@ -196,6 +196,11 @@ sub test_remove_hardware {
     $domain = Ravada::Domain->open($domain->id);
     my @list_hardware1 = $domain->get_controller($hardware);
 
+    confess "Error: I can't remove $hardware $index, only ".scalar(@list_hardware1)
+        ."\n"
+        .Dumper(\@list_hardware1)
+            if $index > scalar @list_hardware1;
+
 	my $req;
 	{
 		$req = Ravada::Request->remove_hardware(uid => $USER->id
@@ -208,7 +213,7 @@ sub test_remove_hardware {
 	ok($req, 'Request');
 	rvd_back->_process_all_requests_dont_fork();
 	is($req->status(), 'done');
-	is($req->error(), '');
+	is($req->error(), '') or exit;
 
     {
         my $domain2 = Ravada::Domain->open($domain->id);
@@ -374,21 +379,22 @@ sub test_change_disk($vm, $domain) {
     test_change_disk_cdrom($vm, $domain);
 }
 
-sub test_change_network_bridge($domain, $index) {
+sub test_change_network_bridge($vm, $domain, $index) {
     SKIP: {
-    my $bridges = rvd_front->list_bridges();
+    my @bridges = $vm->list_network_interfaces('bridge');
 
-    skip("No bridges found in this system",6) if !scalar @$bridges;
+    skip("No bridges found in this system",6) if !scalar @bridges;
     my $info = $domain->info(user_admin);
     is ($info->{hardware}->{network}->[$index]->{type}, 'NAT') or exit;
 
-    ok(scalar @$bridges,"No network bridges defined in this host") or return;
+    ok(scalar @bridges,"No network bridges defined in this host") or return;
 
+    diag("Testing network bridge ".$bridges[0]);
     my $req = Ravada::Request->change_hardware(
         id_domain => $domain->id
         ,hardware => 'network'
            ,index => $index
-            ,data => { type => 'bridge', bridge => $bridges->[0]}
+            ,data => { type => 'bridge', bridge => $bridges[0]}
              ,uid => user_admin->id
     );
 
@@ -400,22 +406,23 @@ sub test_change_network_bridge($domain, $index) {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     $info = $domain_f->info(user_admin);
     is ($info->{hardware}->{network}->[$index]->{type}, 'bridge', $domain->name) or exit;
-    is ($info->{hardware}->{network}->[$index]->{bridge}, $bridges->[0] );
+    is ($info->{hardware}->{network}->[$index]->{bridge}, $bridges[0] );
 
     }
 }
 
-sub test_change_network_nat($domain, $index) {
+sub test_change_network_nat($vm, $domain, $index) {
     my $info = $domain->info(user_admin);
 
-    my $nat = rvd_front->list_nat_networks();
-    ok(scalar @$nat,"No NAT network defined in this host") or return;
+    my @nat = $vm->list_network_interfaces( 'nat');
+    ok(scalar @nat,"No NAT network defined in this host") or return;
 
+    diag("Testing network NAT ".$nat[0]);
     my $req = Ravada::Request->change_hardware(
         id_domain => $domain->id
         ,hardware => 'network'
            ,index => $index
-            ,data => { type => 'NAT', network => $nat->[0]}
+            ,data => { type => 'NAT', network => $nat[0]}
              ,uid => user_admin->id
     );
 
@@ -427,7 +434,7 @@ sub test_change_network_nat($domain, $index) {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     $info = $domain_f->info(user_admin);
     is ($info->{hardware}->{network}->[$index]->{type}, 'NAT');
-    is ($info->{hardware}->{network}->[$index]->{network}, $nat->[0] );
+    is ($info->{hardware}->{network}->[$index]->{network}, $nat[0] );
 
 }
 
@@ -439,8 +446,8 @@ sub test_change_network($vm, $domain) {
 
     my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
 
-    test_change_network_bridge($domain, $index);
-    test_change_network_nat($domain, $index);
+    test_change_network_bridge($vm, $domain, $index);
+    test_change_network_nat($vm, $domain, $index);
 }
 
 sub test_change_hardware($vm, $domain, $hardware) {
