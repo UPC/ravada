@@ -1,4 +1,5 @@
 <div ng-show="name == 'network' && item.edit" class="form-group mt-4">
+{{item}}
     <div class="row">
         <div class="col-lg-1">
             <p class="text-right"><%=l 'bus' %></p>
@@ -33,7 +34,7 @@
             <select ng-model="item.network"
                         ng-change="network_edit[$index]=true"
                         ng-show="item.type == 'NAT'"
-                        ng-options="network for network in nat_networks"
+                        ng-options="nat for nat in network_nats"
                         >
             </select>
             <select ng-model="item.bridge"
@@ -52,7 +53,9 @@
         </div>
         <div class="col-lg-2">
             <button class="btn btn-primary"
-                ng-disabled="item.type == 'bridge' && !network_bridges[0]"
+                ng-disabled=
+                "(item.type == 'bridge' && ( !network_bridges[0] || !item.bridge ))
+                || (item.type == 'NAT' && ( !network_nats[0] || !item.network))"
                 ng-click="item.edit=false;change_network(showmachine.id, $index)">OK</button>
             <button class="btn btn-primary"
                 ng-click="item.edit=false;machine_info(showmachine.id)">cancel</button>
