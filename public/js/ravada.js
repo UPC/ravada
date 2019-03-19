@@ -172,17 +172,23 @@
                             $scope.refresh_machine();
                             $scope.init_ldap_access();
                             $scope.list_ldap_attributes();
+                            $scope.list_interfaces();
                             $scope.hardware_types = Object.keys(response.data.hardware);
                 });
-                $http.get('/network/nat_networks.json')
+          };
+          $scope.list_interfaces = function() {
+            if (! $scope.network_nats) {
+                $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
                     .then(function(response) {
-                        $scope.nat_networks = response.data;
+                        $scope.network_nats = response.data;
                 });
-                $http.get('/network/bridges.json')
+            }
+            if (! $scope.network_bridges ) {
+                $http.get('/network/interfaces/'+$scope.showmachine.type+'/bridge')
                     .then(function(response) {
                         $scope.network_bridges= response.data;
                 });
-
+            }
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
@@ -461,7 +467,14 @@
             $scope.change_network = function(id_machine, index ) {
                 var new_settings ={
                     driver: $scope.showmachine.hardware.network[index].driver,
+                    type: $scope.showmachine.hardware.network[index].type,
                 };
+                if ($scope.showmachine.hardware.network[index].type == 'NAT' ) {
+                    new_settings.network=$scope.showmachine.hardware.network[index].network;
+                }
+                if ($scope.showmachine.hardware.network[index].type == 'bridge' ) {
+                    new_settings.bridge=$scope.showmachine.hardware.network[index].bridge;
+                }
                 $http.post('/machine/hardware/change'
                     ,JSON.stringify({
                         'id_domain': id_machine

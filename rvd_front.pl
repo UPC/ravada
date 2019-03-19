@@ -707,16 +707,18 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
 
 # Network ##########################################################3
 
-get '/network/nat_networks.json' => sub {
+get '/network/interfaces/(:vm_type)/(:type)' => sub {
     my $c = shift;
 
-    return $c->render( json => $RAVADA->list_nat_networks );
-};
+    my $vm_type = $c->stash('vm_type');
+    my $type = $c->stash('type');
 
-get '/network/bridges.json' => sub {
-    my $c = shift;
-
-    return $c->render( json => $RAVADA->list_bridges);
+    return $c->render( json => $RAVADA->list_network_interfaces(
+               user => $USER
+              ,type => $type
+           ,vm_type => $vm_type
+       )
+    );
 };
 
 # Users ##########################################################3

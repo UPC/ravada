@@ -1041,68 +1041,36 @@ sub add_node($self,%arg) {
     return $req->id;
 }
 
-sub list_nat_networks($self) {
+sub list_network_interfaces($self, %args) {
 
-    return $self->{_networks} if $self->{_networks};
+    my $vm_type = delete $args{vm_type}or confess "Error: missing vm_type";
+    my $type = delete $args{type} or confess "Error: missing type";
+    my $user = delete $args{user} or confess "Error: missing user";
+    my $timeout = delete $args{timeout};
+    $timeout = 60 if !defined $timeout;
 
-    my ($in, $out, $err);
-    my @cmd = ( '/usr/bin/virsh','net-list');
-    run3(\@cmd, \$in, \$out, \$err);
+    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
 
-    my @lines = split /\n/,$out;
-    shift @lines;
-    shift @lines;
+    my $cache_key = "_interfaces_$type";
+    return $self->{$cache_key} if exists $self->{$cache_key};
 
-    my @networks;
-    for (@lines) {
-        /\s*(.*?)\s+.*/;
-        push @networks,($1) if $1;
+    my $req = Ravada::Request->list_network_interfaces(
+        vm_type => $vm_type
+          ,type => $type
+           ,uid => $user->id
+    );
+    if  ( defined $timeout ) {
+        for ( 1 .. $timeout ) {
+            last if $req->status eq 'done';
+            sleep 1;
+        }
     }
-    $self->{_networks} = \@networks;
-    return \@networks;
-}
+    return [] if $req->status ne 'done';
 
-sub _get_nat_bridge($net) {
-    my ($in, $out, $err);
-    my @cmd = ( '/usr/bin/virsh','net-info', $net);
-    run3(\@cmd, \$in, \$out, \$err);
+    my $interfaces = decode_json($req->output());
+    $self->{$cache_key} = $interfaces;
 
-    for my $line (split /\n/, $out) {
-        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
-        return $bridge if $bridge;
-    }
-}
-
-sub _list_qemu_bridges($self) {
-    my %bridge;
-    my $networks = $self->list_nat_networks();
-    for my $net (@$networks) {
-        my $nat_bridge = _get_nat_bridge($net);
-        $bridge{$nat_bridge}++;
-    }
-    return [keys %bridge];
-}
-
-sub list_bridges($self) {
-
-    return $self->{_bridges} if $self->{_bridges};
-
-    my %qemu_bridge = map { $_ => 1 } @{$self->_list_qemu_bridges()};
-
-    my ($in, $out, $err);
-    my @cmd = ( '/sbin/brctl','show');
-    run3(\@cmd, \$in, \$out, \$err);
-
-    my @lines = split /\n/,$out;
-    shift @lines;
-
-    my @networks;
-    for (@lines) {
-        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
-        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
-    }
-    $self->{_bridges} = \@networks;
-    return \@networks;
+    return $interfaces;
 }
 
 =head2 version
