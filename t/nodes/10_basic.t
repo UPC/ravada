@@ -246,7 +246,7 @@ sub test_volatile($vm, $node) {
     $base->volatile_clones(1);
 
     my @clones;
-    for ( 1 .. 4 ) {
+    for ( 1 .. 10 ) {
         my $clone = $base->clone(user => user_admin, name => new_domain_name);
         is($clone->_vm->is_active,1);
         is($clone->is_active(),1,"Expecting clone ".$clone->name." active on ".$clone->_vm->name);
