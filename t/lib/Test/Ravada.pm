@@ -222,6 +222,7 @@ sub rvd_back($config=undef, $init=1) {
     $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
+    Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
 }
 
