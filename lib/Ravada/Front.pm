@@ -853,6 +853,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'screenshot'
                 || $command eq 'connect_node'
                 || $command eq 'post_login'
+                || $command eq 'list_network_interfaces'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
@@ -1060,10 +1061,7 @@ sub list_network_interfaces($self, %args) {
            ,uid => $user->id
     );
     if  ( defined $timeout ) {
-        for ( 1 .. $timeout ) {
-            last if $req->status eq 'done';
-            sleep 1;
-        }
+        $self->wait_request($req, $timeout);
     }
     return [] if $req->status ne 'done';
 
