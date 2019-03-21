@@ -2224,6 +2224,7 @@ sub _free_memory_available($self) {
         $used += $memory;
     }
     my $free_mem = $info->{total} - $used;
+    $free_mem = 0 if $free_mem < 0;
     my $free_real = $self->_free_memory_overcommit;
 
     $free_mem = $free_real if $free_real < $free_mem;
