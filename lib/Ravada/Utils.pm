@@ -65,6 +65,7 @@ sub user_daemon {
         );
         $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
     }
+    $USER_DAEMON->_reload_grants();
     return $USER_DAEMON;
 }
 
