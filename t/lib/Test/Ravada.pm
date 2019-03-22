@@ -47,6 +47,7 @@ create_domain
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
     remote_node
+    remote_node_2
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
@@ -58,6 +59,7 @@ create_domain
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
+our $FILE_CONFIG_REMOTE_2 = "t/etc/remote_vm_2.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
 
@@ -86,6 +88,8 @@ our %ARG_CREATE_DOM = (
 our %VM_VALID = ( KVM => 1
     ,Void => 0
 );
+
+our @NODES;
 
 sub user_admin {
 
@@ -260,6 +264,14 @@ sub init($config=undef) {
     rvd_back($config, 0)  if !$RVD_BACK;
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
+}
+
+sub remote_config_2() {
+    return {} if ! -e $FILE_CONFIG_REMOTE_2;
+    my $conf;
+    eval { $conf = LoadFile($FILE_CONFIG_REMOTE_2) };
+    is($@,'',"Error in $FILE_CONFIG_REMOTE_2\n".$@) or return;
+    return $conf;
 }
 
 sub remote_config {
@@ -1102,6 +1114,25 @@ sub remote_node($vm_name) {
     }
 }
 
+sub remote_node_2($vm_name) {
+    my $remote_config = remote_config_2();
+
+    my @nodes;
+    for my $name ( sort keys %$remote_config ) {
+        if ( !grep /^$vm_name$/, @{ $remote_config->{$name}->{vm}} ) {
+            warn "Remote test node $name doesn't support $vm_name "
+                .Dumper($remote_config->{$name});
+            next;
+        }
+        my %config = %{$remote_config->{$name}};
+        $config{name} = $name;
+        delete $config{vm};
+        push @nodes,(_do_remote_node($vm_name, \%config));
+    }
+    return @nodes;
+}
+
+
 sub _do_remote_node($vm_name, $remote_config) {
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -1113,6 +1144,8 @@ sub _do_remote_node($vm_name, $remote_config) {
 ).", got :'"
         .($@ or '')."'") or return;
     ok($node) or return;
+
+    push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
 
     is($node->type,$vm->type) or return;
 
@@ -1225,6 +1258,9 @@ sub connector {
 
 # this must be in DESTROY because users got removed in END
 sub DESTROY {
+    for my $node (@NODES) {
+        shutdown_node($node);
+    }
     remove_old_user() if $CONNECTOR;
     remove_old_user_ldap() if $CONNECTOR;
 }

@@ -1309,10 +1309,13 @@ sub _after_remove_domain {
         $self->_remove_files_base();
     }
     return if !$self->{_data};
-    $self->_finish_requests_db();
-    $self->_remove_base_db();
-    $self->_remove_access_attributes_db();
     $self->_remove_all_volumes();
+    return if $cascade;
+    $self->_remove_base_db();
+    $self->_finish_requests_db();
+    $self->_remove_access_attributes_db();
+    $self->_remove_volumes_db();
+    $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
 }
 
@@ -1350,6 +1353,22 @@ sub _remove_access_attributes_db($self) {
     $sth->finish;
 }
 
+sub _remove_volumes_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
+
+sub _remove_bases_vm_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM bases_vm"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
+
 sub _remove_domain_db {
     my $self = shift;
 
@@ -1363,7 +1382,7 @@ sub _remove_domain_db {
     $sth->finish;
 
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains_".lc($type)
-        ." WHERE id=?");
+        ." WHERE id_domain=?");
     $sth->execute($id);
     $sth->finish;
 
