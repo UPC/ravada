@@ -75,7 +75,7 @@ sub remove {
 
     my $config_file = $self->_config_file;
     my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
-    warn $erri if $err;
+    warn $err if $err;
     $self->_vm->run_command("/bin/rm",$config_file.".lock");
 }
 
