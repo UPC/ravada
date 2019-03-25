@@ -76,6 +76,7 @@ for my $vm_name ( 'Void', 'KVM') {
         clean_remote_node($node1);
         clean_remote_node($node2);
 
+        test_change_hardware($vm);
         test_change_hardware($vm, $node1);
         test_change_hardware($vm, $node2);
         test_change_hardware($vm, $node1, $node2);
