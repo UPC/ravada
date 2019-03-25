@@ -1315,7 +1315,6 @@ sub _after_remove_domain {
         $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
-
     $self->_remove_all_volumes();
     return if !$self->{_data};
     return if $cascade;

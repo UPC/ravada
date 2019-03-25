@@ -71,6 +71,7 @@ for my $vm_name ( 'Void', 'KVM') {
         skip($msg,10)   if !$vm;
 
         diag("Testing remote node in $vm_name");
+<<<<<<< HEAD
         my ($node1,$node2) = remote_node_2($vm_name);
 
         clean_remote_node($node1);
@@ -85,12 +86,31 @@ for my $vm_name ( 'Void', 'KVM') {
         remove_node($node1);
         clean_remote_node($node2);
         remove_node($node2);
+=======
+        my $node = remote_node($vm_name)  or next;
+
+        push @nodes,($node) if !grep { $_->name eq $node->name } @nodes;
+
+        clean_remote_node($node);
+
+        test_change_hardware($vm, $node);
+
+        NEXT:
+        clean_remote_node($node);
+        remove_node($node);
+>>>>>>> ca89c575f01c2927a87b3b24d97a399342f4efdc
     }
 
 }
 
 END: {
     clean();
+<<<<<<< HEAD
+=======
+    for my $node (@nodes) {
+        shutdown_node($node);
+    }
+>>>>>>> ca89c575f01c2927a87b3b24d97a399342f4efdc
     done_testing();
 }
 
