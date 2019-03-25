@@ -72,8 +72,11 @@ sub remove {
     my $self = shift;
 
     $self->remove_disks();
-    $self->_vm->run_command("/bin/rm",$self->_config_file());
-    $self->_vm->run_command("/bin/rm",$self->_config_file().".lock");
+
+    my $config_file = $self->_config_file;
+    my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
+    warn $erri if $err;
+    $self->_vm->run_command("/bin/rm",$config_file.".lock");
 }
 
 sub can_hibernate { return 1; }
@@ -235,6 +238,7 @@ sub _vol_remove {
         unlink $file or die "$! $file"
             if -e $file;
     } else {
+        return if !$self->_vm->file_exists($file);
         my ($out, $err) = $self->_vm->run_command('ls',$file,'&&','rm',$file);
         warn $err if $err;
     }
@@ -328,9 +332,9 @@ sub add_volume {
 
 sub remove_volume($self, $file) {
     confess "Missing file" if ! defined $file || !length($file);
-    return if ! -e $file;
-    unlink $file or die "$! $file";
 
+    $self->_vol_remove($file);
+    return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
 
