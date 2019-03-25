@@ -670,6 +670,11 @@ sub _load_grants($self) {
 
 }
 
+sub _reload_grants($self) {
+    delete $self->{_grant};
+    return $self->_load_grants();
+}
+
 sub _grant_alias($self, $name) {
     my $alias = $name;
     return $self->{_grant_alias}->{$name} if exists $self->{_grant_alias}->{$name};
@@ -749,7 +754,6 @@ sub grant_admin_permissions($self,$user) {
         $self->grant($user,$name);
     }
     $sth->finish;
-
 }
 
 =head2 revoke_all_permissions

@@ -199,6 +199,10 @@ around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
+before 'set_controller' => \&_pre_change_hardware;
+before 'remove_controller' => \&_pre_change_hardware;
+before 'change_hardware' => \&_pre_change_hardware;
+
 after 'set_controller' => \&_post_change_hardware;
 after 'remove_controller' => \&_post_change_hardware;
 after 'change_hardware' => \&_post_change_hardware;
@@ -523,6 +527,8 @@ sub _around_remove_volume {
     my ($file) = @_;
 
     my $ok = $self->$orig(@_);
+
+    return $ok if !$self->is_local;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM volumes "
@@ -1281,6 +1287,7 @@ sub _pre_remove_domain($self, $user, @) {
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+
 }
 
 sub _check_active_node($self) {
@@ -1308,11 +1315,11 @@ sub _after_remove_domain {
         $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
-    return if !$self->{_data};
     $self->_remove_all_volumes();
+    return if !$self->{_data};
     return if $cascade;
-    $self->_remove_base_db();
     $self->_finish_requests_db();
+    $self->_remove_base_db();
     $self->_remove_access_attributes_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
@@ -3317,9 +3324,17 @@ sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
 }
 
+sub _pre_change_hardware($self, @) {
+    if (!$self->_vm->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
+    }
+}
+
 sub _post_change_hardware {
     my $self = shift;
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
+    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1);
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 

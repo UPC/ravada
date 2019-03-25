@@ -92,16 +92,18 @@ for my $vm_name ( 'Void', 'KVM') {
         diag("Testing remote node in $vm_name");
         my ($node1, $node2) = remote_node_2($vm_name);
 
-        clean_remote_node($node1);
-        clean_remote_node($node2);
+        if ( !$node1 || !$node2 ) {
+            diag("Skipped: No remote nodes configured in $Test::Ravada::FILE_CONFIG_REMOTE_2");
+            goto NEXT;
+        }
 
         test_remove($vm, $node1, $node2);
 
         NEXT:
-        clean_remote_node($node1);
-        clean_remote_node($node2);
-        remove_node($node1);
-        remove_node($node2);
+        clean_remote_node($node1)   if $node1;
+        clean_remote_node($node2)   if $node2;
+        remove_node($node1)         if $node1;
+        remove_node($node2)         if $node2;
     }
 
 }

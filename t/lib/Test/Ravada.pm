@@ -222,6 +222,7 @@ sub rvd_back($config=undef, $init=1) {
     $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
+    Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
 }
 
@@ -323,12 +324,11 @@ sub remote_config_nodes {
     return $conf;
 }
 
-sub _remove_old_domains_vm {
-    my $vm_name = shift;
+sub _remove_old_domains_vm($vm_name) {
 
+    confess "Undefined vm_name" if !defined $vm_name;
 
     my $domain;
-
     my $vm;
 
     if (ref($vm_name)) {
@@ -875,10 +875,8 @@ sub _domain_node($node) {
 }
 
 sub hibernate_node($node) {
-    diag("hibernate node ".$node->type." ".$node->name);
     if ($node->is_active) {
         for my $domain ($node->list_domains()) {
-            diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
     }
@@ -900,7 +898,6 @@ sub hibernate_node($node) {
 
 sub shutdown_node($node) {
 
-    diag("shutdown node ".$node->type." ".$node->name);
     if ($node->is_active) {
         $node->run_command("service lightdm stop");
         $node->run_command("service gdm stop");
@@ -929,7 +926,6 @@ sub shutdown_node($node) {
 sub start_node($node) {
 
     confess "Undefined node"    if !defined $node;
-    diag("start node ".$node->type." ".$node->name);
     confess "Undefined node " if!$node;
 
     $node->disconnect;
@@ -1141,11 +1137,11 @@ sub _do_remote_node($vm_name, $remote_config) {
 
     eval { $node = $vm->new(%{$remote_config}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($remote_config
-).", got :'"
+        ).", got :'"
         .($@ or '')."'") or return;
+    push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
     ok($node) or return;
 
-    push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
 
     is($node->type,$vm->type) or return;
 
