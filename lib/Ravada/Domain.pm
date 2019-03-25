@@ -528,6 +528,8 @@ sub _around_remove_volume {
 
     my $ok = $self->$orig(@_);
 
+    return $ok if !$self->is_local;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM volumes "
         ." WHERE id_domain=? AND file=?"
@@ -1285,6 +1287,7 @@ sub _pre_remove_domain($self, $user, @) {
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+
 }
 
 sub _check_active_node($self) {
@@ -1312,9 +1315,9 @@ sub _after_remove_domain {
         $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
+
     $self->_remove_all_volumes();
     return if !$self->{_data};
-    $self->_remove_all_volumes();
     return if $cascade;
     $self->_finish_requests_db();
     $self->_remove_base_db();
