@@ -46,7 +46,7 @@ for my $vm_name ( 'KVM') {
             last if $node->ping;
             sleep 1;
         }
-        like($node->_data('mac'),qr(\d\d:\d\d:\d\d:\d\d:)) or next;
+        like($node->_data('mac'),qr([\da-f][\da-f]:[\da-f][\da-f]:\d\d:\d\d:)) or next;
 
         is( $node->is_active, 1 );
         $node->shutdown();
