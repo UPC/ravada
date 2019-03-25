@@ -58,7 +58,7 @@ Create self signed certificate
 ------------------------------
 
 Download and run the
-`create_cert.sh <http://ravada.readthedocs.io/en/latest/docs/create_cert.sh>`__ script from this documentation.
+`create_cert.sh <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/create_cert.sh>`__ script.
 
 .. include:: create_cert.sh
    :code: bash
