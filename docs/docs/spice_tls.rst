@@ -41,6 +41,9 @@ Uncomment the lines: *spice_listen="0.0.0.0"*, *spice_tls=1*  and *spice_tls_x50
 Add path in Apparmor 
 --------------------
 
+You may want to add this path to Apparmor, in some Linux distributions it is not
+necessary, ie Ubuntu from 18.04.
+
 Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-qemu`` 
 
 ::
@@ -54,60 +57,12 @@ Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-q
 Create self signed certificate
 ------------------------------
 
-Perform the following script, to generate the cert files for ssl , and then copy ``*.pem`` file into ``/etc/pkil/libvirt-spice`` directory: (`source <http://fedoraproject.org/w/index.php?title=QA:Testcase_Virtualization_Manually_set_spice_listening_port_with_TLS_port_set>`_)
+Download and run the
+`create_cert.sh <http://ravada.readthedocs.io/en/latest/docs/create_cert.sh>`__ script from this documentation.
 
-::
-    
-    #!/bin/bash
+.. include:: create_cert.sh
+   :code: bash
 
-    SERVER_KEY=server-key.pem
-    
-    # creating a key for our ca
-    if [ ! -e ca-key.pem ]; then
-        openssl genrsa -des3 -out ca-key.pem 1024
-    fi
-    # creating a ca
-    if [ ! -e ca-cert.pem ]; then
-        openssl req -new -x509 -days 1095 -key ca-key.pem -out ca-cert.pem  -subj "/C=IL/L=Raanana/O=Red Hat/CN=my CA"
-    fi
-    # create server key
-    if [ ! -e $SERVER_KEY ]; then
-        openssl genrsa -out $SERVER_KEY 1024
-    fi
-    # create a certificate signing request (csr)
-    if [ ! -e server-key.csr ]; then
-        openssl req -new -key $SERVER_KEY -out server-key.csr -subj "/C=IL/L=Raanana/O=Red Hat/CN=<server IP>"
-    fi
-    # signing our server certificate with this ca
-    if [ ! -e server-cert.pem ]; then
-        openssl x509 -req -days 1095 -in server-key.csr -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out server-cert.pem
-    fi
-    
-    # now create a key that doesn't require a passphrase
-    openssl rsa -in $SERVER_KEY -out $SERVER_KEY.insecure
-    mv $SERVER_KEY $SERVER_KEY.secure
-    mv $SERVER_KEY.insecure $SERVER_KEY
-    
-    # show the results (no other effect)
-    openssl rsa -noout -text -in $SERVER_KEY
-    openssl rsa -noout -text -in ca-key.pem
-    openssl req -noout -text -in server-key.csr
-    openssl x509 -noout -text -in server-cert.pem
-    openssl x509 -noout -text -in ca-cert.pem
-    chown :kvm ./*.pem
-    
-    # copy *.pem file to /etc/pki/libvirt-spice
-    if [[ -d "/etc/pki/libvirt-spice" ]] 
-    then    
-        cp ./*.pem /etc/pki/libvirt-spice
-    else
-        mkdir -p /etc/pki/libvirt-spice
-        cp ./*.pem /etc/pki/libvirt-spice
-    fi
-
-    # echo --host-subject
-    echo "your --host-subject is" \" `openssl x509 -noout -text -in server-cert.pem | grep Subject: | cut -f 10- -d " "` \"
- 
 .. warning::
     Whatever method you use to generate the certificate and key files, the Common Name value used for the server and client certificates/keys must each differ from the Common Name value used for the CA certificate. Otherwise, the certificate and key files will not work for servers compiled using OpenSSL.
 
