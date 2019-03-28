@@ -11,7 +11,6 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
-use Date::Calc qw(Today_and_Now);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
