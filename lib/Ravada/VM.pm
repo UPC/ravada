@@ -63,6 +63,7 @@ requires 'import_domain';
 requires 'is_alive';
 
 requires 'free_memory';
+requires 'free_disk';
 
 requires '_fetch_dir_cert';
 

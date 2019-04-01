@@ -2247,4 +2247,9 @@ sub _fetch_dir_cert($self) {
     close $in;
 }
 
+sub free_disk($self) {
+    my $pool = $self->storage_pool();
+    my $info = $pool->get_info();
+    return $info->{available};
+}
 1;
