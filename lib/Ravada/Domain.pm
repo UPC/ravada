@@ -501,6 +501,14 @@ sub _around_add_volume {
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
 
+    my $free = $self->_vm->free_disk();
+    my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    die "Error creating volume, out of space $size . Disk free: "
+            .Ravada::Utils::number_to_size($free_out)
+            ."\n"
+        if exists $args{size} && $args{size} >= $free;
+
     my $ok = $self->$orig(%args);
     confess "Error adding ".Dumper(\%args) if !$ok;
     $path = $ok if ! $path;
