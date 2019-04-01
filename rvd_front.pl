@@ -1177,6 +1177,17 @@ get '/session/(#tag)/(#value)' => sub {
 };
 ###################################################
 
+###################################################
+#
+# spice html
+#
+any '/spice' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/spice/index'); #?host=10.110.7.5&port=5959');
+};
+###################################################
+
 sub _init_error {
     my $c = shift;
     $c->stash(error_title => '');

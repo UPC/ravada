@@ -47,6 +47,8 @@
                 </li>
                 <li><b>Display IP :</b> {{domain.display.address}} </li>
                 <li><b>Display Port :</b> {{domain.display.port}} </li>
+                <li><b>HTML Spice Viewer :</b><a ng-click="copy_password(); redirect()"
+                        href="/spice">{{domain.ip}}</a></li>
             </ul>
             <h3>Machine Information</h3>
             <ul>
