@@ -324,7 +324,7 @@ sub _fetch_dir_cert {
     confess "TODO";
 }
 
-sub free_disk($self) {
+sub free_disk($self, $storage_pool = undef) {
     my $df = `df`;
     for my $line (split /\n/, $df) {
         my @info = split /\s+/,$line;

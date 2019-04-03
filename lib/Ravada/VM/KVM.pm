@@ -176,7 +176,7 @@ sub _load_storage_pool {
     my $vm_pool;
     my $available;
 
-    if (defined $self->default_storage_pool_name) {
+    if ($self->default_storage_pool_name) {
         return( $self->vm->get_storage_pool_by_name($self->default_storage_pool_name)
             or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
     }
@@ -2247,8 +2247,13 @@ sub _fetch_dir_cert($self) {
     close $in;
 }
 
-sub free_disk($self) {
-    my $pool = $self->storage_pool();
+sub free_disk($self, $pool_name = undef ) {
+    my $pool;
+    if ($pool_name) {
+        $pool = $self->vm->get_storage_pool_by_name($pool_name);
+    } else {
+        $pool = $self->storage_pool();
+    }
     my $info = $pool->get_info();
     return $info->{available};
 }

@@ -605,6 +605,18 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
     }
+    $self->_check_free_space_prepare_base();
+}
+
+sub _check_free_space_prepare_base($self) {
+    my $pool_base = $self->_vm->default_storage_pool_name;
+    $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+
+    for my $volume ($self->list_volumes_info(device => 'disk')) {;
+        next if $volume->{device} ne 'disk';
+
+        $self->_vm->_check_free_disk($volume->{capacity} * 2, $pool_base);
+    }
 };
 
 sub _post_prepare_base {
