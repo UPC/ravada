@@ -63,6 +63,7 @@ requires 'import_domain';
 requires 'is_alive';
 
 requires 'free_memory';
+requires 'free_disk';
 
 requires '_fetch_dir_cert';
 
@@ -1382,6 +1383,21 @@ sub shutdown($self) {
     die "Error: local VM can't be shut down\n" if $self->is_local;
     $self->is_active(0);
     $self->run_command_nowait('/sbin/poweroff');
+}
+
+sub _check_free_disk($self, $size, $storage_pool=undef) {
+
+    my $size_out = int($size / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    my $free = $self->free_disk($storage_pool);
+    my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    die "Error creating volume, out of space."
+    ." Requested: ".Ravada::Utils::number_to_size($size_out)
+    ." , Disk free: ".Ravada::Utils::number_to_size($free_out)
+    ."\n"
+    if $size > $free;
+
 }
 
 1;

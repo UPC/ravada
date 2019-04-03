@@ -501,6 +501,14 @@ sub _around_add_volume {
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
 
+    my $free = $self->_vm->free_disk();
+    my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    die "Error creating volume, out of space $size . Disk free: "
+            .Ravada::Utils::number_to_size($free_out)
+            ."\n"
+        if exists $args{size} && $args{size} >= $free;
+
     my $ok = $self->$orig(%args);
     confess "Error adding ".Dumper(\%args) if !$ok;
     $path = $ok if ! $path;
@@ -596,6 +604,18 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
+    }
+    $self->_check_free_space_prepare_base();
+}
+
+sub _check_free_space_prepare_base($self) {
+    my $pool_base = $self->_vm->default_storage_pool_name;
+    $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+
+    for my $volume ($self->list_volumes_info(device => 'disk')) {;
+        next if $volume->{device} ne 'disk';
+
+        $self->_vm->_check_free_disk($volume->{capacity} * 2, $pool_base);
     }
 };
 
