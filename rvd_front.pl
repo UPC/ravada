@@ -15,6 +15,7 @@ use Time::Piece;
 use Mojo::Home;
 
 use I18N::LangTags::Detect;
+
 #####
 #my $self->plugin('I18N');
 #package Ravada::I18N:en;
@@ -1181,10 +1182,10 @@ get '/session/(#tag)/(#value)' => sub {
 #
 # spice html
 #
-any '/spice' => sub {
+any '/spiceHtml' => sub {
     my $c = shift;
 
-    $c->render(template => 'main/spice/index'); #?host=10.110.7.5&port=5959');
+    $c->render(template => 'main/spiceHtml'); #?host=10.110.7.5&port=5959');
 };
 ###################################################
 
