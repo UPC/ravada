@@ -672,12 +672,14 @@ sub start {
     my $remote_ip = delete $arg{remote_ip};
     my $request = delete $arg{request};
 
+    my $display_ip;
     if ($remote_ip) {
         $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
+        $display_ip = $self->_listen_ip($remote_ip);
     }
-    $self->_set_spice_ip($set_password);
+    $self->_set_spice_ip($set_password, $display_ip);
     $self->status('starting');
 
     my $error;
