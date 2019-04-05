@@ -17,6 +17,7 @@ use Hash::Util qw(lock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
+use NetAddr::IP;
 use IPC::Run3 qw(run3);
 use Time::Piece;
 
@@ -766,6 +767,7 @@ sub _allowed {
 sub _around_display_info($orig,$self,$user ) {
     $self->_allowed($user);
     my $display = $self->$orig($user);
+    confess if !ref($display);
     if (!$self->readonly) {
         $self->_data(display => encode_json($display));
     }
@@ -1130,7 +1132,8 @@ sub _display_file_spice($self,$user, $tls = 0) {
 
     my $display = $self->display_info($user);
 
-    die "I can't find ip port in ".$self->display if !$display->{address} || !$display->{port};
+    confess "I can't find ip port in ".Dumper($display)
+        if !$display->{address} || !$display->{port};
 
     my $ret =
         "[virt-viewer]\n"
@@ -2666,6 +2669,34 @@ sub set_driver_id {
 
     $self->set_driver($type => $value);
     $sth->finish;
+}
+
+sub _listen_ip($self, $remote_ip) {
+    my $default_ravada_display_ip = Ravada::display_ip();
+    return $default_ravada_display_ip   if $default_ravada_display_ip;
+
+    return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
+    my ($out, $err) = $self->_vm->run_command("/sbin/ip","route");
+    my %route;
+    my ($default_gw , $default_ip);
+
+    my $remote_ip_addr = NetAddr::IP->new($remote_ip);
+
+    for my $line ( split( /\n/, $out ) ) {
+        if ( $line =~ m{^default via ([\d\.]+)} ) {
+            $default_gw = NetAddr::IP->new($1);
+        }
+        if ( $line =~ m{^([\d\.\/]+).*src ([\d\.\/]+)} ) {
+            my ($network, $ip) = ($1, $2);
+            $route{$network} = $ip;
+
+            my $netaddr = NetAddr::IP->new($network);
+            return $ip if $remote_ip_addr->within($netaddr);
+
+            $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+        }
+    }
+    return $default_ip;
 }
 
 sub remote_ip($self) {
