@@ -152,7 +152,7 @@ sub search_user {
     my $mesg = $ldap->search(      # Search for the user
     base   => $base,
     scope  => 'sub',
-    filter => "($field=$username)",
+    filter => "(&($field=$username) (NOMFILTRE=VALORACCES))",
     typesonly => $typesonly,
     attrs  => ['*']
 
