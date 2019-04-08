@@ -2322,4 +2322,12 @@ sub _change_xml_address_virtio($self, $address) {
     $address->setAttribute(slot => $self->_new_pci_slot);
 }
 
+sub dettach($self, $user) {
+    $self->id_base(undef);
+    $self->start($user) if !$self->is_active;
+    for my $vol ($self->list_disks ) {
+        $self->domain->block_pull($vol,0);
+    }
+}
+
 1;

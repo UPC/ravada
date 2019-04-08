@@ -59,6 +59,7 @@ requires 'resume';
 requires 'prepare_base';
 
 requires 'rename';
+requires 'dettach';
 
 #storage
 requires 'add_volume';
@@ -180,6 +181,8 @@ after 'remove_base' => \&_post_remove_base;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
+
+after 'dettach' => \&_post_dettach;
 
 before 'clone' => \&_pre_clone;
 
@@ -2530,6 +2533,16 @@ sub _post_rename {
     $self->_rename_domain_db(@_);
 }
 
+sub _post_dettach($self, @) {
+     my $sth = $$CONNECTOR->dbh->prepare(
+         "UPDATE domains set id_base=? "
+         ." WHERE id=?"
+     );
+     $sth->execute(undef, $self->id);
+     $sth->finish;
+     delete $self->{_data};
+}
+
  sub _post_screenshot {
      my $self = shift;
      my ($filename) = @_;
@@ -3542,6 +3555,50 @@ sub cache_volume_info($self, %info) {
         "UPDATE volumes set info=?, name=?,file=?,id_domain=?,n_order=? WHERE id=?"
     );
     $sth->execute(encode_json(\%info), $name, $file, $self->id, $n_order, $row->{id});
+}
+
+sub rebase($self, $user, $new_base) {
+    croak "Error: ".$self->name." is not a base\n"  if !$self->is_base;
+
+    my @reqs = Ravada::Request->dettach(
+        uid => $user->id
+        ,id_domain => $new_base->id
+    );
+
+    push @reqs, Ravada::Request->prepare_base(
+        uid => $user->id
+        ,id_domain => $new_base->id
+        ,after_request => $reqs[0]->id
+    );
+
+    for my $clone_info ( $self->clones ) {
+        next if $clone_info->{id} == $new_base->id;
+        push @reqs,Ravada::Request->rebase_volumes(
+                   uid => $user->id
+              ,id_base => $new_base->id
+            ,id_domain => $clone_info->{id}
+        ,after_request => $reqs[1]->id
+        );
+    }
+    return @reqs;
+}
+
+sub rebase_volumes($self, $new_base) {
+    die "Error: domain ".$new_base->name." is not a base\n"
+        if !$new_base->is_base;
+    my @files_target = $new_base->list_files_base_target();
+    my %file_target = map { $_->[1] => $_->[0] } @files_target;
+
+    warn "rebasing ".$self->name."\n";
+    for my $vol ( $self->list_volumes_info) {
+        next if $vol->{device} ne 'disk';
+        my $new_base = $file_target{$vol->{target}};
+        die "I can't find new base file for ".Dumper($vol) if !$new_base;
+        warn "$vol->{file}\n$new_base\n";
+        my @cmd = ('/usr/bin/qemu-img','rebase','-b',$new_base,$vol->{file});
+        my ($out, $err) = $self->_vm->run_command(@cmd);
+    }
+    $self->id_base($new_base->id);
 }
 
 1;
