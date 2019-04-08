@@ -1988,6 +1988,8 @@ sub process_requests {
         warn $@ if $@;
         next if !$req;
 
+        next if !$req->requirements_done;
+
         next if $request_type ne 'all' && $req->type ne $request_type;
 
         next if $req->command !~ /shutdown/i
@@ -2526,6 +2528,28 @@ sub _cmd_start {
     $request->status('done', $msg);
 
 }
+
+sub _cmd_dettach($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to dettach domain"
+        if !$user->is_admin;
+
+    $domain->dettach($user);
+}
+
+sub _cmd_rebase_volumes($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to dettach domain"
+        if !$user->is_admin;
+
+    my $new_base = Ravada::Domain->open($request->args('id_base'));
+    $domain->rebase_volumes($new_base);
+}
+
 
 sub _cmd_start_clones {
     my $self = shift;
@@ -3137,6 +3161,7 @@ sub _req_method {
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
+       ,dettach => \&_cmd_dettach
        ,cleanup => \&_cmd_cleanup
       ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
@@ -3158,6 +3183,7 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,rebase_volumes => \&_cmd_rebase_volumes
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_machine => \&_cmd_refresh_machine
 ,refresh_vms => \&_cmd_refresh_vms
