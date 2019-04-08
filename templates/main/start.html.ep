@@ -23,7 +23,7 @@
 
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
-                                <strong>Error: </strong><%= $i %>
+                                <strong><%=l 'Error' %>: </strong><%=l $i %>
                             </div>
                 %       }
 
