@@ -770,3 +770,39 @@ msgstr ""
 
 msgid "licensed."
 msgstr ""
+
+msgid "New Node"
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+msgid "A node with that name already exists."
+msgstr ""
+
+msgid "Setting your default language"
+msgstr ""
+
+msgid "Change password"
+msgstr ""
+
+msgid "Update password"
+msgstr ""
+
+msgid "Start all clones"
+msgstr ""
+
+msgid "Access denied"
+msgstr ""
+
+msgid "Empty login name"
+msgstr ""
+
+msgid "Empty password"
+msgstr ""
+
+msgid "Session timeout"
+msgstr ""
+
+msgid "Vietnamese"
+msgstr ""
