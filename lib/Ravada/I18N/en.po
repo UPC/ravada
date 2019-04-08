@@ -806,3 +806,6 @@ msgstr ""
 
 msgid "Session timeout"
 msgstr ""
+
+msgid "Vietnamese"
+msgstr ""
