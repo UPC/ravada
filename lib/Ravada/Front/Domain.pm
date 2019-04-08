@@ -176,6 +176,8 @@ sub shutdown_now        { confess "TODO" }
 sub spinoff_volumes     { confess "TODO" }
 sub start               { confess "TODO" }
 
+sub dettach             { confess "TODO" }
+
 sub get_driver {}
 sub get_controller_by_name { }
 sub list_controllers {}
