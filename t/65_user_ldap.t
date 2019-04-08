@@ -336,8 +336,10 @@ sub test_filter {
             $ravada->_install();
             Ravada::Auth::LDAP::init();
         };
-        diag("Skipping: $@");
-        skip($@, 6);
+        if ($@) {
+            diag("Skipping: $@");
+            skip($@, 6);
+        }
 
         my ($user_name, $password) = ('mcnulty_'.new_domain_name(), 'jameson');
         _remove_user_ldap($user_name);
