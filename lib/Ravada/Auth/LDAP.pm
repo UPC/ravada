@@ -149,10 +149,17 @@ sub search_user {
 
     $username = escape_filter_value($username);
 
+    my $filter = "($field=$username)";
+    if ( exists $$CONFIG->{ldap}->{filter} ) {
+        my $filter_config = $$CONFIG->{ldap}->{filter};
+        $filter_config = escape_filter_value($filter_config);
+        $filter = "(&($field=$username) ($filter_config))";
+    }
+
     my $mesg = $ldap->search(      # Search for the user
     base   => $base,
     scope  => 'sub',
-    filter => "(&($field=$username) (NOMFILTRE=VALORACCES))",
+    filter => $filter,
     typesonly => $typesonly,
     attrs  => ['*']
 
