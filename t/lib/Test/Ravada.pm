@@ -220,7 +220,7 @@ sub rvd_back($config=undef, $init=1) {
 
     user_admin();
     $RVD_BACK = $rvd;
-    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
+    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
 
     Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
