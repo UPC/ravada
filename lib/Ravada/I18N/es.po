@@ -1,14 +1,17 @@
 # Translators:
-# Fernando Verdugo, 2017
 # Alexander Salas Bastidas <alexander.salas@gmail.com>, 2018
 # JanFontanet <jan2_@hotmail.es>, 2018
+# Fernando Verdugo, 2019
+# Amparo _rvd <amparorvd@gmail.com>, 2019
+# Joel Alarcón <joelalju100@gmail.com>, 2017
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: JanFontanet <jan2_@hotmail.es>, 2018\n"
+"PO-Revision-Date: 2017-01-03 11:17+0000\n"
+"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
 "Language-Team: Spanish (https://www.transifex.com/ravada/teams/70385/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -293,7 +296,7 @@ msgid "A viewer is required to run the virtual machines."
 msgstr "Se precisa de un visualizador para encender la máquina virtual."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Se precisa de un visualizador para encender la máquina virtual."
+msgstr "Es necesario un visor para ejecutar las máquinas virtuales."
 
 msgid "Virtual Machines"
 msgstr "Máquinas Virtuales"
@@ -566,6 +569,9 @@ msgstr "Esta máquina virtual no se puede eliminar porque tiene"
 msgid "clones"
 msgstr "clones"
 
+msgid "Clones"
+msgstr "Clones"
+
 msgid "This machine has not Graphics parameters!"
 msgstr "¡Esta máquina no tiene parámetros Gráficos!"
 
@@ -797,3 +803,36 @@ msgstr "Gracias a:"
 
 msgid "licensed."
 msgstr "licenciado."
+
+msgid "New Node"
+msgstr "Nuevo Nodo"
+
+msgid "Address"
+msgstr "Dirección"
+
+msgid "A node with that name already exists."
+msgstr "Ya existe un node con ese nombre."
+
+msgid "Setting your default language"
+msgstr "Configuración del idioma por defecto"
+
+msgid "Change password"
+msgstr "Cambiar contraseña"
+
+msgid "Update password"
+msgstr "Actualiza contraseña"
+
+msgid "Start all clones"
+msgstr "Iniciar todos los clones"
+
+msgid "Access denied"
+msgstr "Acceso denegado"
+
+msgid "Empty login name"
+msgstr "Nombre de inicio de sesión vacío"
+
+msgid "Empty password"
+msgstr "Contraseña vacía"
+
+msgid "Session timeout"
+msgstr "El tiempo de espera de la sesión finalizo."
