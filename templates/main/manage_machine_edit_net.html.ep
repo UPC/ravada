@@ -1,5 +1,4 @@
 <div ng-show="name == 'network' && item.edit" class="form-group mt-4">
-{{item}}
     <div class="row">
         <div class="col-lg-1">
             <p class="text-right"><%=l 'bus' %></p>
