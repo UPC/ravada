@@ -806,3 +806,6 @@ msgstr ""
 
 msgid "Vietnamese"
 msgstr ""
+
+msgid "Italian"
+msgstr ""

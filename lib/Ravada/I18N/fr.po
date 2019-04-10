@@ -1,15 +1,18 @@
 # Translators:
-# Fernando Verdugo, 2017
-# Thierry Bugier <tbugier@teclib.com>, 2017
 # kimia mirehbar <kimia@etsetb.upc.edu>, 2017
 # peuportier aurelien <aurelien.peuportier@protonmail.com>, 2018
+# Thierry Bugier <tbugier@teclib.com>, 2018
+# Fernando Verdugo, 2018
+# Amparo _rvd <amparorvd@gmail.com>, 2019
+# Joel Alarcón <joelalju100@gmail.com>, 2017
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: peuportier aurelien <aurelien.peuportier@protonmail.com>, 2018\n"
+"PO-Revision-Date: 2017-01-03 11:17+0000\n"
+"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
 "Language-Team: French (https://www.transifex.com/ravada/teams/70385/fr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -292,6 +295,9 @@ msgstr "Bienvenue"
 
 msgid "A viewer is required to run the virtual machines."
 msgstr "Une visionneuse est nécessaire pour exécuter les machines virtuelles."
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Un visualiseur est nécessaire pour exécuter les machines virtuelles."
 
 msgid "Virtual Machines"
 msgstr "Machines Virtuelles"
@@ -576,6 +582,9 @@ msgstr "Cette machine virtuelle ne peut pas être supprimée parce qu'elle a"
 msgid "clones"
 msgstr "clones"
 
+msgid "Clones"
+msgstr "Clones"
+
 msgid "This machine has not Graphics parameters!"
 msgstr "Cette machine n'a pas de paramètres graphiques !"
 
@@ -753,4 +762,95 @@ msgid "copied to clipboard"
 msgstr "copié dans le presse-papiers"
 
 msgid "Portuguese"
+msgstr "Portugais"
+
+msgid "Read more."
+msgstr "Lire la suite."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "Le mot de passe pour cette connexion de machine virtuelle est:"
+
+msgid "view"
+msgstr "vue"
+
+msgid "Start again"
+msgstr "Recommencer"
+
+msgid "The machine is down."
+msgstr "La machine est en panne."
+
+msgid "Remove"
+msgstr "Retirer"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "La machine doit être démarrée pour prendre la capture d'écran."
+
+msgid "Take screenshot"
+msgstr "Prendre une capture d'écran"
+
+msgid "Set base picture"
+msgstr "Définir l'image de base"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Sauvegarde de la capture d'écran, veuillez patienter un instant ..."
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr "Vous devez exécuter la machine afin de prendre une capture d'écran."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Copiez la capture d'écran, attendez un instant, s'il vous plaît ..."
+
+msgid "You need a screenshot in order to copy it to the base machine."
 msgstr ""
+"Vous avez besoin d’une capture d’écran pour pouvoir la copier sur la machine"
+" de base."
+
+msgid "Add"
+msgstr "Ajouter"
+
+msgid "The changes will apply on next restart"
+msgstr "Les modifications s'appliqueront au prochain redémarrage"
+
+msgid "This VM is running and can't be renamed."
+msgstr ""
+"Cette machine virtuelle est en cours d'exécution et ne peut pas être "
+"renommée."
+
+msgid "Thanks to:"
+msgstr "Grâce à:"
+
+msgid "licensed."
+msgstr "autorisé."
+
+msgid "New Node"
+msgstr "Nouveau nœud"
+
+msgid "Address"
+msgstr "Adresse"
+
+msgid "A node with that name already exists."
+msgstr "Un nœud portant ce nom existe déjà"
+
+msgid "Setting your default language"
+msgstr "Définir votre langue par défaut"
+
+msgid "Change password"
+msgstr "Changer le mot de passe"
+
+msgid "Update password"
+msgstr "Mettre à jour le mot de passe"
+
+msgid "Start all clones"
+msgstr "Démarrer tous les clones"
+
+msgid "Access denied"
+msgstr "Accès refusé"
+
+msgid "Empty login name"
+msgstr "Nom d'utilisateur vide"
+
+msgid "Empty password"
+msgstr "Mot de passe vide"
+
+msgid "Session timeout"
+msgstr "Expiration de la session"
