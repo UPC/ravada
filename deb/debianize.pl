@@ -229,7 +229,7 @@ sub chmod_control_files {
 }
 
 sub chmod_ravada_conf {
-    chmod 0644,"$DIR_DST/etc/ravada.conf" or die $!;
+    chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
 }
 
 sub tar {
@@ -306,6 +306,7 @@ chown_files('usr/sbin',0755,0755);
 #chown_files('usr/share/ravada/public');
 #chown_files('usr/share/ravada/templates');
 chown_files('etc');
+chmod_ravada_conf();
 chown_files('lib');
 #chown_files('lib/systemd');
 chown_files('var/lib/ravada');

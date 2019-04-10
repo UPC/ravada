@@ -68,7 +68,7 @@ footer #issue
 
 Example:
 ```
-fix: active virtual machines can not be started
+fix(backend): active virtual machines can not be started
 
 check the machine status before start
 returns if machine active

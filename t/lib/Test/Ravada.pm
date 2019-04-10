@@ -47,6 +47,7 @@ create_domain
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
     remote_node
+    remote_node_2
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
@@ -58,6 +59,7 @@ create_domain
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
+our $FILE_CONFIG_REMOTE_2 = "t/etc/remote_vm_2.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
 
@@ -86,6 +88,8 @@ our %ARG_CREATE_DOM = (
 our %VM_VALID = ( KVM => 1
     ,Void => 0
 );
+
+our @NODES;
 
 sub user_admin {
 
@@ -218,6 +222,7 @@ sub rvd_back($config=undef, $init=1) {
     $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
 
+    Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
 }
 
@@ -260,6 +265,14 @@ sub init($config=undef) {
     rvd_back($config, 0)  if !$RVD_BACK;
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
+}
+
+sub remote_config_2() {
+    return {} if ! -e $FILE_CONFIG_REMOTE_2;
+    my $conf;
+    eval { $conf = LoadFile($FILE_CONFIG_REMOTE_2) };
+    is($@,'',"Error in $FILE_CONFIG_REMOTE_2\n".$@) or return;
+    return $conf;
 }
 
 sub remote_config {
@@ -311,12 +324,11 @@ sub remote_config_nodes {
     return $conf;
 }
 
-sub _remove_old_domains_vm {
-    my $vm_name = shift;
+sub _remove_old_domains_vm($vm_name) {
 
+    confess "Undefined vm_name" if !defined $vm_name;
 
     my $domain;
-
     my $vm;
 
     if (ref($vm_name)) {
@@ -863,10 +875,8 @@ sub _domain_node($node) {
 }
 
 sub hibernate_node($node) {
-    diag("hibernate node ".$node->type." ".$node->name);
     if ($node->is_active) {
         for my $domain ($node->list_domains()) {
-            diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
     }
@@ -888,7 +898,6 @@ sub hibernate_node($node) {
 
 sub shutdown_node($node) {
 
-    diag("shutdown node ".$node->type." ".$node->name);
     if ($node->is_active) {
         $node->run_command("service lightdm stop");
         $node->run_command("service gdm stop");
@@ -917,7 +926,6 @@ sub shutdown_node($node) {
 sub start_node($node) {
 
     confess "Undefined node"    if !defined $node;
-    diag("start node ".$node->type." ".$node->name);
     confess "Undefined node " if!$node;
 
     $node->disconnect;
@@ -1102,6 +1110,25 @@ sub remote_node($vm_name) {
     }
 }
 
+sub remote_node_2($vm_name) {
+    my $remote_config = remote_config_2();
+
+    my @nodes;
+    for my $name ( sort keys %$remote_config ) {
+        if ( !grep /^$vm_name$/, @{ $remote_config->{$name}->{vm}} ) {
+            warn "Remote test node $name doesn't support $vm_name "
+                .Dumper($remote_config->{$name});
+            next;
+        }
+        my %config = %{$remote_config->{$name}};
+        $config{name} = $name;
+        delete $config{vm};
+        push @nodes,(_do_remote_node($vm_name, \%config));
+    }
+    return @nodes;
+}
+
+
 sub _do_remote_node($vm_name, $remote_config) {
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -1110,9 +1137,11 @@ sub _do_remote_node($vm_name, $remote_config) {
 
     eval { $node = $vm->new(%{$remote_config}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($remote_config
-).", got :'"
+        ).", got :'"
         .($@ or '')."'") or return;
+    push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
     ok($node) or return;
+
 
     is($node->type,$vm->type) or return;
 
@@ -1225,6 +1254,9 @@ sub connector {
 
 # this must be in DESTROY because users got removed in END
 sub DESTROY {
+    for my $node (@NODES) {
+        shutdown_node($node);
+    }
     remove_old_user() if $CONNECTOR;
     remove_old_user_ldap() if $CONNECTOR;
 }

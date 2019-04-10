@@ -199,6 +199,10 @@ around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
+before 'set_controller' => \&_pre_change_hardware;
+before 'remove_controller' => \&_pre_change_hardware;
+before 'change_hardware' => \&_pre_change_hardware;
+
 after 'set_controller' => \&_post_change_hardware;
 after 'remove_controller' => \&_post_change_hardware;
 after 'change_hardware' => \&_post_change_hardware;
@@ -497,6 +501,14 @@ sub _around_add_volume {
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
 
+    my $free = $self->_vm->free_disk();
+    my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    die "Error creating volume, out of space $size . Disk free: "
+            .Ravada::Utils::number_to_size($free_out)
+            ."\n"
+        if exists $args{size} && $args{size} >= $free;
+
     my $ok = $self->$orig(%args);
     confess "Error adding ".Dumper(\%args) if !$ok;
     $path = $ok if ! $path;
@@ -523,6 +535,8 @@ sub _around_remove_volume {
     my ($file) = @_;
 
     my $ok = $self->$orig(@_);
+
+    return $ok if !$self->is_local;
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM volumes "
@@ -590,6 +604,18 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
+    }
+    $self->_check_free_space_prepare_base();
+}
+
+sub _check_free_space_prepare_base($self) {
+    my $pool_base = $self->_vm->default_storage_pool_name;
+    $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+
+    for my $volume ($self->list_volumes_info(device => 'disk')) {;
+        next if $volume->{device} ne 'disk';
+
+        $self->_vm->_check_free_disk($volume->{capacity} * 2, $pool_base);
     }
 };
 
@@ -1147,11 +1173,12 @@ Return information about the domain.
 =cut
 
 sub info($self, $user) {
+    my $is_active = $self->is_active;
     my $info = {
         id => $self->id
         ,name => $self->name
         ,is_base => $self->is_base
-        ,is_active => $self->is_active
+        ,is_active => $is_active
         ,spice_password => $self->spice_password
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
@@ -1159,21 +1186,21 @@ sub info($self, $user) {
         ,needs_restart => ( $self->needs_restart or 0)
         ,type => $self->type
     };
-    eval {
-        $info->{display_url} = $self->display($user)    if $self->is_active;
-        $self->display_file($user)  if $self->is_active && !$self->_data('display_file');
-    };
-    die $@ if $@ && $@ !~ /not allowed/i;
+    if ($is_active) {
+        eval {
+            $info->{display_url} = $self->display($user);
+            $self->display_file($user)  if !$self->_data('display_file');
+
+            my $display = $self->display_info($user);
+            $self->display_file_tls($user)
+                if $display->{tls_port} && !$self->_data('display_file');
+            $info->{display} = $display;
+        };
+        die $@ if $@ && $@ !~ /not allowed/i;
+    }
     if (!$info->{description} && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         $info->{description} = $base->description;
-    }
-    if ($self->is_active) {
-        my $display = $self->display_info($user);
-        $self->display_file($user) if !$self->_data('display_file');
-        $self->display_file_tls($user)
-            if $display->{tls_port} && !$self->_data('display_file');
-        $info->{display} = $display;
     }
     $info->{hardware} = $self->get_controllers();
 
@@ -1280,6 +1307,7 @@ sub _pre_remove_domain($self, $user, @) {
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+
 }
 
 sub _check_active_node($self) {
@@ -1307,11 +1335,14 @@ sub _after_remove_domain {
         $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
+    $self->_remove_all_volumes();
     return if !$self->{_data};
+    return if $cascade;
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
-    $self->_remove_all_volumes();
+    $self->_remove_volumes_db();
+    $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
 }
 
@@ -1349,6 +1380,22 @@ sub _remove_access_attributes_db($self) {
     $sth->finish;
 }
 
+sub _remove_volumes_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
+
+sub _remove_bases_vm_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM bases_vm"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
+
 sub _remove_domain_db {
     my $self = shift;
 
@@ -1362,7 +1409,7 @@ sub _remove_domain_db {
     $sth->finish;
 
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains_".lc($type)
-        ." WHERE id=?");
+        ." WHERE id_domain=?");
     $sth->execute($id);
     $sth->finish;
 
@@ -1785,22 +1832,29 @@ sub _post_shutdown {
     my $timeout = delete $arg{timeout};
 
     $self->_remove_iptables() if $self->_vm->is_active;
+
+    my $is_active = $self->is_active;
     $self->_data(status => 'shutdown')
-        if $self->is_known && !$self->is_volatile && !$self->is_active;
+        if $self->is_known && !$self->is_volatile && !$is_active;
 
     if ($self->is_known && $self->id_base) {
-        for ( 1 ..  5 ) {
-            last if !$self->is_active;
-            sleep 1;
+        my @disks = $self->list_disks();
+        if (grep /\.SWAP\./,@disks) {
+            for ( 1 ..  5 ) {
+                last if !$is_active;
+                sleep 1;
+                $is_active = $self->is_active;
+            }
+            $self->clean_swap_volumes(@_) if !$is_active;
         }
-        $self->clean_swap_volumes(@_) if !$self->is_active;
     }
 
-    if (defined $timeout && !$self->is_removed && $self->is_active) {
+    if (defined $timeout && !$self->is_removed && $is_active) {
         if ($timeout<2) {
             sleep $timeout;
-            $self->_data(status => 'shutdown')    if !$self->is_active;
-            return $self->_do_force_shutdown() if !$self->is_removed && $self->is_active;
+            $is_active = $self->is_active;
+            $self->_data(status => 'shutdown')    if !$is_active;
+            return $self->_do_force_shutdown() if !$self->is_removed && $is_active;
         }
 
         my $req = Ravada::Request->force_shutdown_domain(
@@ -1824,11 +1878,11 @@ sub _post_shutdown {
     my $request;
     $request = $arg{request} if exists $arg{request};
     $self->_rsync_volumes_back( $request )
-        if !$self->is_local && !$self->is_active && !$self->is_volatile;
+        if !$self->is_local && !$is_active && !$self->is_volatile;
 
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
-                                && !$self->is_active;
+                                && !$is_active;
 }
 
 sub _around_is_active($orig, $self) {
@@ -2830,6 +2884,7 @@ sub rsync($self, @args) {
         $node->_connect_ssh()
             or confess "No Connection to ".$self->_vm->host;
     }
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     my $rsync = File::Rsync->new(update => 1, sparse => 1);
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
@@ -2840,8 +2895,11 @@ sub rsync($self, @args) {
         my $src = $file;
         my $dst = 'root@'.$node->host.":".$file;
         if ($node->is_local) {
+            next if $self->_vm->shared_storage($node, $path);
             $src = 'root@'.$self->_vm->host.":".$file;
             $dst = $file;
+        } else {
+            next if $vm_local->shared_storage($node, $path);
         }
         $rsync->exec(src => $src, dest => $dst);
     }
@@ -2856,7 +2914,10 @@ sub rsync($self, @args) {
 
 sub _rsync_volumes_back($self, $request=undef) {
     my $rsync = File::Rsync->new(update => 1);
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $file ( $self->list_volumes() ) {
+        my ($dir) = $file =~ m{(.*)/.*};
+        next if $vm_local->shared_storage($self->_vm,$dir);
         $rsync->exec(src => 'root@'.$self->_vm->host.":".$file ,dest => $file );
         if ( $rsync->err ) {
             $request->status("done",join(" ",@{$rsync->err}))   if $request;
@@ -3062,6 +3123,11 @@ sub list_vms($self) {
         eval { $vm = Ravada::VM->open($id_vm) };
         confess "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm);
+    }
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    if ( !grep { $_->name eq $vm_local->name } @vms) {
+        push @vms,($vm_local);
+        $self->set_base_vm(vm => $vm_local, user => Ravada::Utils::user_daemon);
     }
     return @vms;
 }
@@ -3278,10 +3344,18 @@ sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
 }
 
+sub _pre_change_hardware($self, @) {
+    if (!$self->_vm->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
+    }
+}
+
 sub _post_change_hardware {
     my $self = shift;
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->needs_restart(1) if $self->is_known && $self->is_active;
+    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1);
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
 =head2 Access restrictions

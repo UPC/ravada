@@ -274,7 +274,7 @@ sub remove_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'remove' , args => encode_json(\%args));
+    return $self->_new_request(command => 'remove' , args => \%args);
 
 }
 
@@ -333,7 +333,7 @@ sub start_clones {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'start_clones' , args => encode_json($args));
+    return $self->_new_request(command => 'start_clones' , args => $args);
 }
 
 =head2 pause_domain
@@ -353,7 +353,7 @@ sub pause_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'pause' , args => encode_json($args));
+    return $self->_new_request(command => 'pause' , args => $args);
 }
 
 =head2 resume_domain
@@ -373,7 +373,7 @@ sub resume_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'resume' , args => encode_json($args));
+    return $self->_new_request(command => 'resume' , args => $args);
 }
 
 
@@ -469,7 +469,7 @@ sub prepare_base {
 
     return $self->_new_request(command => 'prepare_base'
         , id_domain => $args{id_domain}
-        , args => encode_json( $args ));
+        , args => $args );
 
 }
 
@@ -499,7 +499,7 @@ sub remove_base {
 
     my $req = $self->_new_request(command => 'remove_base'
         , id_domain => $args->{id_domain}
-        , args => encode_json( $args ));
+        , args => $args );
 
     return $req;
 }
@@ -569,6 +569,9 @@ sub _new_request {
             confess "ERROR: Different id_domain: ".Dumper(\%args)
                 if $args{id_domain} && $args{id_domain} ne $id_domain_args;
             $args{id_domain} = $id_domain_args;
+            $args{after_request} = delete $args{args}->{after_request}
+                if exists $args{args}->{after_request};
+
         }
         $args{args} = encode_json($args{args});
     }
@@ -900,7 +903,7 @@ sub rename_domain {
     return $self->_new_request(
             command => 'rename_domain'
         , id_domain => $args->{id_domain}
-             , args => encode_json($args)
+             , args => $args
     );
 
 }
@@ -929,7 +932,7 @@ sub set_driver {
     return $self->_new_request(
             command => 'set_driver'
         , id_domain => $args->{id_domain}
-             , args => encode_json($args)
+             , args => $args
     );
 
 }
@@ -957,7 +960,7 @@ sub add_hardware {
     return $self->_new_request(
         command => 'add_hardware'
         ,id_domain => $args->{id_domain}
-        ,args => encode_json($args)
+        ,args => $args
     );
 }
 
@@ -985,7 +988,7 @@ sub remove_hardware {
     return $self->_new_request(
         command => 'remove_hardware'
         ,id_domain => $args->{id_domain}
-        ,args => encode_json($args)
+        ,args => $args
     );
 }
 
@@ -1016,7 +1019,7 @@ sub hybernate {
     return $self->_new_request(
             command => 'hybernate'
         , id_domain => $args->{id_domain}
-             , args => encode_json($args)
+             , args => $args
     );
 
 }
@@ -1039,7 +1042,7 @@ sub download {
 
     return $self->_new_request(
             command => 'download'
-             , args => encode_json($args)
+             , args => $args
     );
 
 }
@@ -1190,7 +1193,7 @@ sub remove_base_vm {
 
     return $self->_new_request(
             command => 'remove_base_vm'
-             , args => encode_json($args)
+             , args => $args
     );
 
 }

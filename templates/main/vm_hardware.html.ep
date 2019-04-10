@@ -1,4 +1,12 @@
-<div class="panel-body">
+<div class="panel-body" ng-show="showmachine.is_active || showmachine.is_base">
+    <div ng-show="showmachine.is_active" class="alert alert-danger" role="alert">
+        This machine is running and can't be modified.
+    </div>
+    <div ng-show="showmachine.is_base" class="alert alert-danger" role="alert">
+        This machine is base and can't be modified.
+    </div>
+</div>
+<div class="panel-body" ng-show="showmachine.is_active == 0 && showmachine.is_base == 0">
 %=   include "main/needs_restart"
     <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk">
         <h2>{{name}}</h2>

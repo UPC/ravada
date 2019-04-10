@@ -427,6 +427,9 @@ sub _create_qcow_base {
 
         my $pool_base = $self->_vm->default_storage_pool_name;
         $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+        $pool_base = $self->_vm->storage_pool()         if !$pool_base;
+
+        $self->_vm->_check_free_disk($vol_data->{capacity} * 2);
 
         my $dir_base = $self->_vm->_storage_path($pool_base);
 

@@ -176,7 +176,7 @@ sub _load_storage_pool {
     my $vm_pool;
     my $available;
 
-    if (defined $self->default_storage_pool_name) {
+    if ($self->default_storage_pool_name) {
         return( $self->vm->get_storage_pool_by_name($self->default_storage_pool_name)
             or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
     }
@@ -821,6 +821,7 @@ sub _domain_create_common {
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
     $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
     my $dom;
 
@@ -1886,6 +1887,37 @@ sub _xml_clean_machine_type($self, $doc) {
     $os_type->setAttribute( machine => 'pc');
 }
 
+sub _xml_add_sysinfo($self,$doc) {
+    my ($smbios) = $doc->findnodes('/domain/os/smbios');
+    if (!$smbios) {
+        my ($os) = $doc->findnodes('/domain/os');
+        $smbios = $os->addNewChild(undef,'smbios');
+    }
+    $smbios->setAttribute(mode => 'sysinfo');
+
+}
+
+sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
+    $self->_xml_add_sysinfo($doc);
+    my ($oemstrings) = $doc->findnodes('/domain/sysinfo/oemStrings');
+    if (!$oemstrings) {
+        my ($domain) = $doc->findnodes('/domain');
+        my $sysinfo = $domain->addNewChild(undef,'sysinfo');
+        $sysinfo->setAttribute( type => 'smbios' );
+        $oemstrings = $sysinfo->addNewChild(undef,'oemStrings');
+    }
+    my @entries = $oemstrings->findnodes('entry');
+    my $hostname;
+    for (@entries) {
+        $hostname = $_ if $_->textContent =~ /^$field/;
+    }
+    if ($hostname) {
+        $oemstrings->removeChild($hostname);
+    }
+    ($hostname) = $oemstrings->addNewChild(undef,'entry');
+    $hostname->appendText("$field: $value");
+}
+
 sub _xml_remove_cdrom {
     my $doc = shift;
 
@@ -2192,6 +2224,7 @@ sub _free_memory_available($self) {
         $used += $memory;
     }
     my $free_mem = $info->{total} - $used;
+    $free_mem = 0 if $free_mem < 0;
     my $free_real = $self->_free_memory_overcommit;
 
     $free_mem = $free_real if $free_real < $free_mem;
@@ -2281,6 +2314,17 @@ sub _list_bridges($self) {
     }
     $self->{_bridges} = \@networks;
     return @networks;
+}
+
+sub free_disk($self, $pool_name = undef ) {
+    my $pool;
+    if ($pool_name) {
+        $pool = $self->vm->get_storage_pool_by_name($pool_name);
+    } else {
+        $pool = $self->storage_pool();
+    }
+    my $info = $pool->get_info();
+    return $info->{available};
 }
 
 1;

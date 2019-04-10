@@ -186,9 +186,10 @@ sub list_machines_user {
 
 
 sub list_machines($self, $user) {
-    return $self->list_domains() if $user->can_list_machines() || $user->can_list_clones();
-    
+    return $self->list_domains() if $user->can_list_machines();
+
     my @list = ();
+    push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
     push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
     push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
     
@@ -214,7 +215,9 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
-                                    && !$m->{is_volatile};
+        && !$m->{is_volatile};
+
+        $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
     return $machines;
@@ -311,6 +314,32 @@ sub list_domains($self, %args) {
     $sth->finish;
 
     return \@domains;
+}
+
+=head2 filter_base_without_clones
+
+filters the list of domains and drops all machines that are unacessible and 
+bases with 0 machines accessible
+
+=cut
+
+sub filter_base_without_clones($domains) {
+    my @list;
+    my $size_domains = scalar(@$domains);
+    for (my $i = 0; $i < $size_domains; ++$i) {
+        if (@$domains[$i]->{is_base}) {
+            for (my $j = 0; $j < $size_domains; ++$j) {
+                if ($j != $i && !(@$domains[$j]->{is_base}) && (@$domains[$j]->{id_base} eq @$domains[$i]->{id})) {
+                    push @list, (@$domains[$i]);
+                    last;
+                }
+            }
+        }
+        else {
+            push @list, (@$domains[$i]);
+        }
+    }
+    return \@list;
 }
 
 sub list_own_clones($self, $user) {

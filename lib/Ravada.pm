@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.4.0-alpha3';
+our $VERSION = '0.4.0-beta1';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -205,17 +205,6 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
                 ,min_disk_size => '10'
         },
-        alpine_37 => {
-                    name => 'Alpine 3.7'
-            ,description => 'Alpine Linux 3.7 64 bits ( Minimal Linux Distribution)'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/'
-                ,file_re => 'alpine-virt-3.7.\d+-x86_64.iso'
-                ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.7/releases/x86_64/alpine-virt-3.7.\d+-x86_64.iso.sha256'
-                ,min_disk_size => '1'
-        }
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
@@ -1169,6 +1158,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','start_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','output','text DEFAULT NULL');
+    $self->_upgrade_table('requests','after_request','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');

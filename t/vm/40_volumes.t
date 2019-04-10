@@ -386,6 +386,37 @@ sub test_domain_swap {
 
 }
 
+sub test_too_big($vm) {
+    my $domain = create_domain($vm);
+    my $free_disk = $vm->free_disk();
+    my $file;
+    eval { $file = $domain->add_volume(size => int($free_disk * 1.1)) };
+    like($@, qr(out of space),$vm->type) or exit;
+    ok(!$file);
+    my $free_disk2 = $vm->free_disk();
+    is($free_disk2, $free_disk);
+    $domain->remove(user_admin);
+}
+
+sub test_too_big_prepare($vm) {
+    my $domain = create_domain($vm);
+    my $free_disk = $vm->free_disk();
+    my $file;
+    eval { $file = $domain->add_volume(size => int($free_disk * 0.9)) };
+    is($@,'');
+    ok($file);
+
+    is($domain->is_base, 0) or exit;
+    eval { $domain->prepare_base(user_admin); };
+    like($@, qr(out of space),$vm->type." prepare base") or exit;
+
+    is(scalar($domain->list_files_base),0,"[".$vm->type."] ".Dumper([$domain->list_files_base]));
+    is($domain->is_base, 0) or exit;
+
+
+    $domain->remove(user_admin);
+}
+
 sub test_search($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
     $vm->set_default_storage_pool_name('default') if $vm eq 'KVM';
@@ -439,6 +470,17 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok("Ravada::VM::$vm_name");
+
+        test_too_big_prepare($vm);
+
+        my $old_pool = $vm->default_storage_pool_name();
+        if ($old_pool) {
+            $vm->default_storage_pool_name('');
+            test_too_big_prepare($vm);
+            $vm->default_storage_pool_name($old_pool);
+        }
+
+        test_too_big($vm);
 
         test_domain_swap($vm_name);
         test_domain_create_with_swap($vm_name);
