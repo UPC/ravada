@@ -168,7 +168,7 @@ sub rvd_back($config=undef) {
     $USER_ADMIN = create_user($admin_name, $admin_pass,1)
         if !$USER_ADMIN;
 
-    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
+    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
 
     $RVD_BACK = $rvd;
     return $rvd;
