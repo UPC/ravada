@@ -807,6 +807,8 @@ msgstr ""
 msgid "Session timeout"
 msgstr ""
 
-msgid "Italian"
+msgid "Vietnamese"
 msgstr ""
 
+msgid "Italian"
+msgstr ""
