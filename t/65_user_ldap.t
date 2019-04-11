@@ -336,6 +336,7 @@ sub test_filter {
                 , connector => connector);
             $ravada->_install();
             Ravada::Auth::LDAP::init();
+            Ravada::Auth::LDAP::_init_ldap_admin();
         };
         if ($@) {
             diag("Skipping: $@");
