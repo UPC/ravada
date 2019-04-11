@@ -568,15 +568,29 @@ sub nat_ip($self) {
     return Ravada::nat_ip();
 }
 
-sub _interface_ip {
-    my $s = IO::Socket::INET->new(Proto => 'tcp');
+sub _interface_ip($self, $remote_ip=undef) {
+    return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
+    my ($out, $err) = $self->run_command("/sbin/ip","route");
+    my %route;
+    my ($default_gw , $default_ip);
 
-    for my $if ( $s->if_list) {
-        next if $if =~ /^virbr/;
-        my $addr = $s->if_addr($if);
-        return $addr if $addr && $addr !~ /^127\./;
+    my $remote_ip_addr = NetAddr::IP->new($remote_ip);
+
+    for my $line ( split( /\n/, $out ) ) {
+        if ( $line =~ m{^default via ([\d\.]+)} ) {
+            $default_gw = NetAddr::IP->new($1);
+        }
+        if ( $line =~ m{^([\d\.\/]+).*src ([\d\.\/]+)} ) {
+            my ($network, $ip) = ($1, $2);
+            $route{$network} = $ip;
+
+            my $netaddr = NetAddr::IP->new($network);
+            return $ip if $remote_ip_addr->within($netaddr);
+
+            $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+        }
     }
-    return;
+    return $default_ip;
 }
 
 sub _check_memory {

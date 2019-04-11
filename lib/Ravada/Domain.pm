@@ -13,7 +13,7 @@ use Carp qw(carp confess croak cluck);
 use Data::Dumper;
 use File::Copy;
 use File::Rsync;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
@@ -767,11 +767,29 @@ sub _allowed {
 sub _around_display_info($orig,$self,$user ) {
     $self->_allowed($user);
     my $display = $self->$orig($user);
-    confess if !ref($display);
+
     if (!$self->readonly) {
+        $self->_set_display_ip($display);
         $self->_data(display => encode_json($display));
     }
     return $display;
+}
+
+sub _set_display_ip($self, $display) {
+
+    my $new_ip = ( $self->_vm->nat_ip
+            or $self->_vm->public_ip
+            or Ravada::display_ip()
+    );
+    unlock_hash(%$display);
+    $display->{listen_ip} = $display->{ip};
+
+    if ( $new_ip ) {
+        $display->{ip} = $new_ip;
+        $display->{display} =~ s{(\w+)://(.*?):(.*)}{$1://$new_ip:$3};
+    }
+
+    lock_hash(%$display);
 }
 
 sub _around_get_info($orig, $self) {
@@ -1133,13 +1151,15 @@ sub _display_file_spice($self,$user, $tls = 0) {
     my $display = $self->display_info($user);
 
     confess "I can't find ip port in ".Dumper($display)
-        if !$display->{address} || !$display->{port};
+        if !$display->{ip} || !$display->{port};
 
     my $ret =
         "[virt-viewer]\n"
         ."type=spice\n"
-        ."host=".$display->{address}."\n";
+        ."host=".$display->{ip}."\n";
     if ($tls) {
+        confess "Error: No TLS port found"
+            if !exists $display->{tls_port} || !$display->{tls_port};
         $ret .= "tls-port=".$display->{tls_port}."\n";
     } else {
         $ret .= "port=".$display->{port}."\n";
@@ -1196,7 +1216,9 @@ sub info($self, $user) {
 
             my $display = $self->display_info($user);
             $self->display_file_tls($user)
-                if $display->{tls_port} && !$self->_data('display_file');
+                if exists $display->{tls_port}
+                    && $display->{tls_port}
+                    && !$self->_data('display_file');
             $info->{display} = $display;
         };
         die $@ if $@ && $@ !~ /not allowed/i;
@@ -2147,12 +2169,13 @@ sub _add_iptable {
     my $uid = $user->id;
 
     return if !$self->is_active;
-    my $display = $self->display($user);
+    my $display_info = $self->display_info($user);
     $self->display_file($user) if !$self->_data('display_file');
-    my ($local_port) = $display =~ m{\w+://.*:(\d+)};
-    $self->_remove_iptables( port => $local_port );
 
-    my $local_ip = $self->_vm->ip;
+    my $local_ip = $display_info->{listen_ip};
+    my $local_port = $display_info->{port};
+
+    $self->_remove_iptables( port => $local_port );
 
     $self->_open_port($user, $remote_ip, $local_ip, $local_port);
     $self->_close_port($user, '0.0.0.0/0', $local_ip, $local_port);
@@ -2214,34 +2237,6 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
 
     $self->_log_iptable(iptables => \@iptables_arg, user => $user, remote_ip => $remote_ip);
 
-    if ($remote_ip eq '127.0.0.1') {
-        my $remote_ip2 = $local_ip;
-        if (!$self->_vm->is_local) {
-            for my $node ($self->_vm->list_nodes) {
-                if ($node->is_local) {
-                    $remote_ip2 = $node->ip;
-                    last;
-                }
-            }
-        }
-        $self->_vm->iptables(
-                A => $IPTABLES_CHAIN
-                ,m=> 'tcp'
-                ,p => 'tcp'
-                ,s => $remote_ip2
-                ,d => $local_ip
-                ,dport => $local_port
-                ,j => $jump
-        ) if !$>;
-        $self->_log_iptable(
-            iptables => [
-                    $remote_ip2
-                    , $local_ip, 'filter', $IPTABLES_CHAIN, $jump
-                    ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port}
-            ]
-            , user => $user,remote_ip => $local_ip
-        );
-    }
 }
 
 sub _close_port($self, $user, $remote_ip, $local_ip, $local_port) {
@@ -2672,32 +2667,10 @@ sub set_driver_id {
 }
 
 sub _listen_ip($self, $remote_ip) {
-    my $default_ravada_display_ip = Ravada::display_ip();
-    return $default_ravada_display_ip   if $default_ravada_display_ip;
-
-    return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
-    my ($out, $err) = $self->_vm->run_command("/sbin/ip","route");
-    my %route;
-    my ($default_gw , $default_ip);
-
-    my $remote_ip_addr = NetAddr::IP->new($remote_ip);
-
-    for my $line ( split( /\n/, $out ) ) {
-        if ( $line =~ m{^default via ([\d\.]+)} ) {
-            $default_gw = NetAddr::IP->new($1);
-        }
-        if ( $line =~ m{^([\d\.\/]+).*src ([\d\.\/]+)} ) {
-            my ($network, $ip) = ($1, $2);
-            $route{$network} = $ip;
-
-            my $netaddr = NetAddr::IP->new($network);
-            return $ip if $remote_ip_addr->within($netaddr);
-
-            $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
-        }
-    }
-    return $default_ip;
-}
+    return ( Ravada::display_ip()
+        or $self->_vm->public_ip
+        or $self->_vm->_interface_ip($remote_ip));
+ }
 
 sub remote_ip($self) {
 

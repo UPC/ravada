@@ -49,10 +49,8 @@ sub display_info {
     my $self = shift;
 
     my $display_data = $self->_value('display');
-    my $nat_ip = $self->_vm->nat_ip;
-    if ($nat_ip) {
-        $display_data->{ip} = $nat_ip;
-        $display_data->{display} = "void://$nat_ip:$display_data->{port}/";
+    if (!keys %$display_data) {
+        $display_data = $self->_set_display();
     }
     return $display_data;
 }
@@ -61,8 +59,9 @@ sub _set_display($self, $remote_ip=undef) {
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $ip = ( $self->_listen_ip($remote_ip) or $self->_vm->ip );
     my $display="void://$ip:5990/";
-    my $display_data = { display => $display , type => 'void', address => $ip, port => 5990 };
-    return $self->_store( display => $display_data );
+    my $display_data = { display => $display , type => 'void', ip => $ip, port => 5990 };
+    $self->_store( display => $display_data );
+    return $display_data;
 }
 
 sub is_active {
