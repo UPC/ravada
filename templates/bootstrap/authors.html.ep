@@ -1,6 +1,8 @@
 <ul>
+<li>Amparo Gombau</li>
 <li>Angel Aguilera</li>
 <li>Antonio Mesones</li>
+<li>Dani Sanchez Dorado</li>
 <li>Dayyan O'Brien</li>
 <li>Dito Baskoro</li>
 <li>Fernando Verdugo</li>
@@ -23,8 +25,12 @@
 <li>Pascal Scholz</li>
 <li>Raghav Mittal</li>
 <li>Robert-André Mauchin</li>
+<li>Sandra Marsà</li>
 <li>Sanjiv Lobo</li>
 <li>Tim Fechner</li>
 </ul>
 <%=l 'Thanks to:' %>
-<ul><li>Jorge Mata</li></ul>
+<ul>
+<li>Francesc Oller</li>
+<li>Jorge Mata</li>
+</ul>
