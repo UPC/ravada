@@ -7,6 +7,7 @@ use Carp qw(cluck croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Copy;
+use File::Path qw(make_path);
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -38,7 +39,7 @@ sub BUILD {
 
     my $args = $_[0];
 
-    mkdir $DIR_TMP or die "$! when mkdir $DIR_TMP"
+    make_path $DIR_TMP or die "$! when mkdir $DIR_TMP"
         if ! -e $DIR_TMP;
 
     my $drivers = {};
