@@ -2287,20 +2287,6 @@ sub _do_execute_command {
 
 }
 
-sub _cmd_domdisplay {
-    my $self = shift;
-    my $request = shift;
-
-    my $name = $request->args('name');
-    confess "Unknown name for request ".Dumper($request)  if!$name;
-    my $domain = $self->search_domain($request->args->{name});
-    my $user = Ravada::Auth::SQL->search_by_id( $request->args->{uid});
-    $request->error('');
-    my $display = $domain->display($user);
-    $request->result({display => $display});
-
-}
-
 sub _cmd_screenshot {
     my $self = shift;
     my $request = shift;
@@ -3143,7 +3129,6 @@ sub _req_method {
       ,shutdown => \&_cmd_shutdown
      ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
-    ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
     ,add_disk => \&_cmd_add_disk
     ,copy_screenshot => \&_cmd_copy_screenshot
