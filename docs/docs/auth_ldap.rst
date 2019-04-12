@@ -96,3 +96,20 @@ In the example, cn=ravada,ou=groups,dc=domain,dc=com is a Posix Group in your LD
     memberUid: user1
     memberUid: user2
     memberUid: user3
+
+
+Example: Attribute Filter
+-------------------------
+
+In this example, only the users that have pass a filter can login:
+
+::
+
+  ldap:
+    server: 192.168.1.44
+    port: 636
+    base: dc=domain,dc=com
+    filter: campus=North
+    admin_user:
+        dn: cn=admin.user,dc=domain,dc=com
+        password: secretpassword
