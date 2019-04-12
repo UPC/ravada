@@ -444,105 +444,14 @@ sub shutdown_domain {
     return $self->_new_request(command => 'shutdown' , args => $args);
 }
 
-=head2 prepare_base
-
-Returns a new request for preparing a domain base
-
-  my $req = Ravada::Request->prepare_base( $name );
-
-=cut
-
-sub prepare_base {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my %args = @_;
-    confess "Missing uid"           if !$args{uid};
-
-    my $args = _check_args('prepare_base', @_);
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(command => 'prepare_base'
-        , id_domain => $args{id_domain}
-        , args => $args );
-
-}
-
-=head2 remove_base
-
-Returns a new request for making a base regular domain. It marks it
-as 'non base' and removes the files.
-
-It must have not clones. All clones must be removed before calling
-this method.
-
-  my $req = Ravada::Request->remove_base( $name );
-
-=cut
-
-sub remove_base {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my %_args = @_;
-    confess "Missing uid"           if !$_args{uid};
-
-    my $args = _check_args('remove_base', @_);
-
-    my $self = {};
-    bless($self,$class);
-
-    my $req = $self->_new_request(command => 'remove_base'
-        , id_domain => $args->{id_domain}
-        , args => $args );
-
-    return $req;
-}
-
-
-=head2 ping_backend
-
-Returns wether the backend is alive or not
-
-=cut
-
-sub ping_backend {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'ping_backend' );
-}
-
-
-=head2 domdisplay
-
-Returns the domdisplay of a domain
-
-Arguments:
-
-* domain name
-
-=cut
-
-sub domdisplay {
-   my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $name = shift;
-    my $uid = shift;
-
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'domdisplay'
-        ,args => { name => $name, uid => $uid });
-}
-
 sub _new_request {
     my $self = shift;
+    if ( !ref($self) ) {
+        my $proto = $self ;
+        my $class = ref($proto) || $proto;
+        $self = {};
+        bless ($self, $class);
+    }
     my %args = @_;
 
     $args{status} = 'requested';
@@ -856,238 +765,6 @@ sub copy_screenshot {
 
 }
 
-=head2 open_iptables
-
-Request to open iptables for a remote client
-
-=cut
-
-sub open_iptables {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('open_iptables', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'open_iptables'
-        , id_domain => $args->{id_domain}
-             , args => $args);
-}
-
-=head2 rename_domain
-
-Request to rename a domain
-
-=cut
-
-sub rename_domain {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('rename_domain', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'rename_domain'
-        , id_domain => $args->{id_domain}
-             , args => $args
-    );
-
-}
-
-=head2 set_driver
-
-Sets a driver to a domain
-
-    $domain->set_driver(
-        id_domain => $domain->id
-        ,uid => $USER->id
-        ,id_driver => $driver->id
-    );
-
-=cut
-
-sub set_driver {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('set_driver', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'set_driver'
-        , id_domain => $args->{id_domain}
-             , args => $args
-    );
-
-}
-
-=head2 add_hardware
-
-    Sets hardware to a VM
-    
-    $domain->add_hardware(
-        id_domain => $domain->id
-        ,uid => $USER->id
-        ,name => 'usb'
-    );
-    
-=cut
-
-sub add_hardware {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    my $args = _check_args('add_hardware', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    
-    return $self->_new_request(
-        command => 'add_hardware'
-        ,id_domain => $args->{id_domain}
-        ,args => $args
-    );
-}
-
-=head2 remove_hardware
-
-    Removes hardware to a VM
-    
-    $domain->remove_hardware(
-        id_domain => $domain->id
-        ,uid => $USER->id
-        ,name_hardware => 'usb'
-    );
-    
-=cut
-
-sub remove_hardware {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    
-    my $args = _check_args('remove_hardware', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    
-    return $self->_new_request(
-        command => 'remove_hardware'
-        ,id_domain => $args->{id_domain}
-        ,args => $args
-    );
-}
-
-sub change_hardware {
-    return _new_request_generic('change_hardware',@_);
-}
-
-=head2 hybernate
-
-Hybernates a domain.
-
-    Ravada::Request->hybernate(
-        id_domain => $domain->id
-             ,uid => $user->id
-    );
-
-=cut
-
-sub hybernate {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('hybernate', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'hybernate'
-        , id_domain => $args->{id_domain}
-             , args => $args
-    );
-
-}
-
-=head2 download
-
-Downloads a file. Actually used only to download iso images
-for KVM domains.
-
-=cut
-
-sub download {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('download', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'download'
-             , args => $args
-    );
-
-}
-
-=head2 refresh_storage
-
-Refreshes a storage pool
-
-=cut
-
-sub refresh_storage {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('refresh_storage', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-        command => 'refresh_storage'
-        , args => $args
-    );
-
-
-}
-
-=head2 clone
-
-Copies a virtual machine
-
-    my $req = Ravada::Request->clone(
-             ,uid => $user->id
-        id_domain => $domain->id
-    );
-
-=cut
-
-sub clone {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('clone', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-        return _new_request($self
-        , command => 'clone'
-        , args =>$args
-    );
-}
-
 =head2 refresh_vms
 
 Refreshes the Virtual Mangers
@@ -1140,33 +817,6 @@ sub set_base_vm {
 
 }
 
-=head2 cleanup
-
-Performs cleanup operations on the virtual machines.
-
-- Enforces limits
-- .. more .. ?
-
-=cut
-
-sub cleanup($proto , @args) {
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('cleanup', @args );
-
-    return if _requested('cleanup');
-
-    my $self = {};
-    bless ($self, $class);
-
-    return $self->_new_request(
-            command => 'cleanup'
-             , args => $args
-    );
-
-}
-
-
 =head2 remove_base_vm
 
 Disables a base in a Virtual Manager
@@ -1189,6 +839,13 @@ sub remove_base_vm {
     );
 
 }
+
+
+=head2 type
+
+Returns the type of the request
+
+=cut
 
 sub type($self) {
     my $command = $self;
@@ -1231,87 +888,15 @@ sub count_requests($self) {
     return $n;
 }
 
+=head2 requests_limit
+
+    Returns the limit of requests of a type.
+
+=cut
+
 sub requests_limit($self, $type = $self->type) {
     confess "Error: no requests of type $type" if !exists $COMMAND{$type};
     return $COMMAND{$type}->{limit};
-}
-
-=head2 change_owner
-
-Changes the owner of a machine
-
-    my $req = Ravada::Request->change_owner(
-             ,uid => $user->id
-             ,id_domain => $domain->id
-    );
-
-=cut
-
-sub change_owner {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('change_owner', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return _new_request($self
-        , command => 'change_owner'
-        , args =>$args
-    );
-}
-
-=head2 change_max_memory
-
-Changes the maximum memory of a virtual machine.
-
-    my $req = Ravada::Request->change_max_memory (
-             ,uid => $user->id
-             ,ram => $ram_in_kb
-             ,id_domain => $domain->id
-    );
-
-=cut
-
-sub change_max_memory {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    
-    my $args = _check_args('change_max_memory', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    return _new_request($self
-        , command => 'change_max_memory'
-        , args => $args
-    );
-}
-
-=head2 change_curr_memory
-
-Changes the current memory used by a virtual machine.
-
-    my $req = Ravada::Request->change_curr_memory (
-             ,uid => $user->id
-             ,ram => $ram_in_kb
-             ,id_domain => $domain->id
-    );
-
-=cut
-
-sub change_curr_memory {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    
-    my $args = _check_args('change_max_memory', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    return _new_request($self
-        , command => 'change_curr_memory'
-        , args => $args
-    );
 }
 
 =head2 domain_autostart
@@ -1401,6 +986,12 @@ sub enforce_limits {
     return $req;
 }
 
+=head2 refresh_machine
+
+Refresh a machine information
+
+=cut
+
 sub refresh_machine {
     my $proto = shift;
 
@@ -1424,64 +1015,6 @@ sub refresh_machine {
 
     return $req;
 
-}
-
-sub shutdown_node {
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('shutdown_node', @_ );
-
-    my $self = {};
-    bless($self, $class);
-
-    my $req = _new_request($self
-        , command => 'shutdown_node'
-        , args => $args
-    );
-
-    return $req;
-
-}
-
-sub start_node{
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('start_node', @_ );
-
-    my $self = {};
-    bless($self, $class);
-
-    my $req = _new_request($self
-        , command => 'start_node'
-        , args => $args
-    );
-
-    return $req;
-
-}
-
-sub connect_node {
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-    my $args = _check_args('connect_node', @_ );
-    $args->{timeout} = 10 if !exists $args->{timeout};
-
-    my $self = {};
-    bless($self, $class);
-
-    return _new_request($self
-        , command => 'connect_node'
-        , args => $args
-    );
-}
-
-sub post_login {
-    return _new_request_generic('post_login',@_);
 }
 
 sub _new_request_generic {
