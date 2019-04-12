@@ -124,6 +124,7 @@ Upload the file to our repo and change the number at:
 
     $ git checkout gh-pages
     $ gvim docs/docs/INSTALL.md
+    $ gvim docs/docs/res/ravada_installer.sh
     $ gvim index.html
     $ git commit -a
     $ git push
