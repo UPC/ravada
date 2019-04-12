@@ -40,7 +40,7 @@ our $CONVERT = `which convert`;
 chomp $CONVERT;
 #######################################3
 
-sub name { 
+sub name {
     my $self = shift;
     return $self->domain;
 };
@@ -48,9 +48,20 @@ sub name {
 sub display_info {
     my $self = shift;
 
-    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
+    my $display_data = $self->_value('display');
+    if (!keys %$display_data) {
+        $display_data = $self->_set_display();
+    }
+    return $display_data;
+}
+
+sub _set_display($self, $remote_ip=undef) {
+    #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
+    my $ip = ( $self->_listen_ip($remote_ip) or $self->_vm->ip );
     my $display="void://$ip:5990/";
-    return { display => $display , type => 'void', address => $ip, port => 5990 };
+    my $display_data = { display => $display , type => 'void', ip => $ip, port => 5990 };
+    $self->_store( display => $display_data );
+    return $display_data;
 }
 
 sub is_active {
@@ -203,9 +214,12 @@ sub shutdown_now {
     return $self->shutdown(user => $user);
 }
 
-sub start {
-    my $self = shift;
+sub start($self, @args) {
+    my %args;
+    %args = @args if scalar(@args) % 2 == 0;
+    my $remote_ip = delete $args{remote_ip};
     $self->_store(is_active => 1);
+    $self->_set_display( $remote_ip );
 }
 
 sub prepare_base {

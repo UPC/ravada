@@ -613,7 +613,6 @@ sub display_info($self, $user) {
     my ($port) = $graph->getAttribute('port');
     my ($tls_port) = $graph->getAttribute('tlsPort');
     my ($address) = $graph->getAttribute('listen');
-    $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
     confess "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
@@ -625,7 +624,7 @@ sub display_info($self, $user) {
     my %display = (
                 type => $type
                ,port => $port
-            ,address => $address
+                 ,ip => $address
             ,display => $display
           ,tls_port => $tls_port
     );
@@ -676,12 +675,14 @@ sub start {
     my $remote_ip = delete $arg{remote_ip};
     my $request = delete $arg{request};
 
+    my $display_ip;
     if ($remote_ip) {
         $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
+        $display_ip = $self->_listen_ip($remote_ip);
     }
-    $self->_set_spice_ip($set_password);
+    $self->_set_spice_ip($set_password, $display_ip);
     $self->status('starting');
 
     my $error;
@@ -1572,9 +1573,9 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
     $ip = $self->_vm->ip()  if !defined $ip;
 
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
-        $graphics->setAttribute('listen' => $ip);
 
-        if ( !$self->is_hibernated() && !$self->domain->is_active ) {
+        next if $self->is_hibernated() || $self->domain->is_active;
+
             my $password;
             if ($set_password) {
                 $password = Ravada::Utils::random_name(4);
@@ -1583,8 +1584,8 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
                 $graphics->removeAttribute('passwd');
             }
             $self->_set_spice_password($password);
-        }
 
+        $graphics->setAttribute('listen' => $ip);
         my $listen;
         for my $child ( $graphics->childNodes()) {
             $listen = $child if $child->getName() eq 'listen';
@@ -2048,7 +2049,7 @@ sub migrate($self, $node, $request=undef) {
         }
         $self->domain($dom);
     }
-    $self->_set_spice_ip(1,$node->ip);
+    $self->_set_spice_ip(1, $node->ip);
 
     $self->rsync(node => $node, request => $request);
 
