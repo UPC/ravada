@@ -12,6 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use Hash::Util qw(lock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
 use Ravada;
@@ -881,6 +882,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'screenshot'
                 || $command eq 'connect_node'
                 || $command eq 'post_login'
+                || $command eq 'list_network_interfaces'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
@@ -1067,6 +1069,35 @@ sub add_node($self,%arg) {
 
     my $req = Ravada::Request->refresh_vms( _force => 1 );
     return $req->id;
+}
+
+sub list_network_interfaces($self, %args) {
+
+    my $vm_type = delete $args{vm_type}or confess "Error: missing vm_type";
+    my $type = delete $args{type} or confess "Error: missing type";
+    my $user = delete $args{user} or confess "Error: missing user";
+    my $timeout = delete $args{timeout};
+    $timeout = 60 if !defined $timeout;
+
+    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
+
+    my $cache_key = "_interfaces_$type";
+    return $self->{$cache_key} if exists $self->{$cache_key};
+
+    my $req = Ravada::Request->list_network_interfaces(
+        vm_type => $vm_type
+          ,type => $type
+           ,uid => $user->id
+    );
+    if  ( defined $timeout ) {
+        $self->wait_request($req, $timeout);
+    }
+    return [] if $req->status ne 'done';
+
+    my $interfaces = decode_json($req->output());
+    $self->{$cache_key} = $interfaces;
+
+    return $interfaces;
 }
 
 =head2 version

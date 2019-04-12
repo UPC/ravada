@@ -10,6 +10,7 @@ use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash);
+use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
@@ -1156,6 +1157,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','start_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','output','text DEFAULT NULL');
     $self->_upgrade_table('requests','after_request','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
@@ -2935,6 +2937,19 @@ sub _cmd_connect_node($self, $request) {
     $node->connect() && $request->error("Connection OK");
 }
 
+sub _cmd_list_network_interfaces($self, $request) {
+
+    my $vm_type = $request->args('vm_type');
+    my $type = $request->defined_arg('type');
+    my @type;
+    @type = ( $type ) if $type;
+
+    my $vm = Ravada::VM->open( type => $vm_type );
+    my @ifs = $vm->list_network_interfaces( @type );
+
+    $request->output(encode_json(\@ifs));
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -3176,6 +3191,9 @@ sub _req_method {
 
     #users
     ,post_login => \&_cmd_post_login
+
+    #networks
+    ,list_network_interfaces => \&_cmd_list_network_interfaces
     );
     return $methods{$cmd};
 }

@@ -705,6 +705,21 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
     return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
 };
 
+# Network ##########################################################3
+
+get '/network/interfaces/(:vm_type)/(:type)' => sub {
+    my $c = shift;
+
+    my $vm_type = $c->stash('vm_type');
+    my $type = $c->stash('type');
+
+    return $c->render( json => $RAVADA->list_network_interfaces(
+               user => $USER
+              ,type => $type
+           ,vm_type => $vm_type
+       )
+    );
+};
 
 # Users ##########################################################3
 

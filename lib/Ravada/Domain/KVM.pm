@@ -65,18 +65,22 @@ our %SET_DRIVER_SUB = (
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
+    ,network => \&_get_controller_network
     );
 our %SET_CONTROLLER_SUB = (
     usb => \&_set_controller_usb
     ,disk => \&_set_controller_disk
+    ,network => \&_set_controller_network
     );
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
     ,disk => \&_remove_controller_disk
+    ,network => \&_remove_controller_network
     );
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,network => \&_change_hardware_network
 );
 ##################################################
 
@@ -1124,16 +1128,17 @@ sub _new_pci_slot{
             for my $child ($disk->childNodes) {
                 if ($child->nodeName eq 'address') {
 #                    die $child->toString();
-                    $target{ $child->getAttribute('slot') }++
-                        if $child->getAttribute('slot');
+                    my $hex = $child->getAttribute('slot');
+                    next if !defined $hex;
+                    my $dec = hex($hex);
+                    $target{$dec}++;
                 }
             }
         }
     }
-    for ( 1 .. 99) {
-        $_ = "0$_" if length $_ < 2;
-        my $new = '0x'.$_;
-        return $new if !$target{$new};
+    for my $dec ( 1 .. 99) {
+        next if $target{$dec};
+        return sprintf("0x%X", $dec);
     }
 }
 
@@ -1898,6 +1903,24 @@ sub _set_controller_disk($self, $number, $data) {
     $self->add_volume(%$data);
 }
 
+sub _set_controller_network($self, $number, $data) {
+
+    my $driver = (delete $data->{driver} or 'virtio');
+
+    confess "Error: unkonwn fields in data ".Dumper($data) if keys %$data;
+
+    my $pci_slot = $self->_new_pci_slot();
+
+    my $device = "<interface type='network'>
+        <mac address='52:54:00:a7:49:71'/>
+        <source network='default'/>
+        <model type='$driver'/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>
+      </interface>";
+
+      $self->domain->attach_device($device, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG);
+}
+
 sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
     
@@ -1917,7 +1940,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     my $ind=0;
     for my $controller ($devices->findnodes($device)) {
         next if defined $attribute_name
-            && $controller->getAttribute($attribute_name) ne $attribute_value;
+            && $controller->getAttribute($attribute_name) !~ $attribute_value;
 
         if( $ind++==$index ){
             $devices->removeChild($controller);
@@ -1931,7 +1954,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     my $msg = "";
     $msg = " $attribute_name=$attribute_value " if defined $attribute_name;
     confess "ERROR: $device $msg $index"
-        ." not removed, only ".($ind)." found\n";
+        ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
 sub _remove_controller_usb($self, $index) {
@@ -1953,6 +1976,10 @@ sub _remove_controller_disk($self, $index) {
     my $file = $volumes[$index]->{file};
     $self->remove_volume( $file ) if $file && $file !~ /\.iso$/;
     $self->info(Ravada::Utils::user_daemon);
+}
+
+sub _remove_controller_network($self, $index) {
+    $self->_remove_device($index,'interface', type => qr'(bridge|network)');
 }
 
 =head2 pre_remove
@@ -2151,6 +2178,59 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
 
     $self->_post_change_hardware($doc);
 }
+
+
+sub _change_hardware_network($self, $index, $data) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+
+       my $type = delete $data->{type};
+     my $driver = lc(delete $data->{driver} or '');
+     my $bridge = delete $data->{bridge};
+    my $network = delete $data->{network};
+
+    die "Error: Unknown arguments ".Dumper($data) if keys %$data;
+
+    $type = lc($type) if defined $type;
+
+    die "Error: Unknown type '$type' . Known: bridge, NAT"
+        if $type && $type !~ /^(bridge|nat)$/;
+
+    die "Error: Bridged type requires bridge ".Dumper($data)
+        if $type && $type eq 'bridge' && !$bridge;
+
+    die "Error: NAT type requires network ".Dumper($data)
+        if $type && $type eq 'nat' && !$network;
+
+    $type = 'network' if $type && $type eq 'nat';
+
+    my $count = 0;
+    my $changed = 0;
+
+    for my $interface ($doc->findnodes('/domain/devices/interface')) {
+        next if $interface->getAttribute('type') !~ /^(bridge|network)/;
+        next if $count++ != $index;
+
+        my ($model_xml) = $interface->findnodes('model') or die "No model";
+        my ($source_xml) = $interface->findnodes('source') or die "No source";
+
+        $source_xml->removeAttribute('bridge')          if $network;
+        $source_xml->removeAttribute('network')         if $bridge;
+
+        $interface->setAttribute(type => $type)         if $type;
+        $model_xml->setAttribute(type => $driver)       if $driver;
+        $source_xml->setAttribute(bridge => $bridge)    if $bridge;
+        $source_xml->setAttribute(network=> $network)   if $network;
+
+        $changed++;
+    }
+
+    die "Error: interface $index not found in ".$self->name if !$changed;
+
+    $self->_post_change_hardware($doc);
+}
+
+
 
 sub _post_change_hardware($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);

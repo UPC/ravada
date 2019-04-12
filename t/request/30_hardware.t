@@ -4,6 +4,7 @@ use strict;
 use Carp qw(carp confess cluck);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
+use Sys::Virt;
 use Test::More;
 use YAML qw(Dump);
 
@@ -178,6 +179,7 @@ sub test_add_hardware_custom($domain, $hardware) {
         disk => \&test_add_disk
         ,usb => sub {}
         ,mock => sub {}
+        ,network => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -194,6 +196,11 @@ sub test_remove_hardware {
     $domain = Ravada::Domain->open($domain->id);
     my @list_hardware1 = $domain->get_controller($hardware);
 
+    confess "Error: I can't remove $hardware $index, only ".scalar(@list_hardware1)
+        ."\n"
+        .Dumper(\@list_hardware1)
+            if $index > scalar @list_hardware1;
+
 	my $req;
 	{
 		$req = Ravada::Request->remove_hardware(uid => $USER->id
@@ -206,7 +213,7 @@ sub test_remove_hardware {
 	ok($req, 'Request');
 	rvd_back->_process_all_requests_dont_fork();
 	is($req->status(), 'done');
-	is($req->error(), '');
+	is($req->error(), '') or exit;
 
     {
         my $domain2 = Ravada::Domain->open($domain->id);
@@ -229,7 +236,9 @@ sub test_remove_almost_all_hardware {
 	my $domain = shift;
 	my $hardware = shift;
 
-    my $total_hardware = $domain->get_controller($hardware);
+    #TODO test remove hardware out of bounds
+    my $total_hardware = scalar($domain->get_controller($hardware));
+    return if $total_hardware < 2;
     for my $index ( reverse 1 .. $total_hardware-1) {
         test_remove_hardware($vm, $domain, $hardware, $index);
         $domain->list_volumes();
@@ -370,9 +379,81 @@ sub test_change_disk($vm, $domain) {
     test_change_disk_cdrom($vm, $domain);
 }
 
+sub test_change_network_bridge($vm, $domain, $index) {
+    SKIP: {
+    my @bridges = $vm->list_network_interfaces('bridge');
+
+    skip("No bridges found in this system",6) if !scalar @bridges;
+    my $info = $domain->info(user_admin);
+    is ($info->{hardware}->{network}->[$index]->{type}, 'NAT') or exit;
+
+    ok(scalar @bridges,"No network bridges defined in this host") or return;
+
+    diag("Testing network bridge ".$bridges[0]);
+    my $req = Ravada::Request->change_hardware(
+        id_domain => $domain->id
+        ,hardware => 'network'
+           ,index => $index
+            ,data => { type => 'bridge', bridge => $bridges[0]}
+             ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '');
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $info = $domain_f->info(user_admin);
+    is ($info->{hardware}->{network}->[$index]->{type}, 'bridge', $domain->name) or exit;
+    is ($info->{hardware}->{network}->[$index]->{bridge}, $bridges[0] );
+
+    }
+}
+
+sub test_change_network_nat($vm, $domain, $index) {
+    my $info = $domain->info(user_admin);
+
+    my @nat = $vm->list_network_interfaces( 'nat');
+    ok(scalar @nat,"No NAT network defined in this host") or return;
+
+    diag("Testing network NAT ".$nat[0]);
+    my $req = Ravada::Request->change_hardware(
+        id_domain => $domain->id
+        ,hardware => 'network'
+           ,index => $index
+            ,data => { type => 'NAT', network => $nat[0]}
+             ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '');
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $info = $domain_f->info(user_admin);
+    is ($info->{hardware}->{network}->[$index]->{type}, 'NAT');
+    is ($info->{hardware}->{network}->[$index]->{network}, $nat[0] );
+
+}
+
+sub test_change_network($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'network';
+
+    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+
+    test_change_network_bridge($vm, $domain, $index);
+    test_change_network_nat($vm, $domain, $index);
+}
+
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
-         disk => \&test_change_disk
+      network => \&test_change_network
+        ,disk => \&test_change_disk
         ,mock => sub {}
          ,usb => sub {}
     );
@@ -475,7 +556,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM)) {
+for my $vm_name ( qw(KVM Void)) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -491,7 +572,7 @@ for my $vm_name ( qw(Void KVM)) {
     );
     my %controllers = $domain_b->list_controllers;
 
-    for my $hardware ( sort keys %controllers ) {
+    for my $hardware (reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
 
