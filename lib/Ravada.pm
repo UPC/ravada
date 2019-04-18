@@ -48,6 +48,19 @@ $ERROR_VM{Void} = $@;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+our %VALID_CONFIG = (
+    vm => undef
+    ,warn_error => undef
+    ,db => {user => undef, password => undef,  hostname => undef}
+    ,ldap => { admin_user => { dn => undef, password => undef }
+        ,filter => undef
+        ,base => undef
+        ,auth => undef
+        ,admin_group => undef
+        ,ravada_posix_group => undef
+    }
+);
+
 =head1 NAME
 
 Ravada - Remove Virtual Desktop Manager
@@ -1272,6 +1285,7 @@ sub _init_config {
     eval { $CONFIG = YAML::LoadFile($file) };
 
     die "ERROR: Format error in config file $file\n$@"  if $@;
+    _check_config($CONFIG);
 
     if ( !$CONFIG->{vm} ) {
         my %default_vms = %VALID_VM;
@@ -1322,6 +1336,24 @@ sub _create_vm_kvm {
     $vm_kvm = undef if !$internal_vm || !$storage;
 
     return $vm_kvm;
+}
+
+sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
+    return 1 if !defined $config_orig;
+    my %config = %$config_orig;
+
+    for my $key (sort keys %$valid_config) {
+        if ( $config{$key} && ref($valid_config->{$key})) {
+           my $ok = _check_config( $config{$key} , $valid_config->{$key} );
+           return 0 if !$ok;
+        }
+        delete $config{$key};
+    }
+    if ( keys %config ) {
+        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
+        return 0;
+    }
+    return 1;
 }
 
 =head2 disconnect_vm
