@@ -159,7 +159,7 @@
             <div class="form-group row">
                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
                 <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"
-                     ng-disabled="new_machineForm.$invalid || (!new_machineForm.id_iso.$viewValue.device && (new_machineForm.iso_file.$modelValue == '<NONE>')) || name_duplicated">
+                     ng-disabled="new_machineForm.$invalid || name_duplicated">
             </div>
         </form>
     </div>
