@@ -1337,11 +1337,29 @@ sub get_info {
     return $info;
 }
 
+sub _ip_agent($self) {
+    my @ip;
+    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
+    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
+    warn $@ if $@;
+
+    for my $if (@ip) {
+        next if $if->{name} =~ /^lo/;
+        for my $addr ( @{$if->{addrs}} ) {
+            return $addr->{addr}
+            if $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+        }
+    }
+}
+
 sub ip($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
     warn $@ if $@;
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
+
+    return $self->_ip_agent();
+
 }
 
 =head2 set_max_mem

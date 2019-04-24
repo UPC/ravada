@@ -26,12 +26,6 @@ has 'domain' => (
     ,required => 1
 );
 
-has '_ip' => (
-    is => 'rw'
-    ,isa => 'Str'
-    ,default => sub { return '1.1.1.'.int rand(255)}
-);
-
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
 );
@@ -484,7 +478,7 @@ sub _set_default_info {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
-            ,ip => $self->ip
+            ,ip =>'1.1.1.'.int(rand(254)+1)
     };
     $self->_store(info => $info);
     my %controllers = $self->list_controllers;
@@ -573,7 +567,8 @@ sub spinoff_volumes {
 
 sub ip {
     my $self = shift;
-    return $self->_ip;
+    my $info = $self->_value('info');
+    return $info->{ip};
 }
 
 sub clean_swap_volumes {

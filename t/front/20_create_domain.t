@@ -114,9 +114,16 @@ sub test_domain_info {
         last if $domain_b->ip;
         sleep 1;
     }
-    $domain_b->get_info;
+    my $internal_info = $domain_b->get_info;
+    ok(exists $internal_info->{ip}, "Expecting IP in internal info ".Dumper($internal_info))
+        or exit;
     ok(exists $domain->info(user_admin)->{ip}
-        ,"Expecting ip field in domain info ".Dumper($domain->info(user_admin))) or exit;
+        ,"Expecting ip field in domain info ") or exit;
+
+    my $domain_f = Ravada::Front::Domain->open($domain_b->id);
+    my $info_f = $domain_f->info(user_admin);
+    ok(exists $info_f->{ip},"Expecting ip in front domain info");
+    is($info_f->{ip}, $domain_b->ip);
 
     $domain_b->shutdown_now(user_admin);
 

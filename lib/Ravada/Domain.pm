@@ -795,6 +795,7 @@ sub _set_display_ip($self, $display) {
 sub _around_get_info($orig, $self) {
     my $info = $self->$orig();
     if (ref($self) =~ /^Ravada::Domain/ && $self->is_known()) {
+        $info->{ip} = $self->ip() if $self->is_active;
         $self->_data(info => encode_json($info));
     }
     return $info;
