@@ -59,7 +59,6 @@ create_domain
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
-our $FILE_CONFIG_REMOTE_2 = "t/etc/remote_vm_2.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
 
@@ -167,7 +166,7 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 256*1024
-                    , disk => 256 * 1024 * 1024
+                    , disk => 1 * 1024 * 1024
            );
     };
     is('',''.$@);
@@ -267,33 +266,33 @@ sub init($config=undef) {
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
-sub remote_config_2() {
-    return {} if ! -e $FILE_CONFIG_REMOTE_2;
+sub _load_remote_config() {
+    return {} if ! -e $FILE_CONFIG_REMOTE;
     my $conf;
-    eval { $conf = LoadFile($FILE_CONFIG_REMOTE_2) };
-    is($@,'',"Error in $FILE_CONFIG_REMOTE_2\n".$@) or return;
+    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
+    is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
+    lock_hash(%$conf);
     return $conf;
 }
 
 sub remote_config {
     my $vm_name = shift;
-    return { } if !-e $FILE_CONFIG_REMOTE;
-
-    my $conf;
-    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
-    is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
-
-    my $remote_conf = $conf->{$vm_name} or do {
+    my $conf = _load_remote_config();
+    my $remote_conf;
+    for my $node (sort keys %$conf) {
+        next if !grep /^$vm_name$/, @{$conf->{$node}->{vm}};
+        $remote_conf = {
+            name => $node
+            ,host=> $conf->{$node}->{host}
+            ,public_ip => $conf->{$node}->{public_ip}
+        };
+        last;
+    }
+    if (! $remote_conf) {
         diag("SKIPPED: No $vm_name section in $FILE_CONFIG_REMOTE");
         return ;
     };
-    for my $field ( qw(host user password security public_ip name)) {
-        delete $remote_conf->{$field};
-    }
-    die "Unknown fields in remote_conf $vm_name, valids are : host user password name\n"
-        .Dumper($remote_conf)   if keys %$remote_conf;
 
-    $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
     ok($remote_conf->{public_ip} ne $remote_conf->{host},
             "Public IP must be different from host at $FILE_CONFIG_REMOTE")
         if defined $remote_conf->{public_ip};
@@ -301,7 +300,7 @@ sub remote_config {
     $remote_conf->{public_ip} = '' if !exists $remote_conf->{public_ip};
 
     lock_hash(%$remote_conf);
-    return $remote_conf->{$vm_name};
+    return $remote_conf;
 }
 
 sub remote_config_nodes {
@@ -687,6 +686,7 @@ sub clean {
     }
     _clean_db();
     _clean_file_config();
+    shutdown_nodes();
 }
 
 sub _clean_db {
@@ -705,11 +705,7 @@ sub _clean_db {
 }
 
 sub clean_remote {
-    return if ! -e $FILE_CONFIG_REMOTE;
-
-    my $conf;
-    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
-    return if !$conf;
+    my $conf = _load_remote_config() or return;
     for my $vm_name (keys %$conf) {
         my $vm;
         eval { $vm = rvd_back->search_vm($vm_name) };
@@ -977,6 +973,12 @@ sub start_node($node) {
 
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
+    $node->is_active(1);
+    for ( 1 .. 60 ) {
+        my $node2 = Ravada::VM->open(id => $node->id);
+        last if $node2->is_active(1);
+        diag("Waiting for node ".$node->name." active ...")  if !($_ % 10);
+    }
 }
 
 sub remove_node($node) {
@@ -1111,7 +1113,7 @@ sub remote_node($vm_name) {
 }
 
 sub remote_node_2($vm_name) {
-    my $remote_config = remote_config_2();
+    my $remote_config = _load_remote_config();
 
     my @nodes;
     for my $name ( sort keys %$remote_config ) {
@@ -1127,7 +1129,6 @@ sub remote_node_2($vm_name) {
     }
     return @nodes;
 }
-
 
 sub _do_remote_node($vm_name, $remote_config) {
     my $vm = rvd_back->search_vm($vm_name);
@@ -1254,11 +1255,15 @@ sub connector {
 
 # this must be in DESTROY because users got removed in END
 sub DESTROY {
+    shutdown_nodes();
+    remove_old_user() if $CONNECTOR;
+    remove_old_user_ldap() if $CONNECTOR;
+}
+
+sub shutdown_nodes {
     for my $node (@NODES) {
         shutdown_node($node);
     }
-    remove_old_user() if $CONNECTOR;
-    remove_old_user_ldap() if $CONNECTOR;
 }
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'

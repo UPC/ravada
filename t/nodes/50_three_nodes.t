@@ -93,7 +93,7 @@ for my $vm_name ( 'Void', 'KVM') {
         my ($node1, $node2) = remote_node_2($vm_name);
 
         if ( !$node1 || !$node2 ) {
-            diag("Skipped: No remote nodes configured in $Test::Ravada::FILE_CONFIG_REMOTE_2");
+            diag("Skipped: No remote nodes configured in $Test::Ravada::FILE_CONFIG_REMOTE");
             goto NEXT;
         }
 
