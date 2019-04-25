@@ -29,6 +29,7 @@ sub test_disable_node($vm, $node) {
     sleep 2;
     for (1 .. 10 ) {
         last if$clone->is_active;
+        sleep 1;
     }
     is($clone->is_active,1,"Expecting clone active") or return;
 
@@ -46,25 +47,12 @@ sub test_disable_node($vm, $node) {
     is($req->status,'done');
     is($req->error,'');
 
-    my @reqs = $clone->list_requests();
-    if (!@reqs) {
-        my $req2 = Ravada::Request->shutdown_domain(
-            uid => user_admin->id
-            ,timeout => $timeout
-            , id_domain => $clone->id
-        );
-        rvd_back->_process_requests_dont_fork();
-        is($req2->status,'done');
-        is($req2->error,'');
-        @reqs = $clone->list_requests();
-    }
-
-    for ( 0 .. $timeout + 3 ) {
+    for ( 0 .. $timeout * 2 ) {
         last if !$clone->is_active;
         sleep 1;
         rvd_back->_process_requests_dont_fork();
     }
-    is($clone->is_active, 0 );
+    is($clone->is_active, 0,$clone->type." ".$clone->name ) or exit;
     if ( $vm->type eq 'KVM' ) {
         is($clone->domain->is_active, 0);
     } else {
