@@ -148,7 +148,7 @@
                         <strong><%=l 'Error' %></strong> <%=l 'Template selection is required' %>
                     </div>
                 </div>
-                <div ng-show="name_duplicated" class="alert alert-warning fade in">
+                <div ng-show="name_duplicated" class="alert alert-warning">
                         <strong><%=l 'Error' %></strong> <%=l 'A machine with that name already exists.' %>
                 </div>
                 <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
