@@ -197,9 +197,6 @@ for my $vm_name ('Void','KVM','LXC') {
                 ."'");
 
     $display = undef;
-    eval { $display = $RVD_FRONT->domdisplay($name ) };
-    ok(!$display,"No display should b e returned with no user");
-
 
     my $domain_front2 = Ravada::Front::Domain->open($domain->id);
     is($domain_front2->id, $domain->id);
