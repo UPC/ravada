@@ -219,6 +219,7 @@ sub start($self, @args) {
 sub prepare_base {
     my $self = shift;
 
+    my @img;
     for my $volume ($self->list_volumes_info(device => 'disk')) {;
         next if $volume->{device} ne 'disk';
         my $file_qcow = $volume->{file};
@@ -231,8 +232,9 @@ sub prepare_base {
         open my $out,'>',$file_base or die "$! $file_base";
         print $out "$file_qcow\n";
         close $out;
-        $self->_prepare_base_db($file_base);
+        push @img,([$file_base, $volume->{target}]);
     }
+    return @img;
 }
 
 sub list_disks {
@@ -746,4 +748,7 @@ sub change_hardware($self, $hardware, $index, $data) {
     $self->_store(hardware => $hardware_def );
 }
 
+sub dettach($self,$user) {
+    # no need to do anything to dettach mock volumes
+}
 1;

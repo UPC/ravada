@@ -152,8 +152,9 @@ before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
-before 'prepare_base' => \&_pre_prepare_base;
- after 'prepare_base' => \&_post_prepare_base;
+around 'prepare_base' => \&_around_prepare_base;
+#before 'prepare_base' => \&_pre_prepare_base;
+# after 'prepare_base' => \&_post_prepare_base;
 
 before 'start' => \&_start_preconditions;
  after 'start' => \&_post_start;
@@ -567,6 +568,19 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
         $self->cache_volume_info(%$vol);
     }
     return @volumes;
+}
+
+sub _around_prepare_base($orig, $self, $user, $request = undef) {
+    $self->_pre_prepare_base($user, $request);
+
+    my @base_img = $self->$orig($user, $request);
+
+    die "Error: No information files returned from prepare_base"
+        if !scalar (\@base_img);
+
+    $self->_prepare_base_db(@base_img);
+
+    $self->_post_prepare_base($user, $request);
 }
 
 sub _pre_prepare_base($self, $user, $request = undef ) {
@@ -3572,13 +3586,32 @@ sub rebase($self, $user, $new_base) {
         ,after_request => $reqs[0]->id
     );
 
+    for my $vm ($self->list_vms) {
+        next if $vm->is_local;
+        push @reqs, Ravada::Request->set_base_vm(
+            uid => $user->id
+            ,id_vm => $vm->id
+            ,id_domain => $new_base->id
+        ,after_request => $reqs[-1]->id
+        );
+    }
+
+    $new_base->is_public($self->is_public);
+    my $req_set_base = $reqs[-1];
+
     for my $clone_info ( $self->clones ) {
         next if $clone_info->{id} == $new_base->id;
+        push @reqs,Ravada::Request->shutdown_domain(
+            uid => $user->id
+            , id_domain => $clone_info->{id}
+        ,after_request => $req_set_base->id
+        );
+
         push @reqs,Ravada::Request->rebase_volumes(
                    uid => $user->id
               ,id_base => $new_base->id
             ,id_domain => $clone_info->{id}
-        ,after_request => $reqs[1]->id
+        ,after_request => $reqs[-1]->id
         );
     }
     return @reqs;

@@ -466,7 +466,6 @@ sub _create_qcow_base {
         unlink $file_img or die "$! $file_img";
         $self->_vm->_clone_disk($base_img, $file_img);
     }
-    $self->_prepare_base_db(@base_img);
     return @base_img;
 
 }
