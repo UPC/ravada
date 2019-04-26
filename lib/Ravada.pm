@@ -1053,9 +1053,21 @@ sub _upgrade_table {
     my ($table, $field, $definition) = @_;
     my $dbh = $CONNECTOR->dbh;
 
+    my ($new_size) = $definition =~ m{\((\d+)};
+
     my $sth = $dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
+    if ( $dbh->{Driver}{Name} =~ /mysql/
+        && $row && $row->{COLUMN_SIZE}
+        && $new_size
+        && $new_size != $row->{COLUMN_SIZE}) {
+
+        $dbh->do("alter table $table change $field $field $definition");
+        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
+        return;
+    }
+
     return if $row;
 
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
