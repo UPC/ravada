@@ -19,7 +19,11 @@ sub test_remove_domain {
     my $domain = create_domain($vm->type);
     $domain->shutdown( user => user_admin )  if $domain->is_active();
     
-    $domain->domain->undefine();
+    if ($vm->type eq 'KVM') {
+        $domain->domain->undefine();
+    } elsif ($vm->type eq 'Void') {
+        unlink $domain->_config_file() or die "$! ".$domain->_config_file;
+    }
 
     my $removed = $domain->is_removed;
 
@@ -34,6 +38,16 @@ sub test_remove_domain {
 
 }
 
+sub test_remove_domain_volumes_already_gone {
+    my $vm = shift;
+    my $domain = create_domain($vm->type);
+    for my $file ($domain->list_disks) {
+        die $file if $file =~ /iso/;
+        unlink $file or die "$! $file";
+    }
+    eval { $domain->remove(user_admin) };
+    is(''.$@,'',$vm->type);
+}
 
 ##############################################################################
 
@@ -41,7 +55,7 @@ clean();
 
 use_ok('Ravada');
 
-for my $vm_name ( q'KVM' ) {
+for my $vm_name ( vm_names() ) {
 
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
@@ -59,6 +73,7 @@ for my $vm_name ( q'KVM' ) {
         diag("Testing remove on $vm_name");
 
 		test_remove_domain($vm);        
+        test_remove_domain_volumes_already_gone($vm);
 
     }
 }

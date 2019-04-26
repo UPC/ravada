@@ -132,6 +132,7 @@ sub create_domain {
         $domain->add_volume(name => $cdrom_name
                         , file => $cdrom_file
                         , device => 'cdrom'
+                        , type => 'cdrom'
                         , target => 'hdc'
         );
         $domain->_set_default_drivers();
