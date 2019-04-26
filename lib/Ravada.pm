@@ -2907,6 +2907,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
+    $self->_remove_unnecessary_downs();
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
@@ -3116,6 +3117,15 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
                 next if $req->command !~ /shutdown/i;
                 $req->status('done');
             }
+        }
+    }
+}
+
+sub _remove_unnecessary_downs($self) {
+    for my $domain ($self->list_domains( active => 0 )) {
+        my @requests = $domain->list_requests;
+        for my $req (@requests) {
+            $req->status('done') if $req->command =~ /^shutdown/;
         }
     }
 }
