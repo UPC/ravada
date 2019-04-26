@@ -79,9 +79,13 @@ sub remove {
     $self->remove_disks();
 
     my $config_file = $self->_config_file;
-    my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
-    warn $err if $err;
-    $self->_vm->run_command("/bin/rm",$config_file.".lock");
+    if ($self->_vm->file_exists($config_file)) {
+        my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
+        warn $err if $err;
+    }
+    if ($self->_vm->file_exists($config_file.".lock")) {
+        $self->_vm->run_command("/bin/rm",$config_file.".lock");
+    }
 }
 
 sub can_hibernate { return 1; }
@@ -238,7 +242,11 @@ sub prepare_base {
 }
 
 sub list_disks {
-    return disk_device(@_);
+    my @disks;
+    for my $disk ( list_volumes_info(@_)) {
+        push @disks,( $disk->{file}) if $disk->{type} eq 'file';
+    }
+    return @disks;
 }
 
 sub _vol_remove {
@@ -292,7 +300,8 @@ sub add_volume {
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/$vol_name$suffix"
+        $args{file} = $self->_config_dir."/$vol_name";
+        $args{file} .= $suffix if $args{file} !~ /\.\w+$/;
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
@@ -428,10 +437,10 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         next if exists $dev->{type}
                 && $dev->{type} eq 'base';
 
-        my $info;
+        my $info = {};
 
         if (exists $dev->{file} ) {
-            eval { $info = Load($self->_vm->read_file($dev->{file})) };
+            eval { $info = Load($self->_vm->read_file($dev->{file})) if -e $dev->{file} };
             confess "Error loading $dev->{file} ".$@ if $@;
             next if defined $attribute
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);

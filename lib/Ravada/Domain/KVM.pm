@@ -254,7 +254,10 @@ sub remove {
     my @volumes;
     if (!$self->is_removed ) {
         for my $vol ( $self->list_volumes_info ) {
-            push @volumes,($vol->{file}) if $vol->{device} eq 'file';
+            push @volumes,($vol->{file})
+                if exists $vol->{file}
+                   && exists $vol->{device}
+                   && $vol->{device} eq 'file';
         }
     }
 
@@ -376,10 +379,12 @@ sub _volume_info($self, $file, $refresh=0) {
         return;
     }
 
-    my $info = $vol->get_info;
+    my $info;
+    eval { $info = $vol->get_info };
+    warn "WARNING: $@" if $@ && $@ !~ /^libvirt error code: 50,/;
     $info->{file} = $file;
     $info->{name} = $name;
-    $info->{driver} = delete $info->{bus};
+    $info->{driver} = delete $info->{bus} if exists $info->{bus};
 
     return $info;
 }
