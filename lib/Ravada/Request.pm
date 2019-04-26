@@ -68,6 +68,7 @@ our %VALID_ARG = (
     ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
+    ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2}
@@ -82,6 +83,7 @@ our %VALID_ARG = (
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
+    ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
     # Virtual Managers or Nodes
     ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
 
@@ -384,7 +386,9 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    $valid_args->{at}=2 if !exists $valid_args->{at};
+    for (qw(at after_request)) {
+        $valid_args->{$_}=2 if !exists $valid_args->{$_};
+    }
 
     confess "Unknown method $sub" if !$valid_args;
     for (keys %{$args}) {
@@ -1105,6 +1109,15 @@ sub stop($self) {
 
 sub priority($self) {
     return $self->{priority};
+}
+
+sub requirements_done($self) {
+    my $after_request = $self->after_request();
+    return 1 if !defined $after_request;
+
+    my $req = Ravada::Request->open($self->after_request);
+    return 1 if $req->status eq 'done';
+    return 0;
 }
 
 sub AUTOLOAD {
