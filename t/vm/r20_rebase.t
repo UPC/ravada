@@ -25,8 +25,8 @@ sub test_rebase($vm) {
     is(scalar($base->clones),2);
 
     my @reqs = $base->rebase(user_admin, $clone1);
-    rvd_back->_process_requests_dont_fork(1);
     for my $req (@reqs) {
+        rvd_back->_process_requests_dont_fork();
         is($req->status, 'done' ) or exit;
         is($req->error, '') or exit;
     }
@@ -69,3 +69,5 @@ for my $vm_name ( vm_names() ) {
 }
 
 clean();
+
+done_testing();
