@@ -48,7 +48,11 @@ sub test_route($vm) {
     }
 
     for my $network ( sort keys %route ) {
-        my ($client_ip, $last) = $network =~ m{(.*)\.(\d+)/};
+        my ($client_ip, $last) = $network =~ m{(.*)\.(\d+)/.*};
+        ($client_ip, $last) = $network =~ m{(.*)\.(\d+)}    if !defined $client_ip;
+
+        confess "No last in network '$network' ".($client_ip or 'UNDEF')
+                ." ".($last or 'UNDEF') if !defined $last;
         while ( $last < 2 || "$client_ip.$last" eq $route{$network} ) {
             $last++;
         }
