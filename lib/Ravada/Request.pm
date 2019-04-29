@@ -97,6 +97,7 @@ our %VALID_ARG = (
     #networks
     ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
+    ,ping_backend => {}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
