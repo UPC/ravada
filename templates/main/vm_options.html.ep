@@ -1,6 +1,14 @@
 <div class="card-body">
     <form class="form" action="<%= $action %>" method="post">
         <div class="form-group">
+            <div class="row" ng-show="showmachine.ip">
+                <div class="col-lg-2">
+                    <label class="control-label" for="ram"><%=l 'Internal IP' %></label>
+                </div>
+                <div class="col-lg-2">
+                    {{showmachine.ip}}
+                </div>
+            </div>
             <div class="row">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>

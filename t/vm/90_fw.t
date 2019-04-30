@@ -278,7 +278,7 @@ sub test_localhost {
     $domain->start( user => user_admin, remote_ip => $remote_ip);
 
     my ($local_ip, $local_port) = $domain->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
-    is($local_ip, $vm->ip);
+    is($local_ip, $remote_ip);
 #    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
     my %test_args= (
            remote_ip => $remote_ip

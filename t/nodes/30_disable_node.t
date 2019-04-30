@@ -26,27 +26,33 @@ sub test_disable_node($vm, $node) {
     my $clone = $base->clone(user => user_admin, name => new_domain_name);
     $clone->migrate($node);
     $clone->start(user_admin);
+    sleep 2;
+    for (1 .. 10 ) {
+        last if$clone->is_active;
+        sleep 1;
+    }
+    is($clone->is_active,1,"Expecting clone active") or return;
 
     $node->is_enabled(0);
 
     is($clone->_vm->name, $node->name);
 
-    my $timeout = 20;
+    my $timeout = 4;
     my $req = Ravada::Request->shutdown_domain(
                 uid => user_admin->id
-           ,timeout => 20
+           ,timeout => $timeout
         , id_domain => $clone->id
     );
     rvd_back->_process_requests_dont_fork();
     is($req->status,'done');
     is($req->error,'');
 
-    for ( 0 .. $timeout + 1 ) {
+    for ( 0 .. $timeout * 2 ) {
         last if !$clone->is_active;
         sleep 1;
         rvd_back->_process_requests_dont_fork();
     }
-    is($clone->is_active, 0 );
+    is($clone->is_active, 0,$clone->type." ".$clone->name ) or exit;
     if ( $vm->type eq 'KVM' ) {
         is($clone->domain->is_active, 0);
     } else {

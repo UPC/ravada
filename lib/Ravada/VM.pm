@@ -40,6 +40,7 @@ our $MIN_MEMORY_MB = 128 * 1024;
 
 our $SSH_TIMEOUT = 20 * 1000;
 
+our %VM; # cache Virtual Manager Connection
 our %SSH;
 
 our $ARP = `which arp`;
@@ -62,6 +63,7 @@ requires 'import_domain';
 requires 'is_alive';
 
 requires 'free_memory';
+requires 'free_disk';
 
 requires '_fetch_dir_cert';
 
@@ -173,6 +175,8 @@ sub open {
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
+    return $VM{$args{id}} if $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name};
+
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
     $class .= "::$type";
@@ -181,8 +185,14 @@ sub open {
     $args{host} = $row->{hostname};
     $args{security} = decode_json($row->{security}) if $row->{security};
 
-    return $self->new(%args);
+    my $vm = $self->new(%args);
+    $VM{$args{id}} = $vm;
+    return $vm;
 
+}
+
+sub _clean_cache {
+    %VM = ();
 }
 
 sub BUILD {
@@ -358,6 +368,7 @@ sub _around_create_domain {
 
     my $base;
     my $remote_ip = delete $args{remote_ip};
+    my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
      my $id_iso = delete $args{id_iso};
      my $active = delete $args{active};
@@ -378,6 +389,7 @@ sub _around_create_domain {
     if ($id_base) {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
+        $volatile = 1 if $base->volatile_clones;
     }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
@@ -390,7 +402,7 @@ sub _around_create_domain {
 
     $self->_pre_create_domain(@_);
 
-    my $domain = $self->$orig(@_);
+    my $domain = $self->$orig(@_, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
@@ -556,15 +568,29 @@ sub nat_ip($self) {
     return Ravada::nat_ip();
 }
 
-sub _interface_ip {
-    my $s = IO::Socket::INET->new(Proto => 'tcp');
+sub _interface_ip($self, $remote_ip=undef) {
+    return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
+    my ($out, $err) = $self->run_command("/sbin/ip","route");
+    my %route;
+    my ($default_gw , $default_ip);
 
-    for my $if ( $s->if_list) {
-        next if $if =~ /^virbr/;
-        my $addr = $s->if_addr($if);
-        return $addr if $addr && $addr !~ /^127\./;
+    my $remote_ip_addr = NetAddr::IP->new($remote_ip);
+
+    for my $line ( split( /\n/, $out ) ) {
+        if ( $line =~ m{^default via ([\d\.]+)} ) {
+            $default_gw = NetAddr::IP->new($1);
+        }
+        if ( $line =~ m{^([\d\.\/]+).*src ([\d\.\/]+)} ) {
+            my ($network, $ip) = ($1, $2);
+            $route{$network} = $ip;
+
+            my $netaddr = NetAddr::IP->new($network);
+            return $ip if $remote_ip_addr->within($netaddr);
+
+            $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+        }
     }
-    return;
+    return $default_ip;
 }
 
 sub _check_memory {
@@ -616,9 +642,11 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    if (my @requests = grep { $_->command ne 'clone' } $base->list_requests) {
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm);
+    if (my @requests = grep { !$ignore_requests{$_->command} } $base->list_requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
+                            .Dumper([$base->list_requests])
             unless scalar @requests == 1 && $request
                 && $requests[0]->id eq $request->id;
     }
@@ -975,9 +1003,6 @@ sub _do_is_active($self) {
         } else {
             if ( $self->is_alive ) {
                 $ret = 1;
-            }  else {
-                $self->connect();
-                $ret = 1 if $self->is_alive;
             }
         }
     }
@@ -1017,6 +1042,8 @@ Remove the virtual machine manager.
 sub remove($self) {
     #TODO stop the active domains
     #
+    delete $VM{$self->id};
+
     $self->disconnect();
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($self->id);
@@ -1095,7 +1122,7 @@ sub _write_file_local( $self, $file, $contents ) {
     my ($path) = $file =~ m{(.*)/};
     make_path($path) or die "$! $path"
         if ! -e $path;
-    CORE::open(my $out,">",$file) or die "$! $file";
+    CORE::open(my $out,">",$file) or confess "$! $file";
     print $out $contents;
     close $out or die "$! $file";
 }
@@ -1111,6 +1138,22 @@ sub read_file( $self, $file ) {
 sub _read_file_local( $self, $file ) {
     CORE::open my $in,'<',$file or die "$! $file";
     return join('',<$in>);
+}
+
+sub file_exists( $self, $file ) {
+    return -e $file if $self->is_local;
+
+    my ( $out, $err) = $self->run_command("/usr/bin/test",
+        "-e $file ; echo \$?");
+
+    chomp $out;
+    return 1 if $out eq 0;
+    return 0;
+}
+
+sub remove_file( $self, $file ) {
+    unlink $file if $self->is_local;
+    $self->run_command("/bin/rm", $file);
 }
 
 sub create_iptables_chain($self,$chain) {
@@ -1183,27 +1226,57 @@ sub _random_list(@list) {
 }
 
 sub balance_vm($self, $base=undef) {
+
+    my $min_memory = $Ravada::Domain::MIN_FREE_MEMORY;
+    $min_memory = $base->get_info->{memory} if $base;
+
     my %vm_list;
-    for my $vm (_random_list($self->list_nodes)) {
+    my @status;
+
+    my @vms;
+    if ($base) {
+        @vms = $base->list_vms();
+    } else {
+        @vms = $self->list_nodes();
+    }
+#    warn Dumper([ map { $_->name } @vms]);
+    return $self if !@vms;
+    for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
-        next if !$vm->is_active();
+        my $active = 0;
+        eval { $active = $vm->is_active() };
+        my $error = $@;
+        if ($error && !$vm->is_local) {
+            warn "[balance] disabling ".$vm->name." ".$vm->enabled()." $error";
+            $vm->enabled(0);
+        }
 
-        my $free_memory = $vm->free_memory;
-        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+        next if !$vm->enabled();
+        next if !$active;
+        next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
 
-        my $active = $vm->count_domains(status => 'active')
+        my $free_memory;
+        eval { $free_memory = $vm->free_memory };
+        if ($@) {
+            warn $@;
+            $vm->enabled(0) if !$vm->is_local();
+            next;
+        }
+
+        my $n_active = $vm->count_domains(status => 'active')
                         + $vm->count_domains(status => 'starting');
 
-        my $key = $active.".".$free_memory;
+        my $key = $n_active.".".$free_memory;
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
-    my @sorted_vm = map { $vm_list{$_} } sort keys %vm_list;
+    my @sorted_vm = map { $vm_list{$_} } sort { $a <=> $b } keys %vm_list;
+#    warn Dumper([ map {  [$_ , $vm_list{$_}->name ] } keys %vm_list]);
+#    warn "sorted ".Dumper([ map { $_->name } @sorted_vm ]);
     for my $vm (@sorted_vm) {
-        next if $base && !$base->base_in_vm($vm->id);
         return $vm;
     }
-    return;
+    return $self;
 }
 
 sub count_domains($self, %args) {
@@ -1234,6 +1307,21 @@ sub shutdown_domains($self) {
     $sth->finish;
 }
 
+sub shared_storage($self, $node, $dir) {
+    $dir .= '/' if $dir !~ m{/$};
+    my $file;
+    for ( ;; ) {
+        $file = $dir.Ravada::Utils::random_name(4).".tmp";
+        next if $self->file_exists($file);
+        next if $node->file_exists($file);
+        last;
+    }
+    $self->write_file($file,''.localtime(time));
+    my $shared = $node->file_exists($file);
+    $self->remove_file($file);
+
+    return $shared;
+}
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
@@ -1309,6 +1397,21 @@ sub shutdown($self) {
     die "Error: local VM can't be shut down\n" if $self->is_local;
     $self->is_active(0);
     $self->run_command_nowait('/sbin/poweroff');
+}
+
+sub _check_free_disk($self, $size, $storage_pool=undef) {
+
+    my $size_out = int($size / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    my $free = $self->free_disk($storage_pool);
+    my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
+
+    die "Error creating volume, out of space."
+    ." Requested: ".Ravada::Utils::number_to_size($size_out)
+    ." , Disk free: ".Ravada::Utils::number_to_size($free_out)
+    ."\n"
+    if $size > $free;
+
 }
 
 1;

@@ -286,6 +286,9 @@ msgstr ""
 msgid "A viewer is required to run the virtual machines."
 msgstr ""
 
+msgid "It is required a viewer to run the virtual machines."
+msgstr ""
+
 msgid "Virtual Machines"
 msgstr ""
 
@@ -790,4 +793,22 @@ msgid "Update password"
 msgstr ""
 
 msgid "Start all clones"
+msgstr ""
+
+msgid "Access denied"
+msgstr ""
+
+msgid "Empty login name"
+msgstr ""
+
+msgid "Empty password"
+msgstr ""
+
+msgid "Session timeout"
+msgstr ""
+
+msgid "Vietnamese"
+msgstr ""
+
+msgid "Italian"
 msgstr ""

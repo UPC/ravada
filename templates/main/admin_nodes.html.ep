@@ -117,7 +117,7 @@
       </div>
     </div>
 </div>
-%= include 'bootstrap/footer'
+%= include $footer
 %= include 'bootstrap/scripts'
 </body>
 </html>

@@ -26,12 +26,6 @@ has 'domain' => (
     ,required => 1
 );
 
-has '_ip' => (
-    is => 'rw'
-    ,isa => 'Str'
-    ,default => sub { return '1.1.1.'.int rand(255)}
-);
-
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
 );
@@ -40,29 +34,7 @@ our $CONVERT = `which convert`;
 chomp $CONVERT;
 #######################################3
 
-sub BUILD {
-    my $self = shift;
-
-    my $args = $_[0];
-
-    my $drivers = {};
-    if ($args->{id_base}) {
-        my $base = Ravada::Domain->open($args->{id_base});
-
-        confess "ERROR: Wrong base ".ref($base)." ".$base->type
-                ."for domain in vm ".$self->_vm->type
-            if $base->type ne $self->_vm->type;
-        $drivers = $base->_value('drivers');
-    }
-    if ( ! -e $self->_config_file ) {
-        $self->_set_default_info();
-        $self->_store( autostart => 0 );
-        $self->_store( drivers => $drivers );
-    }
-    $self->set_memory($args->{memory}) if $args->{memory};
-}
-
-sub name { 
+sub name {
     my $self = shift;
     return $self->domain;
 };
@@ -70,9 +42,20 @@ sub name {
 sub display_info {
     my $self = shift;
 
-    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
+    my $display_data = $self->_value('display');
+    if (!keys %$display_data) {
+        $display_data = $self->_set_display();
+    }
+    return $display_data;
+}
+
+sub _set_display($self, $remote_ip=undef) {
+    #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
+    my $ip = ( $self->_listen_ip($remote_ip) or $self->_vm->ip );
     my $display="void://$ip:5990/";
-    return { display => $display , type => 'void', address => $ip, port => 5990 };
+    my $display_data = { display => $display , type => 'void', ip => $ip, port => 5990 };
+    $self->_store( display => $display_data );
+    return $display_data;
 }
 
 sub is_active {
@@ -94,8 +77,15 @@ sub remove {
     my $self = shift;
 
     $self->remove_disks();
-    $self->_vm->run_command("/bin/rm",$self->_config_file());
-    $self->_vm->run_command("/bin/rm",$self->_config_file().".lock");
+
+    my $config_file = $self->_config_file;
+    if ($self->_vm->file_exists($config_file)) {
+        my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
+        warn $err if $err;
+    }
+    if ($self->_vm->file_exists($config_file.".lock")) {
+        $self->_vm->run_command("/bin/rm",$config_file.".lock");
+    }
 }
 
 sub can_hibernate { return 1; }
@@ -125,7 +115,7 @@ sub _check_value_disk($self, $value)  {
             if $target{$device->{target}}++;
 
         confess "Duplicated file" .Dumper($value)
-            if $file{$device->{file}}++;
+            if exists $device->{file} && $file{$device->{file}}++;
     }
 }
 
@@ -156,7 +146,7 @@ sub _load($self) {
     eval {
         $data = LoadFile($disk)   if -e $disk;
     };
-    confess $@ if $@;
+    confess "Error in $disk: $@" if $@;
 
     return $data;
 }
@@ -222,15 +212,19 @@ sub shutdown_now {
     return $self->shutdown(user => $user);
 }
 
-sub start {
-    my $self = shift;
+sub start($self, @args) {
+    my %args;
+    %args = @args if scalar(@args) % 2 == 0;
+    my $remote_ip = delete $args{remote_ip};
     $self->_store(is_active => 1);
+    $self->_set_display( $remote_ip );
 }
 
 sub prepare_base {
     my $self = shift;
 
-    for my $volume ($self->list_volumes_info) {;
+    my @img;
+    for my $volume ($self->list_volumes_info(device => 'disk')) {;
         next if $volume->{device} ne 'disk';
         my $file_qcow = $volume->{file};
         my $file_base = $file_qcow.".qcow";
@@ -242,12 +236,17 @@ sub prepare_base {
         open my $out,'>',$file_base or die "$! $file_base";
         print $out "$file_qcow\n";
         close $out;
-        $self->_prepare_base_db($file_base);
+        push @img,([$file_base, $volume->{target}]);
     }
+    return @img;
 }
 
 sub list_disks {
-    return disk_device(@_);
+    my @disks;
+    for my $disk ( list_volumes_info(@_)) {
+        push @disks,( $disk->{file}) if $disk->{type} eq 'file';
+    }
+    return @disks;
 }
 
 sub _vol_remove {
@@ -257,6 +256,7 @@ sub _vol_remove {
         unlink $file or die "$! $file"
             if -e $file;
     } else {
+        return if !$self->_vm->file_exists($file);
         my ($out, $err) = $self->_vm->run_command('ls',$file,'&&','rm',$file);
         warn $err if $err;
     }
@@ -300,7 +300,8 @@ sub add_volume {
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/".$vol_name.".$suffix"
+        $args{file} = $self->_config_dir."/$vol_name";
+        $args{file} .= $suffix if $args{file} !~ /\.\w+$/;
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
@@ -350,9 +351,9 @@ sub add_volume {
 
 sub remove_volume($self, $file) {
     confess "Missing file" if ! defined $file || !length($file);
-    return if ! -e $file;
-    unlink $file or die "$! $file";
 
+    $self->_vol_remove($file);
+    return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
 
@@ -436,11 +437,14 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         next if exists $dev->{type}
                 && $dev->{type} eq 'base';
 
-        my $info;
-        eval { $info = Load($self->_vm->read_file($dev->{file})) };
-        confess "Error loading $dev->{file} ".$@ if $@;
-        next if defined $attribute
-            && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
+        my $info = {};
+
+        if (exists $dev->{file} ) {
+            eval { $info = Load($self->_vm->read_file($dev->{file})) if -e $dev->{file} };
+            confess "Error loading $dev->{file} ".$@ if $@;
+            next if defined $attribute
+                && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
+        }
         $info = {} if !defined $info;
         $info->{n_order} = $n_order++;
         push @vol,({%$dev,%$info})
@@ -485,7 +489,7 @@ sub _set_default_info {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
-            ,ip => $self->ip
+            ,ip =>'1.1.1.'.int(rand(254)+1)
     };
     $self->_store(info => $info);
     my %controllers = $self->list_controllers;
@@ -574,7 +578,8 @@ sub spinoff_volumes {
 
 sub ip {
     my $self = shift;
-    return $self->_ip;
+    my $info = $self->_value('info');
+    return $info->{ip};
 }
 
 sub clean_swap_volumes {
@@ -599,18 +604,32 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
-    $self->rsync(
-           node => $node
-        , files => [$self->_config_file ]
-       ,request => $request
-    );
+    my $config_remote;
+    $config_remote = $self->_load();
+    my $device = $config_remote->{hardware}->{device}
+        or confess "Error: no device hardware in ".Dumper($config_remote);
+    my @device_remote;
+    for my $item (@$device) {
+        push @device_remote,($item) if $item->{device} ne 'cdrom';
+    }
+    $config_remote->{hardware}->{device} = \@device_remote;
+    $node->write_file($self->_config_file, Dump($config_remote));
     $self->rsync($node);
 
 }
 
 sub is_removed {
     my $self = shift;
-    return !-e $self->_config_file();
+
+    return !-e $self->_config_file()    if $self->is_local();
+
+    my ($out, $err) = $self->_vm->run_command("/usr/bin/test",
+         " -e ".$self->_config_file." && echo 1" );
+    chomp $out;
+    warn $self->name." ".$self->_vm->name." ".$err if $err;
+
+    return 0 if $out;
+    return 1;
 }
 
 sub autostart {
@@ -681,18 +700,35 @@ sub _change_driver_disk($self, $index, $driver) {
     $self->_store(hardware => $hardware);
 }
 
+sub _change_disk_data($self, $index, $field, $value) {
+    my $hardware = $self->_value('hardware');
+    if (defined $value && length $value ) {
+        $hardware->{device}->[$index]->{$field} = $value;
+    } else {
+        delete $hardware->{device}->[$index]->{$field};
+    }
+
+    $self->_store(hardware => $hardware);
+}
+
 sub _change_hardware_disk($self, $index, $data_new) {
-    my @volumes = $self->list_volumes();
+    my @volumes = $self->list_volumes_info();
 
     my $driver = delete $data_new->{driver};
     return $self->_change_driver_disk($index, $driver) if $driver;
 
-    my $file = $volumes[$index]
-        or die "Error: volume $index not found, only ".scalar(@volumes)." found.";
+    die "Error: volume $index not found, only ".scalar(@volumes)." found."
+        if $index >= scalar(@volumes);
 
+    my $file = $volumes[$index]->{file};
+    my $new_file = $data_new->{file};
+    return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
+
+    return if !$file;
     my $data;
     if ($self->is_local) {
-        $data = LoadFile($file);
+        eval { $data = LoadFile($file) };
+        confess "Error reading file $file : $@" if $@;
     } else {
         my ($lines, $err) = $self->_vm->run_command("cat $file");
         $data = Load($lines);
@@ -721,4 +757,7 @@ sub change_hardware($self, $hardware, $index, $data) {
     $self->_store(hardware => $hardware_def );
 }
 
+sub dettach($self,$user) {
+    # no need to do anything to dettach mock volumes
+}
 1;

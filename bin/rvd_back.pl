@@ -46,6 +46,7 @@ my $LIST;
 my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
+my $REBASE;
 
 my $IMPORT_DOMAIN_OWNER;
 
@@ -56,6 +57,7 @@ my $USAGE = "$0 "
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
         ." [--test-ldap] "
         ." [-X] [start|stop|status]"
+        ." [--rebase MACHINE]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -90,6 +92,7 @@ GetOptions (       help => \$help
                   ,list => \$LIST
                  ,debug => \$DEBUG
                 ,verbose => \$VERBOSE
+                ,rebase => \$REBASE
               ,'no-fork'=> \$NOFORK
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
@@ -134,6 +137,9 @@ die "ERROR: Shutdown requires a domain name, or --all , --hibernated , --disconn
 die "ERROR: Hibernate requires a domain name, or --all , --disconnected\n"
     if defined $HIBERNATE_DOMAIN && !$HIBERNATE_DOMAIN && !$ALL && !$DISCONNECTED;
 
+die "ERROR: Missing the machine name or id\n$USAGE"
+    if $REBASE && !@ARGV;
+
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
@@ -155,8 +161,8 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
-    Ravada::Request->enforce_limits();
-    Ravada::Request->refresh_vms();
+    #    Ravada::Request->enforce_limits();
+    #Ravada::Request->refresh_vms();
     for (;;) {
         my $t0 = time;
         $ravada->process_priority_requests();
@@ -439,7 +445,8 @@ sub shutdown_domain {
     my $down = 0;
     my $found = 0;
     DOMAIN:
-    for my $domain ($rvd_back->list_domains) {
+    for my $domain_data ($rvd_back->list_domains_data) {
+        my $domain = Ravada::Front::Domain->open($domain_data->{id});
         if ((defined $domain_name && $domain->name eq $domain_name)
             || ($hibernated && $domain->is_hibernated)
             || ($DISCONNECTED
@@ -465,10 +472,11 @@ sub shutdown_domain {
                 next DOMAIN if _verify_connection($domain);
             }
             print "Shutting down ".$domain->name.".\n";
-            eval {
-                $domain->shutdown(user => Ravada::Utils::user_daemon(), timeout => 300);
-                $down++;
-            };
+            Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
+                ,id_domain => $domain->id
+                , timeout => 300
+            );
+            $down++;
             warn $@ if $@;
         }
     }
@@ -525,6 +533,22 @@ sub add_locale_repository {
     }
 }
 
+sub rebase {
+    my ($domain_name) = $ARGV[0];
+    my $rvd_back = Ravada->new(%CONFIG);
+    my $domain;
+    if ($domain_name =~ /^\d+$/) {
+        $domain = Ravada::Domain->open($domain_name);
+    } else {
+        $domain = $rvd_back->search_domain($domain_name);
+    }
+    die "Error: Unknown domain $domain_name\n"      if !$domain;
+    die "Error: ".$domain->name." is not a clone\n" if !$domain->id_base;
+
+    my $base = Ravada::Domain->open($domain->id_base);
+    $base->rebase(Ravada::Utils::user_daemon, $domain);
+}
+
 sub DESTROY {
 }
 
@@ -543,6 +567,7 @@ make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
 test_ldap                           if $TEST_LDAP;
+rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
 hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;

@@ -11,7 +11,6 @@ Ravada::Request - Requests library for Ravada
 
 use Carp qw(confess);
 use Data::Dumper;
-use Date::Calc qw(Today_and_Now);
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
@@ -30,7 +29,7 @@ Request a command to the ravada backend
 
 =cut
 
-our %FIELD = map { $_ => 1 } qw(error);
+our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
@@ -69,6 +68,7 @@ our %VALID_ARG = (
     ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
+    ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2}
@@ -83,8 +83,9 @@ our %VALID_ARG = (
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
+    ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
     # Virtual Managers or Nodes
-    ,refresh_vms => { _force => 2 }
+    ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
 
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
@@ -93,6 +94,10 @@ our %VALID_ARG = (
     #users
     ,post_login => { user => 1, locale => 2 }
 
+    #networks
+    ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
+
+    ,ping_backend => {}
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -111,14 +116,24 @@ our $TIMEOUT_SHUTDOWN = 120;
 our $CONNECTOR;
 
 our %COMMAND = (
-    long => { limit => 2 } #default
+    long => {
+        limit => 4
+        ,priority => 4
+    } #default
     ,huge => {
         limit => 1
         ,commands => ['download']
+        ,priority => 5
     }
-    ,priority => {
+    ,important=> {
         limit => 20
-        ,commands => ['clone','start','start_clones','create_domain','open_iptables']
+        ,priority => 1
+        ,commands => ['clone','start','start_clones','create','open_iptables']
+    }
+    ,secondary => {
+        limit => 50
+        ,priority => 2
+        ,commands => ['shutdown','shutdown_now']
     }
 );
 lock_hash %COMMAND;
@@ -178,6 +193,8 @@ sub open {
     $row->{args} = $args;
 
     bless ($row, $class);
+    $row->{priority} = $row->_set_priority();
+
     return $row;
 }
 
@@ -260,7 +277,7 @@ sub remove_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'remove' , args => encode_json(\%args));
+    return $self->_new_request(command => 'remove' , args => \%args);
 
 }
 
@@ -319,7 +336,7 @@ sub start_clones {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'start_clones' , args => encode_json($args));
+    return $self->_new_request(command => 'start_clones' , args => $args);
 }
 
 =head2 pause_domain
@@ -339,7 +356,7 @@ sub pause_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'pause' , args => encode_json($args));
+    return $self->_new_request(command => 'pause' , args => $args);
 }
 
 =head2 resume_domain
@@ -359,7 +376,7 @@ sub resume_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'resume' , args => encode_json($args));
+    return $self->_new_request(command => 'resume' , args => $args);
 }
 
 
@@ -370,7 +387,9 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    $valid_args->{at}=2 if !exists $valid_args->{at};
+    for (qw(at after_request)) {
+        $valid_args->{$_}=2 if !exists $valid_args->{$_};
+    }
 
     confess "Unknown method $sub" if !$valid_args;
     for (keys %{$args}) {
@@ -433,105 +452,14 @@ sub shutdown_domain {
     return $self->_new_request(command => 'shutdown' , args => $args);
 }
 
-=head2 prepare_base
-
-Returns a new request for preparing a domain base
-
-  my $req = Ravada::Request->prepare_base( $name );
-
-=cut
-
-sub prepare_base {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my %args = @_;
-    confess "Missing uid"           if !$args{uid};
-
-    my $args = _check_args('prepare_base', @_);
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(command => 'prepare_base'
-        , id_domain => $args{id_domain}
-        , args => encode_json( $args ));
-
-}
-
-=head2 remove_base
-
-Returns a new request for making a base regular domain. It marks it
-as 'non base' and removes the files.
-
-It must have not clones. All clones must be removed before calling
-this method.
-
-  my $req = Ravada::Request->remove_base( $name );
-
-=cut
-
-sub remove_base {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my %_args = @_;
-    confess "Missing uid"           if !$_args{uid};
-
-    my $args = _check_args('remove_base', @_);
-
-    my $self = {};
-    bless($self,$class);
-
-    my $req = $self->_new_request(command => 'remove_base'
-        , id_domain => $args->{id_domain}
-        , args => encode_json( $args ));
-
-    return $req;
-}
-
-
-=head2 ping_backend
-
-Returns wether the backend is alive or not
-
-=cut
-
-sub ping_backend {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'ping_backend' );
-}
-
-
-=head2 domdisplay
-
-Returns the domdisplay of a domain
-
-Arguments:
-
-* domain name
-
-=cut
-
-sub domdisplay {
-   my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $name = shift;
-    my $uid = shift;
-
-    my $self = {};
-    bless ($self, $class);
-    return $self->_new_request( command => 'domdisplay'
-        ,args => { name => $name, uid => $uid });
-}
-
 sub _new_request {
     my $self = shift;
+    if ( !ref($self) ) {
+        my $proto = $self ;
+        my $class = ref($proto) || $proto;
+        $self = {};
+        bless ($self, $class);
+    }
     my %args = @_;
 
     $args{status} = 'requested';
@@ -550,6 +478,9 @@ sub _new_request {
             confess "ERROR: Different id_domain: ".Dumper(\%args)
                 if $args{id_domain} && $args{id_domain} ne $id_domain_args;
             $args{id_domain} = $id_domain_args;
+            $args{after_request} = delete $args{args}->{after_request}
+                if exists $args{args}->{after_request};
+
         }
         $args{args} = encode_json($args{args});
     }
@@ -842,238 +773,6 @@ sub copy_screenshot {
 
 }
 
-=head2 open_iptables
-
-Request to open iptables for a remote client
-
-=cut
-
-sub open_iptables {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('open_iptables', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'open_iptables'
-        , id_domain => $args->{id_domain}
-             , args => $args);
-}
-
-=head2 rename_domain
-
-Request to rename a domain
-
-=cut
-
-sub rename_domain {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('rename_domain', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'rename_domain'
-        , id_domain => $args->{id_domain}
-             , args => encode_json($args)
-    );
-
-}
-
-=head2 set_driver
-
-Sets a driver to a domain
-
-    $domain->set_driver(
-        id_domain => $domain->id
-        ,uid => $USER->id
-        ,id_driver => $driver->id
-    );
-
-=cut
-
-sub set_driver {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('set_driver', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'set_driver'
-        , id_domain => $args->{id_domain}
-             , args => encode_json($args)
-    );
-
-}
-
-=head2 add_hardware
-
-    Sets hardware to a VM
-    
-    $domain->add_hardware(
-        id_domain => $domain->id
-        ,uid => $USER->id
-        ,name => 'usb'
-    );
-    
-=cut
-
-sub add_hardware {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    my $args = _check_args('add_hardware', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    
-    return $self->_new_request(
-        command => 'add_hardware'
-        ,id_domain => $args->{id_domain}
-        ,args => encode_json($args)
-    );
-}
-
-=head2 remove_hardware
-
-    Removes hardware to a VM
-    
-    $domain->remove_hardware(
-        id_domain => $domain->id
-        ,uid => $USER->id
-        ,name_hardware => 'usb'
-    );
-    
-=cut
-
-sub remove_hardware {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    
-    my $args = _check_args('remove_hardware', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    
-    return $self->_new_request(
-        command => 'remove_hardware'
-        ,id_domain => $args->{id_domain}
-        ,args => encode_json($args)
-    );
-}
-
-sub change_hardware {
-    return _new_request_generic('change_hardware',@_);
-}
-
-=head2 hybernate
-
-Hybernates a domain.
-
-    Ravada::Request->hybernate(
-        id_domain => $domain->id
-             ,uid => $user->id
-    );
-
-=cut
-
-sub hybernate {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('hybernate', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'hybernate'
-        , id_domain => $args->{id_domain}
-             , args => encode_json($args)
-    );
-
-}
-
-=head2 download
-
-Downloads a file. Actually used only to download iso images
-for KVM domains.
-
-=cut
-
-sub download {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('download', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-            command => 'download'
-             , args => encode_json($args)
-    );
-
-}
-
-=head2 refresh_storage
-
-Refreshes a storage pool
-
-=cut
-
-sub refresh_storage {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('refresh_storage', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(
-        command => 'refresh_storage'
-        , args => $args
-    );
-
-
-}
-
-=head2 clone
-
-Copies a virtual machine
-
-    my $req = Ravada::Request->clone(
-             ,uid => $user->id
-        id_domain => $domain->id
-    );
-
-=cut
-
-sub clone {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('clone', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-        return _new_request($self
-        , command => 'clone'
-        , args =>$args
-    );
-}
-
 =head2 refresh_vms
 
 Refreshes the Virtual Mangers
@@ -1126,33 +825,6 @@ sub set_base_vm {
 
 }
 
-=head2 cleanup
-
-Performs cleanup operations on the virtual machines.
-
-- Enforces limits
-- .. more .. ?
-
-=cut
-
-sub cleanup($proto , @args) {
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('cleanup', @args );
-
-    return if _requested('cleanup');
-
-    my $self = {};
-    bless ($self, $class);
-
-    return $self->_new_request(
-            command => 'cleanup'
-             , args => $args
-    );
-
-}
-
-
 =head2 remove_base_vm
 
 Disables a base in a Virtual Manager
@@ -1171,10 +843,17 @@ sub remove_base_vm {
 
     return $self->_new_request(
             command => 'remove_base_vm'
-             , args => encode_json($args)
+             , args => $args
     );
 
 }
+
+
+=head2 type
+
+Returns the type of the request
+
+=cut
 
 sub type($self) {
     my $command = $self;
@@ -1184,6 +863,17 @@ sub type($self) {
     }
     return 'long';
 }
+
+sub _set_priority ($self) {
+    my $command = $self;
+    $command = $self->command if ref($self);
+    for my $type ( keys %COMMAND ) {
+        next if  !grep /^$command$/, @{$COMMAND{$type}->{commands}};
+        return $COMMAND{$type}->{priority} if exists $COMMAND{$type}->{priority};
+        return 10;
+    }
+}
+
 
 =head2 working_requests
 
@@ -1206,86 +896,15 @@ sub count_requests($self) {
     return $n;
 }
 
+=head2 requests_limit
+
+    Returns the limit of requests of a type.
+
+=cut
+
 sub requests_limit($self, $type = $self->type) {
+    confess "Error: no requests of type $type" if !exists $COMMAND{$type};
     return $COMMAND{$type}->{limit};
-}
-
-=head2 change_owner
-
-Changes the owner of a machine
-
-    my $req = Ravada::Request->change_owner(
-             ,uid => $user->id
-             ,id_domain => $domain->id
-    );
-
-=cut
-
-sub change_owner {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('change_owner', @_ );
-
-    my $self = {};
-    bless($self,$class);
-
-    return _new_request($self
-        , command => 'change_owner'
-        , args =>$args
-    );
-}
-
-=head2 change_max_memory
-
-Changes the maximum memory of a virtual machine.
-
-    my $req = Ravada::Request->change_max_memory (
-             ,uid => $user->id
-             ,ram => $ram_in_kb
-             ,id_domain => $domain->id
-    );
-
-=cut
-
-sub change_max_memory {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    
-    my $args = _check_args('change_max_memory', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    return _new_request($self
-        , command => 'change_max_memory'
-        , args => $args
-    );
-}
-
-=head2 change_curr_memory
-
-Changes the current memory used by a virtual machine.
-
-    my $req = Ravada::Request->change_curr_memory (
-             ,uid => $user->id
-             ,ram => $ram_in_kb
-             ,id_domain => $domain->id
-    );
-
-=cut
-
-sub change_curr_memory {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    
-    my $args = _check_args('change_max_memory', @_);
-    
-    my $self = {};
-    bless($self, $class);
-    return _new_request($self
-        , command => 'change_curr_memory'
-        , args => $args
-    );
 }
 
 =head2 domain_autostart
@@ -1375,6 +994,12 @@ sub enforce_limits {
     return $req;
 }
 
+=head2 refresh_machine
+
+Refresh a machine information
+
+=cut
+
 sub refresh_machine {
     my $proto = shift;
 
@@ -1398,64 +1023,6 @@ sub refresh_machine {
 
     return $req;
 
-}
-
-sub shutdown_node {
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('shutdown_node', @_ );
-
-    my $self = {};
-    bless($self, $class);
-
-    my $req = _new_request($self
-        , command => 'shutdown_node'
-        , args => $args
-    );
-
-    return $req;
-
-}
-
-sub start_node{
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('start_node', @_ );
-
-    my $self = {};
-    bless($self, $class);
-
-    my $req = _new_request($self
-        , command => 'start_node'
-        , args => $args
-    );
-
-    return $req;
-
-}
-
-sub connect_node {
-    my $proto = shift;
-
-    my $class = ref($proto) || $proto;
-    my $args = _check_args('connect_node', @_ );
-    $args->{timeout} = 10 if !exists $args->{timeout};
-
-    my $self = {};
-    bless($self, $class);
-
-    return _new_request($self
-        , command => 'connect_node'
-        , args => $args
-    );
-}
-
-sub post_login {
-    return _new_request_generic('post_login',@_);
 }
 
 sub _new_request_generic {
@@ -1536,12 +1103,22 @@ sub stop($self) {
         ." , pid: ".$self->pid
         .", stale for ".(time - $self->start_time)." seconds\n";
     my $ok = kill (15,$self->pid);
-    warn "exit = $ok\n";
-    if (!$ok) {
-       $self->status('done',"Killed start process after "
+    $self->status('done',"Killed start process after "
            .(time - $self->start_time)." seconds\n");
-    }
 
+}
+
+sub priority($self) {
+    return $self->{priority};
+}
+
+sub requirements_done($self) {
+    my $after_request = $self->after_request();
+    return 1 if !defined $after_request;
+
+    my $req = Ravada::Request->open($self->after_request);
+    return 1 if $req->status eq 'done';
+    return 0;
 }
 
 sub AUTOLOAD {
@@ -1549,6 +1126,13 @@ sub AUTOLOAD {
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
+
+    if(!ref($self) && $VALID_ARG{$name} ) {
+        return _new_request($self
+            , command => $name
+            , args => _check_args($name, @_)
+        );
+    }
 
     confess "Can't locate object method $name via package $self"
         if !ref($self);

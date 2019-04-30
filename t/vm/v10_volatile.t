@@ -168,10 +168,13 @@ sub test_volatile_auto_kvm {
     my $user_name = "user_".new_domain_name();
     my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
 
+    $base->volatile_clones(1);
+    is($base->volatile_clones,1) or exit;
     my $clone = $base->clone(
           user => $user
         , name => $name
     );
+    is($clone->is_volatile,1) or exit;
     my $clone_extra = Ravada::Domain->open($clone->id);
     ok($clone_extra->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
     ok($clone_extra->_data_extra('id_domain'),"[$vm_name] expecting id_domain for ".$clone->name) or BAIL_OUT;
@@ -190,6 +193,9 @@ sub test_volatile_auto_kvm {
     ok($clone->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
     $clone->domain->destroy();
     $clone=undef;
+
+    my $clone_force = $base->_vm->search_domain($name, 1);
+    ok($clone_force,"Expecting clone data still in db") or exit;
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain2;

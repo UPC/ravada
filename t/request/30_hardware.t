@@ -4,7 +4,9 @@ use strict;
 use Carp qw(carp confess cluck);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
+use Sys::Virt;
 use Test::More;
+use YAML qw(Dump);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -177,6 +179,7 @@ sub test_add_hardware_custom($domain, $hardware) {
         disk => \&test_add_disk
         ,usb => sub {}
         ,mock => sub {}
+        ,network => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -193,6 +196,11 @@ sub test_remove_hardware {
     $domain = Ravada::Domain->open($domain->id);
     my @list_hardware1 = $domain->get_controller($hardware);
 
+    confess "Error: I can't remove $hardware $index, only ".scalar(@list_hardware1)
+        ."\n"
+        .Dumper(\@list_hardware1)
+            if $index > scalar @list_hardware1;
+
 	my $req;
 	{
 		$req = Ravada::Request->remove_hardware(uid => $USER->id
@@ -205,7 +213,7 @@ sub test_remove_hardware {
 	ok($req, 'Request');
 	rvd_back->_process_all_requests_dont_fork();
 	is($req->status(), 'done');
-	is($req->error(), '');
+	is($req->error(), '') or exit;
 
     {
         my $domain2 = Ravada::Domain->open($domain->id);
@@ -228,7 +236,9 @@ sub test_remove_almost_all_hardware {
 	my $domain = shift;
 	my $hardware = shift;
 
-    my $total_hardware = $domain->get_controller($hardware);
+    #TODO test remove hardware out of bounds
+    my $total_hardware = scalar($domain->get_controller($hardware));
+    return if $total_hardware < 2;
     for my $index ( reverse 1 .. $total_hardware-1) {
         test_remove_hardware($vm, $domain, $hardware, $index);
         $domain->list_volumes();
@@ -258,7 +268,12 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 
     my $hardware = 'disk';
 
-    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    my $index;
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) ) {
+        $index = $count;
+        last if exists $info->{hardware}->{$hardware}->[$index]->{info}->{$field};
+    }
+    die if !defined $index;
     my $capacity = Ravada::Utils::size_to_number(
         $info->{hardware}->{$hardware}->[$index]->{info}->{$field}
     );
@@ -301,13 +316,144 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 sub test_change_usb($vm, $domain) {
 }
 
+sub test_cdrom($domain, $index, $file_new) {
+    my $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware =>'disk'
+            ,index => $index
+            ,data => { file => $file_new }
+            ,uid => user_admin->id
+        );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $info = $domain2->info(user_admin);
+
+    my $cdrom2 = $info->{hardware}->{disk}->[$index];
+    if ($file_new) {
+        is ($cdrom2->{file}, $file_new);
+    } else {
+        ok(!exists $cdrom2->{file},"[".$domain->type."] Expecting no file. ".Dumper($cdrom2));
+    }
+
+}
+sub test_change_disk_cdrom($vm, $domain) {
+    my ($index,$cdrom) = _search_cdrom($domain);
+    ok($cdrom) or exit;
+    ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
+
+    my $file_old = $cdrom->{file};
+    my $file_new = '/tmp/test.iso';
+    open my $out,'>',$file_new or die "$! $file_new";
+    print $out Dump({ data => $$ });
+    close $out;
+
+    test_cdrom($domain, $index, $file_new);
+    test_cdrom($domain, $index, '');
+    test_cdrom($domain, $index, $file_old);
+}
+
+sub _search_cdrom($domain) {
+    my $count=0;
+    for my $device ( $domain->list_volumes_info ) {
+        return ($count,$device) if ($device->{device} eq 'cdrom');
+        $count++;
+    }
+}
+
+sub _search_disk($domain) {
+    my $count=0;
+    for my $device ( $domain->list_volumes_info ) {
+        return ($count,$device) if ($device->{device} eq 'disk');
+        $count++;
+    }
+}
+
+
 sub test_change_disk($vm, $domain) {
     test_change_disk_field($vm, $domain, 'capacity');
+    test_change_disk_cdrom($vm, $domain);
+}
+
+sub test_change_network_bridge($vm, $domain, $index) {
+    SKIP: {
+    my @bridges = $vm->list_network_interfaces('bridge');
+
+    skip("No bridges found in this system",6) if !scalar @bridges;
+    my $info = $domain->info(user_admin);
+    is ($info->{hardware}->{network}->[$index]->{type}, 'NAT') or exit;
+
+    ok(scalar @bridges,"No network bridges defined in this host") or return;
+
+    diag("Testing network bridge ".$bridges[0]);
+    my $req = Ravada::Request->change_hardware(
+        id_domain => $domain->id
+        ,hardware => 'network'
+           ,index => $index
+            ,data => { type => 'bridge', bridge => $bridges[0]}
+             ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '');
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $info = $domain_f->info(user_admin);
+    is ($info->{hardware}->{network}->[$index]->{type}, 'bridge', $domain->name) or exit;
+    is ($info->{hardware}->{network}->[$index]->{bridge}, $bridges[0] );
+
+    }
+}
+
+sub test_change_network_nat($vm, $domain, $index) {
+    my $info = $domain->info(user_admin);
+
+    my @nat = $vm->list_network_interfaces( 'nat');
+    ok(scalar @nat,"No NAT network defined in this host") or return;
+
+    diag("Testing network NAT ".$nat[0]);
+    my $req = Ravada::Request->change_hardware(
+        id_domain => $domain->id
+        ,hardware => 'network'
+           ,index => $index
+            ,data => { type => 'NAT', network => $nat[0]}
+             ,uid => user_admin->id
+    );
+
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error, '');
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $info = $domain_f->info(user_admin);
+    is ($info->{hardware}->{network}->[$index]->{type}, 'NAT');
+    is ($info->{hardware}->{network}->[$index]->{network}, $nat[0] );
+
+}
+
+sub test_change_network($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'network';
+
+    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+
+    test_change_network_bridge($vm, $domain, $index);
+    test_change_network_nat($vm, $domain, $index);
 }
 
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
-         disk => \&test_change_disk
+      network => \&test_change_network
+        ,disk => \&test_change_disk
         ,mock => sub {}
          ,usb => sub {}
     );
@@ -318,12 +464,12 @@ sub test_change_hardware($vm, $domain, $hardware) {
 sub test_change_drivers($domain, $hardware) {
 
     my $info = $domain->info(user_admin);
-    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+    my ($index) = _search_disk($domain);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
 
     for my $option (@$options) {
-        diag("Testing $hardware type $option");
+        diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
             id_domain => $domain->id
@@ -426,12 +572,13 @@ for my $vm_name ( qw(KVM Void)) {
     );
     my %controllers = $domain_b->list_controllers;
 
-    for my $hardware ( sort keys %controllers ) {
+    for my $hardware (reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);
         test_add_hardware_request($vm, $domain_b, $hardware);
+        test_change_hardware($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
 
         test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
@@ -453,7 +600,6 @@ for my $vm_name ( qw(KVM Void)) {
             }
         }
 
-        test_change_hardware($vm, $domain_b, $hardware);
 
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;

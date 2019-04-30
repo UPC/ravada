@@ -1,4 +1,12 @@
-<div class="panel-body">
+<div class="panel-body" ng-show="showmachine.is_active || showmachine.is_base">
+    <div ng-show="showmachine.is_active" class="alert alert-danger" role="alert">
+        This machine is running and can't be modified.
+    </div>
+    <div ng-show="showmachine.is_base" class="alert alert-danger" role="alert">
+        This machine is base and can't be modified.
+    </div>
+</div>
+<div class="panel-body" ng-show="showmachine.is_active == 0 && showmachine.is_base == 0">
 %=   include "main/needs_restart"
     <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk">
         <h2>{{name}}</h2>
@@ -7,7 +15,7 @@
                 ng-class='{"border rounded border-primary mb-4 p-4": item.edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="name == 'disk' && !item.edit && !item.remove"
+                    ng-show="(name == 'network' ||name == 'disk') && !item.edit && !item.remove"
                     ng-disabled="pending_requests > 0"
                     ng-click="item.edit=!item.edit"
                             ><i class="fa fa-sticky-note"></i>
@@ -42,6 +50,7 @@
                     >cancel</button>
                     </p>
                 </div>
+                %= include 'main/manage_machine_edit_net'
                 <div ng-show="name == 'disk' && item.edit" class="form-group mt-4">
                     <div class="row" ng-show="item.info.device == 'disk'">
                         <div class="col-lg-2">
@@ -65,6 +74,18 @@
                             >
                         </div>
                     </div>
+                    <div class="row" ng-show="item.info.device == 'cdrom'">
+                        <div class="col-lg-2">
+                            <p class="text-right"><%=l 'ISO file' %></p>
+                        </div>
+                        <div class="col-lg-2">
+                            <select name="file" ng-model="item.file">
+%                           for (@$isos) {
+                            <option value="<%= $_ %>"><%= $_ %></option>
+%                           }
+                            </select>
+                        </div>
+                    </div>
                    <div class="row">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'boot order' %></p>
@@ -77,7 +98,7 @@
                         <div class="col-lg-2">
                         </div>
                         <div class="col-lg-2">
-                            <button ng-click="change_disk(showmachine.id, $index)"
+                            <button ng-click="item.edit=false;change_disk(showmachine.id, $index)"
                                 class="btn btn-primary"
                             >ok</button>
                             <button ng-click="item.edit=false"

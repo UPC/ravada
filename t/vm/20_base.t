@@ -113,6 +113,12 @@ sub test_prepare_base {
     is($domain->is_active(),0);
     $domain->is_public(1);
 
+    my @files_target = $domain->list_files_base_target();
+    for (@files_target) {
+        ok($_->[0]) or exit;
+        ok($_->[1],"No target in $_->[0]") or exit;
+    }
+
     my $front_domains = rvd_front->list_domains();
     my ($dom_front) = grep { $_->{name} eq $domain->name }
         @$front_domains;

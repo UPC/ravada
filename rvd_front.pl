@@ -449,11 +449,7 @@ get '/machine/info/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
-    return access_denied($c,"Access denied to user ".$USER->name) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id
-                              || $USER->can_change_settings($domain->id)
-                              || $USER->can_remove_machine($domain->id)
-                              || $USER->can_clone_all;
+    return access_denied($c,"Access denied to user ".$USER->name) unless $USER->can_manage_machine($domain->id);
 
     my $info = $domain->info($USER);
     if ($domain->is_active && !$info->{ip}) {
@@ -465,7 +461,7 @@ get '/machine/info/(:id).(:type)' => sub {
 get '/machine/requests/(:id).json' => sub {
     my $c = shift;
     my $id_domain = $c->stash('id');
-    return access_denied($c) if !$USER->can_manage_machine($id_domain);
+    return access_denied($c) unless $USER->can_manage_machine($id_domain);
 
     $c->render(json => $RAVADA->list_requests($id_domain,10));
 };
@@ -608,13 +604,25 @@ get '/machine/exists/#name' => sub {
 
 };
 
-get '/machine/change_hardware/(:hardware)/(:id)/(:index)/(#data)' => sub {
+post '/machine/hardware/change' => sub {
     my $c = shift;
+    my $arg = decode_json($c->req->body);
+
+    my $domain = Ravada::Front::Domain->open(delete $arg->{id_domain});
+
+    return access_denied($c)
+        unless $USER->id == $domain->id_owner || $USER->is_admin;
+
+    my $hardware = delete $arg->{hardware} or die "Missing hardware name";
+    my $index = delete $arg->{index};
+    my $data = delete $arg->{data};
+
+    die "Unknown fields in request ".Dumper($arg) if keys %{$arg};
     return $c->render(json => { req => Ravada::Request->change_hardware(
-                id_domain => $c->stash('id')
-                ,hardware => $c->stash('hardware')
-                ,index => $c->stash('index')
-                ,data => decode_json($c->stash('data'))
+                id_domain => $domain->id
+                ,hardware => $hardware
+                ,index => $index
+                ,data => $data
                 ,uid => $USER->id
             )
     });
@@ -697,6 +705,21 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
     return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
 };
 
+# Network ##########################################################3
+
+get '/network/interfaces/(:vm_type)/(:type)' => sub {
+    my $c = shift;
+
+    my $vm_type = $c->stash('vm_type');
+    my $type = $c->stash('type');
+
+    return $c->render( json => $RAVADA->list_network_interfaces(
+               user => $USER
+              ,type => $type
+           ,vm_type => $vm_type
+       )
+    );
+};
 
 # Users ##########################################################3
 
@@ -1079,7 +1102,9 @@ sub user_settings {
     if ($c->req->method('POST')) {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
-        Ravada::Request->post_login(uid => $USER->id, locale => $changed_lang);
+        Ravada::Request->post_login(
+                user => $USER->name
+            , locale => $changed_lang);
         _logged_in($c);
     }
     $c->param('tongue' => $USER->language);

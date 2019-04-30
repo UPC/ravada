@@ -65,18 +65,22 @@ our %SET_DRIVER_SUB = (
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
+    ,network => \&_get_controller_network
     );
 our %SET_CONTROLLER_SUB = (
     usb => \&_set_controller_usb
     ,disk => \&_set_controller_disk
+    ,network => \&_set_controller_network
     );
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
     ,disk => \&_remove_controller_disk
+    ,network => \&_remove_controller_network
     );
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,network => \&_change_hardware_network
 );
 ##################################################
 
@@ -177,8 +181,6 @@ sub remove_disks {
     for my $file ($self->list_disks( device => 'disk')) {
         confess $file if $file =~ /iso$/;
         if (! -e $file ) {
-            warn "WARNING: $file already removed for ".$self->name."\n"
-                if $0 !~ /.t$/;
             next;
         }
         $self->_vol_remove($file);
@@ -252,7 +254,10 @@ sub remove {
     my @volumes;
     if (!$self->is_removed ) {
         for my $vol ( $self->list_volumes_info ) {
-            push @volumes,($vol->{file}) if $vol->{device} eq 'file';
+            push @volumes,($vol->{file})
+                if exists $vol->{file}
+                   && exists $vol->{device}
+                   && $vol->{device} eq 'file';
         }
     }
 
@@ -339,6 +344,7 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
         $info->{driver} = $bus;
         $info->{n_order} = $n_order++;
         $info->{boot} = $boot_node->getAttribute('order') if $boot_node;
+        $info->{file} = $file if defined $file;
 
         next if defined $attribute
            && (!exists $info->{$attribute}
@@ -373,10 +379,12 @@ sub _volume_info($self, $file, $refresh=0) {
         return;
     }
 
-    my $info = $vol->get_info;
+    my $info;
+    eval { $info = $vol->get_info };
+    warn "WARNING: $@" if $@ && $@ !~ /^libvirt error code: 50,/;
     $info->{file} = $file;
     $info->{name} = $name;
-    $info->{driver} = delete $info->{bus};
+    $info->{driver} = delete $info->{bus} if exists $info->{bus};
 
     return $info;
 }
@@ -424,6 +432,9 @@ sub _create_qcow_base {
 
         my $pool_base = $self->_vm->default_storage_pool_name;
         $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
+        $pool_base = $self->_vm->storage_pool()         if !$pool_base;
+
+        $self->_vm->_check_free_disk($vol_data->{capacity} * 2);
 
         my $dir_base = $self->_vm->_storage_path($pool_base);
 
@@ -460,7 +471,6 @@ sub _create_qcow_base {
         unlink $file_img or die "$! $file_img";
         $self->_vm->_clone_disk($base_img, $file_img);
     }
-    $self->_prepare_base_db(@base_img);
     return @base_img;
 
 }
@@ -607,7 +617,6 @@ sub display_info($self, $user) {
     my ($port) = $graph->getAttribute('port');
     my ($tls_port) = $graph->getAttribute('tlsPort');
     my ($address) = $graph->getAttribute('listen');
-    $address = $self->_vm->nat_ip if $self->_vm->nat_ip;
 
     confess "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
@@ -619,7 +628,7 @@ sub display_info($self, $user) {
     my %display = (
                 type => $type
                ,port => $port
-            ,address => $address
+                 ,ip => $address
             ,display => $display
           ,tls_port => $tls_port
     );
@@ -670,23 +679,39 @@ sub start {
     my $remote_ip = delete $arg{remote_ip};
     my $request = delete $arg{request};
 
+    my $display_ip;
     if ($remote_ip) {
         $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
         $set_password = 1 if $network->requires_password();
+        $display_ip = $self->_listen_ip($remote_ip);
     }
-    $self->_set_spice_ip($set_password);
+    $self->_set_spice_ip($set_password, $display_ip);
     $self->status('starting');
-    eval { $self->domain->create() };
-    my $error = $@;
-    if ( $error && $error !~ /already running/i ) {
-        if ( $self->domain->has_managed_save_image ) {
-            $request->status("removing saved image") if $request;
-            $self->domain->managed_save_remove();
-            $self->domain->create();
-        } else {
-            die $error;
+
+    my $error;
+    for ( ;; ) {
+        eval { $self->domain->create() };
+        $error = $@;
+        next if $error && $error =~ /libvirt error code: 1, .* pool .* asynchronous/;
+        last;
+    }
+    return if !$error || $error =~ /already running/i;
+    if ($error =~ /libvirt error code: 38,/) {
+        if (!$self->_vm->is_local) {
+            warn "Disabling node ".$self->_vm->name();
+            $self->_vm->enabled(0);
         }
+        die $error;
+        sleep 1;
+    } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
+        die "TODO";
+    } elsif ( $self->domain->has_managed_save_image ) {
+        $request->status("removing saved image") if $request;
+        $self->domain->managed_save_remove();
+        $self->domain->create();
+    } else {
+        die $error;
     }
 }
 
@@ -735,7 +760,9 @@ sub shutdown {
 
 sub _do_shutdown {
     my $self = shift;
-    $self->domain->shutdown();
+    return if !$self->domain->is_active;
+    eval { $self->domain->shutdown() };
+    die $@ if $@ && $@ !~ /libvirt error code: 55,/;
 
 }
 
@@ -1004,7 +1031,6 @@ sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
             my $this_order = $boot->getAttribute('order');
             next if $this_order < $order;
             $boot->setAttribute( order => $this_order+1);
-            warn "[$count] $this_order -> ".($this_order + 1);
             next;
         }
         if (!$set) {
@@ -1028,7 +1054,6 @@ sub _search_volume_index($self, $file) {
     }
     confess "I can't find file $file in ".$self->name;
 }
-
 
 sub _xml_new_device($self , %arg) {
     my $bus = delete $arg{bus} or confess "Missing bus.";
@@ -1108,16 +1133,17 @@ sub _new_pci_slot{
             for my $child ($disk->childNodes) {
                 if ($child->nodeName eq 'address') {
 #                    die $child->toString();
-                    $target{ $child->getAttribute('slot') }++
-                        if $child->getAttribute('slot');
+                    my $hex = $child->getAttribute('slot');
+                    next if !defined $hex;
+                    my $dec = hex($hex);
+                    $target{$dec}++;
                 }
             }
         }
     }
-    for ( 1 .. 99) {
-        $_ = "0$_" if length $_ < 2;
-        my $new = '0x'.$_;
-        return $new if !$target{$new};
+    for my $dec ( 1 .. 99) {
+        next if $target{$dec};
+        return sprintf("0x%X", $dec);
     }
 }
 
@@ -1315,11 +1341,29 @@ sub get_info {
     return $info;
 }
 
+sub _ip_agent($self) {
+    my @ip;
+    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
+    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
+    warn $@ if $@;
+
+    for my $if (@ip) {
+        next if $if->{name} =~ /^lo/;
+        for my $addr ( @{$if->{addrs}} ) {
+            return $addr->{addr}
+            if $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+        }
+    }
+}
+
 sub ip($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
     warn $@ if $@;
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
+
+    return $self->_ip_agent();
+
 }
 
 =head2 set_max_mem
@@ -1551,9 +1595,9 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
     $ip = $self->_vm->ip()  if !defined $ip;
 
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
-        $graphics->setAttribute('listen' => $ip);
 
-        if ( !$self->is_hibernated() ) {
+        next if $self->is_hibernated() || $self->domain->is_active;
+
             my $password;
             if ($set_password) {
                 $password = Ravada::Utils::random_name(4);
@@ -1562,8 +1606,8 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
                 $graphics->removeAttribute('passwd');
             }
             $self->_set_spice_password($password);
-        }
 
+        $graphics->setAttribute('listen' => $ip);
         my $listen;
         for my $child ( $graphics->childNodes()) {
             $listen = $child if $child->getName() eq 'listen';
@@ -1882,6 +1926,24 @@ sub _set_controller_disk($self, $number, $data) {
     $self->add_volume(%$data);
 }
 
+sub _set_controller_network($self, $number, $data) {
+
+    my $driver = (delete $data->{driver} or 'virtio');
+
+    confess "Error: unkonwn fields in data ".Dumper($data) if keys %$data;
+
+    my $pci_slot = $self->_new_pci_slot();
+
+    my $device = "<interface type='network'>
+        <mac address='52:54:00:a7:49:71'/>
+        <source network='default'/>
+        <model type='$driver'/>
+        <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>
+      </interface>";
+
+      $self->domain->attach_device($device, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG);
+}
+
 sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
     
@@ -1901,7 +1963,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     my $ind=0;
     for my $controller ($devices->findnodes($device)) {
         next if defined $attribute_name
-            && $controller->getAttribute($attribute_name) ne $attribute_value;
+            && $controller->getAttribute($attribute_name) !~ $attribute_value;
 
         if( $ind++==$index ){
             $devices->removeChild($controller);
@@ -1915,7 +1977,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     my $msg = "";
     $msg = " $attribute_name=$attribute_value " if defined $attribute_name;
     confess "ERROR: $device $msg $index"
-        ." not removed, only ".($ind)." found\n";
+        ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
 sub _remove_controller_usb($self, $index) {
@@ -1937,6 +1999,10 @@ sub _remove_controller_disk($self, $index) {
     my $file = $volumes[$index]->{file};
     $self->remove_volume( $file ) if $file && $file !~ /\.iso$/;
     $self->info(Ravada::Utils::user_daemon);
+}
+
+sub _remove_controller_network($self, $index) {
+    $self->_remove_device($index,'interface', type => qr'(bridge|network)');
 }
 
 =head2 pre_remove
@@ -1991,12 +2057,21 @@ sub migrate($self, $node, $request=undef) {
         my $xml = $self->domain->get_xml_description();
 
         my $doc = XML::LibXML->load_xml(string => $xml);
-        $self->_check_uuid($doc, $node);
         $self->_check_machine($doc);
-        $dom = $node->vm->define_domain($doc->toString());
+        for ( ;; ) {
+            $self->_check_uuid($doc, $node);
+            eval { $dom = $node->vm->define_domain($doc->toString()) };
+            my $error = $@;
+            last if !$error;
+            die $error if $error !~ /libvirt error code: 9, .*already defined with uuid/;
+            my $msg = "migrating ".$self->name." ".$error;
+            warn $msg;
+            $request->error($msg) if $request;
+            sleep 1;
+        }
         $self->domain($dom);
     }
-    $self->_set_spice_ip(1,$node->ip);
+    $self->_set_spice_ip(1, $node->ip);
 
     $self->rsync(node => $node, request => $request);
 
@@ -2039,17 +2114,10 @@ sub change_hardware($self, $hardware, @args) {
 }
 
 sub _change_hardware_disk($self, $index, $data) {
-    my @volumes = $self->list_volumes();
-    my $file = $volumes[$index] or confess "Error: Unknown volume $index, only ".scalar(@volumes)." found";
-    my ($name) = $file =~ m{.*/(.*)};
-
-    $self->_vm->refresh_storage_pools();
-    my $volume = $self->_vm->search_volume($file);
-    if (!$volume ) {
-        $self->_vm->refresh_storage_pools();
-        $volume = $self->_vm->search_volume($file);
-    }
-    die "Error: Volume file $file not found in ".$self->_vm->name    if !$volume;
+    my @volumes = $self->list_volumes_info();
+    confess "Error: Unknown volume $index, only ".(scalar(@volumes)-1)." found"
+        .Dumper(\@volumes)
+        if $index>=scalar(@volumes);
 
     my $driver = delete $data->{driver};
     my $boot = delete $data->{boot};
@@ -2058,16 +2126,57 @@ sub _change_hardware_disk($self, $index, $data) {
     $self->_set_boot_order($index, $boot)               if $boot;
 
     my $capacity = delete $data->{'capacity'};
-    if ($capacity) {
-        my $new_capacity = Ravada::Utils::size_to_number($capacity);
-        my $old_capacity = $volume->get_info->{'capacity'};
-        $self->cache_volume_info(name => $name, capacity => $old_capacity)   if $old_capacity;
-        $volume->resize($new_capacity);
-        $self->cache_volume_info(name => $name, capacity => $new_capacity);
-    }
+    $self->_change_hardware_disk_capacity($index, $capacity) if $capacity;
+
+    my $file_new = delete $data->{'file'};
+    $self->_change_hardware_disk_file($index, $file_new)    if defined $file_new;
 
     die "Error: I don't know how to change ".Dumper($data) if keys %$data;
 
+}
+
+sub _change_hardware_disk_capacity($self, $index, $capacity) {
+    my @volumes = $self->list_volumes_info();
+    my $file = $volumes[$index]->{file};
+
+    my $volume = $self->_vm->search_volume($file);
+    if (!$volume ) {
+            $self->_vm->refresh_storage_pools();
+            $volume = $self->_vm->search_volume($file);
+    }
+    die "Error: Volume file $file not found in ".$self->_vm->name    if !$volume;
+
+    my ($name) = $file =~ m{.*/(.*)};
+    my $new_capacity = Ravada::Utils::size_to_number($capacity);
+    my $old_capacity = $volume->get_info->{'capacity'};
+    $self->cache_volume_info(name => $name, capacity => $old_capacity)   if $old_capacity;
+    $volume->resize($new_capacity);
+    $self->cache_volume_info(name => $name, capacity => $new_capacity);
+}
+
+sub _change_hardware_disk_file($self, $index, $file) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+        my $disk = $self->_search_device_xml($doc,'disk',$index);
+
+    if (defined $file && length $file) {
+        my ($source) = $disk->findnodes('source');
+        $source = $disk->addNewChild(undef,'source') if !$source;
+        $source->setAttribute(file => $file);
+    } else {
+        my ($source) = $disk->findnodes('source');
+        $disk->removeChild($source);
+    }
+
+    $self->_post_change_hardware($doc);
+}
+
+sub _search_device_xml($self, $doc, $device, $index) {
+    my $count = 0;
+    for my $disk ($doc->findnodes("/domain/devices/$device")) {
+        return $disk if $count++ == $index;
+    }
+    confess "Error: $device $index not found in ".$self->name;
 }
 
 sub _change_hardware_disk_bus($self, $index, $bus) {
@@ -2090,6 +2199,63 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     }
     confess "Error: disk $index not found in ".$self->name if !$changed;
 
+    $self->_post_change_hardware($doc);
+}
+
+
+sub _change_hardware_network($self, $index, $data) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+
+       my $type = delete $data->{type};
+     my $driver = lc(delete $data->{driver} or '');
+     my $bridge = delete $data->{bridge};
+    my $network = delete $data->{network};
+
+    die "Error: Unknown arguments ".Dumper($data) if keys %$data;
+
+    $type = lc($type) if defined $type;
+
+    die "Error: Unknown type '$type' . Known: bridge, NAT"
+        if $type && $type !~ /^(bridge|nat)$/;
+
+    die "Error: Bridged type requires bridge ".Dumper($data)
+        if $type && $type eq 'bridge' && !$bridge;
+
+    die "Error: NAT type requires network ".Dumper($data)
+        if $type && $type eq 'nat' && !$network;
+
+    $type = 'network' if $type && $type eq 'nat';
+
+    my $count = 0;
+    my $changed = 0;
+
+    for my $interface ($doc->findnodes('/domain/devices/interface')) {
+        next if $interface->getAttribute('type') !~ /^(bridge|network)/;
+        next if $count++ != $index;
+
+        my ($model_xml) = $interface->findnodes('model') or die "No model";
+        my ($source_xml) = $interface->findnodes('source') or die "No source";
+
+        $source_xml->removeAttribute('bridge')          if $network;
+        $source_xml->removeAttribute('network')         if $bridge;
+
+        $interface->setAttribute(type => $type)         if $type;
+        $model_xml->setAttribute(type => $driver)       if $driver;
+        $source_xml->setAttribute(bridge => $bridge)    if $bridge;
+        $source_xml->setAttribute(network=> $network)   if $network;
+
+        $changed++;
+    }
+
+    die "Error: interface $index not found in ".$self->name if !$changed;
+
+    $self->_post_change_hardware($doc);
+}
+
+
+
+sub _post_change_hardware($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
     $self->info(Ravada::Utils::user_daemon);
@@ -2176,6 +2342,14 @@ sub _change_xml_address_virtio($self, $address) {
         $address->setAttribute($_ => $attribute{$_});
     }
     $address->setAttribute(slot => $self->_new_pci_slot);
+}
+
+sub dettach($self, $user) {
+    $self->id_base(undef);
+    $self->start($user) if !$self->is_active;
+    for my $vol ($self->list_disks ) {
+        $self->domain->block_pull($vol,0);
+    }
 }
 
 1;
