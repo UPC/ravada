@@ -3,6 +3,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Cwd qw(getcwd);
 use File::Path qw(remove_tree make_path);
 use IPC::Run3;
@@ -11,7 +12,8 @@ use Ravada;
 use File::Copy;
 
 my $VERSION = Ravada::version();
-my $DIR_DST = getcwd."/../ravada-$VERSION";
+my $DIR_SRC = getcwd;
+my $DIR_DST;
 my $DEBIAN = "DEBIAN";
 
 my %DIR = (
@@ -80,8 +82,8 @@ sub copy_files {
 
 sub remove_not_needed {
     for my $file (@REMOVE) {
-        $file = "$DIR_DST/$file";
-        unlink $file or die "$! $file";
+        my $file2 = "$DIR_DST/$file";
+        unlink $file2 or die "$! $file2";
     }
     for my $dir ('usr/share/doc/ravada/sql/sqlite') {
         my $path = "$DIR_DST/$dir";
@@ -114,7 +116,10 @@ sub create_md5sums {
 }
 
 sub create_deb {
-    my $deb = "ravada_${VERSION}_all.deb";
+    my $dist = shift or confess "Missing dist";
+
+    mkdir "ravada_release" if !-e "ravada_release";
+    my $deb = "ravada_release/ravada_${VERSION}_${dist}_all.deb";
     my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -218,7 +223,7 @@ sub chown_pms {
 sub chmod_control_files {
     for (qw(control conffiles)) {
         my $path  = "$DIR_DST/$DEBIAN/$_";
-        warn "Missing $path"                    if ! -e $path;
+        confess "Missing $path"                    if ! -e $path;
         chmod 0644 , $path or die "$! $path"    if -e $path;
     }
 
@@ -242,6 +247,7 @@ sub tar {
 }
 
 sub make_pl {
+    chdir $DIR_SRC or die "$! $DIR_SRC";
     my @cmd = ('perl','Makefile.PL');
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -257,7 +263,7 @@ sub set_version {
     my $file_in = "$DIR_DST/DEBIAN/control";
     my $file_out = "$file_in.version";
 
-    open my $in ,'<',$file_in   or die "$! $file_in";
+    open my $in ,'<',$file_in   or confess "$! $file_in";
     open my $out,'>',$file_out  or die "$! $file_out";
 
     my $version = $VERSION;
@@ -281,12 +287,50 @@ sub set_version {
     unlink $file_out;
 }
 
+sub list_dists {
+    opendir my $dir,'debian' or die "$! debian";
+    my @dists;
+
+    while ( my $file = readdir $dir ) {
+        my ($dist) = $file =~ /control-(.*)/;
+        push @dists,($dist) if $dist;
+    }
+    closedir $dir;
+
+    die "Error: no dists control files found in 'debian' dir"
+        if !@dists;
+
+    return @dists;
+}
+
+sub set_control_file {
+    my $dist = shift;
+    my $dst = "$DIR_DST/DEBIAN/control";
+    my $src = "$dst-$dist";
+
+    die "Error: no $src" if ! -e $src;
+    copy($src, $dst) or die "$! $src -> $dst";
+
+    opendir my $dir,"$DIR_DST/DEBIAN" or die $!;
+
+    while ( my $file = readdir $dir ) {
+        unlink "$DIR_DST/DEBIAN/$file" or die "$! $file"
+            if $file =~ /^control-/;
+    }
+    closedir $dir;
+}
+
 #########################################################################
 
+for my $dist (list_dists) {
+
+    warn $dist;
+$DIR_DST = "$DIR_SRC/../ravada-$VERSION-$dist";
 clean();
 make_pl();
 copy_dirs();
 copy_files();
+set_control_file($dist);
 set_version();
 remove_not_needed();
 remove_use_lib();
@@ -316,4 +360,7 @@ create_md5sums();
 tar();
 #chown_pms();
 create_md5sums();
-create_deb();
+create_deb($dist);
+}
+
+create_index();
