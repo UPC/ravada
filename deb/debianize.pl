@@ -324,7 +324,6 @@ sub set_control_file {
 
 for my $dist (list_dists) {
 
-    warn $dist;
 $DIR_DST = "$DIR_SRC/../ravada-$VERSION-$dist";
 clean();
 make_pl();
@@ -362,5 +361,3 @@ tar();
 create_md5sums();
 create_deb($dist);
 }
-
-create_index();
