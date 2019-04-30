@@ -8,7 +8,7 @@
                         <br/>
                         <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
                         <script>
-                            CKEDITOR.replace( 'editor', {height: 100} );
+                            CKEDITOR.replace( 'editor', {height: 200} );
                         </script>
                     </div>
                 </div>
@@ -19,48 +19,4 @@
             </div>
         </div>
     </form>
-	<hr><h3><%=l 'Rename' %></h3>
-% my $disable_rename = 0;
-% my $message_rename;
-% if ( $domain->is_active ) {
-%   $message_rename = 'This VM is running and can\'t be renamed.';
-%   $disable_rename = 1;
-% }
-% if ( $domain->is_hibernated) {
-%   $message_rename = 'This VM has a saved hybernated state and can\'t be renamed.';
-%   $disable_rename = 1;
-% }
-%# if $domain->is_paused || $domain->domain->has_managed_save_image;
-
-    <div class="row">
-        <div class="col-md-12">
-                % if ($message_rename) {
-                <div class="alert alert-danger" role="alert">
-                   <%= $message_rename %>
-                </div>
-            % }
-            <div ng-hide="pending_requests">
-                <input class="form-control" type="text" name="new_name" ng-model="new_name"
-                        ng-change="validate_new_name(showmachine.name)"
-                        ng-disabled="<%= $disable_rename %>"
-                >
-				<div class="col-md-12">
-					<input type="reset"  class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
-					<button type="button" class="btn btn-primary mt-3" ng-disabled="<%= $disable_rename %> || new_name_duplicated || new_name_invalid || message_rename"
-						ng-click="rename(showmachine.id, showmachine.name)">
-						<%=l 'Rename' %>
-					</button>
-				</div>
-                <div class="form-group has-error">
-                    <div class="alert alert-danger col-form-label" role="alert" ng-show="new_name_duplicated" for="new_name" >
-                       This name is duplicated
-                    </div>
-                    <div class="alert alert-danger col-form-label" role="alert" ng-show="new_name_invalid" for="new_name">
-                       This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
-                       and must start by a letter.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
