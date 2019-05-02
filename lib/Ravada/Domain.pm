@@ -3086,6 +3086,9 @@ sub set_base_vm($self, %args) {
                 confess $err if $err;
             }
         }
+    }
+
+    if (!$vm->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
