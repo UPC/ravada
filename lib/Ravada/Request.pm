@@ -125,6 +125,11 @@ our %COMMAND = (
         ,commands => ['download']
         ,priority => 5
     }
+    ,disk => {
+        limit => 1
+        ,commands => ['prepare_base','remove_base','set_base_vm']
+        ,priority => 6
+    }
     ,important=> {
         limit => 20
         ,priority => 1
