@@ -127,7 +127,7 @@ our %COMMAND = (
     }
     ,disk => {
         limit => 1
-        ,commands => ['prepare_base','remove_base','set_base_vm']
+        ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes']
         ,priority => 6
     }
     ,important=> {
