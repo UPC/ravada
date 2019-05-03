@@ -389,11 +389,6 @@ ul.alert-dropdown {
     filter: alpha(opacity=50); /* For IE8 and earlier */
 }
 
-.nav-pills .nav-link.remove,
-.show>.nav-pills .nav-link{
-    color: #d73a49
-}
-
 .nav-pills .nav-link.active.remove,
 .show>.nav-pills .nav-link{
     color: white;

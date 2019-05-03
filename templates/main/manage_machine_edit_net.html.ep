@@ -50,14 +50,14 @@
     <div class="row">
         <div class="col-lg-1">
         </div>
-        <div class="col-lg-2">
+        <div class="col-md-12">
             <button class="btn btn-primary"
                 ng-disabled=
                 "(item.type == 'bridge' && ( !network_bridges[0] || !item.bridge ))
                 || (item.type == 'NAT' && ( !network_nats[0] || !item.network))"
-                ng-click="item.edit=false;change_network(showmachine.id, $index)">OK</button>
-            <button class="btn btn-primary"
-                ng-click="item.edit=false;machine_info(showmachine.id)">cancel</button>
+                ng-click="item.edit=false;change_network(showmachine.id, $index)"><%=l 'Submit' %></button>
+            <button class="btn btn-outline-secondary"
+                ng-click="item.edit=false;machine_info(showmachine.id)"><%=l 'Cancel' %></button>
         </div>
     </div>
 </div>

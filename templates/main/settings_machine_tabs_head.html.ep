@@ -1,4 +1,4 @@
-    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+    <div class="nav flex-column nav-pills bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     %   if ($USER->can_change_settings($domain->id)) {
         <a class="nav-link active" id="v-pills-description-tab" ng-click="refresh_machine()" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="true"><%=l 'Description' %></a>
     %   }
