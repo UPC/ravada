@@ -239,6 +239,26 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     }
 }
 
+sub test_set_vm($vm, $node) {
+    my $base = create_domain($vm);
+    my $req = Ravada::Request->set_base_vm(
+        id_domain => $base->id
+        , id_vm => $node->id
+        , value => 1
+        , uid => user_admin->id
+    );
+    rvd_back->_process_requests_dont_fork(1);
+    is($req->status, 'done');
+    is($req->error, '');
+
+    is($base->_vm->id, $vm->id);
+
+    my $base2 = Ravada::Domain->open($base->id);
+    is($base2->_vm->id, $vm->id);
+
+    $base->remove(user_admin);
+}
+
 sub test_volatile($vm, $node) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
@@ -453,6 +473,8 @@ for my $vm_name ( 'Void', 'KVM') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
+        test_set_vm($vm, $node);
 
         test_volatile($vm, $node);
 
