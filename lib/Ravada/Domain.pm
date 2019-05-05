@@ -1350,6 +1350,7 @@ sub _pre_remove_domain($self, $user, @) {
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
+    $self->shutdown_now($user)  if $self->is_active;
 
 }
 
@@ -3597,14 +3598,12 @@ sub rebase($self, $user, $new_base) {
     }
 
     $new_base->is_public($self->is_public);
-    my $req_set_base = $reqs[-1];
 
     for my $clone_info ( $self->clones ) {
         next if $clone_info->{id} == $new_base->id;
-        push @reqs,Ravada::Request->shutdown_domain(
+        Ravada::Request->shutdown_domain(
             uid => $user->id
             , id_domain => $clone_info->{id}
-        ,after_request => $req_set_base->id
         );
 
         push @reqs,Ravada::Request->rebase_volumes(
