@@ -16,7 +16,7 @@ use_ok('Ravada::Auth::LDAP');
 
 my $ADMIN_GROUP = "test.admin.group";
 my $RAVADA_POSIX_GROUP = "rvd_posix_group";
-my $FILTER = "sn=bar";
+my @FILTER = ("sn=bar", "|(sn=bar)(sn=bar)");
 
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
@@ -34,7 +34,7 @@ sub test_user_fail {
 
 sub _remove_user_ldap($name) {
     eval { Ravada::Auth::LDAP::remove_user($name) };
-    ok(!$@ || $@ =~ /Entry.* not found/i) or exit;
+    ok(!$@ || $@ =~ /Entry.* not found/i, $@) or return;
 
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
     my $base = Ravada::Auth::LDAP::_dc_base();
@@ -256,7 +256,7 @@ sub test_user_bind {
 
 }
 
-sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0) {
+sub _init_config($file_config, $with_admin, $with_posix_group, $filter = 0) {
     if ( ! -e $file_config) {
         my $config = {
         ldap => {
@@ -281,8 +281,8 @@ sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0)
         delete $config->{ldap}->{ravada_posix_group};
     }
 
-    if ($with_filter) {
-        $config->{ldap}->{filter} = $FILTER;
+    if ($filter) {
+        $config->{ldap}->{filter} = $filter;
     } else {
         delete $config->{ldap}->{filter};
     }
@@ -329,7 +329,8 @@ sub _add_to_posix_group {
 
 sub test_filter {
     my $file_config = "t/etc/ravada_ldap.conf";
-    my $fly_config = _init_config($file_config, 0, 0, 1);
+    for my $filter (@FILTER) {
+    my $fly_config = _init_config($file_config, 0, 0, $filter);
     SKIP: {
         my $ravada;
         eval { $ravada = Ravada->new(config => $fly_config
@@ -371,6 +372,7 @@ sub test_filter {
         ok($user_login,"Expecting an object");
 
         Ravada::Auth::LDAP::remove_user($user_name);
+    }
     }
 }
 
