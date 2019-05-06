@@ -6,7 +6,7 @@ use  Carp qw(carp confess);
 use Data::Dumper;
 use File::Path qw(make_path);
 use YAML qw(DumpFile);
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
 use YAML qw(LoadFile DumpFile);
@@ -284,8 +284,9 @@ sub remote_config {
         $remote_conf = {
             name => $node
             ,host=> $conf->{$node}->{host}
-            ,public_ip => $conf->{$node}->{public_ip}
         };
+        $remote_conf->{public_ip} = $conf->{$node}->{public_ip}
+            if $conf->{$node}->{public_ip};
         last;
     }
     if (! $remote_conf) {
@@ -1136,6 +1137,11 @@ sub _do_remote_node($vm_name, $remote_config) {
     my $node;
     my @list_nodes0 = rvd_front->list_vms;
 
+    if (! $remote_config->{public_ip}) {
+        unlock_hash(%$remote_config);
+        delete $remote_config->{public_ip};
+        lock_hash(%$remote_config);
+    }
     eval { $node = $vm->new(%{$remote_config}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($remote_config
         ).", got :'"
