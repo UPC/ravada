@@ -64,6 +64,7 @@ sub test_new_domain_from_iso {
                                         , id_iso => search_id_iso('alpine')
                                         ,vm => $BACKEND
                                         ,id_owner => $USER->id
+                                        ,disk => 1024 * 1024
             ) 
     };
     is(''.$@,'') or return;

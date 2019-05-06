@@ -40,7 +40,8 @@ sub test_swap {
         name => $name
         ,vm => $vm_name
         ,@ARG_CREATE_DOM
-        ,swap => 128*1024*1024
+        ,swap => 1024*1024
+        ,disk => 1024*1024
     );
     ok($req);
     rvd_back()->_process_all_requests_dont_fork();
@@ -537,7 +538,7 @@ for my $vm_name ( qw(KVM Void)) {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = 1 if $vm;
-        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id );
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id, disk => 1024 * 1024 );
 
         if ($vm_name eq 'KVM') {
             my $iso = $vm->_search_iso($ID_ISO);

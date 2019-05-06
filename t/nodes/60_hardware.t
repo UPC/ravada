@@ -73,8 +73,10 @@ for my $vm_name ( 'Void', 'KVM') {
         diag("Testing remote node in $vm_name");
         my ($node1,$node2) = remote_node_2($vm_name);
 
+        ok($node2,"Expecting at least 2 nodes configured to test") or next;
+
         clean_remote_node($node1);
-        clean_remote_node($node2);
+        clean_remote_node($node2)   if $node2;
 
         test_change_hardware($vm);
         test_change_hardware($vm, $node1);

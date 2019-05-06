@@ -84,6 +84,10 @@ sub test_list_bridges($vm) {
 }
 sub _expected_bridges($vm) {
 
+    my $brctl = `which brctl`;
+    chomp $brctl;
+    return if !$brctl;
+
     my @exp_bridges =   grep { defined $_ && $_ ne 'bridge' }
     map { /(^\w+)\s*/; $1 }
     split /\n/,`brctl show`;
