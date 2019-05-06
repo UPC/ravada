@@ -166,7 +166,8 @@ sub search_user {
 
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
-    if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
+    # 89: bad filter
+    if ( $retry <= 3 && $mesg->code && $mesg->code != 4 && $mesg->code != 89) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
@@ -180,7 +181,7 @@ sub search_user {
          );
     }
 
-    die "ERROR: ".$mesg->code." : ".$mesg->error
+    die "ERROR: ".$mesg->code." : ".$mesg->error." ".($filter or '')
         if $mesg->code;
 
     return if !$mesg->count();
