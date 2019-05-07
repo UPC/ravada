@@ -1616,6 +1616,9 @@ sub remove_domain {
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
+    my $domain0 = Ravada::Domain->open( $id );
+    $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+
     my $vm = Ravada::VM->open(type => $vm_type);
     my $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id)
         or do {
@@ -2578,6 +2581,12 @@ sub _cmd_rebase_volumes($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized to dettach domain"
         if !$user->is_admin;
+
+    if ($domain->is_active) {
+        Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
+        $request->status('retry');
+        die "Error: domain ".$domain->name." is still active, shut it down to rebase\n"
+    }
 
     my $new_base = Ravada::Domain->open($request->args('id_base'));
     $domain->rebase_volumes($new_base);

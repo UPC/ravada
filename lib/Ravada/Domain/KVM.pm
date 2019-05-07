@@ -179,7 +179,6 @@ sub remove_disks {
 
     $self->_vm->connect();
     for my $file ($self->list_disks( device => 'disk')) {
-        confess $file if $file =~ /iso$/;
         if (! -e $file ) {
             next;
         }
@@ -272,7 +271,8 @@ sub remove {
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     for my $file ( @volumes ) {
-        $self->remove_volume($file);
+        eval { $self->remove_volume($file) };
+        warn $@ if $@;
     }
 
     eval { $self->_remove_file_image() };
@@ -477,6 +477,7 @@ sub _create_qcow_base {
 
 sub _cmd_convert {
     my ($base_img, $qcow_img) = @_;
+
 
     return    ('qemu-img','convert',
                 '-O','qcow2', $base_img
@@ -1549,12 +1550,7 @@ sub spinoff_volumes {
 
     $self->_do_force_shutdown() if $self->is_active;
 
-    for my $disk ($self->_disk_devices_xml) {
-
-        my ($source) = $disk->findnodes('source');
-        next if !$source;
-
-        my $volume = $source->getAttribute('file') or next;
+    for my $volume ($self->list_disks) {
 
         confess "ERROR: Domain ".$self->name
                 ." volume '$volume' does not exists"
@@ -1577,7 +1573,10 @@ sub spinoff_volumes {
         warn $out  if $out;
         warn $err   if $err;
         die "ERROR: Temporary output file $volume_tmp not created at "
-                .join(" ",@cmd)."\n"
+                .join(" ",@cmd)
+                .($out or '')
+                .($err or '')
+                ."\n"
             if (! -e $volume_tmp );
 
         copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
@@ -1634,6 +1633,7 @@ sub _hwaddr {
 sub _find_base {
     my $self = shift;
     my $file = shift;
+
     my @cmd = ( 'qemu-img','info',$file);
     my ($in,$out, $err);
     run3(\@cmd,\$in, \$out, \$err);

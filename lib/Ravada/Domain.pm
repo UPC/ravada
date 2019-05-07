@@ -1692,9 +1692,16 @@ sub _do_remove_base($self, $user) {
 }
 
 sub _pre_remove_base {
+    my ($domain) = @_;
     _allow_manage(@_);
     _check_has_clones(@_);
-    $_[0]->spinoff_volumes();
+    
+    if (!$domain->is_local) {
+        my $vm_local = $domain->_vm->new( host => 'localhost' );
+        my $domain_local = $vm_local->search_domain($domain->name);
+        $domain = $domain_local if $domain_local;
+    }
+    $domain->spinoff_volumes();
 }
 
 sub _post_remove_base {

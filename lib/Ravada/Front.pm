@@ -729,7 +729,7 @@ sub open_vm {
     my $class = "Ravada::VM::$type";
 
     if (my $vm = $VM{$type}) {
-        if (!$vm->ping) {
+        if (!$vm->ping || !$vm->is_alive) {
             $vm->disconnect();
             $vm->connect();
         } else {

@@ -77,6 +77,9 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $WGET = `which wget`;
 chomp $WGET;
 
+our $BRCTL = `which brctl`;
+chomp $BRCTL;
+
 our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
@@ -2184,7 +2187,13 @@ Returns true if the virtual manager connection is active, false otherwise.
 
 sub is_alive($self) {
     return 0 if !$self->vm;
-    return 1 if $self->vm->is_alive;
+    my $is_alive = $self->vm->is_alive;
+    return 0 if !$is_alive;
+    eval {
+        $self->vm->get_hostname();
+    };
+    warn $@ if $@;
+    return 1 if !$@;
     return 0;
 }
 
@@ -2298,9 +2307,10 @@ sub _list_qemu_bridges($self) {
 
 sub _list_bridges($self) {
 
+    return () if !-e $BRCTL;
     my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
 
-    my @cmd = ( '/sbin/brctl','show');
+    my @cmd = ( $BRCTL,'show');
     my ($out,$err) = $self->run_command(@cmd);
 
     die $err if $err;
