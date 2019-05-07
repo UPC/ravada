@@ -707,6 +707,9 @@ sub start {
         sleep 1;
     } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
         die "TODO";
+    } elsif ( $error =~ /libvirt error code: 1,.*smbios/) {
+        $self->_remove_smbios();
+        $self->domain->create();
     } elsif ( $self->domain->has_managed_save_image ) {
         $request->status("removing saved image") if $request;
         $self->domain->managed_save_remove();
@@ -714,6 +717,17 @@ sub start {
     } else {
         die $error;
     }
+}
+
+sub _remove_smbios($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+
+    my ($os) = $doc->findnodes('/domain/os');
+    my ($smbios) = $os->findnodes('smbios');
+    $os->removeChild($smbios) if $smbios;
+
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
 }
 
 sub _pre_shutdown_domain {
