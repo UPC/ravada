@@ -3083,15 +3083,13 @@ sub set_base_vm($self, %args) {
         $self->migrate($vm, $request);
     } else {
         if ($vm->is_active) {
+            my $vm_local = $self->_vm->new( host => 'localhost' );
             for my $file ($self->list_files_base()) {
+                my ($path) = $file =~ m{(.*/)};
+                next if $vm_local->shared_storage($vm, $path);
                 confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
-                my ($out, $err);
-                eval {
-                    my ($out, $err) = $vm->run_command("test -e $file && rm $file");
-                };
-                next if $@ && $@ =~ / ssh /i;
-                $err = $@ if $@;
-                confess $err if $err;
+                my ($out, $err) = $vm->remove_file($file);
+                warn $err if $err;
             }
         }
     }

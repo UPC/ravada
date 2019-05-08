@@ -1143,17 +1143,22 @@ sub _read_file_local( $self, $file ) {
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
+    $self->_connect_ssh(1);
     my ( $out, $err) = $self->run_command("/usr/bin/test",
         "-e $file ; echo \$?");
 
     chomp $out;
-    return 1 if $out eq 0;
+    chomp $err;
+
+    warn $self->name." ".$err if $err;
+
+    return 1 if $out =~ /^0$/;
     return 0;
 }
 
 sub remove_file( $self, $file ) {
     unlink $file if $self->is_local;
-    $self->run_command("/bin/rm", $file);
+    return $self->run_command("/bin/rm", $file);
 }
 
 sub create_iptables_chain($self,$chain) {
@@ -1308,6 +1313,10 @@ sub shutdown_domains($self) {
 }
 
 sub shared_storage($self, $node, $dir) {
+    my $cached_st_key = "_cached_shared_storage_".$self->name.$node->name.$dir;
+    $cached_st_key =~ s{/}{_}g;
+    return $self->{$cached_st_key} if exists $self->{$cached_st_key};
+
     $dir .= '/' if $dir !~ m{/$};
     my $file;
     for ( ;; ) {
@@ -1316,10 +1325,18 @@ sub shared_storage($self, $node, $dir) {
         next if $node->file_exists($file);
         last;
     }
+    $file = "$dir$cached_st_key";
     $self->write_file($file,''.localtime(time));
-    my $shared = $node->file_exists($file);
+    confess if !$self->file_exists($file);
+    my $shared;
+    for (1 .. 5 ) {
+        $shared = $node->file_exists($file);
+        last if $shared;
+        sleep 1;
+    }
     $self->remove_file($file);
 
+    $self->{$cached_st_key} = $shared;
     return $shared;
 }
 sub _fetch_tls_host_subject($self) {
