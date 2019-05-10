@@ -2478,6 +2478,8 @@ sub _cmd_pause {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    $self->_remove_unnecessary_downs($domain);
+
     $domain->pause($user);
 
     $request->status('done');
@@ -2495,6 +2497,7 @@ sub _cmd_resume {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    $self->_remove_unnecessary_downs($domain);
     $domain->resume(
         remote_ip => $request->args('remote_ip')
         ,user => $user
@@ -2555,6 +2558,8 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    $self->_remove_unnecessary_downs($domain);
+
     $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
@@ -2584,9 +2589,10 @@ sub _cmd_rebase_volumes($self, $request) {
 
     if ($domain->is_active) {
         Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
-        $request->status('retry');
+        $request->status("requested");
         die "Error: domain ".$domain->name." is still active, shut it down to rebase\n"
     }
+    $request->status('working');
 
     my $new_base = Ravada::Domain->open($request->args('id_base'));
     $domain->rebase_volumes($new_base);
@@ -2642,6 +2648,7 @@ sub _cmd_prepare_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
+    $self->_remove_unnecessary_downs($domain);
     $domain->prepare_base($user);
 
 }
@@ -2894,6 +2901,7 @@ sub _cmd_refresh_machine($self, $request) {
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
     $domain->list_volumes_info();
     $domain->info($user);
+    $self->_remove_unnecessary_downs($domain);
 
 }
 
@@ -3142,11 +3150,13 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     }
 }
 
-sub _remove_unnecessary_downs($self) {
-    for my $domain ($self->list_domains( active => 0 )) {
-        my @requests = $domain->list_requests;
+sub _remove_unnecessary_downs($self, $domain=undef) {
+    my @domains = $self->list_domains( active => 0 )    if !$domain;
+    for my $domain (@domains) {
+        my @requests = $domain->list_requests(1);
         for my $req (@requests) {
             $req->status('done') if $req->command =~ /^shutdown/;
+            $req->_remove_messages();
         }
     }
 }
@@ -3402,6 +3412,10 @@ sub _enforce_limits_active($self, $request) {
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
         next if $user->can_start_many;
+
+        warn $user->name;
+        warn $user->is_admin;
+        warn $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
