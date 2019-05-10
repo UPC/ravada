@@ -642,8 +642,12 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm);
-    if (my @requests = grep { !$ignore_requests{$_->command} } $base->list_requests) {
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones);
+    my @requests;
+    for my $req ( $base->list_requests ) {
+        push @requests,($req) if !$ignore_requests{$req->command};
+    }
+    if (@requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
                             .Dumper([$base->list_requests])
@@ -1313,6 +1317,7 @@ sub shutdown_domains($self) {
 }
 
 sub shared_storage($self, $node, $dir) {
+    return if !$node->is_active || !$self->is_active;
     my $cached_st_key = "_cached_shared_storage_".$self->name.$node->name.$dir;
     $cached_st_key =~ s{/}{_}g;
     return $self->{$cached_st_key} if exists $self->{$cached_st_key};

@@ -133,7 +133,7 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','create','open_iptables']
+        ,commands => ['clone','start','start_clones','create','open_iptables','list_network_interfaces']
     }
     ,secondary => {
         limit => 50
@@ -637,6 +637,25 @@ sub _remove_unnecessary_messages {
     $sth->finish;
 
 }
+
+sub _remove_messages {
+    my $self = shift;
+
+    my $uid;
+    $uid = $self->defined_arg('id_owner');
+    $uid = $self->defined_arg('uid')        if !$uid;
+    return if !$uid;
+
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM messages WHERE id_user=? AND id_request=? "
+    );
+
+    $sth->execute($uid, $self->id);
+    $sth->finish;
+
+}
+
 
 
 =head2 result

@@ -671,7 +671,7 @@ sub test_clone_make_base {
 
     $clone->prepare_base(user_admin);
     is($clone->base_in_vm($vm->id),1);
-    is($clone->base_in_vm($node->id),undef);
+    is($clone->base_in_vm($node->id),0);
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
