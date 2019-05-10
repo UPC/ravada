@@ -208,6 +208,32 @@ sub test_pause_domain {
 
 }
 
+sub test_shutdown {
+    my $vm = shift;
+
+    return if $vm->type eq 'Void';
+
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+
+    my $req = Ravada::Request->shutdown_domain(uid => user_admin->id
+        , id_domain => $domain->id
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my @reqs = $domain->list_requests(1);
+    ok(scalar @reqs,$domain->name);
+
+    $domain->shutdown_now(user_admin);
+
+    ok(!$domain->is_active);
+    rvd_back->_remove_unnecessary_downs($domain);
+    @reqs = $domain->list_requests(1);
+    ok(!scalar @reqs,$domain->name) or exit;
+
+    $domain->remove(user_admin);
+}
+
 sub test_shutdown_paused_domain {
     my $vm_name = shift;
     my $domain = shift;
@@ -492,7 +518,7 @@ sub test_vm_in_db {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names() ) {
 
   my $remote_conf = remote_config ($vm_name);
   my @conf = (undef, { host => 'localhost' });
@@ -527,6 +553,8 @@ for my $vm_name (qw( Void KVM )) {
 
         use_ok($CLASS) or next;
         test_vm_in_db($vm_name, $conf)    if $conf;
+
+        test_shutdown($vm);
 
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);
