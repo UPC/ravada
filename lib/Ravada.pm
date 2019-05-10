@@ -3150,12 +3150,13 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     }
 }
 
-sub _remove_unnecessary_downs($self, $domain=undef) {
-    my @domains = $self->list_domains( active => 0 )    if !$domain;
+sub _remove_unnecessary_downs($self, @domains) {
+    @domains = $self->list_domains( active => 0 ) if !scalar @domains;
+
     for my $domain (@domains) {
         my @requests = $domain->list_requests(1);
         for my $req (@requests) {
-            $req->status('done') if $req->command =~ /^shutdown/;
+            $req->status('done') if $req->command =~ /shutdown/;
             $req->_remove_messages();
         }
     }
