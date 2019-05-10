@@ -238,12 +238,14 @@ sub chmod_ravada_conf {
 }
 
 sub tar {
+    my $dist = shift;
     my @cmd = ('tar','czvf',"ravada_$VERSION.orig.tar.gz"
-       ,"ravada-$VERSION"
+       ,"ravada-$VERSION-$dist"
     );
+    warn "@cmd";
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
-    die $err if $err;
+    confess $err if $err;
 }
 
 sub make_pl {
@@ -356,7 +358,7 @@ chown_files('var/lib/ravada');
 chown_files('usr/share/perl5');
 #chown_files('usr/share/man');
 create_md5sums();
-tar();
+tar($dist);
 #chown_pms();
 create_md5sums();
 create_deb($dist);
