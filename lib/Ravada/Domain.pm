@@ -2930,8 +2930,6 @@ sub rsync($self, @args) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
         die $err if $err;
-        $request->status("syncing","Tranferring $file to ".$node->host)
-            if $request;
         my $src = $file;
         my $dst = 'root@'.$node->host.":".$file;
         if ($node->is_local) {
@@ -2941,6 +2939,8 @@ sub rsync($self, @args) {
         } else {
             next if $vm_local->shared_storage($node, $path);
         }
+        $request->status("syncing","Tranferring $file to ".$node->host)
+            if $request;
         $rsync->exec(src => $src, dest => $dst);
     }
     if ($rsync->err) {
@@ -3006,9 +3006,23 @@ sub _post_migrate($self, $node, $request = undef) {
 
 }
 
+sub _id_base_in_vm($self, $id_vm) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM bases_vm "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($self->id, $id_vm);
+    return $sth->fetchrow;
+}
+
 sub _set_base_vm_db($self, $id_vm, $value) {
-    my $is_base = $self->is_base && $self->base_in_vm($id_vm);
-    if (!defined $is_base) {
+    my $is_base;
+    $is_base = $self->base_in_vm($id_vm) if $self->is_base;
+
+    return if defined $is_base && $value == $is_base;
+
+    my $id_is_base = $self->_id_base_in_vm($id_vm);
+    if (!defined $id_is_base) {
         my $sth = $$CONNECTOR->dbh->prepare(
             "INSERT INTO bases_vm (id_domain, id_vm, enabled) "
             ." VALUES(?, ?, ?)"
@@ -3204,21 +3218,24 @@ sub base_in_vm($self,$id_vm) {
 
 sub _bases_vm($self) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT vms.id, vms.name, vms.hostname, vms.vm_type, b.enabled, b.id_domain FROM vms"
-        ."  LEFT JOIN bases_vm b ON vms.id = b.id_vm"
-        ."  WHERE "
-        ."      vms.vm_type=? "
+        "SELECT id, hostname FROM vms WHERE vm_type=?"
     );
-    $sth->execute($self->type );
-
+    $sth->execute($self->type);
     my %base;
-    while ( my ($id_vm , $name, $address, $type, $enabled, $id_domain ) = $sth->fetchrow) {
-        if ( defined $id_domain && $id_domain != $self->id && !$base{$id_vm}) {
-            $enabled = 0;
+    while (my ($id_vm, $hostname) = $sth->fetchrow) {
+        $base{$id_vm} = 0;
+        $base{$id_vm} = 1 if $self->is_base && $hostname =~ /localhost|127/;
+    }
+    $sth->finish;
+
+    for my $id_vm ( sort keys %base ) {
+        $sth = $$CONNECTOR->dbh->prepare(
+            "SELECT enabled FROM bases_vm WHERE id_domain=? AND id_vm=?"
+        );
+        $sth->execute($self->id, $id_vm);
+        while (my ($enabled) = $sth->fetchrow) {
+            $base{$id_vm} = $enabled;
         }
-        $enabled = 1 if $self->is_base && $address =~ /localhost|^127/
-            && $type eq $self->type;
-        $base{$id_vm} = ($enabled or 0);
     }
     return \%base;
 }

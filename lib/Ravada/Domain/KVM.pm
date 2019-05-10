@@ -2079,7 +2079,6 @@ sub migrate($self, $node, $request=undef) {
             last if !$error;
             die $error if $error !~ /libvirt error code: 9, .*already defined with uuid/;
             my $msg = "migrating ".$self->name." ".$error;
-            warn $msg;
             $request->error($msg) if $request;
             sleep 1;
         }
