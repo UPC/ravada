@@ -241,6 +241,9 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
 
 sub test_set_vm($vm, $node) {
     my $base = create_domain($vm);
+    my $info = $base->info(user_admin);
+    is($info->{bases}->{$vm->id},0);
+
     my $req = Ravada::Request->set_base_vm(
         id_domain => $base->id
         , id_vm => $node->id
@@ -255,6 +258,16 @@ sub test_set_vm($vm, $node) {
 
     my $base2 = Ravada::Domain->open($base->id);
     is($base2->_vm->id, $vm->id);
+
+    $info = $base2->info(user_admin);
+    is($info->{bases}->{$vm->id},1,Dumper($info->{bases})) or exit;
+    is($info->{bases}->{$node->id},1,$node->id." "
+        .Dumper($info->{bases})) or exit;
+
+    my $base_f = Ravada::Front::Domain->open($base->id);
+    $info = $base_f->info(user_admin);
+    is($info->{bases}->{$vm->id},1) or exit;
+    is($info->{bases}->{$node->id},1) or exit;
 
     $base->remove(user_admin);
 }

@@ -10,8 +10,9 @@
     ... Loading ...
     </div>
 
+{{showmachine.bases}}
 <div class="row" ng-repeat="node in nodes">
-
+{{node.id}}
     <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
         <input type="checkbox" ng-checked="showmachine.bases[node.id]"
             ng-click="set_base(node.id, showmachine.id, !showmachine.bases[node.id])"
