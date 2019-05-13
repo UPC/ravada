@@ -342,7 +342,7 @@ sub _connect_ssh($self, $disconnect=0) {
 }
 
 sub _ssh_channel($self) {
-    my $ssh = $self->_connect_ssh() or confess "ERROR: Cant connect to SSH in ".$self->host;
+    my $ssh = $self->_connect_ssh() or confess "ERROR: I can't connect to SSH in ".$self->host;
     my $ssh_channel;
     for ( 1 .. 5 ) {
         $ssh_channel = $ssh->channel();
@@ -1326,8 +1326,11 @@ sub shared_storage($self, $node, $dir) {
     my $file;
     for ( ;; ) {
         $file = $dir.Ravada::Utils::random_name(4).".tmp";
-        next if $self->file_exists($file);
-        next if $node->file_exists($file);
+        eval {
+            next if $self->file_exists($file);
+            next if $node->file_exists($file);
+        };
+        return if $@ && $@ =~ /onnect to SSH/i;
         last;
     }
     $file = "$dir$cached_st_key";
