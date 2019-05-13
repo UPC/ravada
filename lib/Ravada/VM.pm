@@ -39,6 +39,8 @@ our $CONFIG = \$Ravada::CONFIG;
 our $MIN_MEMORY_MB = 128 * 1024;
 
 our $SSH_TIMEOUT = 20 * 1000;
+our $CACHE_TIMEOUT = 60;
+our $FIELD_TIMEOUT = '_data_timeout';
 
 our %VM; # cache Virtual Manager Connection
 our %SSH;
@@ -690,6 +692,7 @@ sub _data($self, $field, $value=undef) {
 
 #    _init_connector();
 
+    $self->_timed_data_cache()  if $self->{_data}->{$field} && $field ne 'name';
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     return if !$self->store();
 
@@ -699,6 +702,15 @@ sub _data($self, $field, $value=undef) {
     confess "No field $field in vms"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
+}
+
+sub _timed_data_cache($self) {
+    return if time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
+    my $name = $self->{_data}->{name};
+    my $id = $self->{_data}->{id};
+    delete $self->{_data};
+    $self->{_data}->{name} = $name  if $name;
+    $self->{_data}->{id} = $id      if $id;
 }
 
 sub _do_select_vm_db {
@@ -734,6 +746,7 @@ sub _select_vm_db {
     my ($row) = ($self->_do_select_vm_db(@_) or $self->_insert_vm_db(@_));
 
     $self->{_data} = $row;
+    $self->{$FIELD_TIMEOUT} = time if $row->{id};
     return $row if $row->{id};
 }
 
