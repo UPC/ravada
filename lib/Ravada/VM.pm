@@ -705,10 +705,12 @@ sub _data($self, $field, $value=undef) {
 }
 
 sub _timed_data_cache($self) {
-    return if time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
+    return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
+    warn "$$ deleting cache node ".localtime(time);
     my $name = $self->{_data}->{name};
     my $id = $self->{_data}->{id};
     delete $self->{_data};
+    delete $self->{$FIELD_TIMEOUT};
     $self->{_data}->{name} = $name  if $name;
     $self->{_data}->{id} = $id      if $id;
 }
