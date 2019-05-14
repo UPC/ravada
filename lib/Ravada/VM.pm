@@ -39,6 +39,8 @@ our $CONFIG = \$Ravada::CONFIG;
 our $MIN_MEMORY_MB = 128 * 1024;
 
 our $SSH_TIMEOUT = 20 * 1000;
+our $CACHE_TIMEOUT = 60;
+our $FIELD_TIMEOUT = '_data_timeout';
 
 our %VM; # cache Virtual Manager Connection
 our %SSH;
@@ -342,7 +344,7 @@ sub _connect_ssh($self, $disconnect=0) {
 }
 
 sub _ssh_channel($self) {
-    my $ssh = $self->_connect_ssh() or confess "ERROR: Cant connect to SSH in ".$self->host;
+    my $ssh = $self->_connect_ssh() or confess "ERROR: I can't connect to SSH in ".$self->host;
     my $ssh_channel;
     for ( 1 .. 5 ) {
         $ssh_channel = $ssh->channel();
@@ -690,6 +692,7 @@ sub _data($self, $field, $value=undef) {
 
 #    _init_connector();
 
+    $self->_timed_data_cache()  if $self->{_data}->{$field} && $field ne 'name';
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     return if !$self->store();
 
@@ -699,6 +702,17 @@ sub _data($self, $field, $value=undef) {
     confess "No field $field in vms"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
+}
+
+sub _timed_data_cache($self) {
+    return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
+    warn "$$ deleting cache node ".localtime(time);
+    my $name = $self->{_data}->{name};
+    my $id = $self->{_data}->{id};
+    delete $self->{_data};
+    delete $self->{$FIELD_TIMEOUT};
+    $self->{_data}->{name} = $name  if $name;
+    $self->{_data}->{id} = $id      if $id;
 }
 
 sub _do_select_vm_db {
@@ -734,6 +748,7 @@ sub _select_vm_db {
     my ($row) = ($self->_do_select_vm_db(@_) or $self->_insert_vm_db(@_));
 
     $self->{_data} = $row;
+    $self->{$FIELD_TIMEOUT} = time if $row->{id};
     return $row if $row->{id};
 }
 
@@ -1326,8 +1341,11 @@ sub shared_storage($self, $node, $dir) {
     my $file;
     for ( ;; ) {
         $file = $dir.Ravada::Utils::random_name(4).".tmp";
-        next if $self->file_exists($file);
-        next if $node->file_exists($file);
+        eval {
+            next if $self->file_exists($file);
+            next if $node->file_exists($file);
+        };
+        return if $@ && $@ =~ /onnect to SSH/i;
         last;
     }
     $file = "$dir$cached_st_key";

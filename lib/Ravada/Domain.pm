@@ -265,12 +265,13 @@ sub _set_vm($self, $vm, $force=0) {
 
 sub _check_equal_storage_pools($self, $vm2) {
     my $vm1 = $self->_vm;
-    my %sp1 = map { $_ => 1 }
-        ($vm1->default_storage_pool_name
-        , ($vm1->base_storage_pool or '')
-        , ($vm1->clone_storage_pool or '')
+    my @sp;
+    push @sp,($vm1->default_storage_pool_name)  if $vm1->default_storage_pool;
+    push @sp,($vm1->base_storage_pool)  if $vm1->base_storage_pool;
+    push @sp,($vm1->clone_storage_pool) if $vm1->clone_storage_pool;
 
-    );
+    my %sp1 = map { $_ => 1 } @sp;
+
     my @sp1 = grep /./,keys %sp1;
 
     my %sp2 = map { $_ => 1 } $vm2->list_storage_pools();
