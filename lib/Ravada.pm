@@ -2302,6 +2302,7 @@ sub _execute {
     if ( $pid == 0 ) {
         $request->status('working','');
         my $t0 = [gettimeofday];
+        srand();
         $self->_do_execute_command($sub, $request);
         my $elapsed = tv_interval($t0,[gettimeofday]);
         $request->run_time($elapsed) if !$request->run_time();
