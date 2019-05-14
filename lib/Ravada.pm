@@ -3414,10 +3414,6 @@ sub _enforce_limits_active($self, $request) {
         next if $user->is_admin;
         next if $user->can_start_many;
 
-        warn $user->name;
-        warn $user->is_admin;
-        warn $user->can_start_many;
-
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
                         @{$domains{$id_user}};
