@@ -59,7 +59,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-mb-12">
+        <div class="col-mb-12 mt-3">
             <button class="btn btn-primary"
             ng-click=
             "add_hardware('disk', value.length+1, add_disk);show_new_disk=false"><%=l 'Submit' %></button>
