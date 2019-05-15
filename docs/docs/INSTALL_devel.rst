@@ -35,6 +35,8 @@ Ubuntu required packages
 
 Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages. You must install it running:
 
+.. note:: The libvirt-bin package was dropped since Ubuntu 18.10. The package was split into two parts: ''libvirt-daemon-system'' and ''libvirt-clients''.
+
 .. prompt:: bash $
 
     sudo apt-get install perl libmojolicious-perl mysql-common libauthen-passphrase-perl \
