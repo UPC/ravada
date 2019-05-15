@@ -23,6 +23,7 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 
 .. prompt:: bash $
 
+    sudo apt install cpu-checker
     sudo kvm-ok
 
 .. warning:: Do not consider `VirtualBox <https://www.virtualbox.org/>`_ in this situation, because it doesn't pass VT-X / AMD-V to the guest operating system.
