@@ -59,13 +59,13 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-4">
+        <div class="col-mb-12 mt-3">
             <button class="btn btn-primary"
             ng-click=
-            "add_hardware('disk', value.length+1, add_disk);show_new_disk=false">ok</button>
+            "add_hardware('disk', value.length+1, add_disk);show_new_disk=false"><%=l 'Submit' %></button>
             <button ng-click="show_new_disk=false"
-                class="btn btn-primary"
-            >cancel</button>
+                class="btn btn-outline-secondary"
+            ><%=l 'Cancel' %></button>
         </div>
     </div>
 </div>

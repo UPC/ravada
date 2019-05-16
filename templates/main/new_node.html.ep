@@ -42,7 +42,7 @@
                     <!--<small class="form-text text-muted">Format: 192.168.0.1/32</small> -->
                 </div>
                 <div ng-show="name_duplicated"
-                    class="alert alert-warning fade in">
+                    class="alert alert-warning" role="alert">
                     <%=l 'A node with that name already exists.' %>
                 </div>
                <div class="form-group row">

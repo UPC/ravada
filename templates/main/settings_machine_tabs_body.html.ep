@@ -10,30 +10,20 @@
         </div>
 %   }
 
-% if ($USER->can_change_settings($domain->id) || $USER->can_rename($domain->id)) {
-<div class="tab-content" id="nav-tabContent">
-    % if ($USER->can_change_settings($domain->id)) {
-    <div class="tab-pane fade show active" id="nav-description" role="tabpanel" aria-labelledby="nav-description-tab">
+% if ($USER->can_change_settings($domain->id)) {
+<div class="tab-content" id="v-pills-tabContent">
+    <div class="tab-pane fade show active" id="v-pills-description" role="tabpanel" aria-labelledby="v-pills-description-tab">
         %= include 'main/vm_description'
     </div>
-    %}
-    
-% if ($USER->can_rename($domain->id)) {
-    <div class="tab-pane fade" id="nav-rename" role="tabpanel" aria-labelledby="nav-rename-tab">
-    % if ($domain->is_base) {
-            %= include 'main/vm_locked_is_base'
-    % } else {
-            %= include 'main/vm_rename'
-    % }
+    <div class="tab-pane fade" id="v-pills-rename" role="tabpanel" aria-labelledby="v-pills-rename-tab">
+        %= include 'main/vm_rename'
     </div>
-% }
-
-    <div class="tab-pane fade" id="nav-options" role="tabpanel" aria-labelledby="nav-options-tab">
+    <div class="tab-pane fade" id="v-pills-options" role="tabpanel" aria-labelledby="v-pills-options-tab">
         %= include 'main/vm_options'
     </div>
 % }
 % if ($USER->can_change_settings($domain->id) && $domain->drivers) {
-    <div class="tab-pane fade" id="nav-drivers" role="tabpanel" aria-labelledby="nav-drivers-tab">
+    <div class="tab-pane fade" id="v-pills-drivers" role="tabpanel" aria-labelledby="v-pills-drivers-tab">
 % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
 % } else {
@@ -42,12 +32,12 @@
     </div>
 % }
 % if ($USER->can_change_settings($domain->id) && !$domain->is_base ) {
-    <div class="tab-pane fade" id="nav-screenshot" role="tabpanel" aria-labelledby="nav-screenshot-tab">
+    <div class="tab-pane fade" id="v-pills-screenshot" role="tabpanel" aria-labelledby="v-pills-screenshot-tab">
         %= include 'main/vm_screenshot'
     </div>
 % }
 % if ($domain->type eq 'KVM') {
-    <div class="tab-pane fade" id="nav-graphics" role="tabpanel" aria-labelledby="nav-graphics-tab">
+    <div class="tab-pane fade" id="v-pills-graphics" role="tabpanel" aria-labelledby="v-pills-graphics-tab">
 % if ($domain->is_base) {
         %= include 'main/vm_locked_is_base'
 % } else {
@@ -56,31 +46,31 @@
     </div>
 % }
 % if ($USER->can_change_settings($domain->id)) {
-    <div class="tab-pane fade" id="nav-hardware" role="tabpanel" aria-labelledby="nav-hardware-tab" >
+    <div class="tab-pane fade" id="v-pills-hardware" role="tabpanel" aria-labelledby="v-pills-hardware-tab" >
         %= include 'main/vm_hardware'
     </div>
 % }
-    <div class="tab-pane fade" id="nav-copy" role="tabpanel" aria-labelledby="nav-copy-tab">
+    <div class="tab-pane fade" id="v-pills-copy" role="tabpanel" aria-labelledby="v-pills-copy-tab">
         %= include 'main/vm_copy'
     </div>
 % if ( $USER->is_admin) {
-    <div class="tab-pane fade" id="nav-clones" >
+    <div class="tab-pane fade" id="v-pills-clones" >
         %= include 'main/vm_clones'
     </div>
 % }
 % if ( $USER->can_remove_machine($domain->id)) {
-    <div class="tab-pane fade" id="nav-remove" role="tabpanel" aria-labelledby="nav-remove-tab">
+    <div class="tab-pane fade" id="v-pills-remove" role="tabpanel" aria-labelledby="v-pills-remove-tab">
         %= include 'main/vm_remove'
     </div>
 % }
 % if ( $monitoring && $USER->is_admin && $domain->is_active && $domain->internal_id) {
-    <div class="tab-pane fade" id="nav-monitoring" role="tabpanel" aria-labelledby="nav-monitoring-tab">
+    <div class="tab-pane fade" id="v-pills-monitoring" role="tabpanel" aria-labelledby="v-pills-monitoring-tab">
         %= include 'main/vm_monitoring'
     </div>
 % }
 
 %if ($USER->is_admin) {
-    <div class="tab-pane fade" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab">
+    <div class="tab-pane fade" id="v-pills-base" role="tabpanel" aria-labelledby="v-pills-base-tab">
         %= include 'main/vm_base'
     </div>
 % }

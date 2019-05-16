@@ -65,6 +65,7 @@
                           <i class="fa fa-window-close"></i>
                     </button>
                     <button type="button" class="btn btn-danger btn-sm {{node.action_remove}}"
+                         ng-disabled="node.action_remove == 'disabled'"
                          ng-click="node_remove(node.id)"
                          title="<%=l 'Remove' %>">
                           <i class="fa fa-trash"></i>
