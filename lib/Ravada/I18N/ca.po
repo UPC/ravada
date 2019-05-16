@@ -1,12 +1,15 @@
 # Translators:
-# Fernando Verdugo, 2017
+# Fernando Verdugo, 2019
+# Amparo _rvd <amparorvd@gmail.com>, 2019
+# Joel Alarcón <joelalju100@gmail.com>, 2017
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: Fernando Verdugo, 2017\n"
+"PO-Revision-Date: 2017-01-03 11:17+0000\n"
+"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
 "Language-Team: Catalan (https://www.transifex.com/ravada/teams/70385/ca/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -290,6 +293,9 @@ msgstr "Benvingut"
 msgid "A viewer is required to run the virtual machines."
 msgstr "Es requereix un visor per executar les màquines virtuals."
 
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Es necessari un visor per accedir a la màquina virtual."
+
 msgid "Virtual Machines"
 msgstr "Màquines Virtuals"
 
@@ -561,6 +567,9 @@ msgstr "Aquesta màquina virtual no es pot eliminar perquè té"
 msgid "clones"
 msgstr "clons"
 
+msgid "Clones"
+msgstr "Clons"
+
 msgid "This machine has not Graphics parameters!"
 msgstr "Aquesta màquina no té paràmetres gràfics!"
 
@@ -795,3 +804,36 @@ msgstr "Gràcies a:"
 
 msgid "licensed."
 msgstr "llicenciat."
+
+msgid "New Node"
+msgstr "Nou Node"
+
+msgid "Address"
+msgstr "Adreça"
+
+msgid "A node with that name already exists."
+msgstr "Ja existeix un node amb aquest nom. "
+
+msgid "Setting your default language"
+msgstr "Configuració del vostre idioma predeterminat"
+
+msgid "Change password"
+msgstr "Canvi de contrasenya"
+
+msgid "Update password"
+msgstr "Actualitza contrasenya"
+
+msgid "Start all clones"
+msgstr "Inicia tots els clons"
+
+msgid "Access denied"
+msgstr "Accés denegat"
+
+msgid "Empty login name"
+msgstr "Nom d'inici de sessió buit"
+
+msgid "Empty password"
+msgstr "Contrasenya buida"
+
+msgid "Session timeout"
+msgstr "Temps d’espera de la sessió"

@@ -27,7 +27,6 @@ sub create_pool {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
 
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
     my $capacity = 1 * 1024 * 1024;
 
@@ -36,27 +35,31 @@ sub create_pool {
 
     mkdir $dir if ! -e $dir;
 
-    my $xml =
-"<pool type='dir'>
-  <name>$pool_name</name>
-  <uuid>$uuid</uuid>
-  <capacity unit='bytes'>$capacity</capacity>
-  <allocation unit='bytes'></allocation>
-  <available unit='bytes'>$capacity</available>
-  <source>
-  </source>
-  <target>
-    <path>$dir</path>
-    <permissions>
-      <mode>0711</mode>
-      <owner>0</owner>
-      <group>0</group>
-    </permissions>
-  </target>
-</pool>"
-;
     my $pool;
-    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    for ( ;; ) {
+        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $xml =
+                    "<pool type='dir'>
+                    <name>$pool_name</name>
+                    <uuid>$uuid</uuid>
+                    <capacity unit='bytes'>$capacity</capacity>
+                    <allocation unit='bytes'></allocation>
+                    <available unit='bytes'>$capacity</available>
+                    <source>
+                    </source>
+                    <target>
+                    <path>$dir</path>
+                    <permissions>
+                    <mode>0711</mode>
+                    <owner>0</owner>
+                    <group>0</group>
+                    </permissions>
+                    </target>
+                    </pool>"
+                    ;
+        eval { $pool = $vm->vm->create_storage_pool($xml) };
+        last if !$@ || $@ !~ /libvirt error code: 9,/;
+    };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
 
@@ -86,8 +89,7 @@ sub test_create_domain {
         .($domain->name or '<UNDEF>')
         ." for VM $vm_name"
     );
-
-    for my $volume ( $domain->list_volumes ) {
+    for my $volume ( $domain->list_volumes(device => 'disk')) {
         like($volume,qr{^/var/tmp});
     }
 
@@ -106,7 +108,11 @@ sub test_remove_domain {
     }
     $domain->remove($USER);
     for my $file (@volumes) {
-        ok(!-e $file,"Expecting no volume $file exists, got : ".(-e $file or 0));
+        if ($file =~ /iso$/) {
+            ok(-e $file,"Expecting volume $file not removed , got : ".(-e $file or 0));
+        } else {
+            ok(!-e $file,"Expecting no volume $file exists, got : ".(-e $file or 0));
+        }
     }
 
 }
@@ -148,6 +154,7 @@ sub test_volumes_in_two_pools {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
+                    , disk => 1024 * 1024
                     , arg_create_dom($vm_name))
     };
 
@@ -157,8 +164,11 @@ sub test_volumes_in_two_pools {
 
     $domain->add_volume(name => $name.'_volb' , size => 1024*1024 );
 
-    my @volumes = $domain->list_volumes();
-    is(scalar @volumes , 2);
+    my @volumes = $domain->list_volumes( device => 'disk' );
+    is(scalar @volumes , 2,$domain->type." "
+        .Dumper([$domain->list_volumes_info(device => 'disk')]
+                ,\@volumes
+        )) or exit;
     for my $file (@volumes) {
         ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
         like($file,qr(^/var/tmp));
@@ -207,9 +217,9 @@ sub test_base_pool {
         $domain->add_volume_swap( size => 1000000 );
         ok($domain);
 
-        for my $volume ($domain->list_volumes ) {
+        for my $volume ($domain->list_volumes(device => 'disk') ) {
             my ($path ) = $volume =~ m{(.*)/.*};
-            like($path, qr{$dir_pool1});
+            like($path, qr{$dir_pool1}, $volume);
         }
         for my $name2 ( $pool_name, 'default' ) {
             my $dir_pool2 = $pool{$name2};
@@ -229,7 +239,10 @@ sub test_base_pool {
             );
             ok(scalar ($clone->list_volumes));
             for my $volume ($clone->list_volumes) {
+                die "Empty volume ".Dumper([$clone->list_volumes],[$clone->list_volumes_info])
+                    if !$volume;
                 my ($path ) = $volume =~ m{(.*)/.*};
+                confess "I can't find path from $volume" if !$path;
                 like($path, qr{$dir_pool1});
             }
 
@@ -258,9 +271,9 @@ sub test_clone_pool {
         $domain->add_volume_swap( size => 1000000 );
         ok($domain);
 
-        for my $volume ($domain->list_volumes ) {
+        for my $volume ($domain->list_volumes(device => 'disk') ) {
             my ($path ) = $volume =~ m{(.*)/.*};
-            like($path, qr{$dir_pool1});
+            like($path, qr{$dir_pool1}, $volume);
         }
         for my $name2 ( $pool_name, 'default' ) {
             my $dir_pool2 = $pool{$name2};
@@ -311,7 +324,7 @@ sub test_base_clone_pool {
         $domain->add_volume_swap( size => 1000000 );
         ok($domain);
 
-        for my $volume ($domain->list_volumes ) {
+        for my $volume ($domain->list_volumes(device => 'disk') ) {
             my ($path ) = $volume =~ m{(.*)/.*};
             like($path, qr{$dir_pool});
         }
@@ -378,7 +391,7 @@ sub test_default_pool_base {
         my $domain = create_domain($vm->type);
         ok($domain);
 
-        for my $volume ($domain->list_volumes ) {
+        for my $volume ($domain->list_volumes(device => 'disk') ) {
             my ($path ) = $volume =~ m{(.*)/.*};
             like($path, qr{$dir_pool});
         }

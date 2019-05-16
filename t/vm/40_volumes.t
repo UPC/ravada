@@ -117,7 +117,7 @@ sub test_clone {
     my $vm_name = shift;
     my $domain = shift;
 
-    my @volumes = $domain->list_volumes();
+    my @volumes = grep { !/iso$/ } $domain->list_volumes();
 
     my $name_clone = new_domain_name();
 #    diag("[$vm_name] going to clone from ".$domain->name);
@@ -153,8 +153,8 @@ sub test_clone {
 sub test_files_base {
     my ($vm_name, $domain, $volumes) = @_;
     my @files_base= $domain->list_files_base();
-    ok(scalar @files_base == scalar @$volumes, "[$vm_name] Domain ".$domain->name
-            ." expecting ".scalar @$volumes." files base, got ".scalar(@files_base)) or exit;
+    is(scalar @files_base, scalar(@$volumes) -1, "[$vm_name] Domain ".$domain->name."\n"
+            .Dumper($volumes,[@files_base])) or confess;
 
     my %files_base = map { $_ => 1 } @files_base;
 
@@ -166,7 +166,11 @@ sub test_files_base {
         for my $volume ($domain->list_volumes) {
             my $info = `qemu-img info $volume`;
             my ($backing) = $info =~ m{(backing.*)}gm;
-            like($backing,qr{^backing file\s*:\s*.+},$info) or exit;
+            if ($volume =~ /iso$/) {
+                is($backing,undef) or exit;
+            } else {
+                like($backing,qr{^backing file\s*:\s*.+},$info) or exit;
+            }
         }
     }
 
@@ -186,8 +190,8 @@ sub test_domain_2_volumes {
     test_add_volume($vm, $domain2, 'vdb');
 
     my @volumes = $domain2->list_volumes;
-    ok(scalar @volumes == 2
-        ,"[$vm_name] Expecting 2 volumes, got ".scalar(@volumes));
+    my $exp_volumes = 3;
+    is(scalar @volumes,$exp_volumes, $vm_name);
 
     ok(test_prepare_base($vm_name, $domain2));
     ok($domain2->is_base,"[$vm_name] Domain ".$domain2->name
@@ -199,8 +203,7 @@ sub test_domain_2_volumes {
     test_add_volume($vm, $domain2, 'vdc');
 
     @volumes = $domain2->list_volumes;
-    ok(scalar @volumes == 3
-        ,"[$vm_name] Expecting 3 volumes, got ".scalar(@volumes));
+    is(scalar @volumes,$exp_volumes+1)
 
 }
 
@@ -221,7 +224,7 @@ sub test_domain_n_volumes {
     }
 
     my @volumes = $domain->list_volumes;
-    ok(scalar @volumes == $n
+    ok(scalar @volumes == $n+1
         ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes));
 
     ok(test_prepare_base($vm_name, $domain));
@@ -231,13 +234,14 @@ sub test_domain_n_volumes {
 
     my $domain_clone = test_clone($vm_name, $domain);
 
-    my @volumes_clone = $domain_clone->list_volumes_target;
-    ok(scalar @volumes_clone ==$n
-        ,"[$vm_name] Expecting $n volumes, got ".scalar(@volumes_clone));
+    my @volumes_clone = $domain_clone->list_volumes_info(device => 'disk');
+    my @volumes_clone_all = $domain_clone->list_volumes_info();
+    is(scalar @volumes_clone, $n
+        ,"[$vm_name] Expecting $n volumes, got ".Dumper([@volumes_clone],[@volumes_clone_all])) or exit;
 
     return if $vm_name =~ /void/i;
     for my $vol ( @volumes_clone ) {
-        my ($file, $target) = @$vol;
+        my ($file, $target) = ($vol->{file}, $vol->{target});
         like($file,qr/-$target-/);
     }
 }
@@ -256,7 +260,7 @@ sub test_add_volume_path {
     print $out "hi\n";
     close $out;
 
-    $domain->add_volume(path => $file_path);
+    $domain->add_volume(file => $file_path);
 
     my $domain2 = $vm->search_domain($domain->name);
     my @volumes2 = $domain2->list_volumes();
@@ -345,7 +349,7 @@ sub test_domain_swap {
                                 ." should be active");
 
     my $min_size = 197120 if $vm_name eq 'KVM';
-    $min_size = 529 if $vm_name eq 'Void';
+    $min_size = 470 if $vm_name eq 'Void';
     # after start, all the files should be there
      my $found_swap = 0;
     for my $file ( $domain_clone->list_volumes) {
@@ -356,10 +360,11 @@ sub test_domain_swap {
             my $size = -s $file;
             copy($file, "$file.tmp");
             `/bin/cat $file.tmp >> $file`;
+            unlink "$file.tmp";
             ok(-s $file > $size);
             ok(-s $file > $min_size
-                , "Expecting swap file bigger than $min_size, got :"
-                    .-s $file);
+                , "Expecting swap file $file bigger than $min_size, got :"
+                    .-s $file) or exit;
         }
     }
     $domain_clone->shutdown_now($USER);
@@ -375,10 +380,41 @@ sub test_domain_swap {
         next if ( $file!~ /SWAP/);
 
         ok(-s $file <= $min_size
-            ,"[$vm_name] Expecting swap $file size <= $min_size , got :".-s $file)
+            ,"[$vm_name] Expecting swap $file size <= $min_size , got :".-s $file) or exit;
 
     }
 
+}
+
+sub test_too_big($vm) {
+    my $domain = create_domain($vm);
+    my $free_disk = $vm->free_disk();
+    my $file;
+    eval { $file = $domain->add_volume(size => int($free_disk * 1.1)) };
+    like($@, qr(out of space),$vm->type) or exit;
+    ok(!$file);
+    my $free_disk2 = $vm->free_disk();
+    is($free_disk2, $free_disk);
+    $domain->remove(user_admin);
+}
+
+sub test_too_big_prepare($vm) {
+    my $domain = create_domain($vm);
+    my $free_disk = $vm->free_disk();
+    my $file;
+    eval { $file = $domain->add_volume(size => int($free_disk * 0.9)) };
+    is($@,'');
+    ok($file);
+
+    is($domain->is_base, 0) or exit;
+    eval { $domain->prepare_base(user_admin); };
+    like($@, qr(out of space),$vm->type." prepare base") or exit;
+
+    is(scalar($domain->list_files_base),0,"[".$vm->type."] ".Dumper([$domain->list_files_base]));
+    is($domain->is_base, 0) or exit;
+
+
+    $domain->remove(user_admin);
 }
 
 sub test_search($vm_name) {
@@ -434,6 +470,17 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok("Ravada::VM::$vm_name");
+
+        test_too_big_prepare($vm);
+
+        my $old_pool = $vm->default_storage_pool_name();
+        if ($old_pool) {
+            $vm->default_storage_pool_name('');
+            test_too_big_prepare($vm);
+            $vm->default_storage_pool_name($old_pool);
+        }
+
+        test_too_big($vm);
 
         test_domain_swap($vm_name);
         test_domain_create_with_swap($vm_name);

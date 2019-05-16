@@ -38,12 +38,17 @@ sub test_create_domain {
     my $name = new_domain_name();
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
+    eval {
+        my %args = arg_create_dom($vm_name);
+        $args{disk} = $disk;
+        $domain = $vm->create_domain(
+                    %args
+                    , name => $name
                     , id_owner => $USER->id
                     , memory => $mem
-                    , disk => $disk
-                    , arg_create_dom($vm_name))
+                );
     };
+    is($@,'');
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
     ok($domain->name
@@ -71,8 +76,9 @@ sub test_create_fail {
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , memory => $mem
+                    , arg_create_dom($vm_name)
                     , disk => $disk
-                    , arg_create_dom($vm_name))
+                );
     };
     ok($@,"Expecting error , got ''");
 
@@ -92,11 +98,11 @@ sub test_req_create_domain{
     {
         my $rvd_front = rvd_front();
         $req = $rvd_front->create_domain( name => $name
+                    , arg_create_dom($vm_name)
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , arg_create_dom($vm_name)
         );
    
     }
@@ -124,11 +130,11 @@ sub test_req_create_fail {
     {
         my $rvd_front = rvd_front();
         $req = $rvd_front->create_domain( name => $name
+                    , arg_create_dom($vm_name)
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , arg_create_dom($vm_name)
         );
    
         ok($req,"Expecting request to create_domain");
@@ -198,7 +204,7 @@ sub test_disk_kvm {
     my $doc = XML::LibXML->load_xml(string => $xml);
     
     my ($size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
-    ok($size == $size_exp, "Expecting size '$size_exp' , got '$size'");
+    ok($size == $size_exp, "Expecting size $disk '$size_exp' , got '$size'");
 
 
 }

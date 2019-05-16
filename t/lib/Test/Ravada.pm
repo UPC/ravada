@@ -6,7 +6,7 @@ use  Carp qw(carp confess);
 use Data::Dumper;
 use File::Path qw(make_path);
 use YAML qw(DumpFile);
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use  Test::More;
 use YAML qw(LoadFile DumpFile);
@@ -47,11 +47,14 @@ create_domain
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
     remote_node
+    remote_node_2
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
     create_ldap_user
     init_ldap_config
+
+    create_storage_pool
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -84,6 +87,8 @@ our %ARG_CREATE_DOM = (
 our %VM_VALID = ( KVM => 1
     ,Void => 0
 );
+
+our @NODES;
 
 sub user_admin {
 
@@ -161,10 +166,10 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 256*1024
-                    , disk => 256 * 1024 * 1024
+                    , disk => 1 * 1024 * 1024
            );
     };
-    is($@,'');
+    is('',''.$@);
 
     return $domain;
 
@@ -198,24 +203,25 @@ sub new_pool_name {
     return base_pool_name()."_".$CONT_POOL++;
 }
 
-sub rvd_back($config=undef) {
+sub rvd_back($config=undef, $init=1) {
 
     return $RVD_BACK            if $RVD_BACK && !$config;
 
     $RVD_BACK = 1;
-    init($config or $DEFAULT_CONFIG);
+    init($config or $DEFAULT_CONFIG) if $init;
 
     my $rvd = Ravada->new(
             connector => connector()
                 , config => ( $config or $DEFAULT_CONFIG)
-                , warn_error => 0
+                , warn_error => 1
     );
     $rvd->_install();
 
     user_admin();
-    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') ];
-
     $RVD_BACK = $rvd;
+    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
+
+    Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
 }
 
@@ -255,30 +261,39 @@ sub init($config=undef) {
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-    rvd_back($config)  if !$RVD_BACK;
+    rvd_back($config, 0)  if !$RVD_BACK;
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
 
-sub remote_config {
-    my $vm_name = shift;
-    return { } if !-e $FILE_CONFIG_REMOTE;
-
+sub _load_remote_config() {
+    return {} if ! -e $FILE_CONFIG_REMOTE;
     my $conf;
     eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
     is($@,'',"Error in $FILE_CONFIG_REMOTE\n".$@) or return;
+    lock_hash(%$conf);
+    return $conf;
+}
 
-    my $remote_conf = $conf->{$vm_name} or do {
+sub remote_config {
+    my $vm_name = shift;
+    my $conf = _load_remote_config();
+    my $remote_conf;
+    for my $node (sort keys %$conf) {
+        next if !grep /^$vm_name$/, @{$conf->{$node}->{vm}};
+        $remote_conf = {
+            name => $node
+            ,host=> $conf->{$node}->{host}
+        };
+        $remote_conf->{public_ip} = $conf->{$node}->{public_ip}
+            if $conf->{$node}->{public_ip};
+        last;
+    }
+    if (! $remote_conf) {
         diag("SKIPPED: No $vm_name section in $FILE_CONFIG_REMOTE");
         return ;
     };
-    for my $field ( qw(host user password security public_ip name)) {
-        delete $remote_conf->{$field};
-    }
-    die "Unknown fields in remote_conf $vm_name, valids are : host user password name\n"
-        .Dumper($remote_conf)   if keys %$remote_conf;
 
-    $remote_conf = LoadFile($FILE_CONFIG_REMOTE);
     ok($remote_conf->{public_ip} ne $remote_conf->{host},
             "Public IP must be different from host at $FILE_CONFIG_REMOTE")
         if defined $remote_conf->{public_ip};
@@ -286,7 +301,7 @@ sub remote_config {
     $remote_conf->{public_ip} = '' if !exists $remote_conf->{public_ip};
 
     lock_hash(%$remote_conf);
-    return $remote_conf->{$vm_name};
+    return $remote_conf;
 }
 
 sub remote_config_nodes {
@@ -309,12 +324,11 @@ sub remote_config_nodes {
     return $conf;
 }
 
-sub _remove_old_domains_vm {
-    my $vm_name = shift;
+sub _remove_old_domains_vm($vm_name) {
 
+    confess "Undefined vm_name" if !defined $vm_name;
 
     my $domain;
-
     my $vm;
 
     if (ref($vm_name)) {
@@ -673,6 +687,7 @@ sub clean {
     }
     _clean_db();
     _clean_file_config();
+    shutdown_nodes();
 }
 
 sub _clean_db {
@@ -691,11 +706,7 @@ sub _clean_db {
 }
 
 sub clean_remote {
-    return if ! -e $FILE_CONFIG_REMOTE;
-
-    my $conf;
-    eval { $conf = LoadFile($FILE_CONFIG_REMOTE) };
-    return if !$conf;
+    my $conf = _load_remote_config() or return;
     for my $vm_name (keys %$conf) {
         my $vm;
         eval { $vm = rvd_back->search_vm($vm_name) };
@@ -769,6 +780,7 @@ sub remove_old_user_ldap {
 sub search_id_iso {
     my $name = shift;
     connector() if !$CONNECTOR;
+    rvd_back();
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
         ." WHERE name like ?"
     );
@@ -860,10 +872,8 @@ sub _domain_node($node) {
 }
 
 sub hibernate_node($node) {
-    diag("hibernate node ".$node->type." ".$node->name);
     if ($node->is_active) {
         for my $domain ($node->list_domains()) {
-            diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
     }
@@ -885,7 +895,6 @@ sub hibernate_node($node) {
 
 sub shutdown_node($node) {
 
-    diag("shutdown node ".$node->type." ".$node->name);
     if ($node->is_active) {
         $node->run_command("service lightdm stop");
         $node->run_command("service gdm stop");
@@ -914,12 +923,13 @@ sub shutdown_node($node) {
 sub start_node($node) {
 
     confess "Undefined node"    if !defined $node;
-    diag("start node ".$node->type." ".$node->name);
     confess "Undefined node " if!$node;
 
     $node->disconnect;
     if ( $node->_do_is_active ) {
-        $node->connect && return;
+        my $connect;
+        eval { $connect = $node->connect };
+        return if $connect;
         warn "I can't connect";
     }
 
@@ -929,7 +939,7 @@ sub start_node($node) {
 
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
-    for ( 1 .. 30 ) {
+    for ( 1 .. 60 ) {
         last if $node->ping ;
         sleep 1;
         diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
@@ -937,12 +947,17 @@ sub start_node($node) {
 
     is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
-    for ( 1 .. 20 ) {
-        last if $node->_do_is_active;
+    for ( 1 .. 60 ) {
+        my $is_active;
+        eval {
+            $node->connect();
+            $is_active = $node->is_active(1)
+        };
+        warn $@ if $@;
+        last if $is_active;
         sleep 1;
         diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
     }
-
     is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
     my $connect;
@@ -959,6 +974,12 @@ sub start_node($node) {
 
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
+    $node->is_active(1);
+    for ( 1 .. 60 ) {
+        my $node2 = Ravada::VM->open(id => $node->id);
+        last if $node2->is_active(1);
+        diag("Waiting for node ".$node->name." active ...")  if !($_ % 10);
+    }
 }
 
 sub remove_node($node) {
@@ -1092,17 +1113,42 @@ sub remote_node($vm_name) {
     }
 }
 
+sub remote_node_2($vm_name) {
+    my $remote_config = _load_remote_config();
+
+    my @nodes;
+    for my $name ( sort keys %$remote_config ) {
+        if ( !grep /^$vm_name$/, @{ $remote_config->{$name}->{vm}} ) {
+            warn "Remote test node $name doesn't support $vm_name "
+                .Dumper($remote_config->{$name});
+            next;
+        }
+        my %config = %{$remote_config->{$name}};
+        $config{name} = $name;
+        delete $config{vm};
+        push @nodes,(_do_remote_node($vm_name, \%config));
+    }
+    return @nodes;
+}
+
 sub _do_remote_node($vm_name, $remote_config) {
     my $vm = rvd_back->search_vm($vm_name);
 
     my $node;
     my @list_nodes0 = rvd_front->list_vms;
 
+    if (! $remote_config->{public_ip}) {
+        unlock_hash(%$remote_config);
+        delete $remote_config->{public_ip};
+        lock_hash(%$remote_config);
+    }
     eval { $node = $vm->new(%{$remote_config}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($remote_config
-).", got :'"
+        ).", got :'"
         .($@ or '')."'") or return;
+    push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
     ok($node) or return;
+
 
     is($node->type,$vm->type) or return;
 
@@ -1204,7 +1250,7 @@ sub connector {
                 ,{sqlite_allow_multiple_statements=> 1 
                         , AutoCommit => 1
                         , RaiseError => 1
-                        , PrintError => 0
+                        , PrintError => 1
                 });
 
     _create_db_tables($connector);
@@ -1215,8 +1261,15 @@ sub connector {
 
 # this must be in DESTROY because users got removed in END
 sub DESTROY {
+    shutdown_nodes();
     remove_old_user() if $CONNECTOR;
     remove_old_user_ldap() if $CONNECTOR;
+}
+
+sub shutdown_nodes {
+    for my $node (@NODES) {
+        shutdown_node($node);
+    }
 }
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
@@ -1258,6 +1311,48 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
 
     init($fly_config);
     return $fly_config;
+}
+
+sub create_storage_pool($vm) {
+    if (!ref($vm)) {
+        $vm = rvd_back->search_vm($vm);
+    }
+    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
+        .int(rand(10)).int(rand(10)));
+
+    my $capacity = 1 * 1024 * 1024;
+
+    my $pool_name = new_pool_name();
+    my $dir = "/var/tmp/$pool_name";
+
+    mkdir $dir if ! -e $dir;
+
+    my $xml =
+"<pool type='dir'>
+  <name>$pool_name</name>
+  <uuid>$uuid</uuid>
+  <capacity unit='bytes'>$capacity</capacity>
+  <allocation unit='bytes'></allocation>
+  <available unit='bytes'>$capacity</available>
+  <source>
+  </source>
+  <target>
+    <path>$dir</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>"
+;
+    my $pool;
+    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
+    ok($pool,"Expecting a pool , got ".($pool or ''));
+
+    return $pool_name;
+
 }
 
 1;

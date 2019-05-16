@@ -12,6 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use Hash::Util qw(lock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
 use Ravada;
@@ -183,28 +184,15 @@ sub list_machines_user {
     return \@list;
 }
 
+
 sub list_machines($self, $user) {
-    return $self->list_domains() if $user->can_list_machines;
+    return $self->list_domains() if $user->can_list_machines();
 
     my @list = ();
-    if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
-        my $machines = $self->list_bases( id_owner => $user->id );
-        for my $base (@$machines) {
-            confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
-            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
-        }
-        push @list,(@$machines);
-    }
-
-    push @list,(@{$self->list_clones()}) if $user->can_list_clones;
-    if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
-        my $machines = $self->list_domains(id_owner => $user->id);
-        for my $clone (@$machines) {
-            next if !$clone->{id_base};
-            push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
-        }
-        push @list,(@$machines);
-    }
+    push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
+    push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
+    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
+    
     return [@list] if scalar @list < 2;
 
     my %uniq = map { $_->{name} => $_ } @list;
@@ -227,7 +215,9 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
-                                    && !$m->{is_volatile};
+        && !$m->{is_volatile};
+
+        $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
     return $machines;
@@ -325,6 +315,52 @@ sub list_domains($self, %args) {
 
     return \@domains;
 }
+
+=head2 filter_base_without_clones
+
+filters the list of domains and drops all machines that are unacessible and 
+bases with 0 machines accessible
+
+=cut
+
+sub filter_base_without_clones($domains) {
+    my @list;
+    my $size_domains = scalar(@$domains);
+    for (my $i = 0; $i < $size_domains; ++$i) {
+        if (@$domains[$i]->{is_base}) {
+            for (my $j = 0; $j < $size_domains; ++$j) {
+                if ($j != $i && !(@$domains[$j]->{is_base}) && (@$domains[$j]->{id_base} eq @$domains[$i]->{id})) {
+                    push @list, (@$domains[$i]);
+                    last;
+                }
+            }
+        }
+        else {
+            push @list, (@$domains[$i]);
+        }
+    }
+    return \@list;
+}
+
+sub list_own_clones($self, $user) {
+    my $machines = $self->list_bases( id_owner => $user->id );
+    for my $base (@$machines) {
+        confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
+        push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+    }
+    return $machines;
+}
+
+sub list_own($self, $user) {
+    my $machines = $self->list_domains(id_owner => $user->id);
+    for my $clone (@$machines) {
+        next if !$clone->{id_base};
+        push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
+    }
+    return $machines;
+}
+
+
 sub _where(%args) {
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -352,7 +388,6 @@ sub list_clones {
   }
   return \@clones;
 }
-
 sub _remove_domain_db($self, $id) {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($id);
@@ -503,14 +538,14 @@ sub _list_bases_vm($self, $id_node) {
 
 sub _list_machines_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT d.id FROM domains d"
+        "SELECT d.id, name FROM domains d"
         ." WHERE d.status='active'"
         ."  AND d.id_vm=?"
     );
     my @bases;
     $sth->execute($id_node);
-    while ( my ($id_domain) = $sth->fetchrow ) {
-        push @bases,($id_domain);
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @bases,({ id => $id_domain, name => $name });
     }
     $sth->finish;
     return \@bases;
@@ -534,32 +569,6 @@ sub list_iso_images {
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
-
-        delete $row->{device} if $row->{device} && !-e $row->{device};
-        next if $row->{device};
-
-        my ($file);
-        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
-        my $file_re = $row->{file_re};
-        next if !$file_re && !$file || !$vm_name;
-
-        $vm = $self->search_vm($vm_name)    if !$vm;
-
-        next if $row->{device};
-        if ($file) {
-            my $iso_file = $vm->search_volume_path($file);
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-                next;
-            }
-        }
-        if ($file_re) {
-            my $iso_file = $vm->search_volume_path_re(qr($file_re));
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-                next;
-            }
-        }
     }
     $sth->finish;
     return \@iso;
@@ -720,7 +729,7 @@ sub open_vm {
     my $class = "Ravada::VM::$type";
 
     if (my $vm = $VM{$type}) {
-        if (!$vm->ping) {
+        if (!$vm->ping || !$vm->is_alive) {
             $vm->disconnect();
             $vm->connect();
         } else {
@@ -868,9 +877,13 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         next if $command eq 'enforce_limits'
                 || $command eq 'refresh_vms'
                 || $command eq 'refresh_storage'
+                || $command eq 'refresh_machine'
                 || $command eq 'ping_backend'
                 || $command eq 'cleanup'
                 || $command eq 'screenshot'
+                || $command eq 'connect_node'
+                || $command eq 'post_login'
+                || $command eq 'list_network_interfaces'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
@@ -1057,6 +1070,35 @@ sub add_node($self,%arg) {
 
     my $req = Ravada::Request->refresh_vms( _force => 1 );
     return $req->id;
+}
+
+sub list_network_interfaces($self, %args) {
+
+    my $vm_type = delete $args{vm_type}or confess "Error: missing vm_type";
+    my $type = delete $args{type} or confess "Error: missing type";
+    my $user = delete $args{user} or confess "Error: missing user";
+    my $timeout = delete $args{timeout};
+    $timeout = 60 if !defined $timeout;
+
+    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
+
+    my $cache_key = "_interfaces_$type";
+    return $self->{$cache_key} if exists $self->{$cache_key};
+
+    my $req = Ravada::Request->list_network_interfaces(
+        vm_type => $vm_type
+          ,type => $type
+           ,uid => $user->id
+    );
+    if  ( defined $timeout ) {
+        $self->wait_request($req, $timeout);
+    }
+    return [] if $req->status ne 'done';
+
+    my $interfaces = decode_json($req->output());
+    $self->{$cache_key} = $interfaces;
+
+    return $interfaces;
 }
 
 =head2 version

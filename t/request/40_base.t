@@ -40,7 +40,8 @@ sub test_swap {
         name => $name
         ,vm => $vm_name
         ,@ARG_CREATE_DOM
-        ,swap => 128*1024*1024
+        ,swap => 1024*1024
+        ,disk => 1024*1024
     );
     ok($req);
     rvd_back()->_process_all_requests_dont_fork();
@@ -318,7 +319,7 @@ sub test_volumes {
     my @volumes1 = $domain1->list_volumes();
     my @volumes2 = $domain2->list_volumes();
 
-    my %volumes1 = map { $_ => 1 } @volumes1;
+    my %volumes1 = map { $_ => 1 } grep { !/iso$/} @volumes1;
     my %volumes2 = map { $_ => 1 } @volumes2;
 
     ok(scalar keys %volumes1 == scalar keys %volumes2
@@ -436,17 +437,19 @@ sub test_req_remove_base {
 }
 
 sub test_req_remove {
-    my ($vm_name, $name_domain, $name_clone ) = @_;
+    my ($vm_name, $name_domain ) = @_;
     my $vm = rvd_back->search_vm($vm_name);
 
     my $req = Ravada::Request->remove_domain(
         uid => $USER->id
-        , name => $name_clone
+        , name => $name_domain
     );
 
     rvd_back->_process_all_requests_dont_fork();
+    is($req->status,'done');
+    is($req->error,'');
 
-    my $clone_gone = $vm->search_domain($name_clone);
+    my $clone_gone = $vm->search_domain($name_domain);
     ok(!$clone_gone);
 }
 
@@ -535,7 +538,7 @@ for my $vm_name ( qw(KVM Void)) {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = 1 if $vm;
-        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id );
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id, disk => 1024 * 1024 );
 
         if ($vm_name eq 'KVM') {
             my $iso = $vm->_search_iso($ID_ISO);
@@ -571,7 +574,7 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
-        test_req_remove($vm_name, $base_name, $clone_name);
+        test_req_remove($vm_name, $base_name);
 
     };
 }

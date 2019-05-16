@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
 <div id="page-wrapper">
         <!--BASES AND DOMAINS LIST-->
-        <div>
     <div class="page-header">
-        <div class="panel panel-default"
+        <div class="card"
              ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
-             <div class="panel-heading">
+             <div class="card-header">
 %              if ($domain->is_base) {
                  <h2><%=l 'Virtual Machine' %>
                      <b><%= $domain->name %></b>
@@ -25,13 +24,19 @@
 %               }
              </div> <!-- del panel heading-->
              %= include 'main/show_requests'
-             <div class="tab-content">
-                %= include 'main/settings_machine_tabs_head'
-                %= include 'main/settings_machine_tabs_body'
+             <div>
+            <div class="card-body">
+				<div class="row">
+					<div class="col-2">
+						%= include 'main/settings_machine_tabs_head'
+					</div>
+					<div class="col-10">
+						%= include 'main/settings_machine_tabs_body'
+					</div>
+				</div>
             </div>
             <div class="alert alert-danger" ng-show="error">{{error}}</div>
         </div><!-- del panel default-->
-%=   include 'bootstrap/requests'
     </div><!-- del page-header -->
 </div> <!-- del page-wrapper -->
 </div> <!-- del wrapper -->

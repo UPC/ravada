@@ -17,8 +17,7 @@ use_ok('Ravada');
 my $RAVADA = rvd_back('t/etc/ravada_kvm.conf');
 
 my ($DOMAIN_NAME) = new_domain_name();
-my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
-$DOMAIN_NAME_SON =~ s/base_//;
+my $DOMAIN_NAME_SON= new_domain_name();
 
 my $USER = create_user('foo','bar', 1);
 
@@ -65,6 +64,7 @@ sub test_new_domain_from_iso {
                                         , id_iso => search_id_iso('alpine')
                                         ,vm => $BACKEND
                                         ,id_owner => $USER->id
+                                        ,disk => 1024 * 1024
             ) 
     };
     is(''.$@,'') or return;
@@ -100,8 +100,7 @@ sub test_usb {
 
     my @redir = $devices->findnodes('redirdev');
     my $expect = 3;
-    ok(scalar @redir == $expect,"Expecting $expect redirdev, got ".scalar(@redir)
-        ." in ".$devices->toString);
+    ok(scalar @redir == $expect,"Expecting $expect redirdev, got ".scalar(@redir));
 
     for my $model ( 'nec-xhci') {
         my @usb = $devices->findnodes('controller');
@@ -126,7 +125,7 @@ sub test_prepare_base {
     my @list = $RAVADA->list_bases();
     my $name = $domain->name;
 
-    ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
+    ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ");
 
     eval { $domain->prepare_base(user_admin) };
     is($@,'') or exit;
@@ -146,7 +145,7 @@ sub test_prepare_base {
     ok(scalar @list2 == scalar @list + 1 ,"Expecting ".(scalar(@list)+1)." bases"
             ." , got ".scalar(@list2));
 
-    ok(grep(/^$name$/, map { $_->name } @list2),"$name should be a base ".Dumper(\@list2));
+    ok(grep(/^$name$/, map { $_->name } @list2),"$name should be a base ");
 
 }
 
@@ -168,7 +167,7 @@ sub test_new_domain_from_base {
             ,vm => $BACKEND
     );
     };
-    is($@,'');
+    is(''.$@,'',"Expecting no error creating $name");
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
@@ -274,6 +273,7 @@ sub test_dont_allow_remove_base_before_sons {
 ################################################################
 my $vm;
 
+clean();
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 
 SKIP: {
@@ -307,5 +307,5 @@ if (ok($domain,"test domain not created")) {
 }
 
 };
-
+clean();
 done_testing();

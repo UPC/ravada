@@ -34,6 +34,9 @@ sub create_node {
     my @list_nodes0 = rvd_front->list_vms;
 
     eval { $node = $vm->new(%{$REMOTE_CONFIG}) };
+    warn $@ if $@;
+
+    return if !$node;
 
     shutdown_node($node)   if $node->ping && !$node->is_active();
     start_node($node);

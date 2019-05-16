@@ -45,8 +45,8 @@
                     <a ng-click="copy_password(); redirect()"
                         href="{{domain.display_url}}">{{domain.display_url}}</a></li>
                 </li>
-                <li><b>Display IP :</b> 192.168.1.106</li>
-                <li><b>Display Port :</b> 5900</li>
+                <li><b>Display IP :</b> {{domain.display.ip}} </li>
+                <li><b>Display Port :</b> {{domain.display.port}} </li>
             </ul>
             <h3>Machine Information</h3>
             <ul>
@@ -59,21 +59,34 @@
             </ul>
             </div>
             <div ng-show="domain.is_active">
+                <div>
                 <a type="button" class="btn btn-success"
+                    ng-show="!domain.display.tls_port"
                     ng-click="view_clicked=true; copy_password(); redirect();"
                     href="/machine/display/{{domain.id}}.vv">
                         <b><%=l 'view'%></b></a>
-                <i><%=l 'Press SHIFT + F12 to exit' %></i>
-                <br/>
+
+                <a type="button" class="btn btn-success" ng-view="domain,display.tls_port"
+                    ng-show="domain.display.tls_port"
+                    ng-click="view_clicked_tls=true; copy_password(); redirect();"
+                    href="/machine/display-tls/{{domain.id}}-tls.vv">
+                        <b><%=l 'view'%></b></a>
+                </div>
+                <div>
                 <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
                 </span>
+                <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.vv</b> <%=l 'in your downloads folder.' %>
+                </span>
+                <br/>
+                <i><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
+                </div>
             </div>
         </div>
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
                 <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.'%>
-                 <button type="submit" onclick="location.reload('forceGet')"><%=l 'Start again'%></button>
+                 <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again'%></button>
                 </div>
             </div>
 

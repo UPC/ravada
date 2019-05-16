@@ -10,8 +10,8 @@
         <div>
         
             <div class="page-header">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card">
+                    <div class="card-header">
                         <h2>Request <%= $request->{command} %> <%= $request->args->{name} %> <%= $request->{status} %></h2>
                         <p>
                             <a href="/request/<%= $request->{id} %>.html">Refresh</a>

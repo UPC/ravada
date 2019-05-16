@@ -46,6 +46,41 @@ sub test_change_owner {
     $USER2->remove();
 }
 
+sub test_start_clones {
+    my $vm_name = shift;
+    my $ravada = Ravada->new(@ARG_RVD);
+    my $vm = $ravada->search_vm($vm_name);
+    ok($vm,"I can't find VM $vm_name") or return;
+    diag("Testing start clones");
+    my $name = new_domain_name();
+    my $user_name = $USER->id;
+    my $domain = $vm->create_domain(name => $name
+                    , id_owner => $user_name
+                    , arg_create_dom($vm_name));
+    my $clone1 = $domain->clone( user=>$USER, name=>new_domain_name() );
+    my $clone2 = $domain->clone( user=>$USER, name=>new_domain_name() );
+    my $clone3 = $domain->clone( user=>$USER, name=>new_domain_name() );
+    is($clone1->is_active,0);
+    is($clone2->is_active,0);
+    is($clone3->is_active,0);
+    my $req = Ravada::Request->start_clones(uid => $USER->id, id_domain => $domain->id, remote_ip => '127.0.0.1' );
+    rvd_back->_process_all_requests_dont_fork(); #we make sure that the sql has updated.
+    is($req->status,'done');
+    is($req->error,'');
+
+    # The first requests creates 3 more requests, process them
+    rvd_back->_process_all_requests_dont_fork();
+    is($clone1->is_active,1);
+    is($clone2->is_active,1);
+    is($clone3->is_active,1);
+
+    $clone1->remove(user_admin);
+    $clone2->remove(user_admin);
+    $clone3->remove(user_admin);
+
+    $domain->remove(user_admin);
+}
+
 sub test_vm_connect {
     my $vm_name = shift;
     my $host = (shift or 'localhost');
@@ -171,6 +206,32 @@ sub test_pause_domain {
 
     ok($domain->is_active,"[$vm_name] Expecting domain active, got ".$domain->is_active);
 
+}
+
+sub test_shutdown {
+    my $vm = shift;
+
+    return if $vm->type eq 'Void';
+
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+
+    my $req = Ravada::Request->shutdown_domain(uid => user_admin->id
+        , id_domain => $domain->id
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my @reqs = $domain->list_requests(1);
+    ok(scalar @reqs,$domain->name);
+
+    $domain->shutdown_now(user_admin);
+
+    ok(!$domain->is_active);
+    rvd_back->_remove_unnecessary_downs($domain);
+    @reqs = $domain->list_requests(1);
+    ok(!scalar @reqs,$domain->name) or exit;
+
+    $domain->remove(user_admin);
 }
 
 sub test_shutdown_paused_domain {
@@ -457,7 +518,7 @@ sub test_vm_in_db {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names() ) {
 
   my $remote_conf = remote_config ($vm_name);
   my @conf = (undef, { host => 'localhost' });
@@ -493,9 +554,15 @@ for my $vm_name (qw( Void KVM )) {
         use_ok($CLASS) or next;
         test_vm_in_db($vm_name, $conf)    if $conf;
 
+        test_shutdown($vm);
+
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);
         test_change_owner($vm_name);
+
+        test_start_clones($vm_name);
+        test_vm_connect($vm_name);
+        test_search_vm($vm_name);
 
         test_remove_domain_already_gone($vm_name);
 

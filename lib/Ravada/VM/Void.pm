@@ -74,42 +74,72 @@ sub create_domain {
     my %args = @_;
 
     croak "argument name required"       if !$args{name};
-    croak "argument id_owner required"       if !$args{id_owner};
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
 
+    my $volatile = delete $args{volatile};
+    my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
                                            , _vm => $self
     );
+    my ($out, $err) = $self->run_command("/usr/bin/test",
+         "-e ".$domain->_config_file." && echo 1" );
+    chomp $out;
+    die "Error: Domain $args{name} already exists " if $out;
+    $domain->_set_default_info();
+    $domain->_store( autostart => 0 );
+    $domain->_store( is_active => $active );
+    $domain->set_memory($args{memory}) if $args{memory};
 
-    $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
+    $domain->_insert_db(name => $args{name} , id_owner => $user->id
         , id_vm => $self->id
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {
-        my $owner = Ravada::Auth::SQL->search_by_id($args{id_owner});
+        my $owner = $user;
         my $domain_base = $self->search_domain_by_id($args{id_base});
 
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
 
         for my $file_base ($domain_base->list_files_base) {
-            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*?)(\..*)};
-            my $new_name = "$vol_name-$args{name}$ext";
+            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.SWAP\..*)};
+            ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.*)} if !$dir;
+            my $new_name = "$vol_name-$args{name}-".Ravada::Utils::random_name(2).$ext;
             $domain->add_volume(name => $new_name
-                                , path => "$dir/$new_name"
+                                , capacity => 1024
+                                , file => "$dir/$new_name"
                                  ,type => 'file');
         }
-        $domain->start(user => $owner)    if $owner->is_temporary;
+        my $drivers = {};
+        $drivers = $domain_base->_value('drivers');
+        $domain->_store( drivers => $drivers );
     } else {
         my ($file_img) = $domain->disk_device();
-        $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
-                        , path => $file_img
+        my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".img";
+        $file_img =~ m{.*/(.*)} if $file_img;
+        $domain->add_volume(name => $vda_name
+                        , capacity => ( $args{disk} or 1024)
+                        , file => $file_img
                         , type => 'file'
                         , target => 'vda'
+        );
+        my $cdrom_file = $domain->_config_dir()."/$args{name}-cdrom-"
+            .Ravada::Utils::random_name(4).".iso";
+        my ($cdrom_name) = $cdrom_file =~ m{.*/(.*)};
+        $domain->add_volume(name => $cdrom_name
+                        , file => $cdrom_file
+                        , device => 'cdrom'
+                        , type => 'cdrom'
+                        , target => 'hdc'
         );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
         $domain->_store( is_active => 0 );
+
+        $domain->_store( is_active => 1 ) if $volatile || $user->is_temporary;
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
@@ -267,7 +297,7 @@ sub refresh_storage_pools {
 }
 
 sub list_storage_pools {
-    return dir_img();
+    return 'default';
 }
 
 sub is_alive($self) {
@@ -291,6 +321,18 @@ sub free_memory {
     return $memory;
 }
 
+sub _fetch_dir_cert {
+    confess "TODO";
+}
+
+sub free_disk($self, $storage_pool = undef) {
+    my $df = `df`;
+    for my $line (split /\n/, $df) {
+        my @info = split /\s+/,$line;
+        return $info[3] * 1024 if $info[5] eq '/';
+    }
+    die "Not found";
+}
 #########################################################################3
 
 1;

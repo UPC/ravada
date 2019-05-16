@@ -118,7 +118,7 @@ a:focus {
 
 @media(min-width:768px) {
     .navbar-custom {
-        padding: 20px 0;
+        padding: -1px 0;
         border-bottom: 0;
         letter-spacing: 1px;
         background: 0 0;
@@ -176,46 +176,6 @@ a:focus {
     }
 }
 
-.btn-circle {
-    width: 70px;
-    height: 70px;
-    margin-top: 3em;
-    padding: 7px 16px;
-    border: 2px solid #fff;
-    border-radius: 100%!important;
-    font-size: 40px;
-    color: #fff;
-    background: 0 0;
-    -webkit-transition: background .3s ease-in-out;
-    -moz-transition: background .3s ease-in-out;
-    transition: background .3s ease-in-out;
-}
-
-.btn-circle:hover,
-.btn-circle:focus {
-    outline: 0;
-    color: #fff;
-    background: rgba(255,255,255,.1);
-}
-
-.btn-circle i.animated {
-    -webkit-transition-property: -webkit-transform;
-    -webkit-transition-duration: 1s;
-    -moz-transition-property: -moz-transform;
-    -moz-transition-duration: 1s;
-}
-
-.btn-circle:hover i.animated {
-    -webkit-animation-name: pulse;
-    -moz-animation-name: pulse;
-    -webkit-animation-duration: 1.5s;
-    -moz-animation-duration: 1.5s;
-    -webkit-animation-iteration-count: infinite;
-    -moz-animation-iteration-count: infinite;
-    -webkit-animation-timing-function: linear;
-    -moz-animation-timing-function: linear;
-}
-
 @-webkit-keyframes pulse {
     0% {
         -webkit-transform: scale(1);
@@ -254,18 +214,6 @@ a:focus {
     padding-top: 100px;
 }
 
-.download-section {
-    width: 100%;
-    padding: 50px 0;
-    color: #fff;
-    background: url(../img/downloads-bg.jpg) no-repeat center center scroll;
-    background-color: #000;
-    -webkit-background-size: cover;
-    -moz-background-size: cover;
-    background-size: cover;
-    -o-background-size: cover;
-}
-
 #map {
     width: 100%;
     height: 200px;
@@ -277,42 +225,10 @@ a:focus {
         padding-top: 250px;
     }
 
-    .download-section {
-        padding: 100px 0;
-    }
-
     #map {
         height: 400px;
         margin-top: 250px;
     }
-}
-
-.btn {
-    border-radius: 0;
-    text-transform: uppercase;
-    font-family: Montserrat,"Helvetica Neue",Helvetica,Arial,sans-serif;
-    font-weight: 400;
-    -webkit-transition: all .3s ease-in-out;
-    -moz-transition: all .3s ease-in-out;
-    transition: all .3s ease-in-out;
-}
-
-.btn-default {
-    border: 1px solid #42dca3;
-    color: #42dca3;
-    background-color: transparent;
-}
-
-.btn-default:hover,
-.btn-default:focus {
-    border: 1px solid #42dca3;
-    outline: 0;
-    color: #000;
-    background-color: #42dca3;
-}
-
-ul.banner-social-buttons {
-    margin-top: 0;
 }
 
 @media(max-width:1199px) {

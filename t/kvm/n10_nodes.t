@@ -17,7 +17,6 @@ use_ok('Ravada');
 init();
 my $USER = create_user("foo","bar");
 
-my $REMOTE_CONFIG;
 ##########################################################
 
 sub test_node_renamed {
@@ -59,26 +58,13 @@ sub test_node_renamed {
 
 }
 
-sub test_node {
-    my $vm_name = shift;
-
-    die "Error: missing host in remote config\n ".Dumper($REMOTE_CONFIG)
-        if !$REMOTE_CONFIG->{host};
+sub test_node($vm_name,$node) {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $node;
     my @list_nodes0 = rvd_front->list_vms;
 
-    eval { $node = $vm->new(%{$REMOTE_CONFIG}) };
-    ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($REMOTE_CONFIG).", got :'"
-        .($@ or '')."'") or return;
-    ok($node) or return;
-
     is($node->type,$vm->type) or return;
-
-    is($node->host,$REMOTE_CONFIG->{host});
-    is($node->name,$REMOTE_CONFIG->{name}) or return;
 
     eval { $node->ping };
     is($@,'',"[$vm_name] ping ".$node->name);
@@ -115,15 +101,14 @@ sub test_node {
 
     my @list_nodes = $vm->list_nodes();
     is(scalar @list_nodes, 2,"[$vm_name] Expecting nodes") or return;
+    ok(ref($list_nodes[0])) or exit;
+    ok(ref($list_nodes[1])) or exit;
 
-    my ($node_remote) = grep { $_->name eq $REMOTE_CONFIG->{name}} @list_nodes;
-    ok($node_remote, "[$vm_name] Expecting node $REMOTE_CONFIG->{name} in back->list_nodes")
-        or return;
+    my ($node_remote) = grep { !$_->is_local } @list_nodes;
     ok($node_remote->{type} eq $vm_name);
     my @list_nodes2 = rvd_front->list_vms;
-    ($node_remote) = grep { $_->{name} eq $REMOTE_CONFIG->{name}} @list_nodes2;
-    ok($node_remote, "[$vm_name] Expecting node $REMOTE_CONFIG->{name} in front->list_vms")
-        or return;
+
+    ($node_remote) = grep { !$_->{is_local} } @list_nodes2;
     ok($node_remote->{type} eq $vm_name);
     return $node;
 }
@@ -192,12 +177,8 @@ sub test_domain {
 
     my $local_ip = $node->ip;
 
-    $local_ip = $REMOTE_CONFIG->{public_ip}
-        if $REMOTE_CONFIG->{public_ip};
     like($clone->display(user_admin),qr($local_ip));
 
-    diag("SKIPPED: Add public_ip to remote_vm.conf to test nodes with 2 IPs")
-        if !exists $REMOTE_CONFIG->{public_ip};
     my ($local_port) = $clone->display(user_admin) =~ m{:(\d+)};
     test_iptables($node, $remote_ip, $local_ip, $local_port)  if $remote_ip;
     return $clone;
@@ -690,7 +671,7 @@ sub test_clone_make_base {
 
     $clone->prepare_base(user_admin);
     is($clone->base_in_vm($vm->id),1);
-    is($clone->base_in_vm($node->id),undef);
+    is($clone->base_in_vm($node->id),0);
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -727,7 +708,7 @@ sub test_bases_different_storage_pools {
     is($domain->base_in_vm($node->id), undef);
 
     eval {$domain->migrate($node) };
-    like($@, qr'storage pools');
+    like($@, qr'storage pool.*not found'i);
     is($domain->base_in_vm($node->id), undef);
 
     _enable_storage_pools($node);
@@ -884,6 +865,27 @@ sub test_remove_base($node) {
 
     $domain->remove(user_admin);
 }
+
+sub test_remove_base_main($node) {
+
+    my $vm = rvd_back->search_vm($node->type, 'localhost');
+    my $domain = create_domain($vm);
+    $domain->prepare_base(user_admin);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),1);
+
+    $domain->remove_base(user_admin);
+    $domain->prepare_base(user_admin);
+
+    is($domain->base_in_vm($vm->id),1);
+    is($domain->base_in_vm($node->id),0) or exit;
+
+    $domain->remove(user_admin);
+}
+
 
 sub test_node_inactive($vm_name, $node) {
 
@@ -1054,7 +1056,7 @@ sub _shutdown_nicely($clone) {
 
 sub _write_in_volumes($clone) {
     for my $file ($clone->list_volumes) {
-        $clone->_vm->run_command("echo hola > $file");
+        $clone->_vm->run_command("echo 'foo: hola' >> $file");
     }
 }
 
@@ -1138,24 +1140,20 @@ eval { $vm = rvd_back->search_vm($vm_name) };
 SKIP: {
 
     my $msg = "SKIPPED: $vm_name virtual manager not found ".($@ or '');
-    $REMOTE_CONFIG = remote_config($vm_name);
-    if (!keys %$REMOTE_CONFIG) {
-        my $msg = "skipped, missing the remote configuration for $vm_name in the file "
-            .$Test::Ravada::FILE_CONFIG_REMOTE;
-        diag($msg);
-        skip($msg,10);
-    }
-
+    my $node;
     if ($vm && $>) {
         $msg = "SKIPPED: Test must run as root";
         $vm = undef;
+    } else {
+        $node = remote_node($vm_name);
+        $node = test_node($vm_name, $node);
+        $vm = undef if !$node;
     }
 
     diag($msg)      if !$vm;
     skip($msg,10)   if !$vm;
 
     diag("Testing remote node in $vm_name");
-    my $node = test_node($vm_name)  or next;
 
     ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
         remove_node($node);
@@ -1163,6 +1161,10 @@ SKIP: {
     };
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+    is($vm->shared_storage($node,'/var/tmp/'),0) or exit;
+    test_migrate_back($node);
+
+    test_remove_base_main($node);
     test_status($node);
     test_bases_node($vm_name, $node);
     test_clone_not_in_node($vm_name, $node);

@@ -287,29 +287,81 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.updatePromise = $interval($scope.updateMessages,3000);
   };
 
-    function manage_nodes($scope, $http, $interval) {
+    function manage_nodes($scope, $http, $interval, $timeout) {
         $scope.list_nodes = function() {
-            $http.get('/list_nodes.json').then(function(response) {
-                $scope.nodes = response.data;
-            });
+            if (!$scope.modal_open) {
+                $http.get('/list_nodes.json').then(function(response) {
+                    $scope.nodes = response.data;
+                });
+            }
         };
         $scope.node_enable=function(id) {
-            $http.get('/node/enable/'+id+'.json');
-            $scope.list_nodes();
+            $scope.modal_open = false;
+            $http.get('/node/enable/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
+
         };
         $scope.node_disable=function(id) {
-            $http.get('/node/disable/'+id+'.json');
-            $scope.list_nodes();
+            $scope.modal_open = false;
+            $http.get('/node/disable/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
         };
         $scope.node_remove=function(id) {
             $http.get('/node/remove/'+id+'.json');
             $scope.list_nodes();
         };
+        $scope.confirm_disable_node = function(id , n_machines) {
+            if (n_machines > 0 ) {
+                $scope.modal_open = true;
+                $('#confirm_disable_'+id).modal({show:true})
+            } else {
+                $scope.node_disable(id);
+            }
+        };
+        $scope.node_start=function(id) {
+            $scope.modal_open = false;
+            $http.get('/node/start/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
+
+        };
+        $scope.node_shutdown=function(id) {
+            $scope.modal_open = false;
+            $http.get('/node/shutdown/'+id+'.json').then(function() {
+                $scope.list_nodes();
+            });
+        };
+        $scope.node_connect = function(id) {
+            $scope.id_req = undefined;
+            $scope.request = undefined;
+            $http.get('/node/connect/'+id).then(function(response) {
+                $scope.id_req= response.data.id_req;
+                $timeout(function() {
+                    $scope.fetch_request($scope.id_req);
+                }, 2 * 1000 );
+            });
+        };
+        $scope.fetch_request = function(id_req) {
+            $http.get('/request/'+id_req+'.json').then(function(response) {
+                $scope.request = response.data;
+                if ($scope.request.status != "done") {
+                    $timeout(function() {
+                        $scope.fetch_request(id_req);
+                    }, 3 * 1000 );
+                } else {
+                    $scope.list_nodes()
+                }
+            });
+        };
+
+        $scope.modal_open = false;
         $scope.list_nodes();
         $interval($scope.list_nodes,30 * 1000);
     };
 
-    function newNodeCtrl($scope, $http, $interval) {
+    function newNodeCtrl($scope, $http, $timeout) {
         $http.get('/list_vm_types.json').then(function(response) {
             $scope.backends = response.data;
             $scope.backend = response.data[0];
@@ -330,6 +382,26 @@ ravadaApp.directive("solShowMachine", swMach)
             function unique_callback() {
                 $scope.name_duplicated=false;
             }
+        };
+        $scope.connect_node = function(backend, address) {
+            $scope.id_req = undefined;
+            $scope.request = undefined;
+            $http.get('/node/connect/'+backend+'/'+address).then(function(response) {
+                $scope.id_req= response.data.id_req;
+                $timeout(function() {
+                    $scope.fetch_request($scope.id_req);
+                }, 2 * 1000 );
+            });
+        };
+        $scope.fetch_request = function(id_req) {
+            $http.get('/request/'+id_req+'.json').then(function(response) {
+                $scope.request = response.data;
+                if ($scope.request.status != "done") {
+                    $timeout(function() {
+                        $scope.fetch_request(id_req);
+                    }, 3 * 1000 );
+                }
+            });
         };
     };
 }());

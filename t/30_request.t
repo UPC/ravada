@@ -249,10 +249,6 @@ sub test_requests_by_domain {
     is($req1->status , 'done');
     is($req2->status , 'done');
 
-    is($@,'');
-    like($req_clone->error,qr(has \d req)) or exit;
-    is($req_clone->status , 'retry');
-
     is($req4->status , 'done');
     is($domain->is_base,1) or exit;
 
@@ -316,7 +312,7 @@ for my $vm_name ( vm_names() ) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;
-        @ARG_CREATE_DOM = ( id_iso => search_id_iso('alpine'), vm => $vm_name, id_owner => $USER->id )       if $vm;
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('alpine'), vm => $vm_name, id_owner => $USER->id , disk => 1024 * 1024 )       if $vm;
     };
 
     SKIP: {

@@ -172,7 +172,23 @@
                             $scope.refresh_machine();
                             $scope.init_ldap_access();
                             $scope.list_ldap_attributes();
+                            $scope.list_interfaces();
+                            $scope.hardware_types = Object.keys(response.data.hardware);
                 });
+          };
+          $scope.list_interfaces = function() {
+            if (! $scope.network_nats) {
+                $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
+                    .then(function(response) {
+                        $scope.network_nats = response.data;
+                });
+            }
+            if (! $scope.network_bridges ) {
+                $http.get('/network/interfaces/'+$scope.showmachine.type+'/bridge')
+                    .then(function(response) {
+                        $scope.network_bridges= response.data;
+                });
+            }
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
@@ -195,6 +211,13 @@
             });
           };
             */
+          $scope.machine_info = function(id) {
+               $http.get('/machine/info/'+$scope.showmachineId+'.json')
+                    .then(function(response) {
+                            $scope.showmachine=response.data;
+                            $scope.list_nodes();
+                    });
+          };
           $scope.remove = function(machineId) {
             $http.get('/machine/remove/'+machineId+'.json');
           };
@@ -289,8 +312,10 @@
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.refresh_machine = function() {
-            if(!$scope.showmachine) { return }
+            if(!$scope.showmachine || $scope.refreshing_machine) { return }
+            $scope.refreshing_machine = true;
             $http.get('/machine/requests/'+$scope.showmachine.id+'.json').then(function(response) {
+              $scope.refreshing_machine = false;
               $scope.requests = response.data;
               var pending = 0;
               for (var i in response.data) {
@@ -306,12 +331,12 @@
               }
               if( pending < $scope.pending_before) {
                   if($scope.showmachine) {
-                      $scope.init($scope.showmachine.id);
-                      $scope.list_nodes();
+                      $scope.machine_info($scope.showmachine.id);
                   }
                   setTimeout(function () {
-                    $scope.init($scope.showmachine.id);
+                    $scope.machine_info($scope.showmachine.id);
                   }, 2000);
+
               } else {
                 setTimeout(function () {
                     $scope.refresh_machine();
@@ -320,16 +345,35 @@
               $scope.pending_before = pending;
             });
           };
-          $scope.add_hardware = function(hardware, number) {
-              $http.get('/machine/hardware/add/'
-                      +$scope.showmachine.id+'/'+hardware+'/'+number).then(function(response) {
+          $scope.add_hardware = function(hardware, number, extra) {
+              if (hardware == 'disk' && ! extra) {
+                  $scope.show_new_disk = true;
+                  return;
+              }
+              if ( hardware == 'disk' && extra.device == 'cdrom') {
+                  extra.driver = 'ide';
+              }
+              $http.post('/machine/hardware/add/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                            ,'hardware': hardware
+                            ,'number': number
+                            ,'data': extra
+                      })
+              ).then(function(response) {
                           $scope.pending_before++;
                           if (!$scope.requests || !$scope.requests.length) {
                             $scope.refresh_machine();
                           }
                       });
           };
-          $scope.remove_hardware = function(hardware, index) {
+          $scope.remove_hardware = function(hardware, index, item, confirmation) {
+            if (hardware == 'disk') {
+                if (!confirmation) {
+                    item.remove = !item.remove;
+                    return;
+                }
+            }
+            item.remove = false;
               $http.get('/machine/hardware/remove/'
                       +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
                             $scope.pending_before++;
@@ -342,7 +386,6 @@
           $scope.list_ldap_attributes= function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
-              console.log($scope.cn);
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                   $scope.ldap_attributes = response.data.attributes;
               });
@@ -401,7 +444,55 @@
             });
 
           };
-            $scope.removed_hardware = [];
+            $scope.change_disk = function(id_machine, index ) {
+                var new_settings={
+                  driver: $scope.showmachine.hardware.disk[index].driver,
+                  capacity: $scope.showmachine.hardware.disk[index].info.capacity,
+                  boot: $scope.showmachine.hardware.disk[index].info.boot,
+                  file: $scope.showmachine.hardware.disk[index].file,
+                };
+                console.log(new_settings);
+                $http.post('/machine/hardware/change'
+                    ,JSON.stringify({
+                        'id_domain': id_machine
+                        ,'hardware': 'disk'
+                           ,'index': index
+                            ,'data': new_settings
+                    })
+                ).then(function(response) {
+                      $scope.getReqs();
+                });
+
+            };
+            $scope.change_network = function(id_machine, index ) {
+                var new_settings ={
+                    driver: $scope.showmachine.hardware.network[index].driver,
+                    type: $scope.showmachine.hardware.network[index].type,
+                };
+                if ($scope.showmachine.hardware.network[index].type == 'NAT' ) {
+                    new_settings.network=$scope.showmachine.hardware.network[index].network;
+                }
+                if ($scope.showmachine.hardware.network[index].type == 'bridge' ) {
+                    new_settings.bridge=$scope.showmachine.hardware.network[index].bridge;
+                }
+                $http.post('/machine/hardware/change'
+                    ,JSON.stringify({
+                        'id_domain': id_machine
+                        ,'hardware': 'network'
+                           ,'index': index
+                            ,'data': new_settings
+                    })
+                ).then(function(response) {
+                      $scope.getReqs();
+                });
+            };
+            $scope.add_disk = {
+                device: 'disk',
+                driver: 'virtio',
+                capacity: '1G',
+                allocation: '0.1G'
+            };
+            $scope.disk_remove = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);

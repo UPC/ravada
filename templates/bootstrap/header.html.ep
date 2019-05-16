@@ -10,13 +10,13 @@
     <title>Ravada VDI</title>
 
 % if ( !$fallback ) {
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css">
+	<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.7/css/bootstrap-select.css">
     <link href="https://use.fontawesome.com/releases/v5.0.7/css/all.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/introjs.css" rel="stylesheet" type="text/css">
-    <script src="https://cdn.ckeditor.com/4.8.0/standard/ckeditor.js"></script>
+	<script src="https://cdn.ckeditor.com/4.11.3/standard/ckeditor.js"></script>
 % } else {
 	<link rel="stylesheet" href="/fallback/bootstrap/dist/css/bootstrap.min.css" type="text/css">
     <link rel="stylesheet" href="/fallback/morris.js/morris.css" type="text/css">
