@@ -109,15 +109,15 @@
             </div>
             <div class="form-group row">
                 <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
-                    <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning fade in">
+                    <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning" role="alert">
                         <strong><%=l "Error" %></strong> <%=l 'Machine name is required.' %>
                     </div>
-                    <div ng-show="new_machineForm.name.$error.maxlength" class="alert alert-warning fade in">
+                    <div ng-show="new_machineForm.name.$error.maxlength" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l "Machine name can\'t exceed 20 characters." %>
                     </div>
                 </div>
                 <div ng-show="new_machineForm.$submitted || new_machineForm.backend.$touched">
-                    <div ng-show="new_machineForm.backend.$error.required" class="alert alert-warning fade in">
+                    <div ng-show="new_machineForm.backend.$error.required" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'Backend selection is required.' %>
                     </div>
                 </div>
@@ -138,20 +138,20 @@
             </div> -->
 
                 <div ng-show="new_machineForm.$submitted || new_machineForm.id_iso.$touched">
-                    <div ng-show="new_machineForm.id_iso.$error.required" class="alert alert-warning fade in">
+                    <div ng-show="new_machineForm.id_iso.$error.required" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'ISO image selection is required.' %>
                     </div>
                 </div>
 
                 <div ng-show="new_machineForm.$submitted || new_machineForm.id_template.$touched">
-                    <div ng-show="new_machineForm.id_template.$error.required" class="alert alert-warning fade in">
+                    <div ng-show="new_machineForm.id_template.$error.required" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'Template selection is required' %>
                     </div>
                 </div>
-                <div ng-show="name_duplicated" class="alert alert-warning">
+                <div ng-show="name_duplicated" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'A machine with that name already exists.' %>
                 </div>
-                <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning fade in">
+                <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
                 </div>
             </div>
