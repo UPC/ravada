@@ -2838,7 +2838,7 @@ Sets a domain option:
 =cut
 
 sub set_option($self, $option, $value) {
-    my %valid_option = map { $_ => 1 } qw( description run_timeout volatile_clones id_owner);
+    my %valid_option = map { $_ => 1 } qw(autostart description run_timeout volatile_clones id_owner);
     die "ERROR: Invalid option '$option'"
         if !$valid_option{$option};
 

@@ -1805,7 +1805,7 @@ sub manage_machine {
         }
     }
 
-    for my $option (qw(description run_timeout volatile_clones id_owner)) {
+    for my $option (qw(autostart description run_timeout volatile_clones id_owner)) {
 
         next if $option eq 'description' && !$c->param('btn_description');
         next if $option ne 'description' && !$c->param('btn_options');
@@ -1817,7 +1817,7 @@ sub manage_machine {
             my $old_value = $domain->_data($option);
             my $value = $c->param($option);
             
-            $value= 0 if $option eq 'volatile_clones' && !$value;
+            $value= 0 if $option =~ /volatile_clones|autostart/ && !$value;
 
             if ( $option eq 'run_timeout' ) {
                 $value = 0 if !$value;

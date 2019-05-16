@@ -2,10 +2,10 @@
     <form class="form" action="<%= $action %>" method="post">
         <div class="form-group">
             <div class="row" ng-show="showmachine.ip">
-                <div class="col-lg-2">
+                <div class="col-lg-3 mt-2">
                     <label class="control-label" for="ram"><%=l 'Internal IP' %></label>
                 </div>
-                <div class="col-lg-2">
+                <div class="col-lg-3">
                     {{showmachine.ip}}
                 </div>
             </div>
@@ -64,6 +64,23 @@
                     <%=l 'Clones created from this machine will be removed on shutdown.' %></small>
                 </div>
             </div>
+            <div class="row" ng-show="!showmachine.id_base">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="autostart"><%=l 'Auto Start' %></label>
+                </div>
+                <div class="col-lg-1">
+                    <input type="checkbox" name="autostart"
+%               my $auto_start = $domain->autostart;
+%               if ( $auto_start){
+                    checked
+%               }
+                    value="1">
+                </div>
+                <div class="col-md-8"><small class="text-secondary">
+                    <%=l 'Virtual Machine will start on host start.' %></small>
+                </div>
+            </div>
+
 %   }
 %   if ($USER->is_admin){
             <div class="row">
