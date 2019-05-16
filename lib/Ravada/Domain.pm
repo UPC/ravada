@@ -301,6 +301,7 @@ sub _start_preconditions{
         if $self->is_base();
 
     my $request;
+    my $id_vm;
     if (scalar @_ %2 ) {
         my @args = @_;
         shift @args;
@@ -308,6 +309,8 @@ sub _start_preconditions{
         my $user = delete $args{user};
         my $remote_ip = delete $args{remote_ip};
         $request = delete $args{request} if exists $args{request};
+        $id_vm = delete $args{id_vm};
+
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
         _allow_manage_args(@_);
@@ -324,7 +327,20 @@ sub _start_preconditions{
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
-        $self->_balance_vm();
+        my $vm;
+        if ($id_vm) {
+            $vm = Ravada::VM->open($id_vm);
+            if ( !$vm->is_alive ) {
+                $vm->disconnect();
+                $vm->connect;
+            }
+        };
+        warn $@ if $@;
+        if ($vm) {
+            $self->_set_vm($vm);
+        } else {
+            $self->_balance_vm();
+        }
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
     } elsif (!$self->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
@@ -3103,7 +3119,9 @@ sub set_base_vm($self, %args) {
                 my ($path) = $file =~ m{(.*/)};
                 next if $vm_local->shared_storage($vm, $path);
                 confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
-                my ($out, $err) = $vm->remove_file($file);
+                my ($out, $err);
+                eval { ($out, $err) = $vm->remove_file($file) };
+                $err = $@ if !$err && $@;
                 warn $err if $err;
             }
         }
