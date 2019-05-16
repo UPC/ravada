@@ -2,7 +2,7 @@
     <form method="post" action="/machine/copy">    
         <div class="form-group">
             <div class="form-group row">
-                <div class="col-md-2">
+                <div class="col-md-2 mt-2">
                     <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
                     <label class="control-label"
                         for="copy_name_{{showmachine.id}}"><%=l 'Name' %></label>
@@ -17,10 +17,10 @@
                </div>
             </div>
             <div class="form-group row">
-                <div class="col-md-2">
+                <div class="col-md-2 mt-2">
                     <label class="control-label" for="copy_ram">RAM (Gb)</label>
                 </div>
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <input class="form-control" name="copy_ram" type="text" size="3" value="1">
                 </div>
             </div>

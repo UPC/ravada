@@ -44,10 +44,10 @@
                     <button ng-click="remove_hardware(name, $index, item, true)"
                         class="btn btn-primary"
                         ng-disabled="confirm_remove !== item.name"
-                    >ok</button>
+                    ><%=l 'Submit' %></button>
                     <button ng-click="item.remove=false;confirm_remove = ''"
-                        class="btn btn-primary"
-                    >cancel</button>
+                        class="btn btn-outline-secondary"
+                    ><%=l 'Cancel' %></button>
                     </p>
                 </div>
                 %= include 'main/manage_machine_edit_net'
@@ -56,7 +56,7 @@
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'bus' %></p>
                         </div>
-                        <div class="col-lg-1">
+                        <div class="col-lg-2">
                             <select ng-model="item.driver"
                             ng-options="model for model in showmachine.drivers['disk']"
                             >
@@ -97,13 +97,13 @@
                    <div class="row">
                         <div class="col-lg-2">
                         </div>
-                        <div class="col-lg-2">
+                        <div class="col-md-12">
                             <button ng-click="item.edit=false;change_disk(showmachine.id, $index)"
                                 class="btn btn-primary"
-                            >ok</button>
+                            ><%=l 'Submit' %></button>
                             <button ng-click="item.edit=false"
-                                class="btn btn-primary"
-                            >cancel</button>
+                                class="btn btn-outline-secondary"
+                            ><%=l 'Cancel' %></button>
                         </div>
                     </div>
                 </div><!-- element ( former li ) -->
@@ -114,16 +114,22 @@
         </div>
     </div>
 
-    <div ng-hide="show_new_disk">
-    <button ng-disabled="pending_requests > 0"
-            ng-click="add_hardware(new_hardware)"
-            class="btn btn-primary">
-        <%=l 'Afegeix '%>
-    </button>
-    <select ng-model="new_hardware"
-        ng-options="type for type in hardware_types"
-    >
-    </select>
+    <div ng-hide="show_new_disk" class="input-group mt-3" style="max-width: 18rem;">
+        <div class="input-group-prepend">
+            <button class="btn btn-primary" 
+                ng-disabled="pending_requests > 0"
+                ng-click="add_hardware(new_hardware)"
+                class="btn btn-primary"
+                type="button">
+            <%=l 'Add'%></button>
+        </div>
+        <div class="custom-file">
+            <select class="custom-select" ng-model="new_hardware"
+                ng-options="type for type in hardware_types"
+            >
+            <option value=""><%=l '-- choose hardware --' %></option>
+            </select>
+        </div>
     </div>
 %= include 'main/manage_machine_new_disk'
 </div>
