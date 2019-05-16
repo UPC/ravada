@@ -975,6 +975,7 @@ sub start_node($node) {
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
     $node->is_active(1);
+    $node->is_enabled(1);
     for ( 1 .. 60 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
         last if $node2->is_active(1);
