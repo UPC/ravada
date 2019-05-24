@@ -797,6 +797,12 @@ sub search_iptable_remote {
     my $local_ip = delete $args{local_ip};
     my $local_port= delete $args{local_port};
     my $jump = (delete $args{jump} or 'ACCEPT');
+    my $table = (delete $args{table} or 'filter');
+    my $chain = (delete $args{chain} or $CHAIN);
+    my $to_dest = delete $args{'to-destination'};
+
+    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
+
     my $iptables = $node->iptables_list();
 
     $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
@@ -805,9 +811,9 @@ sub search_iptable_remote {
     my @found;
 
     my $count = 0;
-    for my $line (@{$iptables->{filter}}) {
+    for my $line (@{$iptables->{$table}}) {
         my %args = @$line;
-        next if $args{A} ne $CHAIN;
+        next if $args{A} ne $chain;
         $count++;
 
         if(
@@ -815,6 +821,8 @@ sub search_iptable_remote {
            && (!defined $remote_ip || exists $args{s} && $args{s} eq $remote_ip )
            && (!defined $local_ip  || exists $args{d} && $args{d} eq $local_ip )
            && (!defined $local_port|| exists $args{dport} && $args{dport} eq $local_port)
+           && (!defined $to_dest   || exists $args{'to-destination'}
+                && $args{'to-destination'} eq $to_dest)
         ){
 
             push @found,($count);
