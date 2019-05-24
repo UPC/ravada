@@ -410,6 +410,12 @@ sub _around_create_domain {
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
+
+        for my $port ( $base->list_ports ) {
+            my %port = %$port;
+            delete @port{'id','id_domain','public_port'};
+            $domain->expose(%port);
+        }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
@@ -1238,7 +1244,6 @@ sub iptables_list($self) {
         push( @{ $ret->{$current_table} }, \@option );
 
     }
-
     return $ret;
 }
 
@@ -1451,6 +1456,48 @@ sub _check_free_disk($self, $size, $storage_pool=undef) {
     ."\n"
     if $size > $free;
 
+}
+sub _list_used_ports_sql($self, $used_port) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports ");
+    $sth->execute();
+    my $port;
+    $sth->bind_columns(\$port);
+
+    while ($sth->fetch ) { $used_port->{$port}++ if defined $port };
+
+}
+
+sub _list_used_ports_ss($self, $used_port) {
+    my @cmd = ("/bin/ss","-tln");
+    my ($out, $err) = $self->run_command(@cmd);
+    for my $line ( split /\n/,$out ) {
+        my ($port) = $line=~ m{^LISTEN.*?\d.\d\:(\d+)};
+        $used_port->{$port}++ if $port;
+    }
+}
+
+sub _list_used_ports_iptables($self, $used_port) {
+    my $iptables = $self->iptables_list();
+    for my $rule ( @{$iptables->{nat}} ) {
+        my %rule = @{$rule};
+        next if !exists $rule{A} || $rule{A} ne 'PREROUTING';
+        $used_port->{dport}++;
+    }
+}
+
+sub _new_free_port($self) {
+    my $used_port = {};
+    $self->_list_used_ports_sql($used_port);
+    $self->_list_used_ports_ss($used_port);
+    $self->_list_used_ports_iptables($used_port);
+
+    my $free_port = 5950;
+    for (;;) {
+        last if !$used_port->{$free_port};
+        $free_port++ ;
+    }
+    return $free_port;
 }
 
 1;

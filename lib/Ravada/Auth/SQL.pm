@@ -667,7 +667,6 @@ sub _load_grants($self) {
         $self->{_grant_disabled}->{$grant_alias} = !$enabled;
     }
     $sth->finish;
-
 }
 
 sub _reload_grants($self) {

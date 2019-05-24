@@ -399,6 +399,39 @@
                   $scope.ldap_verifying = false;
               });
           };
+          $scope.expose = function(port, name, restricted, id_port) {
+              console.log(restricted);
+              if (restricted == "1" || restricted == true) {
+                  restricted = 1;
+              } else {
+                  restricted = 0;
+              }
+              console.log(restricted);
+              $http.post('/request/expose/'
+                  ,JSON.stringify({
+                        'id_domain': $scope.showmachine.id
+                        ,'port': port
+                        ,'name': name
+                        ,'restricted': restricted
+                        ,'id_port': id_port
+                  })
+                ).then(function(response) {
+                    $scope.refresh_machine();
+              });
+              $scope.init_new_port();
+          };
+          $scope.remove_expose = function(port) {
+              $http.post('/request/remove_expose/'
+                  ,JSON.stringify({
+                        'id_domain': $scope.showmachine.id
+                        ,'port': port
+                  })
+                ).then(function(response) {
+                    $scope.refresh_machine();
+              });
+          };
+
+
           $scope.add_ldap_access = function() {
               $http.get('/add_ldap_access/'+$scope.showmachine.id+'/'+$scope.ldap_attribute+'/'
                             +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed
@@ -437,6 +470,11 @@
                   $scope.ldap_attributes_domain  = response.data.list;
                   $scope.ldap_attributes_default = response.data.default;
               });
+          };
+          $scope.init_new_port = function() {
+              $scope.new_port = null;
+              $scope.new_port_name = null;
+              $scope.new_port_restricted = false;
           };
           $scope.list_nodes = function() {
                 $http.get('/list_nodes.json').then(function(response) {

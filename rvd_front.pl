@@ -922,6 +922,19 @@ get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
 };
 ##############################################
 
+post '/request/(:name)/' => sub {
+    my $c = shift;
+
+    my $args = decode_json($c->req->body);
+    warn Dumper($args);
+
+    my $req = Ravada::Request->new_request(
+        $c->stash('name')
+        ,uid => $USER->id
+        ,%$args
+    );
+    return $c->render(json => { ok => 1 });
+};
 
 get '/request/(:id).(:type)' => sub {
     my $c = shift;
