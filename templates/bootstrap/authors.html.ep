@@ -1,6 +1,9 @@
 <ul>
-<li>Angel Aguilera</li>
+<li>Alex Muntada</li>
 <li>Antonio Mesones</li>
+<li>Angel Aguilera</li>
+<li>Carlos Juan</li>
+<li>Daniel Sanchez</li>
 <li>Dayyan O'Brien</li>
 <li>Dito Baskoro</li>
 <li>Fernando Verdugo</li>
@@ -23,8 +26,14 @@
 <li>Pascal Scholz</li>
 <li>Raghav Mittal</li>
 <li>Robert-André Mauchin</li>
+<li>Sandra Marsà</li>
 <li>Sanjiv Lobo</li>
+<li>Shobhit Srivastava</li>
 <li>Tim Fechner</li>
+<li>Wermeille Bastien</li>
 </ul>
 <%=l 'Thanks to:' %>
-<ul><li>Jorge Mata</li></ul>
+<ul>
+    <li>Jorge Mata</li>
+    <li>Francesc Oller<li>
+</ul>
