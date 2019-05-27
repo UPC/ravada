@@ -160,6 +160,7 @@ for my $vm_name ('Void','KVM','LXC') {
     my $req = $RVD_FRONT->create_domain( name => $name 
         , create_args($vm_name)
         , vm => $vm_name
+        , disk => 1024 * 1024
     );
     ok($req, "Request $name not created");
 

@@ -68,7 +68,11 @@
         %= include 'main/vm_monitoring'
     </div>
 % }
-
+% if ( $USER->is_admin()) {
+    <div class="tab-pane fade" id="access" >
+        %= include 'main/machine_access'
+    </div>
+% }
 %if ($USER->is_admin) {
     <div class="tab-pane fade" id="v-pills-base" role="tabpanel" aria-labelledby="v-pills-base-tab">
         %= include 'main/vm_base'

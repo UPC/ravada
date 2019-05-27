@@ -38,6 +38,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
+                    , disk => 1024 * 1024
                     , arg_create_dom($vm_name))
     };
 
