@@ -69,7 +69,7 @@ sub test_ldap {
 
 SKIP: {
     my $ravada = Ravada->new(config => $CONFIG_FILE
-                        , connector => connector);
+                        , connector => connector());
     $ravada->_install();
     my $ldap;
 
@@ -78,6 +78,7 @@ SKIP: {
 
     if ($@ =~ /Bad credentials/) {
         diag("$@\nFix admin credentials in $CONFIG_FILE");
+
     } else {
         diag("Skipped LDAP tests ".($@ or '')) if !$ldap;
     }

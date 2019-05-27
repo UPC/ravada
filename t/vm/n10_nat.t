@@ -36,6 +36,35 @@ sub _search_other_ip($ip) {
     die "I can't find another ip address here";
 }
 
+sub test_route($vm) {
+    my $domain = create_domain($vm);
+
+    my %route = ( '127.0.0.0/24', '127.0.0.1');
+    my $routes = `ip route`;
+    for my $line ( split /\n/, $routes ) {
+        my ($network,$ip) = $line =~ /(^[\d+\.\/]+).*src ([\d+\.]+)/;
+        next if !$network || !$ip;
+        $route{$network} = $ip;
+    }
+
+    for my $network ( sort keys %route ) {
+        my ($client_ip, $last) = $network =~ m{(.*)\.(\d+)/.*};
+        ($client_ip, $last) = $network =~ m{(.*)\.(\d+)}    if !defined $client_ip;
+
+        confess "No last in network '$network' ".($client_ip or 'UNDEF')
+                ." ".($last or 'UNDEF') if !defined $last;
+        while ( $last < 2 || "$client_ip.$last" eq $route{$network} ) {
+            $last++;
+        }
+        $client_ip .= ".$last";
+        $domain->shutdown_now(user_admin) if $domain->is_active;
+        $domain->start(user => user_admin, remote_ip => $client_ip );
+        my $display = $domain->display(user_admin);
+        my ($ip) = $display =~ m{//([\d+\.]+)};
+        is($ip, $route{$network},$vm->type);
+    }
+}
+
 sub test_nat($vm_name) {
     my $domain = create_domain($vm_name);
 
@@ -77,8 +106,12 @@ sub test_nat($vm_name) {
     like($display_ip, qr{\d+\.\d+\.\d+\.\d+});
 
     my $file_config = "/tmp/config_display.yml";
-    DumpFile($file_config,{ display_ip => $display_ip });
-    my $rvd_back = rvd_back($file_config);
+    DumpFile($file_config,{ display_ip => $display_ip, vm => ['Void', 'KVM'] });
+
+    my $rvd_back = Ravada->new(
+        connector => connector()
+        , config => $file_config
+    );
 
     is($rvd_back->display_ip, $display_ip);
     is($rvd_back->search_vm($vm_name)->ip, $display_ip);
@@ -108,8 +141,12 @@ sub test_nat($vm_name) {
     #--------------------------------------------------------------------------------
     # Now with Nat
     #
-    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP });
-    $rvd_back = rvd_back($file_config);
+    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => ['Void', 'KVM'] });
+
+    $rvd_back = Ravada->new(
+        connector => connector()
+        , config => $file_config
+    );
 
     is($rvd_back->nat_ip, $NAT_IP);
     is($rvd_back->search_vm($vm_name)->nat_ip, $NAT_IP);
@@ -187,6 +224,7 @@ for my $vm_name ( 'Void', 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        test_route($vm);
         test_nat($vm_name);
     }
 }

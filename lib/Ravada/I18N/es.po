@@ -1,5 +1,4 @@
 # Translators:
-# Fernando Verdugo, 2017
 # Alexander Salas Bastidas <alexander.salas@gmail.com>, 2018
 # JanFontanet <jan2_@hotmail.es>, 2018
 # Fernando Verdugo, 2019
@@ -297,7 +296,7 @@ msgid "A viewer is required to run the virtual machines."
 msgstr "Se precisa de un visualizador para encender la máquina virtual."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Se precisa de un visualizador para encender la máquina virtual."
+msgstr "Es necesario un visor para ejecutar las máquinas virtuales."
 
 msgid "Virtual Machines"
 msgstr "Máquinas Virtuales"
@@ -569,6 +568,9 @@ msgstr "Esta máquina virtual no se puede eliminar porque tiene"
 
 msgid "clones"
 msgstr "clones"
+
+msgid "Clones"
+msgstr "Clones"
 
 msgid "This machine has not Graphics parameters!"
 msgstr "¡Esta máquina no tiene parámetros Gráficos!"

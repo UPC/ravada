@@ -130,6 +130,7 @@ sub test_req_create_domain_iso {
        ,id_owner => $USER->id
           , disk => 1024 * 1024
              ,vm => $BACKEND
+            ,disk => 1024 * 1024
     );
     ok($req);
     ok($req->status);

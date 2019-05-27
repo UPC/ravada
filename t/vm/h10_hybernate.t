@@ -43,6 +43,7 @@ sub test_hybernate_clone {
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     eval {$clone->start($USER)  if !$clone->is_active };
+    is($@,'');
     is($clone->is_active,1) or return;
 
     eval { $clone->hybernate($USER) };

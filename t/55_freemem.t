@@ -55,6 +55,51 @@ sub test_new_domain {
     return $domain;
 }
 
+sub test_new_domain_req {
+    my $vm = shift;
+
+    my $base;
+    eval { $base= $vm->create_domain(name => new_domain_name()
+                                        , id_iso => search_id_iso('Alpine')
+                                        ,vm => $vm->type
+                                        ,id_owner => $USER->id
+                                        ,memory => (_check_free_memory() * 2) * 1024 * 1024
+            )
+    };
+    is(''.$@,'') or return;
+    $base->prepare_base(user_admin);
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_base => $base->id
+        ,id_owner => user_admin->id
+        ,remote_ip => '127.0.0.1'
+        ,start => 1
+    );
+    ok($req) or return;
+    rvd_back->_process_requests_dont_fork();
+
+    ok($req->status eq 'done');
+    like($req->error,qr(.));
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain) or return;
+
+    my $req_start = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => '127.0.0.1'
+    );
+    rvd_back->_process_requests_dont_fork();
+    ok($req_start->status, 'done');
+    is($domain->is_active, 0 );
+    like($req_start->error,qr(.));
+
+    $domain->remove(user_admin);
+    $base->remove(user_admin);
+
+}
+
 sub _check_free_memory{
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
@@ -90,7 +135,7 @@ SKIP: {
     my $freemem = _check_free_memory();
     my $n_domains = int($freemem)+2;
 
-    if ($n_domains > 5 ) {
+    if ($n_domains > 50 ) {
         my $msg = "Skipped freemem check, too many memory in this host";
         diag($msg);
         skip($msg,10);
@@ -99,15 +144,16 @@ SKIP: {
 
     $freemem =~ s/(\d+\.\d)\d+/$1/;
 
-    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
+#    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
 
     my @domains;
     for ( 0 .. $n_domains ) {
-        diag("Creating domain $_");
+#        diag("Creating domain $_");
         my $domain = test_new_domain($vm) or last;
         push @domains,($domain) if $domain;
     }
 
+    test_new_domain_req($vm) if $vm_name ne 'Void';
     for (@domains) {
         $_->shutdown_now($USER);
     }

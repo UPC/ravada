@@ -19,6 +19,7 @@ SKIP: {
 }
 
 my $RAVADA= Ravada->new( connector => connector() );
+$RAVADA->_install();
 my $vm_lxc;
 
 my $CONT= 0;

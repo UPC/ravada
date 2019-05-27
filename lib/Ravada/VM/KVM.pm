@@ -52,7 +52,7 @@ has vm => (
 has type => (
     isa => 'Str'
     ,is => 'ro'
-    ,default => 'qemu'
+    ,default => 'KVM'
 );
 
 #########################################################################3
@@ -61,6 +61,8 @@ has type => (
 #TODO use config file for DIR_XML
 our $DIR_XML = "etc/xml";
 $DIR_XML = "/var/lib/ravada/xml/" if $0 =~ m{^/usr/sbin};
+
+our $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
 
 our $XML = XML::LibXML->new();
 
@@ -75,6 +77,9 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $WGET = `which wget`;
 chomp $WGET;
 
+our $BRCTL = `which brctl`;
+chomp $BRCTL;
+
 our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
@@ -88,16 +93,34 @@ sub _connect {
     my $vm;
     confess "undefined host" if !defined $self->host;
 
+    my $con_type = $self->type;
+    $con_type = 'qemu' if $self->type eq 'KVM';
+
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
+        $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
     } else {
-        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
-                              ,readonly => $self->mode
+        confess "Error: You can't connect to remote VMs in readonly mode"
+            if $self->readonly;
+        my $transport = 'ssh';
+        my $address = $con_type."+".$transport
+                                            ."://".'root@'.$self->host
+                                            ."/system";
+        eval {
+            $vm = Sys::Virt->new(
+                                address => $address
+                              ,auth => 1
+                              ,credlist => [
+                                  Sys::Virt::CRED_AUTHNAME,
+                                  Sys::Virt::CRED_PASSPHRASE,
+                              ]
                           );
+         };
+         confess $@ if $@;
     }
-    if ( ! $vm->list_storage_pools ) {
-	warn "WARNING: No storage pools creating default\n";
+    if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
     }
     $self->_check_networks($vm);
     return $vm;
@@ -136,19 +159,27 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return if $self->vm;
+    return 1 if $self->vm;
+    return 1 if $self->is_alive;
 
-    $self->vm($self->_connect);
+    return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
+}
+
+sub _reconnect($self) {
+    $self->vm(undef);
+    return $self->connect();
 }
 
 sub _load_storage_pool {
     my $self = shift;
 
+    confess "no hi ha vm" if !$self->vm;
+
     my $vm_pool;
     my $available;
 
-    if (defined $self->default_storage_pool_name) {
+    if ($self->default_storage_pool_name) {
         return( $self->vm->get_storage_pool_by_name($self->default_storage_pool_name)
             or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
     }
@@ -167,7 +198,7 @@ sub _load_storage_pool {
         $available = $info->{available};
 
     }
-    die "I can't find /pool/target/path in the storage pools xml\n"
+    confess "I can't find /pool/target/path in the storage pools xml\n"
         if !$vm_pool;
 
     return $vm_pool;
@@ -202,7 +233,21 @@ list of all the volumes.
 
 sub search_volume($self,$file,$refresh=0) {
     confess "ERROR: undefined file" if !defined $file;
-    return $self->search_volume_re(qr(^$file$),$refresh);
+
+    my ($name) = $file =~ m{.*/(.*)};
+    $name = $file if !defined $name;
+
+    my $vol;
+    for my $pool ($self->vm->list_storage_pools) {
+        if ($refresh) {
+            $pool->refresh();
+            sleep 1;
+        }
+        eval { $vol = $pool->get_volume_by_name($name) };
+        die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+    }
+
+    return $self->search_volume_re(qr(^$name$),$refresh);
 }
 
 =head2 search_volume_path
@@ -273,9 +318,13 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub refresh_storage_pools($self) {
+    $self->_refresh_storage_pools();
+}
+
 sub _refresh_storage_pools($self) {
     for my $pool ($self->vm->list_storage_pools) {
-        for (;;) {
+        for ( 1 .. 10 ) {
             eval { $pool->refresh() };
             last if !$@;
             warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
@@ -292,6 +341,46 @@ Refreshes all the storage pools
 
 sub refresh_storage($self) {
     $self->_refresh_storage_pools();
+    $self->_refresh_isos();
+}
+
+sub _refresh_isos($self) {
+    $self->_init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images ORDER BY name"
+    );
+    my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE iso_images set device=? WHERE id=?");
+
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+
+        if ( $row->{device} && !-e $row->{device} ) {
+            delete $row->{device};
+            $sth_update->execute($row->{device}, $row->{id});
+            next;
+        }
+        next if $row->{device};
+
+        my ($file);
+        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
+        my $file_re = $row->{file_re};
+
+        next if $row->{device};
+        if ($file) {
+            my $iso_file = $self->search_volume_path($file);
+            if ($iso_file) {
+                $row->{device} = $iso_file;
+            }
+        }
+        if (!$row->{device} && $file_re) {
+            my $iso_file = $self->search_volume_path_re(qr($file_re));
+            if ($iso_file) {
+                $row->{device} = $iso_file;
+            }
+        }
+        $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
+    }
+    $sth->finish;
 }
 
 =head2 search_volume_path_re
@@ -439,18 +528,41 @@ Returns true or false if domain exists.
 
 sub search_domain($self, $name, $force=undef) {
 
-    $self->connect();
+    eval {
+        $self->connect();
+    };
+    if ($@ && $@ =~ /libvirt error code: 38,/) {
+        warn $@;
+        if (!$self->is_local) {
+            warn "DISABLING NODE ".$self->name;
+            $self->enabled(0);
+        }
+        return;
+    }
 
     my $dom;
     eval { $dom = $self->vm->get_domain_by_name($name); };
-    confess $@ if $@ && $@ !~ /error code: 42,/;
+    my $error = $@;
+    return if $error =~  /error code: 42,/ && !$force;
+
+    if ($error && $error =~ /libvirt error code: 38,/ ) {
+        eval {
+            $self->disconnect;
+            $self->connect;
+        };
+        confess "Error connecting to ".$self->name." $@" if $@;
+        eval { $dom = $self->vm->get_domain_by_name($name); };
+        confess $@ if $@ && $@ !~  /error code: 42,/;
+    } elsif ($error && $error !~ /error code: 42,/) {
+        confess $error;
+    }
+
     if (!$dom) {
         return if !$force;
         return if !$self->_domain_in_db($name);
     }
-    return if !$force && !$self->_domain_in_db($name);
 
-        my $domain;
+    my $domain;
 
         my @domain = ( );
         push @domain, ( domain => $dom ) if $dom;
@@ -481,19 +593,32 @@ Returns a list of the created domains
 
 =cut
 
-sub list_domains($self, %args) {
+sub list_domains {
+    my $self = shift;
+    my %args = @_;
 
-    my $active = delete $args{active} or 0;
+    return if !$self->vm;
 
-    confess "ERROR: Unknown arguments ".Dumper(\%args)  if keys %args;
+    my $active = (delete $args{active} or 0);
+    my $read_only = delete $args{read_only};
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, name FROM domains WHERE vm = ?");
-    $sth->execute('KVM');
+    confess "Arguments unknown ".Dumper(\%args)  if keys %args;
+
+    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
+    $query .= " AND status = 'active' " if $active;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    $sth->execute( $self->id );
     my @list;
     while ( my ($id) = $sth->fetchrow) {
-        my $domain = Ravada::Domain->open($id);
-        next if !$domain || $active && !$domain->is_active;
-        push @list,($domain);
+        my $domain;
+        if ($read_only) {
+            $domain = Ravada::Front::Domain->open( $id );
+        } else {
+            $domain = Ravada::Domain->open( id => $id, vm => $self);
+        }
+        push @list,($domain) if $domain;
     }
     return @list;
 }
@@ -524,6 +649,10 @@ sub create_volume {
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
 
     confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+
+    confess "Invalid capacity"
+        if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
+
     confess "Capacity and size are the same, give only one of them"
         if defined $capacity && defined $size;
 
@@ -553,14 +682,13 @@ sub create_volume {
                         $img_file);
 
     if ($capacity) {
-        confess "Size '$capacity' too small" if $capacity< 1024*512;
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData($allocation);
+        confess "Size '$capacity' too small" if $capacity< 1024*10;
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
-    my $vol = $self->storage_pool->create_volume($doc->toString);
-    die "volume $img_file does not exists after creating volume "
-            .$doc->toString()
-            if ! -e $img_file;
+    my $vol = $self->storage_pool->create_volume($doc->toString)
+        or die "volume $img_file does not exists after creating volume on ".$self->name." "
+            .$doc->toString();
 
     return $img_file;
 
@@ -597,7 +725,7 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
-    for (qw(disk swap active request vm memory iso_file id_template)) {
+    for (qw(disk swap active request vm memory iso_file id_template volatile)) {
         delete $args2{$_};
     }
 
@@ -691,26 +819,37 @@ sub _domain_create_common {
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
-    $self->_xml_modify_uuid($xml);
+    my $uuid = $self->_xml_modify_uuid($xml);
     $self->_xml_modify_spice_port($xml, $spice_password);
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml);
+    $self->_xml_clean_machine_type($xml) if !$self->is_local;
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
     my $dom;
 
-    eval {
-        if ($user->is_temporary || $is_volatile ) {
-            $dom = $self->vm->create_domain($xml->toString());
+    for ( 1 .. 10 ) {
+        eval {
+            if ($user->is_temporary || $is_volatile ) {
+                $dom = $self->vm->create_domain($xml->toString());
+            } else {
+                $dom = $self->vm->define_domain($xml->toString());
+                $dom->create if $args{active};
+            }
+        };
+
+        last if !$@;
+        if ($@ =~ /libvirt error code: 9, .*already defined with uuid/) {
+            $self->_xml_modify_uuid($xml);
+        } elsif ($@ =~ /libvirt error code: 1, .* pool .* asynchronous/) {
+            sleep 1;
         } else {
-            $dom = $self->vm->define_domain($xml->toString());
-            $dom->create if $args{active};
+            last ;
         }
-    };
+    }
     if ($@) {
         my $out;
-		warn $@;
+		warn $self->name."\n".$@;
         my $name_out = "/var/tmp/$args{name}.xml";
         warn "Dumping $name_out";
         open $out,">",$name_out and do {
@@ -718,7 +857,7 @@ sub _domain_create_common {
         };
         close $out;
         warn "$! $name_out" if !$out;
-        die $@ if !$dom;
+        confess $@ if !$dom;
     }
 
     my $domain = Ravada::Domain::KVM->new(
@@ -769,20 +908,14 @@ sub _create_disk_qcow2 {
 
 sub _clone_disk($self, $file_base, $file_out) {
 
-        my @cmd = ('qemu-img','create'
+        my @cmd = ('/usr/bin/qemu-img','create'
                 ,'-f','qcow2'
                 ,"-b", $file_base
                 ,$file_out
         );
 
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-
-        if (! -e $file_out) {
-            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
-            exit;
-        }
-
+        my ($out, $err) = $self->run_command(@cmd);
+        die $err if $err;
 }
 
 sub _create_disk_raw {
@@ -971,6 +1104,7 @@ sub _fill_url($iso) {
     if ($iso->{file_re}) {
         $iso->{url} .= "/" if $iso->{url} !~ m{/$};
         $iso->{url} .= $iso->{file_re};
+        $iso->{filename} = '';
         return;
     }
     confess "Error: Missing field file_re for ".$iso->{name};
@@ -1282,9 +1416,11 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     my ($url, $file2) = $row->{url} =~ m{(.*)/(.*)};
     my $url_orig = $row->{"${type}_url"};
-    $file = $file2 if $file2 !~ /\*|\^/;
+    $file = $file2 if $file2 && $file2 !~ /\*|\^/;
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
+    confess "error " if $url_orig =~ /\$/;
+
     confess "error " if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
@@ -1299,6 +1435,9 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
         ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file} if !$value;
         if ($value) {
             $row->{$type} = $value;
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images set $type = ? "
+                                                ." WHERE id = ? ");
+                                            $sth->execute($value, $row->{id});
             return $value;
         }
     }
@@ -1403,12 +1542,10 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    my @known_uuids;
-    for my $dom ($self->vm->list_all_domains) {
-        push @known_uuids,($dom->get_uuid_string);
-    }
-    my $new_uuid = _unique_uuid($uuid,@known_uuids);
+    my $new_uuid = $self->_unique_uuid($uuid);
     $uuid->setData($new_uuid);
+
+    return $new_uuid;
 }
 
 sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
@@ -1418,14 +1555,28 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
             push @uuids,($dom->get_uuid_string);
         }
     }
-    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+    my ($pre,$first,$last) = $uuid =~ m{^([0-9a0-f]{6})(.*)([0-9a-f]{6})$};
+    confess "I can't split model uuid '$uuid'" if !$first;
 
-    for (1..1000) {
-        my $new_last = int(rand(0x100000));
-        my $new_uuid = sprintf("%s%06d",$first,substr($new_last,0,6));
+    for my $domain ($self->vm->list_all_domains) {
+        push @uuids,($domain->get_uuid_string);
+    }
 
-        confess "Wrong uuid size ".length($new_uuid)." <> ".length($uuid)
-            if length($new_uuid) != length($uuid);
+    for (1..100) {
+        my $new_pre = '';
+        $new_pre = sprintf("%x",int(rand(0x10))).$new_pre while length($new_pre)<6;
+
+        my $new_last = '';
+        $new_last = sprintf("%x",int(rand(0x10))).$new_last while length($new_last)<6;
+
+        my $new_uuid = "$new_pre$first$new_last";
+        die "Wrong length ".length($new_uuid)." should be ".length($uuid)
+            ."\n"
+            .$new_uuid
+            ."\n"
+            .$uuid
+        if length($new_uuid) != length($uuid);
+
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
     confess "I can't find a new unique uuid";
@@ -1832,7 +1983,6 @@ sub _unique_mac {
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
             if ( $mac eq lc($nic_mac) ) {
-                warn "mac clashes with domain ".$dom->get_name;
                 return 0;
             }
         }
@@ -1857,7 +2007,7 @@ sub _xml_modify_mac {
         or exit;
     my $mac = $if_mac->getAttribute('address');
 
-    my @macparts = split/:/,$mac;
+    my @macparts0 = split/:/,$mac;
 
     my @old_macs;
 
@@ -1873,23 +2023,27 @@ sub _xml_modify_mac {
 
     my $new_mac;
 
-    for my $cont ( 1 .. 1000 ) {
-        my $pos = int(rand(2))+4;
-        my $num =sprintf "%02X", rand(0xff);
-        die "Missing num " if !defined $num;
-        $macparts[$pos] = $num;
-        $new_mac = lc(join(":",@macparts));
-        my $n_part = scalar(@macparts) -2;
+    my @tried;
+    for ( 1 .. 1000 ) {
+        for my $cont ( 1 .. 1000 ) {
+            my @macparts = @macparts0;
+            my $pos = int(rand(scalar(@macparts)-1))+1;
+            my $num =sprintf "%02X", rand(0xff);
+            die "Missing num " if !defined $num;
+            $macparts[$pos] = $num;
+            $new_mac = lc(join(":",@macparts));
+            push @tried,($new_mac);
 
-        last if (! grep /^$new_mac$/i,@old_macs);
-    }
+            last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
+            push @old_macs,($new_mac);
+        }
 
-    if ( $self->_unique_mac($new_mac) ) {
-                $if_mac->setAttribute(address => $new_mac);
-                return;
-    } else {
-        die "I can't find a new unique mac";
+        if ( $self->_unique_mac($new_mac) ) {
+            $if_mac->setAttribute(address => $new_mac);
+            return;
+        }
     }
+    die "I can't find a new unique mac '$new_mac'\n".Dumper(\@tried);
 }
 
 
@@ -2025,20 +2179,41 @@ sub import_domain($self, $name, $user) {
     return $domain;
 }
 
-sub ping($self) {
+=head2 is_alive
+
+Returns true if the virtual manager connection is active, false otherwise.
+
+=cut
+
+sub is_alive($self) {
     return 0 if !$self->vm;
-    eval { $self->vm->list_defined_networks };
+    my $is_alive = $self->vm->is_alive;
+    return 0 if !$is_alive;
+    eval {
+        $self->vm->get_hostname();
+    };
+    warn $@ if $@;
     return 1 if !$@;
     return 0;
 }
 
-sub is_active($self) {
-    return 1 if $self->vm;
-    return 0;
+sub list_storage_pools($self) {
+    confess "No VM " if !$self->vm;
+    return
+        map { $_->get_name }
+        grep { $_-> is_active }
+        $self->vm->list_storage_pools();
 }
 
 sub free_memory($self) {
-    return $self->_free_memory_available();
+    confess "ERROR: VM ".$self->name." inactive"
+        if !$self->is_alive;
+    my $free_available = $self->_free_memory_available();
+    my $free_stats = $self->_free_memory_overcommit();
+
+    $free_available = $free_stats if $free_stats < $free_available;
+
+    return $free_available;
 }
 
 # TODO: enable this check from free memory with a config flag
@@ -2052,14 +2227,114 @@ sub _free_memory_overcommit($self) {
 sub _free_memory_available($self) {
     my $info = $self->vm->get_node_memory_stats();
     my $used = 0;
-    for my $domain ( $self->list_domains(active => 1) ) {
-        $used += $domain->domain->get_info->{memory};
+    for my $domain ( $self->list_domains(active => 1, read_only => 1) ) {
+        my $info = $domain->get_info();
+        my $memory = ($info->{memory} or $info->{max_mem} or 0);
+        $used += $memory;
     }
     my $free_mem = $info->{total} - $used;
+    $free_mem = 0 if $free_mem < 0;
     my $free_real = $self->_free_memory_overcommit;
 
     $free_mem = $free_real if $free_real < $free_mem;
 
     return $free_mem;
 }
+
+sub _fetch_dir_cert($self) {
+    open my $in,'<',$FILE_CONFIG_QEMU or do {
+        warn "$! $FILE_CONFIG_QEMU";
+        return '';
+    };
+    while(my $line = <$in>) {
+        chomp $line;
+        $line =~ s/#.*//;
+        next if !length($line);
+        next if $line !~ /^\s*spice_tls_x509_cert_dir\s*=\s*"(.*)"\s*/;
+        return $1 if $1;
+    }
+    close $in;
+}
+
+sub list_network_interfaces($self, $type) {
+    my $sub = {
+        nat => \&_list_nat_interfaces
+        ,bridge => \&_list_bridges
+    };
+
+    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
+    return $cmd->($self);
+}
+
+sub _list_nat_interfaces($self) {
+
+    my ($in, $out, $err);
+    my @cmd = ( '/usr/bin/virsh','net-list');
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my @lines = split /\n/,$out;
+    shift @lines;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        /\s*(.*?)\s+.*/;
+        push @networks,($1) if $1;
+    }
+    return @networks;
+}
+
+sub _get_nat_bridge($net) {
+    my ($in, $out, $err);
+    my @cmd = ( '/usr/bin/virsh','net-info', $net);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    for my $line (split /\n/, $out) {
+        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
+        return $bridge if $bridge;
+    }
+}
+
+sub _list_qemu_bridges($self) {
+    my %bridge;
+    my @networks = $self->_list_nat_interfaces();
+    for my $net (@networks) {
+        my $nat_bridge = _get_nat_bridge($net);
+        $bridge{$nat_bridge}++;
+    }
+    return keys %bridge;
+}
+
+sub _list_bridges($self) {
+
+    return () if !-e $BRCTL;
+    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
+
+    my @cmd = ( $BRCTL,'show');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    die $err if $err;
+    my @lines = split /\n/,$out;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
+        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
+    }
+    $self->{_bridges} = \@networks;
+    return @networks;
+}
+
+sub free_disk($self, $pool_name = undef ) {
+    my $pool;
+    if ($pool_name) {
+        $pool = $self->vm->get_storage_pool_by_name($pool_name);
+    } else {
+        $pool = $self->storage_pool();
+    }
+    my $info = $pool->get_info();
+    return $info->{available};
+}
+
 1;

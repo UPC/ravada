@@ -85,7 +85,7 @@ sub test_drivers_type {
     for my $option (@options) {
         _domain_shutdown($domain);
 
-        diag("Setting $type $option->{value}");
+#        diag("Setting $type $option->{value}");
 
         die "No value for driver ".Dumper($option)  if !$option->{value};
         eval { $domain->set_driver($type => $option->{value}) };

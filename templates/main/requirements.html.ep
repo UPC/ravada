@@ -3,22 +3,20 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div>
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
 
             <div class="page-header">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <hr>
-                            <h2 class="text-center"><%=l 'Requirements' %></h2>
-								                <i class="fab fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><br><p> <%=l 'For Spice redirection you will need to install' %><a target=_blank href="https://virt-manager.org/download/"> VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br>
-                                <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %> <i><b>sudo apt-get install virt-viewer</b></i></p><br>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="text-center"><%=l 'Requirements' %></h2>
+						<i class="fab fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i><br><br><p> <%=l 'For Spice redirection you will need to install' %><a target=_blank href="https://virt-manager.org/download/"> VirtViewer<i class="fa fa-link" aria-hidden="true"></i></a> <%=l 'in your computer.' %><br>
+                        <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %> <i><b>sudo apt-get install virt-viewer</b></i></p><br>
 
-                                <i class="fab fa-windows fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><br><p> <%=l 'You will need to install' %>
-                                    <a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i> </a>
+                        <i class="fab fa-windows fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;<br><br><p> <%=l 'You will need to install' %>
+						<a target=_blank href="https://virt-manager.org/download/">VirtViewer<i class="fa fa-link" aria-hidden="true"></i> </a>
 
                                     <%=l 'and USB drivers (' %><a href="https://www.spice-space.org/download/windows/usbdk/UsbDk_1.0.19_x64.msi">64 <i class="fa fa-download" aria-hidden="true"></i> </a><%=l 'or' %><a href="https://www.spice-space.org/download/windows/usbdk/UsbDk_1.0.19_x86.msi"> 32 <i class="fa fa-download" aria-hidden="true"></i> </a><%=l 'bits) in your computer.' %></p>
 
@@ -31,8 +29,7 @@
             </div>
     </div>
     </div>
-    </div>
-%#    %= include 'bootstrap/scripts'
-    %= include $footer
+%= include 'bootstrap/scripts'
+%= include $footer
 </body>
 </html>

@@ -101,7 +101,6 @@ sub test_chain {
     my $vm_name = shift;
 
     my ($local_ip, $local_port, $remote_ip, $expected_count) = @_;
-    my $ipt = open_ipt();
 
     my @rule = find_ip_rule(
            remote_ip => $remote_ip
@@ -110,11 +109,7 @@ sub test_chain {
               , jump => 'ACCEPT'
     );
 
-    is(scalar(@rule),$expected_count) or do {
-        my ($rv, $out, $errs) = $ipt->run_ipt_cmd("/sbin/iptables -n -L $CHAIN");
-        warn join("\n",@$out);
-        exit;
-    };
+    is(scalar(@rule),$expected_count);
     ok($rule[0],"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
         if $expected_count;
 
@@ -284,7 +279,7 @@ sub test_localhost {
     $domain->start( user => user_admin, remote_ip => $remote_ip);
 
     my ($local_ip, $local_port) = $domain->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
-    is($local_ip, $vm->ip);
+    is($local_ip, $remote_ip);
 #    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
     my %test_args= (
            remote_ip => $remote_ip
@@ -321,6 +316,8 @@ sub test_localhost {
     @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,0);
 
+    @rule_drop = find_ip_rule(remote_ip => $vm->ip, jump => 'ACCEPT');
+    is(scalar @rule_drop,0) or exit;
 }
 
 sub test_shutdown_internal {
@@ -345,7 +342,6 @@ sub test_shutdown_internal {
         ,jump => 'DROP'
     );
 
-    my $domain2 = create_domain($vm->type);
     my $remote_ip2 = '2.2.2.2';
     $domain->start( user => user_admin, remote_ip => $remote_ip2);
 
@@ -392,7 +388,7 @@ sub test_hibernate {
 
     $domain->hibernate( user_admin );
     @rule = find_ip_rule(%test_args);
-    is(scalar @rule,0) or exit;
+    is(scalar @rule,0);
 
     @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,0);
@@ -429,7 +425,7 @@ for my $vm_name (qw( Void KVM )) {
 
         use_ok("Ravada::VM::$vm_name");
 
-        flush_rules();
+        flush_rules_node($vm);
 
         my $domain = test_create_domain($vm_name);
         test_fw_domain($vm_name, $domain);
@@ -447,7 +443,6 @@ for my $vm_name (qw( Void KVM )) {
         test_jump($vm_name, $domain2->name);
     };
 }
-flush_rules() if !$>;
 remove_old_domains();
 remove_old_disks();
 

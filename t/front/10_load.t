@@ -48,6 +48,13 @@ sub test_add_domain_db {
         , id_owner => $USER->id
         , arg_create_dom($vm_name)
     );
+
+    my $domain2 = $vm->search_domain($domain_name);
+    ok($domain2,"[$vm_name] Expecting domain $domain_name") or exit;
+
+    my $domain_f = $RVD_FRONT->search_domain($domain_name);
+    ok($domain_f,"[$vm_name] Expecting domain $domain_name") or exit;
+
     my $domains = $RVD_FRONT->list_domains();
     ok($domains,"No domains list returned");
     ok(scalar @$domains == 1, "There should be one domain ".Dumper($domains));
@@ -79,6 +86,7 @@ sub test_vm_types {
 
 my $ping = $RVD_FRONT->ping_backend();
 
+clean();
 SKIP: {
     diag("SKIPPING: No backend found at ping")    if !$ping;
     skip("No backend found at ping",10) if !$ping;
@@ -88,5 +96,6 @@ SKIP: {
         test_vm_types();
     }
 }
+clean();
  
 done_testing();

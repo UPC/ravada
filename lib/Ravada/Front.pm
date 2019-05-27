@@ -12,6 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use Hash::Util qw(lock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
 use Ravada;
@@ -50,6 +51,7 @@ our @VM_TYPES = ('KVM');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
+our %VM_ID;
 our $PID_FILE_BACKEND = '/var/run/rvd_back.pid';
 
 our $LOCAL_TZ = DateTime::TimeZone->new(name => 'local');
@@ -136,7 +138,7 @@ sub list_machines_user {
     );
     my ($id, $name, $is_public, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
 
     my @list;
     while ( $sth->fetch ) {
@@ -182,28 +184,15 @@ sub list_machines_user {
     return \@list;
 }
 
+
 sub list_machines($self, $user) {
-    return $self->list_domains() if $user->can_list_machines;
+    return $self->list_domains() if $user->can_list_machines();
 
     my @list = ();
-    if ($user->can_remove_clones() || $user->can_shutdown_clones() ) {
-        my $machines = $self->list_bases( id_owner => $user->id );
-        for my $base (@$machines) {
-            confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
-            push @$machines,@{$self->list_domains( id_base => $base->{id} )};
-        }
-        push @list,(@$machines);
-    }
-
-    push @list,(@{$self->list_clones()}) if $user->can_list_clones;
-    if ($user->can_create_base || $user->can_create_machine || $user->is_operator) {
-        my $machines = $self->list_domains(id_owner => $user->id);
-        for my $clone (@$machines) {
-            next if !$clone->{id_base};
-            push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
-        }
-        push @list,(@$machines);
-    }
+    push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
+    push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
+    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
+    
     return [@list] if scalar @list < 2;
 
     my %uniq = map { $_->{name} => $_ } @list;
@@ -226,7 +215,10 @@ sub _around_list_machines($orig, $self, $user) {
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
-                                    && !$m->{is_volatile};
+        && !$m->{is_volatile};
+
+        $m->{id_base} = undef if !exists $m->{id_base};
+        lock_hash(%$m);
     }
     return $machines;
 }
@@ -256,24 +248,34 @@ Returns a list of the domains as a listref
 
 =cut
 
-sub list_domains {
-    my $self = shift;
-    my %args = @_;
+sub list_domains($self, %args) {
 
-    my $query = "SELECT name, id, id_base, is_base, is_public, is_volatile, client_status"
-                    .", id_owner "
-                ." FROM domains "
-                ._where(%args)
-                ." ORDER BY name";
+    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
+        ."      ,vms.name as node , is_volatile, client_status, id_owner "
+        ." FROM domains d LEFT JOIN vms "
+        ."  ON d.id_vm = vms.id ";
 
+    my $where = '';
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " d.$field=?"
+    }
+    $where = "WHERE $where" if $where;
 
-    my $sth = $CONNECTOR->dbh->prepare($query);
+    my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
     
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
+        for (qw(is_locked is_hibernated is_paused
+                has_clones )) {
+            $row->{$_} = 0;
+        }
         my $domain ;
+        my $t0 = time;
         eval { $domain   = $self->search_domain($row->{name}) };
+        warn $@ if $@;
+        $row->{remote_ip} = undef;
         if ( $row->{is_volatile} && !$domain ) {
             $self->_remove_domain_db($row->{id});
             next;
@@ -281,16 +283,18 @@ sub list_domains {
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
+        $row->{remote_ip} = undef;
         if ( $domain ) {
-            $row->{is_active} = 1 if $domain->is_active;
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = ( $domain->is_hibernated or 0);
             $row->{is_paused} = 1 if $domain->is_paused;
+            $row->{is_active} = 1 if $row->{status} eq 'active';
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
 #            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $domain->is_active();
+            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
+            $row->{node} = $domain->_vm->name if $domain->_vm;
             $row->{remote_ip} = $domain->client_status
                 if $domain->client_status && $domain->client_status ne 'connected';
             $row->{autostart} = $domain->autostart;
@@ -311,6 +315,52 @@ sub list_domains {
 
     return \@domains;
 }
+
+=head2 filter_base_without_clones
+
+filters the list of domains and drops all machines that are unacessible and 
+bases with 0 machines accessible
+
+=cut
+
+sub filter_base_without_clones($domains) {
+    my @list;
+    my $size_domains = scalar(@$domains);
+    for (my $i = 0; $i < $size_domains; ++$i) {
+        if (@$domains[$i]->{is_base}) {
+            for (my $j = 0; $j < $size_domains; ++$j) {
+                if ($j != $i && !(@$domains[$j]->{is_base}) && (@$domains[$j]->{id_base} eq @$domains[$i]->{id})) {
+                    push @list, (@$domains[$i]);
+                    last;
+                }
+            }
+        }
+        else {
+            push @list, (@$domains[$i]);
+        }
+    }
+    return \@list;
+}
+
+sub list_own_clones($self, $user) {
+    my $machines = $self->list_bases( id_owner => $user->id );
+    for my $base (@$machines) {
+        confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
+        push @$machines,@{$self->list_domains( id_base => $base->{id} )};
+    }
+    return $machines;
+}
+
+sub list_own($self, $user) {
+    my $machines = $self->list_domains(id_owner => $user->id);
+    for my $clone (@$machines) {
+        next if !$clone->{id_base};
+        push @$machines,@{$self->list_domains( id => $clone->{id_base} )};
+    }
+    return $machines;
+}
+
+
 sub _where(%args) {
     my $where = '';
     for my $field ( sort keys %args ) {
@@ -331,14 +381,13 @@ sub list_clones {
   my $self = shift;
   my %args = @_;
   
-  my $domains = list_domains();
+  my $domains = $self->list_domains();
   my @clones;
   for (@$domains ) {
     if($_->{id_base}) { push @clones, ($_); }
   }
   return \@clones;
 }
-
 sub _remove_domain_db($self, $id) {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($id);
@@ -389,6 +438,31 @@ sub domain_exists {
     return 1;
 }
 
+
+=head2 node_exists
+
+Returns true if the node name exists
+
+    if ($rvd->node('node_name')) {
+        ...
+    }
+
+=cut
+
+sub node_exists {
+    my $self = shift;
+    my $name = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms"
+        ." WHERE name=? "
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return 0 if !defined $id;
+    return 1;
+}
 =head2 list_vm_types
 
 Returns a reference to a list of Virtual Machine Managers known by the system
@@ -407,6 +481,75 @@ sub list_vm_types {
     return $result;
 }
 
+=head2 list_vms
+
+Returns a list of Virtual Managers
+
+=cut
+
+sub list_vms($self, $type=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, vm_type, enabled FROM vms ";
+
+    my @args = ();
+    if ($type) {
+        $sql .= "WHERE (vm_type=? or vm_type=?)";
+        my $type2 = $type;
+        $type2 = 'qemu' if $type eq 'KVM';
+        @args = ( $type, $type2);
+    }
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
+    $sth->execute(@args);
+
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{bases}= $self->_list_bases_vm($row->{id});
+        $row->{machines}= $self->_list_machines_vm($row->{id});
+        $row->{type} = $row->{vm_type};
+        $row->{action_remove} = 'disabled' if length defined $row->{machines}[0];
+        $row->{action_remove} = 'disabled' if $row->{hostname} eq 'localhost';
+        $row->{action_remove} = 'disabled' if length defined $row->{bases}[0];
+        $row->{is_local} = 0;
+        $row->{is_local} = 1  if $row->{hostname} =~ /^(localhost|127)/;
+        delete $row->{vm_type};
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    return @list;
+}
+
+sub _list_bases_vm($self, $id_node) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
+    );
+    my @bases;
+    $sth->execute($id_node);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return \@bases;
+}
+
+sub _list_machines_vm($self, $id_node) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, name FROM domains d"
+        ." WHERE d.status='active'"
+        ."  AND d.id_vm=?"
+    );
+    my @bases;
+    $sth->execute($id_node);
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @bases,({ id => $id_domain, name => $name });
+    }
+    $sth->finish;
+    return \@bases;
+}
 =head2 list_iso_images
 
 Returns a reference to a list of the ISO images known by the system
@@ -426,32 +569,6 @@ sub list_iso_images {
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
         push @iso,($row);
-
-        delete $row->{device} if $row->{device} && !-e $row->{device};
-        next if $row->{device};
-
-        my ($file);
-        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
-        my $file_re = $row->{file_re};
-        next if !$file_re && !$file || !$vm_name;
-
-        $vm = $self->search_vm($vm_name)    if !$vm;
-
-        next if $row->{device};
-        if ($file) {
-            my $iso_file = $vm->search_volume_path($file);
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-                next;
-            }
-        }
-        if ($file_re) {
-            my $iso_file = $vm->search_volume_path_re(qr($file_re));
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-                next;
-            }
-        }
     }
     $sth->finish;
     return \@iso;
@@ -612,7 +729,7 @@ sub open_vm {
     my $class = "Ravada::VM::$type";
 
     if (my $vm = $VM{$type}) {
-        if (!$vm->ping) {
+        if (!$vm->ping || !$vm->is_alive) {
             $vm->disconnect();
             $vm->connect();
         } else {
@@ -708,7 +825,7 @@ sub search_domain {
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
     $sth->execute($name);
-    my ($id, $tipo) = $sth->fetchrow or confess "ERROR: Unknown domain name $name";
+    my ($id, $tipo) = $sth->fetchrow or return;
 
     return Ravada::Front::Domain->open($id);
 }
@@ -760,8 +877,13 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         next if $command eq 'enforce_limits'
                 || $command eq 'refresh_vms'
                 || $command eq 'refresh_storage'
+                || $command eq 'refresh_machine'
                 || $command eq 'ping_backend'
+                || $command eq 'cleanup'
                 || $command eq 'screenshot'
+                || $command eq 'connect_node'
+                || $command eq 'post_login'
+                || $command eq 'list_network_interfaces'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
@@ -923,6 +1045,76 @@ Disconnects all the conneted VMs
 
 sub disconnect_vm {
     %VM = ();
+}
+
+=head2 enable_node
+
+Enables, disables or delete a node
+
+    $rvd->enable_node($id_node, $value);
+
+Returns true if the node is enabled, false otherwise.
+
+=cut
+
+sub enable_node($self, $id_node, $value) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms SET enabled=? WHERE id=?");
+    $sth->execute($value, $id_node);
+    $sth->finish;
+
+    return $value;
+}
+
+sub remove_node($self, $id_node, $value) {
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
+    $sth->execute($id_node);
+    $sth->finish;
+
+    return $value;
+}
+
+sub add_node($self,%arg) {
+    my $sql = "INSERT INTO vms "
+        ."("
+        .join(",",sort keys %arg)
+        .")"
+        ." VALUES ( ".join(",", map { '?' } keys %arg).")";
+
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $arg{$_} } sort keys %arg );
+    $sth->finish;
+
+    my $req = Ravada::Request->refresh_vms( _force => 1 );
+    return $req->id;
+}
+
+sub list_network_interfaces($self, %args) {
+
+    my $vm_type = delete $args{vm_type}or confess "Error: missing vm_type";
+    my $type = delete $args{type} or confess "Error: missing type";
+    my $user = delete $args{user} or confess "Error: missing user";
+    my $timeout = delete $args{timeout};
+    $timeout = 60 if !defined $timeout;
+
+    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
+
+    my $cache_key = "_interfaces_$type";
+    return $self->{$cache_key} if exists $self->{$cache_key};
+
+    my $req = Ravada::Request->list_network_interfaces(
+        vm_type => $vm_type
+          ,type => $type
+           ,uid => $user->id
+    );
+    if  ( defined $timeout ) {
+        $self->wait_request($req, $timeout);
+    }
+    return [] if $req->status ne 'done';
+
+    my $interfaces = decode_json($req->output());
+    $self->{$cache_key} = $interfaces;
+
+    return $interfaces;
 }
 
 =head2 version

@@ -1,6 +1,6 @@
 package Ravada::VM::Void;
 
-use Carp qw(croak);
+use Carp qw(carp croak);
 use Data::Dumper;
 use Encode;
 use Encode::Locale;
@@ -16,11 +16,10 @@ use URI;
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
 
-with 'Ravada::VM';
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
-has 'vm' => (
-    is => 'rw'
-);
+with 'Ravada::VM';
 
 has 'type' => (
     is => 'ro'
@@ -28,11 +27,46 @@ has 'type' => (
     ,default => 'Void'
 );
 
+has 'vm' => (
+    is => 'rw'
+    ,isa => 'Any'
+    ,builder => '_connect'
+    ,lazy => 1
+);
+
 ##########################################################################
 #
 
-sub connect {}
-sub disconnect {}
+sub _connect {
+    my $self = shift;
+    return 1 if ! $self->host || $self->host eq 'localhost'
+                || $self->host eq '127.0.0.1'
+                || $self->{_ssh};
+
+    my ($out, $err);
+    eval {
+       ($out, $err)= $self->run_command("ls -l ".$self->dir_img." || mkdir -p ".$self->dir_img);
+    };
+
+    warn "ERROR: error connecting to ".$self->host." $err"  if $err;
+    return 0 if $err;
+    return 1;
+}
+
+sub connect($self) {
+    return 1 if $self->vm;
+    return $self->vm($self->_connect);
+}
+
+sub disconnect {
+    my $self = shift;
+    $self->vm(0);
+
+    return if !$self->{_ssh};
+    $self->{_ssh}->disconnect;
+    delete $self->{_ssh};
+}
+
 sub reconnect {}
 
 sub create_domain {
@@ -40,41 +74,72 @@ sub create_domain {
     my %args = @_;
 
     croak "argument name required"       if !$args{name};
-    croak "argument id_owner required"       if !$args{id_owner};
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
 
+    my $volatile = delete $args{volatile};
+    my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
                                            , _vm => $self
     );
+    my ($out, $err) = $self->run_command("/usr/bin/test",
+         "-e ".$domain->_config_file." && echo 1" );
+    chomp $out;
+    die "Error: Domain $args{name} already exists " if $out;
+    $domain->_set_default_info();
+    $domain->_store( autostart => 0 );
+    $domain->_store( is_active => $active );
+    $domain->set_memory($args{memory}) if $args{memory};
 
-    $domain->_insert_db(name => $args{name} , id_owner => $args{id_owner}
+    $domain->_insert_db(name => $args{name} , id_owner => $user->id
         , id_vm => $self->id
         , id_base => $args{id_base} );
 
     if ($args{id_base}) {
-        my $owner = Ravada::Auth::SQL->search_by_id($args{id_owner});
+        my $owner = $user;
         my $domain_base = $self->search_domain_by_id($args{id_base});
 
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
 
         for my $file_base ($domain_base->list_files_base) {
-            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*?)(\..*)};
-            my $new_name = "$vol_name-$args{name}$ext";
+            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.SWAP\..*)};
+            ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.*)} if !$dir;
+            my $new_name = "$vol_name-$args{name}-".Ravada::Utils::random_name(2).$ext;
             $domain->add_volume(name => $new_name
-                                , path => "$dir/$new_name"
+                                , capacity => 1024
+                                , file => "$dir/$new_name"
                                  ,type => 'file');
         }
-        $domain->start(user => $owner)    if $owner->is_temporary;
+        my $drivers = {};
+        $drivers = $domain_base->_value('drivers');
+        $domain->_store( drivers => $drivers );
     } else {
         my ($file_img) = $domain->disk_device();
-        $domain->add_volume(name => 'void-diska' , size => ( $args{disk} or 1)
-                        , path => $file_img
+        my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".img";
+        $file_img =~ m{.*/(.*)} if $file_img;
+        $domain->add_volume(name => $vda_name
+                        , capacity => ( $args{disk} or 1024)
+                        , file => $file_img
                         , type => 'file'
                         , target => 'vda'
         );
+        my $cdrom_file = $domain->_config_dir()."/$args{name}-cdrom-"
+            .Ravada::Utils::random_name(4).".iso";
+        my ($cdrom_name) = $cdrom_file =~ m{.*/(.*)};
+        $domain->add_volume(name => $cdrom_name
+                        , file => $cdrom_file
+                        , device => 'cdrom'
+                        , type => 'cdrom'
+                        , target => 'hdc'
+        );
         $domain->_set_default_drivers();
         $domain->_set_default_info();
+        $domain->_store( is_active => 0 );
+
+        $domain->_store( is_active => 1 ) if $volatile || $user->is_temporary;
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
@@ -86,32 +151,69 @@ sub create_volume {
 }
 
 sub dir_img {
-    return $Ravada::Domain::Void::DIR_TMP;
+    return Ravada::Front::Domain::Void::_config_dir();
 }
 
-sub list_domains {
-    my $self = shift;
+sub _list_domains_local($self, %args) {
+    my $active = delete $args{active};
 
-    opendir my $ls,$Ravada::Domain::Void::DIR_TMP or return;
+    confess "Wrong arguments ".Dumper(\%args)
+        if keys %args;
+
+    opendir my $ls,dir_img or return;
 
     my @domain;
     while (my $file = readdir $ls ) {
-        next if $file !~ /\.yml$/;
-        $file =~ s/\.\w+//;
-        $file =~ s/(.*)\.qcow.*$/$1/;
-        next if $file !~ /\w/;
-
-        my $domain = Ravada::Domain::Void->new(
-                    domain => $file
-                     , _vm => $self
-        );
-        next if !$domain->is_known;
+        my $domain = $self->_is_a_domain($file) or next;
+        next if defined $active && $active && !$domain->is_active;
         push @domain , ($domain);
     }
 
     closedir $ls;
 
     return @domain;
+}
+
+sub _is_a_domain($self, $file) {
+
+    chomp $file;
+
+    return if $file !~ /\.yml$/;
+    $file =~ s/\.\w+//;
+    $file =~ s/(.*)\.qcow.*$/$1/;
+    return if $file !~ /\w/;
+
+    my $domain = Ravada::Domain::Void->new(
+                    domain => $file
+                     , _vm => $self
+    );
+    return if !$domain->is_known;
+    return $domain;
+}
+
+sub _list_domains_remote($self, %args) {
+
+    my $active = delete $args{active};
+
+    confess "Wrong arguments ".Dumper(\%args) if keys %args;
+
+    my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
+
+    my @domain;
+    for my $file (split /\n/,$out) {
+        if ( my $domain = $self->_is_a_domain($file)) {
+            next if defined $active && $active
+                        && !$domain->is_active;
+            push @domain,($domain);
+        }
+    }
+
+    return @domain;
+}
+
+sub list_domains($self, %args) {
+    return $self->_list_domains_local(%args) if $self->is_local();
+    return $self->_list_domains_remote(%args);
 }
 
 sub search_domain {
@@ -141,9 +243,9 @@ sub list_networks {
     return Ravada::NetInterface::Void->new();
 }
 
-sub search_volume {
-    my $self = shift;
-    my $pattern = shift;
+sub search_volume($self, $pattern) {
+
+    return $self->_search_volume_remote($pattern)   if !$self->is_local;
 
     opendir my $ls,$self->dir_img or die $!;
     while (my $file = readdir $ls) {
@@ -153,6 +255,18 @@ sub search_volume {
     return;
 }
 
+sub _search_volume_remote($self, $pattern) {
+
+    my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
+
+    my $found;
+    for my $file ( split /\n/,$out ) {
+        $found = $self->dir_img."/".$file if $file eq $pattern;
+    }
+
+    return $found;
+}
+
 sub search_volume_path {
     return search_volume(@_);
 }
@@ -160,6 +274,8 @@ sub search_volume_path {
 sub search_volume_path_re {
     my $self = shift;
     my $pattern = shift;
+
+    die "TODO remote" if !$self->is_local;
 
     opendir my $ls,$self->dir_img or die $!;
     while (my $file = readdir $ls) {
@@ -176,9 +292,18 @@ sub import_domain {
 
 sub refresh_storage {}
 
-sub ping { return 1 }
+sub refresh_storage_pools {
 
-sub is_active { return 1 }
+}
+
+sub list_storage_pools {
+    return 'default';
+}
+
+sub is_alive($self) {
+    return 0 if !$self->vm;
+    return 1;
+}
 
 sub free_memory {
     my $self = shift;
@@ -194,6 +319,19 @@ sub free_memory {
         $memory -= $domain->get_info->{memory};
     }
     return $memory;
+}
+
+sub _fetch_dir_cert {
+    confess "TODO";
+}
+
+sub free_disk($self, $storage_pool = undef) {
+    my $df = `df`;
+    for my $line (split /\n/, $df) {
+        my @info = split /\s+/,$line;
+        return $info[3] * 1024 if $info[5] eq '/';
+    }
+    die "Not found";
 }
 #########################################################################3
 

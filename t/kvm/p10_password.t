@@ -228,7 +228,7 @@ sub test_any_network_password_hybernate{
 
     eval { $password = $domain->spice_password() };
     is($@,'',"Expecting no error after \$domain->spice_password hybernate/start");
-    is($password, undef ,"Expecting no password, got '".($password2 or '')."' after hybernate");
+    is($password, undef,"Expecting password, got '".($password or '')."' after hybernate");
     is($domain->spice_password,$password);
 
     $domain->shutdown_now($USER);

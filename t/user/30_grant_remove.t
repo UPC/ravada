@@ -267,7 +267,8 @@ sub test_list_clones_from_own_base_2 {
 
     for my $m (@$list) {
         is($user->can_manage_machine($m->{id}), 1);
-        next if !$m->{id_base};
+        next if $m->{is_base};
+
 
         my $machine = $vm->search_domain($m->{name});
         eval { $machine->remove($user) };
@@ -301,7 +302,7 @@ sub test_list_others_clone {
     is(scalar @$list , 0);
 
     user_admin->grant($user, 'remove_clone_all');
-    is($user->can_list_machines, 1);
+    is($user->can_list_clones, 1);
 
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 2 ) and do {

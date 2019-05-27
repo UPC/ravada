@@ -27,12 +27,14 @@ WriteMakefile(
     ,'DBD::SQLite'      => 0
     ,'IPTables::ChainMgr' => 0
     ,'Net::DNS' => 0
+    ,'Net::SSH2' => 0
+    ,'File::Rsync' => 0
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
-  clean     => {FILES => 't/.db' }
+  clean     => {FILES => ['t/.db', '/var/tmp/rvd_void'] }
 
 );

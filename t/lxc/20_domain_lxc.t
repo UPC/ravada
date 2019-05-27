@@ -19,6 +19,7 @@ SKIP: {
 };
 
 my $RAVADA= Ravada->new( connector => connector() );
+$RAVADA->_install();
 
 my $vm_lxc;
 
@@ -174,6 +175,17 @@ sub test_domain{
     }
 }
 
+sub remove_old_domains_lxc_local {
+    for ( 0 .. 10 ) {
+        my $dom_name = $DOMAIN_NAME."_$_";
+
+        my $domain = $RAVADA->search_domain($dom_name,1);
+        $domain->shutdown_now() if $domain;
+        test_remove_domain($dom_name);
+    }
+
+}
+
 ################################################################
 eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {
@@ -195,7 +207,7 @@ SKIP: {
         my $vm2 = $ravada2->search_vm('lxc')    if $ravada2;
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
         $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
-        remove_old_domains();
+        remove_old_domains_lxc_local();
         my $domain = test_domain();
         my $domain2 = test_domain_from_base($domain);
         test_remove_domain($domain);

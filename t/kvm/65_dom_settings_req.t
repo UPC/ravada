@@ -117,7 +117,7 @@ sub test_settings {
 
     for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
 #        next if $driver->name ne 'video';
-        diag("Testing drivers for $vm_name ".$driver->name);
+#        diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_id($vm_name, $driver->name);
     }
 }
@@ -145,8 +145,8 @@ sub test_needs_shutdown {
             , id_option => $option->{id}
     );
     rvd_back->_process_requests_dont_fork();
-    is($req->status,'done') or next;
-    is($req->error,'') or next;
+    is($req->status,'done') or return;
+    is($req->error,'') or return;
 
     ok(!$@,"Expecting no error, got : ".($@ or ''));
 
@@ -183,6 +183,10 @@ eval { $vm =rvd_back->search_vm($vm_name) };
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found"
                 ." error: (".($@ or '').")";
+    if ($vm && $vm_name eq 'KVM' && $>) {
+        $vm = undef;
+        $msg = "SKIPPED: Test must run as root";
+    }
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

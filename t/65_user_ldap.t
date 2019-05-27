@@ -19,6 +19,7 @@ my $RAVADA_POSIX_GROUP = "rvd_posix_group";
 my $FILTER = "sn=bar";
 
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
+
 init();
 
 my @USERS;
@@ -299,7 +300,9 @@ sub _add_posix_group {
 
     my $base = "ou=groups,".Ravada::Auth::LDAP::_dc_base();
 
-    my $mesg = $ldap->add(
+    my $mesg;
+    for ( 1 .. 10 ) {
+        $mesg = $ldap->add(
         cn => $RAVADA_POSIX_GROUP
         ,dn => "cn=$RAVADA_POSIX_GROUP,$base"
         ,attrs => [ cn => $RAVADA_POSIX_GROUP
@@ -307,8 +310,13 @@ sub _add_posix_group {
                     ,gidNumber => 999
                 ]
     );
-    die "Error ".$mesg->code." adding $RAVADA_POSIX_GROUP ".$mesg->error
+    last if !$mesg->code;
+    warn "Error ".$mesg->code." adding $RAVADA_POSIX_GROUP ".$mesg->error
         if $mesg->code && $mesg->code != 68;
+
+        Ravada::Auth::LDAP::init();
+        $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    }
 
     $mesg = $ldap->search( filter => "cn=$RAVADA_POSIX_GROUP",base => $base );
     my @group = $mesg->entries;
@@ -396,6 +404,7 @@ sub test_posix_group {
     is($@,'');
     ok($user_login);
 
+    Ravada::Auth::LDAP::init();
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
     my $mesg = $ldap->delete($user);
     die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;

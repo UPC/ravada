@@ -7,6 +7,7 @@ use lib './lib';
 
 use Data::Dumper;
 use Getopt::Long;
+use POSIX ":sys_wait_h";
 use Proc::PID::File;
 
 use Ravada;
@@ -45,14 +46,18 @@ my $LIST;
 my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
+my $REBASE;
 
 my $IMPORT_DOMAIN_OWNER;
+
+my $ADD_LOCALE_REPOSITORY;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
         ." [--test-ldap] "
         ." [-X] [start|stop|status]"
+        ." [--rebase MACHINE]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -61,9 +66,10 @@ my $USAGE = "$0 "
         ." --import-domain-owner : owner of the domain to import\n"
         ." --make-admin : make user admin\n"
         ." --config : config file, defaults to $FILE_CONFIG_DEFAULT"
-        ." -X : start in foreground\n"
+        ." --no-fork : start in foreground\n"
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
+        .' --add-locale-repository LOCALE : adds ISO repositories for this locale'
         ."\n"
         ."Operations on Virtual Machines:\n"
         ." --list\n"
@@ -86,6 +92,7 @@ GetOptions (       help => \$help
                   ,list => \$LIST
                  ,debug => \$DEBUG
                 ,verbose => \$VERBOSE
+                ,rebase => \$REBASE
               ,'no-fork'=> \$NOFORK
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
@@ -103,6 +110,8 @@ GetOptions (       help => \$help
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
 ,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
+
+    ,'add-locale-repository=s' => \$ADD_LOCALE_REPOSITORY
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -128,6 +137,9 @@ die "ERROR: Shutdown requires a domain name, or --all , --hibernated , --disconn
 die "ERROR: Hibernate requires a domain name, or --all , --disconnected\n"
     if defined $HIBERNATE_DOMAIN && !$HIBERNATE_DOMAIN && !$ALL && !$DISCONNECTED;
 
+die "ERROR: Missing the machine name or id\n$USAGE"
+    if $REBASE && !@ARGV;
+
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
@@ -137,7 +149,6 @@ $Ravada::CAN_FORK=0    if $NOFORK;
 
 ###################################################################
 
-my $PID_LONGS;
 ###################################################################
 #
 
@@ -146,47 +157,32 @@ sub do_start {
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
-    clean_killed_requests();
-
-    start_process_longs() if !$NOFORK;
 
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
-    Ravada::Request->enforce_limits();
+    #    Ravada::Request->enforce_limits();
+    #Ravada::Request->refresh_vms();
     for (;;) {
         my $t0 = time;
+        $ravada->process_priority_requests();
+        $ravada->process_long_requests();
         $ravada->process_requests();
-        $ravada->process_long_requests(0,$NOFORK)   if $NOFORK;
+
         if ( time - $t_refresh > 60 ) {
+            Ravada::Request->cleanup();
             Ravada::Request->refresh_vms()      if rand(5)<3;
             Ravada::Request->enforce_limits()   if rand(5)<2;
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
     }
+
 }
 
-sub start_process_longs {
-    my $pid = fork();
-    die "I can't fork" if !defined $pid;
-    if ( $pid ) {
-        $PID_LONGS = $pid;
-        return;
-    }
-    
-    warn "Processing long requests in pid $$\n" if $DEBUG;
+sub clean_old_requests {
     my $ravada = Ravada->new( %CONFIG );
-    for (;;) {
-        my $t0 = time;
-        $ravada->process_long_requests();
-        sleep 1 if time - $t0 <1;
-    }
-}
-
-sub clean_killed_requests {
-    my $ravada = Ravada->new( %CONFIG );
-    $ravada->clean_killed_requests();
+    $ravada->clean_old_requests();
 }
 
 sub start {
@@ -196,18 +192,13 @@ sub start {
         $ravada->_install();
         for my $vm (@{$ravada->vm}) {
             $vm->id;
-            $vm->vm;
         }
+        $ravada->_wait_pids();
     }
+    clean_old_requests();
     for (;;) {
-        my $pid = fork();
-        die "I can't fork $!" if !defined $pid;
-        if ($pid == 0 ) {
-            do_start();
-            exit;
-        }
-        warn "Waiting for pid $pid\n";
-        waitpid($pid,0);
+        eval { do_start() };
+        warn $@ if $@;
     }
 }
 
@@ -454,7 +445,8 @@ sub shutdown_domain {
     my $down = 0;
     my $found = 0;
     DOMAIN:
-    for my $domain ($rvd_back->list_domains) {
+    for my $domain_data ($rvd_back->list_domains_data) {
+        my $domain = Ravada::Front::Domain->open($domain_data->{id});
         if ((defined $domain_name && $domain->name eq $domain_name)
             || ($hibernated && $domain->is_hibernated)
             || ($DISCONNECTED
@@ -480,10 +472,11 @@ sub shutdown_domain {
                 next DOMAIN if _verify_connection($domain);
             }
             print "Shutting down ".$domain->name.".\n";
-            eval {
-                $domain->shutdown(user => Ravada::Utils::user_daemon(), timeout => 300);
-                $down++;
-            };
+            Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
+                ,id_domain => $domain->id
+                , timeout => 300
+            );
+            $down++;
             warn $@ if $@;
         }
     }
@@ -531,15 +524,32 @@ sub test_ldap {
     exit;
 }
 
+sub add_locale_repository {
+    my $locale = shift;
+    for my $lang ( split /,/, $locale ) {
+        print "Adding locales for $lang.\n";
+        my $found = Ravada::Repository::ISO::insert_iso_locale($lang, 'verbose');
+        print "$found found.\n";
+    }
+}
+
+sub rebase {
+    my ($domain_name) = $ARGV[0];
+    my $rvd_back = Ravada->new(%CONFIG);
+    my $domain;
+    if ($domain_name =~ /^\d+$/) {
+        $domain = Ravada::Domain->open($domain_name);
+    } else {
+        $domain = $rvd_back->search_domain($domain_name);
+    }
+    die "Error: Unknown domain $domain_name\n"      if !$domain;
+    die "Error: ".$domain->name." is not a clone\n" if !$domain->id_base;
+
+    my $base = Ravada::Domain->open($domain->id_base);
+    $base->rebase(Ravada::Utils::user_daemon, $domain);
+}
+
 sub DESTROY {
-    return if !$PID_LONGS;
-    warn "Killing pid: $PID_LONGS";
-
-    my $cnt = kill 15 , $PID_LONGS;
-    return if !$cnt;
-
-    kill 9 , $PID_LONGS;
-    
 }
 
 #################################################################
@@ -557,6 +567,7 @@ make_admin($MAKE_ADMIN_USER)        if $MAKE_ADMIN_USER;
 remove_admin($REMOVE_ADMIN_USER)    if $REMOVE_ADMIN_USER;
 set_url_isos($URL_ISOS)             if $URL_ISOS;
 test_ldap                           if $TEST_LDAP;
+rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
 hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;
@@ -565,6 +576,7 @@ start_domain($START_DOMAIN)         if $START_DOMAIN;
 shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
                                     if defined $SHUTDOWN_DOMAIN;
 
+add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
 }
 
 

@@ -30,9 +30,14 @@ has 'readonly' => (
     ,default => 1
 );
 
-our $CONNECTOR = \$Ravada::Front::CONNECTOR;
+our $CONNECTOR;
 #
 ###########################################################################
+
+sub _init_connector {
+    $CONNECTOR= \$Ravada::CONNECTOR;
+    $CONNECTOR= \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
+}
 
 sub BUILD($self, $arg) {
     my $id = $arg->{id};
@@ -63,12 +68,22 @@ sub open($self, $id) {
 sub autostart($self )    { return $self->_data('autostart') }
 sub _do_force_shutdown  { confess "TODO" }
 sub add_volume          { confess "TODO" }
+sub remove_volume       { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }
 sub disk_device         { confess "TODO" }
 sub disk_size           { confess "TODO" }
 
 sub display($self, $user) {
-    return $self->_data('display');
+    my $info = $self->display_info($user);
+    return $info->{display};
+}
+
+sub display_info($self, $user) {
+    return decode_json($self->_data('display'));
+}
+
+sub display_file_tls($self, $user) {
+    return $self->_data('display_file');
 }
 
 sub force_shutdown      { confess "TODO" }
@@ -101,7 +116,36 @@ sub is_paused($self) {
 }
 
 sub is_removed          { return 0 }
-sub list_volumes        { confess "TODO" }
+sub list_volumes($self, $attribute=undef, $value=undef)
+{
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM volumes "
+        ." WHERE id_domain=?"
+        ." ORDER BY id"
+    );
+    $sth->execute($self->id);
+    my @volumes;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{info} = decode_json($row->{info}) if $row->{info};
+        $row->{info}->{capacity} = Ravada::Utils::number_to_size($row->{info}->{capacity})
+            if defined $row->{info}->{capacity} && $row->{info}->{capacity} =~ /^\d+$/;
+        $row->{info}->{allocation} = Ravada::Utils::number_to_size($row->{info}->{allocation})
+            if defined $row->{info}->{allocation} && $row->{info}->{allocation} =~ /^\d+$/;
+        $row->{driver} = delete $row->{info}->{driver};
+
+        next if defined $attribute
+        && ( !exists $row->{$attribute}
+                || $row->{$attribute} != $value);
+        push @volumes, ($row);
+    }
+    $sth->finish;
+    return @volumes;
+}
+
+sub list_volumes_info($self, @args) { return $self->list_volumes(@args) }
+
+sub migrate             { confess "TODO" }
 
 sub name($self) {
     return $self->{_data}->{name}   if exists $self->{_data} && $self->{_data}->{name};
@@ -115,6 +159,16 @@ sub rename              { confess "TODO" }
 sub resume              { confess "TODO" }
 sub screenshot          { confess "TODO" }
 
+sub search_domain($self,$name) {
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return if !$id;
+    return Ravada::Front::Domain->new(id => $id);
+}
+
 sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }
 sub shutdown            { confess "TODO" }
@@ -122,10 +176,13 @@ sub shutdown_now        { confess "TODO" }
 sub spinoff_volumes     { confess "TODO" }
 sub start               { confess "TODO" }
 
+sub dettach             { confess "TODO" }
+
 sub get_driver {}
 sub get_controller_by_name { }
 sub list_controllers {}
 
 sub set_controller {}
 sub remove_controller {}
+sub change_hardware { die "TODO" }
 1;

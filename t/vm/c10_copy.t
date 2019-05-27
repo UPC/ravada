@@ -3,6 +3,7 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
+use YAML qw(DumpFile);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -36,11 +37,9 @@ sub test_copy_clone {
         ,user => user_admin
     );
 
-    is($clone->is_base,0);
+    is($clone->is_base,0,$clone->name." is base");
     for ( $clone->list_volumes ) {
-        open my $out,'>',$_ or die $!;
-        print $out "hola $_\n";
-        close $out;
+        DumpFile($_,{ data  => 'hola' } );
     }
 
     my $name_copy = new_domain_name();
@@ -55,13 +54,13 @@ sub test_copy_clone {
 
     is(scalar($copy->list_volumes),scalar($clone->list_volumes));
 
-    my @copy_volumes = $copy->list_volumes_target();
-    my %copy_volumes = map { $_->[1] => $_->[0] } @copy_volumes;
-    my @clone_volumes = $clone->list_volumes_target();
-    my %clone_volumes = map { $_->[1] => $_->[0] } @clone_volumes;
+    my @copy_volumes = $copy->list_volumes_info( device => 'disk');
+    my %copy_volumes = map { $_->{target} => $_->{file} } @copy_volumes;
+    my @clone_volumes = $clone->list_volumes_info( device => 'disk');
+    my %clone_volumes = map { $_->{target} => $_->{file} } @clone_volumes;
 
     for my $target ( keys %copy_volumes ) {
-        isnt($copy_volumes{$target}, $clone_volumes{$target});
+        isnt($copy_volumes{$target}, $clone_volumes{$target}, Dumper(\@copy_volumes,\@clone_volumes)) or exit;
         my @stat_copy = stat($copy_volumes{$target});
         my @stat_clone = stat($clone_volumes{$target});
         is($stat_copy[7],$stat_clone[7],"[$vm_name] size different "
@@ -183,10 +182,9 @@ sub test_copy_req_nonbase {
 
 ##########################################################################3
 
-clean();
-
 
 for my $vm_name ('Void', 'KVM') {
+    diag($vm_name);
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {
@@ -199,6 +197,8 @@ for my $vm_name ('Void', 'KVM') {
 
         skip($msg,10)   if !$vm;
 
+        init( { vm => [$vm_name] });
+
         test_copy_clone($vm_name);
         test_copy_clone($vm_name,1);
         test_copy_clone($vm_name,2);
@@ -209,6 +209,7 @@ for my $vm_name ('Void', 'KVM') {
         test_copy_change_ram($vm_name);
 
         test_copy_req_nonbase($vm_name);
+        clean();
     }
 
 }

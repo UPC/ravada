@@ -463,16 +463,15 @@ for my $vm_name ('KVM', 'Void') {
         }
         my $ldap;
 
-        eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
+        eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() } if $vm;
 
         if ($@ =~ /Bad credentials/) {
-            diag("$@\nFix admin credentials in t/etc/ravada_ldap.conf");
-        } else {
-            diag("Skipped LDAP tests ".($@ or '')) if !$ldap;
+            $msg = "$@\nFix admin credentials in t/etc/ravada_ldap.conf";
+        } elsif ($vm) {
+            $msg = "Skipped LDAP tests ".($@ or '');
         }
 
-        $msg = "SKIPPEd: No LDAP server found" if !$ldap && $@ !~ /Bad credentials/;
-        skip($msg,10)   if !$vm || !$ldap;
+        skip($msg,10)   if !$ldap;
         diag("Testing LDAP access for $vm_name");
 
         test_external_auth();
@@ -500,4 +499,3 @@ for my $vm_name ('KVM', 'Void') {
 clean();
 
 done_testing();
-

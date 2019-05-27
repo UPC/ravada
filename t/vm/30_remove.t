@@ -49,10 +49,20 @@ sub test_remove_domain {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
+
+    my @volumes = $domain->list_volumes();
     $domain->remove($USER);
 
     my $domain_missing = rvd_back()->search_domain($domain->name);
     ok(!$domain_missing,"Domain ".$domain->name." should be missing");
+
+    for my $vol (@volumes) {
+        if ($vol =~ /\.iso$/) {
+            ok(-e $vol,"[$vm_name] volume $vol should not be removed");
+        } else {
+            ok(!-e $vol,"[$vm_name] volume $vol should be removed");
+        }
+    }
 }
 
 sub test_remove_domain_base {

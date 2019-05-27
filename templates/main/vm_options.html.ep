@@ -1,93 +1,108 @@
-<div class="panel-body">
-<div class="form-group">
-    <form class="form-inline" action="<%= $action %>" method="post">
-        <div class="row">
-                    <div class="col-md-2">
-                        <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
-                    </div>
-                    <div class="col-md-2">
-%   if ($USER->is_admin && !$domain->is_active()){
-                        <input class="form-control" type="text" name="ram" size="5"
-                            value="<%= $ram %>">
-%   }else{
-                        <input class="form-control" type="text" name="ram" size="5" disabled
-                            value="<%= $ram %>">
-%   }
-                    </div>
-                    <!--<div class="col-md-6">
-                        <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
-                                <%=l 'MB available' %>.
-                    </div>-->
-       </div>
-       <div class="row">
-            <div class="col-md-2">
-                <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
+<div class="card-body">
+    <form class="form" action="<%= $action %>" method="post">
+        <div class="form-group">
+            <div class="row" ng-show="showmachine.ip">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="ram"><%=l 'Internal IP' %></label>
+                </div>
+                <div class="col-lg-3">
+                    {{showmachine.ip}}
+                </div>
             </div>
-            <div class="col-md-2">
-%   if ($domain->is_active()){
-                <input class="form-control" type="text" name="cram" size="5"
-                            value="<%= $cram %>">
-%   } else {
-                <input class="form-control" type="text" name="cram" size="5" disabled
-                            value="<%= $cram %>">
-%   }
+            <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
+                </div>
+                <div class="col-lg-3">
+                    <input class="form-control" type="text" name="ram" size="5" value="<%= $ram %>">
+                </div>
+%               if ( $needs_restart) {
+                    <%=l 'The changes will apply on next restart' %>
+%               }
+                <!--<div class="col-md-6">
+                    <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
+                            <%=l 'MB available' %>.
+                </div>-->
             </div>
-       
-       </div> 
+           <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input class="form-control" type="text" name="cram" size="5" value="<%= $cram %>">
+                </div>
+           </div> 
 %   if ($USER->is_admin){
-       <div class="row">
-                    <div class="col-md-2">
-                        <label class="control-label" for="timeout">Timeout</label>
-                    </div>
-                    <div class="col-md-2">
-                        <input name="run_timeout" type="text"
-%                           my $timeout = '';
-%                           $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
-%                           $timeout = '' if $timeout eq '0';
-                            value="<%= $timeout %>" size="5">
-                    </div>
-                    <div class="col-md-6"><%=l 'The machine will shutdown after these minutes' %></div>
-        </div>
+            <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="timeout">Timeout</label>
+                </div>
+                <div class="col-lg-2">
+                    <input name="run_timeout" type="text"
+%                       my $timeout = '';
+%                       $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
+%                       $timeout = '' if $timeout eq '0';
+                        value="<%= $timeout %>" size="5">
+                </div>
+                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
+            </div>
 %   }
 %   if ($USER->is_admin){
-        <div class="row">
-            <div class="col-md-2">
-                <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
-            </div>
-            <div class="col-md-2">
-                <input type="checkbox" name="volatile_clones"
+            <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
+                </div>
+                <div class="col-lg-1">
+                    <input type="checkbox" name="volatile_clones"
 %               my $vclones = int($domain->is_volatile_clones);
 %               if ( $vclones ){
                     checked
 %               }
-                value="1">
+                    value="1">
+                </div>
+                <div class="col-md-8"><small class="text-secondary">
+                    <%=l 'Clones created from this machine will be removed on shutdown.' %></small>
+                </div>
             </div>
-            <div class="col-md-6">
-                <%=l 'Clones created from this machine will be removed on shutdown.' %>
+            <div class="row" ng-show="!showmachine.id_base">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="autostart"><%=l 'Auto Start' %></label>
+                </div>
+                <div class="col-lg-1">
+                    <input type="checkbox" name="autostart"
+%               my $auto_start = $domain->autostart;
+%               if ( $auto_start){
+                    checked
+%               }
+                    value="1">
+                </div>
+                <div class="col-md-8"><small class="text-secondary">
+                    <%=l 'Virtual Machine will start on host start.' %></small>
+                </div>
             </div>
-        </div>
+
 %   }
 %   if ($USER->is_admin){
-        <div class="row">
-                     <div class="col-md-2">
-                         <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
-                     </div>
-                     <div class="col-md-2">
-                        <select id="new_owner" name="id_owner" >
+            <div class="row">
+                <div class="col-lg-2 mt-2">
+                     <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
+                </div>
+                <div class="col-lg-4">
+                    <select id="new_owner" name="id_owner" >
 %       for my $user (@$list_users) {
-                          <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
+                        <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
 %        }
-                        </select>
-                     </div>
-                     <div class="col-md-6"><%=l 'Change the owner of the machine' %></div>
-         </div>
-%   }
-        <div class="row">
-            <div class="col-md-4">
-        <input type="submit" name="btn_options">
-        <button type="reset" ><%=l 'Cancel' %></button>
+                    </select>
+                </div>
+                <div class="col-md-5"><small class="text-secondary"><%=l 'Change the owner of the machine' %></small></div>
             </div>
-        </div>
+%   }
+            <div class="row">
+                <div class="col-md-12 mt-2">
+                    <input type="button" class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
+                    <input type="submit" class="btn btn-primary mt-3" name="btn_options" value="<%=l 'Submit' %>">
+                </div>
+            </div>
+        </div><!-- of form-group -->
     </form>
-</div><!-- of form-group -->
 </div><!-- of panel-body -->

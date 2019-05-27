@@ -1,12 +1,10 @@
-<div class="tab-pane fade" id="frommachine" >
-    <form method="post" action="/machine/copy">
-        <div class="panel-body">
-            <div class="row">
-                <form class="form-inline" method="post" action="/machine/copy">
-                    <div class="form-group row">
+<div class="tab-pane fade" id="frommachine" role="tabpanel">
+    <div class="card-body">
+            <form class="form" method="post" action="/machine/copy">
+                <div class="form-group row">
                         <input class="form-control" type="hidden" name="id_base" value="{{src_machine.id}}">
-                        <label for="src_machine" class="col-lg-2 control-label"><%=l 'Source Machine' %></label>
-                        <div class="col-lg-10">
+                        <label for="src_machine" class="col-xl-3 col-form-label"><%=l 'Source Machine' %></label>
+                        <div class="col-lg-9">
                             <select class="form-control"
                                 name ="src_machine"
                                 ng-model="src_machine"
@@ -14,49 +12,43 @@
                                 required=""
                             ></select>
                         </div>
-                    </div>
-                    <div ng-show="src_machine">
-                        <div class="form-group row">
-                            <div class="col-lg-2">
+                </div>
+                <div ng-show="src_machine">
+                    <div class="form-group row">
+                        <div class="col-xl-3">
                             <h5><strong><%=l 'Destination Machine' %></strong></h5>
-                          </div>
                         </div>
-                        <div class="form-group row">
-                            <div class="col-lg-2">
-                                <label class="col-lg-12 text-muted" for="copy_name_{{src_machine.id}}"><%=l 'Name' %>:</label>
-                            </div>
-                            <div class="col-lg-10">
-                                <input class="form-control" name="copy_name_{{src_machine.id}}" type="text" size="40"
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-xl-2">
+                            <label class="col-xl-12 text-muted" for="copy_name_{{src_machine.id}}"><%=l 'Name' %>:</label>
+                        </div>
+                        <div class="col-xl-10">
+                            <input class="form-control" name="copy_name_{{src_machine.id}}" type="text" size="40"
                                 value="{{src_machine.name}}-copy">
                                 <!-- todo check unique name -->
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <div class="col-lg-2">
-                                <label class="col-lg-12 text-muted" for="copy_ram">RAM (Gb):</label>
-                            </div>
-                            <div class="col-lg-2">
-                                <input class="form-control" ng-model="ramsize" type="number" name="copy_ram"
-                                min="1" max="4" required="">
-                            </div>
-                        </div>
-                   
-                        <div class="form-group row alert alert-warning"
-                            ng-hide="src_machine.is_base || !src_machine">
-                            The source machine is not a base. It must be
-                            prepared before it can be copied. This
-                            process may take some minutes.
-                        </div>
-                        <div class="form-group row">
-                            <input type="submit" class="btn btn-default">
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="col-md-6">
-                <!-- Description -->
-            </div>
-        </div>
-    </form>
+                    <div class="form-group row">
+                        <div class="col-xl-2">
+                            <label class="col-xl-12 text-muted" for="copy_ram">RAM (Gb):</label>
+                        </div>
+                        <div class="col-xl-2">
+                            <input class="form-control" ng-model="ramsize" type="number" name="copy_ram"
+                            min="1" max="4" required="">
+                        </div>
+                    </div>
+                    <div class="form-group row alert alert-warning"
+                        ng-hide="src_machine.is_base || !src_machine">
+                        The source machine is not a base. It must be
+                        prepared before it can be copied. This
+                        process may take some minutes.
+                    </div>
+                    <div class="form-group row">
+                        <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
+                        <input type="submit" class="btn btn-primary" value="<%=l 'Submit' %>">
+                    </div>
+                </div>
+            </form>
+    </div>
 </div>

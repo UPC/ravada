@@ -38,8 +38,8 @@ body {
     }
 
     #page-wrapper {
-        padding: 5px 100px;
-        min-height: 763px;
+        padding: 17px 100px;
+        min-height: 768px;
         max-width: 1200px;
         margin: 0 auto;
     }
@@ -70,11 +70,6 @@ body {
 .top-nav>.open>a:focus {
     color: #fff;
     background-color: #000;
-}
-
-.dropdown:hover .dropdown-menu {
-        display: block;
-        margin-top: 0; // remove the gap so it doesn't close
 }
 
 .top-nav>.open>.dropdown-menu {
@@ -392,4 +387,10 @@ ul.alert-dropdown {
 .screenshot-default{
     opacity: 0.5;
     filter: alpha(opacity=50); /* For IE8 and earlier */
+}
+
+.nav-pills .nav-link.active.remove,
+.show>.nav-pills .nav-link{
+    color: white;
+    background-color: #d73a49 !important
 }

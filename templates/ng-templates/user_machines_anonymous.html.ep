@@ -1,15 +1,15 @@
 <div ng-repeat="machine in list_machines" ng-show="{{machine.is_base}}">
     <div class="col-sm-4">
-    <div class="panel panel-success machine">
+    <div class="card card-success machine">
 
-    <div class="panel-heading">
-        <h2 class="panel-title"><b>{{machine.name}}</b> (<i>volatile</i>)</h2>
+    <div class="card-header">
+        <h2 class="card-title"><b>{{machine.name}}</b> (<i>volatile</i>)</h2>
         <i>Will be destroyed on shutdown</i>
 
         <h3>{{machine.description}}</h3>
         <img id="screensh" src="/img/screenshots/{{machine.id}}.png">
     </div>
-    <div class="panel-body machine-card">
+    <div class="card-body machine-card">
         <a type="button"  class="btn btn-success" href="/anonymous/{{machine.id}}.html"><strong>&nbsp;<i class="fa fa-play" aria-hidden="true"></i>&nbsp;Start</strong></a>
     </div>
     </div>

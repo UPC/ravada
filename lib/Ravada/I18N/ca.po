@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
+"PO-Revision-Date: 2017-01-03 11:17+0000\n"
 "Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
 "Language-Team: Catalan (https://www.transifex.com/ravada/teams/70385/ca/)\n"
 "MIME-Version: 1.0\n"
@@ -294,7 +294,7 @@ msgid "A viewer is required to run the virtual machines."
 msgstr "Es requereix un visor per executar les màquines virtuals."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Es requereix un visor per executar les màquines virtuals."
+msgstr "Es necessari un visor per accedir a la màquina virtual."
 
 msgid "Virtual Machines"
 msgstr "Màquines Virtuals"
@@ -566,6 +566,9 @@ msgstr "Aquesta màquina virtual no es pot eliminar perquè té"
 
 msgid "clones"
 msgstr "clons"
+
+msgid "Clones"
+msgstr "Clons"
 
 msgid "This machine has not Graphics parameters!"
 msgstr "Aquesta màquina no té paràmetres gràfics!"

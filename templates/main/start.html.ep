@@ -10,73 +10,31 @@
                 <h2 class="form-signin-heading"><%=l($login_header) %></h2>
                 <p><%= $login_message %></p>
 
-                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="User">
-
-                <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="Password">
+                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="<%=l 'User' %>" required autofocus>
+                <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="<%=l 'Password' %>" required>
 
                 <input type="hidden" name="url" value="<%= $url %>">
                 <input type="hidden" name="login_hash"
                        value="<%= $login_hash %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-               <button id="submit" class="btn btn-lg btn-success btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
+               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
                 % if (scalar @$error) {
-
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
                                 <strong><%=l 'Error' %>: </strong><%=l $i %>
                             </div>
                 %       }
-
                 % }
                 </form>
                 <div class="alert alert-warning">
-                    <%=l 'It is required a viewer to run the virtual machines.' %>
+                    <%=l 'A viewer is required to run the virtual machines.' %>
                     <a href="/requirements"><%=l 'Read more.' %></a>
                 </div> 
-                <!--<a href="#instruccions" class="btn btn-circle page-scroll">
-                            <i class="fa fa-angle-double-down animated"></i></a>-->
             </div>
                
         </div>
      
     </header>
-
-    <!-- Instruccions
-    <section id="instruccions" class="container content-section text-center">
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2">
-                <h2>Section 1</h2>
-                <p>Section content</p>
-            </div>
-        </div>
-    </section>
-
-    Tecnologies
-    <section id="tecnologies" class="content-section text-center">
-        <div class="download-section">
-            <div class="container">
-                <div class="col-lg-8 col-lg-offset-2">
-                    <h2>Section 2</h2>
-                    <p>Section content</p>
-                    <a href="#" class="btn btn-default btn-lg">Usable button</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    Contacte
-    <section id="contacte" class="container content-section text-center">
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2">
-                <h2>Section 3</h2>
-                <p>Section content</p>
-            </div>
-        </div>
-    </section>-->
-
-
-
-    <!-- Footer -->
 
     %= include 'bootstrap/scripts'
     %= include $footer

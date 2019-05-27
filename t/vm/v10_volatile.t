@@ -80,10 +80,11 @@ sub test_volatile {
           user => $user
         , name => $name
     );
-    is($clone->is_active,1,"[$vm_name] Expecting clone active");
     $clone->start($user)                if !$clone->is_active;
+    is($clone->is_active,1,"[$vm_name] Expecting clone active");
 
-    like($clone->spice_password,qr{..+})    if $vm_name eq 'KVM';
+    like($clone->spice_password,qr{..+},"[$vm_name] ".$clone->name)
+        if $vm_name eq 'KVM';
 
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
 
@@ -99,6 +100,7 @@ sub test_volatile {
     eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
+    is($clone->is_active, 0);
     # test out of the DB
     my $sth = connector->dbh->prepare("SELECT id,name FROM domains WHERE name=?");
     $sth->execute($name);
@@ -124,6 +126,7 @@ sub test_volatile {
 
     $name = undef;
 
+        $vm->refresh_storage_pools();
         $vm->refresh_storage();
         for my $file ( @volumes ) {
             ok(! -e $file,"[$vm_name] Expecting volume $file removed") or BAIL_OUT();
@@ -165,16 +168,20 @@ sub test_volatile_auto_kvm {
     my $user_name = "user_".new_domain_name();
     my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
 
+    $base->volatile_clones(1);
+    is($base->volatile_clones,1) or exit;
     my $clone = $base->clone(
           user => $user
         , name => $name
     );
+    is($clone->is_volatile,1) or exit;
     my $clone_extra = Ravada::Domain->open($clone->id);
     ok($clone_extra->_data_extra('xml'),"[$vm_name] expecting XML for ".$clone->name) or BAIL_OUT;
     ok($clone_extra->_data_extra('id_domain'),"[$vm_name] expecting id_domain for ".$clone->name) or BAIL_OUT;
 
     is( $clone->is_active, 1,"[$vm_name] volatile domains should clone started" );
     $clone->start($user)                if !$clone->is_active;
+    is($clone->is_active,1,"[$vm_name] Expecting clone active");
 
     is($clone->is_volatile,1,"[$vm_name] Expecting is_volatile");
     is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
@@ -187,9 +194,19 @@ sub test_volatile_auto_kvm {
     $clone->domain->destroy();
     $clone=undef;
 
+    my $clone_force = $base->_vm->search_domain($name, 1);
+    ok($clone_force,"Expecting clone data still in db") or exit;
+
     my $vm = rvd_back->search_vm($vm_name);
-    my $domain2 = $vm->search_domain($name);
-    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown") or exit;
+    my $domain2;
+    for ( 1 .. 10 ) {
+        $domain2 = $vm->search_domain($name);
+        last if !$domain2;
+        sleep 1;
+    }
+    ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown");
+
+    rvd_back->_clean_volatile_machines();
 
     rvd_back->_refresh_volatile_domains();
     my $domain_f;
@@ -215,6 +232,10 @@ sub test_volatile_auto_kvm {
         ok(! -e $file,"[$vm_name] Expecting volume $file removed") or exit;
     }
 
+    for my $file ( @volumes ) {
+        ok(! -e $file,"[$vm_name] Expecting volume $file removed");
+    }
+
     my $clone2;
     eval {
         $clone2 = $base->clone(
@@ -227,12 +248,13 @@ sub test_volatile_auto_kvm {
     isnt($clone2->spice_password, $spice_password
             ,"[$vm_name] Expecting spice password different")   if $clone2;
 
+    $clone2->start(user_admin)  if !$clone2->is_active;
     is($clone2->is_active,1,"[$vm_name] Expecting clone active");
 
     my $clone3= $vm->search_domain($name);
     ok($clone3,"[$vm_name] Expecting clone $name");
 
-    eval { $clone2->remove(user_admin) if $clone2 };
+    { $clone2->remove(user_admin) if $clone2 };
     is(''.$@,'');
 
     $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=?");
@@ -252,13 +274,16 @@ for my $vm_name ('Void', 'KVM') {
     SKIP: {
 
         my $msg = "SKIPPED: No virtual managers found";
-        if ($vm && $vm_name =~ /kvm/i && $>) {
+
+        if ($vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile for $vm_name");
+
+        init( $vm_name );
 
         create_network();
 

@@ -57,7 +57,8 @@ sub test_drivers_type {
 
     if (!$HAS_NOT_VALUE{$type}) {
         my $value = $driver_type->get_value();
-        ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value");
+        ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value")
+            or exit;
     }
 
     my @options = $driver_type->get_options();
@@ -184,7 +185,7 @@ sub test_drivers_clone {
 
     for my $option (@options) {
         _domain_shutdown($domain);
-        diag("Testing $vm_name $type : $option->{name}");
+#        diag("Testing $vm_name $type : $option->{name}");
 
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or '')) or next;
@@ -198,9 +199,10 @@ sub test_drivers_clone {
         is($domain->get_driver($type), $option->{value}) or next;
         _domain_shutdown($domain);
         is($domain->get_driver($type), $option->{value}) or next;
-        $domain->remove_base($USER);
+        $domain->remove_base($USER) if $domain->is_base;
         $domain->prepare_base( user_admin );
         $domain->is_public(1);
+        is($domain->is_base,1);
         my $clone = $domain->clone(user => $USER, name => $clone_name);
         isa_ok($clone,"Ravada::Domain::$vm_name");
         is($domain->get_driver($type), $option->{value}) or next;
@@ -254,7 +256,7 @@ sub test_settings {
     my @drivers = $vm->list_drivers();
 #    @drivers = $vm->list_drivers('image');
     for my $driver ( @drivers ) {
-        diag("Testing drivers for $vm_name ".$driver->name);
+#        diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_type($vm_name, $driver->name);
         test_drivers_clone($vm_name, $driver->name);
         test_drivers_type_id($vm_name, $driver->name);

@@ -3,13 +3,14 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.3.5';
+our $VERSION = '0.4.0-rc1';
 
 use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash);
+use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
@@ -22,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada::Auth;
 use Ravada::Request;
+use Ravada::Repository::ISO;
 use Ravada::VM::Void;
 
 our %VALID_VM;
@@ -45,6 +47,19 @@ $ERROR_VM{Void} = $@;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
+
+our %VALID_CONFIG = (
+    vm => undef
+    ,warn_error => undef
+    ,db => {user => undef, password => undef,  hostname => undef}
+    ,ldap => { admin_user => { dn => undef, password => undef }
+        ,filter => undef
+        ,base => undef
+        ,auth => undef
+        ,admin_group => undef
+        ,ravada_posix_group => undef
+    }
+);
 
 =head1 NAME
 
@@ -72,27 +87,13 @@ our $CAN_FORK = 1;
 our $CAN_LXC = 0;
 
 # Seconds to wait for other long process
-our $SECONDS_WAIT_CHILDREN = 2;
-# Limit for long processes
-our $LIMIT_PROCESS = 2;
-our $LIMIT_HUGE_PROCESS = 1;
+our $SECONDS_WAIT_CHILDREN = 5;
 
 our $DIR_SQL = "sql/mysql";
 $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 
-# LONG commands take long
-our %HUGE_COMMAND = map { $_ => 1 } qw(download prepare_base remove_base enforce_limits refresh_vms);
-our %LONG_COMMAND =  map { $_ => 1 } (qw(screenshot shutdown force_shutdown ), keys %HUGE_COMMAND);
-
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
-
-has 'vm' => (
-          is => 'ro'
-        ,isa => 'ArrayRef'
-       ,lazy => 1
-     , builder => '_create_vm'
-);
 
 has 'connector' => (
         is => 'rw'
@@ -503,6 +504,20 @@ sub _update_isos {
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
         }
+       ,empty_32bits => {
+          name => 'Empty Machine 32 bits'
+          ,description => 'Empty Machine 32 bits Boot PXE'
+          ,xml => 'empty-i386.xml'
+          ,xml_volume => 'jessie-volume.xml'
+          ,min_disk_size => '0'
+        }
+       ,empty_64bits => {
+          name => 'Empty Machine 64 bits'
+          ,description => 'Empty Machine 64 bits Boot PXE'
+          ,xml => 'empty-amd64.xml'
+          ,xml_volume => 'jessie-volume.xml'
+          ,min_disk_size => '0'
+        }
     );
 
     $self->_update_table($table, $field, \%data);
@@ -544,8 +559,20 @@ sub _update_domain_drivers_types($self) {
            ,vm => 'KVM'
 
         }
+        ,disk => {
+            id => 9
+            ,name => 'disk'
+            ,vm => 'KVM'
+        }
+
     };
     $self->_update_table('domain_drivers_types','id',$data);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE domain_drivers_types SET vm='KVM' WHERE vm='qemu'"
+    );
+    $sth->execute;
+    $sth->finish;
 }
 
 sub _update_domain_drivers_options($self) {
@@ -711,14 +738,34 @@ sub _update_domain_drivers_options($self) {
     $self->_update_table('domain_drivers_options','id',$data);
 }
 
-sub _update_table($self, $table, $field, $data) {
+sub _update_domain_drivers_options_disk($self) {
+
+    my @options = ('virtio', 'usb','ide', 'sata', 'scsi');
+
+    my $id = 28;
+    my %data = map {
+        $_ => {
+            id => $id++
+            ,id_driver_type => 9,
+            ,name => $_
+            ,value => $_
+        }
+    } @options;
+
+    $self->_update_table('domain_drivers_options','id',\%data);
+}
+
+sub _update_table($self, $table, $field, $data, $verbose=0) {
 
     my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
-    for my $name (keys %$data) {
+    for my $name (sort keys %$data) {
         my $row = $data->{$name};
         $sth_search->execute($row->{$field});
         my ($id) = $sth_search->fetchrow;
-        next if $id;
+        if ( $id ) {
+            warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
+            next;
+        }
         warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
 
         my $sql =
@@ -771,6 +818,7 @@ sub _update_data {
 
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
+    $self->_update_domain_drivers_options_disk();
     $self->_update_old_qemus();
 
     $self->_add_indexes();
@@ -778,8 +826,25 @@ sub _update_data {
 
 sub _add_indexes($self) {
     return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+    $self->_add_indexes_vms();
     $self->_add_indexes_domains();
     $self->_add_indexes_requests();
+}
+
+sub _add_indexes_vms($self) {
+    my %index;
+    my $sth = $CONNECTOR->dbh->prepare("show index from vms");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+
+    my $index_name = 'hostname_vm_type';
+    return if $index{$index_name};
+    warn "INFO: Adding index to vms: $index_name";
+    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE vms add unique $index_name"
+        ." (hostname, vm_type)");
+    $sth->execute;
 }
 
 sub _add_indexes_domains($self) {
@@ -795,6 +860,7 @@ sub _add_indexes_domains($self) {
         ."(id_base)");
     $sth->execute;
 }
+
 sub _add_indexes_requests($self) {
     my %index;
     my $sth = $CONNECTOR->dbh->prepare("show index from requests");
@@ -853,19 +919,29 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines");
-    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines");
-    $self->_add_grant('start_many',0,"Can have more than one machine started")
+    $self->_add_grant('rename', 0,"Can rename any virtual machine owned by the user.");
+    $self->_add_grant('rename_all', 0,"Can rename any virtual machine.");
+    $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
+    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
+    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
+    $self->_add_grant('start_many',0,"Can have more than one machine started.")
 }
 
 sub _add_grant($self, $grant, $allowed, $description) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM grant_types WHERE name=?"
+        "SELECT id, description FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id) = $sth->fetchrow();
+    my ($id, $current_description) = $sth->fetchrow();
     $sth->finish;
 
+    if ($id && $current_description ne $description) {
+        my $sth = $CONNECTOR->dbh->prepare(
+            "UPDATE grant_types SET description = ? WHERE id = ?;"
+        );
+        $sth->execute($description, $id);
+        $sth->finish;
+    }
     return if $id;
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
@@ -916,6 +992,7 @@ sub _enable_grants($self) {
         ,'clone',           'clone_all',            'create_base', 'create_machine'
         ,'grant'
         ,'manage_users'
+        ,'rename', 'rename_all', 'rename_clones'
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
@@ -976,9 +1053,21 @@ sub _upgrade_table {
     my ($table, $field, $definition) = @_;
     my $dbh = $CONNECTOR->dbh;
 
+    my ($new_size) = $definition =~ m{\((\d+)};
+
     my $sth = $dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
+    if ( $dbh->{Driver}{Name} =~ /mysql/
+        && $row && $row->{COLUMN_SIZE}
+        && $new_size
+        && $new_size != $row->{COLUMN_SIZE}) {
+
+        $dbh->do("alter table $table change $field $field $definition");
+        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
+        return;
+    }
+
     return if $row;
 
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
@@ -1012,6 +1101,8 @@ sub _create_table {
     my $info = $sth->fetchrow_hashref();
     $sth->finish;
     return if keys %$info;
+
+    warn "INFO: creating table $table\n"    if $0 !~ /\.t$/;
 
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
@@ -1077,11 +1168,22 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
+    $self->_upgrade_table('vms','cached_active_time',"integer DEFAULT 0");
+    $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
+    $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
+    $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
+
     $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
+
+    $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','start_time','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','output','text DEFAULT NULL');
+    $self->_upgrade_table('requests','after_request','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
@@ -1110,12 +1212,14 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
+    $self->_upgrade_table('domains','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('domains','start_time','int DEFAULT 0');
     $self->_upgrade_table('domains','is_volatile','int NOT NULL DEFAULT 0');
     $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
-    $self->_upgrade_table('domains','display','varchar(128) DEFAULT NULL');
+    $self->_upgrade_table('domains','display','varchar(250) DEFAULT NULL');
+    $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
@@ -1127,8 +1231,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
+    $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
+    $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
+    $self->_upgrade_table('vms','mac','char(18)');
 }
 
 
@@ -1184,17 +1291,19 @@ sub _init_config {
     my $connector = shift;
     confess "Deprecated connector" if $connector;
 
-    die "ERROR: Missing config file $file\n"
+    confess "ERROR: Missing config file $file\n"
         if !-e $file;
 
     eval { $CONFIG = YAML::LoadFile($file) };
 
     die "ERROR: Format error in config file $file\n$@"  if $@;
+    _check_config($CONFIG);
 
-    $CONFIG->{vm} = [] if !$CONFIG->{vm};
-
-    $LIMIT_PROCESS = $CONFIG->{limit_process}
-        if $CONFIG->{limit_process} && $CONFIG->{limit_process}>1;
+    if ( !$CONFIG->{vm} ) {
+        my %default_vms = %VALID_VM;
+        delete $default_vms{Void};
+        $CONFIG->{vm} = [keys %default_vms];
+    }
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
@@ -1203,12 +1312,19 @@ sub _init_config {
 sub _init_config_vm {
 
     for my $vm ( @{$CONFIG->{vm}} ) {
-        warn "$vm not available in this system.\n".($ERROR_VM{$vm})
-            if !$VALID_VM{$vm} && $0 !~ /\.t$/;
+        die "$vm not available in this system.\n".($ERROR_VM{$vm})
+            if !exists $VALID_VM{$vm} || !$VALID_VM{$vm};
     }
 
-    delete $VALID_VM{Void}
-        if !grep /^Void$/,@{$CONFIG->{vm}};
+    for my $vm ( keys %VALID_VM ) {
+        delete $VALID_VM{$vm}
+            if exists $VALID_VM{$vm}
+                && exists $CONFIG->{vm}
+                && scalar @{$CONFIG->{vm}}
+                && !grep /^$vm$/,@{$CONFIG->{vm}};
+    }
+
+    lock_hash(%VALID_VM);
 
     @Ravada::Front::VM_TYPES = keys %VALID_VM;
 }
@@ -1232,6 +1348,24 @@ sub _create_vm_kvm {
     $vm_kvm = undef if !$internal_vm || !$storage;
 
     return $vm_kvm;
+}
+
+sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
+    return 1 if !defined $config_orig;
+    my %config = %$config_orig;
+
+    for my $key (sort keys %$valid_config) {
+        if ( $config{$key} && ref($valid_config->{$key})) {
+           my $ok = _check_config( $config{$key} , $valid_config->{$key} );
+           return 0 if !$ok;
+        }
+        delete $config{$key};
+    }
+    if ( keys %config ) {
+        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
+        return 0;
+    }
+    return 1;
 }
 
 =head2 disconnect_vm
@@ -1299,18 +1433,35 @@ sub _create_vm {
     );
 
     my @vms = ();
-    my $err='';
+    my $err = '';
 
     for my $vm_name (keys %VALID_VM) {
         my $vm;
         eval { $vm = $create{$vm_name}->($self) };
+        warn $@ if $@;
         $err.= $@ if $@;
-        push @vms,($vm) if $vm;
+        push @vms,$vm if $vm;
     }
-    die "No VMs found: $err\n" if $self->warn_error && !@vms;
+    die "No VMs found: $err\n" if $self->warn_error && !@vms && $err;
 
-    return \@vms;
+    return [@vms, $self->_list_remote_vms];
 
+}
+
+sub _list_remote_vms($self ) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM vms WHERE hostname <> 'localhost'");
+    $sth->execute;
+
+    my @vms;
+
+    while ( my $row = $sth->fetchrow_hashref) {
+        my $vm;
+        eval { $vm = Ravada::VM->open( $row->{id}) };
+        push @vms,( $vm )   if $vm;
+    }
+    $sth->finish;
+
+    return @vms;
 }
 
 sub _check_vms {
@@ -1353,22 +1504,42 @@ sub create_domain {
     my %args = @_;
 
     my $request = $args{request};
-    %args = %{$request->args}   if $request;
+    if ($request) {
+        my %args_r = %{$request->args};
+        delete $args_r{'at'};
+        for my $field (keys %args_r) {
+            confess "Error: Argument $field different in request "
+                if $args{$field} && $args{$field} ne $args_r{$field};
+            $args{$field} = $args_r{$field};
+        }
+    }
+    my $vm_name = delete $args{vm};
 
     my $start = $args{start};
-    my $vm_name = $args{vm};
     my $id_base = $args{id_base};
-    my $id_owner = $args{id_owner};
+    my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
+
+    confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
     my $vm;
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
+    my $base;
     if ($id_base) {
-        my $base = Ravada::Domain->open($id_base)
+        $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+    $request->status("creating machine")    if $request;
+    if ( $base && $base->is_base ) {
+        $request->status("balancing")                       if $request;
+        $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
+        $request->status("creating machine on ".$vm->name)  if $request;
     }
 
     confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
@@ -1378,9 +1549,7 @@ sub create_domain {
 
     confess "I can't find any vm ".Dumper($self->vm) if !$vm;
 
-    $request->status("creating")    if $request;
     my $domain;
-    delete $args{'at'};
     eval { $domain = $vm->create_domain(%args)};
 
     my $error = $@;
@@ -1395,13 +1564,11 @@ sub create_domain {
     if (!$error && $start) {
         $request->status("starting") if $request;
         eval {
-            my $user = Ravada::Auth::SQL->search_by_id($id_owner);
             my $remote_ip;
             $remote_ip = $request->defined_arg('remote_ip') if $request;
             $domain->start(
                 user => $user
                 ,remote_ip => $remote_ip
-                ,request => $request
             )
         };
         my $error = $@;
@@ -1409,6 +1576,15 @@ sub create_domain {
         $request->error($error) if $error;
     }
     return $domain;
+}
+
+sub _check_args($args,@) {
+    my %args_check = %$args;
+    for my $field (@_) {
+        delete $args_check{$field};
+    }
+    confess "ERROR: Unknown arguments ".Dumper(\%args_check) if keys %args_check;
+    lock_hash(%$args);
 }
 
 =head2 remove_domain
@@ -1430,17 +1606,21 @@ sub remove_domain {
 
     lock_hash(%arg);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name = ?");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
     $sth->execute($name);
 
-    my ($id)= $sth->fetchrow;
+    my ($id,$vm_type)= $sth->fetchrow;
     confess "Error: Unknown domain $name"   if !$id;
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
-    my $domain = Ravada::Domain->open(id => $id, _force => 1)
+    my $domain0 = Ravada::Domain->open( $id );
+    $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+
+    my $vm = Ravada::VM->open(type => $vm_type);
+    my $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id)
         or do {
             warn "Warning: I can't find domain '$id', maybe already removed.";
             $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
@@ -1457,7 +1637,58 @@ sub remove_domain {
 
 =cut
 
-sub search_domain {
+sub search_domain($self, $name, $import = 0) {
+    my $query =
+         "SELECT d.id, d.id_vm "
+        ." FROM domains d LEFT JOIN vms "
+        ."      ON d.id_vm = vms.id "
+        ." WHERE "
+        ."    d.name=? "
+        ;
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute($name);
+    my ($id, $id_vm ) = $sth->fetchrow();
+
+    return if !$id;
+    if ($id_vm) {
+        my $vm;
+        my $vm_is_active;
+        eval {
+            $vm = Ravada::VM->open($id_vm);
+            $vm_is_active = $vm->is_active if $vm;
+        };
+        warn $@ if $@;
+        if ( $vm && !$vm_is_active) {
+            eval {
+                $vm->disconnect();
+                $vm->connect;
+            };
+            warn $@ if $@;
+        }
+        if ($vm && $vm_is_active ) {
+            my $domain;
+            eval { $domain = $vm->search_domain($name)};
+            warn $@ if $@;
+            return $domain if $domain;
+        }
+    }
+#    for my $vm (@{$self->vm}) {
+#        warn $vm->name;
+#        next if !$vm->is_active;
+#        my $domain = $vm->search_domain($name, $import);
+#        next if !$domain;
+#        next if !$domain->_select_domain_db && !$import;
+#        my $id_domain;
+#        eval { $id_domain = $domain->id };
+#        next if !$id_domain && !$import;
+#
+#        return $domain if $domain->is_active;
+#    }
+#    return if !$id;
+    return Ravada::Domain->open($id);
+}
+
+sub _search_domain {
     my $self = shift;
     my $name = shift;
     my $import = shift;
@@ -1482,7 +1713,10 @@ sub search_domain {
         eval { $id = $domain->id };
         # TODO import the domain in the database with an _insert_db or something
         warn $@ if $@   && $DEBUG;
-        return $domain if $id || $import;
+        next if !$id && !$import;
+
+        $domain->_vm($domain->last_vm())    if $id && $domain->last_vm;
+        return $domain;
     }
 
 
@@ -1544,17 +1778,23 @@ sub list_domains {
     die "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
 
-    my @domains;
-    for my $vm ($self->list_vms) {
-        for my $domain ($vm->list_domains) {
-            next if defined $active &&
-                ( $domain->is_active && !$active
-                    || !$domain->is_active && $active );
+    my $domains_data = $self->list_domains_data();
 
+    my @domains;
+
+    for my $row (@$domains_data) {
+        my $domain =  Ravada::Domain->open($row->{id});
+        next if !$domain;
+        my $is_active;
+        $is_active = $domain->is_active;
+            if ( defined $active && !$domain->is_removed &&
+                ( $is_active && !$active
+                    || !$is_active && $active )) {
+                next;
+            }
             next if $user && $domain->id_owner != $user->id;
 
             push @domains,($domain);
-        }
     }
     return @domains;
 }
@@ -1564,23 +1804,32 @@ sub list_domains {
 
 List all domains in raw format. Return a list of id => { name , id , is_active , is_base }
 
-   my $list = $ravada->list_domains_data();
+   my @list = $ravada->list_domains_data();
 
-   $c->render(json => $list);
+   $c->render(json => @list);
 
 =cut
 
-sub list_domains_data {
-    my $self = shift;
+sub list_domains_data($self, %args ) {
     my @domains;
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT * FROM domains ORDER BY name"
-    );
-    $sth->execute;
+
+    my $where = '';
+    my @values;
+    for my $field ( sort keys %args ) {
+        $where .= " AND " if $where;
+        $where .= " $field = ? ";
+        push @values,( $args{$field});
+    }
+    $where = " WHERE $where " if $where;
+    my $query = "SELECT * FROM domains $where ORDER BY name";
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
+        lock_hash(%$row);
         push @domains,($row);
     }
     $sth->finish;
+    return @domains if wantarray;
     return \@domains;
 }
 
@@ -1731,13 +1980,13 @@ sub remove_volume {
 
 }
 
-=head2 clean_killed_requests
+=head2 clean_old_requests
 
-Before processing requests, old killed requests must be cleaned.
+Before processing requests, old requests must be cleaned.
 
 =cut
 
-sub clean_killed_requests {
+sub clean_old_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
         ." WHERE status <> 'done' AND STATUS <> 'requested'"
@@ -1748,6 +1997,8 @@ sub clean_killed_requests {
         $req->status("done","Killed ".$req->command." before completion");
     }
 
+    $self->_clean_requests('refresh_vms');
+    $self->_clean_requests('cleanup');
 }
 
 =head2 process_requests
@@ -1762,10 +2013,13 @@ sub process_requests {
     my $self = shift;
     my $debug = shift;
     my $dont_fork = shift;
-    my $long_commands = (shift or 0);
-    my $short_commands = (shift or 0);
+    my $request_type = ( shift or 'all');
+    confess "ERROR: Request type '$request_type' unknown, it must be long, huge, all"
+            ." or priority"
+        if $request_type !~ /^(long|huge|priority|all)$/;
 
-    $self->_wait_pids_nohang();
+    $self->_wait_pids();
+    $self->_kill_stale_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -1775,48 +2029,38 @@ sub process_requests {
     );
     $sth->execute(time);
 
-    my $debug_type = '';
-    $debug_type = 'long' if $long_commands;
-    $debug_type = 'short' if $short_commands || !$long_commands;
-    $debug_type = 'all' if $long_commands && $short_commands;
-
+    my @reqs;
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
-        next if $@ && $@ =~ /I can't find id/;
-        die $@ if $@;
 
-        if (
-            $req->command ne 'ping_backend'
-            &&( ($long_commands &&
-                (!$short_commands && !$LONG_COMMAND{$req->command}))
-                ||(!$long_commands && $LONG_COMMAND{$req->command})
-            )
-        ) {
-            warn "[$debug_type,$long_commands,$short_commands] $$ skipping request "
-                .$req->command  if $DEBUG;
-            next;
-        }
+        next if $@ && $@ =~ /I can't find/;
+        warn $@ if $@;
+        next if !$req;
+
+        next if !$req->requirements_done;
+
+        next if $request_type ne 'all' && $req->type ne $request_type;
+
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
-        warn "[$debug_type] $$ executing request ".$req->id." ".$req->status()." "
+        push @reqs,($req);
+    }
+
+    for my $req (sort { $a->priority <=> $b->priority } @reqs) {
+        next if $req eq 'refresh_vms' && scalar@reqs > 2;
+
+        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
-        my $err = $self->_execute($req, $dont_fork);
-        $req->error($err)   if $err;
-        if ($err && $err =~ /libvirt error code: 38/) {
-            if ( $n_retry < 3) {
-                warn $req->id." ".$req->command." to retry" if $DEBUG;
-                $req->status("retry ".++$n_retry)
-            } else {
-                $req->status("done");
-            }
-        }
-        next if !$DEBUG && !$debug && !$VERBOSE;
+
+        $self->_execute($req, $dont_fork);
+#        $req->status("done") if $req->status() !~ /retry/;
+        next if !$DEBUG && !$debug;
 
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
@@ -1825,6 +2069,78 @@ sub process_requests {
     }
     $sth->finish;
 
+    $self->_timeout_requests();
+}
+
+sub _date_now($seconds = 0) {
+    confess "Error, can't search what changed in the future "
+        if $seconds > 0;
+    my @now = localtime(time + $seconds);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":".$now[0];
+
+    return $time_recent;
+}
+
+sub _timeout_requests($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid, start_time, date_changed "
+        ." FROM requests "
+        ." WHERE ( status = 'working' or status = 'stopping' )"
+        ."  AND date_changed >= ? "
+        ." ORDER BY date_req "
+    );
+    $sth->execute(_date_now(-30));
+
+    my @requests;
+    while (my ($id, $pid, $start_time) = $sth->fetchrow()) {
+        my $req = Ravada::Request->open($id);
+        my $timeout = $req->defined_arg('timeout') or next;
+        next if time - $start_time <= $timeout;
+        warn "request ".$req->pid." ".$req->command." timeout";
+        push @requests,($req);
+    }
+    $sth->finish;
+
+    $self->_kill_requests(@requests);
+}
+
+sub _kill_requests($self, @requests) {
+    for my $req (@requests) {
+        $req->status('stopping');
+        my @procs = $self->_process_sons($req->pid);
+        if ( @procs) {
+            for my $current (@procs) {
+                my ($pid, $cmd) = @$current;
+                my $signal = 15;
+                $signal = 9 if $cmd =~ /<defunct>$/;
+                warn "sending $signal to $pid $cmd";
+                kill($signal, $pid);
+            }
+        }
+        $req->stop();
+    }
+}
+
+sub _process_sons($self, $pid) {
+    my @process;
+
+    my $cmd = "ps -eo 'ppid pid cmd'";
+
+    open my $ps,'-|', $cmd or die "$! $cmd";
+    while (my $line = <$ps>) {
+        warn "looking for $pid in ".$line if $line =~ /$pid/;
+        my ($pid_son, $cmd) = $line =~ /^\s*$pid\s+(\d+)\s+(.*)/;
+        next if !$pid_son;
+        warn "$cmd\n";
+        push @process,[$pid_son, $cmd] if $pid_son;
+    }
+
+    return @process;
 }
 
 =head2 process_long_requests
@@ -1837,8 +2153,7 @@ sub process_long_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    $self->_disconnect_vm();
-    return $self->process_requests($debug, $dont_fork, 1);
+    return $self->process_requests($debug, $dont_fork, 'long');
 }
 
 =head2 process_all_requests
@@ -1852,8 +2167,37 @@ sub process_all_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    $self->process_requests($debug, $dont_fork,1,1);
+    $self->process_requests($debug, $dont_fork,'all');
 
+}
+
+sub process_priority_requests($self, $debug=0, $dont_fork=0) {
+
+    $self->process_requests($debug, $dont_fork,'priority');
+
+}
+
+sub _kill_stale_process($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid,command,start_time "
+        ." FROM requests "
+        ." WHERE start_time<? "
+        ." AND command = 'refresh_vms'"
+        ." AND status <> 'done' "
+        ." AND pid IS NOT NULL "
+        ." AND start_time IS NOT NULL "
+    );
+    $sth->execute(time - 60 );
+    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
+        if ($pid == $$ ) {
+            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
+                ." seconds, but I won't because it is myself";
+            next;
+        }
+        my $request = Ravada::Request->open($id);
+        $request->stop();
+     }
+    $sth->finish;
 }
 
 sub _domain_working {
@@ -1868,16 +2212,18 @@ sub _domain_working {
         if (!$id_domain) {
             my $domain_name = $req->defined_arg('name');
             return if !$domain_name;
-            my $domain = $self->search_domain($domain_name) or return;
-            $id_domain = $domain->id;
+            my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM domains WHERE name=?");
+            $sth->execute($domain_name);
+            ($id_domain) = $sth->fetchrow;
             if (!$id_domain) {
-                warn Dumper($req);
+                # TODO: maybe this request should be marked down because domain already removed
                 return;
             }
         }
     }
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
-        ." WHERE id <> ? AND id_domain=? AND (status <> 'requested' AND status <> 'done')");
+        ." WHERE id <> ? AND id_domain=? "
+        ." AND (status <> 'requested' AND status <> 'done' AND command <> 'set_base_vm')");
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -1890,13 +2236,14 @@ sub _process_all_requests_dont_fork {
     my $self = shift;
     my $debug = shift;
 
-    return $self->process_requests($debug,1, 1, 1);
+    return $self->process_requests($debug,1, 'all');
 }
 
 sub _process_requests_dont_fork {
     my $self = shift;
     my $debug = shift;
-    return $self->process_requests($debug, 1);
+    return $self->process_requests($debug, 'priority');
+    return $self->process_requests($debug, 'long');
 }
 
 =head2 list_vm_types
@@ -1923,11 +2270,16 @@ sub _execute {
 
     my $sub = $self->_req_method($request->command);
 
-    confess "Unknown command ".$request->command
-            if !$sub;
+    if (!$sub) {
+        $request->error("Unknown command ".$request->command);
+        $request->status('done');
+        return;
+    }
 
+    $request->pid($$);
+    $request->start_time(time);
     $request->error('');
-    if ($dont_fork || !$CAN_FORK || !$LONG_COMMAND{$request->command}) {
+    if ($dont_fork || !$CAN_FORK) {
 
         my $t0 = [gettimeofday];
         eval { $sub->($self,$request) };
@@ -1937,26 +2289,27 @@ sub _execute {
         $request->status('done') if $request->status() ne 'done'
                                     && $request->status !~ /retry/;
         $request->error($err) if $err;
-        return $err;
+        warn $err if $err;
+        return;
     }
 
-    $self->_wait_pids_nohang();
-    return if $self->_wait_children($request);
+    $self->_wait_pids;
+    return if !$self->_can_fork($request);
 
-    $request->status('working');
     my $pid = fork();
     die "I can't fork" if !defined $pid;
+
     if ( $pid == 0 ) {
+        $request->status('working','');
         my $t0 = [gettimeofday];
+        srand();
         $self->_do_execute_command($sub, $request);
         my $elapsed = tv_interval($t0,[gettimeofday]);
         $request->run_time($elapsed) if !$request->run_time();
-        print "++++ ".request->command." ".Dumper($elapsed);
-    } else {
-        $self->_add_pid($pid, $request->id);
+        exit;
     }
-#    $self->_connect_vm_kvm();
-    return '';
+    $self->_add_pid($pid, $request);
+    $request->pid($pid);
 }
 
 sub _do_execute_command {
@@ -1974,32 +2327,15 @@ sub _do_execute_command {
 
     my $t0 = [gettimeofday];
     eval {
-        $self->_connect_vm();
         $sub->($self,$request);
-        $self->_disconnect_vm();
     };
     my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    $request->error($err);
+    $request->error($err)   if $err;
     $request->status('done')
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
-    exit;
-
-}
-
-sub _cmd_domdisplay {
-    my $self = shift;
-    my $request = shift;
-
-    my $name = $request->args('name');
-    confess "Unknown name for request ".Dumper($request)  if!$name;
-    my $domain = $self->search_domain($request->args->{name});
-    my $user = Ravada::Auth::SQL->search_by_id( $request->args->{uid});
-    $request->error('');
-    my $display = $domain->display($user);
-    $request->result({display => $display});
 
 }
 
@@ -2046,8 +2382,8 @@ sub _cmd_create{
     my $self = shift;
     my $request = shift;
 
-    $request->status('creating domain');
-    warn "$$ creating domain"   if $DEBUG;
+    $request->status('creating machine');
+    warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
 
     $domain = $self->create_domain(request => $request);
@@ -2067,100 +2403,59 @@ sub _cmd_create{
 
 }
 
-sub _wait_children {
+sub _can_fork {
     my $self = shift;
     my $req = shift or confess "Missing request";
 
-    my $try = 0;
-    for ( 1 .. $SECONDS_WAIT_CHILDREN ) {
-        my $n_pids = scalar keys %{$self->{pids}};
+    # don't wait for priority requests
+    return if $req->type eq 'priority';
 
-        my $msg;
-        if ($HUGE_COMMAND{$req->command}) {
-            if ( $n_pids < $LIMIT_HUGE_PROCESS) {
-                $msg = $req->id." ".$req->command
-                ." waiting for processes to finish $n_pids"
-                ." of $LIMIT_HUGE_PROCESS ";
-                warn $msg if $DEBUG;
-                return;
-            }
-        } elsif ( $n_pids < $LIMIT_PROCESS) {
-            $msg = $req->id." ".$req->command
-                ." waiting for processes to finish $n_pids"
-                ." of $LIMIT_PROCESS ";
-            warn $msg if $DEBUG;
-            return;
-        }
-        $self->_wait_pids_nohang();
-        sleep 1;
+    my $type = $req->type;
 
-        next if $try++;
+    my $n_pids = scalar(keys %{$self->{pids}->{$type}});
+    return 1 if $n_pids <= $req->requests_limit();
 
-        $req->error($msg);
-        $req->status('waiting') if $req->status() !~ 'waiting';
-    }
-    return scalar keys %{$self->{pids}};
+    my $msg = $req->command
+                ." waiting for processes to finish"
+                ." limit ".$req->requests_limit;
+
+    warn $msg if $DEBUG;
+
+    $req->error($msg);
+    $req->status('waiting') if $req->status() !~ 'waiting';
+    return 0;
 }
-
-sub _wait_pids_nohang {
-    my $self = shift;
-    return if !keys %{$self->{pids}};
-
-    for my $pid ( keys %{$self->{pids}}) {
-        my $kid = waitpid($pid , WNOHANG);
-        next if !$kid || $kid == -1;
-        $self->_set_req_done($kid);
-        $self->_delete_pid($kid);
-    }
-
-}
-
-sub _set_req_done {
-    my $self = shift;
-    my $pid = shift;
-
-    my $id_request = $self->{pids}->{$pid};
-    return if !$id_request;
-
-    my $req = Ravada::Request->open($id_request);
-    $req->status('done')    if $req->status =~ /working/i;
-}
-
 sub _wait_pids {
     my $self = shift;
-    my $request = shift;
 
-    $request->status('waiting for other tasks')
-        if $request && $request->status !~ /waiting/i;
-
-    for my $pid ( keys %{$self->{pids}}) {
-        $request->status("waiting for pid $pid")
-            if $request && $request->status !~ /waiting/i;
-
-#        warn "Checking for pid '$pid' created at ".localtime($self->{pids}->{$pid});
-        my $kid = waitpid($pid,0);
-#        warn "Found $kid";
-        $self->_set_req_done($pid);
-
-        $self->_delete_pid($kid);
-        return if $kid  == $pid;
+    for my $type ( keys %{$self->{pids}} ) {
+        for my $pid ( keys %{$self->{pids}->{$type}}) {
+            my $kid = waitpid($pid , WNOHANG);
+            last if $kid <= 0 ;
+            my $request = Ravada::Request->open($self->{pids}->{$type}->{$kid});
+            if ($request) {
+                $request->status('done') if $request->status =~ /working/i;
+            };
+            delete $self->{pids}->{$type}->{$kid};
+        }
     }
 }
 
-sub _add_pid {
-    my $self = shift;
-    my $pid = shift;
-    my $id_req = shift;
+sub _add_pid($self, $pid, $request) {
 
-    $self->{pids}->{$pid} = $id_req;
+    my $type = $request->type;
+    $self->{pids}->{$type}->{$pid} = $request->id;
 
 }
+
 
 sub _delete_pid {
     my $self = shift;
     my $pid = shift;
 
-    delete $self->{pids}->{$pid};
+    for my $type ( keys %{$self->{pids}} ) {
+        delete $self->{pids}->{$type}->{$pid}
+    }
 }
 
 sub _cmd_remove {
@@ -2171,7 +2466,6 @@ sub _cmd_remove {
         if !defined $request->args->{uid};
 
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
-
 }
 
 sub _cmd_pause {
@@ -2184,6 +2478,8 @@ sub _cmd_pause {
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    $self->_remove_unnecessary_downs($domain);
 
     $domain->pause($user);
 
@@ -2202,6 +2498,7 @@ sub _cmd_resume {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    $self->_remove_unnecessary_downs($domain);
     $domain->resume(
         remote_ip => $request->args('remote_ip')
         ,user => $user
@@ -2229,7 +2526,8 @@ sub _cmd_open_iptables {
 }
 
 sub _cmd_clone($self, $request) {
-    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    my $domain = Ravada::Domain->open($request->args('id_domain'))
+        or confess "Error: Domain ".$request->args('id_domain')." not found";
 
     my @args = ( request => $request);
     push @args, ( memory => $request->args('memory'))
@@ -2261,7 +2559,9 @@ sub _cmd_start {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    $domain->start(user => $user, remote_ip => $request->args('remote_ip'), request => $request);
+    $self->_remove_unnecessary_downs($domain);
+
+    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
@@ -2271,6 +2571,70 @@ sub _cmd_start {
 
 }
 
+sub _cmd_dettach($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to dettach domain"
+        if !$user->is_admin;
+
+    $domain->dettach($user);
+}
+
+sub _cmd_rebase_volumes($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to dettach domain"
+        if !$user->is_admin;
+
+    if ($domain->is_active) {
+        Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
+        $request->status("requested");
+        die "Error: domain ".$domain->name." is still active, shut it down to rebase\n"
+    }
+    $request->status('working');
+
+    my $new_base = Ravada::Domain->open($request->args('id_base'));
+    $domain->rebase_volumes($new_base);
+}
+
+
+sub _cmd_start_clones {
+    my $self = shift;
+    my $request = shift;
+
+    my $remote_ip = $request->args('remote_ip');
+    my $id_domain = $request->defined_arg('id_domain');
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+    );
+    $sth->execute($id_domain);
+    while ( my ($id, $name, $is_base) = $sth->fetchrow) {
+        if ($is_base == 0) {
+            my $domain2;
+            my $is_active;
+            eval {
+                $domain2 = $self->search_domain_by_id($id);
+                $is_active = $domain2->is_active;
+            };
+            warn $@ if $@;
+            if (!$is_active) {
+                my $req = Ravada::Request->start_domain(
+                    uid => $uid
+                   ,name => $name
+                   ,remote_ip => $remote_ip);
+            }
+        }
+    }
+}
+
 sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
@@ -2278,12 +2642,14 @@ sub _cmd_prepare_base {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
-    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    my $user = Ravada::Auth::SQL->search_by_id( $uid)
+        or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
     my $domain = $self->search_domain_by_id($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
+    $self->_remove_unnecessary_downs($domain);
     $domain->prepare_base($user);
 
 }
@@ -2316,7 +2682,8 @@ sub _cmd_hybernate {
     my $id_domain = $request->id_domain or confess "Missing request id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+
+    my $domain = Ravada::Domain->open($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
@@ -2354,13 +2721,14 @@ sub _cmd_add_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $number = $request->args('number');
 
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: User ".$user->name." not allowed to add hardware to machine ".$domain->name
+        if !$user->is_admin;
 
-    $domain->set_controller($hardware, $number);
+    $domain->set_controller($hardware, $request->defined_arg('number'), $request->defined_arg('data'));
 }
 
 sub _cmd_remove_hardware {
@@ -2379,6 +2747,28 @@ sub _cmd_remove_hardware {
     $domain->remove_controller($hardware, $index);
 }
 
+sub _cmd_change_hardware {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $hardware = $request->args('hardware') or confess "Missing argument hardware";
+    my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
+
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: User ".$user->name." not allowed\n"
+        if !$user->is_admin;
+
+    $domain->change_hardware(
+         $request->args('hardware')
+        ,$request->args('index')
+        ,$request->args('data')
+    );
+}
+
 sub _cmd_shutdown {
     my $self = shift;
     my $request = shift;
@@ -2387,19 +2777,26 @@ sub _cmd_shutdown {
     my $name = $request->defined_arg('name');
     my $id_domain = $request->defined_arg('id_domain');
     my $timeout = ($request->args('timeout') or 60);
+    my $id_vm = $request->defined_arg('id_vm');
 
     confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
 
     my $domain;
     if ($name) {
-    $domain = $self->search_domain($name);
-    die "Unknown domain '$name'\n" if !$domain;
+        if ($id_vm) {
+            my $vm = Ravada::VM->open($id_vm);
+            $domain = $vm->search_domain($name);
+        } else {
+            $domain = $self->search_domain($name);
+        }
+        die "Unknown domain '$name'\n" if !$domain;
     }
     if ($id_domain) {
-        my $domain2 = $self->search_domain_by_id($id_domain);
+        my $domain2 = Ravada::Domain->open(id => $id_domain, id_vm => $id_vm);
         die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
             if $domain && $domain->name ne $domain2->name;
         $domain = $domain2;
+        die "Unknown domain '$id_domain'\n" if !$domain
     }
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
@@ -2415,9 +2812,15 @@ sub _cmd_force_shutdown {
 
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
 
     my $domain;
-    $domain = $self->search_domain_by_id($id_domain);
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
     die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
@@ -2492,6 +2895,17 @@ sub _cmd_refresh_storage($self, $request=undef) {
     $vm->refresh_storage();
 }
 
+sub _cmd_refresh_machine($self, $request) {
+
+    my $id_domain = $request->args('id_domain');
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+    $domain->list_volumes_info();
+    $domain->info($user);
+    $self->_remove_unnecessary_downs($domain);
+
+}
+
 sub _cmd_change_owner($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain');
@@ -2517,8 +2931,13 @@ sub _cmd_refresh_vms($self, $request=undef) {
     if ($request && (my $id_recent = $request->done_recently(30))) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
+
+    $self->_refresh_disabled_nodes( $request );
+    $self->_refresh_down_nodes( $request );
+
     my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
+    $self->_remove_unnecessary_downs();
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
@@ -2542,13 +2961,66 @@ sub _cmd_change_curr_memory($self, $request) {
     $domain->set_memory($memory);
 }
 
-sub _cmd_start_many_domains{
-    my $self = shift;
-    my $request = shift;
+sub _cmd_shutdown_node($self, $request) {
+    my $id_node = $request->args('id_node');
+    my $node = Ravada::VM->open($id_node);
+    $node->shutdown();
+}
 
-    my $uid = $request->args('uid');
-    my $name = $request->args('name');
+sub _cmd_start_node($self, $request) {
+    my $id_node = $request->args('id_node');
+    my $node = Ravada::VM->open($id_node);
+    $node->start();
+}
 
+sub _cmd_connect_node($self, $request) {
+    my $backend = $request->defined_arg('backend');
+    my $hostname = $request->defined_arg('hostname');
+    my $id_node = $request->defined_arg('id_node');
+
+    my $node;
+
+    if ($id_node) {
+        $node = Ravada::VM->open($id_node);
+        $hostname = $node->host;
+    } else {
+        $node = Ravada::VM->open( type => $backend
+            , host => $hostname
+            , store => 0
+        );
+    }
+
+    die "I can't ping $hostname\n"
+        if ! $node->ping();
+
+    $request->error("Ping ok. Trying to connect to $hostname");
+    my ($out, $err);
+    eval {
+        ($out, $err) = $node->run_command('/bin/true');
+    };
+    $err = $@ if $@ && !$err;
+    warn "out: $out" if $out;
+    if ($err) {
+        warn $err;
+        $err =~ s/(.*?) at lib.*/$1/s;
+        chomp $err;
+        $err .= "\n";
+        die $err if $err;
+    }
+    $node->connect() && $request->error("Connection OK");
+}
+
+sub _cmd_list_network_interfaces($self, $request) {
+
+    my $vm_type = $request->args('vm_type');
+    my $type = $request->defined_arg('type');
+    my @type;
+    @type = ( $type ) if $type;
+
+    my $vm = Ravada::VM->open( type => $vm_type );
+    my @ifs = $vm->list_network_interfaces( @type );
+
+    $request->output(encode_json(\@ifs));
 }
 
 sub _clean_requests($self, $command, $request=undef) {
@@ -2576,7 +3048,10 @@ sub _refresh_active_domains($self, $request=undef) {
     my %active_domain;
     my %active_vm;
     for my $vm ($self->list_vms) {
-        if ( !$vm->is_active ) {
+        $request->status('working',"checking active domains on ".$vm->name)
+            if $request;
+        if ( !$vm->enabled() || !$vm->is_active ) {
+            $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
             next;
@@ -2586,7 +3061,10 @@ sub _refresh_active_domains($self, $request=undef) {
             my $domain = $vm->search_domain_by_id($id_domain);
             $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
          } else {
-            for my $domain ($vm->list_domains( active => 1)) {
+            my @domains;
+            eval { @domains = $vm->list_domains };
+            warn $@ if $@;
+            for my $domain (@domains) {
                 next if $active_domain{$domain->id};
                 next if $domain->is_hibernated;
                 $self->_refresh_active_domain($vm, $domain, \%active_domain);
@@ -2594,6 +3072,40 @@ sub _refresh_active_domains($self, $request=undef) {
         }
     }
     return \%active_domain, \%active_vm;
+}
+
+sub _refresh_down_nodes($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        eval { $vm = Ravada::VM->open($id) };
+        warn $@ if $@;
+    }
+}
+
+sub _refresh_disabled_nodes($self, $request = undef ) {
+    my @timeout = ();
+    @timeout = ( timeout => $request->args('timeout_shutdown') )
+        if defined $request && $request->defined_arg('timeout_shutdown');
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name, vms.name FROM domains d, vms "
+        ." WHERE d.id_vm = vms.id "
+        ."    AND ( vms.enabled = 0 || vms.is_active = 0 )"
+        ."    AND d.status = 'active'"
+    );
+    $sth->execute();
+    while ( my ($id_domain, $domain_name, $vm_name) = $sth->fetchrow ) {
+        Ravada::Request->shutdown_domain( id_domain => $id_domain
+            , uid => Ravada::Utils::user_daemon->id
+            , @timeout
+        );
+        $request->status("Shutting down domain $domain_name in disabled node $vm_name");
+    }
+    $sth->finish;
 }
 
 sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
@@ -2609,6 +3121,7 @@ sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
                 || $domain->_data('id_vm') != $vm->id;
     }
     $domain->_set_data(status => $status);
+    $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
 
 }
@@ -2638,6 +3151,18 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     }
 }
 
+sub _remove_unnecessary_downs($self, @domains) {
+    @domains = $self->list_domains( active => 0 ) if !scalar @domains;
+
+    for my $domain (@domains) {
+        my @requests = $domain->list_requests(1);
+        for my $req (@requests) {
+            $req->status('done') if $req->command =~ /shutdown/;
+            $req->_remove_messages();
+        }
+    }
+}
+
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, name, id_vm FROM domains WHERE is_volatile=1"
@@ -2646,8 +3171,10 @@ sub _refresh_volatile_domains($self) {
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
-            $domain->_post_shutdown(user => $USER_DAEMON);
-            $domain->remove($USER_DAEMON);
+            if ($domain) {
+                $domain->_post_shutdown(user => $USER_DAEMON);
+                $domain->remove($USER_DAEMON);
+            }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
@@ -2659,6 +3186,45 @@ sub _refresh_volatile_domains($self) {
     }
 }
 
+sub _cmd_remove_base_vm {
+    return _cmd_set_base_vm(@_);
+}
+
+sub _cmd_set_base_vm {
+    my $self = shift;
+    my $request = shift;
+
+    my $value = $request->args('value');
+    die "ERROR: Missing value"                  if !defined $value;
+
+    my $uid = $request->args('uid')             or die "ERROR: Missing uid";
+    my $id_vm = $request->args('id_vm')         or die "ERROR: Missing id_vm";
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = Ravada::Domain->open($id_domain) or confess "Error: Unknown domain id $id_domain";
+
+    #    my $domain = $self->search_domain_by_id($id_domain) or confess "Error: Unknown domain id: $id_domain";
+
+    die "USER $uid not authorized to set base vm"
+        if !$user->is_admin;
+
+    $domain->prepare_base($user) if $value && !$domain->is_base;
+
+    $domain->set_base_vm(
+            id_vm => $id_vm
+            ,user => $user
+           ,value => $value
+         ,request => $request
+     );
+}
+
+sub _cmd_cleanup($self, $request) {
+    $self->_clean_volatile_machines( request => $request);
+    $self->_clean_requests('cleanup', $request);
+    $self->_wait_pids();
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -2667,18 +3233,24 @@ sub _req_method {
 
           clone => \&_cmd_clone
          ,start => \&_cmd_start
+  ,start_clones => \&_cmd_start_clones
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
         ,resume => \&_cmd_resume
+       ,dettach => \&_cmd_dettach
+       ,cleanup => \&_cmd_cleanup
       ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
      ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
-    ,domdisplay => \&_cmd_domdisplay
     ,screenshot => \&_cmd_screenshot
+    ,add_disk => \&_cmd_add_disk
     ,copy_screenshot => \&_cmd_copy_screenshot
+   ,cmd_cleanup => \&_cmd_cleanup
    ,remove_base => \&_cmd_remove_base
+   ,set_base_vm => \&_cmd_set_base_vm
+,remove_base_vm => \&_cmd_set_base_vm
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
@@ -2687,14 +3259,27 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,rebase_volumes => \&_cmd_rebase_volumes
 ,refresh_storage => \&_cmd_refresh_storage
+,refresh_machine => \&_cmd_refresh_machine
+,refresh_vms => \&_cmd_refresh_vms
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
+,change_hardware => \&_cmd_change_hardware
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
+# Virtual Managers or Nodes
+    ,shutdown_node  => \&_cmd_shutdown_node
+    ,start_node  => \&_cmd_start_node
+    ,connect_node  => \&_cmd_connect_node
 
+    #users
+    ,post_login => \&_cmd_post_login
+
+    #networks
+    ,list_network_interfaces => \&_cmd_list_network_interfaces
     );
     return $methods{$cmd};
 }
@@ -2723,25 +3308,54 @@ Searches for a VM of a given type
 sub search_vm {
     my $self = shift;
     my $type = shift;
+    my $host = (shift or 'localhost');
 
     confess "Missing VM type"   if !$type;
 
     my $class = 'Ravada::VM::'.uc($type);
 
     if ($type =~ /Void/i) {
-        return Ravada::VM::Void->new();
+        return Ravada::VM::Void->new(host => $host);
     }
 
-    my @vms;
-    eval { @vms = @{$self->vm} };
-    return if $@ && $@ =~ /No VMs found/i;
-    die $@ if $@;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE vm_type = ? "
+        ."   AND hostname=?"
+    );
+    $sth->execute($type, $host);
+    my ($id) = $sth->fetchrow();
+    return Ravada::VM->open($id)    if $id;
+    return if $host ne 'localhost';
 
-    for my $vm (@vms) {
-        $vm->connect    if !$vm->vm;
-        return $vm if ref($vm) eq $class;
+    my $vms = $self->_create_vm();
+
+    for my $vm (@$vms) {
+        return $vm if ref($vm) eq $class && $vm->host eq $host;
     }
     return;
+}
+
+sub vm($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    my @vms;
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        eval {
+            $vm = Ravada::VM->open($id);
+        };
+        if ( $@ ) {
+            warn $@;
+            next;
+        }
+        push @vms, ( $vm );
+    };
+    return [@vms] if @vms;
+    return $self->_create_vm();
+
 }
 
 =head2 import_domain
@@ -2784,6 +3398,7 @@ sub _cmd_enforce_limits($self, $request=undef) {
 
 sub _enforce_limits_active($self, $request) {
 
+    confess if !$request;
     if (my $id_recent = $request->done_recently(30)) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
@@ -2818,6 +3433,52 @@ sub _enforce_limits_active($self, $request) {
             }
         }
     }
+}
+
+sub _clean_volatile_machines($self, %args) {
+    my $request = delete $args{request};
+
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args)
+        if keys %args;
+
+    my $sth_remove = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
+    for my $domain ( $self->list_domains_data( is_volatile => 1 )) {
+        my $domain_real = Ravada::Domain->open(
+            id => $domain->{id}
+            ,_force => 1
+        );
+        if ($domain_real) {
+            next if $domain_real->domain && $domain_real->is_active;
+            $domain_real->_post_shutdown();
+            $domain_real->remove($USER_DAEMON);
+        }
+
+        $sth_remove->execute($domain->{id});
+    }
+}
+
+sub _cmd_post_login($self, $request) {
+    $self->_post_login_locale($request);
+}
+
+sub _post_login_locale($self, $request) {
+    return if ! $request->defined_arg('locale');
+
+    my @locales;
+
+    my $locales = $request->args('locale');
+    if (ref($locales)) {
+        @locales = @$locales;
+    } else {
+        @locales = $locales;
+    }
+    for my $locale ( @locales ) {
+        Ravada::Repository::ISO::insert_iso_locale($locale);
+    }
+}
+
+sub DESTROY($self) {
+    $self->_wait_pids();
 }
 
 =head2 version

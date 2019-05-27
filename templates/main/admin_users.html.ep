@@ -2,33 +2,42 @@
 <html>
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
-<div id="wrapper">
-    %= include 'bootstrap/navigation'
-    <div id="page-wrapper">
-      <div id="admin-content">
-        <h2><%=l 'Users' %></h2>
-        <form method="post" action="/admin/users">
-            <input type="text" name="name" placeholder="<%=l 'Users' %>">
-            <input type="submit" value="<%=l 'Search' %>">
-            <button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'"><%=l 'Register' %></button>
-        </form>
-        <table class="table table-striped">
-        <thead>
-            <tr>
-            <th><%=l 'Name' %></th>
-            </tr>
-        </thead>
-        <tbody>
-%       for my $user (@$list_users) {
-            <tr>
-                <td><a href="/admin/user/<%= $user->{id} %>.html"><%= $user->{name} %></a></td>
-            </tr>
-%       }
-        </tbody>
-        </table>
-      </div>
+    <div id="wrapper">
+        %= include 'bootstrap/navigation'
+        <div id="page-wrapper">
+            <div class="page-header">
+              <div class="card" id="admin-content">
+                <div class="card-header">
+                    <h2 class="display-5"><%=l 'Users' %></h2>
+                    <div class="card-title">
+                        <form method="post" action="/admin/users">
+                            <input type="text" name="name" placeholder="<%=l 'Users' %>">
+                            <input type="submit" value="<%=l 'Search' %>">
+                            <button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'"><%=l 'Register' %></button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                <th><%=l 'Name' %></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    %                         for my $user (@$list_users) {
+                                <tr>
+                                    <td><a href="/admin/user/<%= $user->{id} %>.html"><%= $user->{name} %></a></td>
+                                </tr>
+    %                         }
+                            </tbody>
+                        </table>
+                    </div>
+                 </div>
+                </div>
+        </div>
     </div>
-</div>
 %= include $footer
+%= include 'bootstrap/scripts'
 </body>
 </html>

@@ -1,22 +1,22 @@
-<div class="panel panel-default">
-    <div class="panel-heading">
-    <h2><%=l 'Choose a Machine to Start' %></h2>
+<div class="card">
+    <div class="card-header">
+    <h2 class="display-5"><%=l 'Choose a Machine to Start' %></h2>
 %   if ( $guide ) {
         <a ng-show="public_bases" class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
 %   }
 %   if ($user && $user->is_admin) {
         <div ng-cloak ng-show="public_bases && private_bases">
-            <a ng-click="toggle_only_public()" class="label label-primary"
+            <a ng-click="toggle_only_public()" class="badge badge-primary text-white dropdown-toggle"
               align="right" ng-show="!only_public"><%=l 'Hide Private' %></a>
-            <a ng-click="toggle_only_public()" class="label label-primary"
+            <a ng-click="toggle_only_public()" class="badge badge-primary text-white dropdown-toggle"
               align="right" ng-show="only_public"><%=l 'Show All' %></a>
         </div>
 %   }
 
     </div>
-    <div class="panel-body" ng-show="public_bases==0">
-        <div class="panel panel-warning">
-        <div class="panel-heading">
+    <div class="card-body" ng-show="public_bases==0">
+        <div class="card card.bg-warning">
+        <div class="card-header">
 %           if ($user && $user->is_admin) {
             <%=l 'There are no public bases available in this system.' %>
             <a href="/admin/machines"><%=l 'Create one.' %></a>

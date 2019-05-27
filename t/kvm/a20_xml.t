@@ -72,7 +72,7 @@ SKIP: {
     $domain->add_volume( name => 'vdb' , size => 1000 *1024);
 
     my @volumes_domain = $domain->list_volumes();
-    is(scalar @volumes_domain, 2);
+    is(scalar @volumes_domain, 3);
 
     my $clone2;
     eval  { $clone2 = $domain->clone(user => $USER, name => new_domain_name()) };
