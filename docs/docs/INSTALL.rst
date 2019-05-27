@@ -50,12 +50,19 @@ Install *libmojolicious-plugin-renderfile-perl* package:
 
      sudo apt-get install libmojolicious-plugin-renderfile-perl
 
-Then install the ravada package, it will show some errors, it is ok, keep reading.
+Then install the ravada package. Choose the one that matches your OS release:
+
+- ravada_0.4.0_ubuntu-18.04_all.deb
+- ravada_0.4.0_ubuntu-18.10_all.deb
+- ravada_0.4.0_ubuntu-19.04_all.deb
+- ravada_0.4.0_debian-10_all.deb
+
+When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_0.3.5_all.deb
-     sudo dpkg -i ravada_0.3.5_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_0.4.0_ubuntu-18.04_all.deb
+     sudo dpkg -i ravada_0.4.0_ubuntu-18.04_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
@@ -64,6 +71,15 @@ them running:
 
      sudo apt-get update
      sudo apt-get -f install
+
+Debian Release
+~~~~~~~~~~~~~~
+
+If you are using the Debian release you must enable spice KVM manually:
+
+.. prompt:: bash $
+
+   sudo ln -s /usr/bin/kvm /usr/bin/kvm-spice
 
 Mysql Database
 --------------
