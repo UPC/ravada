@@ -47,6 +47,7 @@ sub test_create_domain {
         name => $name
         ,active => 0
         ,create_args($vm_name)
+	,disk => 1024 * 1024
     );
     
     ok($domain_b);

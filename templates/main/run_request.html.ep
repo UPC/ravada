@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
+<script>
+    $_anonymous=<%= ($_anonymous or 0) %>;
+</script>
 %= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/navigation'

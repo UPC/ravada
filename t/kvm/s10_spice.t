@@ -22,6 +22,7 @@ sub test_spice {
 
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start($USER);

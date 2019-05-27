@@ -70,6 +70,11 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     confess if !ref($data) || ref($data) ne 'HASH';
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
+    while ($hardware eq 'usb' && $numero > 4) {
+        test_remove_hardware($vm, $domain, $hardware, 0);
+        @list_hardware1 = $domain->get_controller($hardware);
+	    $numero = scalar(@list_hardware1)+1;
+    }
 	my $req;
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
@@ -568,6 +573,7 @@ for my $vm_name ( qw(KVM Void)) {
 	my $domain_b = $vm->create_domain(
         name => $name
         ,active => 0
+        ,disk => 1024 * 1024
         ,create_args($vm_name)
     );
     my %controllers = $domain_b->list_controllers;

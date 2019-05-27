@@ -36,6 +36,7 @@ sub test_change_owner {
           ,id_iso => $id_iso
         ,id_owner => $USER->id
         ,iso_file => '<NONE>'
+            ,disk => 1024 * 1024
     );
     is($USER->id, $domain->id_owner) or return;
     my $req = Ravada::Request->change_owner(uid => $USER2->id, id_domain => $domain->id);
@@ -128,6 +129,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
+                    , disk => 1024 * 1024
                     , arg_create_dom($vm_name))
     };
 
@@ -463,6 +465,7 @@ sub test_create_domain_nocd {
     my $domain;
     eval { $domain = rvd_back->search_vm($vm_name)->create_domain(
              name => $name
+            ,disk => 1024 * 1024
           ,id_iso => $id_iso
         ,id_owner => $USER->id
         ,iso_file => '<NONE>'

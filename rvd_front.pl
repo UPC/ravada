@@ -1159,7 +1159,7 @@ get '/img/screenshots/:file' => sub {
         warn"ERROR : no id domain in $path";
         return $c->reply->not_found;
     }
-    if (!$USER->is_admin) {
+    if ($USER && !$USER->is_admin) {
         my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
@@ -1368,7 +1368,8 @@ sub render_machines_user {
 
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
-
+    my $anonymous = (shift or 0);
+    
     return $c->redirect_to('/login') if !$USER;
 
     confess "Missing id_base" if !defined $id_base;
@@ -1382,7 +1383,7 @@ sub quick_start_domain {
     my $domain = $RAVADA->search_clone(id_base => $base->id, id_owner => $USER->id);
     $domain_name = $domain->name if $domain;
 
-    return run_request($c,provision_req($c, $id_base, $domain_name));
+    return run_request($c,provision_req($c, $id_base, $domain_name), $anonymous);
 
 }
 
@@ -1604,9 +1605,10 @@ sub _new_domain_name {
     }
 }
 
-sub run_request($c, $request) {
+sub run_request($c, $request, $anonymous = 0) {
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
+        , anonymous => $anonymous
     );
 }
 
@@ -1906,7 +1908,7 @@ sub clone_machine($c, $anonymous=0) {
         $c->stash( error => "Unknown base ") if !$c->stash('error');
         return $c->render(template => 'main/fail');
     };
-    return quick_start_domain($c, $base->id);
+    return quick_start_domain($c, $base->id, $USER->name, $anonymous);
 }
 
 sub shutdown_machine {

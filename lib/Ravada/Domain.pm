@@ -3478,8 +3478,8 @@ sub list_vms($self) {
     while (my $id_vm = $sth->fetchrow) {
         my $vm;
         eval { $vm = Ravada::VM->open($id_vm) };
-        confess "id_domain: ".$self->id."\n".$@ if $@;
-        push @vms,($vm);
+        warn "id_domain: ".$self->id."\n".$@ if $@;
+        push @vms,($vm) if $vm;
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
     if ( !grep { $_->name eq $vm_local->name } @vms) {

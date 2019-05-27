@@ -22,7 +22,7 @@ sub test_custom_iso {
     my $swap = shift;
 
     my %args_create = ();
-    $args_create{swap} = 1000000  if $swap;
+    $args_create{swap} = 1024 * 1024 if $swap;
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"Expecting a vm of type $vm_name") or return;
@@ -55,10 +55,11 @@ sub test_custom_iso {
                     , active => 0
                     , iso_file => $iso_file
                     , %args_create
+		    , disk => 1 * 1024 * 1024
 		    , remove_cpu => 1
            );
     };
-    is($@,'');
+    is($@,'',Dumper(\%args_create));
     ok($domain,"Expecting domain created, got ".($domain or '<UNDEF>'));
 
     eval {   $domain->start($USER) if !$domain->is_active; };

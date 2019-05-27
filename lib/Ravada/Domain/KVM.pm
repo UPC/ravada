@@ -704,7 +704,6 @@ sub start {
             $self->_vm->enabled(0);
         }
         die $error;
-        sleep 1;
     } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
         die "TODO";
     } elsif ( $error =~ /libvirt error code: 1,.*smbios/) {
