@@ -924,7 +924,8 @@ sub _add_grants($self) {
     $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have more than one machine started.")
+    $self->_add_grant('start_many',0,"Can have more than one machine started.");
+    $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
 }
 
 sub _add_grant($self, $grant, $allowed, $description) {
@@ -949,8 +950,6 @@ sub _add_grant($self, $grant, $allowed, $description) {
     $sth->execute($grant, $description);
     $sth->finish;
 
-    return if !$allowed;
-
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
     $sth->execute($grant);
     my ($id_grant) = $sth->fetchrow;
@@ -959,10 +958,10 @@ sub _add_grant($self, $grant, $allowed, $description) {
     my $sth_insert = $CONNECTOR->dbh->prepare(
         "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users ");
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM users WHERE is_temporary = 0");
     $sth->execute;
 
-    while (my ($id_user) = $sth->fetchrow ) {
+    while (my ($id_user, $name) = $sth->fetchrow ) {
         eval { $sth_insert->execute($id_user, $id_grant, $allowed) };
         die $@ if $@ && $@ !~/Duplicate entry /;
     }
@@ -990,6 +989,7 @@ sub _enable_grants($self) {
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
+        ,'expose_ports'
         ,'grant'
         ,'manage_users'
         ,'rename', 'rename_all', 'rename_clones'
@@ -3272,6 +3272,11 @@ sub _req_method {
 ,change_hardware => \&_cmd_change_hardware
 ,change_max_memory => \&_cmd_change_max_memory
 ,change_curr_memory => \&_cmd_change_curr_memory
+
+# Domain ports
+,expose => \&_cmd_expose
+,remove_expose => \&_cmd_remove_expose
+,open_exposed_ports => \&_cmd_open_exposed_ports
 # Virtual Managers or Nodes
     ,shutdown_node  => \&_cmd_shutdown_node
     ,start_node  => \&_cmd_start_node
@@ -3477,6 +3482,26 @@ sub _post_login_locale($self, $request) {
     for my $locale ( @locales ) {
         Ravada::Repository::ISO::insert_iso_locale($locale);
     }
+}
+
+sub _cmd_expose($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+    $domain->expose(
+               port => $request->args('port')
+              ,name => $request->defined_arg('name')
+           ,id_port => $request->defined_arg('id_port')
+        ,restricted => $request->defined_arg('restricted')
+    );
+}
+
+sub _cmd_remove_expose($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+    $domain->remove_expose($request->args('port'));
+}
+
+sub _cmd_open_exposed_ports($self, $request) {
+    my $domain = Ravada::Domain->open($request->id_domain);
+    $domain->open_exposed_ports();
 }
 
 sub DESTROY($self) {

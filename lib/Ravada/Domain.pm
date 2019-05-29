@@ -1274,6 +1274,7 @@ sub info($self, $user) {
     }
     $info->{bases} = $self->_bases_vm();
     $info->{clones} = $self->_clones_vm();
+    $info->{ports} = [$self->list_ports()];
     return $info;
 }
 
@@ -1390,6 +1391,7 @@ sub _after_remove_domain {
     my ($user, $cascade) = @_;
 
     $self->_remove_iptables( );
+    $self->remove_expose();
     $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_known && $self->is_base) {
@@ -1899,7 +1901,10 @@ sub _post_shutdown {
     my %arg = @_;
     my $timeout = delete $arg{timeout};
 
-    $self->_remove_iptables() if $self->_vm->is_active;
+    if ( $self->_vm->is_active ) {
+        $self->_remove_iptables();
+        $self->_close_exposed_port();
+    }
 
     my $is_active = $self->is_active;
     $self->_data(status => 'shutdown')
@@ -2048,6 +2053,283 @@ sub add_volume_swap {
     $self->add_volume(%arg, swap => 1);
 }
 
+=head2 expose
+
+Expose a TCP port from the domain
+
+Arguments:
+ - number of the port
+ - optional name
+
+Returns: public ip and port
+
+=cut
+
+sub expose($self, @args) {
+    my ($id_port, $internal_port, $name, $restricted);
+    if (scalar @args == 1 ) {
+        $internal_port=shift @args;
+    } else {
+        my %args = @args;
+        $id_port = delete $args{id_port};
+        $internal_port = delete $args{port};
+        $internal_port = delete $args{internal_port} if exists $args{internal_port};
+        confess "Error: Missing port" if !defined $internal_port && !$id_port;
+        confess "Error: internal port not a number '".($internal_port or '<UNDEF>')."'"
+            if defined $internal_port && $internal_port !~ /^\d+$/;
+
+        $name = delete $args{name};
+        $restricted = ( delete $args{restricted} or 0);
+
+        confess "Error: Unknown args ".Dumper(\%args) if keys %args;
+    }
+    if ($id_port) {
+        $self->_update_expose(@args);
+    } else {
+        $self->_add_expose($internal_port, $name, $restricted);
+    }
+}
+
+sub _update_expose($self, %args) {
+    my $id = delete $args{id_port};
+    $args{internal_port} = delete $args{port}
+        if exists $args{port} && !exists $args{internal_port};
+
+    if ($self->is_active) {
+        my $sth=$$CONNECTOR->dbh->prepare("SELECT internal_port FROM domain_ports where id=?");
+        $sth->execute($id);
+        my ($internal_port) = $sth->fetchrow;
+        $self->_close_exposed_port($internal_port) if $self->is_active;
+    }
+
+    my $sql = "UPDATE domain_ports SET ".join(",", map { "$_=?" } sort keys %args)
+        ." WHERE id=?"
+    ;
+
+    my @values = map { $args{$_} } sort keys %args;
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(@values, $id);
+
+    if ($self->is_active) {
+        my $sth=$$CONNECTOR->dbh->prepare(
+            "SELECT internal_port,restricted FROM domain_ports where id=?");
+        $sth->execute($id);
+        my ($internal_port, $restricted) = $sth->fetchrow;
+        $self->_open_exposed_port($internal_port, $restricted);
+    }
+}
+
+sub _add_expose($self, $internal_port, $name, $restricted) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_ports (id_domain"
+        ."  ,public_port, internal_port"
+        ."  ,name, restricted"
+        .")"
+        ." VALUES (?,?,?,?,?)"
+    );
+
+    my $public_port = $self->_vm->_new_free_port();
+
+    $sth->execute($self->id
+        , $public_port, $internal_port
+        , ($name or undef)
+        , $restricted
+    );
+    $sth->finish;
+
+    $self->_open_exposed_port($internal_port, $restricted) if $self->is_active;
+    return $public_port;
+}
+
+sub _open_exposed_port($self, $internal_port, $restricted) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports"
+        ." WHERE id_domain=? AND internal_port=?"
+    );
+    $sth->execute($self->id, $internal_port);
+    my ($public_port) = $sth->fetchrow();
+    if (!$public_port) {
+        $public_port = $self->_vm->_new_free_port();
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
+            ." WHERE id_domain=? AND internal_port=?"
+        );
+        $sth->execute($public_port, $self->id, $internal_port);
+    }
+
+    my $local_ip = $self->_vm->ip;
+    my $internal_ip = $self->ip;
+    confess "Error: I can't get the internal IP of ".$self->name
+        if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
+
+    $self->_vm->iptables(
+                t => 'nat'
+                ,A => 'PREROUTING'
+                ,p => 'tcp'
+                ,d => $local_ip
+                ,dport => $public_port
+                ,j => 'DNAT'
+                ,'to-destination' => "$internal_ip:$internal_port"
+    ) if !$>;
+
+    if ($restricted) {
+        $self->_open_exposed_port_client($public_port);
+    }
+}
+
+sub _open_exposed_port_client($self, $public_port) {
+    my $remote_ip = $self->remote_ip;
+    return if !$remote_ip;
+
+    my $local_ip = $self->_vm->ip;
+
+    $self->_vm->iptables(
+        A => $IPTABLES_CHAIN
+        ,s => $remote_ip
+        ,d => $local_ip
+        ,m => 'tcp'
+        ,p => 'tcp'
+        ,dport => $public_port
+        ,j => 'ACCEPT'
+    );
+    $self->_vm->iptables(
+        A => $IPTABLES_CHAIN
+        ,d => $local_ip
+        ,m => 'tcp'
+        ,p => 'tcp'
+        ,dport => $public_port
+        ,j => 'DROP'
+    );
+}
+
+sub open_exposed_ports($self) {
+    my @ports = $self->list_ports();
+    return if !@ports;
+
+    if ( ! $self->ip ) {
+        Ravada::Request->open_exposed_ports(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,at => time + 10
+        );
+        return;
+    }
+
+    for my $expose ( @ports ) {
+        $self->_open_exposed_port($expose->{internal_port}, $expose->{restricted});
+    }
+}
+
+sub _close_exposed_port($self,$internal_port_req=undef) {
+    my $query = "SELECT public_port,internal_port "
+        ." FROM domain_ports"
+        ." WHERE id_domain=? ";
+    $query .= " AND internal_port=?" if $internal_port_req;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    if ($internal_port_req) {
+        $sth->execute($self->id, $internal_port_req);
+    } else {
+        $sth->execute($self->id);
+    }
+
+    my %port;
+    while ( my ($public_port, $internal_port) = $sth->fetchrow() ) {
+        $port{$public_port} = $internal_port;
+    }
+
+    my $iptables = $self->_vm->iptables_list();
+
+    $self->_close_exposed_port_nat($iptables, %port);
+    $self->_close_exposed_port_client($iptables, %port);
+
+}
+
+sub _close_exposed_port_client($self, $iptables, %port) {
+
+    my $ip = $self->_vm->ip."/32";
+    for my $line (@{$iptables->{'filter'}}) {
+         my %args = @$line;
+         next if $args{A} ne 'RAVADA';
+         if (exists $args{j}
+             && exists $args{d} && $args{d} eq $ip
+             && exists $args{dport} && $port{$args{dport}}) {
+                my @delete = (
+                    D => 'RAVADA'
+                    , p => 'tcp', m => 'tcp'
+                    , d => $ip
+                    , dport => $args{dport}
+                    , j => $args{j}
+                );
+                push @delete , (s => $args{s}) if exists $args{s};
+                $self->_vm->iptables(@delete);
+         }
+     }
+}
+
+sub _close_exposed_port_nat($self, $iptables, %port) {
+    my $ip = $self->_vm->ip."/32";
+    for my $line (@{$iptables->{'nat'}}) {
+         my %args = @$line;
+         next if $args{A} ne 'PREROUTING';
+         if (exists $args{j} && $args{j} eq 'DNAT'
+             && exists $args{d} && $args{d} eq $ip
+             && exists $args{dport}
+             && exists $args{'to-destination'}
+         ) {
+            my $internal_port = $port{$args{dport}} or next;
+            if ( $args{'to-destination'}=~/\:$internal_port$/ ) {
+                my %delete = %args;
+                delete $delete{A};
+                delete $delete{dport};
+                delete $delete{m};
+                delete $delete{p};
+                my $to_destination = delete $delete{'to-destination'};
+
+                my @delete = (
+                    t => 'nat'
+                    ,D => 'PREROUTING'
+                    ,m => 'tcp', p => 'tcp'
+                    ,dport => $args{dport}
+                );
+                push @delete, %delete;
+                push @delete,(
+                    'to-destination',$to_destination
+                );
+                $self->_vm->iptables(@delete);
+            }
+         }
+     }
+}
+
+sub remove_expose($self, $internal_port=undef) {
+    $self->_close_exposed_port($internal_port);
+    my $query = "DELETE FROM domain_ports WHERE id_domain=?";
+    $query .= " AND internal_port=?" if defined $internal_port;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    my @args = $self->id;
+    push @args,($internal_port) if defined $internal_port;
+    $sth->execute(@args);
+}
+
+=head2 list_ports
+
+List of exposed TCP ports
+
+=cut
+
+sub list_ports($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT *"
+        ." FROM domain_ports WHERE id_domain=?");
+    $sth->execute($self->id);
+    my @list;
+    while (my $data = $sth->fetchrow_hashref) {
+        push @list,($data);
+    }
+    return @list;
+}
+
 sub _remove_iptables {
     my $self = shift;
 
@@ -2178,6 +2460,7 @@ sub _post_start {
         $self->display($arg{user});
         $self->display_file($arg{user});
         $self->info($arg{user});
+        $self->open_exposed_ports();
     }
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;

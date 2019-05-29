@@ -446,6 +446,7 @@ sub can_list_machines {
             || $self->can_clone_all()
             || $self->can_remove_all()
             || $self->can_rename_all()
+            || $self->expose_ports()
             || $self->can_shutdown_all();
     return 0;
 }
@@ -667,7 +668,6 @@ sub _load_grants($self) {
         $self->{_grant_disabled}->{$grant_alias} = !$enabled;
     }
     $sth->finish;
-
 }
 
 sub _reload_grants($self) {

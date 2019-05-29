@@ -84,6 +84,10 @@ our %VALID_ARG = (
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
     ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
+    # ports
+    ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
+    ,remove_expose => { uid => 1, id_domain => 1, port => 1}
+    ,open_exposed_ports => {uid => 1, id_domain => 1 }
     # Virtual Managers or Nodes
     ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
 
@@ -455,6 +459,15 @@ sub shutdown_domain {
     bless($self,$class);
 
     return $self->_new_request(command => 'shutdown' , args => $args);
+}
+
+sub new_request($self, $command, @args) {
+    die "Error: Unknown request '$command'" if !$VALID_ARG{$command};
+    return _new_request(
+        $self
+        ,command => $command
+           ,args => _check_args($command, @args)
+    );
 }
 
 sub _new_request {

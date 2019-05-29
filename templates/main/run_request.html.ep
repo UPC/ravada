@@ -60,6 +60,15 @@
                 <li><b>Memory:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
+            <h3 ng-show="domain.ports">Open ports</h3>
+            <ul ng-show="domain.ports">
+                <li ng-repeat="port in domain.ports">
+                    <b>{{port.name}}</b>
+                    {{domain.display.ip}} : {{port.public_port}}
+                    <i class="fa fa-arrow-right"></i>
+                    {{port.internal_port}}
+                </li>
+            </ul>
             </div>
             <div ng-show="domain.is_active">
                 <div>
