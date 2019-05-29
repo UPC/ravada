@@ -1,15 +1,24 @@
 <div class="card-body">
-    <form method="post" action="/machine/copy">    
         <div class="form-group">
             <div class="form-group row">
                 <div class="col-md-2 mt-2">
+                    <label class="control-label" for="clone_number">Clones</label>
+                </div>
+                <div class="col-md-2">
+                    <input class="form-control"
+                        ng-model="copy_number" type="text" ng-init="copy_number=1"
+                        size="3" value="1">
+                </div>
+            </div>
+            <div class="form-group row" ng-show="copy_number == 1">
+                <div class="col-md-2 mt-2">
                     <input class="form-control" type="hidden" name="id_base" value="{{showmachine.id}}">
                     <label class="control-label"
-                        for="copy_name_{{showmachine.id}}"><%=l 'Name' %></label>
+                        for="copy_name"><%=l 'Name' %></label>
                 </div>
                 <div class="col-md-5">
-                    <input class="form-control" name="copy_name_{{showmachine.id}}" type="text" size="40"
-                    value="{{showmachine.name}}-copy"
+                    <input class="form-control"
+                    type="text" size="40"
                     ng-model="new_name"
                     ng-change="validate_new_name(showmachine.name)"
                     >
@@ -21,19 +30,20 @@
                     <label class="control-label" for="copy_ram">RAM (Gb)</label>
                 </div>
                 <div class="col-md-2">
-                    <input class="form-control" name="copy_ram" type="text" size="3" value="1">
+                    <input class="form-control" ng-model="copy_ram" type="text" size="3">
                 </div>
             </div>
             <button type="reset" class="btn btn-outline-secondary mr-2"><%=l 'Cancel' %></button>
-            <input type="submit" class="btn btn-primary" ng-disabled="new_name_duplicated || new_name_invalid || new_name === showmachine.name" value="<%=l 'Submit' %>">
+            <button class="btn btn-primary"
+                ng-click="copy_machine()"
+                ng-disabled="copy_number <1 || copy_number == 1 && (new_name_duplicated || new_name_invalid || new_name === showmachine.name)"><%=l 'Submit' %></button>
         </div>
-    </form>
     <div class="form-group has-error">
-        <label ng-show="new_name_duplicated"
+        <label ng-show="copy_number==1 && new_name_duplicated"
                class="alert alert-danger col-form-label" for="new_name">
                This name is duplicated
         </label>
-        <label ng-show="new_name_invalid"
+        <label ng-show="copy_number==1 && new_name_invalid"
                class="alert alert-danger col-form-label" for="new_name">
                This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
                and must start by a letter.
