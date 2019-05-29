@@ -74,6 +74,7 @@ sub test_req_create_domain_iso {
 
     my $req = Ravada::Request->create_domain(
         name => $name
+        ,disk => 1024 * 1024
         ,@ARG_CREATE_DOM
     );
     ok($req);
@@ -140,6 +141,7 @@ sub test_req_create_domain {
 
     my $req = Ravada::Request->create_domain(
         name => $name
+        ,disk => 1024 * 1024
         ,@ARG_CREATE_DOM
     );
     ok($req);

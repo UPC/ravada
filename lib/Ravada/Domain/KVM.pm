@@ -704,7 +704,6 @@ sub start {
             $self->_vm->enabled(0);
         }
         die $error;
-        sleep 1;
     } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
         die "TODO";
     } elsif ( $error =~ /libvirt error code: 1,.*smbios/) {
@@ -1653,7 +1652,7 @@ sub _find_base {
     run3(\@cmd,\$in, \$out, \$err);
 
     my ($base) = $out =~ m{^backing file: (.*)}mi;
-    confess "No base for $file in $out" if !$base;
+    warn "No base for $file in $out" if !$base;
 
     return $base;
 }

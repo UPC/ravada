@@ -1263,14 +1263,7 @@ sub connector {
 # this must be in DESTROY because users got removed in END
 sub DESTROY {
     shutdown_nodes();
-    remove_old_user() if $CONNECTOR;
     remove_old_user_ldap() if $CONNECTOR;
-}
-
-sub shutdown_nodes {
-    for my $node (@NODES) {
-        shutdown_node($node);
-    }
 }
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
@@ -1312,6 +1305,12 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
 
     init($fly_config);
     return $fly_config;
+}
+
+sub shutdown_nodes {
+    for my $node (@NODES) {
+        shutdown_node($node);
+    }
 }
 
 sub create_storage_pool($vm) {

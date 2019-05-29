@@ -1236,6 +1236,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
     $self->_upgrade_table('vms','mac','char(18)');
+
+    $self->_upgrade_table('volumes','name','char(200)');
 }
 
 
