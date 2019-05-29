@@ -945,6 +945,7 @@ sub _add_grant($self, $grant, $allowed, $description) {
     }
     return if $id;
 
+    warn "INFO: Addging grant type $grant\n";
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
         ." VALUES (?,?)");
     $sth->execute($grant, $description);
@@ -958,11 +959,13 @@ sub _add_grant($self, $grant, $allowed, $description) {
     my $sth_insert = $CONNECTOR->dbh->prepare(
         "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM users WHERE is_temporary = 0");
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name,is_admin FROM users WHERE is_temporary = 0");
     $sth->execute;
 
-    while (my ($id_user, $name) = $sth->fetchrow ) {
-        eval { $sth_insert->execute($id_user, $id_grant, $allowed) };
+    while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
+        my $allowed_current = $allowed;
+        $allowed_current = 1 if $is_admin;
+        eval { $sth_insert->execute($id_user, $id_grant, $allowed_current ) };
         die $@ if $@ && $@ !~/Duplicate entry /;
     }
 }
