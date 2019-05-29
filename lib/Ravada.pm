@@ -945,7 +945,6 @@ sub _add_grant($self, $grant, $allowed, $description) {
     }
     return if $id;
 
-    warn "INFO: Addging grant type $grant\n";
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
         ." VALUES (?,?)");
     $sth->execute($grant, $description);
