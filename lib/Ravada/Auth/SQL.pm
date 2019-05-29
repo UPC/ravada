@@ -446,6 +446,7 @@ sub can_list_machines {
             || $self->can_clone_all()
             || $self->can_remove_all()
             || $self->can_rename_all()
+            || $self->expose_ports()
             || $self->can_shutdown_all();
     return 0;
 }
