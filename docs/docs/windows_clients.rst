@@ -5,7 +5,7 @@ Download Virt Viewer
 --------------------
 
 Windows clients requires the
-`virt-viewer <https://virt-manager.org/download/sources/virt-viewer/virt-viewer-x86-5.0.msi>`__
+`virt-viewer <https://virt-manager.org/download/sources/virt-viewer/`__
 tool to connect to their Virtual Machine.
 
 Fix Windows registry
