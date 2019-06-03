@@ -45,6 +45,22 @@ sub test_one_port($vm) {
     };
     is($@,'',"[".$vm->type."] export port $internal_port");
 
+    my $port_info_no = $domain->exposed_port(456);
+    is(!$port_info_no);
+
+    $port_info_no = $domain->exposed_port('no');
+    is(!$port_info_no);
+
+    my $port_info = $domain->exposed_port($name_port);
+    ok($port_info) && do {
+        is($port_info->{name}, $name_port);
+        is($port_info->{internal_port}, $internal_port);
+    };
+
+    my $port_info2 = $domain->exposed_port($internal_port);
+    ok($port_info2);
+    is_deeply($port_info2, $port_info);
+
     my @list_ports = $domain->list_ports();
     is(scalar @list_ports,1);
 
