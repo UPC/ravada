@@ -67,7 +67,7 @@ sub test_list_bridges($vm) {
     is($req->status,'done');
     is($req->error,'');
 
-    my @exp_bridges = _expected_bridges($vm);
+    my @exp_bridges = sort(_expected_bridges($vm));
     is($req->output,encode_json(\@exp_bridges));
 
     my $bridges = rvd_front->list_network_interfaces(
@@ -79,19 +79,17 @@ sub test_list_bridges($vm) {
 
     SKIP: {
         skip("No system bridges found",1) if !scalar @exp_bridges;
-        like($req->output, qr/\["\w+"]/);
+        like($req->output, qr/\["[\w\d]+".*\]/);
     }
 }
 sub _expected_bridges($vm) {
-
     my $brctl = `which brctl`;
     chomp $brctl;
-    return if !$brctl;
+    return undef if !$brctl;
 
     my @exp_bridges =   grep { defined $_ && $_ ne 'bridge' }
     map { /(^\w+)\s*/; $1 }
     split /\n/,`brctl show`;
-
     @exp_bridges = _remove_qemu_bridges($vm, \@exp_bridges);
 
     return @exp_bridges;
