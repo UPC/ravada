@@ -174,6 +174,7 @@
                             $scope.list_ldap_attributes();
                             $scope.list_interfaces();
                             $scope.hardware_types = Object.keys(response.data.hardware);
+                            $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
           };
           $scope.list_interfaces = function() {
@@ -309,6 +310,19 @@
                     $scope.refresh_machine();
               });
           };
+          $scope.copy_machine = function() {
+              $http.post('/machine/copy/'
+                      , JSON.stringify({ 'id_base': $scope.showmachine.id
+                            ,'copy_number': $scope.copy_number
+                          ,'copy_ram': $scope.copy_ram
+                          ,'new_name': $scope.new_name
+                      })
+              ).then(function(response) {
+                  $scope.getReqs();
+                  $scope.refresh_machine();
+              });
+          };
+
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
           $scope.refresh_machine = function() {
