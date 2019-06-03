@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0';
+our $VERSION = '0.4.3';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -315,7 +315,7 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => 'http://fedora.mirrors.ovh.net/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
+            ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
         ,kubuntu_64 => {
@@ -519,9 +519,37 @@ sub _update_isos {
           ,min_disk_size => '0'
         }
     );
-
+    $self->_scheduled_fedora_releases(\%data);
     $self->_update_table($table, $field, \%data);
 
+}
+
+sub _scheduled_fedora_releases($self,$data) {
+    my @now = localtime(time);
+    my $year = $now[5]+1900;
+    my $month = $now[4]+1;
+
+    my $release = 27;
+    for my $y ( 2018 .. $year ) {
+        for my $m ( 5, 11 ) {
+            return if $y == $year && $m>$month;
+            $release++;
+            my $name = "fedora_".$release;
+            next if exists $data->{$name};
+            $data->{$name} = {
+            name => 'Fedora '.$release
+            ,description => "RedHat Fedora $release Workstation 64 bits"
+            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/'.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-'.$release
+                    .'-.*\.iso'
+            ,arch => 'amd64'
+            ,xml => 'xenial64-amd64.xml'
+            ,xml_volume => 'xenial64-volume.xml'
+            ,sha256_url => '$url/Fedora-Workstation-'.$release.'-.*-x86_64-CHECKSUM'
+            ,min_disk_size => 10 + $release-27
+            };
+        }
+    }
 }
 
 sub _update_domain_drivers_types($self) {
