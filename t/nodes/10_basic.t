@@ -220,7 +220,7 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     $clone_local->start(user => user_admin, remote_ip => $ip_local);
     $clone_remote->start(user => user_admin, remote_ip => $ip_remote);
 
-    for (1 .. 10 ) {
+    for (1 .. 100 ) {
         my ($port_local) = $clone_local->display(user_admin) =~ m{://.*:(\d+)};
         my ($port_remote) = $clone_remote->display(user_admin) =~ m{://.*:(\d+)};
 

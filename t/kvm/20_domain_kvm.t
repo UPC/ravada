@@ -59,7 +59,7 @@ sub test_remove_corrupt_clone {
     my $vm = shift;
 
     my $base = create_domain($vm);
-    $base->add_volume_swap();
+    $base->add_volume_swap( size => 1024 * 1024 );
     my $clone = $base->clone(
          name => new_domain_name
         ,user => user_admin
@@ -141,6 +141,7 @@ sub test_new_domain_iso {
           , active => $active
         , id_owner => $USER->id , iso_file => $iso->{device}
         , vm => $BACKEND
+        , disk => 1024 * 1024
         );
       };
     is($@,'') or return;
