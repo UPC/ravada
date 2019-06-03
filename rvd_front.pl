@@ -2075,32 +2075,56 @@ sub copy_machine {
 
     return login($c) if !_logged_in($c);
 
+    my $arg = decode_json($c->req->body);
 
-    my $id_base= $c->param('id_base') or confess "Missing param id_base";
-
-    my $ram = $c->param('copy_ram');
-    $ram = 0 if $ram !~ /^\d+(\.\d+)?$/;
+    my $number = $arg->{copy_number};
+    my $id_base= $arg->{id_base} or confess "Missing param id_base";
+    my $ram = $arg->{copy_ram};
+    $ram = 0 if !$ram || $ram !~ /^\d+(\.\d+)?$/;
     $ram = int($ram*1024*1024);
 
-    my $disk= $c->param('copy_disk');
-    $disk = 0 if $disk && $disk !~ /^\d+(\.\d+)?$/;
-    $disk = int($disk*1024*1024*1024)   if $disk;
-
-    my ($param_name) = grep /^copy_name_\d+/,(@{$c->req->params->names});
-
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
-    my $name = $c->req->param($param_name) if $param_name;
-    $name = $base->name."-".$USER->name if !$name;
+    my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
 
     my @create_args =( memory => $ram ) if $ram;
-    push @create_args , ( disk => $disk ) if $disk;
-    my $req2 = Ravada::Request->clone(
-              uid => $USER->id
+    my @reqs;
+    if ($number == 1 ) {
+        my $req2 = Ravada::Request->clone(
+            uid => $USER->id
             ,name => $name
-       , id_domain => $base->id
-       ,@create_args
-    );
-    $c->redirect_to("/machine/manage/".$base->id.".html");#    if !@error;
+            , id_domain => $base->id
+            ,@create_args
+        );
+        push @reqs, ( $req2 );
+    } else {
+        push @reqs,(copy_machine_many($base, $number, \@create_args));
+    }
+    return $c->render(json => { request => [map { $_->id } @ reqs ] } );
+}
+
+sub copy_machine_many($base, $number, $create_args) {
+    my $domains = $RAVADA->list_domains;
+    my %domain_exists = map { $_->{name} => 1 } @$domains;
+
+    my @reqs;
+    for ( 1 .. $number ) {
+        my $n = $_;
+        my $name;
+        for ( ;; ) {
+            while (length($n) < length($number)) { $n = "0".$n };
+            $name = $base->name."-".$n;
+            last if !$domain_exists{$name}++;
+            $n++;
+        }
+        my $req2 = Ravada::Request->clone(
+            uid => $USER->id
+            ,name => $name
+            , id_domain => $base->id
+            ,@$create_args
+        );
+        push @reqs, ( $req2 );
+    }
+    return @reqs;
 }
 
 sub machine_is_public {
