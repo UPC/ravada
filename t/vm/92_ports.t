@@ -521,7 +521,7 @@ sub test_restricted($vm, $restricted) {
     flush_rules();
     flush_rules_node($vm);
 
-    my $domain = create_domain($vm->type, user_admin,'debian');
+    my $domain = create_domain($vm->type, user_admin,'debian Stretch');
 
     my $local_ip = $vm->ip;
     my $remote_ip = '10.0.0.6';
@@ -628,7 +628,9 @@ sub test_change_expose_3($vm) {
 
     my $remote_ip = '1.2.3.4';
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+
     _wait_ip($vm->type, $domain);
+    rvd_back->_process_requests_dont_fork(1);
 
     _check_port_rules($domain, $remote_ip);
 
@@ -646,7 +648,8 @@ sub _check_port_rules($domain, $remote_ip, $msg='') {
     for my $port ( $domain->list_ports ) {
         my ($n_rule, $n_rule_drop, $n_rule_nat)
             =_search_rules($domain, $remote_ip, $port->{internal_port}, $port->{public_port});
-        ok($n_rule_nat,"Expecting NAT rule ".Dumper($port)."\n$msg") or exit;
+        ok($n_rule_nat,"Expecting NAT rule ".Dumper($port)."\n$msg")
+            or confess;
         if ($port->{restricted}) {
             ok($n_rule);
             ok($n_rule_drop);
@@ -694,7 +697,7 @@ clean();
 add_network_10(0);
 
 test_can_expose_ports();
-for my $vm_name ( 'Void','KVM') {
+for my $vm_name ( 'KVM', 'Void' ) {
 
     my $vm = rvd_back->search_vm($vm_name);
     next if !$vm;

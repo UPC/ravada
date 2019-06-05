@@ -165,8 +165,8 @@ sub create_domain {
                     , id_owner => $user->id
                     , %arg_create
                     , active => 0
-                    , memory => 256*1024
-                    , disk => 1 * 1024 * 1024
+                    , memory => 1024*1024
+                    , disk => 1024 * 1024 * 1024
            );
     };
     is('',''.$@);
