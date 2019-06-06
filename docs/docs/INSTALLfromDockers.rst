@@ -60,6 +60,9 @@ Connect to ravada-back docker: (We'll implement an automatically solution to avo
    admin password: acme
    is admin ? : [y/n] y
 
+It's over!
+You can connect to: http://localhost:3000
+
 Client
 ------
 
