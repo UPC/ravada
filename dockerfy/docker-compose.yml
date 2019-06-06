@@ -1,0 +1,86 @@
+version: "3.5"
+services:
+  ravada-mysql:
+    container_name: ravada-mysql
+    volumes:
+      - "/opt/ravada/mysql:/var/lib/mysql"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/opt/ravada/log:/var/log/mysql"
+    networks:
+      - ravada_network
+    image: mysql:5.7
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+        - MYSQL_DATABASE=ravada
+        - MYSQL_ROOT_PASSWORD=Pword12345*
+        - MYSQL_HOST=127.0.0.1
+        - MYSQL_PORT=33306
+        - MYSQL_USER=rvd_user
+        - MYSQL_PASSWORD=Pword12345*
+        - MYSQL_MY_DATABASE=ravada
+    ports:
+        - "33306:3306"
+    expose:
+        - "3306"
+
+  ravada-front:
+    container_name: ravada-front
+    volumes:
+      - "/opt/ravada/certs:/certs"
+      - "/opt/ravada/logs:/ravada/logs"
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/opt/ravada/images:/var/lib/libvirt/images"
+      - "~/src/ravada:/ravada"
+
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
+    networks:
+      - ravada_network
+    #image download from dockerhub
+    image: ravada/front
+    #build to build from sources
+    #build: dockers/front/.
+    restart: unless-stopped
+
+    depends_on:
+      - ravada-mysql
+      - ravada-back
+
+  ravada-back:
+    container_name: ravada-back
+    volumes:
+      - "sshkeys:/root/.ssh"
+      - "/opt/ravada/certs:/certs"
+      - "/opt/ravada/logs:/ravada/logs"
+      - "/opt/ravada/certs/default:/etc/pki/libvirt-spice"
+      - "/opt/ravada/images:/var/lib/libvirt/images"
+      - "/opt/ravada/etc:/etc/libvirt/qemu"
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "~/src/ravada:/ravada"
+    ports:
+      - "5900-5999:5900-5999"
+      - "55900-55999:55900-55999"
+    networks:
+      - ravada_network
+    #image download from dockerhub 
+    image: ravada/back
+    #build to build from sources
+    #build: dockers/back/.
+    privileged: true
+    restart: unless-stopped
+ 
+    depends_on:
+      - ravada-mysql
+
+volumes:
+  sshkeys:
+
+networks:
+  ravada_network:
+    external: false
+    name: ravada_network
