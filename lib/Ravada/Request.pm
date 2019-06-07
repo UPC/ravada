@@ -101,6 +101,9 @@ our %VALID_ARG = (
     #networks
     ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
+    #isos
+    ,list_isos => { vm_type => 1 }
+
     ,ping_backend => {}
 );
 
@@ -137,7 +140,7 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','create','open_iptables','list_network_interfaces']
+        ,commands => ['clone','start','start_clones','create','open_iptables','list_network_interfaces','list_isos']
     }
     ,secondary => {
         limit => 50
