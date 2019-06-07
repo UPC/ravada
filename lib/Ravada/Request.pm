@@ -582,6 +582,8 @@ sub status {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
+
+    $status = substr($status,0,64);
     $sth->execute($status, $self->{id});
     $sth->finish;
 

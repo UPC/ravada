@@ -980,8 +980,6 @@ sub start_node($node) {
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
 
-    eval { $node->run_command("hwclock","--hctosys") };
-    is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
     $node->is_active(1);
     $node->is_enabled(1);
     for ( 1 .. 60 ) {
@@ -989,6 +987,8 @@ sub start_node($node) {
         last if $node2->is_active(1);
         diag("Waiting for node ".$node->name." active ...")  if !($_ % 10);
     }
+    eval { $node->run_command("hwclock","--hctosys") };
+    is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 }
 
 sub remove_node($node) {
