@@ -27,12 +27,10 @@ RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
  && mkdir -p /var/log/supervisor \
  && mkdir -p /run/sshd
 
-COPY default.xml network.sh /
+COPY network.sh default.xml /
 
 EXPOSE 5900-5950
 EXPOSE 55900-55950
-
-VOLUME ["/opt/ravada" ]
 
 COPY supervisord.conf /etc/supervisord.conf
 

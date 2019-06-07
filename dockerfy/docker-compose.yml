@@ -19,20 +19,14 @@ services:
         - MYSQL_USER=rvd_user
         - MYSQL_PASSWORD=Pword12345*
         - MYSQL_MY_DATABASE=ravada
-    ports:
-        - "33306:3306"
-    expose:
-        - "3306"
 
   ravada-front:
     container_name: ravada-front
     volumes:
-      - "/opt/ravada/certs:/certs"
-      - "/opt/ravada/logs:/ravada/logs"
       - "/etc/timezone:/etc/timezone:ro"
       - "/etc/localtime:/etc/localtime:ro"
-      - "/opt/ravada/images:/var/lib/libvirt/images"
       - "~/src/ravada:/ravada"
+      - "/opt/ravada/screenshots:/var/www/img/screenshots"
 
     ports:
       - "3000:3000"
@@ -47,16 +41,15 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - ravada-back
+      - ravada-mysql
 
   ravada-back:
     container_name: ravada-back
     volumes:
       - "sshkeys:/root/.ssh"
-      - "/opt/ravada/certs:/certs"
-      - "/opt/ravada/logs:/ravada/logs"
       - "/opt/ravada/certs/default:/etc/pki/libvirt-spice"
       - "/opt/ravada/images:/var/lib/libvirt/images"
+      - "/opt/ravada/screenshots:/var/www/img/screenshots"
       - "/opt/ravada/etc:/etc/libvirt/qemu"
       - "/etc/timezone:/etc/timezone:ro"
       - "/etc/localtime:/etc/localtime:ro"

@@ -6,7 +6,8 @@
 [![Telegram Group](https://img.shields.io/badge/Telegram-Group-blue.svg)](https://t.me/ravadavdi)
 [![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
-
+[![Docker Stars](https://img.shields.io/docker/stars/ravada/front.svg?style=flat)](https://hub.docker.com/r/ravada/front/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ravada/front.svg?style=flat)](https://hub.docker.com/r/ravada/front/)
 
 ## Remote Virtual Desktops Manager
 
