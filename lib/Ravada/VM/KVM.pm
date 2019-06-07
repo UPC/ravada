@@ -2266,10 +2266,6 @@ sub list_network_interfaces($self, $type) {
     return $cmd->($self);
 }
 
-sub list_isos($self, $type) {
-
-}
-
 sub _list_nat_interfaces($self) {
 
     my ($in, $out, $err);
