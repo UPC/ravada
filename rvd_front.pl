@@ -396,7 +396,7 @@ get '/iso_file.json' => sub {
     return access_denied($c) unless _logged_in($c)
         && $USER->can_create_machine();
     my @isos =('<NONE>');
-    push @isos,(@{$RAVADA->iso_file});
+    push @isos,(@{$RAVADA->iso_file('KVM')});
     $c->render(json => \@isos);
 };
 
@@ -1852,7 +1852,7 @@ sub manage_machine {
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
-        , isos => $RAVADA->iso_file()
+        , isos => $RAVADA->iso_file($domain->type)
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
     );
