@@ -1274,10 +1274,15 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+            my @languages = I18N::LangTags::implicate_supers(
+                I18N::LangTags::Detect::detect()
+            );
+            my $header = $c->req->headers->header('accept-language');
+            my @languages2 = map {s/^(.*?)[;-].*/$1/; $_ } split /,/,$header;
 
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [ I18N::LangTags::Detect::detect() ]
+                , locale => [@languages, @languages2]
             );
 
             $c->session(expiration => $expiration);
