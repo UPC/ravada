@@ -47,7 +47,6 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - ravada-mysql
       - ravada-back
 
   ravada-back:
