@@ -7,12 +7,12 @@
         </select>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-5">
         <input ng-model="ldap_attribute_value" type="text"
             ng-change="ldap_entries=0;ldap_verified=false">
     </div>
 
-    <div class="col-md-1">
+    <div class="col-md-2">
         <input ng-model="ldap_attribute_allowed" type="checkbox">
     </div>
 
@@ -26,18 +26,18 @@
             ng-show="ldap_attribute && ldap_attribute_value"
             ng-disabled="ldap_verifying"
             ng-click="count_ldap_entries()"
-            >verify</button>
+            ><%=l 'verify' %></button>
         <button ng-show="ldap_attribute && ldap_attribute_value"
             ng-disabled="ldap_verifying || (!ldap_attribute_allowed && ! ldap_attribute_last)"
             ng-click="add_ldap_access()"
-            >save</button>
+            ><%=l 'save' %></button>
     </div>
     <div class="col-md-3">
-        <span ng-show="ldap_verifying">Verifying {{ldap_attribute}} ...</span>
-        <span ng-show="ldap_verified && !ldap_entries">No entries found</span>
-        <span ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}} has at least {{ldap_entries}} entries. </span>
+        <span ng-show="ldap_verifying"><%=l 'Verifying' %> {{ldap_attribute}} ...</span>
+        <span ng-show="ldap_verified && !ldap_entries"><%=l 'No entries found' %></span>
+        <span ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}} <%=l 'has at least' %> {{ldap_entries}} <%=l 'entries.' %>' </span>
         <span ng-show="!ldap_attribute_allowed && !ldap_attribute_last">
-            Enable last for not allowed restrictions.
+            <%=l 'Enable last for not allowed restrictions.' %>
         </span>
     </div>
 </div>

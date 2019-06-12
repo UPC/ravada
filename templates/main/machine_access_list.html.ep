@@ -2,10 +2,10 @@
     <div class="col-md-2">
         {{attribute.attribute}}
     </div>
-    <div class="col-md-3">
+    <div class="col-md-5">
         {{attribute.value}}
     </div>
-    <div class="col-md-1">
+    <div class="col-md-2">
         <input type="checkbox" ng-checked="attribute.allowed"
             ng-click="set_ldap_access(attribute.id, !attribute.allowed, attribute.last)"
         >
@@ -33,7 +33,7 @@
 
 <div class="row" ng-show="ldap_attributes_default.id">
     <div class="col-md-2">
-        <i>Default</i>
+        <i><%=l 'Default' %></i>
     </div>
     <div class="col-md-3"></div>
     <div class="col-md-1">
@@ -42,9 +42,7 @@
             ng-click="set_ldap_access(ldap_attributes_default.id, !ldap_attributes_default.allowed)">
     </div>
     <div class="col-md-4">
-        <span ng-show="ldap_attributes_default.allowed">If none of the previous match,
-            access is allowed.</span>
-        <span ng-show="!ldap_attributes_default.allowed">If none of the previous match,
-            access is denied.</span>
+        <span ng-show="ldap_attributes_default.allowed"><%=l 'If none of the previous match, access is allowed.' %></span>
+        <span ng-show="!ldap_attributes_default.allowed"><%=l 'If none of the previous match, access is denied.' %></span>
     </div>
 </div>
