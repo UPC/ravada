@@ -357,6 +357,32 @@ sub test_old_machine_req {
     $domain->remove(user_admin);
 }
 
+sub test_ips {
+    my $vm = shift;
+
+    my $domain = create_domain($vm);
+    $domain->volatile_clones(1);
+
+    my $public_ip = $vm->_data('public_ip');
+    my $out = `ip -4 -o a`;
+    my @ip;
+    for my $line (split /\n/, $out) {
+        my ($if, $ip) = $line =~ /\s(\w+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/;
+        push @ip ,($ip) if $if !~ /^virbr/;
+    }
+
+    for my $ip (@ip) {
+        $vm->_data('public_ip',$ip);
+
+        my $clone = $domain->clone(name => new_domain_name , user => user_admin);
+        like($clone->display(user_admin), qr(^spice://$ip));
+
+        $clone->remove(user_admin);
+    }
+
+    $domain->remove(user_admin);
+}
+
 ######################################################################3
 clean();
 
@@ -372,6 +398,8 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
+
+        test_ips($vm);
 
         test_volatile_clone_req($vm);
         test_volatile_clone($vm);
