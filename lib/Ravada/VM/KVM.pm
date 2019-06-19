@@ -725,7 +725,8 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
-    for (qw(disk swap active request vm memory iso_file id_template volatile)) {
+    for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
+            listen_ip)) {
         delete $args2{$_};
     }
 
@@ -807,20 +808,16 @@ sub _domain_create_common {
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
     my $is_volatile = delete $args{is_volatile};
-    my $remote_ip = delete $args{remote_ip};
+    my $listen_ip = delete $args{listen_ip};
+    my $spice_password = delete $args{spice_password};
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "ERROR: User id $id_owner doesn't exist";
 
-    my $spice_password = Ravada::Utils::random_name(4);
-    if ($remote_ip) {
-        my $network = Ravada::Network->new(address => $remote_ip);
-        $spice_password = undef if !$network->requires_password;
-    }
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     my $uuid = $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml, $spice_password);
+    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip);
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
     $self->_xml_clean_machine_type($xml) if !$self->is_local;
@@ -1514,16 +1511,14 @@ sub _xml_modify_video {
 
 }
 
-sub _xml_modify_spice_port {
-    my $self = shift;
-    my $doc = shift or confess "Missing XML doc";
-    my $password = shift;
+sub _xml_modify_spice_port($self, $doc, $password=undef, $listen_ip=$self->listen_ip) {
 
+    $listen_ip = $self->listen_ip if !defined $listen_ip;
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
-    $graph->setAttribute(listen=> $self->ip() );
+    $graph->setAttribute(listen=> $listen_ip );
     $graph->setAttribute(passwd => $password)    if $password;
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
@@ -1533,8 +1528,7 @@ sub _xml_modify_spice_port {
     }
 
     $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $self->ip());
-
+    $listen->setAttribute(address => $listen_ip);
 }
 
 sub _xml_modify_uuid {

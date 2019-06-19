@@ -1604,8 +1604,6 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
                             => $self->domain->get_xml_description);
     my @graphics = $doc->findnodes('/domain/devices/graphics');
 
-    $ip = $self->_vm->ip()  if !defined $ip;
-
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
 
         next if $self->is_hibernated() || $self->domain->is_active;
@@ -1619,14 +1617,14 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
             }
             $self->_set_spice_password($password);
 
-        $graphics->setAttribute('listen' => $ip);
+        $graphics->setAttribute('listen' => ($ip or $self->_vm->listen_ip));
         my $listen;
         for my $child ( $graphics->childNodes()) {
             $listen = $child if $child->getName() eq 'listen';
         }
         # we should consider in the future add a new listen if it ain't one
         next if !$listen;
-        $listen->setAttribute('address' => $ip);
+        $listen->setAttribute('address' => ($ip or $self->_vm->listen_ip));
         $self->domain->update_device($graphics);
     }
 }

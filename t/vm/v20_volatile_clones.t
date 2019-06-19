@@ -360,27 +360,65 @@ sub test_old_machine_req {
 sub test_ips {
     my $vm = shift;
 
-    my $domain = create_domain($vm);
-    $domain->volatile_clones(1);
-
     my $public_ip = $vm->_data('public_ip');
     my $out = `ip -4 -o a`;
-    my @ip;
+    my @ips;
     for my $line (split /\n/, $out) {
         my ($if, $ip) = $line =~ /\s(\w+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/;
-        push @ip ,($ip) if $if !~ /^virbr/;
+        push @ips ,($ip) if $if !~ /^virbr/;
     }
 
-    for my $ip (@ip) {
-        $vm->_data('public_ip',$ip);
+    for my $ip (@ips) {
+        diag("Testing ip $ip");
+        $vm->public_ip($ip);
+        is($vm->_data('public_ip'),$ip);
+        is($vm->public_ip, $ip);
+        is($vm->listen_ip, $ip);
+
+        my $vm2 = Ravada::VM->open($vm->id);
+        is($vm2->_data('public_ip'),$ip);
+        is($vm2->listen_ip, $ip);
+        is($vm2->public_ip, $ip);
+
+        my $domain = create_domain($vm);
+
+        if ($vm->type ne 'Void') {
+            my $xml = $domain->get_xml_base;
+            my ($listen) = $xml =~ m{listen='(.*)'};
+            my ($address) = $xml =~ m{listen.*address='(.*)'};
+            is($listen, $ip);
+            is($address, $ip);
+        }
+
+        $domain->volatile_clones(1);
 
         my $clone = $domain->clone(name => new_domain_name , user => user_admin);
-        like($clone->display(user_admin), qr(^spice://$ip));
+        like($clone->display(user_admin), qr(^\w+://$ip));
 
         $clone->remove(user_admin);
+
+        $vm->public_ip('');
+        is($vm->public_ip,'');
+        for my $ip2 (@ips) {
+            my $clone2 = $domain->clone(name => new_domain_name , user => user_admin
+                ,remote_ip => $ip2
+            );
+            if ($vm->type ne 'Void') {
+                my $xml = $clone2->xml_description;
+                my ($listen) = $xml =~ m{listen='(.*)'};
+                my ($address) = $xml =~ m{listen.*address='(.*)'};
+                is($listen, $ip2);
+                is($address, $ip2);
+            }
+
+            like($clone2->display(user_admin), qr(^\w+://$ip2),$clone->name) or exit;
+
+            $clone2->remove(user_admin);
+        }
+        $domain->remove(user_admin);
     }
 
-    $domain->remove(user_admin);
+    $vm->public_ip($public_ip);
 }
 
 ######################################################################3

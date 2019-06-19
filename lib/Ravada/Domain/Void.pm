@@ -51,7 +51,7 @@ sub display_info {
 
 sub _set_display($self, $remote_ip=undef) {
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
-    my $ip = ( $self->_listen_ip($remote_ip) or $self->_vm->ip );
+    my $ip = $self->_vm->listen_ip($remote_ip);
     my $display="void://$ip:5990/";
     my $display_data = { display => $display , type => 'void', ip => $ip, port => 5990 };
     $self->_store( display => $display_data );

@@ -1787,6 +1787,7 @@ sub clone {
 
     return $self->_copy_clone(@_)   if $self->id_base();
 
+    my $remote_ip = delete $args{remote_ip};
     my $request = delete $args{request};
     my $memory = delete $args{memory};
 
@@ -1803,6 +1804,7 @@ sub clone {
     my @args_copy = ();
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
+    push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
@@ -3003,10 +3005,8 @@ sub set_driver_id {
 }
 
 sub _listen_ip($self, $remote_ip) {
-    return ( Ravada::display_ip()
-        or $self->_vm->public_ip
-        or $self->_vm->_interface_ip($remote_ip));
- }
+    return $self->_vm->listen_ip($remote_ip);
+}
 
 sub remote_ip($self) {
 
@@ -3454,6 +3454,7 @@ sub _pre_clone($self,%args) {
     my $user = delete $args{user};
     my $memory = delete $args{memory};
     delete $args{request};
+    delete $args{remote_ip};
 
     confess "ERROR: Missing clone name "    if !$name;
     confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
