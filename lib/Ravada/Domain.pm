@@ -2462,8 +2462,8 @@ sub _post_start {
         $self->display($arg{user});
         $self->display_file($arg{user});
         $self->info($arg{user});
-        $self->open_exposed_ports();
     }
+    $self->open_exposed_ports();
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }

@@ -80,6 +80,8 @@ sub create_domain {
 
     my $volatile = delete $args{volatile};
     my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
+    my $listen_ip = delete $args{listen_ip};
+    confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -89,7 +91,7 @@ sub create_domain {
          "-e ".$domain->_config_file." && echo 1" );
     chomp $out;
     die "Error: Domain $args{name} already exists " if $out;
-    $domain->_set_default_info();
+    $domain->_set_default_info($listen_ip);
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
     $domain->set_memory($args{memory}) if $args{memory};
@@ -136,7 +138,7 @@ sub create_domain {
                         , target => 'hdc'
         );
         $domain->_set_default_drivers();
-        $domain->_set_default_info();
+        $domain->_set_default_info($listen_ip);
         $domain->_store( is_active => 0 );
 
         $domain->_store( is_active => 1 ) if $volatile || $user->is_temporary;

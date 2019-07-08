@@ -49,11 +49,11 @@ sub display_info {
     return $display_data;
 }
 
-sub _set_display($self, $remote_ip=undef) {
+sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
+    $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
-    my $ip = $self->_vm->listen_ip($remote_ip);
-    my $display="void://$ip:5990/";
-    my $display_data = { display => $display , type => 'void', ip => $ip, port => 5990 };
+    my $display="void://$listen_ip:5990/";
+    my $display_data = { display => $display , type => 'void', ip => $listen_ip, port => 5990 };
     $self->_store( display => $display_data );
     return $display_data;
 }
@@ -215,9 +215,16 @@ sub shutdown_now {
 sub start($self, @args) {
     my %args;
     %args = @args if scalar(@args) % 2 == 0;
+    my $listen_ip = delete $args{listen_ip};
     my $remote_ip = delete $args{remote_ip};
+    my $user = delete $args{user};
+    delete $args{'id_vm'};
+    confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
+
     $self->_store(is_active => 1);
-    $self->_set_display( $remote_ip );
+    $self->_set_display( $listen_ip );
 }
 
 sub prepare_base {
@@ -481,8 +488,7 @@ sub get_info {
     return $info;
 }
 
-sub _set_default_info {
-    my $self = shift;
+sub _set_default_info($self, $listen_ip=undef) {
     my $info = {
             max_mem => 512*1024
             ,memory => 512*1024,
@@ -492,6 +498,7 @@ sub _set_default_info {
             ,ip =>'1.1.1.'.int(rand(254)+1)
     };
     $self->_store(info => $info);
+    $self->_set_display($listen_ip);
     my %controllers = $self->list_controllers;
     for my $name ( sort keys %controllers) {
         next if $name eq 'disk';
