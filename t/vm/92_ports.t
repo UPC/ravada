@@ -411,8 +411,7 @@ sub test_host_down {
 
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
-    _wait_ip($vm_name, $domain);
-    rvd_back->_process_requests_dont_fork();
+    _wait_requests($domain);
 
     my $domain_ip = $domain->ip;
     ok($domain_ip,"[$vm_name] Expecting an IP for domain ".$domain->name.", got ".($domain_ip or '')) or return;
@@ -428,7 +427,7 @@ sub test_host_down {
             , jump => 'DNAT'
     );
 
-    ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or exit;
+    ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or confess;
 
     local $@ = undef;
     eval { $domain->shutdown_now(user_admin) };
@@ -629,9 +628,7 @@ sub test_change_expose_3($vm) {
     my $remote_ip = '1.2.3.4';
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
-    _wait_ip($vm->type, $domain);
-    rvd_back->_process_requests_dont_fork(1);
-
+    _wait_requests($domain);
     _check_port_rules($domain, $remote_ip);
 
     is($domain->list_ports, 3);
@@ -688,6 +685,15 @@ sub _search_rules($domain, $remote_ip, $internal_port, $public_port) {
     );
 
     return($n_rule, $n_rule_drop, $n_rule_nat);
+}
+
+sub _wait_requests($domain) {
+    _wait_ip($domain->_vm->type, $domain);
+    for (;;) {
+        rvd_back->_process_requests_dont_fork(1);
+        last if !$domain->list_requests(1);
+        sleep 1;
+    }
 }
 
 ##############################################################
