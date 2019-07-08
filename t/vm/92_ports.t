@@ -46,10 +46,10 @@ sub test_one_port($vm) {
     is($@,'',"[".$vm->type."] export port $internal_port");
 
     my $port_info_no = $domain->exposed_port(456);
-    is(!$port_info_no);
+    is($port_info_no,undef);
 
     $port_info_no = $domain->exposed_port('no');
-    is(!$port_info_no);
+    is($port_info_no,undef);
 
     my $port_info = $domain->exposed_port($name_port);
     ok($port_info) && do {
