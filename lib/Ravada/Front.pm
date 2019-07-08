@@ -580,12 +580,16 @@ Returns a reference to a list of the ISOs known by the system
 
 =cut
 
-sub iso_file {
-    my $self = shift;
-    my $vm = $self->search_vm('KVM');
-    my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
-    #TODO remove path from device
-    return \@isos;
+sub iso_file ($self, $vm_type) {
+    my $req = Ravada::Request->list_isos(
+        vm_type => $vm_type
+    );
+    $self->wait_request($req);
+    return [] if $req->status ne 'done';
+
+    my $isos = decode_json($req->output());
+
+    return $isos;
 }
 
 =head2 list_lxc_templates
@@ -884,6 +888,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'connect_node'
                 || $command eq 'post_login'
                 || $command eq 'list_network_interfaces'
+                || $command eq 'list_isos'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'

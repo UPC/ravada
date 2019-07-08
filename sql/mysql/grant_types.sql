@@ -6,4 +6,4 @@ CREATE TABLE `grant_types` (
     UNIQUE(`name`),
     UNIQUE(`description`),
   PRIMARY KEY (`id`)
-);
+) CHARACTER SET 'utf8';

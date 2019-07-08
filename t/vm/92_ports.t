@@ -22,7 +22,7 @@ sub test_one_port($vm) {
 
     flush_rules();
 
-    my $domain = create_domain($vm->type, user_admin ,'debian');
+    my $domain = create_domain($vm->type, user_admin ,'debian stretch');
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -44,6 +44,22 @@ sub test_one_port($vm) {
        ($public_port) = $domain->expose(port => $internal_port, name => $name_port);
     };
     is($@,'',"[".$vm->type."] export port $internal_port");
+
+    my $port_info_no = $domain->exposed_port(456);
+    is($port_info_no,undef);
+
+    $port_info_no = $domain->exposed_port('no');
+    is($port_info_no,undef);
+
+    my $port_info = $domain->exposed_port($name_port);
+    ok($port_info) && do {
+        is($port_info->{name}, $name_port);
+        is($port_info->{internal_port}, $internal_port);
+    };
+
+    my $port_info2 = $domain->exposed_port($internal_port);
+    ok($port_info2);
+    is_deeply($port_info2, $port_info);
 
     my @list_ports = $domain->list_ports();
     is(scalar @list_ports,1);
@@ -127,7 +143,7 @@ sub test_remove_expose {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $domain = create_domain($vm_name, user_admin,'debian');
+    my $domain = create_domain($vm_name, user_admin,'debian stretch');
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -222,7 +238,7 @@ sub test_crash_domain($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
 
 
-    my $domain = create_domain($vm_name, user_admin,'debian');
+    my $domain = create_domain($vm_name, user_admin,'debian stretch');
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -259,7 +275,7 @@ sub test_crash_domain($vm_name) {
     # shutdown forced
     shutdown_domain_internal($domain);
 
-    my $domain2 = create_domain($vm_name, user_admin,'debian');
+    my $domain2 = create_domain($vm_name, user_admin,'debian stretch');
     $domain2->start(user => user_admin) if !$domain2->is_active;
 
     $domain2->remove(user_admin);
@@ -269,7 +285,7 @@ sub test_two_ports($vm) {
 
     flush_rules();
 
-    my $domain = create_domain($vm, user_admin,'debian');
+    my $domain = create_domain($vm, user_admin,'debian stretch');
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -327,7 +343,7 @@ sub test_two_ports($vm) {
 
 sub test_clone_exports($vm) {
 
-    my $base = create_domain($vm, user_admin,'debian');
+    my $base = create_domain($vm, user_admin,'debian stretch');
     $base->expose(port => 22, name => "ssh");
 
     my @base_ports = $base->list_ports();
@@ -397,7 +413,7 @@ sub test_host_down {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $domain = create_domain($vm_name, user_admin,'debian');
+    my $domain = create_domain($vm_name, user_admin,'debian stretch');
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -448,7 +464,7 @@ sub test_host_down {
 sub test_req_expose($vm_name) {
     flush_rules();
 
-    my $domain = create_domain($vm_name, user_admin,'debian');
+    my $domain = create_domain($vm_name, user_admin,'debian stretch');
 
     my $remote_ip = '10.0.0.6';
 
@@ -615,7 +631,7 @@ sub test_change_expose($vm, $restricted) {
 }
 
 sub test_change_expose_3($vm) {
-    my $domain = create_domain($vm->type, user_admin,'debian');
+    my $domain = create_domain($vm->type, user_admin,'debian stretch');
 
     my $internal_port = 100;
     my $name = "foo";
@@ -625,8 +641,11 @@ sub test_change_expose_3($vm) {
         $domain->expose(port => $internal_port+$n , restricted => $restricted);
     }
 
-    my $remote_ip = '1.2.3.4';
+    my $remote_ip = '10.0.0.4';
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+
+    _wait_ip($vm->type, $domain);
+    rvd_back->_process_requests_dont_fork(1);
 
     _wait_requests($domain);
     _check_port_rules($domain, $remote_ip);

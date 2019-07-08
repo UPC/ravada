@@ -979,6 +979,12 @@ sub start_node($node) {
     is($connect,1
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
+    for ( 1 .. 60 ) {
+        $domain = _domain_node($node);
+        last if $domain->ip;
+        sleep 1;
+        diag("Waiting for connection to node ".$node->name." $_") if !($_ % 5);
+    }
 
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));

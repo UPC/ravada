@@ -2092,6 +2092,20 @@ sub expose($self, @args) {
     }
 }
 
+sub exposed_port($self, $search) {
+    confess "Error: you must supply a port number or name of exposed port"
+        if !defined $search || !length($search);
+
+    for my $port ($self->list_ports) {
+        if ( $search =~ /^\d+$/ ) {
+            return $port if $port->{internal_port} eq $search;
+        } else {
+            return $port if $port->{name} eq $search;
+        }
+    }
+    return;
+}
+
 sub _update_expose($self, %args) {
     my $id = delete $args{id_port};
     $args{internal_port} = delete $args{port}
@@ -2327,6 +2341,7 @@ sub list_ports($self) {
     $sth->execute($self->id);
     my @list;
     while (my $data = $sth->fetchrow_hashref) {
+        lock_hash(%$data);
         push @list,($data);
     }
     return @list;

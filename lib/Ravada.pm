@@ -986,11 +986,13 @@ sub _add_grant($self, $grant, $allowed, $description) {
     my $sth_insert = $CONNECTOR->dbh->prepare(
         "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM users WHERE is_temporary = 0");
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name,is_admin FROM users WHERE is_temporary = 0");
     $sth->execute;
 
-    while (my ($id_user, $name) = $sth->fetchrow ) {
-        eval { $sth_insert->execute($id_user, $id_grant, $allowed) };
+    while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
+        my $allowed_current = $allowed;
+        $allowed_current = 1 if $is_admin;
+        eval { $sth_insert->execute($id_user, $id_grant, $allowed_current ) };
         die $@ if $@ && $@ !~/Duplicate entry /;
     }
 }
@@ -1091,8 +1093,8 @@ sub _upgrade_table {
         && $new_size
         && $new_size != $row->{COLUMN_SIZE}) {
 
-        $dbh->do("alter table $table change $field $field $definition");
         warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
+        $dbh->do("alter table $table change $field $field $definition");
         return;
     }
 
@@ -3053,6 +3055,15 @@ sub _cmd_list_network_interfaces($self, $request) {
     $request->output(encode_json(\@ifs));
 }
 
+sub _cmd_list_isos($self, $request){
+    my $vm_type = $request->args('vm_type');
+   
+    my $vm = Ravada::VM->open( type => $vm_type );
+    my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
+
+    $request->output(encode_json(\@isos));
+}
+
 sub _clean_requests($self, $command, $request=undef) {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -3315,6 +3326,9 @@ sub _req_method {
 
     #networks
     ,list_network_interfaces => \&_cmd_list_network_interfaces
+
+    #isos
+    ,list_isos => \&_cmd_list_isos
     );
     return $methods{$cmd};
 }
