@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.4.3';
+our $VERSION = '0.4.4';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -1093,7 +1093,7 @@ sub _upgrade_table {
         && $new_size
         && $new_size != $row->{COLUMN_SIZE}) {
 
-        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
+        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n$definition\n"  if $0 !~ /\.t$/;
         $dbh->do("alter table $table change $field $field $definition");
         return;
     }
@@ -1248,7 +1248,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
-    $self->_upgrade_table('domains','display','varchar(250) DEFAULT NULL');
+    $self->_upgrade_table('domains','display','text');
     $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
