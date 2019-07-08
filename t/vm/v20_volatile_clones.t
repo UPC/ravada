@@ -374,6 +374,7 @@ sub test_ips {
         is($vm->_data('public_ip'),$ip);
         is($vm->public_ip, $ip);
         is($vm->listen_ip, $ip);
+        is($vm->listen_ip($ip), $ip);
 
         my $vm2 = Ravada::VM->open($vm->id);
         is($vm2->_data('public_ip'),$ip);
@@ -400,6 +401,7 @@ sub test_ips {
         $vm->public_ip('');
         is($vm->public_ip,'');
         for my $ip2 (@ips) {
+            is($vm->listen_ip($ip), $ip) or exit;
             my $clone2 = $domain->clone(name => new_domain_name , user => user_admin
                 ,remote_ip => $ip2
             );
@@ -410,8 +412,10 @@ sub test_ips {
                 is($listen, $ip2);
                 is($address, $ip2);
             }
+            my $display_info = $clone2->display_info(user_admin);
 
-            like($clone2->display(user_admin), qr(^\w+://$ip2),$clone->name) or exit;
+            like($display_info->{display}, qr(^\w+://$ip2),$clone2->name) or exit;
+            like($clone2->display(user_admin), qr(^\w+://$ip2),$clone2->name) or exit;
 
             $clone2->remove(user_admin);
         }
