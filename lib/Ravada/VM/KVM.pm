@@ -2027,7 +2027,7 @@ sub _xml_modify_mac {
     for ( 1 .. 1000 ) {
         for my $cont ( 1 .. 1000 ) {
             my @macparts = @macparts0;
-            my $pos = int(rand(scalar(@macparts)-1))+1;
+            my $pos = int(rand(scalar(@macparts)-3))+3;
             my $num =sprintf "%02X", rand(0xff);
             die "Missing num " if !defined $num;
             $macparts[$pos] = $num;
