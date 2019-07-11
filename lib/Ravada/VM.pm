@@ -77,11 +77,6 @@ has 'host' => (
     , default => 'localhost'
 );
 
-has 'public_ip' => (
-        isa => 'Str'
-        , is => 'rw'
-);
-
 has 'default_dir_img' => (
       isa => 'String'
      , is => 'ro'
@@ -177,7 +172,10 @@ sub open {
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
-    return $VM{$args{id}} if $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name};
+    if ( $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
+        my $vm = $VM{$args{id}};
+        return _clean($vm);
+    }
 
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
@@ -207,10 +205,10 @@ sub BUILD {
     my $name = delete $args->{name};
     my $store = delete $args->{store};
     $store = 1 if !defined $store;
+    my $public_ip = delete $args->{public_ip};
 
     delete $args->{readonly};
     delete $args->{security};
-    delete $args->{public_ip};
 
     # TODO check if this is needed
     delete $args->{connector};
@@ -227,15 +225,10 @@ sub BUILD {
             ,vm_type => $self->type
         );
         $query{name} = $name  if $name;
+        $query{public_ip} = $public_ip if defined $public_ip;
         $self->_select_vm_db(%query);
     }
     $self->id;
-
-    $self->public_ip($self->_data('public_ip'))
-        if defined $self->_data('public_ip')
-            && (!defined $self->public_ip
-                || $self->public_ip ne $self->_data('public_ip')
-            );
 
 }
 
@@ -364,12 +357,13 @@ sub _around_create_domain {
     my $orig = shift;
     my $self = shift;
     my %args = @_;
+    my $remote_ip = delete $args{remote_ip};
+    my %args_create = %args;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
     my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
 
     my $base;
-    my $remote_ip = delete $args{remote_ip};
     my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
      my $id_iso = delete $args{id_iso};
@@ -377,7 +371,7 @@ sub _around_create_domain {
        my $name = delete $args{name};
        my $swap = delete $args{swap};
 
-     # args get deleted but kept on @_ so when we call $self->$orig below are passed
+     # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};
      delete $args{request};
@@ -402,9 +396,11 @@ sub _around_create_domain {
     confess "ERROR: Base ".$base->name." is private"
         if !$owner->is_admin && $base && !$base->is_public();
 
-    $self->_pre_create_domain(@_);
+    $args_create{listen_ip} = $self->listen_ip($remote_ip);
+    $args_create{spice_password} = $self->_define_spice_password($remote_ip);
+    $self->_pre_create_domain(%args_create);
 
-    my $domain = $self->$orig(@_, volatile => $volatile);
+    my $domain = $self->$orig(%args_create, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
@@ -433,6 +429,15 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     return $domain;
+}
+
+sub _define_spice_password($self, $remote_ip) {
+    my $spice_password = Ravada::Utils::random_name(4);
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $spice_password = undef if !$network->requires_password;
+    }
+    return $spice_password;
 }
 
 sub _check_duplicate_name($self, $name) {
@@ -601,6 +606,17 @@ sub _interface_ip($self, $remote_ip=undef) {
     return $default_ip;
 }
 
+sub listen_ip($self, $remote_ip=undef) {
+    return Ravada::display_ip() if Ravada::display_ip();
+    return $self->public_ip     if $self->public_ip;
+
+    return $self->_interface_ip($remote_ip) if $remote_ip;
+
+    return (
+            $self->ip()
+    );
+}
+
 sub _check_memory {
     my $self = shift;
     my %args = @_;
@@ -644,7 +660,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -693,6 +709,7 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($value, $self->id);
         $sth->finish;
+
         return $value;
     }
 
@@ -712,12 +729,17 @@ sub _data($self, $field, $value=undef) {
 
 sub _timed_data_cache($self) {
     return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
+    return _clean($self);
+}
+
+sub _clean($self) {
     my $name = $self->{_data}->{name};
     my $id = $self->{_data}->{id};
     delete $self->{_data};
     delete $self->{$FIELD_TIMEOUT};
     $self->{_data}->{name} = $name  if $name;
     $self->{_data}->{id} = $id      if $id;
+    return $self;
 }
 
 sub _do_select_vm_db {
@@ -768,11 +790,12 @@ sub _insert_vm_db {
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
     my $host = ( delete $args{hostname} or $self->host );
+    my $public_ip = ( delete $args{public_ip} or '' );
     delete $args{vm_type};
 
     confess "Unknown args ".Dumper(\%args)  if keys %args;
 
-    eval { $sth->execute($name,$self->type,$host, $self->public_ip)  };
+    eval { $sth->execute($name,$self->type,$host, $public_ip) };
     confess $@ if $@;
     $sth->finish;
 
@@ -1055,6 +1078,10 @@ sub enabled($self, $value=undef) {
 
 sub is_enabled($self, $value=undef) {
     return $self->enabled($value);
+}
+
+sub public_ip($self, $value=undef) {
+    return $self->_data('public_ip', $value);
 }
 
 =head2 remove

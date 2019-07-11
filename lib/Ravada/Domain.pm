@@ -1787,6 +1787,7 @@ sub clone {
 
     return $self->_copy_clone(@_)   if $self->id_base();
 
+    my $remote_ip = delete $args{remote_ip};
     my $request = delete $args{request};
     my $memory = delete $args{memory};
 
@@ -1803,6 +1804,7 @@ sub clone {
     my @args_copy = ();
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
+    push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
@@ -2090,6 +2092,20 @@ sub expose($self, @args) {
     }
 }
 
+sub exposed_port($self, $search) {
+    confess "Error: you must supply a port number or name of exposed port"
+        if !defined $search || !length($search);
+
+    for my $port ($self->list_ports) {
+        if ( $search =~ /^\d+$/ ) {
+            return $port if $port->{internal_port} eq $search;
+        } else {
+            return $port if $port->{name} eq $search;
+        }
+    }
+    return;
+}
+
 sub _update_expose($self, %args) {
     my $id = delete $args{id_port};
     $args{internal_port} = delete $args{port}
@@ -2325,6 +2341,7 @@ sub list_ports($self) {
     $sth->execute($self->id);
     my @list;
     while (my $data = $sth->fetchrow_hashref) {
+        lock_hash(%$data);
         push @list,($data);
     }
     return @list;
@@ -2460,8 +2477,8 @@ sub _post_start {
         $self->display($arg{user});
         $self->display_file($arg{user});
         $self->info($arg{user});
-        $self->open_exposed_ports();
     }
+    $self->open_exposed_ports();
     Ravada::Request->enforce_limits(at => time + 60);
     $self->post_resume_aux;
 }
@@ -2498,7 +2515,7 @@ sub _add_iptable {
     my $display_info = $self->display_info($user);
     $self->display_file($user) if !$self->_data('display_file');
 
-    my $local_ip = $display_info->{listen_ip};
+    my $local_ip = (delete $args{local_ip} or $display_info->{listen_ip});
     my $local_port = $display_info->{port};
 
     $self->_remove_iptables( port => $local_port );
@@ -2614,6 +2631,14 @@ sub open_iptables {
     }
 
     $self->_add_iptable(%args);
+
+    my $remote_ip = $args{remote_ip};
+    if ($remote_ip && $remote_ip =~ /^127\./) {
+        my %args2 = %args;
+        $args2{local_ip} = $self->_vm->ip;
+        $self->_add_iptable(%args2);
+    }
+
     $self->info($user);
 }
 
@@ -3003,10 +3028,8 @@ sub set_driver_id {
 }
 
 sub _listen_ip($self, $remote_ip) {
-    return ( Ravada::display_ip()
-        or $self->_vm->public_ip
-        or $self->_vm->_interface_ip($remote_ip));
- }
+    return $self->_vm->listen_ip($remote_ip);
+}
 
 sub remote_ip($self) {
 
@@ -3454,6 +3477,7 @@ sub _pre_clone($self,%args) {
     my $user = delete $args{user};
     my $memory = delete $args{memory};
     delete $args{request};
+    delete $args{remote_ip};
 
     confess "ERROR: Missing clone name "    if !$name;
     confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;

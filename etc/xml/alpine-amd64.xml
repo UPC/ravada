@@ -15,12 +15,6 @@
     <apic/>
     <vmport state='off'/>
   </features>
-  <cpu mode='custom' match='exact' check='full'>
-    <model fallback='forbid'>Penryn</model>
-    <feature policy='require' name='vme'/>
-    <feature policy='require' name='x2apic'/>
-    <feature policy='require' name='hypervisor'/>
-  </cpu>
   <clock offset='utc'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
@@ -138,12 +132,4 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
     </memballoon>
   </devices>
-  <seclabel type='dynamic' model='apparmor' relabel='yes'>
-    <label>libvirt-a289e5a7-77c8-4447-b21e-177105598ec6</label>
-    <imagelabel>libvirt-a289e5a7-77c8-4447-b21e-177105598ec6</imagelabel>
-  </seclabel>
-  <seclabel type='dynamic' model='dac' relabel='yes'>
-    <label>+64055:+130</label>
-    <imagelabel>+64055:+130</imagelabel>
-  </seclabel>
 </domain>

@@ -4,5 +4,4 @@ CREATE TABLE `grant_types` (
 ,  `description` varchar(255) NOT NULL
 ,  `enabled` integer default NULL
 ,    UNIQUE(`name`)
-,    UNIQUE(`description`)
 );
