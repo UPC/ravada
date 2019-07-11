@@ -1245,26 +1245,14 @@ sub login {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
-    my $form_hash = $c->param('login_hash');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     my @error =();
 
-    # TODO: improve this hash
-    my ($time) = time =~ m{(.*)...$};
-    my $login_hash1 = $time.($CONFIG_FRONT->{secrets}->[0] or '');
-
-    # let login varm be valid for 60 seconds
-    ($time) = (time-60) =~ m{(.*)...$};
-    my $login_hash2 = $time.($CONFIG_FRONT->{secrets}->[0] or '');
-
     if (defined $login || defined $password || $c->param('submit')) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
-        push @error,("Session timeout")
-            if $form_hash ne sha256_hex($login_hash1)
-                && $form_hash ne sha256_hex($login_hash2);
     }
 
     if ( !@error && defined $login && defined $password) {
@@ -1304,7 +1292,6 @@ sub login {
                         ,js => ['/js/main.js']
                         ,navbar_custom => 1
                       ,login => $login
-                      ,login_hash => sha256_hex($login_hash1)
                       ,error => \@error
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
