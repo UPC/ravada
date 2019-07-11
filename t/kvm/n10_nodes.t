@@ -191,7 +191,7 @@ sub test_iptables($node, $remote_ip, $local_ip, $local_port) {
         , local_ip => $local_ip
         , local_port => $local_port
     );
-    ok(scalar @line,$node->type." No iptables found $remote_ip -> $local_ip:$local_port");
+    ok(scalar @line,$node->type." No iptables found $remote_ip -> $local_ip:$local_port") or confess;
     ok(scalar @line == 1,$node->type." iptables should found only 1 found $remote_ip -> $local_ip:$local_port ".Dumper(\@line));
 }
 
@@ -1162,6 +1162,9 @@ SKIP: {
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
     is($vm->shared_storage($node,'/var/tmp/'),0) or exit;
+
+    test_domain($vm_name, $node);
+
     test_migrate_back($node);
 
     test_remove_base_main($node);

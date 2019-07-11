@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.4.3';
+our $VERSION = '0.4.4';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -454,16 +454,47 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-        ,debian_stretch => {
+       ,debian_stretch_32 => {
+            name =>'Debian Stretch 32 bits'
+            ,description => 'Debian 9 Stretch 32 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*/i386/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,debian_buster_64=> {
+            name =>'Debian Buster 64 bits'
+            ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*/amd64/iso-cd/'
+            ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_buster_32=> {
+            name =>'Debian Buster 32 bits'
+            ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*/i386/iso-cd/'
+            ,file_re => 'debian-10.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+
         ,windows_7 => {
           name => 'Windows 7'
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
@@ -1093,7 +1124,7 @@ sub _upgrade_table {
         && $new_size
         && $new_size != $row->{COLUMN_SIZE}) {
 
-        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
+        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n$definition\n"  if $0 !~ /\.t$/;
         $dbh->do("alter table $table change $field $field $definition");
         return;
     }
@@ -1248,7 +1279,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
-    $self->_upgrade_table('domains','display','varchar(250) DEFAULT NULL');
+    $self->_upgrade_table('domains','display','text');
     $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
