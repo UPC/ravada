@@ -60,17 +60,15 @@ sub test_fw_domain($vm_name, $domain_name, $remote_ip='99.88.77.66') {
     my $local_port;
     my $domain_id;
 
+    my $vm = rvd_back->search_vm($vm_name);
     {
-        my $vm = rvd_back->search_vm($vm_name);
         my $domain = $vm->search_domain($domain_name);
         ok($domain,"Searching for domain $domain_name") or return;
         $domain->shutdown_now($USER) if $domain->is_active;
         $domain->start( user => $USER, remote_ip => $remote_ip);
 
         my $display = $domain->display($USER);
-        ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
-        $local_ip = $vm->ip;
-        $local_ip = $vm->public_ip if $vm->public_ip;
+        ($local_ip, $local_port) = $display =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
 
         ok(defined $local_port, "Expecting a port in display '$display'") or return;
     
@@ -95,6 +93,11 @@ sub test_fw_domain($vm_name, $domain_name, $remote_ip='99.88.77.66') {
         is($req->status,'done');
         is($req->error,'');
         test_chain($vm_name, $local_ip,$local_port, $remote_ip, 1);
+        if ($remote_ip eq '127.0.0.1') {
+            my $if_ip = $vm->ip;
+            isnt($if_ip,'127.0.0.1');
+            test_chain($vm_name, $local_ip,$local_port, $if_ip, 1);
+        }
     }
 
 
