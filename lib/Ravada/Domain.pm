@@ -2515,7 +2515,7 @@ sub _add_iptable {
     my $display_info = $self->display_info($user);
     $self->display_file($user) if !$self->_data('display_file');
 
-    my $local_ip = $display_info->{listen_ip};
+    my $local_ip = (delete $args{local_ip} or $display_info->{listen_ip});
     my $local_port = $display_info->{port};
 
     $self->_remove_iptables( port => $local_port );
@@ -2631,6 +2631,14 @@ sub open_iptables {
     }
 
     $self->_add_iptable(%args);
+
+    my $remote_ip = $args{remote_ip};
+    if ($remote_ip && $remote_ip =~ /^127\./) {
+        my %args2 = %args;
+        $args2{local_ip} = $self->_vm->ip;
+        $self->_add_iptable(%args2);
+    }
+
     $self->info($user);
 }
 

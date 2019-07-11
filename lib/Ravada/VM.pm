@@ -608,12 +608,12 @@ sub _interface_ip($self, $remote_ip=undef) {
 
 sub listen_ip($self, $remote_ip=undef) {
     return Ravada::display_ip() if Ravada::display_ip();
+    return $self->public_ip     if $self->public_ip;
 
     return $self->_interface_ip($remote_ip) if $remote_ip;
 
     return (
-            $self->public_ip
-            or $self->ip()
+            $self->ip()
     );
 }
 

@@ -400,8 +400,10 @@ sub test_ips {
 
         $vm->public_ip('');
         is($vm->public_ip,'');
+
+        $domain = Ravada::Domain->open($domain->id);
         for my $ip2 (@ips) {
-            is($vm->listen_ip($ip), $ip) or exit;
+            is($vm->listen_ip($ip2), $ip2) or exit;
             my $clone2 = $domain->clone(name => new_domain_name , user => user_admin
                 ,remote_ip => $ip2
             );
