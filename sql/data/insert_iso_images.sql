@@ -23,16 +23,6 @@ VALUES('Ubuntu Xenial Xerus 64 bits','Ubuntu 16.04 LTS Xenial Xerus 64 bits'
     );
 
 INSERT INTO iso_images
-(name,description,arch,xml,xml_volume,url, file_re, md5_url)
-VALUES('Ubuntu Yakkety Yak 64 bits',' Ubuntu 16.10 Yakkety Yak 64 bits'
-    ,'amd64'
-    ,'yakkety64-amd64.xml'
-    ,'yakkety64-volume.xml'
-    ,'http://old-releases.ubuntu.com/releases/16.10/'
-    ,'ubuntu-16.10.*desktop-amd64.iso'
-    ,'http://old-releases.ubuntu.com/releases/16.10/MD5SUMS'
-    );
-INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,file_re,md5_url)
 VALUES('Debian Jessie 64 bits'
     ,'Debian 8.5.0 Jessie 64 bits (netsinst)'
