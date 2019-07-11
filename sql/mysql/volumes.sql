@@ -8,4 +8,4 @@ create table volumes (
     PRIMARY KEY (`id`),
     UNIQUE (`id_domain`,`name`),
     UNIQUE (`id_domain`,`n_order`)
-);
+)CHARACTER SET 'utf8';

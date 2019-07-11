@@ -1093,8 +1093,8 @@ sub _upgrade_table {
         && $new_size
         && $new_size != $row->{COLUMN_SIZE}) {
 
-        $dbh->do("alter table $table change $field $field $definition");
         warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
+        $dbh->do("alter table $table change $field $field $definition");
         return;
     }
 
