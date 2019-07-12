@@ -1296,6 +1296,7 @@ sub login {
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
+                      ,login_hash => ''
     );
 }
 
