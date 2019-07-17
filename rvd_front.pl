@@ -255,6 +255,11 @@ any '/new_machine' => sub {
     return new_machine($c);
 };
 
+any '/copy_machine' => sub {
+    my $c = shift;
+    return new_machine_copy($c);
+};
+
 get '/domain/new.html' => sub {
     my $c = shift;
 
@@ -2093,6 +2098,24 @@ sub copy_machine {
         push @reqs,(copy_machine_many($base, $number, \@create_args));
     }
     return $c->render(json => { request => [map { $_->id } @ reqs ] } );
+}
+
+sub new_machine_copy($c) {
+    my $id_base = $c->param('src_machine');
+    my $copy_name = $c->param('copy_name');
+
+    my $ram = $c->param('copy_ram');
+    $ram = 0 if !$ram || $ram !~ /^\d+(\.\d+)?$/;
+    $ram = int($ram*1024*1024);
+
+    my $req = Ravada::Request->clone(
+        uid => $USER->id
+        ,id_domain => $id_base
+        ,name => $copy_name
+        ,memory => $ram
+    );
+
+   return $c->redirect_to("/admin/machines");
 }
 
 sub copy_machine_many($base, $number, $create_args) {

@@ -99,6 +99,16 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.seeswap = !($scope.seeswap);
       };
 
+      $scope.get_machine_info = function(id) {
+          $http.get('/machine/info/'+id+'.json')
+                .then( function(response) {
+                    $scope.machine = response.data;
+                    $scope.ramsize = ($scope.machine.max_mem / 1024 / 1024);
+                    if ( $scope.ramsize <1 ) {
+                        $scope.ramsize = 1;
+                    }
+                });
+      };
 
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
