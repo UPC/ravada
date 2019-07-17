@@ -1,48 +1,45 @@
-<div class="row" ng-repeat="attribute in ldap_attributes_domain">
-    <div class="col-md-2">
+<tr ng-repeat="attribute in ldap_attributes_domain">
+    <td class="col-lg-3">
         {{attribute.attribute}}
-    </div>
-    <div class="col-md-5">
+    </td>
+    <td class="col-lg-3">
         {{attribute.value}}
-    </div>
-    <div class="col-md-2">
+    </td>
+    <td class="col-lg-2">
         <input type="checkbox" ng-checked="attribute.allowed"
             ng-click="set_ldap_access(attribute.id, !attribute.allowed, attribute.last)"
         >
-    </div>
-    <div class="col-md-1">
+    </td>
+    <td class="col-lg-1">
         <input type="checkbox" ng-checked="attribute.last"
             ng-disabled="!attribute.allowed"
             ng-click="set_ldap_access(attribute.id, attribute.allowed, !attribute.last)"
         >
-    </div>
-    <div class="col-md-1" ng-show="ldap_attributes_domain.length>1">
-        <button class="btn" ng-hide="$index == ldap_attributes_domain.length-1"
+    </td>
+    <td class="col-lg-1" ng-show="ldap_attributes_domain.length>1">
+        <button class="btn" ng-hide="$index == ldap_attributes_domain.length-1" title="<%=l 'Down' %>"
             ng-click="move_ldap_access(attribute.id, +1);"
             ><i class="fa fa-arrow-down"></i></button>
-    </div>
-    <div class="col-md-1" ng-show="ldap_attributes_domain.length>1">
-        <button class="btn" ng-show="$index" ng-click="move_ldap_access(attribute.id,-1)"
+    </td>
+    <td class="col-lg-1" ng-show="ldap_attributes_domain.length>1">
+        <button class="btn" ng-show="$index" ng-click="move_ldap_access(attribute.id,-1)" title="<%=l 'Up' %>"
             ><i class="fa fa-arrow-up" ></i></button>
-    </div>
-    <div class="col-md-1">
-        <button class="btn" 
-            ng-click="delete_ldap_access(attribute.id)"><i class="fas fa-times"></i></button>
-    </div>
-</div>
-
-<div class="row" ng-show="ldap_attributes_default.id">
-    <div class="col-md-2">
+    </td>
+    <td class="col-lg-1">
+        <button class="btn btn-outline-danger btn-sm"
+            ng-click="delete_ldap_access(attribute.id)" title="<%=l 'Remove' %>"><i class="fas fa-times"></i></button>
+    </td>
+</tr>
+<tr ng-show="ldap_attributes_default.id">
+    <td class="col-lg-3">
         <i><%=l 'Default' %></i>
-    </div>
-    <div class="col-md-3"></div>
-    <div class="col-md-1">
+    </td>
+    <td class="col-lg-3"></td>
+    <td class="col-lg-2" colspan="5">
         <input type="checkbox"
             ng-checked="ldap_attributes_default.allowed"
             ng-click="set_ldap_access(ldap_attributes_default.id, !ldap_attributes_default.allowed)">
-    </div>
-    <div class="col-md-4">
-        <span ng-show="ldap_attributes_default.allowed"><%=l 'If none of the previous match, access is allowed.' %></span>
+            <span ng-show="ldap_attributes_default.allowed"><%=l 'If none of the previous match, access is allowed.' %></span>
         <span ng-show="!ldap_attributes_default.allowed"><%=l 'If none of the previous match, access is denied.' %></span>
-    </div>
-</div>
+    </td>
+</tr>

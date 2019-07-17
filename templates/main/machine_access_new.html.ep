@@ -1,43 +1,49 @@
 <div class="row">
-    <div class="col-md-2">
-        <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false">
-        <option ng-repeat="attribute in ldap_attributes" value="{{attribute}}">
-            {{attribute}}
-        </option>
-        </select>
-    </div>
-
-    <div class="col-md-5">
+    <div class="input-group col-lg-6">
+        <div class="input-group-prepend">
+            <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false">
+                <option ng-repeat="attribute in ldap_attributes" value="{{attribute}}">
+                    {{attribute}}
+                </option>
+            </select>
+        </div>
         <input ng-model="ldap_attribute_value" type="text"
             ng-change="ldap_entries=0;ldap_verified=false">
     </div>
-
-    <div class="col-md-2">
+    <div class="col-lg-2">
         <input ng-model="ldap_attribute_allowed" type="checkbox">
     </div>
 
-    <div class="col-md-1">
+    <div class="col-lg-1">
         <input ng-model="ldap_attribute_last" type="checkbox"
             title="Finish checking permission when this matches"
         >
     </div>
-    <div class="col-md-2">
-        <button
+    <div class="col-lg-3">
+        <input type="button" class="btn btn-success"
             ng-show="ldap_attribute && ldap_attribute_value"
             ng-disabled="ldap_verifying"
             ng-click="count_ldap_entries()"
-            ><%=l 'verify' %></button>
-        <button ng-show="ldap_attribute && ldap_attribute_value"
+            value="<%=l 'verify' %>">
+        <input type="button" class="btn btn-primary"
+            ng-show="ldap_attribute && ldap_attribute_value"
             ng-disabled="ldap_verifying || (!ldap_attribute_allowed && ! ldap_attribute_last)"
             ng-click="add_ldap_access()"
-            ><%=l 'save' %></button>
-    </div>
-    <div class="col-md-3">
-        <span ng-show="ldap_verifying"><%=l 'Verifying' %> {{ldap_attribute}} ...</span>
-        <span ng-show="ldap_verified && !ldap_entries"><%=l 'No entries found' %></span>
-        <span ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}} <%=l 'has at least' %> {{ldap_entries}} <%=l 'entries.' %>' </span>
-        <span ng-show="!ldap_attribute_allowed && !ldap_attribute_last">
-            <%=l 'Enable last for not allowed restrictions.' %>
-        </span>
+            value="<%=l 'save' %>">
     </div>
 </div>
+<div class="mt-3 alert alert-warning" role="alert"
+     ng-show="ldap_verifying"><%=l 'Verifying' %> {{ldap_attribute}} ...
+</div>
+<div class="mt-3 alert alert-danger" role="alert"
+    ng-show="ldap_verified && !ldap_entries"><%=l 'No entries found' %>
+</div>
+<div class="mt-3 alert alert-primary" role="alert"
+    ng-show="ldap_verified && ldap_entries">{{ldap_attribute}} = {{ldap_attribute_value}}
+    <%=l 'has at least' %> {{ldap_entries}} <%=l 'entries.' %>
+</div>
+<div class="mt-3 alert alert-primary" role="alert"
+    ng-show="!ldap_attribute_allowed && !ldap_attribute_last">
+    <%=l 'Enable last for not allowed restrictions.' %>
+</div>
+
