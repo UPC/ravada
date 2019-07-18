@@ -1,13 +1,13 @@
 <div class="row">
     <div class="input-group col-lg-6">
         <div class="input-group-prepend">
-            <select ng-model="ldap_attribute"  ng-change="ldap_entries=0;ldap_verified=false">
+            <select ng-model="ldap_attribute" ng-change="ldap_entries=0;ldap_verified=false">
                 <option ng-repeat="attribute in ldap_attributes" value="{{attribute}}">
                     {{attribute}}
                 </option>
             </select>
         </div>
-        <input ng-model="ldap_attribute_value" type="text"
+        <input class="col-lg-6" ng-model="ldap_attribute_value" type="text"
             ng-change="ldap_entries=0;ldap_verified=false">
     </div>
     <div class="col-lg-2">
