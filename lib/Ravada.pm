@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.4.6';
+our $VERSION = '0.4.7';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -2475,7 +2475,15 @@ sub _can_fork {
 
     my $type = $req->type;
 
-    my $n_pids = scalar(keys %{$self->{pids}->{$type}});
+    return 1 if !$self->{pids}->{$type};
+    my %reqs = %{$self->{pids}->{$type}};
+
+    for my $pid (keys %reqs) {
+        my $id_req = $reqs{$pid};
+        my $request = Ravada::Request->open($id_req);
+        delete $reqs{$pid} if !$request || $request->status eq 'done';
+    }
+    my $n_pids = scalar(keys %reqs);
     return 1 if $n_pids <= $req->requests_limit();
 
     my $msg = $req->command
@@ -2998,9 +3006,9 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_disabled_nodes( $request );
     $self->_refresh_down_nodes( $request );
 
-    my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
+    my $active_vm = $self->_refresh_active_vms();
+    my $active_domain = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
-    $self->_remove_unnecessary_downs();
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
@@ -3095,11 +3103,15 @@ sub _cmd_list_isos($self, $request){
     $request->output(encode_json(\@isos));
 }
 
-sub _clean_requests($self, $command, $request=undef) {
+sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
-        ."   AND status='requested'";
+        ."   AND status=?";
 
+    if ($status eq 'done') {
+        my $date= Time::Piece->localtime(time - 300);
+        $query .= " AND date_changed < ".$CONNECTOR->dbh->quote($date->ymd." ".$date->hms);
+    }
     if ($request) {
         confess "Wrong request" if !ref($request) || ref($request) !~ /Request/;
         $query .= "   AND id <> ?";
@@ -3107,21 +3119,16 @@ sub _clean_requests($self, $command, $request=undef) {
     my $sth = $CONNECTOR->dbh->prepare($query);
 
     if ($request) {
-        $sth->execute($command, $request->id);
+        $sth->execute($command, $status, $request->id);
     } else {
-        $sth->execute($command);
+        $sth->execute($command, $status);
     }
 }
 
-sub _refresh_active_domains($self, $request=undef) {
-    my $id_domain;
-    $id_domain = $request->defined_arg('id_domain')  if $request;
+sub _refresh_active_vms ($self) {
 
-    my %active_domain;
     my %active_vm;
     for my $vm ($self->list_vms) {
-        $request->status('working',"checking active domains on ".$vm->name)
-            if $request;
         if ( !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
@@ -3129,21 +3136,30 @@ sub _refresh_active_domains($self, $request=undef) {
             next;
         }
         $active_vm{$vm->id} = 1;
+    }
+    return \%active_vm;
+}
+
+sub _refresh_active_domains($self, $request=undef) {
+    my $id_domain;
+    $id_domain = $request->defined_arg('id_domain')  if $request;
+    my %active_domain;
+
         if ($id_domain) {
-            my $domain = $vm->search_domain_by_id($id_domain);
-            $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
+            my $domain = $self->search_domain_by_id($id_domain);
+            $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
-            eval { @domains = $vm->list_domains };
+            eval { @domains = $self->list_domains };
             warn $@ if $@;
             for my $domain (@domains) {
                 next if $active_domain{$domain->id};
                 next if $domain->is_hibernated;
-                $self->_refresh_active_domain($vm, $domain, \%active_domain);
+                $self->_refresh_active_domain($domain, \%active_domain);
+                $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
             }
         }
-    }
-    return \%active_domain, \%active_vm;
+    return \%active_domain;
 }
 
 sub _refresh_down_nodes($self, $request = undef ) {
@@ -3180,7 +3196,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
     $sth->finish;
 }
 
-sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
+sub _refresh_active_domain($self, $domain, $active_domain) {
     return if $domain->is_hibernated();
 
     my $is_active = $domain->is_active();
@@ -3188,9 +3204,6 @@ sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
     my $status = 'shutdown';
     if ( $is_active ) {
         $status = 'active';
-        $domain->_data(id_vm => $vm->id)
-            if !defined$domain->_data('id_vm')
-                || $domain->_data('id_vm') != $vm->id;
     }
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
@@ -3223,16 +3236,13 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     }
 }
 
-sub _remove_unnecessary_downs($self, @domains) {
-    @domains = $self->list_domains( active => 0 ) if !scalar @domains;
+sub _remove_unnecessary_downs($self, $domain) {
 
-    for my $domain (@domains) {
         my @requests = $domain->list_requests(1);
         for my $req (@requests) {
             $req->status('done') if $req->command =~ /shutdown/;
             $req->_remove_messages();
         }
-    }
 }
 
 sub _refresh_volatile_domains($self) {
@@ -3294,6 +3304,9 @@ sub _cmd_set_base_vm {
 sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_requests('cleanup', $request);
+    $self->_clean_requests('cleanup', $request,'done');
+    $self->_clean_requests('enforce_limits', $request,'done');
+    $self->_clean_requests('refresh_vms', $request,'done');
     $self->_wait_pids();
 }
 
@@ -3334,7 +3347,6 @@ sub _req_method {
 ,rebase_volumes => \&_cmd_rebase_volumes
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_machine => \&_cmd_refresh_machine
-,refresh_vms => \&_cmd_refresh_vms
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
