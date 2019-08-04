@@ -9,5 +9,6 @@ CREATE TABLE `users` (
   `language` char(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-);
+)
+  CHARACTER SET 'utf8';
 

@@ -11,6 +11,8 @@ use feature qw(signatures);
 
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
+    ,disk => \&_get_controller_disk
+    ,network => \&_get_controller_network
     );
 
 our %GET_DRIVER_SUB = (
@@ -22,6 +24,7 @@ our %GET_DRIVER_SUB = (
      ,zlib => \&_get_driver_zlib
      ,playback => \&_get_driver_playback
      ,streaming => \&_get_driver_streaming
+     ,disk => \&_get_driver_disk
 );
 
 
@@ -47,6 +50,45 @@ sub _get_controller_usb {
     } 
 
     return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+}
+
+sub _get_controller_disk($self) {
+    return $self->list_volumes_info();
+}
+
+sub _get_controller_network($self) {
+    $self->xml_description if !$self->readonly();
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    my @ret;
+
+    my $count = 0;
+    for my $interface ($doc->findnodes('/domain/devices/interface')) {
+        next if $interface->getAttribute('type') !~ /^(bridge|network)/;
+
+        my ($model) = $interface->findnodes('model') or die "No model";
+        my ($source) = $interface->findnodes('source') or die "No source";
+        my $type = 'NAT';
+        $type = 'bridge' if $source->getAttribute('bridge');
+        my ($address) = $interface->findnodes('address');
+        my $name = "en";
+        if ($address->getAttribute('type') eq 'pci') {
+            my $slot = $address->getAttribute('slot');
+            $name .="s".hex($slot);
+        } else {
+            $name .="o$count";
+        }
+        $count++;
+        push @ret,({
+                     type => $type
+                    ,name => $name
+                  ,driver => $model->getAttribute('type')
+                  ,bridge => $source->getAttribute('bridge')
+                 ,network => $source->getAttribute('network')
+        });
+    }
+
     return @ret;
 }
 
@@ -171,19 +213,9 @@ sub _get_driver_sound {
 
 }
 
-=pod
-
-sub get_info {
+sub _get_driver_disk {
     my $self = shift;
-
-    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
-    my $info;
-    $info->{max_mem} = ($doc->findnodes('/domain/memory'))[0]->textContent;
-    $info->{memory} = ($doc->findnodes('/domain/currentMemory'))[0]->textContent;
-
-    return $info;
+    my @volumes = $self->list_volumes_info();
+    return $volumes[0]->{driver};
 }
-
-=cut
-
 1;

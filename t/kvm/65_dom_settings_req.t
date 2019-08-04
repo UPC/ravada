@@ -28,6 +28,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
+                    , disk => 1024 * 1024
                     , arg_create_dom($vm_name)
                      );
     };
@@ -144,8 +145,8 @@ sub test_needs_shutdown {
             , id_option => $option->{id}
     );
     rvd_back->_process_requests_dont_fork();
-    is($req->status,'done') or next;
-    is($req->error,'') or next;
+    is($req->status,'done') or return;
+    is($req->error,'') or return;
 
     ok(!$@,"Expecting no error, got : ".($@ or ''));
 

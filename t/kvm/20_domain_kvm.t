@@ -55,6 +55,30 @@ sub test_remove_domain_by_name {
 
 }
 
+sub test_remove_corrupt_clone {
+    my $vm = shift;
+
+    my $base = create_domain($vm);
+    $base->add_volume_swap( size => 1024 * 1024 );
+    my $clone = $base->clone(
+         name => new_domain_name
+        ,user => user_admin
+    );
+
+    for my $file ( $clone->list_disks ) {
+        warn $file;
+        open my $out, '>',$file or die "$! $file";
+        print $out "bogus\n";
+        close $out;
+    }
+    eval { $clone->start(user_admin) };
+    diag($@);
+    $clone->shutdown_now(user_admin);
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub search_domain_db
  {
     my $name = shift;
@@ -77,6 +101,7 @@ sub test_new_domain {
         , active => $active
         , id_owner => $USER->id
         , vm => $BACKEND
+        , disk => 1024 * 1024
     );
 
     ok($domain,"Domain not created");
@@ -116,6 +141,7 @@ sub test_new_domain_iso {
           , active => $active
         , id_owner => $USER->id , iso_file => $iso->{device}
         , vm => $BACKEND
+        , disk => 1024 * 1024
         );
       };
     is($@,'') or return;
@@ -304,6 +330,7 @@ test_vm_kvm();
 remove_old_domains();
 remove_old_disks();
 test_domain();
+test_remove_corrupt_clone($vm);
 test_domain_with_iso();
 test_domain_missing_in_db();
 test_domain_inactive();

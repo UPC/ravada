@@ -24,6 +24,8 @@ sub test_node_down($node, $action, $action_name) {
         );
 
     start_node($node);
+    is($node->is_active,1) or exit;
+    is($node->is_enabled,1) or exit;
 
     my $domain = create_domain($node->type);
     $domain->prepare_base(user_admin);
@@ -34,8 +36,9 @@ sub test_node_down($node, $action, $action_name) {
         ,name => new_domain_name
     );
     $clone->migrate($node);
+    is($clone->is_local,0 );
 
-    $clone->start(user_admin);
+    $clone->start(user => user_admin, id_vm => $node->id);
     is($clone->is_local,0 );
 
     $action->($clone);

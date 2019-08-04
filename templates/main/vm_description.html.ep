@@ -8,7 +8,7 @@
                         <br/>
                         <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
                         <script>
-                            CKEDITOR.replace( 'editor' );
+                            CKEDITOR.replace( 'editor', {height: 200} );
                         </script>
                     </div>
                 </div>

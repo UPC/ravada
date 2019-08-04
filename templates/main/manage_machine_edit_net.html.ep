@@ -1,0 +1,54 @@
+<div ng-show="name == 'network' && item.edit" class="form-group mt-4">
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary"><%=l 'bus' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.driver"
+                    ng-options="model for model in showmachine.drivers['network']"
+            >
+            </select>
+        </li>
+        <li class="list-group-item list-group-item-primary"><%=l 'type' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.type"
+                    ng-change="network_edit[$index]=true"
+                    ng-options="type for type in ['bridge','NAT']"
+                    >
+                    </select>
+        </li>
+        <li class="list-group-item list-group-item-primary">
+            <span ng-show="item.type == 'NAT'">nat</span>
+            <span ng-show="item.type == 'bridge'">bridge</span>
+            </p>
+        </li>
+        <li class="list-group-item">
+            <select ng-model="item.network"
+                        ng-change="network_edit[$index]=true"
+                        ng-show="item.type == 'NAT'"
+                        ng-options="nat for nat in network_nats"
+                        >
+            </select>
+            <select ng-model="item.bridge"
+                        ng-change="network_edit[$index]=true"
+                        ng-show="item.type == 'bridge' && network_bridges[0]"
+                        ng-options="bridge for bridge in network_bridges"
+                        >
+            </select>
+            <span ng-hide="item.type == 'NAT' || network_bridges[0]">
+                No bridges found
+            </span>
+        </li>
+    </ul>
+    <div class="row">
+        <div class="col-lg-1">
+        </div>
+        <div class="col-md-12 mt-3">
+            <button class="btn btn-primary"
+                ng-disabled=
+                "(item.type == 'bridge' && ( !network_bridges[0] || !item.bridge ))
+                || (item.type == 'NAT' && ( !network_nats[0] || !item.network))"
+                ng-click="item.edit=false;change_network(showmachine.id, $index)"><%=l 'Submit' %></button>
+            <button class="btn btn-outline-secondary"
+                ng-click="item.edit=false;machine_info(showmachine.id)"><%=l 'Cancel' %></button>
+        </div>
+    </div>
+</div>

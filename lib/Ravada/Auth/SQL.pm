@@ -354,6 +354,19 @@ sub is_admin {
     return ($self->{_data}->{is_admin} or 0);
 }
 
+=head2 is_user_manager
+
+Returns true if the user is user manager
+
+=cut
+
+sub is_user_manager {
+    my $self = shift;
+    return 1 if $self->can_grant()
+            || $self->can_manage_users();
+    return 0;
+}
+
 =head2 is_operator
 
 Returns true if the user is admin or has been granted special permissions
@@ -362,79 +375,78 @@ Returns true if the user is admin or has been granted special permissions
 
 sub is_operator {
     my $self = shift;
-    return $self->is_admin()
-        || $self->can_shutdown_clones()
-#	|| $self->can_hibernate_clone()
-	|| $self->can_change_settings_clones()
-        || $self->can_remove_clones()
-        || $self->can_remove_clone_all()
-        || $self->can_create_base()
-        || $self->can_create_machine
-        || $self->can_list_machines
-        || $self->can_change_settings_all()
-        || $self->can_grant()
-        || 0;
+    return 1 if $self->can_list_own_machines()
+            || $self->can_list_clones()
+            || $self->can_list_clones_from_own_base()
+            || $self->can_list_machines()
+            || $self->is_user_manager();
+    return 0;
 }
 
 =head2 can_list_own_machines
 
 Returns true if the user can list her own virtual machines at the web frontend
+(can_XXXXX)
 
 =cut
 
 sub can_list_own_machines {
     my $self = shift;
-    return 1
-        if $self->can_create_base()
+    return 1 if $self->can_create_base()
             || $self->can_create_machine()
-            || $self->can_remove_clone_all()
-            || $self->is_operator()
-        ;
+            || $self->can_rename()
+            || $self->can_list_clones()
+            || $self->can_list_machines();
+    return 0;
+}
+
+=head2 can_list_clones_from_own_base
+
+Returns true if the user can list all machines that are clones from his bases
+(can_XXXXX_clones)
+
+=cut
+
+sub can_list_clones_from_own_base($self) {
+    return 1 if $self->can_change_settings_clones()
+            || $self->can_remove_clones()
+            || $self->can_rename_clones()
+            || $self->can_shutdown_clones()
+            || $self->can_list_clones()
+            || $self->can_list_machines();
     return 0;
 }
 
 =head2 can_list_clones
 
 Returns true if the user can list all machines that are clones and its bases
+(can_XXXXX_clones_all)
 
 =cut
 
 sub can_list_clones {
     my $self = shift;
-    return 1 if $self->is_admin()
-                || $self->can_remove_clone_all();
+    return 1 if $self->can_remove_clone_all()
+            || $self->can_list_machines();
     return 0;
   
 }
 
-=head2 can_list_clones_from_own_base
-
-Returns true if the user can list all machines that are clones from his bases
-
-=cut
-
-sub can_list_clones_from_own_base($self) {
-    return 1 if $self->can_remove_clones || $self->can_remove_clone_all
-        || $self->can_shutdown_clones
-        || $self->can_change_settings_clones;
-    return 0;
-}
-
-
 =head2 can_list_machines
 
 Returns true if the user can list all the virtual machines at the web frontend
+(can_XXXXX_all or is_admin)
 
 =cut
 
 sub can_list_machines {
     my $self = shift;
     return 1 if $self->is_admin()
-            || $self->can_remove_all || $self->can_remove_clone_all
-            || $self->can_shutdown_all
             || $self->can_change_settings_all()
-            || $self->can_change_settings_clones()
-            || $self->can_clone_all();
+            || $self->can_clone_all()
+            || $self->can_remove_all()
+            || $self->can_rename_all()
+            || $self->can_shutdown_all();
     return 0;
 }
 
@@ -617,7 +629,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown);
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown rename);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 0 if !$self->can_do($grant) && !$domain->id_base;
@@ -655,7 +667,11 @@ sub _load_grants($self) {
         $self->{_grant_disabled}->{$grant_alias} = !$enabled;
     }
     $sth->finish;
+}
 
+sub _reload_grants($self) {
+    delete $self->{_grant};
+    return $self->_load_grants();
 }
 
 sub _grant_alias($self, $name) {
@@ -737,7 +753,6 @@ sub grant_admin_permissions($self,$user) {
         $self->grant($user,$name);
     }
     $sth->finish;
-
 }
 
 =head2 revoke_all_permissions
@@ -898,18 +913,15 @@ sub can_manage_machine($self, $domain) {
 
     $domain = Ravada::Front::Domain->open($domain)  if !ref $domain;
 
-    return 1 if $self->can_change_settings($domain);
+    return 1 if $self->can_clone_all
+                || $self->can_change_settings($domain)
+                || $self->can_rename_all
+                || $self->can_remove_all
+                || ($self->can_remove_clone_all && $domain->id_base)
+                || ($self->can_remove && $domain->id_owner == $self->id);
 
-    return 1 if $self->can_remove_all;
-
-    return 1 if $self->can_remove_clone_all
-        && $domain->id_base;
-    
-    return 1 if $self->can_clone_all;
-
-    return 1 if $self->can_remove && $domain->id_owner == $self->id;
-
-    if ( ($self->can_remove_clones || $self->can_change_settings_clones) && $domain->id_base ) {
+    if ( ($self->can_remove_clones || $self->can_change_settings_clones || $self->can_rename_clones) 
+         && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
     }

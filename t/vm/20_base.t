@@ -35,6 +35,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => user_admin->id
+                    , disk => 1024 * 1024
                     , arg_create_dom($vm_name))
     };
 
@@ -112,6 +113,12 @@ sub test_prepare_base {
     ok($domain->is_base);
     is($domain->is_active(),0);
     $domain->is_public(1);
+
+    my @files_target = $domain->list_files_base_target();
+    for (@files_target) {
+        ok($_->[0]) or exit;
+        ok($_->[1],"No target in $_->[0]") or exit;
+    }
 
     my $front_domains = rvd_front->list_domains();
     my ($dom_front) = grep { $_->{name} eq $domain->name }

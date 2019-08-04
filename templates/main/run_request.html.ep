@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
+<script>
+    $_anonymous=<%= ($_anonymous or 0) %>;
+</script>
 %= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/navigation'
@@ -45,8 +48,8 @@
                     <a ng-click="copy_password(); redirect()"
                         href="{{domain.display_url}}">{{domain.display_url}}</a></li>
                 </li>
-                <li><b>Display IP :</b> 192.168.1.106</li>
-                <li><b>Display Port :</b> 5900</li>
+                <li><b>Display IP :</b> {{domain.display.ip}} </li>
+                <li><b>Display Port :</b> {{domain.display.port}} </li>
             </ul>
             <h3>Machine Information</h3>
             <ul>
@@ -57,16 +60,38 @@
                 <li><b>Memory:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
+            <h3 ng-show="domain.ports">Open ports</h3>
+            <ul ng-show="domain.ports">
+                <li ng-repeat="port in domain.ports">
+                    <b>{{port.name}}</b>
+                    {{domain.display.ip}} : {{port.public_port}}
+                    <i class="fa fa-arrow-right"></i>
+                    {{port.internal_port}}
+                </li>
+            </ul>
             </div>
             <div ng-show="domain.is_active">
+                <div>
                 <a type="button" class="btn btn-success"
+                    ng-show="!domain.display.tls_port"
                     ng-click="view_clicked=true; copy_password(); redirect();"
                     href="/machine/display/{{domain.id}}.vv">
                         <b><%=l 'view'%></b></a>
-                <i><%=l 'Press SHIFT + F12 to exit' %></i>
-                <br/>
+
+                <a type="button" class="btn btn-success" ng-view="domain,display.tls_port"
+                    ng-show="domain.display.tls_port"
+                    ng-click="view_clicked_tls=true; copy_password(); redirect();"
+                    href="/machine/display-tls/{{domain.id}}-tls.vv">
+                        <b><%=l 'view'%></b></a>
+                </div>
+                <div>
                 <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
                 </span>
+                <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.vv</b> <%=l 'in your downloads folder.' %>
+                </span>
+                <br/>
+                <i><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
+                </div>
             </div>
         </div>
         <div>

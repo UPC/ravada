@@ -26,6 +26,7 @@ sub test_domain_no_password {
     ok(!$net->requires_password);
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -72,6 +73,7 @@ sub test_domain_password2 {
     ok(!$net->requires_password) or return;
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -120,6 +122,7 @@ sub test_domain_password1 {
     ok($net2->requires_password,"Expecting net requires password ")
         or return;
     my $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '10.0.0.1');
@@ -151,6 +154,7 @@ sub test_any_network_password {
     add_network_any(1);
 
     my $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -181,6 +185,7 @@ sub test_any_network_password_hybernate{
     add_network_any(1);
 
     my $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start(user => $USER, remote_ip => '127.0.0.1');
@@ -203,6 +208,7 @@ sub test_any_network_password_hybernate{
 
     # create another domain to start from far away
     $domain = $vm->create_domain( name => new_domain_name
+                , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     eval {
@@ -301,6 +307,52 @@ sub remove_network_default {
 
 }
 
+sub _remove_network {
+    my $name = shift;
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM networks where name=?"
+    );
+    $sth->execute($name);
+
+}
+# When a domain is started in network that requires password, then
+# the password won't show in password-less networks.
+sub test_reopen {
+    my $vm_name = shift;
+    my $domain1 = create_domain($vm_name);
+
+    add_network_any(1); # with password
+    $domain1->start(user => user_admin
+        ,remote_ip => '8.8.8.8'
+    );
+    my $password1;
+    eval { $password1 = $domain1->spice_password };
+    is($@,'');
+    like($password1,qr'.+');
+
+    my $domain2 = create_domain($vm_name);
+    $domain2->start(user => user_admin
+        ,remote_ip => '127.0.0.1'
+    );
+    my $password2;
+    eval { $password2 = $domain2->spice_password };
+    is($@,'');
+    is($password2,undef);
+
+    $domain1->start(user => user_admin
+        , remote_ip => '127.0.0.1'
+    );
+    my $password1b;
+    eval { $password1b = $domain1->spice_password };
+    is($@,'');
+    like($password1b,qr'.+');
+    is($password1, $password1b);
+
+    $domain1->remove(user_admin);
+    $domain2->remove(user_admin);
+
+    _remove_network('any');
+}
 
 #######################################################
 
@@ -342,6 +394,7 @@ SKIP: {
     is($password,undef,"Expecting no password, got : '".($password or '')."'");
     $domain2->shutdown_now($USER)   if $domain2->is_active;
 
+    test_reopen($vm_name);
     test_domain_no_password($vm_name);
 
     test_any_network_password($vm_name);

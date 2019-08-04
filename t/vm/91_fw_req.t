@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
@@ -38,6 +39,7 @@ sub test_create_domain {
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
+                    , disk => 1024 * 1024
                     , arg_create_dom($vm_name))
     };
 
@@ -52,23 +54,21 @@ sub test_create_domain {
     return $domain->name;
 }
 
-sub test_fw_domain{
-    my ($vm_name, $domain_name) = @_;
-    my $remote_ip = '99.88.77.66';
+sub test_fw_domain($vm_name, $domain_name, $remote_ip='99.88.77.66') {
 
     my $local_ip;
     my $local_port;
     my $domain_id;
 
+    my $vm = rvd_back->search_vm($vm_name);
     {
-        my $vm = rvd_back->search_vm($vm_name);
         my $domain = $vm->search_domain($domain_name);
         ok($domain,"Searching for domain $domain_name") or return;
+        $domain->shutdown_now($USER) if $domain->is_active;
         $domain->start( user => $USER, remote_ip => $remote_ip);
 
         my $display = $domain->display($USER);
-        ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
-        $local_ip = $vm->ip;
+        ($local_ip, $local_port) = $display =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
 
         ok(defined $local_port, "Expecting a port in display '$display'") or return;
     
@@ -93,9 +93,22 @@ sub test_fw_domain{
         is($req->status,'done');
         is($req->error,'');
         test_chain($vm_name, $local_ip,$local_port, $remote_ip, 1);
+        if ($remote_ip eq '127.0.0.1') {
+            my $if_ip = $vm->ip;
+            isnt($if_ip,'127.0.0.1');
+            test_chain($vm_name, $local_ip,$local_port, $if_ip, 1);
+        }
     }
 
 
+}
+
+sub test_fw_domain_public_ip($vm_name, $domain_name, $remote_ip='1.2.3.4') {
+    my $vm = rvd_back->search_vm($vm_name);
+    $vm->public_ip('127.0.0.2');
+
+    test_fw_domain($vm_name, $domain_name, $remote_ip);
+    $vm->public_ip('');
 }
 
 sub test_fw_domain_pause {
@@ -140,7 +153,7 @@ sub test_fw_domain_pause {
 
         is($req->status,'done');
         is($req->error,'');
-        ok(search_rule($local_ip,$local_port, $remote_ip ),"Expecting rule for $local_ip:$local_port <- $remote_ip") or return;
+        ok(search_rule($local_ip,$local_port, $remote_ip ),"Expecting rule for $local_ip:$local_port <- $remote_ip") or confess;
         my @messages2 = $USER->messages();
         is(scalar @messages2, scalar @messages
             ,"Expecting no new messages ");
@@ -165,7 +178,8 @@ sub test_chain {
 
     my $rule_num = search_rule(@_);
 
-    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
+    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port")
+            or confess
         if $enabled;
     ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip "
                         ."-> $local_ip: $local_port"
@@ -237,8 +251,10 @@ for my $vm_name (qw( Void KVM )) {
         flush_rules();
 
         my $domain_name = test_create_domain($vm_name);
+        test_fw_domain($vm_name, $domain_name, '127.0.0.1');
         test_fw_domain($vm_name, $domain_name);
         test_fw_domain_pause($vm_name, $domain_name);
+        test_fw_domain_public_ip($vm_name, $domain_name);
 
         test_fw_domain_down($vm_name);
     };

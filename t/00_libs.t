@@ -10,6 +10,8 @@ use_ok('Ravada::VM');
 use_ok('Ravada::Domain');
 use_ok('Ravada::Front::Domain');
 
+use_ok('Ravada::Repository::ISO');
+
 my @vms = 'Void';
 
 

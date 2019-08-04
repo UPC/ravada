@@ -390,7 +390,7 @@ sub test_remove_clone_all {
     ok($other_domain);
 
     is($user->is_admin, 0);
-    is($user->can_list_machines, 1);
+    is($user->can_list_clones, 1);
     my $list = rvd_front->list_machines($user);
     is(scalar@$list,4);
     ok( grep { $_->{name} eq $other_domain->name } @$list);
@@ -537,6 +537,7 @@ sub test_create_domain {
             id_iso => search_id_iso('alpine')
             ,id_owner => $user->id
             ,name => $domain_name
+            ,disk => 1024 * 1024
    );
 
 
@@ -650,7 +651,8 @@ sub test_create_domain2 {
 
     my $domain_name = new_domain_name();
     my $domain;
-    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id )};
+    eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+            ,disk => 1024 * 1024 )};
     like($@,qr'not allowed');
 
     my $domain2 = $vm->search_domain($domain_name);
@@ -662,6 +664,7 @@ sub test_create_domain2 {
 
     $domain_name = new_domain_name();
     eval { $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id
+        , disk => 1024 * 1024
         , id_iso => search_id_iso('alpine'))};
     is($@,'');
 
@@ -752,6 +755,11 @@ clean();
 
 for my $vm_name (vm_names()) {
     next if $vm_name eq 'KVM' && $>;
+
+    my $vm;
+    eval { $vm = rvd_back->search_vm($vm_name) };
+    diag($@) if $@;
+    next if !$vm;
 
     diag("Testing VM $vm_name");
     test_change_settings($vm_name);

@@ -12,8 +12,8 @@
 %= include 'main/list_bases_ng_head'
     <!--MACHINES SELECTION-->
     <div class="card-body">
-    <div ng-repeat="machine in machines"
-         class="col-sm-4 d-inline-block mb-2"
+    <div ng-repeat="machine in machines | orderBy: 'id_clone'"
+         class="col-sm-4  d-inline-block mb-2"
                 ng-show="machine.is_public || (!machine.is_public && !only_public)">
         <div class="card card-success">
             <div class="card-header" id="step1" >
@@ -96,7 +96,7 @@
 }
 </style>
 
-%= include 'bootstrap/footer'
+%= include $footer
 %= include 'bootstrap/messages'
 </body>
 </html>

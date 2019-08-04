@@ -49,6 +49,7 @@ for my $vm_name ('KVM') {
         is($req1->status, 'requested');
 
         $rvd_back->process_all_requests();
+        sleep 1;
         is($req1->status, 'working');
 
         ################################################
