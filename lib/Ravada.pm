@@ -1060,16 +1060,27 @@ sub _upgrade_table {
     my $dbh = $CONNECTOR->dbh;
 
     my ($new_size) = $definition =~ m{\((\d+)};
+    my ($new_type) = $definition =~ m{(\w+)};
 
     my $sth = $dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
     if ( $dbh->{Driver}{Name} =~ /mysql/
-        && $row && $row->{COLUMN_SIZE}
-        && $new_size
-        && $new_size != $row->{COLUMN_SIZE}) {
+        && $row
+        && (
+            ($row->{COLUMN_SIZE}
+            && defined $new_size
+            && $new_size != $row->{COLUMN_SIZE}
+            ) || (
+                lc($row->{TYPE_NAME}) ne lc($new_type)
+            )
+        )
+    ){
 
-        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n$definition\n"  if $0 !~ /\.t$/;
+        warn "INFO: changing $field\n"
+            ." $row->{COLUMN_SIZE} to ".($new_size or '')."\n"
+            ." $row->{TYPE_NAME} -> $new_type \n"
+            ." in $table\n$definition\n"  if $0 !~ /\.t$/;
         $dbh->do("alter table $table change $field $field $definition");
         return;
     }
@@ -1174,7 +1185,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
-    $self->_upgrade_table('vms','cached_active_time',"integer DEFAULT 0");
+    $self->_upgrade_table('vms','cached_active_time',"int DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
