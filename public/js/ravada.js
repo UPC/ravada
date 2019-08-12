@@ -293,6 +293,17 @@
               $scope.new_name_duplicated=false;
             }
           };
+          $scope.set_bool = function(field, value) {
+            if (value ) value=1;
+                else value=0;
+            console.log(field+" "+value);
+            $scope.showmachine[field]=value;
+            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
+          };
+          $scope.set = function(field) {
+            console.log(field+" = "+$scope.showmachine[field]);
+            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+$scope.showmachine[field]);
+          };
           $scope.set_public = function(machineId, value) {
             if (value) value=1;
             else value=0;
