@@ -15,3 +15,4 @@ bootstrap/ https://github.com/twbs/bootstrap/releases/download/v4.3.1/bootstrap-
 ../img/version-$version-brightbreen.svg wget https://img.shields.io/badge/version-$version-brightgreen.svg
 ../img/latest.svg https://readthedocs.org/projects/ravada/badge/?version=latest
 ../img/License-AGPL%20v3-blue.svg https://img.shields.io/badge/License-AGPL%20v3-blue.svg
+https://download.cksource.com/CKEditor/CKEditor/CKEditor%204.12.1/ckeditor_4.12.1_standard_easyimage.zip
