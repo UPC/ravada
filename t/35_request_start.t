@@ -111,7 +111,7 @@ sub test_start {
     wait_request($req2);
     ok($req2->status eq 'done',"Expecting request status 'done' , got "
                                 .$req2->status);
-
+    is($req2->error,'');
     my $id_domain;
     {
         my $domain = $RAVADA->search_domain($name);
@@ -222,8 +222,8 @@ sub test_screenshot_file {
 ###############################################################
 #
 
-remove_old_domains();
-remove_old_disks();
+init();
+clean();
 
 for my $vm_name (qw(KVM Void)) {
     my $vmm = $RAVADA->search_vm($vm_name);
@@ -251,8 +251,7 @@ for my $vm_name (qw(KVM Void)) {
         test_screenshot_file($vm_name, $domain_name);
     };
 }
-remove_old_domains();
-remove_old_disks();
+clean();
 
 done_testing();
 

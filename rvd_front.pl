@@ -663,6 +663,18 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/set/#id/#field/#value' => sub {
+    my $c = shift;
+    my $id = $c->stash('id');
+    my $field = $c->stash('field');
+    my $value = $c->stash('value');
+
+    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
+
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+    return $c->render(json => { $field => $domain->_data($field, $value)});
+};
+
 get '/machine/autostart/#id/#value' => sub {
     my $c = shift;
     my $req = Ravada::Request->domain_autostart(
@@ -1268,10 +1280,15 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+            my @languages = I18N::LangTags::implicate_supers(
+                I18N::LangTags::Detect::detect()
+            );
+            my $header = $c->req->headers->header('accept-language');
+            my @languages2 = map {s/^(.*?)[;-].*/$1/; $_ } split /,/,$header;
 
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [ I18N::LangTags::Detect::detect() ]
+                , locale => [@languages, @languages2]
             );
 
             $c->session(expiration => $expiration);
@@ -1600,9 +1617,12 @@ sub _new_domain_name {
 }
 
 sub run_request($c, $request, $anonymous = 0) {
+    my $timeout = $SESSION_TIMEOUT;
+    $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
+        , timeout => $timeout * 1000
     );
 }
 
@@ -2080,7 +2100,8 @@ sub copy_machine {
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
 
-    my @create_args =( memory => $ram ) if $ram;
+    my @create_args = ( no_pool => 1 );
+    push @create_args,( memory => $ram ) if $ram;
     my @reqs;
     if ($number == 1 ) {
         my $req2 = Ravada::Request->clone(

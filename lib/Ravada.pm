@@ -1285,9 +1285,14 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
+    $self->_upgrade_table('domains','comment',"varchar(80) DEFAULT ''");
 
     $self->_upgrade_table('domains','client_status','varchar(32)');
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
+    $self->_upgrade_table('domains','pools','int NOT NULL default 0');
+    $self->_upgrade_table('domains','pool_clones','int NOT NULL default 0');
+    $self->_upgrade_table('domains','pool_start','int NOT NULL default 0');
+    $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
@@ -2127,7 +2132,7 @@ sub process_requests {
 
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
-        sleep 1 if $DEBUG;
+            #        sleep 1 if $DEBUG;
 
     }
     $sth->finish;
@@ -2402,6 +2407,72 @@ sub _do_execute_command {
 
 }
 
+sub _cmd_manage_pools($self, $request) {
+    my @domains;
+    my $id_domain = $request->defined_arg('id_domain');
+    my $uid = $request->defined_arg('uid');
+    if (!$uid) {
+        $uid = Ravada::Utils::user_daemon->id;
+        $request->arg( uid => $uid );
+    }
+    confess if !defined $uid;
+    if ($id_domain) {
+        my $domain = Ravada::Domain->open($id_domain)
+            or die "Error: missing domain ".$id_domain;
+        push @domains,($domain);
+    } else {
+        push @domains, $self->list_domains;
+    }
+    for my $domain ( @domains ) {
+        next if !$domain->pools();
+        my @clone_pool = $domain->clones(is_pool => 1);
+        my $number = $domain->pool_clones() - scalar(@clone_pool);
+        if ($number > 0 ) {
+            $self->_pool_create_clones($domain, $number, $request);
+        }
+        my $count_active = 0;
+        for my $clone_data (@clone_pool) {
+            last if $count_active >= $domain->pool_start;
+            my $clone = Ravada::Domain->open($clone_data->{id});
+#            warn $clone->name."".($clone->client_status or '')." $count_active >= "
+#    .$domain->pool_start."\n";
+            if ( ! $clone->is_active ) {
+                Ravada::Request->start_domain(
+                    uid => $uid
+                    ,id_domain => $clone->id
+                );
+                $count_active++;
+            } else {
+                $count_active++ if !$clone->client_status
+                                || $clone->client_status =~ /disconnected/i;
+            }
+        }
+    }
+}
+
+sub _pool_create_clones($self, $domain, $number, $request) {
+    my @arg_clone = ( no_pool => 1 );
+    $request->status("cloning $number");
+    if (!$domain->is_base) {
+	my @requests = $domain->list_requests();
+	return if grep { $_->command eq 'prepare_base' } @requests;
+        $request->status("preparing base");
+        my $req_base = Ravada::Request->prepare_base(
+            uid => $request->args('uid')
+            ,id_domain => $domain->id
+        );
+        push @arg_clone, ( after_request => $req_base->id ) if $req_base;
+    }
+    Ravada::Request->clone(
+        uid => $request->args('uid')
+        ,id_domain => $domain->id
+        ,number => $number
+        ,is_pool => 1
+        ,start => 1
+        ,@arg_clone
+    );
+}
+
 sub _cmd_screenshot {
     my $self = shift;
     my $request = shift;
@@ -2448,6 +2519,17 @@ sub _cmd_create{
     $request->status('creating machine');
     warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
+
+    if ( $request->defined_arg('id_base') ) {
+        my $base = Ravada::Domain->open($request->args('id_base'));
+        if ( $base->pools && !$request->defined_arg('no_pools') ) {
+            $request->{args}->{id_domain} = delete $request->{args}->{id_base};
+            $request->{args}->{uid} = delete $request->{args}->{id_owner};
+            my $clone = $self->_cmd_clone($request);
+            $request->id_domain($clone->id);
+            return $clone;
+        }
+    }
 
     $domain = $self->create_domain(request => $request);
 
@@ -2597,21 +2679,67 @@ sub _cmd_open_iptables {
 }
 
 sub _cmd_clone($self, $request) {
+    my $number = $request->defined_arg('number');
+    my $no_pool = $request->defined_arg('no_pool');
+
+    return _req_clone_many($self, $request) if $number;
+
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
 
-    my @args = ( request => $request);
-    push @args, ( memory => $request->args('memory'))
-        if $request->defined_arg('memory');
+    my $args = $request->args();
+    $args->{request} = $request;
 
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'))
         or die "Error: User missing, id: ".$request->args('uid');
-    push @args,(user => $user);
-    $domain->clone(
-        name => $request->args('name')
-        ,@args
-    );
+    $args->{user} = $user;
+    for (qw(id_domain uid at )) {
+        delete $args->{$_};
+    }
 
+    my $name = ( $request->defined_arg('name') or $domain->name."-".$user->name );
+    if ( $domain->pools && !$no_pool ) {
+        my $clone = $domain->_search_pool_clone($user);
+        my $remote_ip = $request->defined_arg('remote_ip');
+        my $start = $request->defined_arg('start');
+        if ($start || $clone->is_active) {
+            $clone->start(user => $user, remote_ip => $remote_ip);
+            $clone->_data('client_status', 'connecting ...');
+            $clone->_data('client_status_time_checked',time);
+            Ravada::Request->manage_pools( uid => Ravada::Utils::user_daemon->id);
+        }
+        return $clone;
+    }
+
+    my $clone = $domain->clone(
+        name => $name
+        ,%$args
+    );
+}
+
+sub _req_clone_many($self, $request) {
+    my $args = $request->args();
+    my $id_domain = $args->{id_domain};
+    my $base = Ravada::Domain->open($id_domain);
+    my $number = ( delete $args->{number} or 1 );
+    my $domains = $self->list_domains_data();
+    my %domain_exists = map { $_->{name} => 1 } @$domains;
+
+    my @reqs;
+    for ( 1 .. $number ) {
+        my $n = $_;
+        my $name;
+        for ( ;; ) {
+            while (length($n) < length($number)) { $n = "0".$n };
+            $name = $base->name."-".$n;
+            last if !$domain_exists{$name}++;
+            $n++;
+        }
+        $args->{name} = $name;
+        my $req2 = Ravada::Request->clone( %$args );
+        push @reqs, ( $req2 );
+    }
+    return @reqs;
 }
 
 sub _cmd_start {
@@ -2632,7 +2760,16 @@ sub _cmd_start {
 
     $self->_remove_unnecessary_downs($domain);
 
-    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
+    my @args = ( user => $user );
+    push @args, ( remote_ip => $request->defined_arg('remote_ip') )
+        if $request->defined_arg('remote_ip');
+
+    $domain->start(@args);
+
+    Ravada::Request->manage_pools(
+        uid => Ravada::Utils::user_daemon->id
+    ) if $domain->is_pool && $request->defined_arg('remote_ip');
+
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
@@ -3372,6 +3509,8 @@ sub _req_method {
 
     #isos
     ,list_isos => \&_cmd_list_isos
+
+    ,manage_pools => \&_cmd_manage_pools
     );
     return $methods{$cmd};
 }
@@ -3517,6 +3656,14 @@ sub _enforce_limits_active($self, $request) {
             #TODO check the domain shutdown has been already requested
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
+            }
+            if ($domain->is_pool) {
+                $domain->id_owner(Ravada::Utils::user_daemon->id);
+                $domain->_data(comment => '');
+                Ravada::Request->shutdown(user => Ravada::Utils::user_daemon->id
+                    ,id_domain => $domain->id
+                );
+                return;
             }
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);

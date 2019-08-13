@@ -1202,6 +1202,7 @@ sub _search_iso {
 
     return $row if $file_iso;
 
+    return $row if $row->{device} && -e $row->{device};
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
@@ -1391,7 +1392,7 @@ sub _match_file($self, $url, $file_re) {
         confess $@ if $@;
     }
 
-    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
+    confess unless defined $res->code &&  $res->code == 200 || $res->code == 301;
 
     my $dom= $res->dom;
 
