@@ -1605,7 +1605,7 @@ sub run_request($c, $request, $anonymous = 0) {
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
-        , timeout => $timeout
+        , timeout => $timeout * 1000
     );
 }
 

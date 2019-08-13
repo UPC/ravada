@@ -8,7 +8,7 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main"
         ng-controller="run_domain_req"
-        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>;timeout =<% $timeout %>"
+        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
     >
     <div class="jumbotron">
 
