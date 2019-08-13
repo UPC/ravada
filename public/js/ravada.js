@@ -673,7 +673,7 @@
                     else {
                         window.location.href="/logout";
                     }
-                }, 60000);
+                }, $scope.timeout);
                 $scope.redirect_done = true;
             }
         }

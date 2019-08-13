@@ -1605,9 +1605,12 @@ sub _new_domain_name {
 }
 
 sub run_request($c, $request, $anonymous = 0) {
+    my $timeout = $SESSION_TIMEOUT;
+    $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
+        , timeout => $timeout * 1000
     );
 }
 
