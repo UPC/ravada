@@ -51,7 +51,7 @@ Internal OO build
 
 sub BUILD {
     my $self = shift;
-    die "ERROR: Login failed ".$self->name
+    die "ERROR: Login failed '".$self->name."'"
         if !$self->login;
     return $self;
 }
@@ -175,6 +175,7 @@ sub search_user {
          _init_ldap_admin();
          return search_user(
                 name => $username
+               ,base => $base
               ,field => $field
               ,retry => ++$retry
               ,typesonly => $typesonly
@@ -186,8 +187,10 @@ sub search_user {
 
     return if !$mesg->count();
 
-    my @entries = $mesg->entries;
-#    warn join ( "\n",map { $_->dn } @entries);
+    my @entries;
+    for my $entry ($mesg->entries) {
+        push @entries,($entry) if $entry->get_value($field) eq $username;
+    }
 
     return @entries;
 }
@@ -321,15 +324,29 @@ sub add_to_group {
 sub login($self) {
     my $user_ok;
     my $allowed;
+    my $posix_group_name = $$CONFIG->{ldap}->{ravada_posix_group};
 
-    if ($$CONFIG->{ldap}->{ravada_posix_group}) {
-        $allowed = search_user (name => $self->name, field => 'memberUid', base => $$CONFIG->{ldap}->{ravada_posix_group}) || 0;
-        $self->{_ldap_entry} = $allowed;
-    } else {
-        $allowed = 1;
+    if ($posix_group_name) {
+        my ($posix_group) = search_user (
+              name => $posix_group_name
+            ,field => 'cn'
+            , base => 'ou=groups,'._dc_base()
+        );
+        if (!$posix_group) {
+            warn "Warning: posix group $posix_group_name not found";
+            return;
+        }
+        my @member = $posix_group->get_value('memberUid');
+        my $user_name = $self->name;
+        my ($found) = grep /^$user_name$/,@member;
+        if (!$found) {
+            warn "Error: $user_name is not a member of posix group $posix_group_name\n";
+            warn Dumper(\@member) if $Ravada::DEBUG;
+            return;
+        }
+        $self->{_ldap_entry} = $posix_group;
     }
 
-    if ($allowed) {
         $user_ok = $self->_login_bind()
             if !exists $$CONFIG->{ldap}->{auth}
                 || !$$CONFIG->{ldap}->{auth}
@@ -339,9 +356,6 @@ sub login($self) {
         $self->_check_user_profile($self->name)   if $user_ok;
         $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
         return $user_ok;
-    } else {
-        return 0;
-    }
 }
 
 sub _login_bind {

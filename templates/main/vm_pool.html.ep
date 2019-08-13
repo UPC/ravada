@@ -1,0 +1,92 @@
+<div class="panel panel-default">
+
+    <div class="panel-body" ng-show="showmachine.is_base">
+        <div class="row">
+            <div class="col-md-2">
+                Pool
+            </div>
+            <div class="col-md-2">
+                <input type="checkbox" ng-checked="showmachine.pools==1"
+                    ng-click="set_bool('pools',!showmachine.pools)"
+                >
+            </div>
+            <div class="col-mg-4" >
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                Clones
+            </div>
+            <div class="col-md-2">
+                <input type="text" size="2" ng-model="showmachine.pool_clones"
+                    ng-disabled="showmachine.pools==0"
+                >
+            </div>
+            <div class="col-mg-4">
+                <small class="text-secondary">Virtual machines in the pool.</small>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                Start
+            </div>
+            <div class="col-md-2">
+                <input type="text" size="2" ng-model="showmachine.pool_start"
+                    ng-disabled="showmachine.pools==0"
+                >
+            </div>
+            <div class="col-mg-4">
+                <small class="text-secondary">
+                Virtual machines pre-started
+                </small>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <input type="reset"  class="btn btn-outline-secondary mt-3"
+                    value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
+                <button type="button" class="btn btn-primary mt-3"
+                    ng-disabled="showmachine.pool_start > showmachine.pool_clones"
+                    ng-click="set('pool_clones');set('pool_start');refresh_machine()">
+                    <%=l 'Submit' %>
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div ng-show="showmachine.pools && showmachine.pool_clones >0 && showmachine.is_base==0">Warning: this virtual machine will be prepared as a base. This may take long.
+                </div>
+                <div ng-show="showmachine.pool_start > showmachine.pool_clones"
+                    class="alert alert-danger"
+                >Error: you want to have {{showmachine.pool_start}} but only have {{showmachine.pool_clones}} clones defined.
+                </div>
+             </div>
+         </div>
+               </form>
+    </div>
+    <div class="panel-body" ng-hide="showmachine.is_base">
+        <div class="row">
+            <div class="col-md-2">
+               Pool
+            </div>
+            <div class="col-md-2">
+                <input type="checkbox" ng-checked="showmachine.is_pool==1"
+                    ng-click="set_bool('is_pool',!showmachine.is_pool)"
+                >
+            </div>
+            <div class="col-mg-4">
+                <small class="text-secondary">
+                    Assign this virtual machine to the pre-started pool
+                </small>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+

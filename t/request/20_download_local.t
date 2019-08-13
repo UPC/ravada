@@ -107,11 +107,24 @@ sub httpd_localhost {
     return 0;
 }
 
+sub add_locales {
+
+    my @lang;
+    opendir my $ls,"etc/repository/iso" or die $!;
+    while (my $dir = readdir $ls) {
+        push @lang,($dir) if $dir =~ /^\w+/;
+    }
+    closedir $ls;
+    Ravada::Request->post_login( user => user_admin->id, locale => \@lang);
+    rvd_back->_process_requests_dont_fork();
+}
+
 ##################################################################
 
 
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
+    add_locales();
     local_urls();
     my $vm = $rvd_back->search_vm($vm_name);
     SKIP: {

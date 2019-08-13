@@ -35,7 +35,7 @@ our $IPTABLES_CHAIN = 'RAVADA';
 
 our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
 
-our $TIME_CACHE_NETSTAT = 10; # seconds to cache netstat data output
+our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 
 _init_connector();
 
@@ -883,6 +883,20 @@ sub id($self) {
 
 ##################################################################################
 
+sub _execute_request($self, $field, $value) {
+    my %req = (
+        pools => 'manage_pools'
+        ,pool_start => 'manage_pools'
+        ,pool_clones => 'manage_pools'
+    );
+    my $exec = $req{$field} or return;
+
+    Ravada::Request->_new_request(
+        command => $exec
+        ,args => { id_domain => $self->id , uid => Ravada::Utils::user_daemon->id }
+    );
+}
+
 sub _data($self, $field, $value=undef, $table='domains') {
 
     _init_connector();
@@ -908,6 +922,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
         $sth->finish;
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
+        $self->_execute_request($field,$value);
     }
     return $self->{$data}->{$field} if exists $self->{$data}->{$field};
 
@@ -1243,6 +1258,11 @@ sub info($self, $user) {
         ,has_clones => ( $self->has_clones or undef)
         ,needs_restart => ( $self->needs_restart or 0)
         ,type => $self->type
+        ,pools => $self->pools
+        ,pool_start => $self->pool_start
+        ,pool_clones => $self->pool_clones
+        ,is_pool => $self->is_pool
+        ,comment => $self->_data('comment')
     };
     if ($is_active) {
         eval {
@@ -1597,17 +1617,25 @@ Returns a list of clones from this virtual machine
     my @clones = $domain->clones
 =cut
 
-sub clones {
-    my $self = shift;
+sub clones($self, %filter) {
 
     _init_connector();
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, id_vm, name FROM domains "
-            ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)");
-    $sth->execute($self->id);
+    my $query =
+        "SELECT id, id_vm, name, id_owner, status, client_status, is_pool"
+            ." FROM domains "
+            ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)";
+    my @values = ($self->id);
+    if (keys %filter) {
+        $query .= "AND ( ".join(" AND ",map { "$_ = ?" } sort keys %filter)." )";
+        push @values,map {$filter{$_} } sort keys %filter;
+    }
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(@values);
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {
         # TODO: open the domain, now it returns only the id
+        lock_hash(%$row);
         push @clones , $row;
     }
     return @clones;
@@ -1790,6 +1818,9 @@ sub clone {
     my $remote_ip = delete $args{remote_ip};
     my $request = delete $args{request};
     my $memory = delete $args{memory};
+    my $start = delete $args{start};
+    my $is_pool = delete $args{is_pool};
+    my $no_pool = delete $args{no_pool};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -1802,6 +1833,7 @@ sub clone {
     }
 
     my @args_copy = ();
+    push @args_copy, ( start => $start )        if $start;
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
@@ -1820,6 +1852,7 @@ sub clone {
         ,id_owner => $uid
         ,@args_copy
     );
+    $clone->is_pool(1) if $is_pool;
     return $clone;
 }
 
@@ -2473,13 +2506,20 @@ sub _post_start {
     $self->get_info();
 
     # get the display so it is stored for front access
-    if ($self->is_active) {
+    if ($self->is_active && $arg{remote_ip}) {
+        $self->_data('client_status', $arg{remote_ip});
+        $self->_data('client_status_time_checked', time );
         $self->display($arg{user});
         $self->display_file($arg{user});
         $self->info($arg{user});
     }
     $self->open_exposed_ports();
     Ravada::Request->enforce_limits(at => time + 60);
+    Ravada::Request->manage_pools(
+            uid => Ravada::Utils::user_daemon->id
+    )   if $self->is_pool;
+
+
     $self->post_resume_aux;
 }
 
@@ -2619,6 +2659,7 @@ sub open_iptables {
     delete $args{uid};
 
     $self->_data('client_status','connecting...');
+    $self->_data('client_status_time_checked', time );
     $self->_remove_iptables();
 
     if ( !$self->is_active ) {
@@ -2631,6 +2672,9 @@ sub open_iptables {
         die $@ if $@ && $@ !~ /already running/i;
     } else {
         Ravada::Request->enforce_limits( at => time + 60);
+        Ravada::Request->manage_pools(
+            uid => Ravada::Utils::user_daemon->id
+        )if $self->is_pool;
     }
 
     $self->_add_iptable(%args);
@@ -3480,6 +3524,9 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
+    for (qw(is_pool start no_pool)) {
+        delete $args{$_};
+    }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
 }
 
@@ -3584,6 +3631,81 @@ sub is_local($self) {
     return $self->_vm->is_local();
 }
 
+=head2 pools
+
+Enables or disables pools of clones for this virtual machine
+
+=cut
+
+sub pools($self,$value=undef) {
+    return $self->_data('pools',$value);
+}
+
+=head2 pool_clones
+
+Number of clones of this virtual machine that belong to the pool
+
+=cut
+
+sub pool_clones($self,$value=undef) {
+    return $self->_data('pool_clones',$value);
+}
+
+=head2 pool_start
+
+Number of clones of this virtual machine that are pre-started
+
+=cut
+
+sub pool_start($self,$value=undef) {
+    return $self->_data('pool_start',$value);
+}
+
+sub is_pool($self, $value=undef) {
+    return $self->_data(is_pool => $value);
+}
+
+
+sub _search_pool_clone($self, $user) {
+    confess "Error: ".$self->name." is not a base"
+        if !$self->is_base;
+
+    confess "Error: ".$self->name." is not pooled"
+        if !$self->pools;
+
+    my ($clone_down, $clone_free_up, $clone_free_down);
+    for my $current ( $self->clones) {
+        if ( $current->{id_owner} == $user->id
+                && $current->{status} =~ /^(active|hibernated)$/) {
+            my $clone = Ravada::Domain->open($current->{id});
+            $clone->_data( comment => $user->name );
+            return $clone;
+        }
+        if ( $current->{id_owner} == $user->id ) {
+            $clone_down = $current;
+        } elsif ($current->{is_pool}) {
+            my $clone = Ravada::Domain->open($current->{id});
+            if(!$clone->client_status || $clone->client_status eq 'disconnected') {
+                if ( $clone->status =~ /^(active|hibernated)$/ ) {
+                    $clone_free_up = $current;
+                } else {
+                    $clone_free_down = $current;
+                }
+            }
+        }
+    }
+
+
+    my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
+    die "Error: no free clones in pool for ".$self->name
+        if !$clone_data;
+
+    my $clone = Ravada::Domain->open($clone_data->{id});
+    $clone->id_owner($user->id);
+    $clone->_data( comment => $user->name );
+    return $clone;
+}
+
 =head2 internal_id
 
 Returns the internal id of this domain as found in its Virtual Manager connection
@@ -3664,8 +3786,6 @@ you find suitable.
 
 
 sub client_status($self, $force=0) {
-    return if !$self->is_active;
-    return if !$self->remote_ip;
 
     return $self->_data('client_status')    if $self->readonly;
 
@@ -3673,8 +3793,12 @@ sub client_status($self, $force=0) {
     if ( $time_checked < $TIME_CACHE_NETSTAT && !$force ) {
         return $self->_data('client_status');
     }
-
-    my $status = $self->_client_connection_status( $force );
+    my $status = '';
+    if ( !$self->is_active || !$self->remote_ip ) {
+        $status = '';
+    } else {
+        $status = $self->_client_connection_status( $force );
+    }
     $self->_data('client_status', $status);
     $self->_data('client_status_time_checked', time );
 
@@ -3686,9 +3810,8 @@ sub _run_netstat($self, $force=undef) {
         && ( time - $self->_vm->{_netstat_time} < $TIME_CACHE_NETSTAT+1 ) ) {
         return $self->_vm->{_netstat};
     }
-    my @cmd = ("netstat", "-tan");
-    my ($in, $out, $err);
-    run3(\@cmd, \$in, \$out, \$err);
+    my @cmd = ("/bin/netstat", "-tan");
+    my ( $out, $err) = $self->_vm->run_command(@cmd);
     $self->_vm->{_netstat} = $out;
     $self->_vm->{_netstat_time} = time;
 
@@ -3696,8 +3819,6 @@ sub _run_netstat($self, $force=undef) {
 }
 
 sub _client_connection_status($self, $force=undef) {
-    #TODO: this should be run in the VM
-    #       in develop release VM->run_command does exists
     my $display = $self->display(Ravada::Utils::user_daemon());
     my ($ip, $port) = $display =~ m{\w+://(.*):(\d+)};
     die "No ip in $display" if !$ip;

@@ -63,8 +63,11 @@
         %= include 'main/vm_ports'
     </div>
 % }
-
-
+% if ( $USER->is_admin()) {
+    <div class="tab-pane fade" id="v-pills-access" role="tabpanel" aria-labelledby="v-pills-access-tab">
+        %= include 'main/machine_access'
+    </div>
+% }
 % if ( $USER->can_remove_machine($domain->id)) {
     <div class="tab-pane fade" id="v-pills-remove" role="tabpanel" aria-labelledby="v-pills-remove-tab">
         %= include 'main/vm_remove'
@@ -83,6 +86,11 @@
 %if ($USER->is_admin) {
     <div class="tab-pane fade" id="v-pills-base" role="tabpanel" aria-labelledby="v-pills-base-tab">
         %= include 'main/vm_base'
+    </div>
+% }
+%if ($USER->is_admin) {
+    <div class="tab-pane fade" id="v-pills-pool" role="tabpanel" aria-labelledby="v-pills-pool-tab">
+        %= include 'main/vm_pool'
     </div>
 % }
 </div>

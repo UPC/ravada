@@ -79,6 +79,7 @@ sub BUILD {
     Ravada::_init_config($self->config()) if $self->config;
     Ravada::Auth::init($Ravada::CONFIG);
     $CONNECTOR->dbh();
+    @VM_TYPES = @{$Ravada::CONFIG->{vm}};
 }
 
 =head2 list_bases
@@ -252,6 +253,7 @@ sub list_domains($self, %args) {
 
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
+        ."      ,comment, is_pool"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
