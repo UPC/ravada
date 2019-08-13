@@ -145,7 +145,8 @@ hook before_routes => sub {
 
     return if _logged_in($c);
     return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)}
-           || $url =~ m{^/(css|font|img|js)};
+           || $url =~ m{^/(css|font|img|js)}
+	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
     # anonymous URLs
     if (($url =~ m{^/machine/(clone|display|info|view)/}
