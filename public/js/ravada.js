@@ -666,6 +666,7 @@
         };
         $scope.redirect = function() {
             if (!$scope.redirect_done) {
+                console.log($scope.timeout);
                 $timeout(function() {
                     if(typeof $_anonymous != "undefined" && $_anonymous){
                         window.location.href="/anonymous";                        
@@ -673,7 +674,7 @@
                     else {
                         window.location.href="/logout";
                     }
-                }, 60000);
+                }, $scope.timeout);
                 $scope.redirect_done = true;
             }
         }
