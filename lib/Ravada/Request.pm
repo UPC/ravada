@@ -29,6 +29,7 @@ Request a command to the ravada backend
 
 =cut
 
+my $COUNT = 0;
 our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
@@ -65,7 +66,7 @@ our %VALID_ARG = (
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
-    ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
+    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
@@ -75,7 +76,10 @@ our %VALID_ARG = (
     ,refresh_storage => { id_vm => 2 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }
-    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, is_pool => 2
+                ,start => 2, no_pool => 2
+                ,remote_ip => 2
+    }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
@@ -104,6 +108,7 @@ our %VALID_ARG = (
     #isos
     ,list_isos => { vm_type => 1 }
 
+    ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
 );
 
@@ -473,6 +478,32 @@ sub new_request($self, $command, @args) {
     );
 }
 
+sub _duplicated_request($command, $args) {
+    return if !$args;
+    my $args_d = decode_json($args);
+    delete $args_d->{uid};
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,args FROM requests WHERE status='requested'"
+        ." AND command=?"
+    );
+    $sth->execute($command);
+    while (my ($id,$args_found) = $sth->fetchrow) {
+
+        my $args_found_d = decode_json($args_found);
+        delete $args_found_d->{uid};
+
+        next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
+        my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
+        my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        next if $args_d_s ne $args_found_s;
+
+        warn "$id\n$args_d_s\n$args_found_s\n"
+            if $command eq 'clone' && $args =~ /a-1/;
+        return $id;
+    }
+    return 0;
+}
+
 sub _new_request {
     my $self = shift;
     if ( !ref($self) ) {
@@ -506,6 +537,13 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
+    if ($args{command} =~ /^(clone|manage_pools)$/) {
+        if ( _duplicated_request($args{command}, $args{args})
+            || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
+            warn "Warning: duplicated request for $args{command} $args{args}";
+            return;
+        }
+    }
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
@@ -748,6 +786,16 @@ sub args {
         if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
 }
+
+sub arg($self, $name, $value) {
+
+    confess "Unknown argument $name ".Dumper($self->{args})
+        if !exists $self->{args}->{$name} && !defined $value;
+
+    $self->{args}->{$name} = $value if defined $value;
+    return $self->{args}->{$name};
+}
+
 
 =head2 defined_arg
 

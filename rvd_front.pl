@@ -663,6 +663,18 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/set/#id/#field/#value' => sub {
+    my $c = shift;
+    my $id = $c->stash('id');
+    my $field = $c->stash('field');
+    my $value = $c->stash('value');
+
+    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
+
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+    return $c->render(json => { $field => $domain->_data($field, $value)});
+};
+
 get '/machine/autostart/#id/#value' => sub {
     my $c = shift;
     my $req = Ravada::Request->domain_autostart(
@@ -2088,7 +2100,8 @@ sub copy_machine {
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
 
-    my @create_args =( memory => $ram ) if $ram;
+    my @create_args = ( no_pool => 1 );
+    push @create_args,( memory => $ram ) if $ram;
     my @reqs;
     if ($number == 1 ) {
         my $req2 = Ravada::Request->clone(
