@@ -21,24 +21,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
 
 % } else {
-<script src="/fallback/jquery/dist/jquery.min.js"></script>
-<script src="/fallback/jqueryui/jquery-ui.min.js"></script>
-<script src="/fallback/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="/fallback/jquery/jquery-3.3.1.min.js"></script>
+<script src="/fallback/jquery-ui-1.11.1/jquery-ui.min.js"></script>
+<script src="/fallback/bootstrap-4.3.1-dist/js/bootstrap.min.js"></script>
 
-<script src="/fallback/angular/angular.min.js"></script>
-<script src="/fallback/angular-resource/angular-resource.min.js"></script>
-<script src="/fallback/angular-animate/angular-animate.min.js"></script>
-<script src="/fallback/angular-aria/angular-aria.min.js"></script>
-<script src="/fallback/angular-messages/angular-messages.min.js"></script>
+<script src="/fallback/angular-1.5.5/angular.min.js"></script>
+<script src="/fallback/angular-1.5.5/angular-resource.min.js"></script>
+<script src="/fallback/angular-1.5.5/angular-animate.min.js"></script>
+<script src="/fallback/angular-1.5.5/angular-aria.min.js"></script>
+<script src="/fallback/angular-1.5.5/angular-messages.min.js"></script>
  
-<script src="/fallback/angular-sanitize/angular-sanitize.min.js"></script>
+<script src="/fallback/angular-1.5.5/angular-sanitize.min.js"></script>
+
 <script src="/fallback/angular-material/angular-material.min.js"></script>
-<script src="/fallback/bootstrap/dist/js/bootstrap.min.js"></script>
 
 <script src="/fallback/raphael/raphael-min.js"></script>
-<script src="/fallback/morris/main.js"></script>
+<script src="/fallback/morris.js/morris.min.js"></script>
 
-<script src="/fallback/bootstrap-select/dist/js/bootstrap-select.js"></script>
+%# <script src="/fallback/bootstrap-select/dist/js/bootstrap-select.js"></script>
 
 <script src="/fallback/intro.js/intro.js"></script>
 % }
