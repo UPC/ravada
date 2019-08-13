@@ -145,7 +145,8 @@ hook before_routes => sub {
 
     return if _logged_in($c);
     return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)}
-           || $url =~ m{^/(css|font|img|js)};
+           || $url =~ m{^/(css|font|img|js)}
+	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
     # anonymous URLs
     if (($url =~ m{^/machine/(clone|display|info|view)/}
@@ -1616,9 +1617,12 @@ sub _new_domain_name {
 }
 
 sub run_request($c, $request, $anonymous = 0) {
+    my $timeout = $SESSION_TIMEOUT;
+    $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
+        , timeout => $timeout * 1000
     );
 }
 
