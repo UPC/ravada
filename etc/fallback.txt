@@ -1,0 +1,18 @@
+morris.js/morris.css https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css
+https://use.fontawesome.com/releases/v5.10.1/fontawesome-free-5.10.1-web.zip
+introjs/bin/introjs.css    https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/introjs.css
+jquery/jquery.min.js  https://code.jquery.com/jquery-3.3.1.min.js
+https://jqueryui.com/resources/download/jquery-ui-1.11.1.zip
+bootstrap/dist/js/bootstrap.min.js https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js
+https://code.angularjs.org/1.5.5/angular-1.5.5.zip
+https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.5.0/ui-bootstrap.min.js
+raphael.js/ https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js
+https://github.com/snapappointments/bootstrap-select/archive/v1.13.9.zip
+morris.js/ https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.min.js
+intro.js/ https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js
+bootstrap/ https://github.com/twbs/bootstrap/releases/download/v4.3.1/bootstrap-4.3.1-dist.zip
+../img/logoUPC.png	https://www.upc.edu/"><img src="https://www.upc.edu/content/assets/images/logoUPC.png
+../img/version-$version-brightbreen.svg wget https://img.shields.io/badge/version-$version-brightgreen.svg
+../img/latest.svg https://readthedocs.org/projects/ravada/badge/?version=latest
+../img/License-AGPL%20v3-blue.svg https://img.shields.io/badge/License-AGPL%20v3-blue.svg
+https://download.cksource.com/CKEditor/CKEditor/CKEditor%204.12.1/ckeditor_4.12.1_standard_easyimage.zip

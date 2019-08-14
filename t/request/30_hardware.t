@@ -121,6 +121,7 @@ sub test_add_cdrom($domain) {
     }
 
     my $data = { device => 'cdrom' , boot => 2 };
+    my $file_iso = "/var/tmp/test_30_hardware.iso";
     if ($domain->type eq 'KVM') {
         eval { $domain->_set_boot_hd(1) };
         is(''.$@,'') or exit;
@@ -129,7 +130,7 @@ sub test_add_cdrom($domain) {
         my $iso = $domain->_vm->_search_iso(search_id_iso('Alpine'));
         $data->{file} = $iso->{device};
     } else {
-        $data->{file} = "/var/tmp/a.iso";
+        $data->{file} = $file_iso;
     }
     my $found = 0;
     test_add_hardware_request($domain->_vm, $domain,'disk', $data);
@@ -144,6 +145,7 @@ sub test_add_cdrom($domain) {
             is($device->{boot}, 2, $domain->name) or exit;
         }
     }
+    unlink $file_iso;
 
 }
 

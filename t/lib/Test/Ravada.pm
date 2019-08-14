@@ -115,7 +115,8 @@ sub arg_create_dom {
 }
 
 sub add_ubuntu_minimal_iso {
-    my %info = ('bionic_minimal' => {
+    my $distro = 'bionic_minimal';
+    my %info = ($distro => {
         name => 'Ubuntu Bionic Minimal'
         ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-i386/current/images/netboot/mini.iso'
         ,xml => 'bionic-i386.xml'
@@ -124,6 +125,12 @@ sub add_ubuntu_minimal_iso {
         ,arch => 'i386'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
+    my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
+    warn $device;
+    if ( -e $device ) {
+        warn $device;
+        $info{$distro}->{device} = $device;
+    }
     $RVD_BACK->_update_table('iso_images','name',\%info);
 }
 
@@ -572,15 +579,68 @@ sub create_ldap_user($name, $password) {
     return $user[0];
 }
 
-sub wait_request {
-    my $req = shift;
-    for my $cnt ( 0 .. 10 ) {
-        diag("Request ".$req->id." ".$req->command." ".$req->status." ".localtime(time))
-            if $cnt > 2;
-        last if $req->status eq 'done';
-        sleep 2;
+sub _list_requests {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
+        ."WHERE status <> 'done'");
+    $sth->execute;
+    my @req;
+    while (my ($id) = $sth->fetchrow) {
+        push @req,($id);
     }
+    return @req;
+}
 
+sub wait_request {
+    my %args;
+    if (scalar @_ % 2 == 0 ) {
+        %args = @_;
+        $args{process} = 1 if !exists$args{process};
+    } else {
+        $args{request} = [ $_[0] ];
+    }
+    my $timeout = delete $args{timeout};
+    my $request = ( delete $args{request} or [] );
+    my $process = delete $args{process};
+    $timeout = 60 if !defined $timeout && !$process;
+    my $debug = ( delete $args{debug} or 0 );
+    my $skip = ( delete $args{skip} or [] );
+    $skip = [ $skip ] if !ref($skip);
+    my %skip = map { $_ => 1 } @$skip;
+    die "Error: uknown args ".Dumper(\%args) if keys %args;
+    my $t0 = time;
+    my %done;
+    for ( ;; ) {
+        my $done_all = 1;
+        my $prev = join(".",_list_requests);
+        my $done_count = scalar keys %done;
+        $prev = '' if !defined $prev;
+        my @req = _list_requests();
+        rvd_back->_process_requests_dont_fork($debug) if $process;
+        for my $req_id ( @req ) {
+            my $req = Ravada::Request->open($req_id);
+            next if $skip{$req->command};
+            if ( $req->status ne 'done' ) {
+                $done_all = 0;
+            } elsif (!$done{$req->id}) {
+                $done{$req->{id}}++;
+                is($req->error,'');
+            }
+        }
+        my $post = join(".",_list_requests);
+        $post = '' if !defined $post;
+        if ( $done_all ) {
+            for my $req (@$request) {
+                if ($req->status ne 'done') {
+                    $done_all = 0;
+                    diag("Waiting for request ".$req->id." ".$req->command);
+                    last;
+                }
+            }
+        }
+        return if $done_all && $prev eq $post && scalar(keys %done) == $done_count;;
+        return if defined $timeout && time - $t0 >= $timeout;
+        sleep 1 if !$process;
+    }
 }
 
 sub init_vm {

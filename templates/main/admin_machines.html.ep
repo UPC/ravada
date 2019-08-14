@@ -160,7 +160,7 @@
                         <a align="right" href="/machine/manage/{{machine.id}}.html"
                                          ng-class="{disabled: !machine.can_manage}"
                         title ="<%=l 'Manage machine' %>"><b
-                        ng-cloak>{{machine.name}}</b></a>
+                                                              ng-cloak>{{machine.name}}</b></a> {{machine.comment}}
                     </td>
                     <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
@@ -281,7 +281,7 @@
                           <a align="right" href="/machine/manage/{{child.id}}.html"
                                          ng-class="{disabled: !child.can_manage}"
                           title ="Manage machine"><i
-                             ng-cloak>&nbsp;{{child.name}}</i></a>
+                                         ng-cloak>&nbsp;{{child.name}}</i></a> {{child.comment}}
                       </td>
                       <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {

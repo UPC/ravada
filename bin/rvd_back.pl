@@ -173,6 +173,7 @@ sub do_start {
             Ravada::Request->cleanup();
             Ravada::Request->refresh_vms()      if rand(5)<3;
             Ravada::Request->enforce_limits()   if rand(5)<2;
+            Ravada::Request->manage_pools()     if rand(5)<2;
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
