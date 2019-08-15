@@ -85,6 +85,7 @@ our %VALID_ARG = (
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 1, data => 1 }
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
+    ,change_curr_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
     ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
@@ -139,7 +140,8 @@ our %COMMAND = (
     }
     ,disk => {
         limit => 1
-        ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes']
+        ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
+                    , 'manage_pools']
         ,priority => 6
     }
     ,important=> {
