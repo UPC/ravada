@@ -79,7 +79,10 @@ sub display($self, $user) {
 }
 
 sub display_info($self, $user) {
-    return decode_json($self->_data('display'));
+    my $display = $self->_data('display');
+    return {} if !$display;
+    return decode_json($display);
+
 }
 
 sub display_file_tls($self, $user) {
