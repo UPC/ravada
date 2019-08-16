@@ -87,8 +87,7 @@ sub test_fw_domain($vm_name, $domain_name, $remote_ip='99.88.77.66') {
         );
         ok($req);
         ok($req->status);
-        rvd_back->_process_all_requests_dont_fork();
-        wait_request($req);
+        wait_request(background=> 0);
 
         is($req->status,'done');
         is($req->error,'');
@@ -148,8 +147,7 @@ sub test_fw_domain_pause {
         ok($req->status);
 
         my @messages = $USER->messages();
-        rvd_back->process_requests();
-        wait_request($req);
+        wait_request(background => 0);
 
         is($req->status,'done');
         is($req->error,'');

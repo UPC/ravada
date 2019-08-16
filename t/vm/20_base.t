@@ -72,7 +72,8 @@ sub test_display {
     my ($vm_name, $domain) = @_;
 
     my $display;
-    $domain->start( user_admin ) if !$domain->is_active;
+    $domain->shutdown_now(user_admin);
+    $domain->start(user => user_admin, remote_ip => '1.2.3.4' );# if !$domain->is_active;
     eval { $display = $domain->display( user_admin )};
     is($@,'');
     ok($display,"Expecting a display URI, got '".($display or '')."'") or return;
