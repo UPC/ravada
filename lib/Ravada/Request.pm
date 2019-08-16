@@ -542,7 +542,7 @@ sub _new_request {
     if ($args{command} =~ /^(clone|manage_pools)$/) {
         if ( _duplicated_request($args{command}, $args{args})
             || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
-            warn "Warning: duplicated request for $args{command} $args{args}";
+            #            warn "Warning: duplicated request for $args{command} $args{args}";
             return;
         }
     }

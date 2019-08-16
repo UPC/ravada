@@ -1781,7 +1781,7 @@ sub manage_machine {
         }
     }
 
-    if ($c->param("start-clones") ne "") {
+    if (defined $c->param("start-clones") && $c->param("start-clones") ne "") {
         my $req = Ravada::Request->start_clones(
             id_domain => $domain->id,
             ,uid => $USER->id

@@ -69,7 +69,7 @@
          </div>
                </form>
     </div>
-    <div class="panel-body" ng-hide="showmachine.is_base">
+    <div class="panel-body" ng-show="!showmachine.is_base && showmachine.id_base">
         <div class="row">
             <div class="col-md-2">
                Pool
@@ -85,8 +85,6 @@
                 </small>
             </div>
         </div>
-
-
     </div>
 </div>
 

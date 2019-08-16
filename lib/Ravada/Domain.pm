@@ -1251,6 +1251,7 @@ sub info($self, $user) {
         id => $self->id
         ,name => $self->name
         ,is_base => $self->is_base
+        ,id_base => $self->id_base
         ,is_active => $is_active
         ,spice_password => $self->spice_password
         ,description => $self->description
