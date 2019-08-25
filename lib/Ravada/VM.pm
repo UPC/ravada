@@ -600,6 +600,7 @@ sub _interface_ip($self, $remote_ip=undef) {
             my $netaddr = NetAddr::IP->new($network);
             return $ip if $remote_ip_addr->within($netaddr);
 
+            $default_ip = $ip if !defined $default_ip && $ip !~ /^127\./;
             $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
         }
     }

@@ -1146,7 +1146,7 @@ SKIP: {
         $vm = undef;
     } else {
         $node = remote_node($vm_name);
-        $node = test_node($vm_name, $node);
+        $node = test_node($vm_name, $node) if $node;
         $vm = undef if !$node;
     }
 

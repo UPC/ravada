@@ -225,6 +225,7 @@ sub test_manage_group {
 }
 
 sub test_user_bind {
+    my $user = shift;
     my $file_config = shift;
     my $with_posix_group = shift;
 
@@ -238,11 +239,11 @@ sub test_user_bind {
 
     Ravada::Auth::LDAP::init();
 
-    _add_to_posix_group('jimmy.mcnulty', $with_posix_group);
+    _add_to_posix_group($user->name, $with_posix_group);
 
     my $mcnulty;
-    eval { $mcnulty = Ravada::Auth::LDAP->new(name => 'jimmy.mcnulty',password => 'jameson') };
-    is($@,'');
+    eval { $mcnulty = Ravada::Auth::LDAP->new(name => $user->name,password => 'jameson') };
+    is($@,'') or die $file_config_bind;
 
     ok($mcnulty,($@ or "ldap login failed ")) or return;
 
@@ -286,6 +287,12 @@ sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0)
         $config->{ldap}->{filter} = $FILTER;
     } else {
         delete $config->{ldap}->{filter};
+    }
+
+    if ($with_admin) {
+        $config->{ldap}->{admin_group} = $ADMIN_GROUP;
+    } else {
+        delete $config->{ldap}->{admin_group};
     }
 
     $config->{vm}=['KVM','Void'];
@@ -461,13 +468,13 @@ SKIP: {
         ok($ldap) and do {
 
             test_user_fail();
-            test_user( 'pepe.mcnulty', $with_posix_group );
+            my $user = test_user( 'pepe.mcnulty', $with_posix_group );
 
             test_add_group();
             test_manage_group($with_admin, $with_posix_group);
             test_posix_group($with_posix_group);
 
-            test_user_bind($fly_config, $with_posix_group);
+            test_user_bind($user, $fly_config, $with_posix_group);
 
             remove_users();
         };

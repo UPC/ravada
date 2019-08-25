@@ -51,6 +51,10 @@ sub test_clones($domain, $n_clones) {
     ok($clone);
     is($domain->clones(), $n_clones+1);
     is($domain->clones(is_pool => 1), $n_clones);
+
+    my $clone_f = Ravada::Front::Domain->open($clone->id);
+    my $info = $clone_f->info(user_admin);
+    is($info->{id_base}, $domain->id,Dumper($info)) or exit;
 }
 
 sub test_active($domain, $n_start) {
@@ -123,9 +127,10 @@ sub test_user($base, $n_start) {
     is($clone2->is_pool,1) or exit;
 
     my $clone_f = Ravada::Front::Domain->open($clone2->id);
-    is($clone_f->{pools},undef);
-    is($clone_f->{is_pool},1);
-    is($clone_f->{comment},$user->name);
+    my $info = $clone_f->info(user_admin);
+    is($info->{pools},0);
+    is($info->{is_pool},1) or die Dumper($clone_f);
+    is($info->{comment},$user->name);
 
     # now we should have another active
     wait_request(debug => 0);

@@ -110,7 +110,7 @@ sub test_req_create_domain{
 
     rvd_back()->process_requests();
 
-    wait_request($req);
+    wait_request(background => 1);
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok(!$req->error,"Expecting error '' , got '".($req->error or '')."'");
 
@@ -145,7 +145,7 @@ sub test_req_create_fail {
         rvd_back->_process_all_requests_dont_fork();
     }
 
-    wait_request($req);
+    wait_request( background => $fork, check_error => 0 );
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok($req->error,"Expecting error creating $name , got '".($req->error or '')."'"
         ." with memory: $mem ,  disk: $disk , fork: ".($fork or 0)) or exit;
@@ -251,8 +251,7 @@ sub test_small {
 
 #######################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 $Data::Dumper::Sortkeys = 1;
 
 for my $vm_name (qw( Void KVM )) {
@@ -284,8 +283,7 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 done_testing();
 

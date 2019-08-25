@@ -126,9 +126,7 @@ sub add_ubuntu_minimal_iso {
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
     my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
-    warn $device;
     if ( -e $device ) {
-        warn $device;
         $info{$distro}->{device} = $device;
     }
     $RVD_BACK->_update_table('iso_images','name',\%info);
@@ -594,18 +592,25 @@ sub wait_request {
     my %args;
     if (scalar @_ % 2 == 0 ) {
         %args = @_;
-        $args{process} = 1 if !exists$args{process};
+        $args{background} = 0 if !exists $args{background};
     } else {
         $args{request} = [ $_[0] ];
     }
     my $timeout = delete $args{timeout};
     my $request = ( delete $args{request} or [] );
-    my $process = delete $args{process};
-    $timeout = 60 if !defined $timeout && !$process;
+
+    my $background = delete $args{background};
+    $background = 1 if !defined $background;
+
+    $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
     my $skip = ( delete $args{skip} or [] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
+
+    my $check_error = delete $args{check_error};
+    $check_error = 1 if !defined $check_error;
+
     die "Error: uknown args ".Dumper(\%args) if keys %args;
     my $t0 = time;
     my %done;
@@ -615,7 +620,7 @@ sub wait_request {
         my $done_count = scalar keys %done;
         $prev = '' if !defined $prev;
         my @req = _list_requests();
-        rvd_back->_process_requests_dont_fork($debug) if $process;
+        rvd_back->_process_requests_dont_fork($debug) if !$background;
         for my $req_id ( @req ) {
             my $req = Ravada::Request->open($req_id);
             next if $skip{$req->command};
@@ -623,7 +628,7 @@ sub wait_request {
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
-                is($req->error,'');
+                is($req->error,'') if $check_error;
             }
         }
         my $post = join(".",_list_requests);
@@ -639,7 +644,7 @@ sub wait_request {
         }
         return if $done_all && $prev eq $post && scalar(keys %done) == $done_count;;
         return if defined $timeout && time - $t0 >= $timeout;
-        sleep 1 if !$process;
+        sleep 1 if !$background;
     }
 }
 

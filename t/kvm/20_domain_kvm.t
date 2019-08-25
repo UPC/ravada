@@ -66,7 +66,6 @@ sub test_remove_corrupt_clone {
     );
 
     for my $file ( $clone->list_disks ) {
-        warn $file;
         open my $out, '>',$file or die "$! $file";
         print $out "bogus\n";
         close $out;
