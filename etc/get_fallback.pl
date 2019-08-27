@@ -7,6 +7,10 @@ use Cwd;
 use File::Path qw(make_path);
 use Mojo::UserAgent;
 
+use lib './lib';
+use Ravada;
+
+my $VERSION = Ravada::version();
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -19,7 +23,7 @@ my $DIR_FALLBACK = getcwd.'/public/fallback';
 die "Error: missing fallback dir $DIR_FALLBACK"
     if ! -e $DIR_FALLBACK;
 
-sub downlad($url, $dst = $DIR_FALLBACK) {
+sub download($url, $dst = $DIR_FALLBACK) {
 
     $dst = "$DIR_FALLBACK/$dst" if $dst !~ m{^/};
 
@@ -44,7 +48,6 @@ sub downlad($url, $dst = $DIR_FALLBACK) {
     elsif ($res->code == 301) { print $res->headers->location."\n" }
     else                      { print "Error ".$res->code." ".$res->message
                                     ." downloading $url\n"}
-                                die $dst;
     return $dst;
 }
 
@@ -53,11 +56,20 @@ sub uncompress($file) {
     print `unzip -o $file`;
 }
 
+sub get_version_badge {
+    download("https://img.shields.io/badge/version-$VERSION-brightgreen.svg"
+        ,"../img/version-$VERSION-brightgreen.svg");
+}
+
+#############################################################################
+
+get_version_badge();
+
 open my $in,'<',$FILE_CONFIG or die "$! $FILE_CONFIG";
 while (<$in>) {
     next if /^#/;
     my ($url, $dst) = split;
-    my $file = downlad($url, $dst);
+    my $file = download($url, $dst);
     uncompress($file) if $file =~ /\.zip$/;
 }
 close $in;
