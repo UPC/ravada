@@ -55,7 +55,7 @@ system with some specific applications. ( TODO: review this )
 
 - ssh
 - libvirt-bin
-- qemu
+- qemu-kvm
 
 It is possible to have nodes with heterogeneous operative systems: different Ubuntus,
 Debians, even RedHats or Fedoras can be added, though it should be easier if all of
