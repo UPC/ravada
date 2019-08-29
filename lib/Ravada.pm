@@ -230,17 +230,6 @@ sub _update_isos {
           ,min_disk_size => '9'
         }
 
-        ,zesty => {
-                    name => 'Ubuntu Zesty Zapus'
-            ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/17.04/'
-                ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
-                ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
-                ,min_disk_size => '10'
-        }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
     ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
@@ -383,18 +372,6 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_artful.iso'
-            ,min_disk_size => '10'
-        }
-        ,xubuntu_zesty => {
-            name => 'Xubuntu Zesty Zapus'
-            ,description => 'Xubuntu 17.04 Zesty Zapus 64 bits'
-            ,arch => 'amd64'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_zesty_mini.iso'
             ,min_disk_size => '10'
         }
         ,xubuntu_xenial => {
