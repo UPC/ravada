@@ -1195,7 +1195,8 @@ sub _read_file_local( $self, $file ) {
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    $self->_connect_ssh(1);
+    # why should we force disconnect before ?
+    $self->_connect_ssh();
     my ( $out, $err) = $self->run_command("/usr/bin/test",
         "-e $file ; echo \$?");
 

@@ -5,6 +5,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
   VERSION   => '0.01',
+  NAME => 'Ravada',
   PREREQ_PM => {
           'Mojolicious' => '7.01'
             ,'DateTime' => 0
