@@ -363,6 +363,7 @@ sub _refresh_isos($self) {
 
         my ($file);
         ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
+        $file = $row->{rename_file} if $row->{rename_file};
         my $file_re = $row->{file_re};
 
         next if $row->{device};
@@ -1190,19 +1191,17 @@ sub _download_file_external($self, $url, $device, $verbose=1) {
     die $err;
 }
 
-sub _search_iso {
-    my $self = shift;
-    my $id_iso = shift or croak "Missing id_iso";
-    my $file_iso = shift;
-
+sub _search_iso($self, $id_iso, $file_iso=undef) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
-    return $row if $file_iso;
+    return $row if $file_iso && -e $file_iso;
 
-    return $row if $row->{device} && -e $row->{device};
+    if ( $row->{device} && -e $row->{device} ) {
+        ($row->{filename}) = $row->{device} =~ m{.*/(.*)};
+    }
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
@@ -1210,7 +1209,7 @@ sub _search_iso {
     }
 
     if ( !$row->{device} && $row->{filename}) {
-        if (my $volume = $self->search_volume($row->{filename})) {
+        if (my $volume = $self->search_volume_re(qr("^".$row->{filename}))) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
                 "UPDATE iso_images SET device=? WHERE id=?"
@@ -1218,6 +1217,8 @@ sub _search_iso {
             $sth->execute($volume->get_path, $row->{id});
         }
     }
+    confess Dumper($row) if $row->{rename_file} && $row->{device}
+        && $row->{rename_file} =~ /^xubuntu/ && $row->{device} =~ m{/ubuntu};
     return $row;
 }
 

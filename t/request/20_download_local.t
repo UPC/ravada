@@ -55,6 +55,8 @@ sub test_download {
     is($iso2->{rename_file}, $iso2->{filename}) if $iso2->{rename_file};
 
     like($iso2->{device},qr'.',"Expecting something in device field ");
+
+    return $iso2;
 }
 
 sub test_download_fail {
@@ -82,7 +84,7 @@ sub search_id_isos {
     my $vm = shift;
     my $sth=connector->dbh->prepare(
         "SELECT * FROM iso_images"
-        #                        ." where name like 'Xubuntu Bionic%'"
+        #        ." where name like 'Xubuntu %'"
         ." ORDER BY name,arch"
     );
     $sth->execute;
@@ -119,6 +121,21 @@ sub add_locales {
     rvd_back->_process_requests_dont_fork();
 }
 
+sub test_refresh_isos {
+    my ($vm,$iso) = @_;
+    # Now we remove the ISO file and try to refresh
+    unlink $iso->{device};
+    my $sth = connector->dbh->prepare(
+        "UPDATE iso_images set device=NULL WHERE id=?"
+    );
+    $sth->execute($iso->{id});
+
+    $vm->_refresh_isos();
+
+    my $iso2 = $vm->_search_iso($iso->{id});
+    like($iso2->{device},qr{.*/$iso->{rename_file}}) or exit;
+}
+
 ##################################################################
 
 
@@ -149,7 +166,9 @@ for my $vm_name ('KVM') {
             $sth->execute($id_iso);
             $sth->finish;
 
-            test_download($vm, $id_iso);
+            my $iso = test_download($vm, $id_iso);
+
+            test_refresh_isos($vm, $iso) if $iso->{rename_file};
         }
     }
 }
