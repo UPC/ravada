@@ -932,7 +932,7 @@ sub flush_rules {
 sub _domain_node($node) {
     my $vm = rvd_back->search_vm('KVM','localhost');
     ok($vm) or die Dumper(rvd_back->_create_vm);
-    my $domain = $vm->search_domain($node->name);
+    my $domain = $vm->search_domain($node->name, 1);
     $domain = rvd_back->import_domain(name => $node->name
             ,user => user_admin->name
             ,vm => 'KVM'
@@ -1039,7 +1039,8 @@ sub start_node($node) {
         warn $@ if $@;
         last if $connect;
         sleep 1;
-        diag("Waiting for connection to node ".$node->name." $_") if !($_ % 5);
+        diag("Waiting for connection to node ".$node->type." "
+            .$node->name." $_") if !($_ % 5);
     }
     is($connect,1
             ,"[".$node->type."] "
@@ -1048,8 +1049,10 @@ sub start_node($node) {
         $domain = _domain_node($node);
         last if $domain->ip;
         sleep 1;
-        diag("Waiting for connection to node ".$node->name." $_") if !($_ % 5);
+        diag("Waiting for domain from node ".$node->type." "
+            .$node->name." $_") if !($_ % 5);
     }
+    ok($domain->ip,"Make sure the virtual machine ".$domain->name." has installed the qemu-guest-agent") or exit;
 
     $node->is_active(1);
     $node->is_enabled(1);
