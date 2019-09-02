@@ -150,11 +150,11 @@ sub test_needs_shutdown {
 
     ok(!$@,"Expecting no error, got : ".($@ or ''));
 
-
     {
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         my $value = $domain_f->get_driver($type->name);
         is($value , $option->{value});
+        ;
 
         is($domain_f->needs_restart, 1);
     }

@@ -72,7 +72,9 @@ sub test_remove_corrupt_clone {
     }
     eval { $clone->start(user_admin) };
     diag($@);
-    $clone->shutdown_now(user_admin);
+    eval { $clone->shutdown_now(user_admin) };
+    like($@,qr{(No base for|Image not in qcow)});
+    is($clone->is_active,0);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);

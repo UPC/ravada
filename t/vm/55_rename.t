@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
@@ -31,8 +32,9 @@ sub test_create_domain {
                     , disk => 1024 * 1024
                     , arg_create_dom($vm_name))
     };
+    is(''.$@,'') or confess;
 
-    ok($domain,"[$vm_name] Expecting VM $name created with ".ref($vm)." ".($@ or '')) or return;
+    ok($domain,"[$vm_name] Expecting VM $name created with ".ref($vm)." ".($@ or '')) or confess;
     ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
@@ -178,8 +180,7 @@ sub test_rename_twice {
 
 #######################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 for my $vm_name (qw( Void KVM )) {
 
@@ -218,7 +219,6 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
     
-remove_old_domains();
-remove_old_disks();
+clean();
 
 done_testing();

@@ -107,14 +107,20 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
             ,"Adding hardware $numero\n"
                 .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
+    $domain = Ravada::Domain->open($domain->id);
     my $info = $domain->info(user_admin);
     is(scalar(@{$info->{hardware}->{$hardware}}), $numero) or exit;
+    my $new_hardware = $info->{hardware}->{$hardware}->[$numero-1];
+    if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/ ) {
+        my $name = $domain->name;
+        like($new_hardware->{name}, qr/$name-\w{4}-vd[a-z]\.\w+$/) or die Dumper($data);
+    }
 }
 
 sub test_add_cdrom($domain) {
     my $n = 0;
     for my $device ( $domain->list_volumes_info ) {
-        if ($device->{device} eq 'cdrom') {
+        if ($device->info->{device} eq 'cdrom') {
             test_remove_hardware($domain->_vm, $domain, 'disk', $n);
         }
         $n++;
@@ -131,6 +137,7 @@ sub test_add_cdrom($domain) {
         $data->{file} = $iso->{device};
     } else {
         $data->{file} = $file_iso;
+        $data->{boot} = 2;
     }
     my $found = 0;
     test_add_hardware_request($domain->_vm, $domain,'disk', $data);
@@ -139,10 +146,10 @@ sub test_add_cdrom($domain) {
     #############
     # test device cdrom just added
     for my $device ( $domain->list_volumes_info ) {
-        if ($device->{device} eq 'cdrom') {
+        if ($device->info->{device} eq 'cdrom') {
             $found++;
-            like($device->{name}, qr/\.iso/,$domain->type." ".$domain->name) or exit;
-            is($device->{boot}, 2, $domain->name) or exit;
+            like($device->info->{name}, qr/\.iso/,$domain->type." ".$domain->name) or exit;
+            is($device->info->{boot}, 2, $domain->name) or die Dumper($device->info);
         }
     }
     unlink $file_iso;
@@ -276,11 +283,19 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
     my $hardware = 'disk';
 
     my $index;
-    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) ) {
-        $index = $count;
-        last if exists $info->{hardware}->{$hardware}->[$index]->{info}->{$field};
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) -1 ) {
+        if ( exists $info->{hardware}->{$hardware}->[$count]->{info}->{$field} ) {
+            $index = $count;
+            last;
+        }
     }
-    die if !defined $index;
+    confess "Device without $field in ".$domain->name
+        ."\n".Dumper($info->{hardware}->{$hardware})
+        if !defined $index;
+
+    my $device = $info->{hardware}->{$hardware}->[$index];
+    confess "Device without $field in ".$domain->name."\n".Dumper($device)
+        if !exists $device->{info}->{$field};
     my $capacity = Ravada::Utils::size_to_number(
         $info->{hardware}->{$hardware}->[$index]->{info}->{$field}
     );
@@ -367,7 +382,7 @@ sub test_change_disk_cdrom($vm, $domain) {
 sub _search_cdrom($domain) {
     my $count=0;
     for my $device ( $domain->list_volumes_info ) {
-        return ($count,$device) if ($device->{device} eq 'cdrom');
+        return ($count,$device) if ($device->info()->{device} eq 'cdrom');
         $count++;
     }
 }
@@ -375,7 +390,7 @@ sub _search_cdrom($domain) {
 sub _search_disk($domain) {
     my $count=0;
     for my $device ( $domain->list_volumes_info ) {
-        return ($count,$device) if ($device->{device} eq 'disk');
+        return ($count,$device) if ($device->info->{device} eq 'disk');
         $count++;
     }
 }
@@ -563,7 +578,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(KVM Void)) {
+for my $vm_name ( qw(Void KVM )) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
