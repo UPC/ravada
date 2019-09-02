@@ -891,6 +891,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'post_login'
                 || $command eq 'list_network_interfaces'
                 || $command eq 'list_isos'
+                || $command eq 'manage_pools'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
