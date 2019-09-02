@@ -16,7 +16,6 @@ use Digest::MD5;
 use Encode;
 use Encode::Locale;
 use File::Path qw(make_path);
-use File::Temp qw(tempfile);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -428,6 +427,39 @@ sub dir_img {
     return $dir;
 }
 
+=head2 dir_base
+
+Returns the directory where base images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_base($self, $volume_size) {
+    my $pool_base = $self->default_storage_pool_name;
+    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
+    $pool_base = $self->storage_pool()         if !$pool_base;
+
+    $self->_check_free_disk($volume_size * 2, $pool_base);
+    return $self->_storage_path($pool_base);
+
+}
+
+=head2 dir_clone
+
+Returns the directory where clone images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_clone($self) {
+
+    my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
+
+    return $dir_img;
+}
+
 sub _storage_path($self, $storage) {
     if (!ref($storage)) {
         $storage = $self->vm->get_storage_pool_by_name($storage);
@@ -668,6 +700,9 @@ sub create_volume {
 
     my $storage_pool = $self->storage_pool();
 
+    confess $name if $name =~ /-\w{4}-vd[a-z]-\w{4}\./
+        || $name =~ /\d-vd[a-z]\./;
+
     my $img_file = $self->_volume_path(
         target => $target
         , swap => $swap
@@ -675,6 +710,7 @@ sub create_volume {
         , storage => $storage_pool
     );
 
+    confess if $img_file =~ /\d-vd[a-z]\./;
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
@@ -699,20 +735,14 @@ sub _volume_path {
 
     my %args = @_;
     my $swap     =(delete $args{swap} or 0);
-    my $target   = delete $args{target};
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
+    my $target = delete $args{target};
 
     my $dir_img = $self->_storage_path($storage);
-    my $suffix = ".img";
-    $suffix = ".SWAP.img"   if $swap;
-    $filename .= "-$target" if $target;
-    my (undef, $img_file) = tempfile($filename."-XXXX"
-        ,DIR => $dir_img
-        ,OPEN => 0
-        ,SUFFIX => $suffix
-    );
-    return $img_file;
+    my $suffix = "qcow2";
+    $suffix = ".SWAP.qcow2"   if $swap;
+    return "$dir_img/$filename.$suffix";
 }
 
 sub _domain_create_from_iso {
@@ -770,7 +800,7 @@ sub _domain_create_from_iso {
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
     my $device_disk = $self->create_volume(
-          name => $args{name}
+          name => "$args{name}-vda-".Ravada::Utils::random_name(4)
          , xml => $file_xml
         , size => $disk_size
         ,target => 'vda'
@@ -870,10 +900,6 @@ sub _create_disk {
     return _create_disk_qcow2(@_);
 }
 
-sub _create_swap_disk {
-    return _create_disk_raw(@_);
-}
-
 sub _create_disk_qcow2 {
     my $self = shift;
     my ($base, $name) = @_;
@@ -881,59 +907,17 @@ sub _create_disk_qcow2 {
     confess "Missing base" if !$base;
     confess "Missing name" if !$name;
 
-    my $dir_img  = $self->dir_img;
-    my $clone_pool = $self->clone_storage_pool();
-    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
-
     my @files_out;
 
     for my $file_data ( $base->list_files_base_target ) {
         my ($file_base,$target) = @$file_data;
-        my $ext = ".qcow2";
-        $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\.\w+$/;
-        my $file_out = "$dir_img/$name-".($target or _random_name(2))
-            ."-"._random_name(2).$ext;
-
-        $self->_clone_disk($file_base, $file_out);
-        push @files_out,($file_out);
-    }
-    return @files_out;
-
-}
-
-# this may become official API eventually
-
-sub _clone_disk($self, $file_base, $file_out) {
-
-        my @cmd = ('/usr/bin/qemu-img','create'
-                ,'-f','qcow2'
-                ,"-b", $file_base
-                ,$file_out
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self
         );
-
-        my ($out, $err) = $self->run_command(@cmd);
-        die $err if $err;
-}
-
-sub _create_disk_raw {
-    my $self = shift;
-    my ($base, $name) = @_;
-
-    confess "Missing base" if !$base;
-    confess "Missing name" if !$name;
-
-    my $dir_img  = $self->dir_img;
-
-    my @files_out;
-
-    for my $file_base ( $base->list_files_base ) {
-        next unless $file_base =~ /SWAP\.img$/;
-        my $file_out = $file_base;
-        $file_out =~ s/\.ro\.\w+$//;
-        $file_out =~ s/-.*(img|qcow\d?)//;
-        $file_out .= ".$name-".Ravada::Utils::random_name(4).".SWAP.img";
-
-        push @files_out,($file_out);
+        my $clone = $vol_base->clone(name => "$name-$target");
+        push @files_out,($clone->file);
     }
     return @files_out;
 
@@ -1948,9 +1932,9 @@ sub _xml_modify_disk {
   my $cont = 0;
   my $cont_swap = 0;
   for my $disk ($doc->findnodes('/domain/devices/disk')) {
-    next if $disk->getAttribute('device') ne 'disk';
 
     for my $child ($disk->childNodes) {
+        next if $disk->getAttribute('device') ne 'disk';
         if ($child->nodeName eq 'driver') {
             $child->setAttribute(type => 'qcow2');
         } elsif ($child->nodeName eq 'source') {

@@ -29,9 +29,9 @@
                     {{item.name || item}}
                 </span>
                 <div ng-show="name == 'disk' && item.remove"
-                    ng-class='{"border border-danger p-4 m-4": item.info.device == "disk"}'
+                    ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'
                 >
-                        <p class="h4" ng-show="item.info.device == 'disk'">
+                        <p class="h4" ng-show="item.device == 'disk'">
                             Danger: This will destroy all the disk data permantently.
                         </p>
                     <label for "confirm_remove">
@@ -52,7 +52,7 @@
                 </div>
                 %= include 'main/manage_machine_edit_net'
                 <div ng-show="name == 'disk' && item.edit" class="form-group mt-4">
-                    <div class="row" ng-show="item.info.device == 'disk'">
+                    <div class="row" ng-show="item.device == 'disk'">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'bus' %></p>
                         </div>
@@ -63,18 +63,18 @@
                             </select>
                         </div>
                     </div>
-                    <div class="row" ng-show="item.info.device == 'disk'">
+                    <div class="row" ng-show="item.device == 'disk'">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'capacity' %></p>
                         </div>
                         <div class="col-lg-2">
                             <input type="text"
                             name="capacity"
-                            ng-model="item.info.capacity"
+                            ng-model="item.capacity"
                             >
                         </div>
                     </div>
-                    <div class="row" ng-show="item.info.device == 'cdrom'">
+                    <div class="row" ng-show="item.device == 'cdrom'">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'ISO file' %></p>
                         </div>
@@ -91,7 +91,7 @@
                             <p class="text-right"><%=l 'boot order' %></p>
                         </div>
                         <div class="col-lg-2">
-                            <input type="text" name="boot" ng-model="item.info.boot">
+                            <input type="text" name="boot" ng-model="item.boot">
                         </div>
                     </div>
                    <div class="row">

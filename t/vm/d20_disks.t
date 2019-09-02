@@ -29,7 +29,6 @@ sub test_frontend {
 
     my $info = $domain_f->info(user_admin);
     isa_ok($info->{hardware}->{disk}->[0],'HASH') or die Dumper($domain->name,$info->{hardware});
-    isa_ok($info->{hardware}->{disk}->[0]->{info},'HASH') or die Dumper($domain->name,$info->{hardware});
 
     $domain->remove(user_admin);
 }
@@ -92,7 +91,7 @@ sub test_add_disk {
     $domain->info(user_admin);
     my $info = $domain_f->info(user_admin);
     is(scalar(@{$info->{hardware}->{disk}}),scalar(@volumes2),Dumper($info->{hardware}->{disk},$domain->name)) or exit;
-    isa_ok($info->{hardware}->{disk}->[1]->{info},'HASH') or exit;
+    isa_ok($info->{hardware}->{disk}->[1],'HASH') or exit;
     $domain->remove(user_admin);
 }
 
@@ -100,32 +99,34 @@ sub test_add_disk_boot_order {
     my $vm = shift;
     return if $vm->type ne 'KVM';
     my $domain = create_domain($vm);
-    $domain->add_volume( boot => 1 , name => 'troy' );
+    $domain->add_volume( boot => 1 , name => $domain->name.'-troy' );
     my @volumes = $domain->list_volumes_info();
-    my ($troy) = grep { $_->{name} =~ m/^troy/ } @volumes;
-    is($troy->{boot}, 1);
+    my ($troy) = grep { $_->name =~ m/-troy\.\w+$/ } @volumes;
+    ok($troy,"Expecting volume called -troy\$") or die Dumper(\@volumes);
 
-    $domain->add_volume( boot => 1 , name => 'abed');
+    is($troy->info->{boot}, 1);
+
+    $domain->add_volume( boot => 1 , name => $domain->name.'-abed');
     @volumes = $domain->list_volumes_info();
-    my ($abed) = grep { $_->{name} =~ /^abed/ } @volumes;
-    is($abed->{boot}, 1);
-    ($troy) = grep { $_->{name} =~ m/^troy/ } @volumes;
-    is($troy->{boot}, 2);
+    my ($abed) = grep { $_->name =~ /-abed/ } @volumes;
+    is($abed->info->{boot}, 1);
+    ($troy) = grep { $_->name =~ m/-troy/ } @volumes;
+    is($troy->info->{boot}, 2);
 
 
-    $domain->add_volume( boot => 2 , name => 'jeff');
+    $domain->add_volume( boot => 2 , name => $domain->name.'-jeff');
     @volumes = $domain->list_volumes_info();
-    my ($jeff) = grep { $_->{name} =~ /^jeff/ } @volumes;
+    my ($jeff) = grep { $_->name =~ /-jeff/ } @volumes;
 
-    ($abed) = grep { $_->{name} =~ m/^abed/ } @volumes;
-    is($abed->{boot}, 1);
+    ($abed) = grep { $_->name =~ m/-abed/ } @volumes;
+    is($abed->info->{boot}, 1);
 
-    ($troy) = grep { $_->{name} =~ m/^troy/ } @volumes;
-    is($troy->{boot}, 3);
+    ($troy) = grep { $_->name =~ m/-troy/ } @volumes;
+    is($troy->info->{boot}, 3);
 
     $domain->change_hardware('disk',0,{ boot => 1 });
     @volumes = $domain->list_volumes_info();
-    is($volumes[0]->{boot}, 1 );
+    is($volumes[0]->info->{boot}, 1 );
 }
 
 #############################################################################

@@ -143,6 +143,10 @@ sub _init_connector {
                                                 && defined $Ravada::Front::CONNECTOR;
 }
 
+sub _dbh($self) {
+    return $$CONNECTOR->dbh();
+}
+
 =head1 Constructors
 
 =head2 open

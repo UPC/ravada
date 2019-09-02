@@ -27,7 +27,7 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
     test_chain_prerouting
     find_ip_rule
@@ -67,6 +67,7 @@ our $DEFAULT_DB_CONFIG = "t/etc/sql.conf";
 
 our $CONT = 0;
 our $CONT_POOL= 0;
+our $CONT_VOL= 0;
 our $USER_ADMIN;
 our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
@@ -206,6 +207,13 @@ sub new_domain_name {
 
 sub new_pool_name {
     return base_pool_name()."_".$CONT_POOL++;
+}
+
+sub new_volume_name($domain=undef) {
+    my $name;
+    $name = $domain->name       if $domain;
+    $name = new_domain_name()   if !$domain;
+    return $name."_".$CONT_VOL++;
 }
 
 sub rvd_back($config=undef, $init=1) {
@@ -491,7 +499,7 @@ sub _remove_old_disks_kvm {
 
     for my $pool( $vm->vm->list_all_storage_pools ) {
         for my $volume  ( $pool->list_volumes ) {
-            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2)$/;
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
             $volume->delete();
         }
     }
