@@ -179,16 +179,6 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        mate_artful => {
-                    name => 'Ubuntu Mate Artful'
-            ,description => 'Ubuntu Mate 17.10.1 (Artful) 64 bits'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
-                ,min_disk_size => '10'
-        },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
@@ -287,16 +277,6 @@ sub _update_isos {
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
         }
-        ,fedora_27 => {
-            name => 'Fedora 27'
-            ,description => 'RedHat Fedora 27 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-27-.*\.iso'
-            ,arch => 'amd64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => '$url/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
-        }
         ,fedora_28 => {
             name => 'Fedora 28'
             ,description => 'RedHat Fedora 28 Workstation 64 bits'
@@ -362,18 +342,6 @@ sub _update_isos {
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_32.iso'
         }
-        ,xubuntu_artful => {
-            name => 'Xubuntu Artful Aardvark'
-            ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
-            ,arch => 'amd64'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_artful.iso'
-            ,min_disk_size => '10'
-        }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
@@ -434,7 +402,7 @@ sub _update_isos {
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
             ,description => 'Debian 9 Stretch 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
@@ -454,7 +422,7 @@ sub _update_isos {
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -464,7 +432,7 @@ sub _update_isos {
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
@@ -2234,6 +2202,8 @@ sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 }
 
 sub _kill_stale_process($self) {
+
+    my @domains = $self->list_domains_data();
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid,command,start_time "
         ." FROM requests "
@@ -2243,7 +2213,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 60 );
+    $sth->execute(time - 5*scalar(@domains) + 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)

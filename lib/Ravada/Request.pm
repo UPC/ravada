@@ -72,7 +72,7 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }

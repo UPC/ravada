@@ -1062,6 +1062,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
+        return if $req && $req->defined_arg('test');
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
@@ -1262,8 +1263,10 @@ sub _match_url($self,$url) {
     my @found;
     my $links = $res->dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
-        next if !defined $link || $link !~ qr($match);
-        my $new_url = "$url1$link$url2";
+        next if !defined $link;
+        $link =~ s{/$}{};
+        next if $link !~ qr($match);
+        my $new_url = "$url1$link/$url2";
         push @found,($self->_match_url($new_url));
     }
     return @found;
@@ -1393,7 +1396,7 @@ sub _match_file($self, $url, $file_re) {
         confess $@ if $@;
     }
 
-    confess unless defined $res->code &&  $res->code == 200 || $res->code == 301;
+    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
 
     my $dom= $res->dom;
 
