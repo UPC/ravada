@@ -3,12 +3,11 @@
 
 **Implemented enhancements:**
 
-- Add ISO for Debian Buster [\#1108]
-- non-predictable MAC addresses [\#1103]
-- first login fails after inactivity logout [\#1102]
+- Multiple copies of machines [\#1091]
+- Pools of virtual machines [\#1115]
 
 **Bugfixes**
 
-- Specified key was too long with MariaDB 10.1 in Debian [\#1104]
-- Login name with spaces [\#1100]
-- Volatile domains get invalid SPICE IP [\#1099]
+- Access option missing in settings machine [\#1098]
+- Logout timeout on start machine too quick [\#1119]
+- Change current memory fails [\#1123]
