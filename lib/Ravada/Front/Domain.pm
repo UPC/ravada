@@ -139,6 +139,7 @@ sub list_volumes($self, $attribute=undef, $value=undef)
         next if defined $attribute
         && ( !exists $row->{$attribute}
                 || $row->{$attribute} != $value);
+        $row->{info}->{file} = $row->{file} if $row->{file};
         push @volumes, (Ravada::Volume->new(file => $row->{file}, info => $row->{info}));
     }
     $sth->finish;

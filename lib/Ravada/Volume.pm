@@ -98,14 +98,18 @@ sub BUILD($self, $arg) {
     eval { $class->meta->rebless_instance($self) };
     confess $@ if $@;
     $self->vm($self->domain->_vm) if !$arg->{vm} && $self->domain;
-    $self->set_info(capacity => $self->capacity)
-        if $arg->{info} && ! exists $arg->{info}->{capacity} && $arg->{file}
+
+    if ($arg->{info} && keys %{$arg->{info}}) {
+        $self->set_info(capacity => $self->capacity)
+        if ! exists $arg->{info}->{capacity} 
+            && $arg->{file}
             && $self->vm
             && $self->vm->file_exists($arg->{file})
             ;
-
-
-    $self->_cache_volume_info() if $arg->{domain};
+        $self->_cache_volume_info() if $arg->{domain};
+    } else {
+        $arg->{info} = $self->_get_cached_info();
+    }
 }
 
 sub _get_name($self) {
@@ -186,6 +190,7 @@ sub _dbh($self) {
 }
 
 sub _get_cached_info($self) {
+    return if !$self->domain;
     my $sth = $self->_dbh->prepare(
         "SELECT * from volumes "
         ." WHERE name=? "

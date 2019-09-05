@@ -87,7 +87,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 	is($@,'') or return;
     $USER->unread_messages();
 	ok($req, 'Request');
-	rvd_back->_process_all_requests_dont_fork();
+	rvd_back->_process_all_requests_dont_fork(1);
     is($req->status(),'done');
     is($req->error(),'') or exit;
 
@@ -114,6 +114,8 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/ ) {
         my $name = $domain->name;
         like($new_hardware->{name}, qr/$name-\w{4}-vd[a-z]\.\w+$/) or die Dumper($data);
+    } elsif($hardware eq 'disk') {
+        like($new_hardware->{file},qr(\.iso$)) or die Dumper($info->{hardware}->{$hardware});
     }
 }
 
@@ -284,7 +286,7 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 
     my $index;
     for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) -1 ) {
-        if ( exists $info->{hardware}->{$hardware}->[$count]->{info}->{$field} ) {
+        if ( exists $info->{hardware}->{$hardware}->[$count]->{$field} ) {
             $index = $count;
             last;
         }
@@ -295,17 +297,18 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
 
     my $device = $info->{hardware}->{$hardware}->[$index];
     confess "Device without $field in ".$domain->name."\n".Dumper($device)
-        if !exists $device->{info}->{$field};
+        if !exists $device->{$field};
     my $capacity = Ravada::Utils::size_to_number(
-        $info->{hardware}->{$hardware}->[$index]->{info}->{$field}
+        $info->{hardware}->{$hardware}->[$index]->{$field}
     );
     ok(defined $capacity,"Expecting some $field") or exit;
     my $new_capacity = int(( $capacity +1 ) * 2);
     isnt($new_capacity, $capacity) or exit;
+    isnt( $info->{hardware}->{$hardware}->[$index]->{$field}, $new_capacity );
 
     my $file = $info->{hardware}->{$hardware}->[$index]->{file};
-    ok($new_capacity) or exit;
-    isnt( $info->{hardware}->{$hardware}->[$index]->{info}->{$field}, $new_capacity );
+    ok($file) or die Dumper($info->{hardware}->{$hardware}->[$index]);
+
     my @volumes = $domain->list_volumes();
     is($volumes[$index], $file) or exit;
 
@@ -328,7 +331,7 @@ sub test_change_disk_field($vm, $domain, $field='capacity') {
     $info = $domain_f->info(user_admin);
 
     my $found_capacity
-    = Ravada::Utils::size_to_number($info->{hardware}->{$hardware}->[$index]->{info}->{$field});
+    = Ravada::Utils::size_to_number($info->{hardware}->{$hardware}->[$index]->{$field});
     is( int($found_capacity/1024)
         ,int($new_capacity/1024), $domain_b->name." $field \n"
         .Dumper($info->{hardware}->{$hardware}->[$index]) ) or exit;
