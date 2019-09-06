@@ -216,6 +216,118 @@ sub test_prepare_base {
 
 }
 
+sub test_prepare_base_with_cd {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    eval {
+        $domain->prepare_base(user => user_admin, with_cd => 1);
+    };
+    is($@,'') or exit;
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base)) or exit;
+
+    my $clone = rvd_back->create_domain(
+             name => new_domain_name
+        , id_base => $domain->id
+        ,id_owner => user_admin->id
+    );
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep { $_->{file} =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+
+}
+sub test_prepare_base_with_cd_req {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $req = Ravada::Request->prepare_base(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,with_cd => 1
+    );
+    wait_request( debug => 1 );
+    is($req->status, 'done');
+    is($req->error, '');
+
+    is($domain->is_base, 1);
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
+
+    my $clone = rvd_back->create_domain(
+             name => new_domain_name
+        , id_base => $domain->id
+        ,id_owner => user_admin->id
+    );
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep { exists $_->{file} && $_->{file} =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+
+}
+
+sub test_clone_with_cd {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $clone = $domain->clone(
+             name => new_domain_name
+            ,user => user_admin
+         ,with_cd => 1
+    );
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
+
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep { exists $_->{file} && $_->{file} =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+
+}
+
+sub test_clone_with_cd_req {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $clone_name = new_domain_name();
+    my $req = Ravada::Request->clone(
+            id_domain => $domain->id
+             ,with_cd => 1
+                ,name => $clone_name
+                 ,uid => user_admin->id
+    );
+    wait_request(debug => 1);
+    is($domain->is_base,1);
+    is($req->status, 'done');
+    is($req->error,'');
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
+
+    my $clone = rvd_back->search_domain($clone_name);
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep { exists $_->{file} && $_->{file} =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+
+}
+
 sub test_prepare_base_active {
     my $vm_name = shift;
 
@@ -634,6 +746,12 @@ for my $vm_name ('Void','KVM') {
         use_ok($CLASS);
 
         test_domain_limit_already_requested($vm_name);
+
+        test_prepare_base_with_cd($vm);
+        test_clone_with_cd($vm);
+
+        test_prepare_base_with_cd_req($vm);
+        test_clone_with_cd_req($vm);
 
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
