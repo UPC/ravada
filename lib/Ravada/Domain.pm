@@ -587,10 +587,21 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     return @volumes;
 }
 
-sub _around_prepare_base($orig, $self, $user, $request = undef) {
+sub _around_prepare_base($orig, $self, @args) {
+    #sub _around_prepare_base($orig, $self, $user, $request = undef) {
+    my ($user, $request, $with_cd);
+    if(ref($args[0]) =~/^Ravada::/) {
+        ($user, $request) = @args;
+    } else {
+        my %args = @args;
+        $user = delete $args{user};
+        $request = delete $args{request};
+        $with_cd = delete $args{with_cd};
+        confess "Error: uknown args". Dumper(\%args) if keys %args;
+    }
     $self->_pre_prepare_base($user, $request);
 
-    my @base_img = $self->$orig($user, $request);
+    my @base_img = $self->$orig($user, $request, $with_cd);
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -1822,6 +1833,7 @@ sub clone {
     my $start = delete $args{start};
     my $is_pool = delete $args{is_pool};
     my $no_pool = delete $args{no_pool};
+    my $with_cd = delete $args{with_cd};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -1830,7 +1842,7 @@ sub clone {
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
-        $self->prepare_base($user)
+        $self->prepare_base(user => $user, with_cd => $with_cd)
     }
 
     my @args_copy = ();
@@ -3525,7 +3537,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start no_pool)) {
+    for (qw(is_pool start no_pool with_cd)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
