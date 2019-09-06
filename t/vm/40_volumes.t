@@ -363,7 +363,7 @@ sub test_domain_swap {
                                 ." should be active");
 
     my $min_size = 197120 if $vm_name eq 'KVM';
-    $min_size = 96 if $vm_name eq 'Void';
+    $min_size = 100 if $vm_name eq 'Void';
     # after start, all the files should be there
      my $found_swap = 0;
     for my $file ( $domain_clone->list_volumes) {
