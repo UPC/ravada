@@ -135,12 +135,12 @@ sub list_volumes($self, $attribute=undef, $value=undef)
             if defined $row->{info}->{capacity} && $row->{info}->{capacity} =~ /^\d+$/;
         $row->{info}->{allocation} = Ravada::Utils::number_to_size($row->{info}->{allocation})
             if defined $row->{info}->{allocation} && $row->{info}->{allocation} =~ /^\d+$/;
-        $row->{driver} = delete $row->{info}->{driver};
 
         next if defined $attribute
         && ( !exists $row->{$attribute}
                 || $row->{$attribute} != $value);
-        push @volumes, ($row);
+        $row->{info}->{file} = $row->{file} if $row->{file};
+        push @volumes, (Ravada::Volume->new(file => $row->{file}, info => $row->{info}));
     }
     $sth->finish;
     return @volumes;
@@ -188,4 +188,9 @@ sub list_controllers {}
 sub set_controller {}
 sub remove_controller {}
 sub change_hardware { die "TODO" }
+
+sub _get_controller_disk($self) {
+    return map { $_->info } $self->list_volumes_info();
+}
+
 1;

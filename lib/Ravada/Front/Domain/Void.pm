@@ -1,5 +1,6 @@
 package Ravada::Front::Domain::Void;
 
+use Data::Dumper;
 use Moose;
 use YAML qw(LoadFile);
 
@@ -67,8 +68,7 @@ sub _get_controller_mock {
 }
 
 sub _get_controller_disk {
-    my $self = shift;
-    return $self->list_volumes_info;
+    return Ravada::Front::Domain::_get_controller_disk(@_);
 }
 
 1;

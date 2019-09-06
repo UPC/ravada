@@ -46,7 +46,7 @@ sub test_domain_raw {
 
     my ($source) = $disk->findnodes('./source');
     my $file = $source->getAttribute('file');
-    like($file , qr(qcow2));
+    like($file , qr(qcow2)) or exit;
 
     my $file_type = `file $file`;
     chomp $file_type;
@@ -62,11 +62,11 @@ sub test_domain_raw {
     ok($disk) or return;
 
     my ($driver) = $disk->findnodes('./driver');
-    ok($driver->getAttribute('type') eq 'qcow2');
+    is($driver->getAttribute('type'),'raw');
 
     my ($source) = $disk->findnodes('./source');
     my $file = $source->getAttribute('file');
-    like($file , qr(img));
+    like($file , qr(raw$)) or exit;
 
     my $file_type = `file $file`;
     chomp $file_type;
@@ -115,6 +115,10 @@ sub _set_raw_volume {
 
     is($disk_found,1);
 
+    my $new_domain = $domain->_vm->vm->define_domain($doc->toString);
+    $domain->domain($new_domain);
+
+    ok(grep /\.raw$/,$domain->list_volumes) or exit;
 }
 
 #####################################################################
