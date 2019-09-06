@@ -110,7 +110,7 @@ sub test_prepare_base {
     $domain->shutdown_now($USER)    if $domain->is_active();
 
     eval { $domain->prepare_base( user_admin ) };
-    ok(!$@, $@);
+    ok(!$@, $@) or exit;
     ok($domain->is_base);
     is($domain->is_active(),0);
     $domain->is_public(1);
@@ -608,7 +608,7 @@ sub test_domain_limit_already_requested {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ('Void','KVM') {
+for my $vm_name ('KVM', 'Void') {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";

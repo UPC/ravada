@@ -510,8 +510,8 @@
             $scope.change_disk = function(id_machine, index ) {
                 var new_settings={
                   driver: $scope.showmachine.hardware.disk[index].driver,
-                  capacity: $scope.showmachine.hardware.disk[index].info.capacity,
-                  boot: $scope.showmachine.hardware.disk[index].info.boot,
+                  capacity: $scope.showmachine.hardware.disk[index].capacity,
+                  boot: $scope.showmachine.hardware.disk[index].boot,
                   file: $scope.showmachine.hardware.disk[index].file,
                 };
                 console.log(new_settings);
