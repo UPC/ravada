@@ -3496,7 +3496,9 @@ sub set_base_vm($self, %args) {
                 next if $vm_local->shared_storage($vm, $path);
                 confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
                 my ($out, $err);
-                eval { ($out, $err) = $vm->remove_file($file) };
+                eval { ($out, $err) = $vm->remove_file($file)
+                    if $vm->file_exists($file);
+                };
                 $err = $@ if !$err && $@;
                 warn $err if $err;
             }
