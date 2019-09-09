@@ -48,10 +48,10 @@ Do you feel like giving us a hand? Here you have all the information you need as
 
 * :ref:`dev-docs`
 
-.. _user-docs:
+.. _admin-docs:
 
 .. toctree::
-   :caption: User Documentation
+   :caption: Administrator Documentation
    :maxdepth: 2
 
    docs/INSTALL
@@ -109,7 +109,8 @@ Do you feel like giving us a hand? Here you have all the information you need as
 .. toctree::
    :maxdepth: 2
    :caption: Guest VM section
-   
+
+   docs/install_guest_alpine
    docs/resize_hard_drive
    docs/resize_hard_drive_linux_machine
    docs/config_console
