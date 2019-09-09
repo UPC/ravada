@@ -71,6 +71,11 @@ sub test_files_base {
 sub test_display {
     my ($vm_name, $domain) = @_;
 
+    my @ips = local_ips($domain->_vm);
+
+    my @ips2 = grep { $_ ne '127.0.0.1' } @ips;
+    skip("No IPs found in ".$domain->_vm->name,5) if !scalar @ips2;
+
     my $display;
     $domain->shutdown_now(user_admin);
     $domain->start(user => user_admin, remote_ip => '1.2.3.4' );# if !$domain->is_active;

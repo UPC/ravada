@@ -55,6 +55,7 @@ create_domain
     init_ldap_config
 
     create_storage_pool
+    local_ips
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -758,6 +759,8 @@ sub clean {
         warn $@ if $@;
         _clean_remote_nodes($config)    if $config;
     }
+    unlink $FILE_CONFIG_TMP or die "$! $FILE_CONFIG_TMP"
+        if $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP;
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
@@ -1162,6 +1165,15 @@ sub find_ip_rule {
     return if !scalar@found || !defined $found[0];
     return @found   if wantarray;
     return $found[0];
+}
+
+sub local_ips($vm) {
+    my ($out, $err) = $vm->run_command("/bin/ip","address");
+    confess $err if $err;
+    my @ips = map { m{^\s+inet (.*?)/};$1 }
+                grep { m{^\s+inet } }
+                split /\n/,$out;
+    return @ips;
 }
 
 sub shutdown_domain_internal($domain) {

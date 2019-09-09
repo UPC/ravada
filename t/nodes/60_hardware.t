@@ -67,18 +67,19 @@ for my $vm_name ( 'Void', 'KVM') {
             $vm = undef;
         }
 
-
-        my ($node1,$node2) = remote_node_2($vm_name);
-
-        if ( !$node2 ) {
-            $msg = "Expecting at least 2 nodes configured to test";
-            $vm = undef;
+        my ($node1,$node2);
+        if ($vm) {
+            ($node1,$node2) = remote_node_2($vm_name);
+            if (!$node2) {
+                $vm = undef;
+                $msg = "Expecting at least 2 nodes configured to test";
+            }
         }
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
 
-
         diag("Testing remote node in $vm_name");
+
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
 
