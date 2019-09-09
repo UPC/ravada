@@ -101,3 +101,33 @@ The setup script will ask the disk
     How would you like to use them ? [?] *sys*
     WARNING: Erase the above disk(s) and continue [y/N]: *y*
 
+Now the setup process will install minimal applications to start the server.
+
+Installing more software
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+You should at least install these applications:
+
+
+.. prompt:: bash #
+
+    apk add qemu-guest-agent acpi
+
+
+Shutdown and restart
+~~~~~~~~~~~~~~~~~~~~
+
+Type these commands from the console to restart and shutdown the server:
+
+.. prompt:: bash #
+
+    reboot
+
+
+.. prompt:: bash #
+
+    poweroff
+
+
+
+
