@@ -21,7 +21,9 @@ added when creating the virtual machine.
 .. image:: images/create_alpine.png
 
 
-When the machine is created start it from Admin Tools , Virtual Machines
+When the machine is created start it from Admin Tools menu, click on
+Virtual Machines to see a list. At the right there is a bunch of buttons.
+Click on *view* to start and access the virtual machine console.
 
 .. image:: images/create_alpine_view.png
 
@@ -38,7 +40,7 @@ are the default settings we use in a Ravada-KVM Virtual Machine.
 
 Start the setup typing:
 
-.. prompt:: bash #
+.. prompt:: bash \#
 
     setup-alpine
 
@@ -109,7 +111,7 @@ Installing more software
 You should at least install these applications:
 
 
-.. prompt:: bash #
+.. prompt:: bash
 
     apk add qemu-guest-agent acpi
 
