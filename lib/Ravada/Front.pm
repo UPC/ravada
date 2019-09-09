@@ -331,8 +331,10 @@ sub filter_base_without_clones($domains) {
     for (my $i = 0; $i < $size_domains; ++$i) {
         if (@$domains[$i]->{is_base}) {
             for (my $j = 0; $j < $size_domains; ++$j) {
-                if ($j != $i && !(@$domains[$j]->{is_base}) && (@$domains[$j]->{id_base} eq @$domains[$i]->{id})) {
-                    push @list, (@$domains[$i]);
+                if ($j != $i && !($domains->[$j]->{is_base})
+                        && defined $domains->[$j]->{id_base}
+                        && $domains->[$j]->{id_base} eq $domains->[$i]->{id}) {
+                    push @list, ($domains->[$i]);
                     last;
                 }
             }

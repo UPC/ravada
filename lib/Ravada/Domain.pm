@@ -56,7 +56,6 @@ requires '_do_force_shutdown';
 
 requires 'pause';
 requires 'resume';
-requires 'prepare_base';
 
 requires 'rename';
 requires 'dettach';
@@ -73,7 +72,6 @@ requires 'disk_size';
 
 requires 'spinoff_volumes';
 
-requires 'clean_swap_volumes';
 #hardware info
 
 requires 'get_info';
@@ -507,17 +505,22 @@ sub _around_add_volume {
         if scalar @_ % 2;
     my %args = @_;
 
-    my $path = $args{path};
+    my $file = ($args{file} or $args{path});
     my $name = $args{name};
+    $args{target} = $self->_new_target_dev() if !exists $args{target};
+
+    if (!$name) {
+        ($name) = $file =~ m{.*/(.*)} if !$name && $file;
+        $name = $self->name if !$name;
+
+        $name .= "-".Ravada::Utils::random_name(4)."-$args{target}";
+        $args{name} = $name;
+    }
+
     $args{size} = delete $args{capacity} if exists $args{capacity} && !exists $args{size};
     my $size = $args{size};
-    my $target = $args{target};
-    if ( $path ) {
-        $self->_check_volume_added($path);
-        if (!$name) {
-            ($args{name}) = $path =~ m{.*/(.*)};
-            $name = $args{name};
-        }
+    if ( $file ) {
+        $self->_check_volume_added($file);
     }
     $args{size} = Ravada::Utils::size_to_number($size) if defined $size;
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
@@ -531,9 +534,15 @@ sub _around_add_volume {
             ."\n"
         if exists $args{size} && $args{size} >= $free;
 
+    if ($name) {
+        confess "Error: volume $name already exists"
+            if grep {$_->info->{name} eq $name} $self->list_volumes_info;
+    }
+    confess "Error: target $args{target} already exists"
+            if grep {$_->info->{target} eq $args{target} } $self->list_volumes_info;
+
     my $ok = $self->$orig(%args);
     confess "Error adding ".Dumper(\%args) if !$ok;
-    $path = $ok if ! $path;
 
     return $ok;
 }
@@ -574,23 +583,19 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
 
     return $self->$orig($attribute, $value) if ref($self) =~ /^Ravada::Front/i;
 
-    my @volumes = $self->$orig($attribute => $value);
-
-    #TODO make these atomic
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
     $sth->execute($self->id);
     $sth->finish;
 
-    for my $vol (@volumes) {
-        $self->cache_volume_info(%$vol);
-    }
+    my @volumes = $self->$orig($attribute => $value);
+
     return @volumes;
 }
 
 sub _around_prepare_base($orig, $self, $user, $request = undef) {
     $self->_pre_prepare_base($user, $request);
 
-    my @base_img = $self->$orig($user, $request);
+    my @base_img = $self->$orig();
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -599,6 +604,28 @@ sub _around_prepare_base($orig, $self, $user, $request = undef) {
 
     $self->_post_prepare_base($user, $request);
 }
+
+sub prepare_base($self) {
+    my @base_img;
+    for my $volume ($self->list_volumes_info(device => 'disk')) {
+        confess "Undefined info->target ".Dumper($volume)
+            if !$volume->info->{target};
+
+        my $base = $volume->prepare_base();
+        push @base_img,([$base, $volume->info->{target}]);
+    }
+    $self->post_prepare_base();
+    return @base_img;
+}
+
+=head2 post_prepare_base
+
+Placeholder for optional method implemented in subclasses. This will
+run after preparing the base files.
+
+=cut
+
+sub post_prepare_base($self) {}
 
 sub _pre_prepare_base($self, $user, $request = undef ) {
 
@@ -648,9 +675,7 @@ sub _check_free_space_prepare_base($self) {
     $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
 
     for my $volume ($self->list_volumes_info(device => 'disk')) {;
-        next if $volume->{device} ne 'disk';
-
-        $self->_vm->_check_free_disk($volume->{capacity} * 2, $pool_base);
+        $self->_vm->_check_free_disk($volume->capacity * 2, $pool_base);
     }
 };
 
@@ -1285,6 +1310,9 @@ sub info($self, $user) {
     }
     $info->{hardware} = $self->get_controllers();
 
+    confess Dumper($info->{hardware}->{disk}->[0])
+        if ref($info->{hardware}->{disk}->[0]) =~ /^Ravada::Vol/;
+
     my $internal_info = $self->get_info();
     for (keys(%$internal_info)) {
         die "Field $_ already in info" if exists $info->{$_};
@@ -1733,6 +1761,7 @@ sub _do_remove_base($self, $user) {
     }
     $self->is_base(0);
     for my $file ($self->list_files_base) {
+        next if $file =~ /\.iso$/i;
         next if ! -e $file;
         unlink $file or die "$! unlinking $file";
     }
@@ -1883,8 +1912,8 @@ sub _copy_clone($self, %args) {
     my @volumes = $self->list_volumes_info(device => 'disk');
     my @copy_volumes = $copy->list_volumes_info(device => 'disk');
 
-    my %volumes = map { $_->{target} => $_->{file} } @volumes;
-    my %copy_volumes = map { $_->{target} => $_->{file} } @copy_volumes;
+    my %volumes = map { $_->info->{target} => $_->file } @volumes;
+    my %copy_volumes = map { $_->info->{target} => $_->file } @copy_volumes;
     for my $target (keys %volumes) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
@@ -2896,9 +2925,9 @@ Check if the domain has swap volumes defined, and clean them
 
 sub clean_swap_volumes {
     my $self = shift;
-    for my $file ( $self->list_volumes) {
-        $self->clean_disk($file)
-            if $file =~ /\.SWAP\.\w+$/;
+    for my $vol ( $self->list_volumes_info) {
+        $vol->restore()
+            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/;
     }
 }
 
@@ -3467,7 +3496,9 @@ sub set_base_vm($self, %args) {
                 next if $vm_local->shared_storage($vm, $path);
                 confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
                 my ($out, $err);
-                eval { ($out, $err) = $vm->remove_file($file) };
+                eval { ($out, $err) = $vm->remove_file($file)
+                    if $vm->file_exists($file);
+                };
                 $err = $@ if !$err && $@;
                 warn $err if $err;
             }
@@ -3853,8 +3884,10 @@ sub _pre_change_hardware($self, @) {
     }
 }
 
-sub _post_change_hardware {
-    my $self = shift;
+sub _post_change_hardware($self, $hardware, $index, $data=undef) {
+    if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
+        my @volumes = $self->list_volumes_info();
+    }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
     $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1);
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
@@ -3990,57 +4023,6 @@ sub set_ldap_access($self, $id_access, $allowed, $last) {
     $sth->execute($allowed, $last, $id_access);
 }
 
-sub _get_volume_info($self, $name) {
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * from volumes "
-        ." WHERE name=? "
-        ."   AND id_domain=? "
-        ." ORDER by n_order"
-    );
-    $sth->execute($name, $self->id);
-    my $row = $sth->fetchrow_hashref();
-
-    return if !$row || !keys %$row;
-    if ( $row->{info} ) {
-        $row->{info} = decode_json($row->{info})
-    }
-    return $row;
-}
-
-sub cache_volume_info($self, %info) {
-    my $name = delete $info{name} or confess "No name in info ".Dumper(\%info);
-    my $row = $self->_get_volume_info($name);
-    if (!$row) {
-        my $file = (delete $info{file} or '');
-        confess "Error: Missing n_order field ".Dumper(\%info) if !exists $info{n_order};
-        my $n_order = delete $info{n_order};
-
-        eval {
-        my $sth = $$CONNECTOR->dbh->prepare(
-            "INSERT INTO volumes (id_domain, name, file, n_order, info) "
-            ."VALUES(?,?,?,?,?)"
-        );
-        $sth->execute($self->id
-            ,$name
-            ,$file
-            ,$n_order
-            ,encode_json(\%info));
-        };
-        confess "$name / $n_order \n".$@ if $@;
-        return;
-    }
-    for (keys %{$row->{info}}) {
-        $info{$_} = $row->{info}->{$_} if !exists $info{$_};
-    }
-    my $file = (delete $info{file} or $row->{file});
-    my $n_order = (delete $info{n_order} or $row->{n_order});
-    confess "Error: Missing file field ".Dumper(\%info, $row)
-        if !defined $file || !length($file);
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE volumes set info=?, name=?,file=?,id_domain=?,n_order=? WHERE id=?"
-    );
-    $sth->execute(encode_json(\%info), $name, $file, $self->id, $n_order, $row->{id});
-}
 
 sub rebase($self, $user, $new_base) {
     croak "Error: ".$self->name." is not a base\n"  if !$self->is_base;

@@ -1,5 +1,7 @@
 package Ravada::Front::Domain::KVM;
 
+use Carp qw(confess);
+use Data::Dumper;
 use Moose;
 
 use XML::LibXML;
@@ -53,10 +55,6 @@ sub _get_controller_usb {
     return @ret;
 }
 
-sub _get_controller_disk($self) {
-    return $self->list_volumes_info();
-}
-
 sub _get_controller_network($self) {
     $self->xml_description if !$self->readonly();
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
@@ -90,6 +88,10 @@ sub _get_controller_network($self) {
     }
 
     return @ret;
+}
+
+sub _get_controller_disk($self) {
+    return Ravada::Front::Domain::_get_controller_disk($self);
 }
 
 =head2 get_driver
@@ -213,9 +215,9 @@ sub _get_driver_sound {
 
 }
 
-sub _get_driver_disk {
-    my $self = shift;
+sub _get_driver_disk($self) {
     my @volumes = $self->list_volumes_info();
-    return $volumes[0]->{driver};
+    return $volumes[0]->info()->{driver};
 }
+
 1;
