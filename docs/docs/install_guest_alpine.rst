@@ -40,7 +40,7 @@ are the default settings we use in a Ravada-KVM Virtual Machine.
 
 Start the setup typing:
 
-.. prompt:: bash \#
+.. prompt:: bash #
 
     setup-alpine
 
