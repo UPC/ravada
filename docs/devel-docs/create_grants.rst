@@ -1,5 +1,5 @@
 How to create a new grants
-========================
+==========================
 
 If you want to add a new grant, you have to do two things:
 
