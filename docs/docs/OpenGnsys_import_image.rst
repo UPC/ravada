@@ -62,7 +62,7 @@ Now, we have to create an empty qcow2 file and dump the raw file inside. First o
 
 Now, we mount the qcow2 file in your system, to dump it. 
 
-.. Tip:: You can follow this guide to do it: `How to mount a qcow2 disk image <https://gist.github.com/shamil/62935d9b456a6f9877b5>'__
+.. Tip:: You can follow this guide to do it: `How to mount a qcow2 disk image <https://gist.github.com/shamil/62935d9b456a6f9877b5>`_
 
 .. prompt:: bash $
    
