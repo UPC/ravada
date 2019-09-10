@@ -1,5 +1,5 @@
 Install Ravada - Ubuntu Xenial
-==========================
+==============================
 
 It is advisable to install Ravada in one of the supported
 platforms: Ubuntu Bionic ( 18.04 ) or Fedora.
