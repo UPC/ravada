@@ -16,21 +16,22 @@ DHCP boot options
 First of all, we have to provide the dhcp options ``next-server`` and ``filename``. to our dhcp server. Ravada is a KVM-based solutions, so, the dhcp server is the standard integrated in KVM. The DHCP-KVM server allows some configurations. Edit the KVM network configuration and add these options to the dhcp section:
        
 .. prompt:: bash $
-virsh#virsh net-edit default 
-  <network>
-  <name>default</name>
-  <uuid>85909d3b-f219-4055-92a3-d36c0c57810c</uuid>
-   <forward mode='nat'/>
-    <bridge name='virbr0' stp='on' delay='0'/>
-    <mac address='52:54:00:1a:06:50'/> 
-    <ip address='192.168.122.1' netmask='255.255.255.0'>
-    <tftp root='/'/>
-    <dhcp>
-      <range start='192.168.122.30' end='192.168.122.254'/>
-      <bootp file='grldr' server='<opengnsys-server-ip'/>
-    </dhcp>
-    </ip>
-</network>
+
+   virsh#virsh net-edit default 
+   <network>
+   <name>default</name>
+   <uuid>85909d3b-f219-4055-92a3-d36c0c57810c</uuid>
+      <forward mode='nat'/>
+      <bridge name='virbr0' stp='on' delay='0'/>
+      <mac address='52:54:00:1a:06:50'/> 
+      <ip address='192.168.122.1' netmask='255.255.255.0'>
+      <tftp root='/'/>
+      <dhcp>
+         <range start='192.168.122.30' end='192.168.122.254'/>
+         <bootp file='grldr' server='<opengnsys-server-ip'/>
+      </dhcp>
+      </ip>
+   </network>
                                               
 ``grldr`` is the standard boot loader for Opengnsys.
 
