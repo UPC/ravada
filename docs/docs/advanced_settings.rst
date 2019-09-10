@@ -94,6 +94,7 @@ First check the id field of the Virtual Manager in the table *vms*, then
 set a *base_storage* or *clone_storage* pools this way:
 
 .. prompt:: bash $,(env)...$ auto
+
     root@ravada:~# virsh pool-list
      Name                 State      Autostart
     -------------------------------------------
