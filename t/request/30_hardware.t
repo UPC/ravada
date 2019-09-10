@@ -87,7 +87,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 	is($@,'') or return;
     $USER->unread_messages();
 	ok($req, 'Request');
-	rvd_back->_process_all_requests_dont_fork(1);
+	rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
     is($req->error(),'') or exit;
 

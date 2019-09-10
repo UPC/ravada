@@ -220,7 +220,7 @@ sub test_prepare_base_with_cd {
     my $vm = shift;
     my $domain = create_domain($vm);
     my @volumes = $domain->list_volumes_info;
-    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
     die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
 
     eval {
@@ -238,16 +238,25 @@ sub test_prepare_base_with_cd {
         ,id_owner => user_admin->id
     );
     my @volumes_clone = $clone->list_volumes_info;
-    my ($cd_clone ) = grep { $_->{file} =~ /\.iso$/ } @volumes_clone;
-    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+    for my $vol (@volumes_clone) {
+        like(ref $vol->domain, qr/^Ravada::Domain/);
+        like(ref $vol->vm, qr/^Ravada::VM/);
+    }
+
+    my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
 
 }
 sub test_prepare_base_with_cd_req {
     my $vm = shift;
     my $domain = create_domain($vm);
     my @volumes = $domain->list_volumes_info;
-    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
     die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    ok($domain_f->info(user_admin)->{cdrom}) or die Dumper($domain_f->info(user_admin)->{hardware}->{disk});
+    like($domain_f->info(user_admin)->{cdrom}->[0],qr/\.iso$/) or die Dumper($domain_f->info(user_admin)->{hardware}->{disk});
 
     my $req = Ravada::Request->prepare_base(
         id_domain => $domain->id
@@ -270,8 +279,8 @@ sub test_prepare_base_with_cd_req {
         ,id_owner => user_admin->id
     );
     my @volumes_clone = $clone->list_volumes_info;
-    my ($cd_clone ) = grep { exists $_->{file} && $_->{file} =~ /\.iso$/ } @volumes_clone;
-    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+    my ($cd_clone ) = grep {defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm} } @volumes_clone])) or exit;
 
 }
 
@@ -279,7 +288,7 @@ sub test_clone_with_cd {
     my $vm = shift;
     my $domain = create_domain($vm);
     my @volumes = $domain->list_volumes_info;
-    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
     die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
 
     my $clone = $domain->clone(
@@ -293,8 +302,8 @@ sub test_clone_with_cd {
     ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
 
     my @volumes_clone = $clone->list_volumes_info;
-    my ($cd_clone ) = grep { exists $_->{file} && $_->{file} =~ /\.iso$/ } @volumes_clone;
-    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+    my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
 
 }
 
@@ -302,7 +311,7 @@ sub test_clone_with_cd_req {
     my $vm = shift;
     my $domain = create_domain($vm);
     my @volumes = $domain->list_volumes_info;
-    my ($cd) = grep { $_->{file} =~ /\.iso$/ } @volumes;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
     die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
 
     my $clone_name = new_domain_name();
@@ -323,7 +332,7 @@ sub test_clone_with_cd_req {
 
     my $clone = rvd_back->search_domain($clone_name);
     my @volumes_clone = $clone->list_volumes_info;
-    my ($cd_clone ) = grep { exists $_->{file} && $_->{file} =~ /\.iso$/ } @volumes_clone;
+    my ($cd_clone ) = grep { $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
 
 }

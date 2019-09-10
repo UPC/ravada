@@ -38,6 +38,7 @@ sub _test_base_iso($volume, $base) {
 }
 
 sub _test_clone_iso($base, $clone) {
+    is($base->file, $clone);
 }
 
 sub _test_base_void($volume, $base) {
@@ -158,9 +159,16 @@ sub test_clone($vm, $base) {
     like($clone->file,qr($ext$));
     like($clone->file,qr(\.SWAP\.$ext$)) if $base =~ /\.SWAP\./;
 
-    like($clone->file,qr(^.*/$name)) or exit;
+    #ISOs should be identical and we test no more
+    if ($ext eq 'iso') {
+        is($clone->file, $base);
+        is($clone->name, $vol_base->name);
+        return;
+    }
 
+    like($clone->file,qr(^.*/$name));
     isnt($clone->name, $vol_base->name);
+
     $test->($vol_base, $clone->file);
 
     copy($clone->file,$clone->file.".tmp");
@@ -194,7 +202,7 @@ sub _do_test_file($type, $vm, $file) {
     is($volume->info->{name}, $file);
 
     my $base_file = test_base($volume);
-    test_clone($vm, $base_file) if $type ne 'ISO';
+    test_clone($vm, $base_file);
 
     unlink $file if $type ne 'ISO';
 

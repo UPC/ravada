@@ -548,6 +548,8 @@ sub _around_add_volume {
 }
 
 sub _check_volume_added($self, $file) {
+    return if $file =~ /\.iso$/i;
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain FROM volumes "
         ." WHERE file=?"
     );
@@ -606,7 +608,7 @@ sub _around_prepare_base($orig, $self, @args) {
     }
     $self->_pre_prepare_base($user, $request);
 
-    my @base_img = $self->$orig($user, $request, $with_cd);
+    my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -616,9 +618,10 @@ sub _around_prepare_base($orig, $self, @args) {
     $self->_post_prepare_base($user, $request);
 }
 
-sub prepare_base($self) {
+sub prepare_base($self, $with_cd) {
     my @base_img;
-    for my $volume ($self->list_volumes_info(device => 'disk')) {
+    for my $volume ($self->list_volumes_info()) {
+        next if !$with_cd && $volume->info->{device} eq 'cdrom';
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
 
@@ -1335,6 +1338,12 @@ sub info($self, $user) {
     $info->{bases} = $self->_bases_vm();
     $info->{clones} = $self->_clones_vm();
     $info->{ports} = [$self->list_ports()];
+    my @cdrom = ();
+    for my $disk (@{$info->{hardware}->{disk}}) {
+        push @cdrom,($disk->{file}) if $disk->{file} && $disk->{file} =~ /\.iso$/;
+    }
+    $info->{cdrom} = \@cdrom;
+
     return $info;
 }
 

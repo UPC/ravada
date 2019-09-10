@@ -949,6 +949,7 @@ sub _domain_create_from_base {
         if $self->search_domain($args{name});
 
     my $base = $args{base};
+    my $with_cd = delete $args{with_cd};
 
     $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
@@ -961,7 +962,10 @@ sub _domain_create_from_base {
 
     my @device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml);
-    _xml_remove_cdrom($xml);
+    if ( !defined $with_cd ) {
+        $with_cd = grep (/\.iso$/ ,@device_disk);
+    }
+    _xml_remove_cdrom($xml) if !$with_cd;
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 

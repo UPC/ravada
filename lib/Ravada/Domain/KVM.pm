@@ -423,6 +423,7 @@ sub disk_device {
 
 
 sub _create_qcow_base {
+    confess "Deprecated";
     my $self = shift;
 
     my @base_img;
