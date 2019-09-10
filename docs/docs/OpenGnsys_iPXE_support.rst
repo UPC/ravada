@@ -68,10 +68,11 @@ The virtual machine runs inside a NATed network, usually with a 192.168.122.0/24
 Now, we have to create a computer inside your ravada classroom that is your virtual machine. Copy the MAC address of your empty machine:
 
 .. prompt:: bash $
- virsh net-dhcp-leases default 
- Expiry Time          MAC address        Protocol  IP address                Hostname        Client ID or DUID
- -------------------------------------------------------------------------------------------------------------------
-  2018-11-27 09:11:39  52:54:00:a7:49:34  ipv4      192.168.122.178/24        -               01:52:54:00:a7:49:34
+ 
+   virsh net-dhcp-leases default 
+   Expiry Time          MAC address        Protocol  IP address                Hostname        Client ID or DUID
+   -------------------------------------------------------------------------------------------------------------------
+   2018-11-27 09:11:39  52:54:00:a7:49:34  ipv4      192.168.122.178/24        -               01:52:54:00:a7:49:34
 
 .. image:: images/opengnsys_computer.png
 
