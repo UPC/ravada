@@ -58,7 +58,7 @@ Connect to ravada-back docker: (We'll implement an automatically solution to avo
 
 .. prompt:: bash $
 
-   ~/src/ravada/dockerfy≻ docker exec -it ravada-back bash
+   ~/src/ravada/dockerfy> docker exec -it ravada-back bash
    root@6c3089f22e77:/ravada# bin/rvd_back.pl --add-user admin
    admin password: acme
    is admin ? : [y/n] y
