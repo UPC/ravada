@@ -36,12 +36,14 @@ Install Ravada from dockers
 For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clone repository:
 
 .. prompt:: bash $
+
    cd ~
    mdir src
    git clone https://github.com/UPC/ravada.git
    cd dockerfy
    
 .. prompt:: bash $
+
    cd dockerfy
    docker-compose pull
    docker-compose up -d
@@ -55,6 +57,7 @@ Add a new user for the ravada web. Use rvd\_back to create it. It will perform s
 Connect to ravada-back docker: (We'll implement an automatically solution to avoid this case)
 
 .. prompt:: bash $
+
    ~/src/ravada/dockerfy≻ docker exec -it ravada-back bash
    root@6c3089f22e77:/ravada# bin/rvd_back.pl --add-user admin
    admin password: acme
