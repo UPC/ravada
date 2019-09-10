@@ -87,15 +87,16 @@ We have detected that the new machine boots, but it hangs just when the menu had
 
 
 .. prompt:: bash $
- ifconfig 
-  br0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-  inet 10.10.73.24  netmask 255.255.255.0  broadcast 10.10.73.255
-  inet6 fe80::20a:f7ff:feba:c980  prefixlen 64  scopeid 0x20<link>
-  ether 00:0a:f7:ba:c9:80  txqueuelen 1000  (Ethernet)
-  RX packets 11251336  bytes 196755808380 (196.7 GB)
-  RX errors 0  dropped 0  overruns 0  frame 0
-  TX packets 11875794  bytes 4220061188 (4.2 GB)
-  TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+   ifconfig 
+   br0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+   inet 10.10.73.24  netmask 255.255.255.0  broadcast 10.10.73.255
+   inet6 fe80::20a:f7ff:feba:c980  prefixlen 64  scopeid 0x20<link>
+   ether 00:0a:f7:ba:c9:80  txqueuelen 1000  (Ethernet)
+   RX packets 11251336  bytes 196755808380 (196.7 GB)
+   RX errors 0  dropped 0  overruns 0  frame 0
+   TX packets 11875794  bytes 4220061188 (4.2 GB)
+   TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
 .. image:: images/opengnsys_fake_computer.png
 
@@ -117,10 +118,10 @@ Our images boots ok, but our opengnsys instance doesn't detect the virtual disk.
 
 .. prompt:: bash $
 
-# Listar dispositivo para los discos duros (tipos: 3=hd, 8=sd 253=vda). inLab 2018
-ALLDISKS=$(awk '($1==3 || $1==8 || $1==253) && $4!~/[0-9]/ {printf "/dev/%s ",$4}' /proc/partitions)
-VOLGROUPS=$(vgs -a --noheadings 2>/dev/null | awk '{printf "/dev/%s ",$1}')
-ALLDISKS="$ALLDISKS $VOLGROUPS"
+   # Listar dispositivo para los discos duros (tipos: 3=hd, 8=sd 253=vda). inLab 2018
+   ALLDISKS=$(awk '($1==3 || $1==8 || $1==253) && $4!~/[0-9]/ {printf "/dev/%s ",$4}' /proc/partitions)
+   VOLGROUPS=$(vgs -a --noheadings 2>/dev/null | awk '{printf "/dev/%s ",$1}')
+   ALLDISKS="$ALLDISKS $VOLGROUPS"
 
 
 This patch adds vda disk detection to the ``ogDiskToDev`` function. (minor 253 -> vda devices). This problem was fixed in later versions.
