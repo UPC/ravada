@@ -72,6 +72,7 @@ Now, we mount the qcow2 file in your system, to dump it.
 Now, whe can create the partition structure of your disk. After create it, this is the result: 
 
 .. prompt:: bash $
+
    fdisk /dev/nbd0 
    Disk /dev/nbd0: 90 GiB, 96636764160 bytes, 188743680 sectors
    Units: sectors of 1 * 512 = 512 bytes
