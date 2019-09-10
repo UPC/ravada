@@ -94,7 +94,7 @@ Partitioning
 
 The setup script will ask the disk
 
-.. prompt::
+.. prompt:: bash
 
     Available disks are:
     vda
