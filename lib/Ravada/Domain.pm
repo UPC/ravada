@@ -1880,6 +1880,8 @@ sub clone {
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
+    push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
+    push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
@@ -1937,6 +1939,7 @@ sub _copy_clone($self, %args) {
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
+        ,from_pool => 0
         ,@copy_arg
     );
     my @volumes = $self->list_volumes_info(device => 'disk');
@@ -3737,6 +3740,7 @@ sub _search_pool_clone($self, $user) {
         if !$self->pools;
 
     my ($clone_down, $clone_free_up, $clone_free_down);
+    my ($clones_in_pool, $clones_used) = (0,0);
     for my $current ( $self->clones) {
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
@@ -3747,6 +3751,7 @@ sub _search_pool_clone($self, $user) {
         if ( $current->{id_owner} == $user->id ) {
             $clone_down = $current;
         } elsif ($current->{is_pool}) {
+            $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
             if(!$clone->client_status || $clone->client_status eq 'disconnected') {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
@@ -3754,13 +3759,16 @@ sub _search_pool_clone($self, $user) {
                 } else {
                     $clone_free_down = $current;
                 }
+            } else {
+                $clones_used++;
             }
         }
     }
 
 
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
-    confess "Error: no free clones in pool for ".$self->name
+    die "Error: no free clones in pool for ".$self->name
+        .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
         if !$clone_data;
 
     my $clone = Ravada::Domain->open($clone_data->{id});

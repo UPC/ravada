@@ -375,6 +375,7 @@ sub _around_create_domain {
      my $active = delete $args{active};
        my $name = delete $args{name};
        my $swap = delete $args{swap};
+       my $from_pool = delete $args{from_pool};
 
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
@@ -391,6 +392,11 @@ sub _around_create_domain {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
         $volatile = 1 if $base->volatile_clones;
+        if ($add_to_pool) {
+            confess "Error: you can't add to pool and also pick from pool" if $from_pool;
+            $from_pool = 0;
+        }
+        $from_pool = 1 if !defined $from_pool && $base->pools();
     }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
@@ -410,6 +416,8 @@ sub _around_create_domain {
     $args_create{listen_ip} = $self->listen_ip($remote_ip);
     $args_create{spice_password} = $self->_define_spice_password($remote_ip);
     $self->_pre_create_domain(%args_create);
+
+    return $base->_search_pool_clone($owner) if $from_pool;
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
@@ -673,7 +681,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
