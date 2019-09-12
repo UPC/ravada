@@ -25,8 +25,14 @@ sub test_download {
         return;
     }
     is($@,'');
-    unlink($iso->{device}) or die "$! $iso->{device}"
-        if $clean && $iso->{device} && -e $iso->{device};
+    if ($clean && $iso->{device}) {
+        unlink($iso->{device}) or die "$! $iso->{device}"
+            if -e $iso->{device};
+        my $sth = connector->dbh->prepare(
+        "UPDATE iso_images set device=NULL WHERE id=?"
+        );
+        $sth->execute($id_iso);
+    }
     confess "Missing name in ".Dumper($iso) if !$iso->{name};
     diag("Testing download $iso->{name}");
     my $req1 = Ravada::Request->download(
