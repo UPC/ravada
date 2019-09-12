@@ -92,6 +92,38 @@ sub _set_clones_client_status($base) {
     $sth->finish;
 }
 
+sub test_user_create($base, $n_start) {
+    $base->is_public(1);
+    my $user = create_user('kevin','carter');
+    my @clones = $base->clones();
+    wait_request();
+    _remove_enforce_limits();
+    _set_clones_client_status($base);
+
+    my $req = Ravada::Request->create_domain(
+                id_owner => $user->id
+             ,start => 1
+             ,name => new_domain_name()
+           ,id_base => $base->id
+         ,remote_ip => '1.2.3.4'
+    );
+    ok($req);
+    wait_request(debug => 0,skip => 'enforce_limits');
+    _remove_enforce_limits();
+    is($req->status,'done');
+    is($req->error,'');
+
+    my @clones2 = $base->clones();
+    is(scalar(@clones2), scalar(@clones));
+
+    my ($clone) = grep { $_->{id_owner} == $user->id } @clones2;
+    ok($clone,"Expecting clone that belongs to ".$user->name);
+    like($clone->{client_status},qr'^1.2.3.4$', $clone->{name}) or exit;
+    is($clone->{is_pool},1) or exit;
+
+    $user->remove();
+}
+
 sub test_user($base, $n_start) {
     # TODO : test $domain->_data('comment');
     $base->is_public(1);
@@ -176,7 +208,7 @@ sub test_clone_regular($base, $add_to_pool) {
     );
     ok($req) or exit;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->status,'done');
     is($req->error,'');
 
@@ -195,7 +227,7 @@ sub test_clone_regular($base, $add_to_pool) {
         ,from_pool => 0
     );
     ok($req) or exit;
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->status,'done');
     is($req->error,'') or exit;
 
@@ -246,7 +278,7 @@ sub test_no_pool($vm) {
 
     $clone->remove(user_admin) if $clone;
     $base->remove(user_admin);
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 }
 
 init();
@@ -284,6 +316,7 @@ for my $vm_name (reverse vm_names() ) {
         test_active($domain, $n_start);
 
         test_user($domain, $n_start);
+        test_user_create($domain, $n_start);
 
         # add the clone to the pool => 1 <=
         test_clone_regular($domain   , 1);
