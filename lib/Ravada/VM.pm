@@ -362,6 +362,7 @@ sub _around_create_domain {
     my $self = shift;
     my %args = @_;
     my $remote_ip = delete $args{remote_ip};
+    my $add_to_pool = delete $args{add_to_pool};
     my %args_create = %args;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
@@ -400,6 +401,12 @@ sub _around_create_domain {
     confess "ERROR: Base ".$base->name." is private"
         if !$owner->is_admin && $base && !$base->is_public();
 
+    if ($add_to_pool) {
+        confess "Error: This machine can only be added to a pool if it is a clone"
+            if !$base;
+        confess("Error: Requested to add a clone for the pool but this base has no pools")
+            if !$base->pools;
+    }
     $args_create{listen_ip} = $self->listen_ip($remote_ip);
     $args_create{spice_password} = $self->_define_spice_password($remote_ip);
     $self->_pre_create_domain(%args_create);
@@ -432,6 +439,7 @@ sub _around_create_domain {
     $domain->info($owner);
     $domain->display($owner)    if $domain->is_active;
 
+    $domain->is_pool(1) if $add_to_pool;
     return $domain;
 }
 

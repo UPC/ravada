@@ -2100,7 +2100,7 @@ sub copy_machine {
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
 
-    my @create_args = ( no_pool => 1 );
+    my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     my @reqs;
     if ($number == 1 ) {

@@ -637,7 +637,7 @@ sub wait_request {
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
-                is($req->error,'') if $check_error;
+                is($req->error,'') or confess if $check_error;
             }
         }
         my $post = join(".",_list_requests);
