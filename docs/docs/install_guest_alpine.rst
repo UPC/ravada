@@ -18,14 +18,18 @@ You can increase it later if you want to keep it slim.
 At least 1GB disk drive is required. A swap partition should also be
 added when creating the virtual machine.
 
-.. image:: images/create_alpine.png
+.. figure:: images/create_alpine.png
+
+   Create Alpine Virtual Machine
 
 
 When the machine is created start it from Admin Tools menu, click on
 Virtual Machines to see a list. At the right there is a bunch of buttons.
 Click on *view* to start and access the virtual machine console.
 
-.. image:: images/create_alpine_view.png
+.. figure:: images/create_alpine_view.png
+
+   Start and View Virtual Machine
 
 Login
 -----
@@ -40,7 +44,7 @@ are the default settings we use in a Ravada-KVM Virtual Machine.
 
 Start the setup typing:
 
-.. prompt:: bash \#
+.. prompt:: bash #
 
     setup-alpine
 
@@ -75,8 +79,8 @@ know the actual timezone, type it.
 Proxy
 ~~~~~
 
-If you are downloading packages through a proxy tell it know, you probably should keep
-it *none*.
+If you are downloading packages through a proxy tell it now, you probably should keep
+it to *none*.
 
 Mirror
 ~~~~~~
@@ -94,14 +98,14 @@ Partitioning
 
 The setup script will ask the disk
 
-.. prompt::
+.. code-block::
 
     Available disks are:
-    vda
-    vdb
-    Which disk(s) would you like to use? [none] *vda*
-    How would you like to use them ? [?] *sys*
-    WARNING: Erase the above disk(s) and continue [y/N]: *y*
+      vda
+      vdb
+    Which disk(s) would you like to use? [none] vda
+    How would you like to use them ? [?] sys
+    WARNING: Erase the above disk(s) and continue [y/N]: y
 
 Now the setup process will install minimal applications to start the server.
 
@@ -111,13 +115,14 @@ Installing more software
 You should at least install these applications:
 
 
-.. prompt:: bash
+.. prompt:: bash #
 
     apk add qemu-guest-agent acpi
 
 
+
 Shutdown and restart
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 Type these commands from the console to restart and shutdown the server:
 
@@ -130,6 +135,80 @@ Type these commands from the console to restart and shutdown the server:
 
     poweroff
 
+Advanced Settings
+-----------------
+
+Add a swap partition
+~~~~~~~~~~~~~~~~~~~~
+
+If you added a swap volume in the Ravada installation form you must define it
+later after the Alpine setup script.
+
+Define de partition
+```````````````````
+
+The swap device will be probably in /dev/vdb , check first with df it is
+not mounted already. If it is not shown it is ok.
+
+Using *fdisk* you should find an empty disk and you must create the
+partitions like this:
+
+.. code-block::
+
+    localhost:~# fdisk /dev/vdb
+    Command (m for help): n
+    Command action
+       e   extended
+       p   primary partition (1-4)
+    p
+    Partition number (1-4): 1
+    First cylinder (1-2080, default 1):
+    Using default value 1
+    Last cylinder or +size or +sizeM or +sizeK (1-2080, default 2080):
+    Using default value 2080
+    Command (m for help): w
+    The partition table has been altered.
+    Calling ioctl() to re-read partition table
+
+Create the swap
+```````````````
+
+.. prompt:: bash #
+
+    mkswap /dev/vdb1
 
 
+Test it
+```````
+Type this to start using the swap space:
+
+.. prompt:: bash #
+
+   swapon -a
+
+This command will check the memory utilization, at the bottom there should be
+now a swap entry:
+
+.. prompt:: bash #
+
+   free
+
+.. code::
+
+                 total       used       free     shared    buffers     cached
+    Mem:       1031924      48896     983028        100       2884      10964
+    -/+ buffers/cache:      35048     996876
+    Swap:      1262140          0    1262140
+
+
+Add it to the system
+````````````````````
+
+.. prompt:: bash #
+
+    echo "/dev/vdb1       swap    swap    defaults 0 0" >> /dev/fstab
+
+
+Now the swap space is configured, after rebooting the system it should show typing
+the *free* command.
 
