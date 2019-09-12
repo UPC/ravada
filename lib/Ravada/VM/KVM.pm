@@ -359,24 +359,23 @@ sub _refresh_isos($self) {
             next;
         }
         next if $row->{device};
+        next if !$row->{url};
 
+        my $file_re = $row->{file_re};
         my ($file);
         ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
         $file = $row->{rename_file} if $row->{rename_file};
-        my $file_re = $row->{file_re};
 
-        next if $row->{device};
-        if ($file) {
-            my $iso_file = $self->search_volume_path($file);
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-            }
+        $file_re = "^$file\$" if $file;
+
+        if (!$file_re) {
+            warn "Error: ISO mismatch ".Dumper($row);
+            next;
         }
-        if (!$row->{device} && $file_re) {
-            my $iso_file = $self->search_volume_path_re(qr($file_re));
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-            }
+
+        my $iso_file = $self->search_volume_path_re(qr($file_re));
+        if ($iso_file) {
+            $row->{device} = $iso_file;
         }
         $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
     }
@@ -1055,7 +1054,13 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
             if (!$iso->{$check} && $iso->{"${check}_url"}) {
-                my ($url_path,$url_file) = $url =~ m{(.*)/(.*)};
+                my ($url_path,$url_file);
+                if ( $url =~ m{/$} ) {
+                    $url_path = $url;
+                    $url_file = $iso->{filename};
+                } else {
+                    ($url_path,$url_file) = $url =~ m{(.*)/(.+)};
+                }
                 $iso->{"${check}_url"} =~ s/(.*)\$url(.*)/$1$url_path$2/;
                 $self->_fetch_this($iso,$check,$url_file);
             }
@@ -1143,14 +1148,14 @@ sub _check_signature($file, $type, $expected) {
 
 sub _download_file_external($self, $url, $device, $verbose=1) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
-    if ( $url =~ m{/$} ) {
-        my ($filename) = $device =~ m{.*/(.*)};
-        $url = "$url$filename";
-    }
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
         confess "No match for $url" if !scalar @found;
         $url = $found[-1];
+    }
+    if ( $url =~ m{/$} ) {
+        my ($filename) = $device =~ m{.*/(.*)};
+        $url = "$url$filename";
     }
     confess "ERROR: wget missing"   if !$WGET;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
@@ -1202,8 +1207,8 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
             $sth->execute($volume->get_path, $row->{id});
         }
     }
-    confess Dumper($row) if $row->{rename_file} && $row->{device}
-        && $row->{rename_file} =~ /^xubuntu/ && $row->{device} =~ m{/ubuntu};
+    my $rename_file = $row->{rename_file};
+
     return $row;
 }
 
@@ -1398,15 +1403,16 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     confess "Error: missing file or filename ".Dumper($row) if !$file;
 
-    $file=~ s{.*/(.*)}{$1} if $file =~ m{/};
+    $file=~ s{.*/(.+)}{$1} if $file =~ m{/} && $file !~ m{/$};
 
-    my ($url, $file2) = $row->{url} =~ m{(.*)/(.*)};
+    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)};
+    $url = $row->{url} if $row->{url} =~ m{/$};
     my $url_orig = $row->{"${type}_url"};
-    $file = $file2 if $file2 && $file2 !~ /\*|\^/;
+    $file = $file2 if $file2 && $file2 !~ /\*|\^/ && $file2 !~ m{/$};
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
-    confess "error " if $url_orig =~ /\$/;
 
+    confess "error: file missing '$file' ".Dumper($row) if $file =~ m{/$};
     confess "error " if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);

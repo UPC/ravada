@@ -179,6 +179,15 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
+        arch_1909 => {
+                    name => 'Arch Linux 19.09'
+            ,description => 'Arch Linux 19.09.01 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'http://mirrors.evowise.com/archlinux/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
+                ,md5_url => '$url/md5sums.txt'
+        },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
@@ -334,7 +343,7 @@ sub _update_isos {
         ,xubuntu_beaver_32 => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'amd64'
+            ,arch => 'i386'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,md5_url => '$url/../MD5SUMS'
