@@ -1551,7 +1551,7 @@ sub create_domain {
     my $start = $args{start};
     my $id_base = $args{id_base};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -2418,7 +2418,7 @@ sub _cmd_manage_pools($self, $request) {
 }
 
 sub _pool_create_clones($self, $domain, $number, $request) {
-    my @arg_clone = ( no_pool => 1 );
+    my @arg_clone = ( );
     $request->status("cloning $number");
     if (!$domain->is_base) {
 	my @requests = $domain->list_requests();
@@ -2434,7 +2434,7 @@ sub _pool_create_clones($self, $domain, $number, $request) {
         uid => $request->args('uid')
         ,id_domain => $domain->id
         ,number => $number
-        ,is_pool => 1
+        ,add_to_pool => 1
         ,start => 1
         ,@arg_clone
     );
@@ -2489,12 +2489,16 @@ sub _cmd_create{
 
     if ( $request->defined_arg('id_base') ) {
         my $base = Ravada::Domain->open($request->args('id_base'));
-        if ( $base->pools && !$request->defined_arg('no_pools') ) {
-            $request->{args}->{id_domain} = delete $request->{args}->{id_base};
-            $request->{args}->{uid} = delete $request->{args}->{id_owner};
-            my $clone = $self->_cmd_clone($request);
-            $request->id_domain($clone->id);
-            return $clone;
+        if ( $request->defined_arg('pool') ) {
+            if ( $base->pools ) {
+                $request->{args}->{id_domain} = delete $request->{args}->{id_base};
+                $request->{args}->{uid} = delete $request->{args}->{id_owner};
+                my $clone = $self->_cmd_clone($request);
+                $request->id_domain($clone->id);
+                return $clone;
+            } else {
+                confess "Error: this base has no pools";
+            }
         }
     }
 
@@ -2646,10 +2650,8 @@ sub _cmd_open_iptables {
 }
 
 sub _cmd_clone($self, $request) {
-    my $number = $request->defined_arg('number');
-    my $no_pool = $request->defined_arg('no_pool');
 
-    return _req_clone_many($self, $request) if $number;
+    return _req_clone_many($self, $request) if $request->defined_arg('number');
 
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
@@ -2665,18 +2667,6 @@ sub _cmd_clone($self, $request) {
     }
 
     my $name = ( $request->defined_arg('name') or $domain->name."-".$user->name );
-    if ( $domain->pools && !$no_pool ) {
-        my $clone = $domain->_search_pool_clone($user);
-        my $remote_ip = $request->defined_arg('remote_ip');
-        my $start = $request->defined_arg('start');
-        if ($start || $clone->is_active) {
-            $clone->start(user => $user, remote_ip => $remote_ip);
-            $clone->_data('client_status', 'connecting ...');
-            $clone->_data('client_status_time_checked',time);
-            Ravada::Request->manage_pools( uid => Ravada::Utils::user_daemon->id);
-        }
-        return $clone;
-    }
 
     my $clone = $domain->clone(
         name => $name

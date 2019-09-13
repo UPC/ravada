@@ -1843,17 +1843,30 @@ sub clone {
     confess "ERROR: Clones can't be created in readonly mode"
         if $self->_vm->readonly();
 
-    return $self->_copy_clone(@_)   if $self->id_base();
-
+    my $add_to_pool = delete $args{add_to_pool};
+    my $from_pool = delete $args{from_pool};
     my $remote_ip = delete $args{remote_ip};
     my $request = delete $args{request};
     my $memory = delete $args{memory};
     my $start = delete $args{start};
-    my $is_pool = delete $args{is_pool};
-    my $no_pool = delete $args{no_pool};
+
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
+
+    confess "Error: This base has no pools"
+        if $add_to_pool && !$self->pools;
+
+    $from_pool = 1 if !defined $from_pool && !$add_to_pool && $self->pools;
+
+    confess "Error: you can't add to pool if you pick from pool"
+        if $from_pool && $add_to_pool;
+
+    return $self->_clone_from_pool(@_) if $from_pool;
+
+    my %args2 = @_;
+    delete $args2{from_pool};
+    return $self->_copy_clone(%args2)   if $self->id_base();
 
     my $uid = $user->id;
 
@@ -1867,6 +1880,8 @@ sub clone {
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
+    push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
+    push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
@@ -1882,7 +1897,23 @@ sub clone {
         ,id_owner => $uid
         ,@args_copy
     );
-    $clone->is_pool(1) if $is_pool;
+    $clone->is_pool(1) if $add_to_pool;
+    return $clone;
+}
+
+sub _clone_from_pool($self, %args) {
+
+    my $user = delete $args{user};
+    my $remote_ip = delete $args{remote_ip};
+    my $start = delete $args{start};
+
+    my $clone = $self->_search_pool_clone($user);
+    if ($start || $clone->is_active) {
+        $clone->start(user => $user, remote_ip => $remote_ip);
+        $clone->_data('client_status', 'connecting ...');
+        $clone->_data('client_status_time_checked',time);
+        Ravada::Request->manage_pools( uid => Ravada::Utils::user_daemon->id);
+    }
     return $clone;
 }
 
@@ -1891,6 +1922,7 @@ sub _copy_clone($self, %args) {
     my $user = delete $args{user} or confess "ERROR: Missing user";
     my $memory = delete $args{memory};
     my $request = delete $args{request};
+    my $add_to_pool = delete $args{add_to_pool};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -1907,6 +1939,7 @@ sub _copy_clone($self, %args) {
         name => $name
         ,id_base => $base->id
         ,id_owner => $user->id
+        ,from_pool => 0
         ,@copy_arg
     );
     my @volumes = $self->list_volumes_info(device => 'disk');
@@ -1918,6 +1951,7 @@ sub _copy_clone($self, %args) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
+    $copy->is_pool(1) if $add_to_pool;
     return $copy;
 }
 
@@ -3556,7 +3590,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start no_pool)) {
+    for (qw(is_pool start add_to_pool from_pool)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
@@ -3706,6 +3740,7 @@ sub _search_pool_clone($self, $user) {
         if !$self->pools;
 
     my ($clone_down, $clone_free_up, $clone_free_down);
+    my ($clones_in_pool, $clones_used) = (0,0);
     for my $current ( $self->clones) {
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
@@ -3716,6 +3751,7 @@ sub _search_pool_clone($self, $user) {
         if ( $current->{id_owner} == $user->id ) {
             $clone_down = $current;
         } elsif ($current->{is_pool}) {
+            $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
             if(!$clone->client_status || $clone->client_status eq 'disconnected') {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
@@ -3723,6 +3759,8 @@ sub _search_pool_clone($self, $user) {
                 } else {
                     $clone_free_down = $current;
                 }
+            } else {
+                $clones_used++;
             }
         }
     }
@@ -3730,6 +3768,7 @@ sub _search_pool_clone($self, $user) {
 
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
     die "Error: no free clones in pool for ".$self->name
+        .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
         if !$clone_data;
 
     my $clone = Ravada::Domain->open($clone_data->{id});
