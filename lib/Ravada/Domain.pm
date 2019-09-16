@@ -2274,19 +2274,35 @@ sub _open_exposed_port($self, $internal_port, $restricted) {
     confess "Error: I can't get the internal IP of ".$self->name
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    $self->_vm->iptables(
-                t => 'nat'
-                ,A => 'PREROUTING'
-                ,p => 'tcp'
-                ,d => $local_ip
-                ,dport => $public_port
-                ,j => 'DNAT'
-                ,'to-destination' => "$internal_ip:$internal_port"
-    ) if !$>;
+    if ( !$> ) {
+        $self->_vm->iptables(
+            t => 'nat'
+            ,A => 'PREROUTING'
+            ,p => 'tcp'
+            ,d => $local_ip
+            ,dport => $public_port
+            ,j => 'DNAT'
+            ,'to-destination' => "$internal_ip:$internal_port"
+        ) if !$>;
 
-    if ($restricted) {
-        $self->_open_exposed_port_client($public_port);
+        if ($restricted) {
+            $self->_open_exposed_port_client($public_port);
+        }
+        $self->_open_iptables_state();
     }
+}
+
+sub _open_iptables_state($self) {
+    my $local_net = $self->ip;
+    $local_net =~ s{(.*)\.\d+}{$1.0/24};
+
+    $self->_vm->iptables_unique(
+        I => 'FORWARD'
+        ,m => 'state'
+        ,d => $local_net
+        ,state => 'NEW,RELATED,ESTABLISHED'
+        ,j => 'ACCEPT'
+    );
 }
 
 sub _open_exposed_port_client($self, $public_port) {
