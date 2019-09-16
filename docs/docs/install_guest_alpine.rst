@@ -97,11 +97,11 @@ Partitioning
 ~~~~~~~~~~~~
 
 The setup script will ask the disk
-
+::
 
     Available disks are:
-      vda
-      vdb
+    - vda
+    - vdb
     Which disk(s) would you like to use? [none] vda
     How would you like to use them ? [?] sys
     WARNING: Erase the above disk(s) and continue [y/N]: y
@@ -151,6 +151,7 @@ not mounted already. If it is not shown it is ok.
 
 Using *fdisk* you should find an empty disk and you must create the
 partitions like this:
+::
 
     localhost:~# fdisk /dev/vdb
     Command (m for help): n
