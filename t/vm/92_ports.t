@@ -82,6 +82,7 @@ sub test_one_port($vm) {
 
     ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or exit;
 
+
     #################################################################
     #
     # shutdown
@@ -569,7 +570,6 @@ sub test_restricted($vm, $restricted) {
             , jump => 'DROP'
     );
 
-
     if ($restricted) {
         ok($n_rule,"Expecting rule for $remote_ip -> $local_ip:$public_port") or exit;
         ok($n_rule_drop,"Expecting drop rule for any -> $local_ip:$public_port") or exit;
@@ -577,6 +577,20 @@ sub test_restricted($vm, $restricted) {
         ok(!$n_rule,"Expecting no rule for $remote_ip -> $local_ip:$public_port") or exit;
         ok(!$n_rule_drop,"Expecting drop no rule for any -> $local_ip:$public_port") or exit;
     }
+
+    # check for FORWARD
+    my $local_net = $domain->ip;
+    $local_net =~ s/\.\d+$//;
+    $local_net = "$local_net.0/24";
+    ($n_rule)
+        = search_iptable_remote(local_ip => "$local_ip/32"
+            , chain => 'FORWARD'
+            , node => $vm
+            , jump => 'ACCEPT'
+            , local_ip => $local_net
+    );
+    ok($n_rule,"Expecting rule in forward to -> $local_net") or exit;
+
     $domain->shutdown_now(user_admin);
     ($n_rule)
         = search_iptable_remote(
@@ -717,7 +731,10 @@ sub _wait_requests($domain) {
 
 ##############################################################
 
-clean();
+#clean();
+
+init();
+Test::Ravada::_clean_db();
 
 add_network_10(0);
 
