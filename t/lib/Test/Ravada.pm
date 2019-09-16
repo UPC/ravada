@@ -165,9 +165,14 @@ sub create_domain {
 
     my $name = new_domain_name();
 
+    my $domain;
+    eval { $domain = $vm->import_domain($name, $user) };
+    die $@ if $@ && $@ !~ /Domain not found/;
+
+    return $domain if $domain;
+
     my %arg_create = (id_iso => $id_iso);
 
-    my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
@@ -877,8 +882,6 @@ sub search_iptable_remote {
     my $chain = (delete $args{chain} or $CHAIN);
     my $to_dest = delete $args{'to-destination'};
 
-    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
-
     my $iptables = $node->iptables_list();
 
     $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
@@ -913,6 +916,10 @@ sub flush_rules_node($node) {
     $node->create_iptables_chain($CHAIN);
     $node->run_command("/sbin/iptables","-F", $CHAIN);
     $node->run_command("/sbin/iptables","-X", $CHAIN);
+
+    # flush forward too. this is only supposed to run on test servers
+    $node->run_command("/sbin/iptables","-F", 'FORWARD');
+
 }
 
 sub flush_rules {
