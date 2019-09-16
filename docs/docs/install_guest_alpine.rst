@@ -98,7 +98,6 @@ Partitioning
 
 The setup script will ask the disk
 
-.. code-block::
 
     Available disks are:
       vda
@@ -152,8 +151,6 @@ not mounted already. If it is not shown it is ok.
 
 Using *fdisk* you should find an empty disk and you must create the
 partitions like this:
-
-.. code-block::
 
     localhost:~# fdisk /dev/vdb
     Command (m for help): n
