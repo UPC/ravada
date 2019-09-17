@@ -1294,7 +1294,7 @@ sub _connect_dbh {
         sleep 1;
         warn "Try $try $@\n";
     }
-    die ($@ or "Can't connect to $driver $db at $host");
+    confess ($@ or "Can't connect to $driver $db at $host");
 }
 
 =head2 display_ip
@@ -1547,11 +1547,12 @@ sub create_domain {
         }
     }
     my $vm_name = delete $args{vm};
+    delete $args{uid};
 
     my $start = $args{start};
     my $id_base = $args{id_base};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm iso_name));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -2944,14 +2945,14 @@ sub _cmd_change_hardware {
     );
 }
 
-sub _cmd_shutdown {
+sub _cmd_shutdown_machine {
     my $self = shift;
     my $request = shift;
 
     my $uid = $request->args('uid');
     my $name = $request->defined_arg('name');
     my $id_domain = $request->defined_arg('id_domain');
-    my $timeout = ($request->args('timeout') or 60);
+    my $timeout = ($request->defined_arg('timeout') or 60);
     my $id_vm = $request->defined_arg('id_vm');
 
     confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
@@ -3199,9 +3200,10 @@ sub _cmd_list_network_interfaces($self, $request) {
 }
 
 sub _cmd_list_isos($self, $request){
-    my $vm_type = $request->args('vm_type');
-   
-    my $vm = Ravada::VM->open( type => $vm_type );
+    my $vm_type = $request->defined_arg('vm_type');
+    my $vm = $self->vm->[0];
+    $vm = Ravada::VM->open( type => $vm_type ) if $vm_type;
+
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
@@ -3422,15 +3424,21 @@ sub _req_method {
 
           clone => \&_cmd_clone
          ,start => \&_cmd_start
+         ,start_domain => \&_cmd_start
   ,start_clones => \&_cmd_start_clones
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
+        ,create_domain => \&_cmd_create
+
         ,remove => \&_cmd_remove
+ ,remove_domain => \&_cmd_remove
+
         ,resume => \&_cmd_resume
        ,dettach => \&_cmd_dettach
        ,cleanup => \&_cmd_cleanup
       ,download => \&_cmd_download
-      ,shutdown => \&_cmd_shutdown
+      ,shutdown => \&_cmd_shutdown_machine
+      ,shutdown_domain => \&_cmd_shutdown_machine
      ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,screenshot => \&_cmd_screenshot

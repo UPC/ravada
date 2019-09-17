@@ -33,7 +33,7 @@ my $COUNT = 0;
 our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
-our $args_manage = { name => 1 , uid => 1 };
+our $args_manage = { name => 1 , uid => 1, id_domain => 1 };
 our $args_prepare = { id_domain => 1 , uid => 1 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
@@ -45,6 +45,7 @@ our %VALID_ARG = (
            ,swap => 2
          ,id_iso => 2
          ,iso_file => 2
+         ,iso_name => 2
         ,id_base => 2
        ,id_owner => 1
     ,id_template => 2
@@ -60,8 +61,11 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
-    ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
+    ,shutdown => {
+        alias => 'shutdown_domain'
+        ,args => { name => 2, id_domain => 1, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
+    },
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
@@ -107,10 +111,10 @@ our %VALID_ARG = (
     ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
     #isos
-    ,list_isos => { vm_type => 1 }
+    ,list_isos => { vm_type => 2 }
 
     ,manage_pools => { uid => 2, id_domain => 2 }
-    ,ping_backend => {}
+    ,ping_backend => { uid => 2 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -405,23 +409,80 @@ sub _check_args {
     confess "Odd number of elements ".Dumper(\@_)   if scalar(@_) % 2;
     my $args = { @_ };
 
-    my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request)) {
+    my $valid_args = valid_args($sub);
+    for (qw(at after_request uid)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
     confess "Unknown method $sub" if !$valid_args;
     for (keys %{$args}) {
         confess "Invalid argument $_ , valid args ".Dumper($valid_args)
-            if !$valid_args->{$_};
+        if !$valid_args->{$_};
     }
 
-    for (keys %{$VALID_ARG{$sub}}) {
-        next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
+    if (exists $args->{machine} && $VALID_ARG{$sub}->{id_domain}) {
+        my $id_domain = _search_id_domain($args->{machine});
+
+        die "Error: provided id_domain=$args->{id_domain} and machine=$args->{machine}. "
+        ." But $args->{machine} has a different id=$id_domain\n"
+        if exists $args->{id_domain} && $args->{id_domain}
+        && $args->{id_domain} ne $id_domain;
+
+        die "Error: unknown machine '$args->{machine}'\n" if !defined $id_domain;
+        $args->{id_domain} = $id_domain;
+
+    }
+    my $valid = valid_args($sub);
+    for (keys %$valid) {
+        next if $valid->{$_} == 2; # optional arg
         confess "Missing argument $_"   if !exists $args->{$_};
     }
+    delete $args->{machine} if exists $args->{machine} && exists $args->{id_domain};
 
     return $args;
+}
+
+sub _valid_args_common($command_req) {
+    my %valid;
+    my $found;
+    if ( exists $VALID_ARG{$command_req}) {
+        %valid = %{$VALID_ARG{$command_req}};
+        %valid = %{$valid{args}} if exists $valid{args};
+        $found++;
+    } else {
+        for my $command (keys %VALID_ARG) {
+            if ( exists $VALID_ARG{$command}->{alias}
+                    && $VALID_ARG{$command}->{alias} eq $command_req ) {
+                %valid = %{$VALID_ARG{$command}->{args}};
+                $found++;
+                last;
+            }
+        }
+    }
+    confess "Error: Unknown command '$command_req'\n" if !$found;
+    $valid{at} = 2;
+    $valid{after_request} = 2;
+    return \%valid;
+}
+
+sub valid_args_cli($command) {
+    my $valid = _valid_args_common($command);
+
+    if (exists $valid->{id_domain}) {
+        $valid->{machine} = $valid->{id_domain};
+        delete $valid->{id_domain};
+    }
+    return $valid;
+}
+
+sub valid_args($command=undef) {
+    return %VALID_ARG if !defined $command;
+    my $valid = _valid_args_common($command);
+    if (exists $valid->{id_domain}) {
+        $valid->{machine} = 2;
+        $valid->{id_domain} = 2;
+    }
+    return $valid;
 }
 
 =head2 force_shutdown_domain
@@ -468,7 +529,7 @@ sub shutdown_domain {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(command => 'shutdown' , args => $args);
+    return $self->_new_request(command => 'shutdown_domain' , args => $args);
 }
 
 sub new_request($self, $command, @args) {
@@ -643,6 +704,17 @@ sub _search_domain_name {
     $sth->execute($domain_id);
     return $sth->fetchrow;
 }
+
+sub _search_id_domain($machine) {
+    return $machine if $machine =~ /^\d+$/;
+
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains where name=?");
+    $sth->execute($machine);
+    my $id = $sth->fetchrow;
+    return $id;
+}
+
 
 sub _send_message {
     my $self = shift;

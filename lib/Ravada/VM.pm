@@ -368,6 +368,7 @@ sub _around_create_domain {
     my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
 
     my $base;
+    my $iso_name = delete $args{iso_name};
     my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
      my $id_iso = delete $args{id_iso};
@@ -404,6 +405,16 @@ sub _around_create_domain {
     $args_create{spice_password} = $self->_define_spice_password($remote_ip);
     $self->_pre_create_domain(%args_create);
 
+    if ($iso_name) {
+        my $iso = $self->search_iso_image($iso_name);
+        die "Error: iso '$iso_name' not found" if !$iso;
+
+        confess "Error: requested both id_iso=$id_iso && iso_name=$iso_name (id=$iso->{id})"
+            if $id_iso && $iso->{id} != $id_iso;
+
+        delete $args_create{iso_name};
+        $args_create{id_iso} = $iso->{id};
+    }
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
@@ -433,6 +444,15 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     return $domain;
+}
+
+sub search_iso_image($self, $name) {
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name like ?");
+    $sth->execute($name);
+    my $row = $sth->fetchrow_hashref;
+    return $row;
+
 }
 
 sub _define_spice_password($self, $remote_ip) {
