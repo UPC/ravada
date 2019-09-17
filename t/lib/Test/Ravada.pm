@@ -99,9 +99,11 @@ sub user_admin {
     my $login;
     my $admin_name = base_domain_name();
     my $admin_pass = "$$ $$";
+
     eval {
-        $login = Ravada::Auth::SQL->new(name => $admin_name );
+        $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
     };
+    warn $@ if $@ && $@ !~ /Login failed/i;
     $USER_ADMIN = $login if $login && $login->id;
     $USER_ADMIN = create_user($admin_name, $admin_pass,1)
         if !$USER_ADMIN;
@@ -176,7 +178,7 @@ sub create_domain {
                     , disk => 1024 * 1024 * 1024
            );
     };
-    is('',''.$@);
+    is(''.$@,'');
 
     return $domain;
 
@@ -217,18 +219,24 @@ sub new_volume_name($domain=undef) {
     return $name."_".$CONT_VOL++;
 }
 
-sub rvd_back($config=undef, $init=1) {
+sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     return $RVD_BACK            if $RVD_BACK && !$config;
 
     $RVD_BACK = 1;
     init($config or $DEFAULT_CONFIG) if $init;
 
+    my @connector;
+    @connector = ( connector => connector() ) if $sqlite;
+
     my $rvd = Ravada->new(
-            connector => connector()
+                @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
     );
+
+    $CONNECTOR = $rvd->connector if !$sqlite;
+
     $rvd->_install();
 
     user_admin();
@@ -250,7 +258,7 @@ sub rvd_front($config=undef) {
     return $RVD_FRONT;
 }
 
-sub init($config=undef) {
+sub init($config=undef,$sqlite=1) {
 
     if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
         $config = { vm => [ $config ] };
@@ -270,12 +278,14 @@ sub init($config=undef) {
         DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
     }
 
-    $Ravada::CONNECTOR = connector();
-    Ravada::Auth::SQL::_init_connector($CONNECTOR);
+    if ($sqlite) {
+        $Ravada::CONNECTOR = connector();
+        Ravada::Auth::SQL::_init_connector($CONNECTOR);
+    }
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-    rvd_back($config, 0)  if !$RVD_BACK;
+    rvd_back($config, 0, $sqlite)  if !$RVD_BACK;
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
@@ -547,6 +557,9 @@ sub remove_old_disks {
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
 
+    my $old_user = Ravada::Auth::SQL->new(name => $name);
+    $old_user->remove if $old_user;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
@@ -607,6 +620,7 @@ sub wait_request {
     }
     my $timeout = delete $args{timeout};
     my $request = ( delete $args{request} or [] );
+    $request = [$request] if $request && !ref($request);
 
     my $background = delete $args{background};
     $background = 1 if !defined $background;
@@ -628,11 +642,17 @@ sub wait_request {
         my $prev = join(".",_list_requests);
         my $done_count = scalar keys %done;
         $prev = '' if !defined $prev;
-        my @req = _list_requests();
+        $request = [$request] if $request && ref($request) !~ /ARRAY/;
+        my @req = @$request;
+        @req = _list_requests() if !scalar @req;
+
         rvd_back->_process_requests_dont_fork($debug) if !$background;
+        my $msg_wait = '';
         for my $req_id ( @req ) {
-            my $req = Ravada::Request->open($req_id);
+            my $req = $req_id;
+            $req = Ravada::Request->open($req_id) if $req_id =~ /^\d+$/;
             next if $skip{$req->command};
+            $msg_wait .= " ".$req->id."-".$req->command;
             if ( $req->status ne 'done' ) {
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
@@ -640,10 +660,15 @@ sub wait_request {
                 is($req->error,'') if $check_error;
             }
         }
+        diag("Waiting for request$msg_wait") if $msg_wait && time - $t0 > 5;;
         my $post = join(".",_list_requests);
         $post = '' if !defined $post;
         if ( $done_all ) {
             for my $req (@$request) {
+                if (!ref($req)) {
+                    confess if $req !~ /^\d+$/;
+                    $req = Ravada::Request->open($req);
+                }
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     diag("Waiting for request ".$req->id." ".$req->command);
@@ -653,7 +678,7 @@ sub wait_request {
         }
         return if $done_all && $prev eq $post && scalar(keys %done) == $done_count;;
         return if defined $timeout && time - $t0 >= $timeout;
-        sleep 1 if !$background;
+        sleep 1 if $background;
     }
 }
 
@@ -766,7 +791,14 @@ sub clean {
     shutdown_nodes();
 }
 
+sub _clean_db_mysql {
+    my $sth =$CONNECTOR->dbh->prepare("DELETE FROM domains where name like ?");
+    $sth->execute(base_domain_name."%");
+    $sth->finish;
+}
+
 sub _clean_db {
+    return _clean_db_mysql() if $CONNECTOR->{driver}->{driver} =~ /mysql/i;
     my $sth = $CONNECTOR->dbh->prepare(
         "DELETE FROM vms "
     );
@@ -862,7 +894,7 @@ sub search_id_iso {
     );
     $sth->execute("$name%");
     my ($id) = $sth->fetchrow;
-    die "There is no iso called $name%" if !$id;
+    confess "There is no iso called $name% ".Dumper($CONNECTOR) if !$id;
     return $id;
 }
 
