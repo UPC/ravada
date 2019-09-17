@@ -89,6 +89,40 @@ sub search_domain_db
     return $row;
 
 }
+sub test_new_domain_iso_name {
+    my $active = shift;
+
+    my $domain = $RAVADA->create_domain(name => new_domain_name
+        , iso_name => 'Alpine %'
+        , active => $active
+        , id_owner => $USER->id
+        , vm => $BACKEND
+        , disk => 1024 * 1024
+    );
+
+    ok($domain,"Expecting new domain");
+
+    $domain->remove(user_admin) if $domain;
+}
+
+sub test_new_domain_iso_name_req {
+
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain
+        (name => $name
+        , iso_name => 'Alpine %'
+        , id_owner => $USER->id
+        , vm => $BACKEND
+        , disk => 1024 * 1024
+    );
+    wait_request(request => $req, background => 0);
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain,"Expecting new domain");
+
+    $domain->remove(user_admin) if $domain;
+}
+
 
 sub test_new_domain {
     my $active = shift;
@@ -330,6 +364,10 @@ test_vm_kvm();
 
 remove_old_domains();
 remove_old_disks();
+
+test_new_domain_iso_name();
+test_new_domain_iso_name_req();
+
 test_domain();
 test_remove_corrupt_clone($vm);
 test_domain_with_iso();

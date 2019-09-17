@@ -85,7 +85,7 @@ sub test_start {
         $RAVADA->_process_all_requests_dont_fork(0);
     }
 
-    wait_request( background => $fork, check_error => 0 );
+    wait_request( background => $fork, check_error => 0, request => $req );
 
     ok($req->status eq 'done', "[$vm_name] Req ".$req->{id}." expecting status done, got ".$req->status);
     like($req->error , qr/unknown/i
@@ -176,7 +176,7 @@ sub test_screenshot {
 
     my $dont_fork = 1;
     rvd_back->process_all_requests(0,$dont_fork);
-    wait_request( background=> !$dont_fork );
+    wait_request( background=> !$dont_fork, request => $req );
     ok($req->status('done'),"Request should be done, it is ".$req->status);
     ok(!$req->error(''),"Error should be '' , it is ".$req->error);
 
@@ -209,7 +209,7 @@ sub test_screenshot_file {
 
     my $dont_fork = 1;
     rvd_back->process_all_requests(0,$dont_fork);
-    wait_request( background => !$dont_fork );
+    wait_request( background => !$dont_fork, request => $req );
 
     ok($req->status('done'),"Request should be done, it is ".$req->status);
     ok(!$req->error(),"Error should be '' , it is ".($req->error or ''));
