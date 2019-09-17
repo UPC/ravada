@@ -944,14 +944,17 @@ post '/request/(:name)/' => sub {
     my $c = shift;
 
     my $args = decode_json($c->req->body);
-    warn Dumper($args);
 
-    my $req = Ravada::Request->new_request(
-        $c->stash('name')
-        ,uid => $USER->id
-        ,%$args
-    );
-    return $c->render(json => { ok => 1 });
+    my $req;
+    eval {
+        $req = Ravada::Request->new_request(
+            $c->stash('name')
+            ,uid => $USER->id
+            ,%$args
+        );
+    };
+    return $c->render(json => { error => $@ }) if $@;
+    return $c->render(json => { request => $req->id });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -1683,7 +1686,8 @@ sub init {
     $home->detect();
 
     if (exists $ENV{MORBO_VERBOSE}
-        || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
+        || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
+                && $ENV{MOJO_MODE} =~ /devel/i )) {
             return if -e $home->rel_file("public");
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
