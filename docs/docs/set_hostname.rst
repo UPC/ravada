@@ -63,7 +63,6 @@ in */usr/local/bin/set_hostname.sh* as specified in the previous file.
 
 .. literalinclude:: set_hostname.sh
    :lineos:
-   :language: bash
 
 Type this so the script is executed on startup:
 
