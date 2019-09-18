@@ -20,7 +20,7 @@
             <button ng-show="new_port" ng-click="expose(new_port, new_port_name, new_port_restricted)"><%=l 'Add' %></button>
         </div>
         <div class="col-lg-2 mt-2">
-            <input type="text" size="3" maxlength="3" ng-model="new_port">
+            <input type="text" size="3" maxlength="5" ng-model="new_port">
         </div>
         <div class="col-lg-2 mt-2">
             <input type="checkbox" ng-model="new_port_restricted"
