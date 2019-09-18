@@ -166,7 +166,7 @@ sub create_domain {
     my $name = new_domain_name();
 
     my $domain;
-    eval { $domain = $vm->import_domain($name, $user) };
+    eval { $domain = $vm->import_domain($name, $user) } if $vm->type !~ /void/i;
     die $@ if $@ && $@ !~ /Domain not found/;
 
     return $domain if $domain;
