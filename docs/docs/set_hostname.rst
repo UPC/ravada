@@ -48,6 +48,32 @@ Some tools may read the hostname from the config file, set it like this:
     dmidecode | grep hostname | awk -F: '{ print $3}' | sed -e 's/^ //' > /etc/hostname
 
 
+systemd
+~~~~~~~~
+
+If your system supports systemd this script will set the virtual machine name
+as the hostname on startup. Put the service file in */lib/systemd/system*:
+
+
+.. literalinclude:: sethostname.service
+   :linenos:
+
+This is the script that is launched by the service, it should be
+in */usr/local/bin/set_hostname.sh* as specified in the previous file.
+
+.. literalinclude:: set_hostname.sh
+   :lineos:
+   :language: bash
+
+Type this so the script is executed on startup:
+
+.. prompt:: bash $
+
+   sudo systemctl enable sethostname
+
+Reboot and check if the hostname is applied. You should find a log file
+at */var/log/set_hostname.log*.
+
 rc.local
 ~~~~~~~~
 
