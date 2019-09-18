@@ -2372,6 +2372,10 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
 
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM requests WHERE id_domain=? "
+            ." AND command='open_exposed_ports'");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _close_exposed_port_client($self, $iptables, %port) {
