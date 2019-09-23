@@ -1213,6 +1213,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
+    $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -2084,7 +2085,7 @@ sub process_requests {
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
 
-        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
+        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -2311,20 +2312,11 @@ sub _execute {
         return;
     }
 
-    $request->pid($$);
     $request->start_time(time);
     $request->error('');
+        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
-
-        my $t0 = [gettimeofday];
-        eval { $sub->($self,$request) };
-        my $err = ($@ or '');
-        my $elapsed = tv_interval($t0,[gettimeofday]);
-        $request->run_time($elapsed);
-        $request->status('done') if $request->status() ne 'done'
-                                    && $request->status !~ /retry/;
-        $request->error($err) if $err;
-        warn $err if $err;
+        $self->_do_execute_command($sub, $request);
         return;
     }
 
@@ -2335,12 +2327,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
-        $request->status('working','');
-        my $t0 = [gettimeofday];
-        srand();
         $self->_do_execute_command($sub, $request);
-        my $elapsed = tv_interval($t0,[gettimeofday]);
-        $request->run_time($elapsed) if !$request->run_time();
         exit;
     }
     $self->_add_pid($pid, $request);
@@ -2360,6 +2347,7 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    $request->pid($$);
     my $t0 = [gettimeofday];
     eval {
         $sub->($self,$request);
@@ -2368,10 +2356,22 @@ sub _do_execute_command {
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
     $request->error($err)   if $err;
+    if ($err && $err =~ /retry.?$/i) {
+        my $retry = $request->retry;
+        if (defined $retry && $retry>0) {
+            $request->status('requested');
+            $request->at(time + 10);
+            $request->retry($retry-1);
+        } else {
+            $request->status('done');
+            $err =~ s/(.*?)retry.?/$1/i;
+            $request->error($err)   if $err;
+        }
+    } else {
     $request->status('done')
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
-
+    }
 }
 
 sub _cmd_manage_pools($self, $request) {

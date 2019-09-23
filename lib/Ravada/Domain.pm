@@ -1966,6 +1966,7 @@ sub _post_pause {
 sub _post_hibernate($self, $user) {
     $self->_data(status => 'hibernated');
     $self->_remove_iptables();
+    $self->_close_exposed_port();
 }
 
 sub _pre_shutdown {
@@ -2251,7 +2252,7 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
     );
     $sth->finish;
 
-    $self->_open_exposed_port($internal_port, $restricted) if $self->is_active;
+    $self->_open_exposed_port($internal_port, $restricted) if $self->is_active && $self->ip;
     return $public_port;
 }
 
@@ -2275,7 +2276,7 @@ sub _open_exposed_port($self, $internal_port, $restricted) {
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
     if ( !$> ) {
-        $self->_vm->iptables(
+        $self->_vm->iptables_unique(
             t => 'nat'
             ,A => 'PREROUTING'
             ,p => 'tcp'
@@ -2311,7 +2312,7 @@ sub _open_exposed_port_client($self, $public_port) {
 
     my $local_ip = $self->_vm->ip;
 
-    $self->_vm->iptables(
+    $self->_vm->iptables_unique(
         A => $IPTABLES_CHAIN
         ,s => $remote_ip
         ,d => $local_ip
@@ -2320,7 +2321,7 @@ sub _open_exposed_port_client($self, $public_port) {
         ,dport => $public_port
         ,j => 'ACCEPT'
     );
-    $self->_vm->iptables(
+    $self->_vm->iptables_unique(
         A => $IPTABLES_CHAIN
         ,d => $local_ip
         ,m => 'tcp'
@@ -2335,12 +2336,7 @@ sub open_exposed_ports($self) {
     return if !@ports;
 
     if ( ! $self->ip ) {
-        Ravada::Request->open_exposed_ports(
-            uid => Ravada::Utils::user_daemon->id
-            ,id_domain => $self->id
-            ,at => time + 10
-        );
-        return;
+        die "Error: No ip in domain. Retry.\n";
     }
 
     for my $expose ( @ports ) {
@@ -2564,6 +2560,7 @@ sub _post_start {
     } else {
         %arg = @_;
     }
+    my $remote_ip = $arg{remote_ip};
 
     $self->_data('status','active') if $self->is_active();
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -2577,6 +2574,11 @@ sub _post_start {
 
     $self->_add_iptable(@_);
     $self->_update_id_vm();
+    Ravada::Request->open_exposed_ports(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,retry => 5
+    ) if $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
@@ -2597,7 +2599,6 @@ sub _post_start {
         $self->display_file($arg{user});
         $self->info($arg{user});
     }
-    $self->open_exposed_ports();
     Ravada::Request->enforce_limits(at => time + 60);
     Ravada::Request->manage_pools(
             uid => Ravada::Utils::user_daemon->id
@@ -4132,13 +4133,11 @@ sub rebase_volumes($self, $new_base) {
     my @files_target = $new_base->list_files_base_target();
     my %file_target = map { $_->[1] => $_->[0] } @files_target;
 
-    warn "rebasing ".$self->name."\n";
     for my $vol ( $self->list_volumes_info) {
-        next if $vol->{device} ne 'disk';
-        my $new_base = $file_target{$vol->{target}};
+        next if $vol->info->{device} ne 'disk';
+        my $new_base = $file_target{$vol->info->{target}};
         die "I can't find new base file for ".Dumper($vol) if !$new_base;
-        warn "$vol->{file}\n$new_base\n";
-        my @cmd = ('/usr/bin/qemu-img','rebase','-b',$new_base,$vol->{file});
+        my @cmd = ('/usr/bin/qemu-img','rebase','-b',$new_base,$vol->file);
         my ($out, $err) = $self->_vm->run_command(@cmd);
     }
     $self->id_base($new_base->id);

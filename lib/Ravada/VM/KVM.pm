@@ -535,7 +535,7 @@ sub create_domain {
 
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
-    croak "argument id_iso or id_base required ".Dumper(\%args)
+    confess "argument id_iso or id_base required ".Dumper(\%args)
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
