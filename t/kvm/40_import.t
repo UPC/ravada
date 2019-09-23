@@ -12,7 +12,7 @@ use_ok('Ravada');
 my $RVD_BACK = rvd_back();
 my $RVD_FRONT= rvd_front();
 
-my @VMS = ('KVM');
+my @VMS = ('KVM','Void');
 my $USER = create_user("foo","bar", 1);
 
 #############################################################################
@@ -90,8 +90,9 @@ sub test_import {
 
 sub test_import_spinoff {
     my $vm_name = shift;
+    return if $vm_name eq 'Void';
 
-    my $vm = rvd_back->search_vm('kvm');
+    my $vm = rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name,$vm);
     $domain->is_public(1);
     my $clone = $domain->clone(name => new_domain_name(), user => user_admin );
@@ -139,8 +140,7 @@ sub test_import_spinoff {
 
 ############################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 for my $vm_name (@VMS) {
     my $vm = $RVD_BACK->search_vm($vm_name);
@@ -153,6 +153,7 @@ for my $vm_name (@VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        diag("Tesing import in $vm_name");
         test_wrong_args($vm_name, $vm);
 
         my $domain = test_already_there($vm_name, $vm);
@@ -162,8 +163,7 @@ for my $vm_name (@VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 done_testing();
 

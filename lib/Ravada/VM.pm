@@ -1261,6 +1261,38 @@ sub iptables($self, @args) {
     warn $err if $err;
 }
 
+sub iptables_unique($self,@rule) {
+    return if $self->search_iptables(@rule);
+    return $self->iptables(@rule);
+}
+
+sub search_iptables($self, %rule) {
+    my $table = 'filter';
+    $table = delete $rule{t} if exists $rule{t};
+    my $iptables = $self->iptables_list();
+
+    if (exists $rule{I}) {
+        $rule{A} = delete $rule{I};
+    }
+    $rule{m} = $rule{p} if exists $rule{p} && !exists $rule{m};
+    $rule{d} = "$rule{d}/32" if exists $rule{d} && $rule{d} !~ m{/\d+$};
+    $rule{s} = "$rule{s}/32" if exists $rule{s} && $rule{s} !~ m{/\d+$};
+
+    for my $line (@{$iptables->{$table}}) {
+
+        my %args = @$line;
+        my $match = 1;
+        for my $key (keys %rule) {
+            $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
+            last if !$match;
+        }
+        if ( $match ) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
 #   (c) Jan Gehring <jan.gehring@gmail.com>

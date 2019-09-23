@@ -56,6 +56,8 @@ create_domain
 
     create_storage_pool
     local_ips
+
+    delete_request
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -165,9 +167,14 @@ sub create_domain {
 
     my $name = new_domain_name();
 
+    my $domain;
+    eval { $domain = $vm->import_domain($name, $user) };
+    die $@ if $@ && $@ !~ /Domain.* not found/i;
+
+    return $domain if $domain;
+
     my %arg_create = (id_iso => $id_iso);
 
-    my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
@@ -597,6 +604,15 @@ sub _list_requests {
     return @req;
 }
 
+sub delete_request {
+    confess "Error: missing request command to delete" if !@_;
+
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?");
+    for my $command (@_) {
+        $sth->execute($command);
+    }
+}
+
 sub wait_request {
     my %args;
     if (scalar @_ % 2 == 0 ) {
@@ -606,7 +622,12 @@ sub wait_request {
         $args{request} = [ $_[0] ];
     }
     my $timeout = delete $args{timeout};
-    my $request = ( delete $args{request} or [] );
+    my $request = delete $args{request};
+    if (!$request) {
+        my @list_requests = map { Ravada::Request->open($_) }
+            _list_requests();
+        $request = \@list_requests;
+    }
 
     my $background = delete $args{background};
     $background = 1 if !defined $background;
@@ -634,6 +655,7 @@ sub wait_request {
             my $req = Ravada::Request->open($req_id);
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
+                diag("Waiting for request ".$req->id." ".$req->command) if $debug;
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
@@ -877,8 +899,6 @@ sub search_iptable_remote {
     my $chain = (delete $args{chain} or $CHAIN);
     my $to_dest = delete $args{'to-destination'};
 
-    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
-
     my $iptables = $node->iptables_list();
 
     $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
@@ -913,6 +933,10 @@ sub flush_rules_node($node) {
     $node->create_iptables_chain($CHAIN);
     $node->run_command("/sbin/iptables","-F", $CHAIN);
     $node->run_command("/sbin/iptables","-X", $CHAIN);
+
+    # flush forward too. this is only supposed to run on test servers
+    $node->run_command("/sbin/iptables","-F", 'FORWARD');
+
 }
 
 sub flush_rules {
@@ -938,6 +962,12 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
+    run3(["/sbin/iptables","-F", $CHAIN], \$in, \$out, \$err);
+    run3(["/sbin/iptables","-X", $CHAIN], \$in, \$out, \$err);
+
+    # flush forward too. this is only supposed to run on test servers
+    run3(["/sbin/iptables","-F", ], \$in, \$out, \$err);
+
 }
 
 sub _domain_node($node) {

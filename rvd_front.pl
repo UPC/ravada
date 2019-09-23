@@ -1580,10 +1580,15 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         if ( $domain->id_owner == $USER->id
                 && $domain->id_base == $id_base && !$domain->is_base ) {
             if ($domain->is_active) {
-                return Ravada::Request->open_iptables(
+                Ravada::Request->open_iptables(
                     uid => $USER->id
                 , id_domain => $domain->id
                 , remote_ip => _remote_ip($c)
+                );
+
+                 Ravada::Request->open_exposed_ports(
+                    uid => $USER->id
+                , id_domain => $domain->id
                 );
             }
             return Ravada::Request->start_domain(

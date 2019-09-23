@@ -412,7 +412,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request)) {
+    for (qw(at after_request retry)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -540,6 +540,8 @@ sub _new_request {
             $args{id_domain} = $id_domain_args;
             $args{after_request} = delete $args{args}->{after_request}
                 if exists $args{args}->{after_request};
+            $args{retry} = delete $args{args}->{retry}
+                if exists $args{args}->{retry};
 
         }
         $args{args} = encode_json($args{args});
@@ -639,6 +641,12 @@ sub status {
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
+}
+
+sub at($self, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set at_time=? "
+            ." WHERE id=?");
+    $sth->execute($value, $self->{id});
 }
 
 sub _search_domain_name {

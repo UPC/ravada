@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use IPC::Run3;
 use JSON::XS;
 use Test::More;
 use IPTables::ChainMgr;
@@ -15,8 +16,139 @@ use feature qw(signatures);
 
 use_ok('Ravada');
 
-##############################################################
+sub test_no_dupe($vm) {
 
+    flush_rules($vm);
+
+    my $domain = create_domain($vm->type, user_admin ,'debian stretch');
+
+    my $remote_ip = '10.0.0.1';
+    my $local_ip = $vm->ip;
+
+    my ($internal_port, $name_port) = (22, 'ssh');
+
+    my ($in, $out, $err);
+    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    my @out = split /\n/,$out;
+    is(grep(/^DNAT.*/,@out),0);
+
+    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*192.168.\d+\.0/24\sstate NEW},@out),0);
+
+    $domain->start(user => user_admin, remote_ip => $remote_ip);
+    my @request = $domain->list_requests();
+
+    # No requests because no ports exposed
+    is(scalar @request,0) or exit;
+    delete_request('enforce_limits');
+    wait_request(debug => 1, background => 0);
+
+    my $client_ip = $domain->remote_ip();
+    is($client_ip, $remote_ip);
+    my $public_port;
+    _wait_ip($vm->type, $domain);
+    my $internal_ip = $domain->ip;
+    my $internal_net = $internal_ip;
+    $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
+
+    ($public_port) = $domain->expose(
+        port => $internal_port
+        , name => $name_port
+        , restricted => 1
+    );
+    delete_request('enforce_limits');
+    wait_request(background => 0, debug => 1);
+
+    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
+
+    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1,"Expecting rule for $internal_net")
+        or die $out;
+
+    run3(['/sbin/iptables','-L','RAVADA','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$local_ip.*dpt:$public_port},@out),1) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$local_ip.*dpt:$public_port},@out),1) or die $out;
+
+    ##########################################################################
+    #
+    # start again check only one instance of each
+    #
+    $domain->start(user => user_admin, remote_ip => $remote_ip);
+    is($domain->is_active,1);
+    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
+
+    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
+
+    run3(['/sbin/iptables','-L','RAVADA','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$local_ip.*dpt:$public_port},@out),1) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$local_ip.*dpt:$public_port},@out),1) or die $out;
+
+    test_hibernate($domain, $local_ip, $public_port, $internal_ip, $internal_port,$remote_ip);
+    test_start_after_hibernate($domain, $local_ip, $public_port, $internal_ip, $internal_port,$remote_ip);
+    $domain->remove(user_admin);
+
+    flush_rules($vm);
+}
+
+sub test_hibernate($domain
+        ,$local_ip, $public_port, $internal_ip, $internal_port, $remote_ip) {
+    $domain->hibernate(user_admin);
+
+    my ($in,$out,$err);
+    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    my @out = split /\n/,$out;
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0);
+
+    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*192.168.\d+\.0/24\sstate NEW},@out),0);
+
+    run3(['/sbin/iptables','-L','RAVADA','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$local_ip.*dpt:$public_port},@out),0) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$local_ip.*dpt:$public_port},@out),0) or die $out;
+
+}
+
+sub test_start_after_hibernate($domain
+        ,$local_ip, $public_port, $internal_ip, $internal_port, $remote_ip) {
+
+    my $internal_net = $internal_ip;
+    $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
+
+    $domain->start(user => user_admin, remote_ip => $remote_ip);
+
+    delete_request('enforce_limits');
+    wait_request(debug => 1, background => 0);
+
+    my ($in,$out,$err);
+    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    my @out = split /\n/,$out;
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
+
+    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
+
+    run3(['/sbin/iptables','-L','RAVADA','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$local_ip.*dpt:$public_port},@out),1) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$local_ip.*dpt:$public_port},@out),1) or die $out;
+
+}
+
+
+##############################################################
 # Forward one port
 sub test_one_port($vm) {
 
@@ -82,6 +214,7 @@ sub test_one_port($vm) {
 
     ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or exit;
 
+
     #################################################################
     #
     # shutdown
@@ -104,6 +237,8 @@ sub test_one_port($vm) {
     # start
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+    delete_request('enforce_limits');
+    wait_request(debug => 1, background => 0);
 
     ($n_rule)
         = search_iptable_remote(local_ip => "$local_ip/32"
@@ -428,6 +563,7 @@ sub test_host_down {
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
     _wait_requests($domain);
+    wait_request(debug => 1, background => 0);
 
     my $domain_ip = $domain->ip;
     ok($domain_ip,"[$vm_name] Expecting an IP for domain ".$domain->name.", got ".($domain_ip or '')) or return;
@@ -569,7 +705,6 @@ sub test_restricted($vm, $restricted) {
             , jump => 'DROP'
     );
 
-
     if ($restricted) {
         ok($n_rule,"Expecting rule for $remote_ip -> $local_ip:$public_port") or exit;
         ok($n_rule_drop,"Expecting drop rule for any -> $local_ip:$public_port") or exit;
@@ -577,6 +712,20 @@ sub test_restricted($vm, $restricted) {
         ok(!$n_rule,"Expecting no rule for $remote_ip -> $local_ip:$public_port") or exit;
         ok(!$n_rule_drop,"Expecting drop no rule for any -> $local_ip:$public_port") or exit;
     }
+
+    # check for FORWARD
+    my $local_net = $domain->ip;
+    $local_net =~ s/\.\d+$//;
+    $local_net = "$local_net.0/24";
+    ($n_rule)
+        = search_iptable_remote(local_ip => "$local_ip/32"
+            , chain => 'FORWARD'
+            , node => $vm
+            , jump => 'ACCEPT'
+            , local_ip => $local_net
+    );
+    ok($n_rule,"Expecting rule in forward to -> $local_net") or exit;
+
     $domain->shutdown_now(user_admin);
     ($n_rule)
         = search_iptable_remote(
@@ -654,6 +803,7 @@ sub test_change_expose_3($vm) {
     for my $port ($domain->list_ports) {
         my $restricted = ! $port->{restricted};
         $domain->expose(id_port => $port->{id}, restricted => $restricted);
+        wait_request(background => 0, debug => 1);
         _check_port_rules($domain, $remote_ip
             ,"Changed port $port->{internal_port} restricted=$restricted");
     }
@@ -713,11 +863,16 @@ sub _wait_requests($domain) {
         last if !$domain->list_requests(1);
         sleep 1;
     }
+    delete_request('enforce_limits');
+    wait_request( background => 0 );
 }
 
 ##############################################################
 
-clean();
+#clean();
+
+init();
+Test::Ravada::_clean_db();
 
 add_network_10(0);
 
@@ -728,6 +883,8 @@ for my $vm_name ( 'KVM', 'Void' ) {
     next if !$vm;
 
     diag("Testing $vm_name");
+
+    test_no_dupe($vm);
 
     test_restricted($vm,0);
     test_restricted($vm,1);
