@@ -513,7 +513,7 @@ sub _around_add_volume {
         ($name) = $file =~ m{.*/(.*)} if !$name && $file;
         $name = $self->name if !$name;
 
-        $name .= "-".Ravada::Utils::random_name(4)."-$args{target}";
+        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4);
         $args{name} = $name;
     }
 
@@ -607,6 +607,13 @@ sub _around_prepare_base($orig, $self, $user, $request = undef) {
 
 sub prepare_base($self) {
     my @base_img;
+    for my $volume ($self->list_volumes_info(device => 'disk')) {
+        confess "Undefined info->target ".Dumper($volume)
+            if !$volume->info->{target};
+        my $base_file = $volume->base_filename;
+        die "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
+    }
+
     for my $volume ($self->list_volumes_info(device => 'disk')) {
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
@@ -2149,7 +2156,6 @@ sub add_volume_swap {
     my $self = shift;
     my %arg = @_;
 
-    $arg{name} = $self->name if !$arg{name};
     $self->add_volume(%arg, swap => 1);
 }
 

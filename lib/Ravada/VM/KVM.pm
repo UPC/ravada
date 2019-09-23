@@ -741,7 +741,7 @@ sub _volume_path {
 
     my $dir_img = $self->_storage_path($storage);
     my $suffix = "qcow2";
-    $suffix = ".SWAP.qcow2"   if $swap;
+    $suffix = "SWAP.qcow2"   if $swap;
     return "$dir_img/$filename.$suffix";
 }
 
