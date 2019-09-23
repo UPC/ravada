@@ -7,7 +7,8 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
-use_ok('Ravada');
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
@@ -607,6 +608,47 @@ sub test_domain_limit_already_requested {
     $user->remove();
 }
 
+sub test_prepare_fail($vm) {
+    my $domain = create_domain($vm,undef,undef,1);
+    my @volumes = $domain->list_volumes_info();
+    is(scalar @volumes,3);
+    for (@volumes) {
+        next if $_->file =~ /\.iso$/;
+        like($_->file,qr(-vd[a-c]-)) or exit;
+    }
+    for my $vol ( @volumes ) {
+        next if $vol->file =~ /\.iso$/;
+        my $base_file = $vol->base_filename();
+        open my $out , '>',$base_file;
+        close $out;
+    }
+    eval {
+        $domain->prepare_base(user_admin);
+    };
+    like($@,qr/already exists/);
+    is($domain->is_base,0) or exit;
+    for my $vol ( @volumes ) {
+        eval { $vol->backing_file };
+        like($@,qr/./);
+    }
+
+    # Now we only have the second file already there
+    my $base_file = $volumes[0]->base_filename();
+    unlink $base_file;
+
+    eval {
+        $domain->prepare_base(user_admin);
+    };
+    like($@,qr/already exists/);
+    for my $vol ( @volumes ) {
+        eval { $vol->backing_file };
+        like($@,qr/./, "Expecting ".$vol->file." not prepared") or exit;
+    }
+
+
+    $domain->remove(user_admin);
+}
+
 #######################################################################33
 
 
@@ -637,6 +679,8 @@ for my $vm_name ('KVM', 'Void') {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
+
+        test_prepare_fail($vm);
 
         test_domain_limit_already_requested($vm_name);
 

@@ -142,6 +142,7 @@ sub create_domain {
     my $vm_name = shift;
     my $user = (shift or $USER_ADMIN);
     my $id_iso = (shift or 'Alpine');
+    my $swap = (shift or undef);
 
     $vm_name = 'KVM' if $vm_name eq 'qemu';
 
@@ -166,6 +167,7 @@ sub create_domain {
     my $name = new_domain_name();
 
     my %arg_create = (id_iso => $id_iso);
+    $arg_create{swap} = 1024 * 1024 if $swap;
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
@@ -1024,7 +1026,7 @@ sub start_node($node) {
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
     for ( 1 .. 60 ) {
-        last if $node->ping ;
+        last if $node->ping;
         sleep 1;
         diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
     }
@@ -1251,7 +1253,6 @@ sub _do_remote_node($vm_name, $remote_config) {
         .($@ or '')."'") or return;
     push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
     ok($node) or return;
-
 
     is($node->type,$vm->type) or return;
 

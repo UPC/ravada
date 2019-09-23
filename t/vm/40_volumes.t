@@ -372,6 +372,7 @@ sub test_domain_swap {
         if ( $file =~ /SWAP/) {
             $found_swap++;
             my $size = -s $file;
+            $min_size = $size if $size > $min_size;
             for ( 'a' .. 'z' ) {
                 open my $out, ">>",$file or die "$! $file";
                 print $out "$_: ".('a' x 256)."\n";
