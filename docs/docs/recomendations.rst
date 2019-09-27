@@ -6,21 +6,27 @@ Firewall
 
 The server must be able to send *DHCP* packets to its own virtual interface.
 
-KVM should be using a virtual interface for the NAT domnains. Look what is the address range and add it to your *iptables* configuration.
+KVM should be using a virtual interface for the NAT domnains.
 
 First we try to find out what is the new internal network:
 
 .. prompt:: bash $,(env)... auto
 
-    sudo route -n
+    sudo ip route
     ...
-    192.168.122.0   0.0.0.0         255.255.255.0   U     0      0        0 virbr0
+    192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1
 
-So it is 192.168.122.0 , netmask 24. Add it to your iptables configuration:
+So it is the interface virbr0.
+
+Add it to your iptables configuration. This will allow some traffic between the
+host and the virtual machines: DHCP and ping.
 
 .. prompt:: bash $
 
-    sudo iptables -A INPUT -s 192.168.122.0/24 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+   sudo iptables -A INPUT -i virbr0 -p udp -m udp --dport 67:68 -j ACCEPT
+   sudo iptables -A INPUT -i virbr0 -p icmp -m icmp --icmp-type 8 -j ACCEPT
+   sudo iptables -A OUTPUT -o virbr0 -p udp -m udp --sport 67:68 -j ACCEPT
+   sudo iptables -A OUTPUT -o virbr0 -p icmp -m icmp --icmp-type 8 -j ACCEPT
 
 To confirm that the configuration was updated, check it with:
 
