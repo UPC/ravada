@@ -1234,16 +1234,16 @@ sub remove_file( $self, $file ) {
     return $self->run_command("/bin/rm", $file);
 }
 
-sub create_iptables_chain($self,$chain) {
+sub create_iptables_chain($self, $chain, $jchain='INPUT') {
     my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
 
     $self->run_command("/sbin/iptables", '-N' => $chain)
         if $out !~ /^Chain $chain/;
 
-    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",'INPUT');
-    return if grep(/^RAVADA /, split(/\n/,$out));
+    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$jchain);
+    return if grep(/^$chain /, split(/\n/,$out));
 
-    $self->run_command("/sbin/iptables", '-A','INPUT', '-j' => $chain);
+    $self->run_command("/sbin/iptables", '-I', $jchain, '-j' => $chain);
 
 }
 

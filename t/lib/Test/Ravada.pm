@@ -901,6 +901,8 @@ sub search_iptable_remote {
     my $chain = (delete $args{chain} or $CHAIN);
     my $to_dest = delete $args{'to-destination'};
 
+    confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
     my $iptables = $node->iptables_list();
 
     $remote_ip .= "/32" if defined $remote_ip && $remote_ip !~ m{/};
@@ -913,6 +915,7 @@ sub search_iptable_remote {
         my %args = @$line;
         next if $args{A} ne $chain;
         $count++;
+        $args{s} = "0.0.0.0/0" if !exists $args{s} && exists $args{dport};
 
         if(
               (!defined $jump      || exists $args{j} && $args{j} eq $jump )

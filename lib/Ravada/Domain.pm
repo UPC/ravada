@@ -2180,6 +2180,8 @@ sub expose($self, @args) {
         $id_port = delete $args{id_port};
         $internal_port = delete $args{port};
         $internal_port = delete $args{internal_port} if exists $args{internal_port};
+        delete $args{internal_ip};
+
         confess "Error: Missing port" if !defined $internal_port && !$id_port;
         confess "Error: internal port not a number '".($internal_port or '<UNDEF>')."'"
             if defined $internal_port && $internal_port !~ /^\d+$/;
@@ -2281,6 +2283,11 @@ sub _open_exposed_port($self, $internal_port, $restricted) {
     confess "Error: I can't get the internal IP of ".$self->name
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
+    $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set internal_ip=?"
+            ." WHERE id_domain=? AND internal_port=?"
+    );
+    $sth->execute($internal_ip, $self->id, $internal_port);
+
     if ( !$> ) {
         $self->_vm->iptables_unique(
             t => 'nat'
@@ -2292,10 +2299,8 @@ sub _open_exposed_port($self, $internal_port, $restricted) {
             ,'to-destination' => "$internal_ip:$internal_port"
         ) if !$>;
 
-        if ($restricted) {
-            $self->_open_exposed_port_client($public_port);
-        }
         $self->_open_iptables_state();
+        $self->_open_exposed_port_client($internal_port, $restricted);
     }
 }
 
@@ -2312,29 +2317,34 @@ sub _open_iptables_state($self) {
     );
 }
 
-sub _open_exposed_port_client($self, $public_port) {
-    my $remote_ip = $self->remote_ip;
-    return if !$remote_ip;
+sub _open_exposed_port_client($self, $internal_port, $restricted) {
 
-    my $local_ip = $self->_vm->ip;
+    my $internal_ip = $self->ip;
+
+    my $remote_ip = '0.0.0.0/0';
+    $remote_ip = $self->remote_ip if $restricted;
+    return if !$remote_ip;
+    if ( $restricted ) {
+        $self->_vm->iptables_unique(
+            I => 'FORWARD'
+            ,d => $internal_ip
+            ,m => 'tcp'
+            ,p => 'tcp'
+            ,dport => $internal_port
+            ,j => 'DROP'
+        );
+    }
 
     $self->_vm->iptables_unique(
-        A => $IPTABLES_CHAIN
+        I => 'FORWARD'
         ,s => $remote_ip
-        ,d => $local_ip
+        ,d => $internal_ip
         ,m => 'tcp'
         ,p => 'tcp'
-        ,dport => $public_port
+        ,dport => $internal_port
         ,j => 'ACCEPT'
     );
-    $self->_vm->iptables_unique(
-        A => $IPTABLES_CHAIN
-        ,d => $local_ip
-        ,m => 'tcp'
-        ,p => 'tcp'
-        ,dport => $public_port
-        ,j => 'DROP'
-    );
+
 }
 
 sub open_exposed_ports($self) {
@@ -2351,7 +2361,7 @@ sub open_exposed_ports($self) {
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
-    my $query = "SELECT public_port,internal_port "
+    my $query = "SELECT public_port,internal_port, internal_ip "
         ." FROM domain_ports"
         ." WHERE id_domain=? ";
     $query .= " AND internal_port=?" if $internal_port_req;
@@ -2365,9 +2375,11 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
     }
 
     my %port;
-    while ( my ($public_port, $internal_port) = $sth->fetchrow() ) {
-        $port{$public_port} = $internal_port;
+    while ( my $row = $sth->fetchrow_hashref() ) {
+        lock_hash(%$row);
+        $port{$row->{public_port}} = $row;
     }
+    lock_hash(%port);
 
     my $iptables = $self->_vm->iptables_list();
 
@@ -2382,17 +2394,24 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
 
 sub _close_exposed_port_client($self, $iptables, %port) {
 
-    my $ip = $self->_vm->ip."/32";
+    my %ip = map {
+        my $ip = '0.0.0.0/0';
+        $ip = $port{$_}->{internal_ip}."/32" if $port{$_}->{internal_ip};
+        $port{$_}->{internal_port} => $ip;
+    } keys %port;
+
     for my $line (@{$iptables->{'filter'}}) {
          my %args = @$line;
-         next if $args{A} ne 'RAVADA';
+         next if $args{A} ne 'FORWARD';
          if (exists $args{j}
-             && exists $args{d} && $args{d} eq $ip
-             && exists $args{dport} && $port{$args{dport}}) {
+             && exists $args{dport} && $ip{$args{dport}}
+             && exists $args{d} && $args{d} eq $ip{$args{dport}}
+         ) {
+
                 my @delete = (
-                    D => 'RAVADA'
+                    D => 'FORWARD'
                     , p => 'tcp', m => 'tcp'
-                    , d => $ip
+                    , d => $ip{$args{dport}}
                     , dport => $args{dport}
                     , j => $args{j}
                 );
@@ -2412,7 +2431,7 @@ sub _close_exposed_port_nat($self, $iptables, %port) {
              && exists $args{dport}
              && exists $args{'to-destination'}
          ) {
-            my $internal_port = $port{$args{dport}} or next;
+            my $internal_port = $port{$args{dport}}->{internal_port} or next;
             if ( $args{'to-destination'}=~/\:$internal_port$/ ) {
                 my %delete = %args;
                 delete $delete{A};

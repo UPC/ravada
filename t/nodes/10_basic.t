@@ -20,7 +20,7 @@ init();
 
 sub test_reuse_vm($node) {
     my $domain = create_domain($node->type);
-    $domain->add_volume(name => 'vdb', swap => 1, size => 512 * 1024);
+    $domain->add_volume(swap => 1, size => 512 * 1024);
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin);
 
