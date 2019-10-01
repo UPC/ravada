@@ -116,6 +116,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/config_console
    docs/reduce-size-image
    docs/qemu_ga
+   docs/set_hostname
 
 
 .. _about-docs:
