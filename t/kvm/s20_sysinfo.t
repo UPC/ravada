@@ -19,7 +19,7 @@ our $XML = XML::LibXML->new();
 
 ###################################################################################3
 
-sub test_sysinfo($domain) {
+sub test_sysinfo($domain, $domain_name=$domain->name) {
 
     my $doc = $XML->load_xml(string => $domain->domain->get_xml_description())
         or die "ERROR: $!\n";
@@ -45,7 +45,6 @@ sub test_sysinfo($domain) {
         }
         ok($hostname,"Expecting a hostname entry in ".$oemstrings->toString) and do {
             my $hostname_text = $hostname->textContent();
-            my $domain_name = $domain->name;
             like($hostname_text, qr{^hostname: $domain_name$});
         };
     }
@@ -72,11 +71,19 @@ SKIP: {
     my $domain = create_domain($vm);
     test_sysinfo($domain);
 
+    my $rename = new_domain_name;
+    $domain->rename(name => $rename, user => user_admin);
+    test_sysinfo($domain, $rename);
+
+    $domain = Ravada::Domain->open($domain->id);
+    test_sysinfo($domain, $rename);
+
+    my $clone_name = new_domain_name;
     my $clone = $domain->clone(
-         name => new_domain_name
+         name => $clone_name
         ,user => user_admin
     );
-    test_sysinfo($clone);
+    test_sysinfo($clone, $clone_name);
 
 }
 
