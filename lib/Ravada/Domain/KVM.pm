@@ -1431,6 +1431,11 @@ sub rename {
     my $new_name = $args{name};
 
     $self->domain->rename($new_name);
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    $self->_vm->_xml_add_sysinfo_entry($doc, hostname => $new_name);
+
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
 }
 
 =head2 disk_size
