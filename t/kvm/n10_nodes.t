@@ -279,7 +279,7 @@ sub test_sync_base {
 
     my $vm =rvd_back->search_vm($vm_name);
     my $base = create_domain($vm_name);
-    $base->add_volume(name => 'vdb', swap => 1, size => 512*1024 );
+    $base->add_volume(swap => 1, size => 512*1024 );
     my $clone = $base->clone(
         name => new_domain_name
        ,user => user_admin

@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0-beta2';
+our $VERSION = '0.5.0-beta8';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -1270,6 +1270,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','mac','char(18)');
 
     $self->_upgrade_table('volumes','name','char(200)');
+
+    $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
 }
 
 
