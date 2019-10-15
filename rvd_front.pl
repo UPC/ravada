@@ -1582,10 +1582,15 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         if ( $domain->id_owner == $USER->id
                 && $domain->id_base == $id_base && !$domain->is_base ) {
             if ($domain->is_active) {
-                return Ravada::Request->open_iptables(
+                Ravada::Request->open_iptables(
                     uid => $USER->id
                 , id_domain => $domain->id
                 , remote_ip => _remote_ip($c)
+                );
+
+                 Ravada::Request->open_exposed_ports(
+                    uid => $USER->id
+                , id_domain => $domain->id
                 );
             }
             return Ravada::Request->start_domain(
@@ -2102,7 +2107,7 @@ sub copy_machine {
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
 
-    my @create_args = ( no_pool => 1 );
+    my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     my @reqs;
     if ($number == 1 ) {

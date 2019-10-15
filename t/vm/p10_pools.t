@@ -42,14 +42,14 @@ sub test_clones($domain, $n_clones) {
     wait_request();
     $domain->pool_clones($n_clones);
     is($domain->pool_clones, $n_clones);
-    wait_request();
+    wait_request(debug => 1);
     is($domain->is_base,1);
     is($domain->clones(), $n_clones) or exit;
     is($domain->clones(is_pool => 1), $n_clones);
 
-    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin, from_pool => 0);
     ok($clone);
-    is($domain->clones(), $n_clones+1);
+    is($domain->clones(), $n_clones+1) or exit;
     is($domain->clones(is_pool => 1), $n_clones);
 
     my $clone_f = Ravada::Front::Domain->open($clone->id);
@@ -90,6 +90,38 @@ sub _set_clones_client_status($base) {
     );
     $sth->execute('Disconnected',time,$base->id);
     $sth->finish;
+}
+
+sub test_user_create($base, $n_start) {
+    $base->is_public(1);
+    my $user = create_user('kevin','carter');
+    my @clones = $base->clones();
+    wait_request();
+    _remove_enforce_limits();
+    _set_clones_client_status($base);
+
+    my $req = Ravada::Request->create_domain(
+                id_owner => $user->id
+             ,start => 1
+             ,name => new_domain_name()
+           ,id_base => $base->id
+         ,remote_ip => '1.2.3.4'
+    );
+    ok($req);
+    wait_request(debug => 0,skip => 'enforce_limits');
+    _remove_enforce_limits();
+    is($req->status,'done');
+    is($req->error,'');
+
+    my @clones2 = $base->clones();
+    is(scalar(@clones2), scalar(@clones));
+
+    my ($clone) = grep { $_->{id_owner} == $user->id } @clones2;
+    ok($clone,"Expecting clone that belongs to ".$user->name);
+    like($clone->{client_status},qr'^1.2.3.4$', $clone->{name}) or exit;
+    is($clone->{is_pool},1) or exit;
+
+    $user->remove();
 }
 
 sub test_user($base, $n_start) {
@@ -164,23 +196,89 @@ sub test_user($base, $n_start) {
     $user_r->remove();
 }
 
-sub test_clone_regular($base) {
+sub test_clone_regular($base, $add_to_pool) {
+    is($base->pools,1) or confess "Base ".$base->name." has no pools";
     my $name = new_domain_name();
     my $req = Ravada::Request->clone(
         name => $name
         ,id_domain => $base->id
         ,uid => user_admin->id
-        ,no_pool => 1
+        ,add_to_pool => $add_to_pool
+        ,from_pool => 0
     );
     ok($req) or exit;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->status,'done');
     is($req->error,'');
 
     my $domain = rvd_back->search_domain($name);
-    ok($domain,"Expecting clone from ".$base->name);
+    ok($domain,"Expecting clone from ".$base->name) or exit;
+    is($domain->is_pool, $add_to_pool);
+
+    $domain->pools(1);
+    # copy the clone
+    my $name_clone = new_domain_name();
+    $req = Ravada::Request->clone(
+        name => $name_clone
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,add_to_pool => $add_to_pool
+        ,from_pool => 0
+    );
+    ok($req) or exit;
+    wait_request(debug => 0);
+    is($req->status,'done');
+    is($req->error,'') or exit;
+
+    my $clone = rvd_back->search_domain($name_clone);
+    ok($clone,"Expecting clone from ".$name) or exit;
+    is($clone->is_pool, $add_to_pool) or exit;
+
     $domain->remove(user_admin);
+
+
+}
+
+sub test_no_pool($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+
+    my $clone_name = new_domain_name();
+
+    my $clone;
+    eval {
+        $clone = rvd_back->create_domain(
+            id_base => $base->id
+            ,name => $clone_name
+            ,add_to_pool => 1
+            ,id_owner => user_admin->id
+        );
+    };
+    like($@,qr(this base has no pools)i);
+    ok(!$clone);
+
+    my $clone2 = rvd_back->search_domain($clone_name);
+    ok(!$clone2);
+
+    $clone->remove(user_admin) if $clone;
+
+    $clone_name = new_domain_name();
+    eval {
+        $clone = $base->clone(
+             name => $clone_name
+            ,user => user_admin
+            ,add_to_pool => 1
+        );
+    };
+    like($@,qr(this base has no pools)i);
+    $clone2 = rvd_back->search_domain($clone_name);
+    ok(!$clone);
+    ok(!$clone2);
+
+    $clone->remove(user_admin) if $clone;
+    $base->remove(user_admin);
+    wait_request( debug => 0);
 }
 
 init();
@@ -205,6 +303,8 @@ for my $vm_name (reverse vm_names() ) {
 
         test_duplicate_req();
 
+        test_no_pool($vm);
+
         my $domain = create_domain($vm);
 
         my $n_clones = 6;
@@ -216,8 +316,13 @@ for my $vm_name (reverse vm_names() ) {
         test_active($domain, $n_start);
 
         test_user($domain, $n_start);
+        test_user_create($domain, $n_start);
 
-        test_clone_regular($domain);
+        # add the clone to the pool => 1 <=
+        test_clone_regular($domain   , 1);
+        # do not add the clone to the pool
+        test_clone_regular($domain, 0);
+
         _remove_enforce_limits();
    }
 }

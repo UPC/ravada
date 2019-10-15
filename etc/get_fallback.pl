@@ -53,7 +53,7 @@ sub download($url, $dst = $DIR_FALLBACK) {
 
 sub uncompress($file) {
     chdir $DIR_FALLBACK or die "$! $DIR_FALLBACK";
-    print `unzip -o $file`;
+    print `unzip -oq $file`;
 }
 
 sub get_version_badge {
@@ -61,7 +61,6 @@ sub get_version_badge {
     $VERSION =~ s/-/--/;
     download("https://img.shields.io/badge/version-$VERSION-brightgreen.svg"
         ,"../img/version-$VERSION-brightgreen.svg");
-    exit;
 }
 
 #############################################################################

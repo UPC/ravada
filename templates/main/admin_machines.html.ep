@@ -283,9 +283,10 @@
                 </tr>
                     <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
-                          &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
+                      &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
-                          <i class="far fa-clone" title="Cloned"></i>
+                          <i class="far fa-clone" title="Cloned" ng-hide="child.is_pool"></i>
+                          <i class="far fa-file-alt" title="Pool" ng-show="child.is_pool"></i>
                           <a align="right" href="/machine/manage/{{child.id}}.html"
                                          ng-class="{disabled: !child.can_manage}"
                           title ="Manage machine"><i

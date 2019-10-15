@@ -113,7 +113,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     my $new_hardware = $info->{hardware}->{$hardware}->[$numero-1];
     if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/ ) {
         my $name = $domain->name;
-        like($new_hardware->{name}, qr/$name-\w{4}-vd[a-z]\.\w+$/) or die Dumper($data);
+        like($new_hardware->{name}, qr/$name-vd[a-z]-\w{4}\.\w+$/) or die Dumper($data);
     } elsif($hardware eq 'disk') {
         like($new_hardware->{file},qr(\.iso$)) or die Dumper($info->{hardware}->{$hardware});
     }

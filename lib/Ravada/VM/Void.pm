@@ -294,8 +294,18 @@ sub search_volume_path_re {
 
 }
 
-sub import_domain {
-    confess "Not implemented";
+sub import_domain($self, $name, $user) {
+
+    my $file = $self->dir_img."/$name.yml";
+
+    die "Error: domain $name not found in ".$self->dir_img if !-e $file;
+
+    return Ravada::Domain::Void->new(
+        domain => $file
+        ,name => $name
+        ,_vm => $self
+    );
+
 }
 
 sub refresh_storage {}

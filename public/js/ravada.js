@@ -293,16 +293,30 @@
               $scope.new_name_duplicated=false;
             }
           };
+
           $scope.set_bool = function(field, value) {
             if (value ) value=1;
                 else value=0;
-            console.log(field+" "+value);
             $scope.showmachine[field]=value;
+            value_show = true;
+            if (! value) {
+                value_show = false;
+            }
+            $scope.add_message("Setting "+$scope.showmachine.name+" "+field+" to "+value_show);
             $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
           };
+
           $scope.set = function(field) {
-            console.log(field+" = "+$scope.showmachine[field]);
+            $scope.add_message("Setting "+$scope.showmachine.name+" "+field+" to "
+                        +$scope.showmachine[field]);
+
             $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+$scope.showmachine[field]);
+          };
+          $scope.add_message = function(text) {
+            $scope.message.push(text);
+            setTimeout(function () {
+                    $scope.message = [];
+            }, 5000);
           };
           $scope.set_public = function(machineId, value) {
             if (value) value=1;
@@ -557,6 +571,7 @@
                 capacity: '1G',
                 allocation: '0.1G'
             };
+            $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();

@@ -55,6 +55,9 @@ create_domain
     init_ldap_config
 
     create_storage_pool
+    local_ips
+
+    delete_request
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -141,6 +144,7 @@ sub create_domain {
     my $vm_name = shift;
     my $user = (shift or $USER_ADMIN);
     my $id_iso = (shift or 'Alpine');
+    my $swap = (shift or undef);
 
     $vm_name = 'KVM' if $vm_name eq 'qemu';
 
@@ -164,9 +168,15 @@ sub create_domain {
 
     my $name = new_domain_name();
 
-    my %arg_create = (id_iso => $id_iso);
-
     my $domain;
+    eval { $domain = $vm->import_domain($name, $user) };
+    die $@ if $@ && $@ !~ /Domain.* not found/i;
+
+    return $domain if $domain;
+
+    my %arg_create = (id_iso => $id_iso);
+    $arg_create{swap} = 1024 * 1024 if $swap;
+
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
@@ -596,6 +606,15 @@ sub _list_requests {
     return @req;
 }
 
+sub delete_request {
+    confess "Error: missing request command to delete" if !@_;
+
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?");
+    for my $command (@_) {
+        $sth->execute($command);
+    }
+}
+
 sub wait_request {
     my %args;
     if (scalar @_ % 2 == 0 ) {
@@ -605,7 +624,12 @@ sub wait_request {
         $args{request} = [ $_[0] ];
     }
     my $timeout = delete $args{timeout};
-    my $request = ( delete $args{request} or [] );
+    my $request = delete $args{request};
+    if (!$request) {
+        my @list_requests = map { Ravada::Request->open($_) }
+            _list_requests();
+        $request = \@list_requests;
+    }
 
     my $background = delete $args{background};
     $background = 1 if !defined $background;
@@ -633,10 +657,11 @@ sub wait_request {
             my $req = Ravada::Request->open($req_id);
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
+                diag("Waiting for request ".$req->id." ".$req->command) if $debug;
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
-                is($req->error,'') if $check_error;
+                is($req->error,'') or confess if $check_error;
             }
         }
         my $post = join(".",_list_requests);
@@ -758,6 +783,8 @@ sub clean {
         warn $@ if $@;
         _clean_remote_nodes($config)    if $config;
     }
+    unlink $FILE_CONFIG_TMP or die "$! $FILE_CONFIG_TMP"
+        if $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP;
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
@@ -874,7 +901,7 @@ sub search_iptable_remote {
     my $chain = (delete $args{chain} or $CHAIN);
     my $to_dest = delete $args{'to-destination'};
 
-    confess "Error: Unknown args ".Dumper(\%args) if keys %args;
+    confess "Error: unknown args ".Dumper(\%args) if keys %args;
 
     my $iptables = $node->iptables_list();
 
@@ -888,6 +915,7 @@ sub search_iptable_remote {
         my %args = @$line;
         next if $args{A} ne $chain;
         $count++;
+        $args{s} = "0.0.0.0/0" if !exists $args{s} && exists $args{dport};
 
         if(
               (!defined $jump      || exists $args{j} && $args{j} eq $jump )
@@ -910,6 +938,10 @@ sub flush_rules_node($node) {
     $node->create_iptables_chain($CHAIN);
     $node->run_command("/sbin/iptables","-F", $CHAIN);
     $node->run_command("/sbin/iptables","-X", $CHAIN);
+
+    # flush forward too. this is only supposed to run on test servers
+    $node->run_command("/sbin/iptables","-F", 'FORWARD');
+
 }
 
 sub flush_rules {
@@ -935,6 +967,12 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
+    run3(["/sbin/iptables","-F", $CHAIN], \$in, \$out, \$err);
+    run3(["/sbin/iptables","-X", $CHAIN], \$in, \$out, \$err);
+
+    # flush forward too. this is only supposed to run on test servers
+    run3(["/sbin/iptables","-F", ], \$in, \$out, \$err);
+
 }
 
 sub _domain_node($node) {
@@ -1021,7 +1059,7 @@ sub start_node($node) {
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
     for ( 1 .. 60 ) {
-        last if $node->ping ;
+        last if $node->ping;
         sleep 1;
         diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
     }
@@ -1164,6 +1202,15 @@ sub find_ip_rule {
     return $found[0];
 }
 
+sub local_ips($vm) {
+    my ($out, $err) = $vm->run_command("/bin/ip","address");
+    confess $err if $err;
+    my @ips = map { m{^\s+inet (.*?)/};$1 }
+                grep { m{^\s+inet } }
+                split /\n/,$out;
+    return @ips;
+}
+
 sub shutdown_domain_internal($domain) {
     if ($domain->type eq 'KVM') {
         $domain->domain->destroy();
@@ -1239,7 +1286,6 @@ sub _do_remote_node($vm_name, $remote_config) {
         .($@ or '')."'") or return;
     push @NODES,($node) if !grep { $_->name eq $node->name } @NODES;
     ok($node) or return;
-
 
     is($node->type,$vm->type) or return;
 
