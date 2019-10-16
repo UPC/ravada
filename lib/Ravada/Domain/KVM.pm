@@ -217,6 +217,8 @@ sub _vol_remove {
     my $file = shift;
     my $warning = shift;
 
+    confess "Error: I won't remove an iso file " if $file =~ /\.iso$/i;
+
     my $name;
     ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
@@ -276,6 +278,7 @@ sub remove {
     }
 
     eval { $self->_remove_file_image() };
+        warn $@ if $@;
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
@@ -290,12 +293,14 @@ sub remove {
 sub _remove_file_image {
     my $self = shift;
     for my $file ( $self->list_files_base ) {
+        next if $file && $file =~ /\.iso$/i;
 
         next if !$file || ! -e $file;
 
         chmod 0770, $file or die "$! chmodding $file";
         chown $<,$(,$file    or die "$! chowning $file";
         eval { $self->_vol_remove($file,1) };
+        warn $@ if $@;
 
         if ( -e $file ) {
             eval {

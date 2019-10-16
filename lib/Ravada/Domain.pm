@@ -621,14 +621,14 @@ sub _around_prepare_base($orig, $self, @args) {
 sub prepare_base($self, $with_cd) {
     my @base_img;
     for my $volume ($self->list_volumes_info()) {
-        next if !$with_cd && $volume->info->{device} eq 'cdrom';
-        confess "Undefined info->target ".Dumper($volume)
-            if !$volume->info->{target};
         my $base_file = $volume->base_filename;
+        next if !$base_file || $base_file =~ /\.iso$/;
         die "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
     }
 
-    for my $volume ($self->list_volumes_info(device => 'disk')) {
+    for my $volume ($self->list_volumes_info()) {
+        next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
+        next if $volume->info->{device} eq 'cdrom' && !$with_cd;
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
 
@@ -1573,6 +1573,7 @@ sub _remove_files_base {
     my $self = shift;
 
     for my $file ( $self->list_files_base ) {
+        next if $file =~ /\.iso$/;
         unlink $file or die "$! $file" if -e $file;
     }
 }

@@ -37,4 +37,8 @@ sub clone_filename($self, $name=undef) {
     return $self->file;
 }
 
+sub base_filename($self) {
+    return $self->file;
+}
+
 1;

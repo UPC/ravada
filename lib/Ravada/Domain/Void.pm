@@ -257,6 +257,7 @@ sub remove_disks {
         my $file = $vol->{file};
         my $device = $vol->info->{device};
         next if $device eq 'cdrom';
+        next if $file =~ /\.iso$/;
         $self->_vol_remove($file);
     }
 
