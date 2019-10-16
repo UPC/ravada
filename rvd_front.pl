@@ -1291,6 +1291,9 @@ sub login {
                 , locale => [@languages, @languages2]
             );
 
+            my $machines = $RAVADA->list_machines_user($auth_ok);
+            $url = "/machine/display/". $machines->[0]->{id_clone}.".vv" if scalar(@$machines) == 1 && $machines->[0]->{id_clone};
+
             $c->session(expiration => $expiration);
             return $c->redirect_to($url);
         } else {
