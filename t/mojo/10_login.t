@@ -9,9 +9,22 @@ use Mojo::File 'path';
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
+my $SECONDS_TIMEOUT = 15;
+
+my $t;
+
+my $URL_LOGOUT;
+my ($USERNAME, $PASSWORD);
+my $SCRIPT = path(__FILE__)->dirname->sibling('../rvd_front.pl');
+
+
 ########################################################################################
 
 sub remove_machines {
+    my $t0 = time;
     for my $name ( @_ ) {
         my $domain = rvd_front->search_domain($name) or next;
         for my $clone ($domain->clones) {
@@ -20,15 +33,45 @@ sub remove_machines {
                 ,uid => user_admin->id
             );
         }
-        wait_request(debug => 0, background => 1, check_error => 1);
+        _wait_request(debug => 1, background => 1, check_error => 1);
 
         my $req = Ravada::Request->remove_domain(
             name => $name
             ,uid => user_admin->id
         );
     }
-    wait_request(debug => 0, background => 1);
+    _wait_request(debug => 1, background => 1);
+    if ( time - $t0 > $SECONDS_TIMEOUT ) {
+        login();
+    }
 }
+
+sub _wait_request(@args) {
+    my $t0 = time;
+    wait_request(@args);
+
+    if ( time - $t0 > $SECONDS_TIMEOUT ) {
+        login();
+    }
+
+}
+
+
+sub login( $user=$USERNAME, $pass=$PASSWORD ) {
+    if ($URL_LOGOUT) {
+        $t->get_ok('/logout');
+        $URL_LOGOUT = $t->tx->req->url->to_abs;
+    } {
+        $t->ua->get($URL_LOGOUT);
+    }
+
+    $t->post_ok('/' => form => {login => $user, password => $pass});
+    like($t->tx->res->code(),qr/^(200|302)$/);
+    #    ->status_is(302);
+
+    exit if !$t->success;
+}
+
 
 ########################################################################################
 
@@ -36,19 +79,18 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
-my $script = path(__FILE__)->dirname->sibling('../rvd_front.pl');
 
-my $t = Test::Mojo->new($script);
+$t = Test::Mojo->new($SCRIPT);
+$t->ua->inactivity_timeout(300);
 $t->get_ok('/')->status_is(200)->content_like(qr/name="login"/);
 
 my $user_admin = user_admin();
 my $pass = "$$ $$";
 
-$t->post_ok('/' => form => {login => $user_admin->name, password => $pass})
-  ->status_is(302);
+$USERNAME = $user_admin->name;
+$PASSWORD = $pass;
 
-exit if !$t->success;
-
+login($user_admin->name, $pass);
 $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
 
 my @bases;
@@ -62,7 +104,7 @@ for my $vm_name ( vm_names() ) {
     remove_machines($name,"$name-".user_admin->name);
 
     $t->post_ok('/new_machine.html' => form => {
-            backend => 'Void'
+            backend => $vm_name
             ,id_iso => search_id_iso('Alpine%')
             ,name => $name
             ,disk => 1
@@ -72,18 +114,18 @@ for my $vm_name ( vm_names() ) {
         }
     )->status_is(302);
 
-    wait_request(debug => 0, background => 1);
+    _wait_request(debug => 0, background => 1);
     my $base = rvd_front->search_domain($name);
     ok($base) or next;
     push @bases,($base->name);
 
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
-    wait_request(debug => 0, background => 1);
+    _wait_request(debug => 0, background => 1);
     $base = rvd_front->search_domain($name);
     is($base->is_base,1);
 
     $t->get_ok("/machine/clone/".$base->id.".json")->status_is(200);
-    wait_request(debug => 0, background => 1);
+    _wait_request(debug => 0, background => 1);
     my $clone = rvd_front->search_domain($name."-".$user_admin->name);
     ok($clone,"Expecting clone created");
     is($clone->is_volatile,0) or exit;
@@ -91,6 +133,6 @@ for my $vm_name ( vm_names() ) {
 }
 ok(@bases,"Expecting some machines created");
 remove_machines(@bases);
-wait_request(background => 1);
+_wait_request(background => 1);
 
 done_testing();
