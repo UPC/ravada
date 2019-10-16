@@ -288,6 +288,55 @@ sub test_prepare_base_with_cd_req {
     my ($cd_clone ) = grep {defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm} } @volumes_clone])) or exit;
 
+    $clone->remove(user_admin);
+
+    for my $vol ( @volumes_clone ) {
+        if ($vol->file =~ /\.iso$/) {
+            ok(-e $vol->file, $vol->file);
+        } else {
+            ok(!-e $vol->file, $vol->file);
+        }
+    }
+
+    $domain->remove_base(user_admin);
+
+    for my $volume ( @volumes_base ) {
+        my $file = $volume->[0];
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file, $file);
+        } else {
+            ok(!-e $file, $file);
+        }
+    }
+
+    $domain->prepare_base(user => user_admin, with_cd => 1);
+    my @volumes_base2 = $domain->list_files_base;
+    ok(grep(/\.iso$/,@volumes_base2));
+
+    for my $volume ( @volumes_base ) {
+        my $file = $volume->[0];
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file, "File shouldn't be removed : $file") or exit;
+        } else {
+            ok(-e $file, $file);
+        }
+    }
+
+
+    $domain->remove(user_admin);
+
+    for my $volume ( @volumes_base ) {
+        my $file = $volume->[0];
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file, "File shouldn't be removed : $file") or exit;
+        } else {
+            ok(!-e $file, $file);
+        }
+    }
+
 }
 
 sub test_clone_with_cd {
@@ -396,7 +445,12 @@ sub test_remove_base {
     ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     for my $file (@files) {
-        ok(!-e $file,"Expecting file base '$file' removed" );
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$};
+        if ($file =~ /\.iso$/) {
+            ok(-e $file,"Expecting file base '$file' removed" );
+        } else {
+            ok(!-e $file,"Expecting file base '$file' removed" );
+        }
     }
 
     my @files_deleted = $domain->list_files_base();
@@ -440,6 +494,7 @@ sub test_dont_remove_base_cloned {
     ok($domain->is_base,"[$vm_name] expecting domain is base, got "
                         .$domain->is_base);
     for my $file (@files) {
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
         ok(-e $file,"[$vm_name] Expecting file base '$file' not removed" );
     }
 
@@ -453,7 +508,13 @@ sub test_dont_remove_base_cloned {
     ok(!$domain->is_base,"[$vm_name] expecting domain is base, got "
                         .$domain->is_base);
     for my $file (@files) {
-        ok(!-e $file,"[$vm_name] Expecting file base '$file' removed" );
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file,"[$vm_name] Expecting file base '$file' not removed" );
+        } else {
+            ok(!-e $file,"[$vm_name] Expecting file base '$file' removed" );
+        }
+
     }
 
 }
@@ -750,7 +811,8 @@ sub test_prepare_fail($vm) {
     is($domain->is_base,0) or exit;
     for my $vol ( @volumes ) {
         eval { $vol->backing_file };
-        like($@,qr/./);
+        like($@,qr/./, $vol->file)
+            if $vol->file !~ /\.iso$/;
     }
 
     # Now we only have the second file already there
@@ -763,7 +825,8 @@ sub test_prepare_fail($vm) {
     like($@,qr/already exists/);
     for my $vol ( @volumes ) {
         eval { $vol->backing_file };
-        like($@,qr/./, "Expecting ".$vol->file." not prepared") or exit;
+        like($@,qr/./, "Expecting ".$vol->file." not prepared")
+            if $vol->file !~ /\.iso$/;
     }
 
 
