@@ -383,6 +383,7 @@ sub _remove_old_domains_vm($vm_name) {
 
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
+        warn $@ if $@;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
         }
@@ -636,7 +637,7 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or [] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
 
@@ -668,6 +669,7 @@ sub wait_request {
         $post = '' if !defined $post;
         if ( $done_all ) {
             for my $req (@$request) {
+                next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     diag("Waiting for request ".$req->id." ".$req->command);
