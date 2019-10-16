@@ -652,7 +652,7 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or [] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
     %skip = ( enforce_limits => 1 ) if !keys %skip;
@@ -674,8 +674,8 @@ sub wait_request {
             my $req = Ravada::Request->open($req_id);
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
-                confess if $req->command eq 'enforce_limits';
-                diag("Waiting for request ".$req->id." ".$req->command) if $debug;
+                diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
+                    ." ".($req->error or '')) if $debug && (time%5 == 0);
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
@@ -697,7 +697,7 @@ sub wait_request {
         }
         return if $done_all && $prev eq $post && scalar(keys %done) == $done_count;;
         return if defined $timeout && time - $t0 >= $timeout;
-        sleep 1 if !$background;
+        sleep 1 if $background;
     }
 }
 
