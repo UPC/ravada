@@ -73,7 +73,7 @@ You have to restart libvirt after changing this file:
 
 .. prompt:: bash $
 
-    sudo sytemctl restart libvirtd
+    sudo systemctl restart libvirtd
 
 Apache
 ------
