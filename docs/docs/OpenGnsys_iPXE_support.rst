@@ -99,7 +99,7 @@ We have detected that the new machine boots, but it hangs just when the menu had
    TX packets 11875794  bytes 4220061188 (4.2 GB)
    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 
-(Sorry tihs image is missing. There is an issue to solve this) image:: images/opengnsys_fake_computer.png
+.. image:: images/opengnsys_fake_computer.png
 
 Parameters:
 * IP: external NAT address of your RAVADA system
