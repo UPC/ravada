@@ -101,7 +101,7 @@ We have detected that the new machine boots, but it hangs just when the menu had
 
 .. image:: images/opengnsys_fake_computer.png
 
-Parameters:
+
 * IP: external NAT address of your RAVADA system
 * MAC: external MAC address of your RAVADA system
 
