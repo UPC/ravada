@@ -7,7 +7,7 @@ Requirements
 OS
 --
 
-Install `Docker <https://docs.docker.com/v17.12/install/>` and `docker-compose <https://docs.docker.com/compose/install/>` on your local machine.
+Install `Docker <https://docs.docker.com/v17.12/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
 
 Hardware
 --------
