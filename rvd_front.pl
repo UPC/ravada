@@ -946,7 +946,6 @@ post '/request/(:name)/' => sub {
     my $args = decode_json($c->req->body);
     confess "Error: uid should not be provided".Dumper($args)
         if exists $args->{uid};
-    warn Dumper($args);
 
     my $req = Ravada::Request->new_request(
         $c->stash('name')
@@ -1293,6 +1292,7 @@ sub login {
                 , locale => [@languages, @languages2]
             );
 
+            $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
             my $machines = $RAVADA->list_machines_user($auth_ok);
             $url = "/machine/display/". $machines->[0]->{id_clone}.".vv" if scalar(@$machines) == 1 && $machines->[0]->{id_clone};
 
