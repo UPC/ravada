@@ -944,7 +944,6 @@ post '/request/(:name)/' => sub {
     my $c = shift;
 
     my $args = decode_json($c->req->body);
-    warn Dumper($args);
 
     my $req = Ravada::Request->new_request(
         $c->stash('name')
@@ -1291,6 +1290,7 @@ sub login {
                 , locale => [@languages, @languages2]
             );
 
+            $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
             my $machines = $RAVADA->list_machines_user($auth_ok);
             $url = "/machine/display/". $machines->[0]->{id_clone}.".vv" if scalar(@$machines) == 1 && $machines->[0]->{id_clone};
 
