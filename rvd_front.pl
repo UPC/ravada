@@ -1308,6 +1308,9 @@ sub login {
                     ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error);
+    my @error_status;
+    @error_status = ( status => 403) if @error;
+
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -1320,6 +1323,7 @@ sub login {
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
                       ,login_hash => ''
+                      ,@error_status
     );
 }
 
