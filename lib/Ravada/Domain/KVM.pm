@@ -900,7 +900,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my $bus = (delete $args{driver} or 'virtio');
+    my $bus = delete $args{driver};# or 'virtio');
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
@@ -942,6 +942,13 @@ sub add_volume {
         $driver_type = 'raw';
     }
 
+    if ( !defined $bus ) {
+        if  ($device eq 'cdrom') {
+            $bus = 'ide';
+        } else {
+            $bus = 'virtio'
+        }
+    }
     my $xml_device = $self->_xml_new_device(
             bus => $bus
           ,file => $path
