@@ -20,7 +20,7 @@ Then we build documentation and host it in `Read the Docs`_ for you.
 .. _Ubuntu: https://www.ubuntu.com/server
 .. _KVM: http://www.linux-kvm.org/
 .. _Spice: https://www.spice-space.org/
-.. _Bootstrap: getbootstrap.com/
+.. _Bootstrap: https://getbootstrap.com/
 .. _AngularJS: https://angularjs.org/
 .. _Transifex: https://www.transifex.com/ravada/ravada/
 .. _Read the Docs: http://readthedocs.org/
