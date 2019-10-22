@@ -99,7 +99,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/access_restrictions
    devel-docs/test_ad
    docs/tuning
-   devel-docs/translations
    docs/monitoring
    docs/guide
    docs/local_resources
@@ -141,5 +140,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/run
    devel-docs/test
    devel-docs/create_test
+   devel-docs/translations
    devel-docs/documentation
    docs/spice_tls
