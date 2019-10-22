@@ -489,11 +489,11 @@ sub test_change_hardware($vm, $domain, $hardware) {
 sub test_change_drivers($domain, $hardware) {
 
     my $info = $domain->info(user_admin);
-    my ($index) = _search_disk($domain);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
 
     for my $option (@$options) {
+        my ($index) = _search_disk($domain);
         diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
