@@ -149,6 +149,8 @@ sub test_create_domain {
     for my $dom2 ( $vm->list_domains ) {
         is(ref($dom2),ref($domain)) if $vm_name ne 'Void';
     }
+    my ($cdrom) = grep { /iso/ } $domain->list_volumes;
+    like($cdrom, qr/\.iso$/, "Expecting a CDROM ".Dumper([$domain->list_volumes]));
 
     return $domain;
 }
@@ -459,9 +461,6 @@ sub test_create_domain_nocd {
     return if $@ && $@ =~ /Can't locate object method/;
     is($@,'');
 
-    ok(!$iso->{device},"Expecting no device. Got: "
-                        .($iso->{device} or '<UNDEF>')) or return;
-
     my $domain;
     eval { $domain = rvd_back->search_vm($vm_name)->create_domain(
              name => $name
@@ -473,10 +472,8 @@ sub test_create_domain_nocd {
     is($@,'');
     ok($domain,"Expecting a domain");
 
-    my $iso2 = select_iso($id_iso);
-    is($iso->{id}, $iso2->{id}) or return;
-    ok(!$iso2->{device},"Expecting no device. Got: "
-                        .($iso2->{device} or '<UNDEF>'));
+    my ($cdrom) = grep { /iso/ } $domain->list_volumes;
+    is($cdrom, undef, "Expecting a CDROM ".Dumper([$domain->list_volumes]));
 }
 
 sub select_iso {

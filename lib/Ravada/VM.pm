@@ -77,11 +77,6 @@ has 'host' => (
     , default => 'localhost'
 );
 
-has 'public_ip' => (
-        isa => 'Str'
-        , is => 'rw'
-);
-
 has 'default_dir_img' => (
       isa => 'String'
      , is => 'ro'
@@ -148,6 +143,10 @@ sub _init_connector {
                                                 && defined $Ravada::Front::CONNECTOR;
 }
 
+sub _dbh($self) {
+    return $$CONNECTOR->dbh();
+}
+
 =head1 Constructors
 
 =head2 open
@@ -177,7 +176,10 @@ sub open {
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
-    return $VM{$args{id}} if $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name};
+    if ( $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
+        my $vm = $VM{$args{id}};
+        return _clean($vm);
+    }
 
     my $type = $row->{vm_type};
     $type = 'KVM'   if $type eq 'qemu';
@@ -207,10 +209,10 @@ sub BUILD {
     my $name = delete $args->{name};
     my $store = delete $args->{store};
     $store = 1 if !defined $store;
+    my $public_ip = delete $args->{public_ip};
 
     delete $args->{readonly};
     delete $args->{security};
-    delete $args->{public_ip};
 
     # TODO check if this is needed
     delete $args->{connector};
@@ -227,15 +229,10 @@ sub BUILD {
             ,vm_type => $self->type
         );
         $query{name} = $name  if $name;
+        $query{public_ip} = $public_ip if defined $public_ip;
         $self->_select_vm_db(%query);
     }
     $self->id;
-
-    $self->public_ip($self->_data('public_ip'))
-        if defined $self->_data('public_ip')
-            && (!defined $self->public_ip
-                || $self->public_ip ne $self->_data('public_ip')
-            );
 
 }
 
@@ -364,20 +361,23 @@ sub _around_create_domain {
     my $orig = shift;
     my $self = shift;
     my %args = @_;
+    my $remote_ip = delete $args{remote_ip};
+    my $add_to_pool = delete $args{add_to_pool};
+    my %args_create = %args;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
     my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
 
     my $base;
-    my $remote_ip = delete $args{remote_ip};
     my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
      my $id_iso = delete $args{id_iso};
      my $active = delete $args{active};
        my $name = delete $args{name};
        my $swap = delete $args{swap};
+       my $from_pool = delete $args{from_pool};
 
-     # args get deleted but kept on @_ so when we call $self->$orig below are passed
+     # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};
      delete $args{request};
@@ -392,6 +392,11 @@ sub _around_create_domain {
         $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
         $volatile = 1 if $base->volatile_clones;
+        if ($add_to_pool) {
+            confess "Error: you can't add to pool and also pick from pool" if $from_pool;
+            $from_pool = 0;
+        }
+        $from_pool = 1 if !defined $from_pool && $base->pools();
     }
 
     confess "ERROR: User ".$owner->name." is not allowed to create machines"
@@ -402,9 +407,19 @@ sub _around_create_domain {
     confess "ERROR: Base ".$base->name." is private"
         if !$owner->is_admin && $base && !$base->is_public();
 
-    $self->_pre_create_domain(@_);
+    if ($add_to_pool) {
+        confess "Error: This machine can only be added to a pool if it is a clone"
+            if !$base;
+        confess("Error: Requested to add a clone for the pool but this base has no pools")
+            if !$base->pools;
+    }
+    $args_create{listen_ip} = $self->listen_ip($remote_ip);
+    $args_create{spice_password} = $self->_define_spice_password($remote_ip);
+    $self->_pre_create_domain(%args_create);
 
-    my $domain = $self->$orig(@_, volatile => $volatile);
+    return $base->_search_pool_clone($owner) if $from_pool;
+
+    my $domain = $self->$orig(%args_create, volatile => $volatile);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
@@ -432,7 +447,17 @@ sub _around_create_domain {
     $domain->info($owner);
     $domain->display($owner)    if $domain->is_active;
 
+    $domain->is_pool(1) if $add_to_pool;
     return $domain;
+}
+
+sub _define_spice_password($self, $remote_ip) {
+    my $spice_password = Ravada::Utils::random_name(4);
+    if ($remote_ip) {
+        my $network = Ravada::Network->new(address => $remote_ip);
+        $spice_password = undef if !$network->requires_password;
+    }
+    return $spice_password;
 }
 
 sub _check_duplicate_name($self, $name) {
@@ -595,10 +620,22 @@ sub _interface_ip($self, $remote_ip=undef) {
             my $netaddr = NetAddr::IP->new($network);
             return $ip if $remote_ip_addr->within($netaddr);
 
+            $default_ip = $ip if !defined $default_ip && $ip !~ /^127\./;
             $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
         }
     }
     return $default_ip;
+}
+
+sub listen_ip($self, $remote_ip=undef) {
+    return Ravada::display_ip() if Ravada::display_ip();
+    return $self->public_ip     if $self->public_ip;
+
+    return $self->_interface_ip($remote_ip) if $remote_ip;
+
+    return (
+            $self->ip()
+    );
 }
 
 sub _check_memory {
@@ -644,7 +681,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -693,6 +730,7 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($value, $self->id);
         $sth->finish;
+
         return $value;
     }
 
@@ -712,12 +750,17 @@ sub _data($self, $field, $value=undef) {
 
 sub _timed_data_cache($self) {
     return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
+    return _clean($self);
+}
+
+sub _clean($self) {
     my $name = $self->{_data}->{name};
     my $id = $self->{_data}->{id};
     delete $self->{_data};
     delete $self->{$FIELD_TIMEOUT};
     $self->{_data}->{name} = $name  if $name;
     $self->{_data}->{id} = $id      if $id;
+    return $self;
 }
 
 sub _do_select_vm_db {
@@ -768,11 +811,12 @@ sub _insert_vm_db {
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
     my $host = ( delete $args{hostname} or $self->host );
+    my $public_ip = ( delete $args{public_ip} or '' );
     delete $args{vm_type};
 
     confess "Unknown args ".Dumper(\%args)  if keys %args;
 
-    eval { $sth->execute($name,$self->type,$host, $self->public_ip)  };
+    eval { $sth->execute($name,$self->type,$host, $public_ip) };
     confess $@ if $@;
     $sth->finish;
 
@@ -1057,6 +1101,10 @@ sub is_enabled($self, $value=undef) {
     return $self->enabled($value);
 }
 
+sub public_ip($self, $value=undef) {
+    return $self->_data('public_ip', $value);
+}
+
 =head2 remove
 
 Remove the virtual machine manager.
@@ -1167,7 +1215,8 @@ sub _read_file_local( $self, $file ) {
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    $self->_connect_ssh(1);
+    # why should we force disconnect before ?
+    $self->_connect_ssh();
     my ( $out, $err) = $self->run_command("/usr/bin/test",
         "-e $file ; echo \$?");
 
@@ -1185,16 +1234,16 @@ sub remove_file( $self, $file ) {
     return $self->run_command("/bin/rm", $file);
 }
 
-sub create_iptables_chain($self,$chain) {
+sub create_iptables_chain($self, $chain, $jchain='INPUT') {
     my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
 
     $self->run_command("/sbin/iptables", '-N' => $chain)
         if $out !~ /^Chain $chain/;
 
-    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",'INPUT');
-    return if grep(/^RAVADA /, split(/\n/,$out));
+    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$jchain);
+    return if grep(/^$chain /, split(/\n/,$out));
 
-    $self->run_command("/sbin/iptables", '-A','INPUT', '-j' => $chain);
+    $self->run_command("/sbin/iptables", '-I', $jchain, '-j' => $chain);
 
 }
 
@@ -1210,6 +1259,38 @@ sub iptables($self, @args) {
     }
     my ($out, $err) = $self->run_command(@cmd);
     warn $err if $err;
+}
+
+sub iptables_unique($self,@rule) {
+    return if $self->search_iptables(@rule);
+    return $self->iptables(@rule);
+}
+
+sub search_iptables($self, %rule) {
+    my $table = 'filter';
+    $table = delete $rule{t} if exists $rule{t};
+    my $iptables = $self->iptables_list();
+
+    if (exists $rule{I}) {
+        $rule{A} = delete $rule{I};
+    }
+    $rule{m} = $rule{p} if exists $rule{p} && !exists $rule{m};
+    $rule{d} = "$rule{d}/32" if exists $rule{d} && $rule{d} !~ m{/\d+$};
+    $rule{s} = "$rule{s}/32" if exists $rule{s} && $rule{s} !~ m{/\d+$};
+
+    for my $line (@{$iptables->{$table}}) {
+
+        my %args = @$line;
+        my $match = 1;
+        for my $key (keys %rule) {
+            $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
+            last if !$match;
+        }
+        if ( $match ) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 sub iptables_list($self) {

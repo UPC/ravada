@@ -79,6 +79,7 @@ sub BUILD {
     Ravada::_init_config($self->config()) if $self->config;
     Ravada::Auth::init($Ravada::CONFIG);
     $CONNECTOR->dbh();
+    @VM_TYPES = @{$Ravada::CONFIG->{vm}};
 }
 
 =head2 list_bases
@@ -252,6 +253,7 @@ sub list_domains($self, %args) {
 
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
+        ."      ,comment, is_pool"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -329,8 +331,10 @@ sub filter_base_without_clones($domains) {
     for (my $i = 0; $i < $size_domains; ++$i) {
         if (@$domains[$i]->{is_base}) {
             for (my $j = 0; $j < $size_domains; ++$j) {
-                if ($j != $i && !(@$domains[$j]->{is_base}) && (@$domains[$j]->{id_base} eq @$domains[$i]->{id})) {
-                    push @list, (@$domains[$i]);
+                if ($j != $i && !($domains->[$j]->{is_base})
+                        && defined $domains->[$j]->{id_base}
+                        && $domains->[$j]->{id_base} eq $domains->[$i]->{id}) {
+                    push @list, ($domains->[$i]);
                     last;
                 }
             }
@@ -889,6 +893,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'post_login'
                 || $command eq 'list_network_interfaces'
                 || $command eq 'list_isos'
+                || $command eq 'manage_pools'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'

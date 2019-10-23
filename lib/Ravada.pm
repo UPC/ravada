@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.4.3';
+our $VERSION = '0.5.0-beta8';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -179,15 +179,14 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
-        mate_artful => {
-                    name => 'Ubuntu Mate Artful'
-            ,description => 'Ubuntu Mate 17.10.1 (Artful) 64 bits'
+        arch_1909 => {
+                    name => 'Arch Linux 19.09'
+            ,description => 'Arch Linux 19.09.01 64 bits'
                    ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/17.10.*/release/ubuntu-mate-17.10.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
-                ,min_disk_size => '10'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'http://mirrors.evowise.com/archlinux/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
+                ,md5_url => '$url/md5sums.txt'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -230,17 +229,6 @@ sub _update_isos {
           ,min_disk_size => '9'
         }
 
-        ,zesty => {
-                    name => 'Ubuntu Zesty Zapus'
-            ,description => 'Ubuntu 17.04 Zesty Zapus 64 bits'
-                   ,arch => 'amd64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/17.04/'
-                ,file_re => 'ubuntu-17.04.*desktop-amd64.iso'
-                ,md5_url => 'http://releases.ubuntu.com/17.04/MD5SUMS'
-                ,min_disk_size => '10'
-        }
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
     ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
@@ -297,16 +285,6 @@ sub _update_isos {
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
-        }
-        ,fedora_27 => {
-            name => 'Fedora 27'
-            ,description => 'RedHat Fedora 27 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/27/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-27-.*\.iso'
-            ,arch => 'amd64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => '$url/Fedora-Workstation-27-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
         }
         ,fedora_28 => {
             name => 'Fedora 28'
@@ -365,37 +343,13 @@ sub _update_isos {
         ,xubuntu_beaver_32 => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'amd64'
+            ,arch => 'i386'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,md5_url => '$url/../MD5SUMS'
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-i386/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_32.iso'
-        }
-        ,xubuntu_artful => {
-            name => 'Xubuntu Artful Aardvark'
-            ,description => 'Xubuntu 17.10 Artful Aardvark 64 bits'
-            ,arch => 'amd64'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/artful/main/installer-amd64/current/images/netboot/'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_artful.iso'
-            ,min_disk_size => '10'
-        }
-        ,xubuntu_zesty => {
-            name => 'Xubuntu Zesty Zapus'
-            ,description => 'Xubuntu 17.04 Zesty Zapus 64 bits'
-            ,arch => 'amd64'
-            ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/zesty/main/installer-amd64/current/images/netboot'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_zesty_mini.iso'
-            ,min_disk_size => '10'
         }
         ,xubuntu_xenial => {
             name => 'Xubuntu Xenial Xerus'
@@ -454,16 +408,47 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-        ,debian_stretch => {
+       ,debian_stretch_32 => {
+            name =>'Debian Stretch 32 bits'
+            ,description => 'Debian 9 Stretch 32 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*\d$/i386/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^9\..*/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,debian_buster_64=> {
+            name =>'Debian Buster 64 bits'
+            ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/amd64/iso-cd/'
+            ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_buster_32=> {
+            name =>'Debian Buster 32 bits'
+            ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/i386/iso-cd/'
+            ,file_re => 'debian-10.[\d\.]+-i386-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+
         ,windows_7 => {
           name => 'Windows 7'
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
@@ -1084,17 +1069,28 @@ sub _upgrade_table {
     my $dbh = $CONNECTOR->dbh;
 
     my ($new_size) = $definition =~ m{\((\d+)};
+    my ($new_type) = $definition =~ m{(\w+)};
 
     my $sth = $dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
     $sth->finish;
     if ( $dbh->{Driver}{Name} =~ /mysql/
-        && $row && $row->{COLUMN_SIZE}
-        && $new_size
-        && $new_size != $row->{COLUMN_SIZE}) {
+        && $row
+        && (
+            ($row->{COLUMN_SIZE}
+            && defined $new_size
+            && $new_size != $row->{COLUMN_SIZE}
+            ) || (
+                lc($row->{TYPE_NAME}) ne lc($new_type)
+            )
+        )
+    ){
 
+        warn "INFO: changing $field\n"
+            ." $row->{COLUMN_SIZE} to ".($new_size or '')."\n"
+            ." $row->{TYPE_NAME} -> $new_type \n"
+            ." in $table\n$definition\n"  if $0 !~ /\.t$/;
         $dbh->do("alter table $table change $field $field $definition");
-        warn "INFO: changing $field $row->{COLUMN_SIZE} to $new_size in $table\n"  if $0 !~ /\.t$/;
         return;
     }
 
@@ -1198,7 +1194,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
-    $self->_upgrade_table('vms','cached_active_time',"integer DEFAULT 0");
+    $self->_upgrade_table('vms','cached_active_time',"int DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
@@ -1217,6 +1213,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
+    $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -1248,15 +1245,20 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
-    $self->_upgrade_table('domains','display','varchar(250) DEFAULT NULL');
+    $self->_upgrade_table('domains','display','text');
     $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
+    $self->_upgrade_table('domains','comment',"varchar(80) DEFAULT ''");
 
     $self->_upgrade_table('domains','client_status','varchar(32)');
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
+    $self->_upgrade_table('domains','pools','int NOT NULL default 0');
+    $self->_upgrade_table('domains','pool_clones','int NOT NULL default 0');
+    $self->_upgrade_table('domains','pool_start','int NOT NULL default 0');
+    $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
@@ -1268,6 +1270,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','mac','char(18)');
 
     $self->_upgrade_table('volumes','name','char(200)');
+
+    $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
 }
 
 
@@ -1550,7 +1554,7 @@ sub create_domain {
     my $start = $args{start};
     my $id_base = $args{id_base};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -2083,7 +2087,7 @@ sub process_requests {
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
 
-        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." "
+        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -2096,7 +2100,7 @@ sub process_requests {
 
         warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
             ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
-        sleep 1 if $DEBUG;
+            #        sleep 1 if $DEBUG;
 
     }
     $sth->finish;
@@ -2210,6 +2214,8 @@ sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 }
 
 sub _kill_stale_process($self) {
+
+    my @domains = $self->list_domains_data();
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid,command,start_time "
         ." FROM requests "
@@ -2219,7 +2225,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 60 );
+    $sth->execute(time - 5*scalar(@domains) + 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2308,20 +2314,11 @@ sub _execute {
         return;
     }
 
-    $request->pid($$);
     $request->start_time(time);
     $request->error('');
+        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
-
-        my $t0 = [gettimeofday];
-        eval { $sub->($self,$request) };
-        my $err = ($@ or '');
-        my $elapsed = tv_interval($t0,[gettimeofday]);
-        $request->run_time($elapsed);
-        $request->status('done') if $request->status() ne 'done'
-                                    && $request->status !~ /retry/;
-        $request->error($err) if $err;
-        warn $err if $err;
+        $self->_do_execute_command($sub, $request);
         return;
     }
 
@@ -2332,12 +2329,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
-        $request->status('working','');
-        my $t0 = [gettimeofday];
-        srand();
         $self->_do_execute_command($sub, $request);
-        my $elapsed = tv_interval($t0,[gettimeofday]);
-        $request->run_time($elapsed) if !$request->run_time();
         exit;
     }
     $self->_add_pid($pid, $request);
@@ -2357,6 +2349,7 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    $request->pid($$);
     my $t0 = [gettimeofday];
     eval {
         $sub->($self,$request);
@@ -2365,10 +2358,88 @@ sub _do_execute_command {
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
     $request->error($err)   if $err;
+    if ($err && $err =~ /retry.?$/i) {
+        my $retry = $request->retry;
+        if (defined $retry && $retry>0) {
+            $request->status('requested');
+            $request->at(time + 10);
+            $request->retry($retry-1);
+        } else {
+            $request->status('done');
+            $err =~ s/(.*?)retry.?/$1/i;
+            $request->error($err)   if $err;
+        }
+    } else {
     $request->status('done')
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
+    }
+}
 
+sub _cmd_manage_pools($self, $request) {
+    my @domains;
+    my $id_domain = $request->defined_arg('id_domain');
+    my $uid = $request->defined_arg('uid');
+    if (!$uid) {
+        $uid = Ravada::Utils::user_daemon->id;
+        $request->arg( uid => $uid );
+    }
+    confess if !defined $uid;
+    if ($id_domain) {
+        my $domain = Ravada::Domain->open($id_domain)
+            or die "Error: missing domain ".$id_domain;
+        push @domains,($domain);
+    } else {
+        push @domains, $self->list_domains;
+    }
+    for my $domain ( @domains ) {
+        next if !$domain->pools();
+        my @clone_pool = $domain->clones(is_pool => 1);
+        my $number = $domain->pool_clones() - scalar(@clone_pool);
+        if ($number > 0 ) {
+            $self->_pool_create_clones($domain, $number, $request);
+        }
+        my $count_active = 0;
+        for my $clone_data (@clone_pool) {
+            last if $count_active >= $domain->pool_start;
+            my $clone = Ravada::Domain->open($clone_data->{id});
+#            warn $clone->name."".($clone->client_status or '')." $count_active >= "
+#    .$domain->pool_start."\n";
+            if ( ! $clone->is_active ) {
+                Ravada::Request->start_domain(
+                    uid => $uid
+                    ,id_domain => $clone->id
+                );
+                $count_active++;
+            } else {
+                $count_active++ if !$clone->client_status
+                                || $clone->client_status =~ /disconnected/i;
+            }
+        }
+    }
+}
+
+sub _pool_create_clones($self, $domain, $number, $request) {
+    my @arg_clone = ( );
+    $request->status("cloning $number");
+    if (!$domain->is_base) {
+	my @requests = $domain->list_requests();
+	return if grep { $_->command eq 'prepare_base' } @requests;
+        $request->status("preparing base");
+        my $req_base = Ravada::Request->prepare_base(
+            uid => $request->args('uid')
+            ,id_domain => $domain->id
+        );
+        push @arg_clone, ( after_request => $req_base->id ) if $req_base;
+    }
+    Ravada::Request->clone(
+        uid => $request->args('uid')
+        ,id_domain => $domain->id
+        ,number => $number
+        ,add_to_pool => 1
+        ,start => 1
+        ,@arg_clone
+    );
 }
 
 sub _cmd_screenshot {
@@ -2418,6 +2489,21 @@ sub _cmd_create{
     warn "$$ creating domain ".Dumper($request->args)   if $DEBUG;
     my $domain;
 
+    if ( $request->defined_arg('id_base') ) {
+        my $base = Ravada::Domain->open($request->args('id_base'));
+        if ( $request->defined_arg('pool') ) {
+            if ( $base->pools ) {
+                $request->{args}->{id_domain} = delete $request->{args}->{id_base};
+                $request->{args}->{uid} = delete $request->{args}->{id_owner};
+                my $clone = $self->_cmd_clone($request);
+                $request->id_domain($clone->id);
+                return $clone;
+            } else {
+                confess "Error: this base has no pools";
+            }
+        }
+    }
+
     $domain = $self->create_domain(request => $request);
 
     my $msg = '';
@@ -2444,7 +2530,15 @@ sub _can_fork {
 
     my $type = $req->type;
 
-    my $n_pids = scalar(keys %{$self->{pids}->{$type}});
+    return 1 if !$self->{pids}->{$type};
+    my %reqs = %{$self->{pids}->{$type}};
+
+    for my $pid (keys %reqs) {
+        my $id_req = $reqs{$pid};
+        my $request = Ravada::Request->open($id_req);
+        delete $reqs{$pid} if !$request || $request->status eq 'done';
+    }
+    my $n_pids = scalar(keys %reqs);
     return 1 if $n_pids <= $req->requests_limit();
 
     my $msg = $req->command
@@ -2558,21 +2652,53 @@ sub _cmd_open_iptables {
 }
 
 sub _cmd_clone($self, $request) {
+
+    return _req_clone_many($self, $request) if $request->defined_arg('number');
+
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
 
-    my @args = ( request => $request);
-    push @args, ( memory => $request->args('memory'))
-        if $request->defined_arg('memory');
+    my $args = $request->args();
+    $args->{request} = $request;
 
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'))
         or die "Error: User missing, id: ".$request->args('uid');
-    push @args,(user => $user);
-    $domain->clone(
-        name => $request->args('name')
-        ,@args
-    );
+    $args->{user} = $user;
+    for (qw(id_domain uid at )) {
+        delete $args->{$_};
+    }
 
+    my $name = ( $request->defined_arg('name') or $domain->name."-".$user->name );
+
+    my $clone = $domain->clone(
+        name => $name
+        ,%$args
+    );
+}
+
+sub _req_clone_many($self, $request) {
+    my $args = $request->args();
+    my $id_domain = $args->{id_domain};
+    my $base = Ravada::Domain->open($id_domain);
+    my $number = ( delete $args->{number} or 1 );
+    my $domains = $self->list_domains_data();
+    my %domain_exists = map { $_->{name} => 1 } @$domains;
+
+    my @reqs;
+    for ( 1 .. $number ) {
+        my $n = $_;
+        my $name;
+        for ( ;; ) {
+            while (length($n) < length($number)) { $n = "0".$n };
+            $name = $base->name."-".$n;
+            last if !$domain_exists{$name}++;
+            $n++;
+        }
+        $args->{name} = $name;
+        my $req2 = Ravada::Request->clone( %$args );
+        push @reqs, ( $req2 );
+    }
+    return @reqs;
 }
 
 sub _cmd_start {
@@ -2593,7 +2719,16 @@ sub _cmd_start {
 
     $self->_remove_unnecessary_downs($domain);
 
-    $domain->start(user => $user, remote_ip => $request->args('remote_ip'));
+    my @args = ( user => $user );
+    push @args, ( remote_ip => $request->defined_arg('remote_ip') )
+        if $request->defined_arg('remote_ip');
+
+    $domain->start(@args);
+
+    Ravada::Request->manage_pools(
+        uid => Ravada::Utils::user_daemon->id
+    ) if $domain->is_pool && $request->defined_arg('remote_ip');
+
     my $msg = 'Domain '
             ."<a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
@@ -2677,12 +2812,14 @@ sub _cmd_prepare_base {
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
         or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
+    my $with_cd = $request->defined_arg('with_cd');
+
     my $domain = $self->search_domain_by_id($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
     $self->_remove_unnecessary_downs($domain);
-    $domain->prepare_base($user);
+    $domain->prepare_base(user => $user, with_cd => $with_cd);
 
 }
 
@@ -2967,9 +3104,9 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_disabled_nodes( $request );
     $self->_refresh_down_nodes( $request );
 
-    my ($active_domain, $active_vm) = $self->_refresh_active_domains($request);
+    my $active_vm = $self->_refresh_active_vms();
+    my $active_domain = $self->_refresh_active_domains($request);
     $self->_refresh_down_domains($active_domain, $active_vm);
-    $self->_remove_unnecessary_downs();
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
@@ -3064,11 +3201,15 @@ sub _cmd_list_isos($self, $request){
     $request->output(encode_json(\@isos));
 }
 
-sub _clean_requests($self, $command, $request=undef) {
+sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
-        ."   AND status='requested'";
+        ."   AND status=?";
 
+    if ($status eq 'done') {
+        my $date= Time::Piece->localtime(time - 300);
+        $query .= " AND date_changed < ".$CONNECTOR->dbh->quote($date->ymd." ".$date->hms);
+    }
     if ($request) {
         confess "Wrong request" if !ref($request) || ref($request) !~ /Request/;
         $query .= "   AND id <> ?";
@@ -3076,21 +3217,16 @@ sub _clean_requests($self, $command, $request=undef) {
     my $sth = $CONNECTOR->dbh->prepare($query);
 
     if ($request) {
-        $sth->execute($command, $request->id);
+        $sth->execute($command, $status, $request->id);
     } else {
-        $sth->execute($command);
+        $sth->execute($command, $status);
     }
 }
 
-sub _refresh_active_domains($self, $request=undef) {
-    my $id_domain;
-    $id_domain = $request->defined_arg('id_domain')  if $request;
+sub _refresh_active_vms ($self) {
 
-    my %active_domain;
     my %active_vm;
     for my $vm ($self->list_vms) {
-        $request->status('working',"checking active domains on ".$vm->name)
-            if $request;
         if ( !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
@@ -3098,21 +3234,30 @@ sub _refresh_active_domains($self, $request=undef) {
             next;
         }
         $active_vm{$vm->id} = 1;
+    }
+    return \%active_vm;
+}
+
+sub _refresh_active_domains($self, $request=undef) {
+    my $id_domain;
+    $id_domain = $request->defined_arg('id_domain')  if $request;
+    my %active_domain;
+
         if ($id_domain) {
-            my $domain = $vm->search_domain_by_id($id_domain);
-            $self->_refresh_active_domain($vm, $domain, \%active_domain) if $domain;
+            my $domain = $self->search_domain_by_id($id_domain);
+            $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
-            eval { @domains = $vm->list_domains };
+            eval { @domains = $self->list_domains };
             warn $@ if $@;
             for my $domain (@domains) {
                 next if $active_domain{$domain->id};
                 next if $domain->is_hibernated;
-                $self->_refresh_active_domain($vm, $domain, \%active_domain);
+                $self->_refresh_active_domain($domain, \%active_domain);
+                $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
             }
         }
-    }
-    return \%active_domain, \%active_vm;
+    return \%active_domain;
 }
 
 sub _refresh_down_nodes($self, $request = undef ) {
@@ -3149,7 +3294,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
     $sth->finish;
 }
 
-sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
+sub _refresh_active_domain($self, $domain, $active_domain) {
     return if $domain->is_hibernated();
 
     my $is_active = $domain->is_active();
@@ -3157,9 +3302,6 @@ sub _refresh_active_domain($self, $vm, $domain, $active_domain) {
     my $status = 'shutdown';
     if ( $is_active ) {
         $status = 'active';
-        $domain->_data(id_vm => $vm->id)
-            if !defined$domain->_data('id_vm')
-                || $domain->_data('id_vm') != $vm->id;
     }
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
@@ -3192,16 +3334,13 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     }
 }
 
-sub _remove_unnecessary_downs($self, @domains) {
-    @domains = $self->list_domains( active => 0 ) if !scalar @domains;
+sub _remove_unnecessary_downs($self, $domain) {
 
-    for my $domain (@domains) {
         my @requests = $domain->list_requests(1);
         for my $req (@requests) {
             $req->status('done') if $req->command =~ /shutdown/;
             $req->_remove_messages();
         }
-    }
 }
 
 sub _refresh_volatile_domains($self) {
@@ -3263,6 +3402,9 @@ sub _cmd_set_base_vm {
 sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_requests('cleanup', $request);
+    $self->_clean_requests('cleanup', $request,'done');
+    $self->_clean_requests('enforce_limits', $request,'done');
+    $self->_clean_requests('refresh_vms', $request,'done');
     $self->_wait_pids();
 }
 
@@ -3303,7 +3445,6 @@ sub _req_method {
 ,rebase_volumes => \&_cmd_rebase_volumes
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_machine => \&_cmd_refresh_machine
-,refresh_vms => \&_cmd_refresh_vms
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
@@ -3329,6 +3470,8 @@ sub _req_method {
 
     #isos
     ,list_isos => \&_cmd_list_isos
+
+    ,manage_pools => \&_cmd_manage_pools
     );
     return $methods{$cmd};
 }
@@ -3474,6 +3617,14 @@ sub _enforce_limits_active($self, $request) {
             #TODO check the domain shutdown has been already requested
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
+            }
+            if ($domain->is_pool) {
+                $domain->id_owner(Ravada::Utils::user_daemon->id);
+                $domain->_data(comment => '');
+                Ravada::Request->shutdown(user => Ravada::Utils::user_daemon->id
+                    ,id_domain => $domain->id
+                );
+                return;
             }
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);

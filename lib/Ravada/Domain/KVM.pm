@@ -217,6 +217,8 @@ sub _vol_remove {
     my $file = shift;
     my $warning = shift;
 
+    confess "Error: I won't remove an iso file " if $file =~ /\.iso$/i;
+
     my $name;
     ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
@@ -276,6 +278,7 @@ sub remove {
     }
 
     eval { $self->_remove_file_image() };
+        warn $@ if $@;
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
@@ -290,12 +293,14 @@ sub remove {
 sub _remove_file_image {
     my $self = shift;
     for my $file ( $self->list_files_base ) {
+        next if $file && $file =~ /\.iso$/i;
 
         next if !$file || ! -e $file;
 
         chmod 0770, $file or die "$! chmodding $file";
         chown $<,$(,$file    or die "$! chowning $file";
         eval { $self->_vol_remove($file,1) };
+        warn $@ if $@;
 
         if ( -e $file ) {
             eval {
@@ -354,7 +359,7 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
             push @img,($file) if $file;
             next;
         }
-        push @img,$info;
+        push @img,Ravada::Volume->new(file => $file, info => $info, domain => $self);
     }
     return @img;
 
@@ -421,55 +426,17 @@ sub disk_device {
     return $self->_disk_device(@_);
 }
 
+
 sub _create_qcow_base {
+    confess "Deprecated";
     my $self = shift;
 
     my @base_img;
 
     for  my $vol_data ( $self->list_volumes_info( device => 'disk')) {
-        my ($file_img,$target) = ($vol_data->{file}, $vol_data->{target});
-        my $base_img = $file_img;
+        my $base_img = $vol_data->prepare_base();
+        push @base_img,([$base_img,$vol_data->info->{target}]);
 
-        my $pool_base = $self->_vm->default_storage_pool_name;
-        $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
-        $pool_base = $self->_vm->storage_pool()         if !$pool_base;
-
-        $self->_vm->_check_free_disk($vol_data->{capacity} * 2);
-
-        my $dir_base = $self->_vm->_storage_path($pool_base);
-
-        my @cmd;
-        $base_img =~ s{(.*)/(.*)\.\w+$}{$dir_base/$2\.ro.qcow2};
-
-        die "ERROR: base image already exists '$base_img'" if -e $base_img;
-
-        if ($file_img =~ /\.SWAP\.\w+$/) {
-            @cmd = _cmd_copy($file_img, $base_img);
-        } else {
-            @cmd = _cmd_convert($file_img,$base_img);
-        }
-
-        push @base_img,([$base_img,$target]);
-
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-        warn $out  if $out;
-        warn "$?: $err"   if $err;
-
-        if ($? || ! -e $base_img) {
-            chomp $err;
-            chomp $out;
-            die "ERROR: Output file $base_img not created at "
-                ."\n"
-                ."ERROR $?: '".($err or '')."'\n"
-                ."  OUT: '".($out or '')."'\n"
-                ."\n"
-                .join(" ",@cmd);
-        }
-
-        chmod 0555,$base_img;
-        unlink $file_img or die "$! $file_img";
-        $self->_vm->_clone_disk($base_img, $file_img);
     }
     return @base_img;
 
@@ -538,20 +505,17 @@ sub _create_swap_base {
 
 =cut
 
-=head2 prepare_base
+=head2 post_prepare_base
 
-Prepares a base virtual machine with this domain disk
+Task to run after preparing a base virtual machine
 
 =cut
 
 
-sub prepare_base {
+sub post_prepare_base {
     my $self = shift;
 
-#    my @img = $self->_create_swap_base();
-    my @img = $self->_create_qcow_base();
     $self->_store_xml();
-    return @img;
 }
 
 sub _store_xml {
@@ -936,7 +900,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my $bus = (delete $args{driver} or 'virtio');
+    my $bus = delete $args{driver};# or 'virtio');
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
@@ -958,7 +922,7 @@ sub add_volume {
     ($name) = $path =~ m{.*/(.*)} if !$name && $path;
 
     $path = $args{vm}->create_volume(
-        name => ($name or $self->name)
+        name => $name
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
@@ -978,6 +942,13 @@ sub add_volume {
         $driver_type = 'raw';
     }
 
+    if ( !defined $bus ) {
+        if  ($device eq 'cdrom') {
+            $bus = 'ide';
+        } else {
+            $bus = 'virtio'
+        }
+    }
     my $xml_device = $self->_xml_new_device(
             bus => $bus
           ,file => $path
@@ -1473,6 +1444,11 @@ sub rename {
     my $new_name = $args{name};
 
     $self->domain->rename($new_name);
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    $self->_vm->_xml_add_sysinfo_entry($doc, hostname => $new_name);
+
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
 }
 
 =head2 disk_size
@@ -1604,8 +1580,6 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
                             => $self->domain->get_xml_description);
     my @graphics = $doc->findnodes('/domain/devices/graphics');
 
-    $ip = $self->_vm->ip()  if !defined $ip;
-
     for my $graphics ( $doc->findnodes('/domain/devices/graphics') ) {
 
         next if $self->is_hibernated() || $self->domain->is_active;
@@ -1619,14 +1593,14 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
             }
             $self->_set_spice_password($password);
 
-        $graphics->setAttribute('listen' => $ip);
+        $graphics->setAttribute('listen' => ($ip or $self->_vm->listen_ip));
         my $listen;
         for my $child ( $graphics->childNodes()) {
             $listen = $child if $child->getName() eq 'listen';
         }
         # we should consider in the future add a new listen if it ain't one
         next if !$listen;
-        $listen->setAttribute('address' => $ip);
+        $listen->setAttribute('address' => ($ip or $self->_vm->listen_ip));
         $self->domain->update_device($graphics);
     }
 }
@@ -1642,6 +1616,8 @@ sub _hwaddr {
     }
     return @hwaddr;
 }
+
+=pod
 
 sub _find_base {
     my $self = shift;
@@ -1661,8 +1637,6 @@ sub _find_base {
 
 Clean swap volumes. It actually just creates an empty qcow file from the base
 
-=cut
-
 sub clean_swap_volumes {
     my $self = shift;
     return if !$self->is_local;
@@ -1681,6 +1655,8 @@ sub clean_swap_volumes {
     	die $err if $err;
 	}
 }
+
+=cut
 
 =head2 set_driver
 
@@ -2149,7 +2125,8 @@ sub _change_hardware_disk($self, $index, $data) {
 
 sub _change_hardware_disk_capacity($self, $index, $capacity) {
     my @volumes = $self->list_volumes_info();
-    my $file = $volumes[$index]->{file};
+    my $vol_orig = $volumes[$index];
+    my $file = $vol_orig->file;
 
     my $volume = $self->_vm->search_volume($file);
     if (!$volume ) {
@@ -2160,10 +2137,12 @@ sub _change_hardware_disk_capacity($self, $index, $capacity) {
 
     my ($name) = $file =~ m{.*/(.*)};
     my $new_capacity = Ravada::Utils::size_to_number($capacity);
-    my $old_capacity = $volume->get_info->{'capacity'};
-    $self->cache_volume_info(name => $name, capacity => $old_capacity)   if $old_capacity;
+    #    my $old_capacity = $volume->get_info->{'capacity'};
+    #    if ( $old_capacity ) {
+    #    $vol_orig->set_info( capacity => $old_capacity);
+    #    $self->cache_volume_info($vol_orig);
+    #}
     $volume->resize($new_capacity);
-    $self->cache_volume_info(name => $name, capacity => $new_capacity);
 }
 
 sub _change_hardware_disk_file($self, $index, $file) {
@@ -2216,6 +2195,7 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
 
 
 sub _change_hardware_network($self, $index, $data) {
+    confess if !defined $index;
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 

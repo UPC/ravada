@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
 use YAML qw(DumpFile);
@@ -38,8 +39,13 @@ sub test_copy_clone {
     );
 
     is($clone->is_base,0,$clone->name." is base");
-    for ( $clone->list_volumes ) {
-        DumpFile($_,{ data  => 'hola' } );
+    for my $vol ( $clone->list_volumes_info ) {
+        next if $vol->info->{device} ne 'disk';
+        confess Dumper($vol) if !$vol->file;
+
+        open my $out ,'>>', $vol->file;
+        print $out,"data : hola\n" ;
+        close $out;
     }
 
     my $name_copy = new_domain_name();
@@ -55,9 +61,9 @@ sub test_copy_clone {
     is(scalar($copy->list_volumes),scalar($clone->list_volumes));
 
     my @copy_volumes = $copy->list_volumes_info( device => 'disk');
-    my %copy_volumes = map { $_->{target} => $_->{file} } @copy_volumes;
+    my %copy_volumes = map { $_->info->{target} => $_->file } @copy_volumes;
     my @clone_volumes = $clone->list_volumes_info( device => 'disk');
-    my %clone_volumes = map { $_->{target} => $_->{file} } @clone_volumes;
+    my %clone_volumes = map { $_->info->{target} => $_->file } @clone_volumes;
 
     for my $target ( keys %copy_volumes ) {
         isnt($copy_volumes{$target}, $clone_volumes{$target}, Dumper(\@copy_volumes,\@clone_volumes)) or exit;

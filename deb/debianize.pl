@@ -34,7 +34,6 @@ for ( qw(css fallback fonts img js )) {
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
     ,'bin/rvd_back.pl' => 'usr/sbin/rvd_back'
-    ,'bin/rvd_benchmark_create.pl' => 'usr/sbin/rvd_benchmark_create'
     ,'rvd_front.pl' => 'usr/sbin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
     ,'copyright' => 'usr/share/doc/ravada'
@@ -61,7 +60,7 @@ sub copy_dirs {
         make_path($dst) if ! -e $dst;
 
         my ($in, $out, $err);
-        my @cmd = ('rsync','-avL',$src,$dst);
+        my @cmd = ('rsync','-avL','--exclude','*.zip',$src,$dst);
         run3(\@cmd, \$in, \$out, \$err);
         die $err if $err;
         print `chmod go+rx $dst`;
@@ -242,7 +241,6 @@ sub tar {
     my @cmd = ('tar','czvf',"ravada_$VERSION.orig.tar.gz"
        ,"ravada-$VERSION-$dist"
     );
-    warn "@cmd";
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     confess $err if $err;
@@ -322,7 +320,13 @@ sub set_control_file {
     closedir $dir;
 }
 
+sub get_fallback {
+    print `etc/get_fallback.pl`;
+}
+
 #########################################################################
+
+get_fallback();
 
 for my $dist (list_dists) {
 

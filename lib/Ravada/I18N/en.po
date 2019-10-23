@@ -812,3 +812,54 @@ msgstr ""
 
 msgid "Italian"
 msgstr ""
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+
+msgid "User name"
+msgstr ""
+
+msgid "not found in LDAP server"
+msgstr ""
+
+msgid "Attribute"
+msgstr ""
+
+msgid "Value"
+msgstr ""
+
+msgid "Allowed"
+msgstr ""
+
+msgid "Last"
+msgstr ""
+
+msgid "Default"
+msgstr ""
+
+msgid "If none of the previous match, access is allowed."
+msgstr ""
+
+msgid "If none of the previous match, access is denied."
+msgstr ""
+
+msgid "verify"
+msgstr ""
+
+msgid "save"
+msgstr ""
+
+msgid "Verifying"
+msgstr ""
+
+msgid "No entries found"
+msgstr ""
+
+msgid "has at least"
+msgstr ""
+
+msgid "entries."
+msgstr ""
+
+msgid "Enable last for not allowed restrictions."
+msgstr ""

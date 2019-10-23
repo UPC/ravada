@@ -27,6 +27,7 @@ my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
 my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
+my $REMOVE_USER;
 my $IMPORT_DOMAIN;
 my $IMPORT_VBOX;
 my $CHANGE_PASSWORD;
@@ -58,9 +59,11 @@ my $USAGE = "$0 "
         ." [--test-ldap] "
         ." [-X] [start|stop|status]"
         ." [--rebase MACHINE]"
+        ." [--remove-user=name]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
+        ." --remove-user : removes a db user\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --import-domain-owner : owner of the domain to import\n"
@@ -103,6 +106,7 @@ GetOptions (       help => \$help
            ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
           ,'hibernate:s'=> \$HIBERNATE_DOMAIN
          ,'disconnected'=> \$DISCONNECTED
+        ,'remove-user=s'=> \$REMOVE_USER
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -126,7 +130,7 @@ if ($help) {
     exit;
 }
 
-die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
+die "Only root can do that\n" if $> && ( $ADD_USER || $REMOVE_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
 die "ERROR: Missing file config $FILE_CONFIG\n"
     if $FILE_CONFIG && ! -e $FILE_CONFIG;
 
@@ -173,6 +177,7 @@ sub do_start {
             Ravada::Request->cleanup();
             Ravada::Request->refresh_vms()      if rand(5)<3;
             Ravada::Request->enforce_limits()   if rand(5)<2;
+            Ravada::Request->manage_pools()     if rand(5)<2;
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
@@ -234,6 +239,21 @@ sub add_user_ldap {
     chomp $password;
 
     Ravada::Auth::LDAP::add_user($login, $password);
+}
+
+sub remove_user {
+    my $login = shift;
+    my $ravada = Ravada->new( %CONFIG);
+
+    my $user = Ravada::Auth::SQL->new(name => $login);
+
+    die "ERROR: Unknown user '$login'\n" if !$user->id;
+    print "Are you sure you want remove $login user ? : [y/n] ";
+    my $remove_it = <STDIN>;
+    if ( $remove_it =~ /y/i ) {
+        $user->remove();
+        print "USER $login was removed\n";
+    }
 }
 
 sub change_password {
@@ -560,6 +580,7 @@ my $rvd_back = Ravada->new(%CONFIG);
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
+remove_user($REMOVE_USER)           if $REMOVE_USER;
 change_password()                   if $CHANGE_PASSWORD;
 import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
 import_vbox($IMPORT_VBOX)           if $IMPORT_VBOX;

@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
 use YAML qw(LoadFile DumpFile);
@@ -76,11 +77,11 @@ sub test_user{
 
     ok(!$@, $@) or return;
 
-    _add_to_posix_group($name);
+    _add_to_posix_group($name, $with_posix_group);
 
     my $mcnulty;
     eval { $mcnulty = Ravada::Auth::LDAP->new(name => $name,password => $password) };
-    is($@,'', Dumper($Ravada::CONFIG)) or exit;
+    is($@,'', Dumper($Ravada::CONFIG)) or confess;
 
     ok($mcnulty,($@ or "ldap login failed for $name")) or return;
     ok(ref($mcnulty) =~ /Ravada/i,"User must be Ravada::Auth::LDAP , it is '".ref($mcnulty));
@@ -224,6 +225,7 @@ sub test_manage_group {
 }
 
 sub test_user_bind {
+    my $user = shift;
     my $file_config = shift;
     my $with_posix_group = shift;
 
@@ -237,11 +239,11 @@ sub test_user_bind {
 
     Ravada::Auth::LDAP::init();
 
-    _add_to_posix_group('jimmy.mcnulty') if $with_posix_group;
+    _add_to_posix_group($user->name, $with_posix_group);
 
     my $mcnulty;
-    eval { $mcnulty = Ravada::Auth::LDAP->new(name => 'jimmy.mcnulty',password => 'jameson') };
-    is($@,'');
+    eval { $mcnulty = Ravada::Auth::LDAP->new(name => $user->name,password => 'jameson') };
+    is($@,'') or die $file_config_bind;
 
     ok($mcnulty,($@ or "ldap login failed ")) or return;
 
@@ -287,6 +289,12 @@ sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0)
         delete $config->{ldap}->{filter};
     }
 
+    if ($with_admin) {
+        $config->{ldap}->{admin_group} = $ADMIN_GROUP;
+    } else {
+        delete $config->{ldap}->{admin_group};
+    }
+
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
 
@@ -321,17 +329,31 @@ sub _add_posix_group {
     $mesg = $ldap->search( filter => "cn=$RAVADA_POSIX_GROUP",base => $base );
     my @group = $mesg->entries;
     ok($group[0],"Expecting group $RAVADA_POSIX_GROUP") or return;
+    push @USERS,($group[0]);
     return $group[0];
 }
 
-sub _add_to_posix_group {
-    my $user_name = shift;
+sub _add_to_posix_group($user_name, $with_posix_group) {
     my $group = _add_posix_group();
 
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    $group->add(memberUid => $user_name);
-    my $mesg = $group->update($ldap);
-    die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 20;
+    if ($with_posix_group) {
+        $group->add(memberUid => $user_name);
+        my $mesg = $group->update($ldap);
+                                                            # 20: no such object
+        die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 20;
+    } else {
+        $group->delete(memberUid => $user_name );
+        my $mesg = $group->update($ldap);
+                                                            # 16: no such attrib
+        die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 16;
+    }
+    my @member = $group->get_value('memberUid');
+
+    my ($found) = grep /^$user_name$/,@member;
+
+    ok( $found, "Expecting $user_name in $RAVADA_POSIX_GROUP") if $with_posix_group;
+    ok( !$found ) if !$with_posix_group;
 }
 
 sub test_filter {
@@ -398,7 +420,7 @@ sub test_posix_group {
     } else {
         ok($user_login);
     }
-    _add_to_posix_group($user_name);
+    _add_to_posix_group($user_name, $with_posix_group);
 
     eval { $user_login= Ravada::Auth::LDAP->new(name => $user_name,password => $password) };
     is($@,'');
@@ -446,14 +468,13 @@ SKIP: {
         ok($ldap) and do {
 
             test_user_fail();
-            test_user( );
-
+            my $user = test_user( 'pepe.mcnulty', $with_posix_group );
 
             test_add_group();
-            test_manage_group($with_admin);
+            test_manage_group($with_admin, $with_posix_group);
             test_posix_group($with_posix_group);
 
-            test_user_bind($fly_config, $with_posix_group);
+            test_user_bind($user, $fly_config, $with_posix_group);
 
             remove_users();
         };

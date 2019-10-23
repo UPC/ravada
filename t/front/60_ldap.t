@@ -65,6 +65,38 @@ sub test_ldap {
     ok(Ravada::Auth::LDAP::_init_ldap_admin(),"Expecting LDAP admin connected");
 }
 
+sub test_ldap_space {
+    create_ldap_user($USER_DATA->{name}, $USER_DATA->{password});
+    my %user = %$USER_DATA;
+    $user{name} = " ".$user{name};
+    my $login_ok;
+
+    $Ravada::CONFIG->{ldap}->{auth} = 'bind';
+
+    eval { $login_ok = Ravada::Auth::LDAP->new(name => $user{name}, password => $user{password}) };
+    like($@, qr'.');
+    ok(!$login_ok,"Expecting no login with $user{name}");
+
+    eval { $login_ok = Ravada::Auth::login($user{name}, $user{password}) };
+    like($@, qr'.');
+    ok(!$login_ok,"Expecting no login with $user{name}");
+
+    $Ravada::CONFIG->{ldap}->{auth} = 'match';
+
+    eval { $login_ok = Ravada::Auth::LDAP->new(name => $user{name}, password => $user{password}) };
+    like($@, qr'.');
+    ok(!$login_ok,"Expecting no login with $user{name}");
+
+    eval { $login_ok = Ravada::Auth::login($user{name}, $user{password}) };
+    like($@, qr'.');
+    ok(!$login_ok,"Expecting no login with $user{name}");
+}
+
+sub test_ldap_search_space {
+    my @entries = Ravada::Auth::LDAP::search_user( name =>" $USER_DATA->{name}");
+    is(scalar@entries, 0);
+}
+
 #########################################################################
 
 SKIP: {
@@ -73,6 +105,7 @@ SKIP: {
     $ravada->_install();
     my $ldap;
 
+    delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
 
     eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
 
@@ -86,6 +119,9 @@ SKIP: {
     skip( ($@ or "No LDAP server found"),6) if !$ldap && $@ !~ /Bad credentials/;
 
     ok($ldap) and do {
+
+        test_ldap_space();
+        test_ldap_search_space();
 
         test_ldap();
 

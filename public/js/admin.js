@@ -99,6 +99,16 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.seeswap = !($scope.seeswap);
       };
 
+      $scope.get_machine_info = function(id) {
+          $http.get('/machine/info/'+id+'.json')
+                .then( function(response) {
+                    $scope.machine = response.data;
+                    $scope.ramsize = ($scope.machine.max_mem / 1024 / 1024);
+                    if ( $scope.ramsize <1 ) {
+                        $scope.ramsize = 1;
+                    }
+                });
+      };
 
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
@@ -198,6 +208,14 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.hide_clones = !$scope.hide_clones;
       $scope.auto_hide_clones = false;
     }
+      $scope.request = function(request, args) {
+          $http.post('/request/'+request+'/'
+              ,JSON.stringify(args)
+          ).then(function(response) {
+              console.log(response);
+          });
+      };
+
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json')
         .then(function() {
@@ -228,6 +246,11 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.open_modal=function(prefix,machine){
       $scope.modalOpened=true;
       $('#'+prefix+machine.id).modal({show:true})
+      $scope.with_cd = false;
+      $http.get("/machine/info/"+machine.id+".json").then(function(response) {
+          machine.info=response.data;
+      }
+      );
     }
     $scope.cancel_modal=function(){
       $scope.modalOpened=false;

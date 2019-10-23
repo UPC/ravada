@@ -6,6 +6,9 @@ use warnings;
 use Data::Dumper;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -89,6 +92,42 @@ sub test_change_memory_base {
     $domain->remove(user_admin);
 }
 
+sub test_req_change_mem($vm) {
+    my $domain = create_domain($vm);
+    my $max_mem = $domain->info(user_admin)->{max_mem};
+    my $mem = $domain->info(user_admin)->{memory};
+
+    my $new_max_mem = int($max_mem * 1.5 ) + 1;
+    my $new_mem = int($mem * 1.5 ) + 1;
+
+    my $req1 = Ravada::Request->change_max_memory(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,ram => $new_max_mem
+    );
+
+    my $req2 = Ravada::Request->change_curr_memory(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,ram => $new_max_mem
+    );
+
+    wait_request(check_error => 1, background => 0);
+
+    is($req1->status,'done');
+    is($req2->status,'done');
+
+    is($req1->error,'');
+    is($req2->error,'');
+
+    my $max_mem2 = $domain->info(user_admin)->{max_mem};
+    my $mem2 = $domain->info(user_admin)->{memory};
+
+    is($max_mem2, $new_max_mem);
+    is($mem2, $new_mem);
+
+    $domain->remove(user_admin);
+}
 ####################################################################
 
 for my $vm_name ( q(KVM) ) {
@@ -109,6 +148,8 @@ for my $vm_name ( q(KVM) ) {
         skip $msg,10    if !$vm;
 
         diag("Testing free mem on $vm_name");
+
+        test_req_change_mem($vm);
 
         test_change_memory($vm, 2, 2);
         test_change_memory($vm, 2, 2, 1);

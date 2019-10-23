@@ -8,9 +8,9 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main"
         ng-controller="run_domain_req"
-        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>"
+        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
     >
-    <div class="jumbotron">
+    <div class="jumbotron" ng-cloak="">
 
         <h2><%=l 'Running' %> {{domain.name}}</h2>
 
@@ -60,8 +60,8 @@
                 <li><b>Memory:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
-            <h3 ng-show="domain.ports">Open ports</h3>
-            <ul ng-show="domain.ports">
+            <h3 ng-show="domain.ports.length">Open ports</h3>
+            <ul ng-show="domain.ports.length">
                 <li ng-repeat="port in domain.ports">
                     <b>{{port.name}}</b>
                     {{domain.display.ip}} : {{port.public_port}}
