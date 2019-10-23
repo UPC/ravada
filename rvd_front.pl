@@ -944,6 +944,8 @@ post '/request/(:name)/' => sub {
     my $c = shift;
 
     my $args = decode_json($c->req->body);
+    confess "Error: uid should not be provided".Dumper($args)
+        if exists $args->{uid};
     warn Dumper($args);
 
     my $req = Ravada::Request->new_request(

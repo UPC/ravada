@@ -2812,12 +2812,14 @@ sub _cmd_prepare_base {
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
         or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
+    my $with_cd = $request->defined_arg('with_cd');
+
     my $domain = $self->search_domain_by_id($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
     $self->_remove_unnecessary_downs($domain);
-    $domain->prepare_base($user);
+    $domain->prepare_base(user => $user, with_cd => $with_cd);
 
 }
 

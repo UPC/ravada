@@ -399,6 +399,7 @@ sub _remove_old_domains_vm($vm_name) {
 
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
+        warn $@ if $@;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
         }
@@ -687,7 +688,6 @@ sub wait_request {
         if ( $done_all ) {
             for my $req (@$request) {
                 next if $skip{$req->command};
-                confess if $req->command eq 'enforce_limits';
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     diag("Waiting for request ".$req->id." ".$req->command);

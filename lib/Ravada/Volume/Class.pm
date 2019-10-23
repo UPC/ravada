@@ -18,8 +18,14 @@ sub _around_prepare_base($orig, $self) {
     confess "Error: unknown VM " if !defined $self->vm;
 
     confess if !$self->capacity;
-    $self->vm->_check_free_disk($self->capacity);
+
+    my $storage_pool = ($self->vm->base_storage_pool or $self->vm->default_storage_pool_name);
+    $self->vm->_check_free_disk($self->capacity, $storage_pool);
     my $base_file = $orig->($self);
+    confess if !$base_file;
+
+    return $base_file if ! $self->clone_base_after_prepare;
+
     $self->vm->remove_file($self->file);
 
     my $base = Ravada::Volume->new(
@@ -27,7 +33,7 @@ sub _around_prepare_base($orig, $self) {
         ,is_base => 1
         ,vm => $self->vm
     );
-    $base->clone(file => $self->file) if $self->clone_original;
+    $base->clone(file => $self->file);
 
     return $base_file;
 }
@@ -37,6 +43,7 @@ sub _around_clone($orig, $self, %args) {
     my $file_clone = ( delete $args{file} or $self->clone_filename($name));
 
     confess "Error: unkonwn args ".Dumper(\%args) if keys %args;
+    confess "Error: empty clone filename" if !defined $file_clone || !length($file_clone);
 
     return Ravada::Volume->new(
         file => $orig->($self, $file_clone)

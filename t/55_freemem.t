@@ -29,7 +29,7 @@ sub test_new_domain {
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
                                         ,memory => 1.5*1024*1024
-                                        ,disk => 1 * 1024 * 1024
+                                        ,disk => 1 * 1024*1024
             ) 
     };
     if ($freemem < 1 ) {
@@ -65,7 +65,7 @@ sub test_new_domain_req {
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
                                         ,memory => (_check_free_memory() * 2) * 1024 * 1024
-                                        ,disk => 1 * 1024 * 1024
+                                        ,disk => 1 * 1024*1024
             )
     };
     is(''.$@,'') or return;
