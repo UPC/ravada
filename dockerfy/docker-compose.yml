@@ -35,7 +35,7 @@ services:
     networks:
       - ravada_network
     #image download from dockerhub
-    image: ravada/front
+    image: ravada/front:0.0.2
     #build to build from sources
     #build: dockers/front/.
     restart: unless-stopped
@@ -60,7 +60,7 @@ services:
     networks:
       - ravada_network
     #image download from dockerhub 
-    image: ravada/back
+    image: ravada/back:0.0.2
     #build to build from sources
     #build: dockers/back/.
     privileged: true
