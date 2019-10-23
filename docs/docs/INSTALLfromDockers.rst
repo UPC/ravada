@@ -1,5 +1,5 @@
-[WIP] Install Ravada from dockers
-=================================
+[WIP] Install Ravada from dockers for devel purpose
+===================================================
 
 Requirements
 ------------
