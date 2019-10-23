@@ -1293,8 +1293,9 @@ sub login {
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
             my $machines = $RAVADA->list_machines_user($auth_ok);
             $url = "/machine/clone/". $machines->[0]->{id}.".html" if scalar(@$machines) == 1 && !($auth_ok->is_admin);
+            my $auto_view = 1;
 
-            $c->session(expiration => $expiration);
+            $c->session(auto_view => $auto_view, expiration => $expiration);
             return $c->redirect_to($url);
         } else {
             push @error,("Access denied");
