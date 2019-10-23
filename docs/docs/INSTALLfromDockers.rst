@@ -79,6 +79,25 @@ Run
 The Ravada server is now installed, learn
 `how to run and use it <http://ravada.readthedocs.io/en/latest/docs/production.html>`__.
 
+Dockers troubleshoots
+---------------------
+
+* Let's do a reset:
+   We want to return to an initial starting point
+   Remove all dockers and volume associated.
+   
+.. prompt:: bash $
+
+   $ docker-compose rm -s -v
+   Stopping ravada-back  ... done
+   Stopping ravada-front ... done
+   Stopping ravada-mysql ... done
+   Going to remove ravada-back, ravada-front, ravada-mysql
+   Are you sure? [yN] y
+   Removing ravada-back  ... done
+   Removing ravada-front ... done
+   Removing ravada-mysql ... done
+
 Help
 ----
 
@@ -87,3 +106,5 @@ let us know if you need `assistance <http://ravada.upc.edu/#help>`__.
 
 There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
 admins may face.
+
+  
