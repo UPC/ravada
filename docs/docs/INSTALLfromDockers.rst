@@ -1,5 +1,5 @@
-Install Ravada from dockers
-===========================
+[WIP] Install Ravada from dockers
+=================================
 
 Requirements
 ------------
@@ -40,6 +40,7 @@ For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clon
    cd ~
    mkdir src
    git clone https://github.com/UPC/ravada.git
+   git checkout 369_dockers 
    cd dockerfy
    
 .. prompt:: bash $
