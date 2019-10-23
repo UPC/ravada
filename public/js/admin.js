@@ -208,6 +208,14 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.hide_clones = !$scope.hide_clones;
       $scope.auto_hide_clones = false;
     }
+      $scope.request = function(request, args) {
+          $http.post('/request/'+request+'/'
+              ,JSON.stringify(args)
+          ).then(function(response) {
+              console.log(response);
+          });
+      };
+
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json')
         .then(function() {
@@ -238,6 +246,11 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.open_modal=function(prefix,machine){
       $scope.modalOpened=true;
       $('#'+prefix+machine.id).modal({show:true})
+      $scope.with_cd = false;
+      $http.get("/machine/info/"+machine.id+".json").then(function(response) {
+          machine.info=response.data;
+      }
+      );
     }
     $scope.cancel_modal=function(){
       $scope.modalOpened=false;

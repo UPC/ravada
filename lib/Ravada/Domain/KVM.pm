@@ -217,6 +217,8 @@ sub _vol_remove {
     my $file = shift;
     my $warning = shift;
 
+    confess "Error: I won't remove an iso file " if $file =~ /\.iso$/i;
+
     my $name;
     ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
 
@@ -276,6 +278,7 @@ sub remove {
     }
 
     eval { $self->_remove_file_image() };
+        warn $@ if $@;
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 #    warn "WARNING: Problem removing file image for ".$self->name." : $@" if $@ && $0 !~ /\.t$/;
 
@@ -290,12 +293,14 @@ sub remove {
 sub _remove_file_image {
     my $self = shift;
     for my $file ( $self->list_files_base ) {
+        next if $file && $file =~ /\.iso$/i;
 
         next if !$file || ! -e $file;
 
         chmod 0770, $file or die "$! chmodding $file";
         chown $<,$(,$file    or die "$! chowning $file";
         eval { $self->_vol_remove($file,1) };
+        warn $@ if $@;
 
         if ( -e $file ) {
             eval {
@@ -423,6 +428,7 @@ sub disk_device {
 
 
 sub _create_qcow_base {
+    confess "Deprecated";
     my $self = shift;
 
     my @base_img;
@@ -894,7 +900,7 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my $bus = (delete $args{driver} or 'virtio');
+    my $bus = delete $args{driver};# or 'virtio');
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
@@ -936,6 +942,13 @@ sub add_volume {
         $driver_type = 'raw';
     }
 
+    if ( !defined $bus ) {
+        if  ($device eq 'cdrom') {
+            $bus = 'ide';
+        } else {
+            $bus = 'virtio'
+        }
+    }
     my $xml_device = $self->_xml_new_device(
             bus => $bus
           ,file => $path

@@ -64,7 +64,7 @@ has 'name' => (
 );
 
 # after prepare base the original file is cloned so it gets empty
-has 'clone_original' => (
+has 'clone_base_after_prepare' => (
     isa => 'Int'
     ,is => 'ro'
     ,default => sub { 1 }

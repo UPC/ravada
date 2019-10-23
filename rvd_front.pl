@@ -944,6 +944,9 @@ post '/request/(:name)/' => sub {
     my $c = shift;
 
     my $args = decode_json($c->req->body);
+    confess "Error: uid should not be provided".Dumper($args)
+        if exists $args->{uid};
+    warn Dumper($args);
 
     my $req = Ravada::Request->new_request(
         $c->stash('name')
@@ -1307,6 +1310,9 @@ sub login {
                     ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error);
+    my @error_status;
+    @error_status = ( status => 403) if @error;
+
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -1319,6 +1325,7 @@ sub login {
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
                       ,login_hash => ''
+                      ,@error_status
     );
 }
 

@@ -548,6 +548,8 @@ sub _around_add_volume {
 }
 
 sub _check_volume_added($self, $file) {
+    return if $file =~ /\.iso$/i;
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain FROM volumes "
         ." WHERE file=?"
     );
@@ -592,10 +594,21 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     return @volumes;
 }
 
-sub _around_prepare_base($orig, $self, $user, $request = undef) {
+sub _around_prepare_base($orig, $self, @args) {
+    #sub _around_prepare_base($orig, $self, $user, $request = undef) {
+    my ($user, $request, $with_cd);
+    if(ref($args[0]) =~/^Ravada::/) {
+        ($user, $request) = @args;
+    } else {
+        my %args = @args;
+        $user = delete $args{user};
+        $request = delete $args{request};
+        $with_cd = delete $args{with_cd};
+        confess "Error: uknown args". Dumper(\%args) if keys %args;
+    }
     $self->_pre_prepare_base($user, $request);
 
-    my @base_img = $self->$orig();
+    my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -605,16 +618,17 @@ sub _around_prepare_base($orig, $self, $user, $request = undef) {
     $self->_post_prepare_base($user, $request);
 }
 
-sub prepare_base($self) {
+sub prepare_base($self, $with_cd) {
     my @base_img;
-    for my $volume ($self->list_volumes_info(device => 'disk')) {
-        confess "Undefined info->target ".Dumper($volume)
-            if !$volume->info->{target};
+    for my $volume ($self->list_volumes_info()) {
         my $base_file = $volume->base_filename;
+        next if !$base_file || $base_file =~ /\.iso$/;
         die "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
     }
 
-    for my $volume ($self->list_volumes_info(device => 'disk')) {
+    for my $volume ($self->list_volumes_info()) {
+        next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
+        next if $volume->info->{device} eq 'cdrom' && !$with_cd;
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
 
@@ -1331,6 +1345,12 @@ sub info($self, $user) {
     $info->{bases} = $self->_bases_vm();
     $info->{clones} = $self->_clones_vm();
     $info->{ports} = [$self->list_ports()];
+    my @cdrom = ();
+    for my $disk (@{$info->{hardware}->{disk}}) {
+        push @cdrom,($disk->{file}) if $disk->{file} && $disk->{file} =~ /\.iso$/;
+    }
+    $info->{cdrom} = \@cdrom;
+
     return $info;
 }
 
@@ -1553,6 +1573,7 @@ sub _remove_files_base {
     my $self = shift;
 
     for my $file ( $self->list_files_base ) {
+        next if $file =~ /\.iso$/;
         unlink $file or die "$! $file" if -e $file;
     }
 }
@@ -1856,7 +1877,9 @@ sub clone {
     my $request = delete $args{request};
     my $memory = delete $args{memory};
     my $start = delete $args{start};
-
+    my $is_pool = delete $args{is_pool};
+    my $no_pool = delete $args{no_pool};
+    my $with_cd = delete $args{with_cd};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -1879,7 +1902,7 @@ sub clone {
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
-        $self->prepare_base($user)
+        $self->prepare_base(user => $user, with_cd => $with_cd)
     }
 
     my @args_copy = ();
@@ -3636,7 +3659,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

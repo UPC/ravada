@@ -186,12 +186,20 @@
                                  <p><%=l 'Are you sure you want to remove the base of' %> {{machine.name}}?</p>
                                </div>
                                <div class="modal-body" ng-show="can_prepare_base(machine)">
+                                   <div ng-show="machine.info.cdrom">
+                                   <p>This machine has a CD-ROM</p>
+                                   <ul>
+                                       <li ng-repeat="cdrom in machine.info.cdrom">{{cdrom}}</li>
+                                   </ul>
+                                   <input type="checkbox" ng-model="with_cd" name="with_cd"/>
+                                    <label for="with_cd">Keep the CD for the clones</label>
+                                   </div>
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
-                               <div class="modal-footer">
+                               <div class="modal-footer" ng-show="machine.info">
                                  <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',machine.id)" ng-show="can_prepare_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();request('prepare_base',{ 'id_domain': machine.id, 'with_cd': with_cd })" ng-show="can_prepare_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
@@ -309,12 +317,20 @@
                                  <p><%=l 'Are you sure you want to remove the Base of' %> {{child.name}}?</p>
                                </div>
                                <div class="modal-body" ng-show="can_prepare_base(child)">
+                                   <div ng-show="child.info.cdrom">
+                                       <p>This machine has a CD-ROM {{with_cd}}</p>
+                                   <ul>
+                                       <li ng-repeat="cdrom in child.info.cdrom">{{cdrom}}</li>
+                                   </ul>
+                                   <input type="checkbox" ng-model="with_cd" name="with_cd"/>
+                                    <label for="with_cd">Keep the CD for the clones</label>
+                                   </div>
                                  <p><%=l 'Are you sure you want to prepare the Base of' %> {{child.name}}?</p>
                                </div>
-                               <div class="modal-footer">
+                               <div class="modal-footer" ng-show="child.info">
                                  <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',child.id)" ng-show="can_remove_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','prepare',child.id)" ng-show="can_prepare_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();request('prepare_base',{ 'id_domain': child.id, 'with_cd': with_cd })" ng-show="can_prepare_base(child)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
