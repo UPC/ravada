@@ -104,7 +104,6 @@ sub user_admin {
     eval {
         $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
     };
-    warn $@ if $@;
     if ($@ && $@ =~ /Login failed/ ) {
         $login = Ravada::Auth::SQL->new(name => $admin_name);
         $login->remove();
