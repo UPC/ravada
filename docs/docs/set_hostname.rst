@@ -52,7 +52,7 @@ systemd
 ~~~~~~~~
 
 If your system supports systemd this script will set the virtual machine name
-as the hostname on startup. Put the service file in */lib/systemd/system*:
+as the hostname on startup. Put the service file in */lib/systemd/system/sethostname.service*:
 
 
 .. literalinclude:: sethostname.service
