@@ -1,12 +1,25 @@
 How to Install a local LDAP
 ===========================
 
-Install and configure 389-ds
+Install 389-ds
 ----------------------------
 
 .. prompt:: bash
 
     sudo apt-get install 389-ds-base
+
+Configure directory server
+--------------------------
+
+Release 1.3 [old]
+~~~~~~~~~~~~~~~~~
+
+This is the configuration tool for older releases of 389 directory server.
+If there is no setup-ds tool in your system you probably have the new release,
+skip to Release 1.4 instruction bellow.
+
+.. prompt:: bash
+
     sudo setup-ds
 
 When requested the server name, answer with the full qualified
@@ -14,6 +27,25 @@ domain name of the host: hostname.domainname.
 In the next step you must supply the domain name as base for the
 configuration. So if your domain name is "foobar.com", the base
 will be "dc=foobar,dc=com".
+
+Release 1.4 [new]
+~~~~~~~~~~~~~~~~~
+
+From release 1.4 we provide an example configuration file for
+creating the new directory instance. Review it at *t/etc/ds389.conf*
+and use it with *dscreate*:
+
+.. prompt:: bash
+
+    sudo dscreate create-template t/etc/ds389.conf
+
+Enable and Start the service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. prompt:: bash
+
+   sudo systemctl start dirsrv@localhost
+   sudo systemctl enable dirsrv@localhost
 
 Add a LDAP section in the config file
 -------------------------------------
@@ -26,8 +58,8 @@ The config file usually is /etc/ravada.conf. Add this configuration:
         admin_group: test.admin.group
         admin_user:
             dn: cn=Directory Manager
-            password: thepasswordyouusedwhensetup-ds
-        base: 'dc=foobar,dc=com'
+            password: 12345678
+        base: 'dc=example,dc=com'
 
 Insert one test user
 --------------------
