@@ -51,7 +51,6 @@ create_domain
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
-    create_ldap_user
     init_ldap_config
 
     create_storage_pool
