@@ -9,7 +9,7 @@
               <input type="hidden" name="off_perm_<%= $perm->{name} %>" value="off">
               <label for="perm_<%= $perm->{name} %>"><%= $perm->{name} %>: <%=l($perm->{description}) %></label><br/>
         % }
-            <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
+            <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/users'"><%=l 'Cancel' %></button>
             <input type="submit" class="btn btn-primary" name="grant" value="<%=l 'Submit' %>">
         </form>
         </form>
