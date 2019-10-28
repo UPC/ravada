@@ -337,6 +337,10 @@ sub _load_allowed {
 
     return if !$refresh && $self->{_load_allowed}++;
 
+    if (ref($self) !~ /SQL$/) {
+        $self = Ravada::Auth::SQL->new(name => $self->name);
+    }
+
     my $ldap_entry;
     $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
 

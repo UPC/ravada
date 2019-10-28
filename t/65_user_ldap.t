@@ -90,6 +90,8 @@ sub test_user{
             .Dumper($mcnulty->{_data}));
 
     ok($mcnulty->ldap_entry,"Expecting User LDAP entry");
+    eval { $mcnulty->allowed_access(1) };
+    is($@,'');
     # try to login
     my $mcnulty_login = Ravada::Auth::login($name,$password);
     ok($mcnulty_login,"No login");
