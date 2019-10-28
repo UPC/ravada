@@ -11,7 +11,7 @@
                     <h2 class="display-5"><%=l 'Users' %></h2>
                     <div class="card-title">
                         <form method="post" action="/admin/users">
-                            <input type="text"  name="name" placeholder="<%=l 'Users' %>">
+                            <input type="text" name="name" placeholder="<%=l 'Users' %>">
                             <input type="submit" value="<%=l 'Search' %>">
                             <button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'"><%=l 'New user' %></button>
                         </form>
