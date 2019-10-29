@@ -791,22 +791,26 @@
     };
 
   function notifCrtl($scope, $interval, $http, request){
-    $scope.getAlerts = function() {
-      $http.get('/unshown_messages.json').then(function(response) {
-              $scope.alerts= response.data;
-      },function error(response) {
-               if ( response.status == 403 && (typeof $_anonymous == "undefined" || !$_anonymous)) {
-                   window.location.href="/logout";
-               }
-      });
-    };
-    $interval($scope.getAlerts,10000);
     $scope.closeAlert = function(index) {
-      var message = $scope.alerts.splice(index, 1);
-      var toGet = '/messages/read/'+message[0].id+'.html';
+      var message = $scope.alerts_ws.splice(index, 1);
+      var toGet = '/messages/read/'+message[0].id+'.json';
       $http.get(toGet);
     };
-    $scope.getAlerts();
+
+      $scope.subscribe_alerts = function(url) {
+          var ws = new WebSocket(url);
+          ws.onopen = function(event) { ws.send('list_alerts') };
+          ws.onmessage = function(event) {
+              var data = JSON.parse(event.data);
+              $scope.$apply(function () {
+                  $scope.alerts_ws = data;
+              });
+          }
+
+      }
+      $scope.alerts_ws = [];
+
+
   };
 
 /*
