@@ -28,6 +28,7 @@ use lib 'lib';
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
+use Ravada::WebSocket;
 use POSIX qw(locale_h);
 
 my $help;
@@ -114,6 +115,7 @@ our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
+my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 init();
 ############################################################################3
 
@@ -1205,6 +1207,23 @@ get '/iso/download/(#id).json' => sub {
 
     return $c->render(json => {request => $req->id});
 };
+
+websocket '/ws_subscribe' => sub {
+    my $c = shift;
+    my $expiration = $SESSION_TIMEOUT;
+    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
+    $c->inactivity_timeout( $expiration );
+    $c->on(message => sub {
+            my ($ws, $channel ) = @_;
+            $WS->subscribe( ws => $ws
+                , channel => $channel
+                , login => $USER->name
+                , remote_ip => _remote_ip($c)
+            );
+    });
+
+    $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
+} => 'ws_subscribe';
 
 ###################################################
 #
