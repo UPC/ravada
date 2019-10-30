@@ -445,6 +445,12 @@ get '/pingbackend.json' => sub {
     $c->render(json => $RAVADA->ping_backend);
 };
 
+any '/admin_settings' => sub {
+    my $c = shift;
+    return access_denied($c)    if !$USER->is_admin;
+    return new_node($c);
+};
+
 # machine commands
 
 get '/machine/info/(:id).(:type)' => sub {
