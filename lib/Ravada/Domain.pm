@@ -1073,12 +1073,13 @@ sub open($class, @args) {
         $domain = $vm->search_domain($row->{name}, $force) or return;
         $domain->_data(id_vm => $vm->id);
     }
-    if (!$id_vm) {
-        $domain->_search_already_started() if !$domain->is_base;
-        $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
-    }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
     return $domain;
+}
+
+sub check_status($self) {
+    $self->_search_already_started()    if !$self->is_base;
+    $self->_check_clean_shutdown()      if $self->domain;
 }
 
 =head2 is_known
@@ -2015,7 +2016,6 @@ sub _pre_shutdown {
 
     $self->_allow_shutdown(@_);
 
-    $self->_vm->connect;
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
