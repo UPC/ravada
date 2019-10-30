@@ -2548,22 +2548,35 @@ sub _can_fork {
     warn $msg if $DEBUG;
 
     $req->error($msg);
+    $req->at_time(time+10);
     $req->status('waiting') if $req->status() !~ 'waiting';
     return 0;
 }
 sub _wait_pids {
     my $self = shift;
 
+    my @done;
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             my $kid = waitpid($pid , WNOHANG);
             last if $kid <= 0 ;
-            my $request = Ravada::Request->open($self->{pids}->{$type}->{$kid});
-            if ($request) {
-                $request->status('done') if $request->status =~ /working/i;
-            };
-            delete $self->{pids}->{$type}->{$kid};
+            push @done, ($kid);
         }
+    }
+    return if !@done;
+    for my $pid (@done) {
+        my $id_req;
+        for my $type ( keys %{$self->{pids}} ) {
+            $id_req = $self->{pids}->{$type}->{$pid} if exists $self->{pids}->{$type}->{$pid};
+            next if !$id_req;
+            delete $self->{pids}->{$type}->{$pid};
+            last;
+        }
+        next if !$id_req;
+        my $request = Ravada::Request->open($id_req);
+        if ($request) {
+            $request->status('done') if $request->status =~ /working/i;
+        };
     }
 }
 
@@ -3069,6 +3082,7 @@ sub _cmd_refresh_machine($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+    $domain->check_status();
     $domain->list_volumes_info();
     $domain->info($user);
     $self->_remove_unnecessary_downs($domain);
@@ -3295,6 +3309,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
 }
 
 sub _refresh_active_domain($self, $domain, $active_domain) {
+    $domain->check_status();
     return if $domain->is_hibernated();
 
     my $is_active = $domain->is_active();
