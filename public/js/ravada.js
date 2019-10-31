@@ -30,6 +30,7 @@
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain",run_domain_ctrl)
             .controller("run_domain_req",run_domain_req_ctrl)
+            .controller("adminSettingsPage",adminSettingsPageC)
 
 
 
@@ -842,4 +843,23 @@
           };
         }
       }
+    };
+
+// Admin settings page
+    function adminSettingsPageC($scope) {
+        $scope.varconfig = {
+            'auto_view' : true
+        };
+
+        $scope.set_varconfig = function(field, value) {
+            if (value ) value=1;
+                else value=0;
+            $scope.auto_view[field]=value;
+            value_show = true;
+            if (! value) {
+                value_show = false;
+            }
+            $scope.add_message("Setting "+$scope.auto_view+" "+field+" to "+value_show);
+            //$http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
+          };
     };

@@ -2,7 +2,7 @@
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
-    <div id="wrapper">
+    <div id="wrapper" ng-controller="adminSettingsPage">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
         <div class="page-header">
@@ -18,18 +18,15 @@
                     <p class="card-text">
                     <%=l 'After login, if there is only one virtual machine for that user, just starts the machine right away.
 In order to to avoid unnecessary click stages, and to give a better user experience' %></p>
-
                     <div class="custom-control custom-switch">
-                        %= check_box auto_view => 0
-                        <label>Enable direct access to machine</label>
-                        auto_view <%= my $auto_view %>
+                            <label><input type="checkbox" ng-model="set_varconfig.auto_view">
+                            Enable direct access to machine </label>
                     </div>
 
-                        <input type="checkbox" class="custom-control-input" id="isAutoView">
+                    <tt>auto_view = {{set_varconfig.auto_view}}</tt><br/>
 
                 </div>
             </div>
-
     </div>
     </div>
 %= include 'bootstrap/scripts'
