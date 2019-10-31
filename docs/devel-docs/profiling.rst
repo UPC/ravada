@@ -56,5 +56,4 @@ More info
 ---------
 
 Find out more about NYTProf profiler in these
-`slides <https://www.slideshare.net/Tim.Bunce/develnytprof-v4-at-yapceu-201008-4906467>`
-.
+`slides <https://www.slideshare.net/Tim.Bunce/develnytprof-v4-at-yapceu-201008-4906467>`_.
