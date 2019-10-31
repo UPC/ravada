@@ -5,41 +5,34 @@
     <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
-
-        <!--BASES AND DOMAINS LIST-->
-
-            <div class="page-header">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="text-center"><%=l 'Admin settings' %></h2>
-                    </div>
+        <div class="page-header">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-center"><%=l 'Admin settings' %></h2>
                 </div>
-              
-                <div class="card w-50">
-                    <div class="card-body">
-                        <h5 class="card-title"><%=l 'User machine behavior' %></h5>
-                        <p class="card-text">
-                        <%=l 'After login, if there is only one virtual machine for that user, just starts the machine right away.
-In order to to avoid unnecessary click stages, and to give a better user experience' %></p>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="isAutoView">
-                            <label class="custom-control-label" for="isAutoView">Enable direct access to machine</label>
-                        </div> 
-                    <div id="enableAutoView" style="display:none">Enabled</div>
-                    </div>
-                </div>  
-            
-         
             </div>
+              
+            <div class="card w-50">
+                <div class="card-body">
+                    <h5 class="card-title"><%=l 'User machine behavior' %></h5>
+                    <p class="card-text">
+                    <%=l 'After login, if there is only one virtual machine for that user, just starts the machine right away.
+In order to to avoid unnecessary click stages, and to give a better user experience' %></p>
+
+                    <div class="custom-control custom-switch">
+                        %= check_box auto_view => 0
+                        <label>Enable direct access to machine</label>
+                        auto_view <%= my $auto_view %>
+                    </div>
+
+                        <input type="checkbox" class="custom-control-input" id="isAutoView">
+
+                </div>
+            </div>
+
     </div>
     </div>
 %= include 'bootstrap/scripts'
 %= include $footer
-
-<script type=text/javascript>
-$('#isAutoView').click(function() {
-    $("#enableAutoView").toggle(this.checked);
-});
-</script>
 </body>
 </html>

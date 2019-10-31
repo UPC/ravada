@@ -448,7 +448,10 @@ get '/pingbackend.json' => sub {
 any '/admin_settings' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER->is_admin;
-    return new_node($c);
+    my $auto_view = 0;
+
+   # $c->render(auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0) );
+    return $c->render(auto_view => 0);
 };
 
 # machine commands
