@@ -1441,7 +1441,6 @@ sub shutdown_domains($self) {
 }
 
 sub _shared_storage_cache($self, $node, $dir, $value=undef) {
-    return;
     if (!defined $value) {
         my $sth = $$CONNECTOR->dbh->prepare(
             "SELECT is_shared FROM storage_nodes "
