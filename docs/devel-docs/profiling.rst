@@ -17,16 +17,16 @@ Request
 
 Remove the requests from the database:
 
-.. prompt:: mysql>
+::
 
-    delete from requests;
+    mysql> delete from requests;
 
 Click on the web admin to run the request you want to check. It should appear
 now in the requests table:
 
-.. prompt:: mysql>
+::
 
-    select id,command from requests;
+    mysql> select id,command from requests;
 
 Run rvd_back
 ------------
