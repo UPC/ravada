@@ -1449,6 +1449,8 @@ sub _pre_remove_domain($self, $user, @) {
 
 }
 
+# check the node is active
+# search the domain in another node if it is not
 sub _check_active_node($self) {
     return $self->_vm if $self->_vm->is_active(1);
 
@@ -1456,7 +1458,9 @@ sub _check_active_node($self) {
         next if !$node->is_local;
 
         $self->_vm($node);
-        $self->domain($node->search_domain_by_id($self->id)->domain);
+        my $domain_active = $node->search_domain_by_id($self->id);
+        next if !$domain_active;
+        $self->domain($domain_active->domain);
         last;
     }
     return $self->_vm;
