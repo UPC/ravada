@@ -64,7 +64,7 @@
             <ul ng-show="domain.ports.length">
                 <li ng-repeat="port in domain.ports">
                     <b>{{port.name}}</b>
-                    {{domain.display.ip}} : {{port.public_port}}
+                    {{domain.display.ip}}:{{port.public_port}}
                     <i class="fa fa-arrow-right"></i>
                     {{port.internal_port}}
                 </li>
