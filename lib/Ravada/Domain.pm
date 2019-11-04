@@ -1073,12 +1073,13 @@ sub open($class, @args) {
         $domain = $vm->search_domain($row->{name}, $force) or return;
         $domain->_data(id_vm => $vm->id);
     }
-    if (!$id_vm) {
-        $domain->_search_already_started() if !$domain->is_base;
-        $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
-    }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
     return $domain;
+}
+
+sub check_status($self) {
+    $self->_search_already_started()    if !$self->is_base;
+    $self->_check_clean_shutdown()      if $self->domain;
 }
 
 =head2 is_known
@@ -1448,6 +1449,8 @@ sub _pre_remove_domain($self, $user, @) {
 
 }
 
+# check the node is active
+# search the domain in another node if it is not
 sub _check_active_node($self) {
     return $self->_vm if $self->_vm->is_active(1);
 
@@ -1455,7 +1458,9 @@ sub _check_active_node($self) {
         next if !$node->is_local;
 
         $self->_vm($node);
-        $self->domain($node->search_domain_by_id($self->id)->domain);
+        my $domain_active = $node->search_domain_by_id($self->id);
+        next if !$domain_active;
+        $self->domain($domain_active->domain);
         last;
     }
     return $self->_vm;
@@ -2015,7 +2020,6 @@ sub _pre_shutdown {
 
     $self->_allow_shutdown(@_);
 
-    $self->_vm->connect;
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
@@ -3469,6 +3473,7 @@ sub _pre_migrate($self, $node, $request = undef) {
 
     return if !$self->id_base;
 
+    $self->check_status();
     confess "ERROR: Active domains can't be migrated"   if $self->is_active;
 
     my $base = Ravada::Domain->open($self->id_base);
