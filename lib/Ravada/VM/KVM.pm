@@ -16,7 +16,6 @@ use Digest::MD5;
 use Encode;
 use Encode::Locale;
 use File::Path qw(make_path);
-use File::Temp qw(tempfile);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -360,23 +359,23 @@ sub _refresh_isos($self) {
             next;
         }
         next if $row->{device};
+        next if !$row->{url};
 
+        my $file_re = $row->{file_re};
         my ($file);
         ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
-        my $file_re = $row->{file_re};
+        $file = $row->{rename_file} if $row->{rename_file};
 
-        next if $row->{device};
-        if ($file) {
-            my $iso_file = $self->search_volume_path($file);
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-            }
+        $file_re = "^$file\$" if $file;
+
+        if (!$file_re) {
+            warn "Error: ISO mismatch ".Dumper($row);
+            next;
         }
-        if (!$row->{device} && $file_re) {
-            my $iso_file = $self->search_volume_path_re(qr($file_re));
-            if ($iso_file) {
-                $row->{device} = $iso_file;
-            }
+
+        my $iso_file = $self->search_volume_path_re(qr($file_re));
+        if ($iso_file) {
+            $row->{device} = $iso_file;
         }
         $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
     }
@@ -426,6 +425,39 @@ sub dir_img {
         if !$dir;
 
     return $dir;
+}
+
+=head2 dir_base
+
+Returns the directory where base images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_base($self, $volume_size) {
+    my $pool_base = $self->default_storage_pool_name;
+    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
+    $pool_base = $self->storage_pool()         if !$pool_base;
+
+    $self->_check_free_disk($volume_size * 2, $pool_base);
+    return $self->_storage_path($pool_base);
+
+}
+
+=head2 dir_clone
+
+Returns the directory where clone images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_clone($self) {
+
+    my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
+
+    return $dir_img;
 }
 
 sub _storage_path($self, $storage) {
@@ -503,7 +535,7 @@ sub create_domain {
 
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
-    croak "argument id_iso or id_base required ".Dumper(\%args)
+    confess "argument id_iso or id_base required ".Dumper(\%args)
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
@@ -668,6 +700,9 @@ sub create_volume {
 
     my $storage_pool = $self->storage_pool();
 
+    confess $name if $name =~ /-\w{4}-vd[a-z]-\w{4}\./
+        || $name =~ /\d-vd[a-z]\./;
+
     my $img_file = $self->_volume_path(
         target => $target
         , swap => $swap
@@ -675,6 +710,7 @@ sub create_volume {
         , storage => $storage_pool
     );
 
+    confess if $img_file =~ /\d-vd[a-z]\./;
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
@@ -699,20 +735,14 @@ sub _volume_path {
 
     my %args = @_;
     my $swap     =(delete $args{swap} or 0);
-    my $target   = delete $args{target};
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
+    my $target = delete $args{target};
 
     my $dir_img = $self->_storage_path($storage);
-    my $suffix = ".img";
-    $suffix = ".SWAP.img"   if $swap;
-    $filename .= "-$target" if $target;
-    my (undef, $img_file) = tempfile($filename."-XXXX"
-        ,DIR => $dir_img
-        ,OPEN => 0
-        ,SUFFIX => $suffix
-    );
-    return $img_file;
+    my $suffix = "qcow2";
+    $suffix = "SWAP.qcow2"   if $swap;
+    return "$dir_img/$filename.$suffix";
 }
 
 sub _domain_create_from_iso {
@@ -770,7 +800,7 @@ sub _domain_create_from_iso {
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
     my $device_disk = $self->create_volume(
-          name => $args{name}
+          name => "$args{name}-vda-".Ravada::Utils::random_name(4)
          , xml => $file_xml
         , size => $disk_size
         ,target => 'vda'
@@ -870,10 +900,6 @@ sub _create_disk {
     return _create_disk_qcow2(@_);
 }
 
-sub _create_swap_disk {
-    return _create_disk_raw(@_);
-}
-
 sub _create_disk_qcow2 {
     my $self = shift;
     my ($base, $name) = @_;
@@ -881,59 +907,17 @@ sub _create_disk_qcow2 {
     confess "Missing base" if !$base;
     confess "Missing name" if !$name;
 
-    my $dir_img  = $self->dir_img;
-    my $clone_pool = $self->clone_storage_pool();
-    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
-
     my @files_out;
 
     for my $file_data ( $base->list_files_base_target ) {
         my ($file_base,$target) = @$file_data;
-        my $ext = ".qcow2";
-        $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\.\w+$/;
-        my $file_out = "$dir_img/$name-".($target or _random_name(2))
-            ."-"._random_name(2).$ext;
-
-        $self->_clone_disk($file_base, $file_out);
-        push @files_out,($file_out);
-    }
-    return @files_out;
-
-}
-
-# this may become official API eventually
-
-sub _clone_disk($self, $file_base, $file_out) {
-
-        my @cmd = ('/usr/bin/qemu-img','create'
-                ,'-f','qcow2'
-                ,"-b", $file_base
-                ,$file_out
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self
         );
-
-        my ($out, $err) = $self->run_command(@cmd);
-        die $err if $err;
-}
-
-sub _create_disk_raw {
-    my $self = shift;
-    my ($base, $name) = @_;
-
-    confess "Missing base" if !$base;
-    confess "Missing name" if !$name;
-
-    my $dir_img  = $self->dir_img;
-
-    my @files_out;
-
-    for my $file_base ( $base->list_files_base ) {
-        next unless $file_base =~ /SWAP\.img$/;
-        my $file_out = $file_base;
-        $file_out =~ s/\.ro\.\w+$//;
-        $file_out =~ s/-.*(img|qcow\d?)//;
-        $file_out .= ".$name-".Ravada::Utils::random_name(4).".SWAP.img";
-
-        push @files_out,($file_out);
+        my $clone = $vol_base->clone(name => "$name-$target");
+        push @files_out,($clone->file);
     }
     return @files_out;
 
@@ -964,6 +948,7 @@ sub _domain_create_from_base {
         if $self->search_domain($args{name});
 
     my $base = $args{base};
+    my $with_cd = delete $args{with_cd};
 
     $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
@@ -976,7 +961,10 @@ sub _domain_create_from_base {
 
     my @device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml);
-    _xml_remove_cdrom($xml);
+    if ( !defined $with_cd ) {
+        $with_cd = grep (/\.iso$/ ,@device_disk);
+    }
+    _xml_remove_cdrom($xml) if !$with_cd;
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
@@ -1061,6 +1049,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
+        return if $req && $req->defined_arg('test');
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
@@ -1069,7 +1058,13 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
             if (!$iso->{$check} && $iso->{"${check}_url"}) {
-                my ($url_path,$url_file) = $url =~ m{(.*)/(.*)};
+                my ($url_path,$url_file);
+                if ( $url =~ m{/$} ) {
+                    $url_path = $url;
+                    $url_file = $iso->{filename};
+                } else {
+                    ($url_path,$url_file) = $url =~ m{(.*)/(.+)};
+                }
                 $iso->{"${check}_url"} =~ s/(.*)\$url(.*)/$1$url_path$2/;
                 $self->_fetch_this($iso,$check,$url_file);
             }
@@ -1157,14 +1152,14 @@ sub _check_signature($file, $type, $expected) {
 
 sub _download_file_external($self, $url, $device, $verbose=1) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
-    if ( $url =~ m{/$} ) {
-        my ($filename) = $device =~ m{.*/(.*)};
-        $url = "$url$filename";
-    }
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
         confess "No match for $url" if !scalar @found;
         $url = $found[-1];
+    }
+    if ( $url =~ m{/$} ) {
+        my ($filename) = $device =~ m{.*/(.*)};
+        $url = "$url$filename";
     }
     confess "ERROR: wget missing"   if !$WGET;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
@@ -1190,18 +1185,17 @@ sub _download_file_external($self, $url, $device, $verbose=1) {
     die $err;
 }
 
-sub _search_iso {
-    my $self = shift;
-    my $id_iso = shift or croak "Missing id_iso";
-    my $file_iso = shift;
-
+sub _search_iso($self, $id_iso, $file_iso=undef) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
-    return $row if $file_iso;
+    return $row if $file_iso && -e $file_iso;
 
+    if ( $row->{device} && -e $row->{device} ) {
+        ($row->{filename}) = $row->{device} =~ m{.*/(.*)};
+    }
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
@@ -1209,7 +1203,7 @@ sub _search_iso {
     }
 
     if ( !$row->{device} && $row->{filename}) {
-        if (my $volume = $self->search_volume($row->{filename})) {
+        if (my $volume = $self->search_volume_re(qr("^".$row->{filename}))) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
                 "UPDATE iso_images SET device=? WHERE id=?"
@@ -1217,6 +1211,8 @@ sub _search_iso {
             $sth->execute($volume->get_path, $row->{id});
         }
     }
+    my $rename_file = $row->{rename_file};
+
     return $row;
 }
 
@@ -1260,8 +1256,10 @@ sub _match_url($self,$url) {
     my @found;
     my $links = $res->dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
-        next if !defined $link || $link !~ qr($match);
-        my $new_url = "$url1$link$url2";
+        next if !defined $link;
+        $link =~ s{/$}{};
+        next if $link !~ qr($match);
+        my $new_url = "$url1$link/$url2";
         push @found,($self->_match_url($new_url));
     }
     return @found;
@@ -1409,15 +1407,16 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     confess "Error: missing file or filename ".Dumper($row) if !$file;
 
-    $file=~ s{.*/(.*)}{$1} if $file =~ m{/};
+    $file=~ s{.*/(.+)}{$1} if $file =~ m{/} && $file !~ m{/$};
 
-    my ($url, $file2) = $row->{url} =~ m{(.*)/(.*)};
+    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)};
+    $url = $row->{url} if $row->{url} =~ m{/$};
     my $url_orig = $row->{"${type}_url"};
-    $file = $file2 if $file2 && $file2 !~ /\*|\^/;
+    $file = $file2 if $file2 && $file2 !~ /\*|\^/ && $file2 !~ m{/$};
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
-    confess "error " if $url_orig =~ /\$/;
 
+    confess "error: file missing '$file' ".Dumper($row) if $file =~ m{/$};
     confess "error " if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
@@ -1947,9 +1946,9 @@ sub _xml_modify_disk {
   my $cont = 0;
   my $cont_swap = 0;
   for my $disk ($doc->findnodes('/domain/devices/disk')) {
-    next if $disk->getAttribute('device') ne 'disk';
 
     for my $child ($disk->childNodes) {
+        next if $disk->getAttribute('device') ne 'disk';
         if ($child->nodeName eq 'driver') {
             $child->setAttribute(type => 'qcow2');
         } elsif ($child->nodeName eq 'source') {

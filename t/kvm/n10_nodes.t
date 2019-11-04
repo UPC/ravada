@@ -279,7 +279,7 @@ sub test_sync_base {
 
     my $vm =rvd_back->search_vm($vm_name);
     my $base = create_domain($vm_name);
-    $base->add_volume(name => 'vdb', swap => 1, size => 512*1024 );
+    $base->add_volume(swap => 1, size => 512*1024 );
     my $clone = $base->clone(
         name => new_domain_name
        ,user => user_admin
@@ -809,6 +809,7 @@ sub test_domain_already_started {
 
     { # clone is active, it should be found in node
     my $clone3 = rvd_back->search_domain($clone->name);
+    $clone3->check_status();
     is($clone3->id, $clone->id);
     is($clone3->_vm->host , $node->host,"Expecting ".$clone3->name
         ." in ".$node->host) or exit;
@@ -1016,6 +1017,11 @@ sub test_shutdown($node) {
     is($clone->is_active,0,"[".$clone->type."] Expecting clone ".$clone->name." inactive") or return;
     is($clone->_data('status'),'shutdown',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
+    my $req = Ravada::Request->refresh_vms();
+    wait_request(debug => 1);
+    is($req->status,'done');
+    is($req->error,'');
+
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
     is($clone2->is_active,0) or exit;
 
@@ -1024,6 +1030,7 @@ sub test_shutdown($node) {
         my $md5_remote = _md5($file, $node);
         is($md5_remote, $md5);
     }
+    # this would eventualy be called on check_vms request
     my @line = search_iptable_remote(
         node => $node
         , remote_ip => $remote_ip
@@ -1146,7 +1153,7 @@ SKIP: {
         $vm = undef;
     } else {
         $node = remote_node($vm_name);
-        $node = test_node($vm_name, $node);
+        $node = test_node($vm_name, $node) if $node;
         $vm = undef if !$node;
     }
 

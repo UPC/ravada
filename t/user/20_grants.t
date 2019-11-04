@@ -275,7 +275,7 @@ sub test_shutdown_clone {
 sub test_remove {
     my $vm_name = shift;
 
-    my $user = create_user("oper_r$$","bar");
+    my $user = create_user("oper_r$$.$vm_name","bar");
     ok(!$user->is_operator);
     ok(!$user->is_admin);
 

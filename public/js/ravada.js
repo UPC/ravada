@@ -293,6 +293,31 @@
               $scope.new_name_duplicated=false;
             }
           };
+
+          $scope.set_bool = function(field, value) {
+            if (value ) value=1;
+                else value=0;
+            $scope.showmachine[field]=value;
+            value_show = true;
+            if (! value) {
+                value_show = false;
+            }
+            $scope.add_message("Setting "+$scope.showmachine.name+" "+field+" to "+value_show);
+            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
+          };
+
+          $scope.set = function(field) {
+            $scope.add_message("Setting "+$scope.showmachine.name+" "+field+" to "
+                        +$scope.showmachine[field]);
+
+            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+$scope.showmachine[field]);
+          };
+          $scope.add_message = function(text) {
+            $scope.message.push(text);
+            setTimeout(function () {
+                    $scope.message = [];
+            }, 5000);
+          };
           $scope.set_public = function(machineId, value) {
             if (value) value=1;
             else value=0;
@@ -499,10 +524,12 @@
             $scope.change_disk = function(id_machine, index ) {
                 var new_settings={
                   driver: $scope.showmachine.hardware.disk[index].driver,
-                  capacity: $scope.showmachine.hardware.disk[index].info.capacity,
-                  boot: $scope.showmachine.hardware.disk[index].info.boot,
+                  boot: $scope.showmachine.hardware.disk[index].boot,
                   file: $scope.showmachine.hardware.disk[index].file,
                 };
+                if ($scope.showmachine.hardware.disk[index].device === 'disk') {
+                  new_settings.capacity = $scope.showmachine.hardware.disk[index].capacity;
+                }
                 console.log(new_settings);
                 $http.post('/machine/hardware/change'
                     ,JSON.stringify({
@@ -544,6 +571,7 @@
                 capacity: '1G',
                 allocation: '0.1G'
             };
+            $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
@@ -673,7 +701,7 @@
                     else {
                         window.location.href="/logout";
                     }
-                }, 60000);
+                }, $scope.timeout);
                 $scope.redirect_done = true;
             }
         }

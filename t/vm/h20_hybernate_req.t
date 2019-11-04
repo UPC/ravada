@@ -55,7 +55,7 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
         } else {
             rvd_back->_process_all_requests_dont_fork();
         }
-        wait_request($req);
+        wait_request( background => $fork );
 
         $domain = rvd_back->search_domain($domain->name);
         is($domain->is_active,0);

@@ -12,7 +12,11 @@
 % $version =~ s/-/--/g;
 % if ($fallback) {
 	<a href="https://ravada.upc.edu/"><img src="/img/Website-Ravada-orange.svg"></a>
-        <a href="https://github.com/UPC/ravada/releases"><img src="/img/version-<%= $version %>-brightgreen.svg"></a>
+%       if ($version =~/alpha/) {
+        <a href="https://github.com/UPC/ravada/releases"><%= $version %></a>
+%        } else {
+        <a href="https://github.com/UPC/ravada/releases"><img alt="<%= $version %>" src="/img/version-<%= $version %>-brightgreen.svg"></a>
+%        }
         <a href="https://github.com/UPC/ravada/blob/master/LICENSE"><img src="/img/License-AGPL%20v3-blue.svg"></a>
         <a href="https://ravada.readthedocs.io"><img src="/img/latest.svg"></a>
 % } else {
@@ -23,7 +27,7 @@
 % }
             </div>
             <div class="col mt-3">
-                <p class="p-1 text-muted"><font size="2">Copyright &copy; 2016 - 2018 RavadaVDI</font></p>
+                <p class="p-1 text-muted"><font size="2">Copyright &copy; 2016 - 2019 RavadaVDI</font></p>
             </div>
         </div>
     </div>

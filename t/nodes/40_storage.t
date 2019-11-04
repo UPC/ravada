@@ -27,10 +27,13 @@ sub test_fail_different_storage_pools($node) {
 
     eval {
         $base->migrate($node);
+    };
+    is(''.$@, '',"migrating to ".$node->name) or BAIL_OUT();
+
+    eval {
         $base->migrate($vm);
     };
-    is($@, '');
-
+    is(''.$@, '',"migrating to ".$vm->name);
     my $sp_default = $vm->default_storage_pool_name();
     $vm->default_storage_pool_name($sp_name);
 

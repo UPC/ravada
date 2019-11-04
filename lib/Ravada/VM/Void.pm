@@ -106,13 +106,16 @@ sub create_domain {
 
         confess "I can't find base domain id=$args{id_base}" if !$domain_base;
 
-        for my $file_base ($domain_base->list_files_base) {
-            my ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.SWAP\..*)};
-            ($dir,$vol_name,$ext) = $file_base =~ m{(.*)/(.*)(\.*)} if !$dir;
-            my $new_name = "$vol_name-$args{name}-".Ravada::Utils::random_name(2).$ext;
-            $domain->add_volume(name => $new_name
-                                , capacity => 1024
-                                , file => "$dir/$new_name"
+        for my $base_t ($domain_base->list_files_base_target) {
+            my ($file_base, $target ) = @$base_t;
+            my $vol_base = Ravada::Volume->new(
+                file => $file_base
+                ,is_base => 1
+                ,vm => $domain_base->_vm
+            );
+            my $vol_clone = $vol_base->clone(name => "$args{name}-$target");
+            $domain->add_volume(name => $vol_clone->name
+                                , file => $vol_clone->file
                                  ,type => 'file');
         }
         my $drivers = {};
@@ -120,7 +123,7 @@ sub create_domain {
         $domain->_store( drivers => $drivers );
     } else {
         my ($file_img) = $domain->disk_device();
-        my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".img";
+        my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
         $file_img =~ m{.*/(.*)} if $file_img;
         $domain->add_volume(name => $vda_name
                         , capacity => ( $args{disk} or 1024)
@@ -155,6 +158,9 @@ sub create_volume {
 sub dir_img {
     return Ravada::Front::Domain::Void::_config_dir();
 }
+
+sub dir_base  { return dir_img }
+sub dir_clone { return dir_img }
 
 sub _list_domains_local($self, %args) {
     my $active = delete $args{active};
@@ -288,8 +294,18 @@ sub search_volume_path_re {
 
 }
 
-sub import_domain {
-    confess "Not implemented";
+sub import_domain($self, $name, $user) {
+
+    my $file = $self->dir_img."/$name.yml";
+
+    die "Error: domain $name not found in ".$self->dir_img if !-e $file;
+
+    return Ravada::Domain::Void->new(
+        domain => $file
+        ,name => $name
+        ,_vm => $self
+    );
+
 }
 
 sub refresh_storage {}

@@ -14,6 +14,8 @@ use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(Load Dump  LoadFile DumpFile);
 
+use Ravada::Volume;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -227,31 +229,10 @@ sub start($self, @args) {
     $self->_set_display( $listen_ip );
 }
 
-sub prepare_base {
-    my $self = shift;
-
-    my @img;
-    for my $volume ($self->list_volumes_info(device => 'disk')) {;
-        next if $volume->{device} ne 'disk';
-        my $file_qcow = $volume->{file};
-        my $file_base = $file_qcow.".qcow";
-
-        if ( $file_qcow =~ /.SWAP.img$/ ) {
-            $file_base = $file_qcow;
-            $file_base =~ s/(\.SWAP.img$)/base-$1/;
-        }
-        open my $out,'>',$file_base or die "$! $file_base";
-        print $out "$file_qcow\n";
-        close $out;
-        push @img,([$file_base, $volume->{target}]);
-    }
-    return @img;
-}
-
 sub list_disks {
     my @disks;
     for my $disk ( list_volumes_info(@_)) {
-        push @disks,( $disk->{file}) if $disk->{type} eq 'file';
+        push @disks,( $disk->file) if $disk->type eq 'file';
     }
     return @disks;
 }
@@ -274,8 +255,9 @@ sub remove_disks {
     my @files = $self->list_volumes_info;
     for my $vol (@files) {
         my $file = $vol->{file};
-        my $device = $vol->{device};
+        my $device = $vol->info->{device};
         next if $device eq 'cdrom';
+        next if $file =~ /\.iso$/;
         $self->_vol_remove($file);
     }
 
@@ -302,8 +284,8 @@ sub add_volume {
 
     my $device = ( delete $args{device} or 'disk' );
 
-    my $suffix = ".img";
-    $suffix = '.SWAP.img' if $args{swap};
+    my $suffix = ".void";
+    $suffix = '.SWAP.void' if $args{swap};
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
@@ -332,13 +314,13 @@ sub add_volume {
     delete $args{vm}   if defined $args{vm};
 
     my $data = $self->_load();
-    $args{target} = _new_target($data) if !$args{target};
+    $args{target} = $self->_new_target() if !$args{target};
     $args{driver} = 'foo' if !exists $args{driver};
 
     my $hardware = $data->{hardware};
     my $device_list = $hardware->{device};
     my $file = delete $args{file};
-    push @$device_list, {
+    my $data_new = {
         name => $args{name}
         ,file => $file
         ,type => $args{type}
@@ -346,12 +328,15 @@ sub add_volume {
         ,driver => $args{driver}
         ,device => $device
     };
+    $data_new->{boot} = $args{boot} if $args{boot};
+    push @$device_list, $data_new;
     $hardware->{device} = $device_list;
     $self->_store(hardware => $hardware);
 
     delete @args{'name', 'target', 'driver'};
-    $args{a} = 'a'x400;
-    $self->_vm->write_file($file, Dump(\%args)),
+    if ( ! -e $file ) {
+        $self->_vm->write_file($file, Dump(\%args)),
+    }
 
     return $file;
 }
@@ -373,8 +358,10 @@ sub remove_volume($self, $file) {
     $self->_store(hardware => $hardware);
 }
 
-sub _new_target {
-    my $data = shift;
+sub _new_target_dev { return _new_target(@_) }
+
+sub _new_target($self) {
+    my $data = $self->_load();
     return 'vda'    if !$data or !keys %$data;
     my %targets;
     for my $dev ( @{$data->{hardware}->{device}}) {
@@ -444,17 +431,18 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         next if exists $dev->{type}
                 && $dev->{type} eq 'base';
 
-        my $info = {};
-
         if (exists $dev->{file} ) {
-            eval { $info = Load($self->_vm->read_file($dev->{file})) if -e $dev->{file} };
             confess "Error loading $dev->{file} ".$@ if $@;
             next if defined $attribute
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
-        $info = {} if !defined $info;
-        $info->{n_order} = $n_order++;
-        push @vol,({%$dev,%$info})
+        $dev->{n_order} = $n_order++;
+        my $vol = Ravada::Volume->new(
+            file => $dev->{file}
+            ,info => $dev
+            ,domain => $self
+        );
+        push @vol,($vol);
     }
     return @vol;
 
@@ -589,13 +577,9 @@ sub ip {
     return $info->{ip};
 }
 
-sub clean_swap_volumes {
-    my $self = shift;
-    for my $file ($self->list_volumes) {
-        next if $file !~ /SWAP.img$/;
-        open my $out,'>',$file or die "$! $file";
-        close $out;
-    }
+sub clean_disk($self, $file) {
+    open my $out,'>',$file or die "$! $file";
+    close $out;
 }
 
 sub hybernate {

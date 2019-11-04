@@ -29,11 +29,12 @@ Request a command to the ravada backend
 
 =cut
 
+my $COUNT = 0;
 our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1 };
-our $args_prepare = { id_domain => 1 , uid => 1 };
+our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
@@ -65,22 +66,33 @@ our %VALID_ARG = (
     ,screenshot_domain => { id_domain => 1, filename => 2 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1, filename => 2 }
-    ,start_domain => {%$args_manage, remote_ip => 1, name => 2, id_domain => 2 }
+    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }
-    ,clone => { uid => 1, id_domain => 1, name => 1, memory => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2
+                # If base has pools, from_pool = 1 if undefined
+                # when from_pool is true the clone is picked from the pool
+                # when from_pool is false the clone is created
+                ,from_pool => 2
+                # If base has pools, create anew and add to the pool
+                ,add_to_pool => 2
+                ,start => 2,
+                ,remote_ip => 2
+                ,with_cd => 2
+    }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 1, data => 1 }
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
+    ,change_curr_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
     ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
@@ -104,6 +116,7 @@ our %VALID_ARG = (
     #isos
     ,list_isos => { vm_type => 1 }
 
+    ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
 );
 
@@ -134,7 +147,8 @@ our %COMMAND = (
     }
     ,disk => {
         limit => 1
-        ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes']
+        ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
+                    , 'manage_pools']
         ,priority => 6
     }
     ,important=> {
@@ -399,7 +413,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request)) {
+    for (qw(at after_request retry)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -473,6 +487,32 @@ sub new_request($self, $command, @args) {
     );
 }
 
+sub _duplicated_request($command, $args) {
+    return if !$args;
+    my $args_d = decode_json($args);
+    delete $args_d->{uid};
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,args FROM requests WHERE status='requested'"
+        ." AND command=?"
+    );
+    $sth->execute($command);
+    while (my ($id,$args_found) = $sth->fetchrow) {
+
+        my $args_found_d = decode_json($args_found);
+        delete $args_found_d->{uid};
+
+        next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
+        my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
+        my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        next if $args_d_s ne $args_found_s;
+
+        warn "$id\n$args_d_s\n$args_found_s\n"
+            if $command eq 'clone' && $args =~ /a-1/;
+        return $id;
+    }
+    return 0;
+}
+
 sub _new_request {
     my $self = shift;
     if ( !ref($self) ) {
@@ -501,11 +541,20 @@ sub _new_request {
             $args{id_domain} = $id_domain_args;
             $args{after_request} = delete $args{args}->{after_request}
                 if exists $args{args}->{after_request};
+            $args{retry} = delete $args{args}->{retry}
+                if exists $args{args}->{retry};
 
         }
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
+    if ($args{command} =~ /^(clone|manage_pools)$/) {
+        if ( _duplicated_request($args{command}, $args{args})
+            || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
+            #            warn "Warning: duplicated request for $args{command} $args{args}";
+            return;
+        }
+    }
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
@@ -585,12 +634,20 @@ sub status {
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
             ." WHERE id=?");
+
+    $status = substr($status,0,64);
     $sth->execute($status, $self->{id});
     $sth->finish;
 
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
+}
+
+sub at($self, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set at_time=? "
+            ." WHERE id=?");
+    $sth->execute($value, $self->{id});
 }
 
 sub _search_domain_name {
@@ -746,6 +803,16 @@ sub args {
         if !exists $self->{args}->{$name};
     return $self->{args}->{$name};
 }
+
+sub arg($self, $name, $value) {
+
+    confess "Unknown argument $name ".Dumper($self->{args})
+        if !exists $self->{args}->{$name} && !defined $value;
+
+    $self->{args}->{$name} = $value if defined $value;
+    return $self->{args}->{$name};
+}
+
 
 =head2 defined_arg
 

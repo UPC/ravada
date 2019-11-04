@@ -663,6 +663,18 @@ get '/machine/public/#id/#value' => sub {
     return machine_is_public($c);
 };
 
+get '/machine/set/#id/#field/#value' => sub {
+    my $c = shift;
+    my $id = $c->stash('id');
+    my $field = $c->stash('field');
+    my $value = $c->stash('value');
+
+    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
+
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+    return $c->render(json => { $field => $domain->_data($field, $value)});
+};
+
 get '/machine/autostart/#id/#value' => sub {
     my $c = shift;
     my $req = Ravada::Request->domain_autostart(
@@ -932,7 +944,8 @@ post '/request/(:name)/' => sub {
     my $c = shift;
 
     my $args = decode_json($c->req->body);
-    warn Dumper($args);
+    confess "Error: uid should not be provided".Dumper($args)
+        if exists $args->{uid};
 
     my $req = Ravada::Request->new_request(
         $c->stash('name')
@@ -1268,13 +1281,23 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+            my @languages = I18N::LangTags::implicate_supers(
+                I18N::LangTags::Detect::detect()
+            );
+            my $header = $c->req->headers->header('accept-language');
+            my @languages2 = map {s/^(.*?)[;-].*/$1/; $_ } split /,/,$header;
 
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [ I18N::LangTags::Detect::detect() ]
+                , locale => [@languages, @languages2]
             );
 
-            $c->session(expiration => $expiration);
+            $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
+            my $machines = $RAVADA->list_machines_user($auth_ok);
+            $url = "/machine/clone/". $machines->[0]->{id}.".html" if scalar(@$machines) == 1 && !($auth_ok->is_admin);
+            my $auto_view = 1;
+
+            $c->session(auto_view => $auto_view, expiration => $expiration);
             return $c->redirect_to($url);
         } else {
             push @error,("Access denied");
@@ -1286,6 +1309,9 @@ sub login {
                     ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error);
+    my @error_status;
+    @error_status = ( status => 403) if @error;
+
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -1298,6 +1324,7 @@ sub login {
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
                       ,login_hash => ''
+                      ,@error_status
     );
 }
 
@@ -1563,10 +1590,15 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         if ( $domain->id_owner == $USER->id
                 && $domain->id_base == $id_base && !$domain->is_base ) {
             if ($domain->is_active) {
-                return Ravada::Request->open_iptables(
+                Ravada::Request->open_iptables(
                     uid => $USER->id
                 , id_domain => $domain->id
                 , remote_ip => _remote_ip($c)
+                );
+
+                 Ravada::Request->open_exposed_ports(
+                    uid => $USER->id
+                , id_domain => $domain->id
                 );
             }
             return Ravada::Request->start_domain(
@@ -1600,9 +1632,12 @@ sub _new_domain_name {
 }
 
 sub run_request($c, $request, $anonymous = 0) {
+    my $timeout = $SESSION_TIMEOUT;
+    $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
+        , timeout => $timeout * 1000
     );
 }
 
@@ -1761,7 +1796,7 @@ sub manage_machine {
         }
     }
 
-    if ($c->param("start-clones") ne "") {
+    if (defined $c->param("start-clones") && $c->param("start-clones") ne "") {
         my $req = Ravada::Request->start_clones(
             id_domain => $domain->id,
             ,uid => $USER->id
@@ -2080,7 +2115,8 @@ sub copy_machine {
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
 
-    my @create_args =( memory => $ram ) if $ram;
+    my @create_args = ( from_pool => 0 );
+    push @create_args,( memory => $ram ) if $ram;
     my @reqs;
     if ($number == 1 ) {
         my $req2 = Ravada::Request->clone(

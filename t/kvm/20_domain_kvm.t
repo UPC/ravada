@@ -66,14 +66,15 @@ sub test_remove_corrupt_clone {
     );
 
     for my $file ( $clone->list_disks ) {
-        warn $file;
         open my $out, '>',$file or die "$! $file";
         print $out "bogus\n";
         close $out;
     }
     eval { $clone->start(user_admin) };
     diag($@);
-    $clone->shutdown_now(user_admin);
+    eval { $clone->shutdown_now(user_admin) };
+    like($@,qr{(No base for|Image not in qcow)});
+    is($clone->is_active,0);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);

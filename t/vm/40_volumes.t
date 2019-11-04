@@ -66,7 +66,16 @@ sub test_add_volume {
 
 #    diag("[".$domain->vm."] adding volume $volume_name to domain ".$domain->name);
 
-    $domain->add_volume(name => $domain->name.".$volume_name", size => 512*1024 , vm => $vm
+    my $ext = 'qcow2';
+    if ($vm->type eq 'Void') {
+        $ext = 'void';
+    } elsif ($vm->type eq 'KVM') {
+        $ext = 'qcow2';
+    }
+    $domain->add_volume(
+           vm => $vm
+        ,name => $domain->name."-".Ravada::Utils::random_name(2)."-$volume_name.$ext"
+        ,size => 512*1024
         ,swap => $swap);
 
     my ($vm_name) = $vm->name =~ /^(.*)_/;
@@ -240,10 +249,14 @@ sub test_domain_n_volumes {
     is(scalar @volumes_clone, $n
         ,"[$vm_name] Expecting $n volumes, got ".Dumper([@volumes_clone],[@volumes_clone_all])) or exit;
 
-    return if $vm_name =~ /void/i;
     for my $vol ( @volumes_clone ) {
-        my ($file, $target) = ($vol->{file}, $vol->{target});
-        like($file,qr/-$target-/);
+        my ($file, $target) = ($vol->file, $vol->info->{target});
+        if (!$target) {
+            confess "$file without target";
+        } else {
+            like($file,qr/-$target/);
+        }
+        ok($vol->info->{driver}) or exit;
     }
 }
 
@@ -350,7 +363,7 @@ sub test_domain_swap {
                                 ." should be active");
 
     my $min_size = 197120 if $vm_name eq 'KVM';
-    $min_size = 470 if $vm_name eq 'Void';
+    $min_size = 100 if $vm_name eq 'Void';
     # after start, all the files should be there
      my $found_swap = 0;
     for my $file ( $domain_clone->list_volumes) {
@@ -359,9 +372,13 @@ sub test_domain_swap {
         if ( $file =~ /SWAP/) {
             $found_swap++;
             my $size = -s $file;
-            copy($file, "$file.tmp");
-            `/bin/cat $file.tmp >> $file`;
-            unlink "$file.tmp";
+            $min_size = $size if $size > $min_size;
+            for ( 'a' .. 'z' ) {
+                open my $out, ">>",$file or die "$! $file";
+                print $out "$_: ".('a' x 256)."\n";
+                close $out;
+                last if -s $file > $size && -s $file > $min_size;
+            }
             ok(-s $file > $size);
             ok(-s $file > $min_size
                 , "Expecting swap file $file bigger than $min_size, got :"
@@ -403,9 +420,21 @@ sub test_too_big_prepare($vm) {
     my $domain = create_domain($vm);
     my $free_disk = $vm->free_disk();
     my $file;
-    eval { $file = $domain->add_volume(size => int($free_disk * 0.9)) };
+    my $size = int($free_disk * 0.9);
+    my $name = new_volume_name($domain);
+    eval { $file = $domain->add_volume(
+              size => $size
+             ,name => $name
+         )
+    };
     is($@,'');
     ok($file);
+
+    my @volumes = $domain->list_volumes_info();
+    for my $vol (@volumes) {
+        next if $vol->name ne $name;
+        is($vol->capacity, $size, Dumper($vol)) or exit;
+    }
 
     is($domain->is_base, 0) or exit;
     eval { $domain->prepare_base(user_admin); };
@@ -450,8 +479,7 @@ sub test_search($vm_name) {
 
 #######################################################################33
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 for my $vm_name (reverse sort @VMS) {
 
@@ -496,8 +524,7 @@ for my $vm_name (reverse sort @VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
 done_testing();
 
