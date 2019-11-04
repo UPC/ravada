@@ -48,6 +48,7 @@ my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
 my $REBASE;
+my $RUN_REQUEST;
 
 my $IMPORT_DOMAIN_OWNER;
 
@@ -116,6 +117,7 @@ GetOptions (       help => \$help
 ,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
 
     ,'add-locale-repository=s' => \$ADD_LOCALE_REPOSITORY
+    ,'run-request=s' => \$RUN_REQUEST
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -173,6 +175,8 @@ sub do_start {
         $ravada->process_long_requests();
         $ravada->process_requests();
 
+        exit if done_request();
+
         if ( time - $t_refresh > 60 ) {
             Ravada::Request->cleanup();
             Ravada::Request->refresh_vms()      if rand(5)<3;
@@ -182,6 +186,16 @@ sub do_start {
         }
         sleep 1 if time - $t0 <1;
     }
+
+}
+
+sub done_request {
+    return 0 if !$RUN_REQUEST;
+    my $req;
+    eval { $req = Ravada::Request->open($RUN_REQUEST) };
+    warn $req->status;
+    warn $@ if $@;
+    return 1 if !$req || $req->status eq 'done';
 
 }
 
@@ -204,6 +218,7 @@ sub start {
     for (;;) {
         eval { do_start() };
         warn $@ if $@;
+        exit if done_request();
     }
 }
 

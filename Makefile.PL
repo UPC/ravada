@@ -19,6 +19,7 @@ WriteMakefile(
       ,'XML::LibXML'=> 0
              ,'YAML' => 0
     ,'Image::Magick' => 0
+        ,'IO::Scalar' => 0
       ,'MooseX::Types::NetAddr::IP' => 0
 	,'IO::Interface' => 0
 	,'Sys::Statistics::Linux' => 0
