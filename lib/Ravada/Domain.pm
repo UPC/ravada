@@ -1299,6 +1299,7 @@ sub info($self, $user) {
         ,is_base => $self->is_base
         ,id_base => $self->id_base
         ,is_active => $is_active
+        ,is_hibernated => $self->is_hibernated
         ,spice_password => $self->spice_password
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
@@ -1350,6 +1351,7 @@ sub info($self, $user) {
         push @cdrom,($disk->{file}) if $disk->{file} && $disk->{file} =~ /\.iso$/;
     }
     $info->{cdrom} = \@cdrom;
+    $info->{requests} = $self->list_requests();
 
     return $info;
 }
@@ -2060,6 +2062,11 @@ sub _post_shutdown {
             return $self->_do_force_shutdown() if !$self->is_removed && $is_active;
         }
 
+        Ravada::Request->refresh_machine(
+                         at => time+int($timeout/2)
+                      , uid => Ravada::Utils::user_daemon->id
+                , id_domain => $self->id
+        );
         my $req = Ravada::Request->force_shutdown_domain(
             id_domain => $self->id
                ,id_vm => $self->_vm->id

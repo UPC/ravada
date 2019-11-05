@@ -25,6 +25,9 @@ has ravada => (
 
 my %SUB = (
                   list_alerts => \&_list_alerts
+               ,list_machines => \&_list_machines
+               ,list_requests => \&_list_requests
+                ,machine_info => \&_get_machine_info
 );
 
 ######################################################################
@@ -54,6 +57,47 @@ sub _list_alerts($rvd, $args) {
     }
 
     return [@ret2,@ret];
+}
+
+sub _list_machines($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+    return []
+        unless (
+            $user->can_list_machines
+            || $user->can_list_own_machines()
+            || $user->can_list_clones()
+            || $user->can_list_clones_from_own_base()
+            || $user->is_admin()
+        );
+    return $rvd->list_machines($user);
+}
+
+sub _list_requests($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
+    return [] unless $user->is_operator || $user->is_admin;
+    return $rvd->list_requests;
+}
+
+sub _get_machine_info($rvd, $args) {
+    my ($id_domain) = $args->{channel} =~ m{/(\d+)};
+    my $domain = $rvd->search_domain_by_id($id_domain) or do {
+        warn "Error: domain $id_domain not found.";
+        return {};
+    };
+
+
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
+
+    my $info = $domain->info($user);
+    if ($info->{is_active} && !$info->{ip}) {
+       Ravada::Request->refresh_machine(id_domain => $info->{id}, uid => $user->id);
+    }
+
+    return $info;
 }
 
 sub _different_list($list1, $list2) {

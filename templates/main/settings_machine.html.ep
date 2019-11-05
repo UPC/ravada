@@ -8,7 +8,7 @@
         <!--BASES AND DOMAINS LIST-->
     <div class="page-header">
         <div class="card"
-             ng-controller="singleMachinePage" ng-init="init(<%= $id %>)">
+             ng-controller="singleMachinePage" ng-init="subscribe_ws('<%= url_for('ws_subscribe')->to_abs %>', $scope);init(<%= $id %>);">
              <div class="card-header">
 %              if ($domain->is_base) {
                  <h2><%=l 'Virtual Machine' %>

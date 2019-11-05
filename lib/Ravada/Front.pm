@@ -872,7 +872,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         , $error, $id_domain, $domain, $date));
 
     while ( $sth->fetch) {
-        my $epoch_date_changed;
+        my $epoch_date_changed = time;
         if ($date_changed) {
             my ($y,$m,$d,$hh,$mm,$ss) = $date_changed =~ /(\d{4})-(\d\d)-(\d\d) (\d+):(\d+):(\d+)/;
             if ($y)  {

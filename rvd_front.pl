@@ -674,6 +674,8 @@ get '/machine/set/#id/#field/#value' => sub {
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+    $USER->send_message("Setting $field to $value in ".$domain->name)
+        if $domain->_data($field) ne $value;
     return $c->render(json => { $field => $domain->_data($field, $value)});
 };
 
@@ -2147,7 +2149,7 @@ sub copy_machine {
     } else {
         push @reqs,(copy_machine_many($base, $number, \@create_args));
     }
-    return $c->render(json => { request => [map { $_->id } @ reqs ] } );
+    return $c->render(json => { request => [map { $_->id } @reqs ] } );
 }
 
 sub new_machine_copy($c) {
