@@ -102,8 +102,4 @@
     </div>
 </div>
 
-<div class="mt-4"> <!-- del panel heading-->
-    %= include 'main/show_requests'
-</div>
-
 </div>
