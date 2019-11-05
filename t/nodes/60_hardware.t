@@ -33,13 +33,14 @@ sub test_graphics($vm, $node) {
 
             test_driver_clone($vm, $node, $domain, $driver_name, $option);
 
-            last;
+            last unless $ENV{TEST_LONG};
         }
     }
     $domain->remove(user_admin);
 }
 
 sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
+    $domain->remove_base(user_admin) if $domain->is_base;
     my $req = Ravada::Request->set_driver(uid => user_admin->id
         , id_domain => $domain->id
         , id_option => $option->{id}
@@ -47,7 +48,9 @@ sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
     wait_request();
     is($req->status,'done');
     is($req->error,'');
-    $domain->prepare_base(user_admin) if !$domain->is_base();
+    is($domain->get_driver($driver_name), $option->{value}
+        , $driver_name);
+    $domain->prepare_base(user_admin);
     $domain->set_base_vm(node => $node, user => user_admin);
 
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
@@ -68,32 +71,32 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
             diag("No driver for $driver_name in ".$domain->type);
             next;
     };
-    for my $curr_option ($driver->get_options) {
-        next if defined $domain->get_driver($driver_name)
-            && $domain->get_driver($driver_name) eq $curr_option->{value};
-        $option = $curr_option;
-        last;
-    }
-    die if !$option;
-
-    diag("Testing $driver_name $option->{value} then migrate");
-    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    $domain->prepare_base(user_admin);
     $domain->set_base_vm(node => $node, user => user_admin);
-    my $req = Ravada::Request->set_driver(uid => user_admin->id
-        , id_domain => $clone->id
-        , id_option => $option->{id}
-    );
-    wait_request();
-    is($req->status,'done');
-    is($req->error,'');
+    for my $option ($driver->get_options) {
+        next if defined $domain->get_driver($driver_name)
+        && $domain->get_driver($driver_name) eq $option->{value};
 
-    $clone->migrate($node);
-    my $clone2 = Ravada::Domain->open($clone->id);
-    is($clone2->_vm->id,$node->id);
-    is($clone2->get_driver($driver_name), $option->{value}
-        , $driver_name);
+        diag("Testing $driver_name $option->{value} then migrate");
+        my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+        my $req = Ravada::Request->set_driver(uid => user_admin->id
+            , id_domain => $clone->id
+            , id_option => $option->{id}
+        );
+        wait_request();
+        is($req->status,'done');
+        is($req->error,'');
 
-    $clone->remove(user_admin);
+        $clone->migrate($node);
+        my $clone2 = Ravada::Domain->open($clone->id);
+        is($clone2->_vm->id,$node->id);
+        is($clone2->get_driver($driver_name), $option->{value}
+            , $driver_name) or exit;
+
+        $clone->remove(user_admin);
+        last unless $ENV{TEST_LONG};
+    }
+    $domain->remove_base(user_admin);
 }
 
 sub test_drivers_type($type, $vm, $node) {
