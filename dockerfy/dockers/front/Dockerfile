@@ -11,8 +11,8 @@ RUN apt-get update \
     libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl liblocale-maketext-lexicon-perl \
     libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl libnet-ssh2-perl \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
-    libvirt-clients liblwp-useragent-determined-perl supervisor net-tools apt-utils lsof mysql-client curl \
-    bash vim wget \
+    libio-stringy-perl libvirt-clients liblwp-useragent-determined-perl supervisor net-tools apt-utils lsof mysql-client \
+	curl bash vim wget \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
