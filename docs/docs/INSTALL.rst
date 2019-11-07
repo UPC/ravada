@@ -121,7 +121,8 @@ Grant all permissions on this database to the *rvd_user*:
 
 .. prompt:: bash $
 
-     sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'Pword12345*'"
+     sudo mysql -u root -p ravada -e "create user 'rvd_user'@'localhost' identified by 'Pword12345*';
+     sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost'"
 
 The password chosen must fulfill the following characteristics:
 
