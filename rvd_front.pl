@@ -10,6 +10,8 @@ use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Mojo::JSON qw(decode_json encode_json);
+use Mojo::IOLoop;
+
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
@@ -483,6 +485,63 @@ any '/machine/manage/(:id).(:type)' => sub {
 any '/hardware/(:id).(:type)' => sub {
    	 my $c = shift;
      return $c->render(template => 'main/hardware');
+};
+
+websocket '/proxy_vnc' => sub {
+    my $c = shift;
+    $c->render_later->on(finish => sub { warn 'websocket closing' });
+
+    my $tx = $c->tx;
+    $tx->with_protocols('binary');
+
+    my $host = $c->param('host') || '127.0.0.1';
+    my $port = $c->param('port') || '5902';
+
+    Mojo::IOLoop->client(address => $host, port => $port, sub {
+            my ($loop, $err, $tcp) = @_;
+
+            $tx->finish(4500, "TCP connection error: $err") if $err;
+            $tcp->on(error => sub { $tx->finish(4500, "TCP error: $_[1]") });
+
+            $tcp->on(read => sub {
+                    my ($tcp, $bytes) = @_;
+                    $tx->send({binary => $bytes});
+                });
+
+            $tx->on(binary => sub {
+                    my ($tx, $bytes) = @_;
+                    $tcp->write($bytes);
+                });
+
+            $tx->on(finish => sub {
+                    $tcp->close;
+                    undef $tcp;
+                    undef $tx;
+                });
+        });
+};
+
+get '/machine/screen/(:id)' => sub($c){
+    my ($domain) = _search_requested_machine($c);
+    return $c->render(text => "Error: machine ".$c->stash('id')." is not active")
+    if !$domain->is_active;
+
+    my $display = $domain->info ($USER)->{display};
+
+    return $c->render(text => "Error: no VNC display "."<pre>".Dumper($display)."</pre>")
+        if $display->{type} ne 'vnc';
+
+    my $url = $c->url_for('proxy_vnc')->query(
+         host => $display->{ip}
+        ,port => $display->{port}
+    );
+    $url->path->leading_slash(0); # novnc assumes no leading slash :(
+    $c->render(
+        vnc =>
+        base => $c->tx->req->url->to_abs,
+        path => $url,
+    );
+
 };
 
 get '/machine/view/(:id).(:type)' => sub {
