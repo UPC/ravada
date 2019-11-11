@@ -1341,7 +1341,7 @@ sub info($self, $user) {
         die "Field $_ already in info" if exists $info->{$_};
         $info->{$_} = $internal_info->{$_};
     }
-    for (qw(disk network)) {
+    for (qw(disk network graphics)) {
         $info->{drivers}->{$_} = $self->drivers($_,undef,1);
     }
     $info->{bases} = $self->_bases_vm();
@@ -3105,7 +3105,7 @@ sub get_controller {
     my $sub = $self->get_controller_by_name($name);
 #    my $sub = $GET_CONTROLLER_SUB{$name};
     
-    die "I can't get controller $name for domain ".$self->name
+    confess "I can't get controller $name for domain ".$self->name
         if !$sub;
 
     return $sub->($self);

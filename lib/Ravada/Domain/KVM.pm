@@ -65,22 +65,26 @@ our %SET_DRIVER_SUB = (
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
+    ,graphics => \&_get_controller_graphics
     ,network => \&_get_controller_network
     );
 our %SET_CONTROLLER_SUB = (
     usb => \&_set_controller_usb
     ,disk => \&_set_controller_disk
+    ,graphics => \&_set_controller_graphics
     ,network => \&_set_controller_network
     );
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
     ,disk => \&_remove_controller_disk
+    ,graphics => \&_remove_controller_graphics
     ,network => \&_remove_controller_network
     );
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
     ,network => \&_change_hardware_network
+    ,graphics => \&_change_hardware_graphics
 );
 ##################################################
 
@@ -1933,6 +1937,53 @@ sub _set_controller_network($self, $number, $data) {
       $self->domain->attach_device($device, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG);
 }
 
+sub _set_graphics_spice_xml($self, $graphics) {
+    my %settings = (
+        image => { compression => 'auto_glz'}
+        ,jpeg => { compression => 'auto' }
+        ,zlib => { compression => 'auto' }
+        ,playback => { compression => 'on' }
+        ,streaming => { mode => 'filter' }
+    );
+    $self->_set_device_settings_xml($graphics, \%settings);
+}
+
+sub _set_device_settings_xml($self, $graphics, $settings) {
+    for my $name( keys %$settings ) {
+        my $node= $graphics->addNewChild(undef,$name);
+        for my $attrib ( keys %{$settings->{$name}} ) {
+            $node->setAttribute( $attrib => $settings->{$name}->{$attrib});
+        }
+    }
+
+}
+
+sub _set_graphics_vnc_xml($self, $graphics) {
+    #TODO find out recommended VNC settings
+    my %settings = ();
+    $self->_set_device_settings_xml($graphics, \%settings);
+}
+
+sub _set_controller_graphics($self, $number, $data) {
+    my $type = ( delete $data->{driver} or 'spice' );
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    my ($devices) = $doc->findnodes('/domain/devices');
+    my $graphics = $devices->addNewChild(undef,'graphics');
+    $graphics->setAttribute(type => $type);
+    $graphics->setAttribute(autoport=> 'yes');
+
+    if ($type eq 'spice') {
+        $self->_set_graphics_spice_xml($graphics);
+    } elsif ($type eq 'vnc') {
+        $self->_set_graphics_vnc_xml($graphics);
+    }
+
+    $self->_vm->connect if !$self->_vm->vm;
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+}
+
 sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
     
@@ -1992,6 +2043,10 @@ sub _remove_controller_disk($self, $index) {
 
 sub _remove_controller_network($self, $index) {
     $self->_remove_device($index,'interface', type => qr'(bridge|network)');
+}
+
+sub _remove_controller_graphics($self, $index) {
+    $self->_remove_device($index,'graphics');
 }
 
 =head2 pre_remove
@@ -2243,6 +2298,32 @@ sub _change_hardware_network($self, $index, $data) {
     die "Error: interface $index not found in ".$self->name if !$changed;
 
     $self->_post_change_hardware($doc);
+}
+
+sub _change_hardware_graphics($self, $index, $data) {
+    confess if !defined $index;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+
+    my $driver = lc(delete $data->{driver} or '');
+    my $type = lc(delete $data->{type} or '');
+
+    die "Error: Unknown arguments ".Dumper($data) if keys %$data;
+
+    my $count = 0;
+    my $changed = 0;
+
+    for my $interface ($doc->findnodes('/domain/devices/graphics')) {
+        next if $count++ != $index;
+        $interface->setAttribute(type => $type) if $type;
+        $interface->setAttribute(type => $driver) if $driver;
+        $changed++;
+    }
+
+    die "Error: interface $index not found in ".$self->name if !$changed;
+
+    $self->_post_change_hardware($doc);
+
 }
 
 

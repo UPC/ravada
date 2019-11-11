@@ -14,6 +14,7 @@ use feature qw(signatures);
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
+    ,graphics => \&_get_controller_graphics
     ,network => \&_get_controller_network
     );
 
@@ -88,6 +89,40 @@ sub _get_controller_network($self) {
     }
 
     return @ret;
+}
+
+sub _get_controller_graphics($self) {
+    $self->xml_description if !$self->readonly();
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    my @ret;
+
+    for my $device ($doc->findnodes('/domain/devices/graphics')) {
+        my $screen = _fetch_xml_nodes($device);
+        $screen->{driver} = $screen->{type};
+        $screen->{name} = $screen->{type}." ".scalar(@ret);
+        push @ret,($screen);
+    }
+
+    return @ret;
+
+}
+
+sub _fetch_xml_attributes($element) {
+    my $device = {};
+    for my $attrib ($element->attributes) {
+        $device->{$attrib->name}=$attrib->value;
+    }
+    return $device;
+}
+
+sub _fetch_xml_nodes($element) {
+    my $entry = _fetch_xml_attributes($element);
+    for my $node ( $element->findnodes('*') ) {
+        my $attributes = _fetch_xml_attributes($node);
+        $entry->{$node->nodeName} = $attributes;
+    }
+    return $entry;
 }
 
 sub _get_controller_disk($self) {

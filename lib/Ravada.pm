@@ -577,6 +577,11 @@ sub _update_domain_drivers_types($self) {
             ,name => 'disk'
             ,vm => 'KVM'
         }
+        ,graphics => {
+            id => 10
+            ,name => 'graphics'
+            ,vm => 'KVM'
+        }
 
     };
     $self->_update_table('domain_drivers_types','id',$data);
@@ -590,6 +595,7 @@ sub _update_domain_drivers_types($self) {
 
 sub _update_domain_drivers_options($self) {
 
+    my $n = 33;
     my $data = {
         qxl => {
             id => 1,
@@ -747,6 +753,19 @@ sub _update_domain_drivers_options($self) {
             ,name => 'off'
            ,value => 'mode="off"'
         }
+        ,spice => {
+            id => $n++
+            ,id_driver_type => 10,
+            ,name => 'spice'
+            ,value => 'spice'
+        }
+        ,vnc => {
+            id => $n++
+            ,id_driver_type => 10,
+            ,name => 'vnc'
+            ,value => 'vnc'
+        }
+
     };
     $self->_update_table('domain_drivers_options','id',$data);
 }
