@@ -42,7 +42,11 @@ sub test_add_hardware_request_drivers {
 	my $domain = shift;
 	my $hardware = shift;
 
-    test_remove_almost_all_hardware($vm, $domain, $hardware);
+    if ($hardware eq 'graphics') {
+        test_remove_all_hardware($vm, $domain, $hardware);
+    } else {
+        test_remove_almost_all_hardware($vm, $domain, $hardware);
+    }
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $info0 = $domain->info(user_admin);
@@ -64,17 +68,29 @@ sub test_add_hardware_request_drivers {
             , scalar(@{$info->{hardware}->{$hardware}})-1);
     }
 }
-
-sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
-
-    confess if !ref($data) || ref($data) ne 'HASH';
+sub _remove_hardware($vm, $domain, $hardware) {
+    my %limit = (
+        usb => 4
+        ,graphics => 2
+    );
+    return if !exists $limit{$hardware};
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
-    while ($hardware eq 'usb' && $numero > 4) {
+    while ( $numero >= $limit{$hardware} ) {
+        diag("Removing hardware $hardware");
         test_remove_hardware($vm, $domain, $hardware, 0);
         @list_hardware1 = $domain->get_controller($hardware);
 	    $numero = scalar(@list_hardware1)+1;
     }
+}
+
+sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
+
+    confess if !ref($data) || ref($data) ne 'HASH';
+    $domain->info(user_admin);
+    _remove_hardware($vm, $domain, $hardware);
+    my @list_hardware1 = $domain->get_controller($hardware);
+	my $numero = scalar(@list_hardware1)+1;
 	my $req;
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
@@ -87,7 +103,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 	is($@,'') or return;
     $USER->unread_messages();
 	ok($req, 'Request');
-	rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0);
     is($req->status(),'done');
     is($req->error(),'') or exit;
 
@@ -95,7 +111,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my @list_hardware2 = $domain_f->get_controller($hardware);
     is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
-        ,"Adding hardware $numero\n"
+        ,"Adding hardware $numero to ".$domain->name."\n"
             .Dumper(\@list_hardware2, \@list_hardware1))
             or exit;
     }
@@ -196,6 +212,7 @@ sub test_add_hardware_custom($domain, $hardware) {
         ,usb => sub {}
         ,mock => sub {}
         ,network => sub {}
+        ,graphics => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -260,6 +277,13 @@ sub test_remove_almost_all_hardware {
         $domain->list_volumes();
     }
 }
+sub test_remove_all_hardware($vm, $domain, $hardware) {
+    my $total_hardware = scalar($domain->get_controller($hardware));
+    for my $index ( 0 .. $total_hardware-1) {
+        test_remove_hardware($vm, $domain, $hardware, $index);
+    }
+}
+
 
 sub test_front_hardware {
     my ($vm, $domain, $hardware ) = @_;
@@ -475,9 +499,21 @@ sub test_change_network($vm, $domain) {
     test_change_network_nat($vm, $domain, $index);
 }
 
+sub test_change_graphics($vm, $domain) {
+    my $graphics = $domain->info(user_admin)->{hardware}->{graphics};
+    if (scalar @$graphics > 1 ) {
+        test_remove_hardware($vm, $domain, 'graphics', 0);
+    }
+    $graphics = $domain->info(user_admin)->{hardware}->{graphics};
+    my $driver = $domain->drivers('graphics');
+    die Dumper([$driver->get_options]);
+
+}
+
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
       network => \&test_change_network
+    ,graphics => \&test_change_graphics
         ,disk => \&test_change_disk
         ,mock => sub {}
          ,usb => sub {}
@@ -492,8 +528,12 @@ sub test_change_drivers($domain, $hardware) {
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
 
+    my $count = scalar( @{ $info->{hardware}->{$hardware} } );
+    test_add_hardware_request($domain->_vm, $domain, $hardware)
+        if !$count;
+    my ($index) = int($count/2);
+
     for my $option (@$options) {
-        my ($index) = _search_disk($domain);
         diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
@@ -532,7 +572,12 @@ sub test_all_drivers($domain, $hardware) {
     my $info = $domain->info(user_admin);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
-    my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
+
+    my $count = scalar( @{ $info->{hardware}->{$hardware} } );
+    test_add_hardware_request($domain->_vm, $domain, $hardware)
+        if !$count;
+
+    my $index = int($count / 2);
 
     my $domain_b = Ravada::Domain->open($domain->id);
     for my $option1 (@$options) {
@@ -581,7 +626,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM )) {
+for my $vm_name ( qw(KVM Void)) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -598,7 +643,9 @@ for my $vm_name ( qw(Void KVM )) {
     );
     my %controllers = $domain_b->list_controllers;
 
-    for my $hardware (reverse sort keys %controllers ) {
+    for my $hardware ('graphics',reverse sort keys %controllers ) {
+        next if $hardware eq 'graphics' && $vm_name eq 'Void';
+
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
 
