@@ -72,9 +72,12 @@ sub test_volatile {
     my $vm = rvd_back->search_vm($vm_name);
     my $name = new_domain_name();
 
-    {
     my $user_name = "user_".new_domain_name();
+    my $user_id;
+    {
     my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
+    is($user->is_temporary,1);
+    $user_id = $user->id;
 
     my $clone = $base->clone(
           user => $user
@@ -157,6 +160,13 @@ sub test_volatile {
     ok(grep({ $_->{name} eq $name2 } @$domains_nf),"[$vm_name] Expecting $name2 listed");
 
     $clone_normal->remove(user_admin);
+
+    my $clone_removed = rvd_back->search_domain($name);
+    is($clone_removed,undef);
+
+    my $user_removed = Ravada::Auth::SQL->search_by_id($user_id);
+    is($user_removed,undef,"User ".$user_id." should be removed") or exit;
+
 }
 
 # KVM volatiles get auto-removed
