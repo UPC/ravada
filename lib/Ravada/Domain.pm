@@ -2644,7 +2644,7 @@ sub _post_start {
     Ravada::Request->open_exposed_ports(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
-            ,retry => 5
+            ,retry => 20
     ) if $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
