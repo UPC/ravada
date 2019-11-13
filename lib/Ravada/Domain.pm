@@ -2208,6 +2208,10 @@ sub expose($self, @args) {
         $internal_port = delete $args{port};
         $internal_port = delete $args{internal_port} if exists $args{internal_port};
         delete $args{internal_ip};
+        # remove old fields
+        for (qw(public_ip active description)) {
+            delete $args{$_};
+        }
 
         confess "Error: Missing port" if !defined $internal_port && !$id_port;
         confess "Error: internal port not a number '".($internal_port or '<UNDEF>')."'"
