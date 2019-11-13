@@ -2509,10 +2509,21 @@ sub list_ports($self) {
         ." FROM domain_ports WHERE id_domain=?");
     $sth->execute($self->id);
     my @list;
+    my %clone_port;
     while (my $data = $sth->fetchrow_hashref) {
         lock_hash(%$data);
         push @list,($data);
+        $clone_port{$data->{internal_port}}++;
     }
+
+    if ($self->id_base) {
+        my $base = Ravada::Domain->open($self->id_base);
+        my @ports_base = $base->list_ports();
+        for my $data (@ports_base) {
+            push @list,($data) if !exists $clone_port{$data->{internal_port}};
+        }
+    }
+
     return @list;
 }
 
