@@ -246,6 +246,7 @@ sub test_volatile_auto_kvm {
         ok(! -e $file,"[$vm_name] Expecting volume $file removed");
     }
 
+    $user = Ravada::Auth::SQL::add_user(name => "$user_name.2", is_temporary => 1);
     my $clone2;
     eval {
         $clone2 = $base->clone(
@@ -273,10 +274,29 @@ sub test_volatile_auto_kvm {
     is(keys(%$row),0);
 }
 
+sub test_upgrade {
+    my $user_name = "user_".new_domain_name();
+    my $user = Ravada::Auth::SQL::add_user(name => $user_name, is_temporary => 1);
+
+
+    my $sth = connector->dbh->prepare("DELETE FROM grants_user WHERE id_user=?");
+    $sth->execute($user->id);
+
+    rvd_back->_update_data();
+
+    $sth = connector->dbh->prepare("SELECT id from grants_user WHERE id_user=?");
+    $sth->execute($user->id);
+    my ($found) = $sth->fetchrow;
+
+    is($found,undef);
+
+    $user->remove();
+}
 ################################################################################
 
 clean();
 
+test_upgrade();
 
 for my $vm_name ('Void', 'KVM') {
     my $vm = rvd_back->search_vm($vm_name);
