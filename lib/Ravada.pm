@@ -159,7 +159,7 @@ sub _init_user_daemon {
 sub _update_user_grants {
     my $self = shift;
     $self->_init_user_daemon();
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users WHERE is_temporary=0");
     my $id;
     $sth->execute;
     $sth->bind_columns(\$id);
@@ -167,7 +167,13 @@ sub _update_user_grants {
         my $user = Ravada::Auth::SQL->search_by_id($id);
         next if $user->name() eq $USER_DAEMON_NAME;
 
-        next if $user->grants();
+        my %grants = $user->grants();
+
+        for my $key (keys %grants) {
+            delete $grants{$key} if !defined $grants{$key};
+        }
+        next if keys %grants;
+
         $USER_DAEMON->grant_user_permissions($user);
         $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }
@@ -989,7 +995,7 @@ sub _null_grants($self) {
     $sth->execute;
     my ($count) = $sth->fetchrow;
 
-    exit if !$count && $self->{_null}++;
+    warn "No null grants found" if !$count && $self->{_null_grants}++;
     return $count;
 }
 
