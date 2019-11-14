@@ -2266,10 +2266,10 @@ sub _update_expose($self, %args) {
 
     if ($self->is_active) {
         my $sth=$$CONNECTOR->dbh->prepare(
-            "SELECT internal_port,restricted FROM domain_ports where id=?");
+            "SELECT internal_port,name,restricted FROM domain_ports where id=?");
         $sth->execute($id);
-        my ($internal_port, $restricted) = $sth->fetchrow;
-        $self->_open_exposed_port($internal_port, $restricted);
+        my ($internal_port, $name, $restricted) = $sth->fetchrow;
+        $self->_open_exposed_port($internal_port, $name, $restricted);
     }
 }
 
@@ -2291,22 +2291,35 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
     );
     $sth->finish;
 
-    $self->_open_exposed_port($internal_port, $restricted) if $self->is_active && $self->ip;
+    $self->_open_exposed_port($internal_port, $name, $restricted)
+        if $self->is_active && $self->ip;
     return $public_port;
 }
 
-sub _open_exposed_port($self, $internal_port, $restricted) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports"
+sub _open_exposed_port($self, $internal_port, $name, $restricted) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
-    my ($public_port) = $sth->fetchrow();
+    my ($id_port, $public_port) = $sth->fetchrow();
     if (!$public_port) {
         $public_port = $self->_vm->_new_free_port();
-        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
-            ." WHERE id_domain=? AND internal_port=?"
-        );
-        $sth->execute($public_port, $self->id, $internal_port);
+        if ($id_port) {
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
+                ." WHERE id_domain=? AND internal_port=?"
+            );
+            $sth->execute($public_port, $self->id, $internal_port);
+        } else {
+            my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
+                 ."(id_domain, public_port, internal_port, name, restricted)"
+                 ." VALUES(?,?,?,?,?) "
+            );
+            $sth->execute( $self->id
+                ,$public_port, $internal_port
+                ,( $name or undef )
+                ,$restricted
+            );
+        }
     }
 
     my $local_ip = $self->_vm->ip;
@@ -2387,7 +2400,8 @@ sub open_exposed_ports($self) {
     }
 
     for my $expose ( @ports ) {
-        $self->_open_exposed_port($expose->{internal_port}, $expose->{restricted});
+        $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
+            ,$expose->{restricted});
     }
 }
 
@@ -2417,9 +2431,6 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
 
-    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM requests WHERE id_domain=? "
-            ." AND command='open_exposed_ports'");
-    $sth->execute($self->id);
     $sth->finish;
 }
 
