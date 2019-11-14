@@ -122,11 +122,13 @@ our %VALID_ARG = (
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+            clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
             change_owner
             change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver change_hardware
+            expose remove_expose
             set_base_vm
             shutdown_node start_node
     );
@@ -523,15 +525,18 @@ sub _new_request {
     }
     my %args = @_;
 
-    $args{status} = 'requested';
+    $args{status} = 'initializing';
 
     if ($args{name}) {
         $args{domain_name} = $args{name};
         delete $args{name};
     }
+    my $uid;
     if ( ref $args{args} ) {
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
+        $uid = $args{args}->{uid} if exists $args{args}->{uid};
+
         $args{at_time} = $args{args}->{at} if exists $args{args}->{at};
         my $id_domain_args = $args{args}->{id_domain};
 
@@ -572,7 +577,11 @@ sub _new_request {
     ." WHERE id=?");
     $sth->execute($self->{id});
 
-    return $self->open($self->{id});
+
+    my $request = $self->open($self->{id});
+    $request->status('requested');
+
+    return $request;
 }
 
 sub _last_insert_id {
@@ -668,6 +677,7 @@ sub _send_message {
 
     $uid = $self->args('id_owner') if $self->defined_arg('id_owner');
     $uid = $self->args('uid')      if !$uid && $self->defined_arg('uid');
+
     return if !$uid;
 
     my $domain_name = $self->defined_arg('name');

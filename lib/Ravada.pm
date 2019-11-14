@@ -2314,6 +2314,7 @@ sub _execute {
         return;
     }
 
+    $request->status('working','') unless $request->status() eq 'waiting';
     $request->start_time(time);
     $request->error('');
         $request->status('working','');
@@ -2349,6 +2350,7 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    $request->status('working','') unless $request->status() eq 'working';
     $request->pid($$);
     my $t0 = [gettimeofday];
     eval {
@@ -2358,6 +2360,19 @@ sub _do_execute_command {
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
     $request->error($err)   if $err;
+    if ($err) {
+        my $user = $request->defined_arg('user');
+        if ($user) {
+            warn "sending message to ".$user->id." ".$user->name;
+            my $subject = $err;
+            my $message = '';
+            if (length($subject) > 40 ) {
+                $message = $subject;
+                $subject = substr($subject,0,40);
+                $user->send_message($subject, $message);
+            }
+        }
+    }
     if ($err && $err =~ /retry.?$/i) {
         my $retry = $request->retry;
         if (defined $retry && $retry>0) {
@@ -2550,6 +2565,7 @@ sub _can_fork {
     $req->error($msg);
     $req->at_time(time+10);
     $req->status('waiting') if $req->status() !~ 'waiting';
+    $req->at_time(time+10);
     return 0;
 }
 sub _wait_pids {
@@ -2981,6 +2997,11 @@ sub _cmd_shutdown {
         die "Unknown domain '$id_domain'\n" if !$domain
     }
 
+    Ravada::Request->refresh_machine(
+                   uid => $uid
+            ,id_domain => $id_domain
+        ,after_request => $request->id
+    );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
     $domain->shutdown(timeout => $timeout, user => $user

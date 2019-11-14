@@ -6,7 +6,7 @@
         This machine is base and can't be modified.
     </div>
 </div>
-<div class="panel-body" ng-show="showmachine.is_active == 0 && showmachine.is_base == 0">
+<div class="panel-body">
 %=   include "main/needs_restart"
     <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk">
         <h2>{{name}}</h2>
@@ -116,8 +116,8 @@
 
     <div ng-hide="show_new_disk" class="input-group mt-3" style="max-width: 18rem;">
         <div class="input-group-prepend">
-            <button class="btn btn-primary" 
-                ng-disabled="pending_requests > 0"
+            <button class="btn btn-primary"
+                ng-disabled="showmachine.requests > 0 || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
                 class="btn btn-primary"
                 type="button">
