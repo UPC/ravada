@@ -1079,7 +1079,7 @@ sub open($class, @args) {
 
 sub check_status($self) {
     $self->_search_already_started()    if !$self->is_base;
-    $self->_check_clean_shutdown()      if $self->domain;
+    $self->_check_clean_shutdown()      if $self->domain && !$self->is_active;
 }
 
 =head2 is_known
