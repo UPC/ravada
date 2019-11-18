@@ -3105,8 +3105,8 @@ sub _cmd_refresh_machine($self, $request) {
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
     $domain->check_status();
     $domain->list_volumes_info();
+    $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
     $domain->info($user);
-    $self->_remove_unnecessary_downs($domain);
 
 }
 
