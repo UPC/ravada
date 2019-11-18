@@ -2043,6 +2043,7 @@ sub _post_shutdown {
     }
 
     my $is_active = $self->is_active;
+
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$is_active;
 
@@ -2670,7 +2671,7 @@ sub _post_start {
             id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$self->run_timeout
-                 , timeout => 59
+                 , timeout => $TIMEOUT_SHUTDOWN
         );
 
     }
