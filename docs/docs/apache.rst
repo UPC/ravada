@@ -12,7 +12,7 @@ Enable apache modules
 
 .. prompt:: bash #
 
-    a2enmod ssl proxy proxy_http proxy_connect
+    a2enmod ssl proxy proxy_http proxy_connect proxy_wstunnel headers
 
 Apache Proxy Configuration
 --------------------------
@@ -31,8 +31,10 @@ Edit /etc/apache2/sites-enabled/default-ssl.conf
         <VirtualHost _default_:443>
             ProxyRequests Off
             ProxyPreserveHost On
+            ProxyPass /ws/ ws://localhost:8081/ws/ keepalive=On
             ProxyPass / http://localhost:8081/ keepalive=On
             ProxyPassReverse / http://localhost:8081/
+            RequestHeader set X-Forwarded-Proto "https"
 
 Apache redirect to https
 ------------------------
