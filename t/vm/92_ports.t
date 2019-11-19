@@ -214,6 +214,31 @@ sub test_one_port($vm) {
 
     ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or exit;
 
+    #####################################################################3
+    #
+    # Check rule won't disapear refreshing
+    my $req1 = Ravada::Request->refresh_vms();
+    my $req2 = Ravada::Request->refresh_machine(id_domain => $domain->id, uid => user_admin->id);
+
+    wait_request();
+    is($req1->status,'done');
+    is($req1->error,'');
+    is($req2->status,'done');
+    is($req2->error,'');
+
+    ($n_rule)
+        = search_iptable_remote(local_ip => "$local_ip/32"
+            , local_port => $public_port
+            , table => 'nat'
+            , chain => 'PREROUTING'
+            , node => $vm
+            , jump => 'DNAT'
+            , 'to-destination' => $domain->ip.":".$internal_port
+    );
+
+    ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or exit;
+
+
 
     #################################################################
     #
