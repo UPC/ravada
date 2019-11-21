@@ -2539,7 +2539,11 @@ sub list_ports($self) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
-            push @list,($data) if !exists $clone_port{$data->{internal_port}};
+            next if exists $clone_port{$data->{internal_port}};
+            unlock_hash(%$data);
+            $data->{public_port} = $self->_vm->_new_free_port();
+            lock_hash(%$data);
+            push @list,($data);
         }
     }
 
