@@ -1210,7 +1210,7 @@ get '/iso/download/(#id).json' => sub {
     return $c->render(json => {request => $req->id});
 };
 
-websocket '/ws_subscribe' => sub {
+websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
