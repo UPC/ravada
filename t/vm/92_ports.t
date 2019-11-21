@@ -528,6 +528,8 @@ sub test_clone_exports_add_ports($vm) {
     $base->expose(port => 22, name => "ssh");
     my @base_ports0 = $base->list_ports();
 
+    $base->prepare_base(user => user_admin, with_cd => 1);
+
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => 80, name => "web");
     my @base_ports = $base->list_ports();
@@ -539,11 +541,14 @@ sub test_clone_exports_add_ports($vm) {
 
     for my $n ( 0 .. 1 ) {
         is($base_ports[$n]->{internal_port}, $clone_ports[$n]->{internal_port});
-        isnt($base_ports[$n]->{public_port}, $clone_ports[$n]->{public_port});
+        isnt($base_ports[$n]->{public_port}, $clone_ports[$n]->{public_port},"Same public port in clone and base for ".$base_ports[$n]->{internal_port});
         is($base_ports[$n]->{name}, $clone_ports[$n]->{name});
     }
-    my $out = `iptables -t nat -L PREROUTING`;
-    die $out;
+    _wait_ip($vm, $clone);
+    wait_request( );
+    my @out = split /\n/, `iptables -t nat -L PREROUTING -n`;
+    ok(grep /dpt:\d+.*\d+:22/, @out);
+    ok(grep /dpt:\d+.*\d+:80/, @out);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -951,6 +956,7 @@ for my $vm_name ( 'KVM', 'Void' ) {
     next if !$vm;
 
     diag("Testing $vm_name");
+    test_clone_exports_add_ports($vm);
 
     test_no_dupe($vm);
 
