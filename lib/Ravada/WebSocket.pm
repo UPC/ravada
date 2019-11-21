@@ -26,8 +26,11 @@ has ravada => (
 my %SUB = (
                   list_alerts => \&_list_alerts
                ,list_machines => \&_list_machines
+          ,list_machines_user => \&_list_machines_user
+        ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
                 ,machine_info => \&_get_machine_info
+                ,ping_backend => \&_ping_backend
 );
 
 ######################################################################
@@ -74,6 +77,20 @@ sub _list_machines($rvd, $args) {
     return $rvd->list_machines($user);
 }
 
+sub _list_machines_user($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+
+    return $rvd->list_machines_user($user)
+}
+
+sub _list_bases_anonymous($rvd, $args) {
+    my $remote_ip = $args->{remote_ip} or die "Error: no remote_ip arg ".Dumper($args);
+    return $rvd->list_bases_anonymous($remote_ip);
+}
+
+
 sub _list_requests($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
@@ -98,6 +115,18 @@ sub _get_machine_info($rvd, $args) {
     }
 
     return $info;
+}
+
+sub _ping_backend($rvd, $args) {
+    my $requests = $rvd->list_requests(undef, 120, 1);
+    return 1 if !scalar(@$requests);
+    warn Dumper($requests);
+    my @requests2 = grep { $_->{status} ne 'requested' } @$requests;
+
+    return 0 if !scalar(@requests2) && grep { $_->{command} eq 'ping_backend'} @$requests;
+
+    warn "***".Dumper(map { [ $_->{command} => $_->{status} ] } @requests2);
+    return scalar (@requests2);
 }
 
 sub _different_list($list1, $list2) {

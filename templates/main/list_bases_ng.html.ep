@@ -8,10 +8,10 @@
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
 
-<div id="page-wrapper" ng-controller="bases" ng-init="anonymous=<%= $_anonymous or 0 %>;list_machines_user();">
+<div id="page-wrapper" ng-controller="bases" ng-init="anonymous=<%= $_anonymous or 0 %>;subscribe_list_machines_user('<%= url_for('ws_subscribe')->to_abs %>', $scope)">
 %= include 'main/list_bases_ng_head'
     <!--MACHINES SELECTION-->
-    <div class="card-body" ng-cloak>
+    <div class="card-body">
     <div ng-repeat="machine in machines | orderBy: 'id_clone'"
          class="col-sm-4  d-inline-block mb-2"
                 ng-show="machine.is_public || (!machine.is_public && !only_public)">
