@@ -28,6 +28,7 @@ use lib 'lib';
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
+use Ravada::WebSocket;
 use POSIX qw(locale_h);
 
 my $help;
@@ -114,6 +115,7 @@ our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
+my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 init();
 ############################################################################3
 
@@ -672,6 +674,8 @@ get '/machine/set/#id/#field/#value' => sub {
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+    $USER->send_message("Setting $field to $value in ".$domain->name)
+        if $domain->_data($field) ne $value;
     return $c->render(json => { $field => $domain->_data($field, $value)});
 };
 
@@ -1205,6 +1209,23 @@ get '/iso/download/(#id).json' => sub {
 
     return $c->render(json => {request => $req->id});
 };
+
+websocket '/ws/subscribe' => sub {
+    my $c = shift;
+    my $expiration = $SESSION_TIMEOUT;
+    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
+    $c->inactivity_timeout( $expiration );
+    $c->on(message => sub {
+            my ($ws, $channel ) = @_;
+            $WS->subscribe( ws => $ws
+                , channel => $channel
+                , login => $USER->name
+                , remote_ip => _remote_ip($c)
+            );
+    });
+
+    $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
+} => 'ws_subscribe';
 
 ###################################################
 #
@@ -2129,7 +2150,7 @@ sub copy_machine {
     } else {
         push @reqs,(copy_machine_many($base, $number, \@create_args));
     }
-    return $c->render(json => { request => [map { $_->id } @ reqs ] } );
+    return $c->render(json => { request => [map { $_->id } @reqs ] } );
 }
 
 sub new_machine_copy($c) {

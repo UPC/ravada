@@ -233,7 +233,14 @@ sub test_shutdown {
     ok(!$domain->is_active);
     rvd_back->_remove_unnecessary_downs($domain);
     @reqs = $domain->list_requests(1);
-    ok(!scalar @reqs,$domain->name) or exit;
+    # 1 request for refresh_machine
+    my @req_refresh = grep { $_->command eq 'refresh_machine' } @reqs;
+    is(scalar(@req_refresh),1);
+    # no other requests
+    my @req_other = grep { $_->command ne 'refresh_machine' } @reqs;
+    is(scalar(@req_other),0);
+
+    is(scalar @reqs,1,$domain->name) or exit;
 
     $domain->remove(user_admin);
 }

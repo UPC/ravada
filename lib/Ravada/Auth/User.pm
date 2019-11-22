@@ -161,6 +161,24 @@ sub unshown_messages {
 
 }
 
+=head2 send_message
+
+Send a message to this user
+
+    $user->send_message($subject, $message)
+
+=cut
+
+sub send_message($self, $subject, $message='') {
+    _init_connector() if !$$CONNECTOR;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO messages (id_user, subject, message) "
+        ." VALUES(?, ? , ? )");
+
+    $sth->execute($self->id, $subject, $message);
+}
+
 
 =head2 show_message
 
