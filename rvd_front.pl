@@ -1168,17 +1168,19 @@ sub user_settings {
 
 get '/img/screenshots/:file' => sub {
     my $c = shift;
-
     my $file = $c->param('file');
     my $path = $DOCUMENT_ROOT."/".$c->req->url->to_abs->path;
+    my ($id_domain) =$path =~ m{/(\d+)\..+$};
+    my $domain = $RAVADA->search_domain_by_id($id_domain);
 
-    my ($id_domain ) =$path =~ m{/(\d+)\..+$};
+    my $image = new Image::Magick;
+    my $sshot = $image->BlobToImage($domain->get_info()->{screenshot});
     if (!$id_domain) {
         warn"ERROR : no id domain in $path";
         return $c->reply->not_found;
     }
     if ($USER && !$USER->is_admin) {
-        my $domain = $RAVADA->search_domain_by_id($id_domain);
+        #my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
             return access_denied($c) if $USER->id != $domain->id_owner;

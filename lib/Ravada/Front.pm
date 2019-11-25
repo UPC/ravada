@@ -132,7 +132,7 @@ sub list_machines_user {
     my $user = shift;
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, file_screenshot"
+        "SELECT id,name,is_public, screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
@@ -169,7 +169,7 @@ sub list_machines_user {
                 );
             }
             $base{name_clone} = $clone->name;
-            $base{screenshot} = ( $clone->_data('file_screenshot') 
+            $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
