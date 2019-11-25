@@ -1,0 +1,49 @@
+Exposing Ports from a Virtual Machine
+=====================================
+
+Since release 0.5 ports from the internal virtual machine can be
+exposed to outside.
+
+Requirements
+------------
+
+Ports exposing works with Linux Kernel *iptables* so it requires the
+host to have it installed in properly configured.
+
+The virtual machine must have a way to tell the host what is the
+internal IP to the host, so the `qemu guest agent <qemu_ga.html>`  must be installed.
+
+Configure Expose
+----------------
+
+From the virtual machine settings there is a new menu item **Ports**.
+There you can add new ports to be exposed.
+
+There you must add the number of the internal port to be exposed and
+an optional name. If you set this port to *restricted* it will only
+be allowed to the remote client IP.
+
+Fields
+~~~~~~
+
+- *Port*: internal port in the virtual machine
+- *Name*: optional short description of the service to expose
+- *Restricted*: restrict the port to the remote client if set
+
+.. image:: images/ports_expose.png
+
+Run
+---
+
+When the virtual machine gets started Ravada searches for a free
+port in the host to expose the port through.
+
+In this example the user can connect to the IP 10.1.36.68 port 5954
+to access the SSH server inside the virtual machine.
+
+.. image:: images/ports_expose_run.png
+
+Ports redirection requires the internal IP of the virtual machine
+to be active. So it retries for a while trying to redirect until
+an IP is detected or it fails.
+
