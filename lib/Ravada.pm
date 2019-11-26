@@ -2388,7 +2388,6 @@ sub _do_execute_command {
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
-            warn "sending message to ".$user->id." ".$user->name;
             my $subject = $err;
             my $message = '';
             if (length($subject) > 40 ) {
