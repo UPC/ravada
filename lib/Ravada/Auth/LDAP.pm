@@ -139,7 +139,7 @@ sub search_user {
 
     my $username = delete $args{name} or confess "Missing user name";
     my $retry = (delete $args{retry} or 0);
-    my $field = (delete $args{field} or 'uid');
+    my $field = (delete $args{field} or $$CONFIG->{ldap}->{field} or 'uid');
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
     my $typesonly= (delete $args{typesonly} or 0);
@@ -364,8 +364,7 @@ sub _login_bind {
     my ($username, $password) = ($self->name , $self->password);
 
     my $found = 0;
-    for my $user (search_user( name => $self->name , field => 'uid' )
-                ,search_user( name => $self->name, field => 'cn')) {
+    for my $user (search_user( name => $self->name )) {
         my $dn = $user->dn;
         $found++;
         my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
