@@ -13,6 +13,8 @@ use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(Load Dump  LoadFile DumpFile);
+use Image::Magick;
+use MIME::Base64;
 
 use Ravada::Volume;
 
@@ -474,13 +476,13 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
 
 sub screenshot {
     my $self = shift;
-    my $file = (shift or $self->_file_screenshot);
-
-    my @cmd =($CONVERT,'-size', '400x300', 'xc:white'
-        ,$file
-    );
-    my ($in,$out,$err);
-    run3(\@cmd, \$in, \$out, \$err);
+    my $DPI = 300; # 600;
+    my $image = Image::Magick->new(density => $DPI,width=>100, height=>100);
+    $image = Image::Magick->new;
+    $image->Set(size=>'100x100');
+    $image->ReadImage('canvas:white');
+    $image->Set('pixel[49,49]'=>'red');
+    $self->_data(screenshot => encode_base64($image));
 }
 
 sub _file_screenshot {

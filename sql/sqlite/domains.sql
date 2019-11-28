@@ -21,6 +21,7 @@ CREATE TABLE `domains` (
 ,  `info` varchar(255) default NULL
 ,  `internal_id` varchar(64) DEFAULT NULL
 ,  `needs_resetart`int not null default 0
+,  `screenshot` BLOB
 ,  UNIQUE (`id_base`,`name`)
 ,  UNIQUE (`name`)
 );
