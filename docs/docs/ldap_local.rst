@@ -37,7 +37,7 @@ and use it with *dscreate*:
 
 .. prompt:: bash
 
-    sudo dscreate create-template t/etc/ds389.conf
+    sudo dscreate from-file t/etc/ds389.conf
 
 Enable and Start the service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
