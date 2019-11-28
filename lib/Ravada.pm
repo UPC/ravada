@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0-rc7';
+our $VERSION = '0.5.0-rc8';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -2340,9 +2340,9 @@ sub _execute {
     }
 
     $request->status('working','') unless $request->status() eq 'waiting';
+    $request->pid($$);
     $request->start_time(time);
     $request->error('');
-        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
