@@ -438,6 +438,45 @@ sub test_posix_group {
 
 }
 
+sub test_uid_cn($user, $with_posix_group) {
+    my $password = 'jameson';
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $login_ok;
+
+    for my $field ( qw(uid cn) ) {
+        diag("Testing login with $field");
+
+        my $entry = $user->{_ldap_entry};
+        my $old_value = $entry->get_value($field);
+        die "Error: No $field found in LDAP entry in ".Dummper($user)
+            if !$old_value;
+
+        eval { $login_ok = Ravada::Auth::login($old_value, $password) };
+        is($@,'',$old_value);
+        ok($login_ok, $old_value);
+
+        next if $field eq 'cn';
+
+        my $new_value = new_domain_name();
+        diag("Testing login with $field $new_value , posix_group=$with_posix_group");
+
+        $entry->replace($field => $new_value);
+        my $mesg = $entry->update($ldap);
+        die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
+
+        _add_to_posix_group($new_value, $with_posix_group);
+
+        eval { $login_ok = Ravada::Auth::login($new_value, $password) };
+        is($@,''," $field: $new_value") or exit;
+        ok($login_ok, $new_value);
+
+        $entry->replace($field => $old_value);
+        $entry->update($ldap);
+
+    }
+
+}
+
 SKIP: {
     test_filter();
     my $file_config = "t/etc/ravada_ldap.conf";
@@ -477,6 +516,8 @@ SKIP: {
             test_posix_group($with_posix_group);
 
             test_user_bind($user, $fly_config, $with_posix_group);
+
+            test_uid_cn($user, $with_posix_group);
 
             remove_users();
         };
