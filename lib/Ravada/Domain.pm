@@ -2290,14 +2290,21 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         ." VALUES (?,?,?,?,?)"
     );
 
-    my $public_port = $self->_vm->_new_free_port();
 
-    $sth->execute($self->id
-        , $public_port, $internal_port
-        , ($name or undef)
-        , $restricted
-    );
-    $sth->finish;
+    my $public_port;
+    for (;;) {
+        eval {
+            $public_port = $self->_vm->_new_free_port();
+            $sth->execute($self->id
+                , $public_port, $internal_port
+                , ($name or undef)
+                , $restricted
+            );
+            $sth->finish;
+        };
+        last if !$@;
+        confess $@ if $@ && $@ !~ /Duplicate entry .*for key 'public/;
+    }
 
     $self->_open_exposed_port($internal_port, $name, $restricted)
         if $self->is_active && $self->ip;
