@@ -7,7 +7,6 @@ use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
-use LWP::UserAgent;
 use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
