@@ -104,8 +104,8 @@ sub _password_store($password, $storage, $algorithm) {
 
 }
 
-sub _password_pbkdf2($password, $algorithm='SHA-1') {
-    $algorithm = 'SHA-1' if ! defined $algorithm;
+sub _password_pbkdf2($password, $algorithm='SHA-256') {
+    $algorithm = 'SHA-256' if ! defined $algorithm;
 
     my $salt = encode('ascii', 'random_name');
     my $iters = 100;
@@ -483,10 +483,10 @@ sub _match_password {
     my $salt = encode('ascii', 'random_name');
 
     if ( lc($storage) eq 'pbkdf2') {
-        my ($algorithm) = $password_ldap =~ /^{[a-z0-9]+_([a-z0-9]+)}/i;
+        my ($algorithm,$n) = $password_ldap =~ /^{[a-z0-9]+_([a-z]+)([0-9]+)}/i;
         confess "Error: I can't find the algorithm in $password_ldap"
             if !$algorithm;
-        return verify_hex($password_ldap, $algorithm
+        return verify_hex($password_ldap, "$algorithm-$n"
             , encode('ascii',$password)
             , $salt)
     }
