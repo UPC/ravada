@@ -2363,7 +2363,6 @@ sub _do_execute_command {
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
-            warn "sending message to ".$user->id." ".$user->name;
             my $subject = $err;
             my $message = '';
             if (length($subject) > 40 ) {
@@ -2384,11 +2383,10 @@ sub _do_execute_command {
             $err =~ s/(.*?)retry.?/$1/i;
             $request->error($err)   if $err;
         }
-    } else {
+    }
     $request->status('done')
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
-    }
 }
 
 sub _cmd_manage_pools($self, $request) {
