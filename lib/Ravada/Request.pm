@@ -678,6 +678,11 @@ sub _send_message {
     $uid = $self->args('id_owner') if $self->defined_arg('id_owner');
     $uid = $self->args('uid')      if !$uid && $self->defined_arg('uid');
 
+    if (!$uid) {
+        my $user = $self->defined_arg('user');
+        $uid = $user->id if $user;
+    }
+
     return if !$uid;
 
     my $domain_name = $self->defined_arg('name');

@@ -4,6 +4,8 @@ use strict;
 #####
 use locale ':not_characters';
 #####
+use lib 'lib';
+
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
@@ -23,7 +25,6 @@ use I18N::LangTags::Detect;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Front::Domain;
