@@ -13,7 +13,9 @@ use Authen::Passphrase;
 use Authen::Passphrase::SaltedDigest;
 use Carp qw(carp);
 use Data::Dumper;
-use Digest::SHA qw(sha1_hex);
+use Digest::SHA qw(sha1_hex sha256_hex);
+use Encode;
+use PBKDF2::Tiny qw/derive_hex verify_hex/;
 use Moose;
 use Net::LDAP;
 use Net::LDAPS;
@@ -64,8 +66,7 @@ Adds a new user in the LDAP directory
 
 =cut
 
-sub add_user {
-    my ($name, $password, $is_admin) = @_;
+sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
 
     _init_ldap_admin();
 
@@ -76,8 +77,6 @@ sub add_user {
         if !_dc_base();
     my ($givenName, $sn) = $name =~ m{(\w+)\.(.*)};
 
-    my $apr=Authen::Passphrase::SaltedDigest->new(passphrase => $password, algorithm => "MD5");
-
     my %entry = (
         cn => $name
         , uid => $name
@@ -87,7 +86,7 @@ sub add_user {
         , givenName => ($givenName or $name)
         , sn => ($sn or $name)
 #        , homeDirectory => "/home/$name"
-        ,userPassword => $apr->as_rfc2307()
+        ,userPassword => _password_store($password, $storage, $algorithm)
     );
     my $dn = "cn=$name,"._dc_base();
 
@@ -95,6 +94,29 @@ sub add_user {
     if ($mesg->code) {
         die "Error afegint $name to $dn ".$mesg->error;
     }
+}
+
+sub _password_store($password, $storage, $algorithm) {
+    return _password_rfc2307($password, $algorithm) if lc($storage) eq 'rfc2307';
+    return _password_pbkdf2($password, $algorithm)  if lc($storage) eq 'pbkdf2';
+
+    confess "Error: Unknown storage '$storage'";
+
+}
+
+sub _password_pbkdf2($password, $algorithm='SHA-1') {
+    $algorithm = 'SHA-1' if ! defined $algorithm;
+
+    my $salt = encode('ascii', 'random_name');
+    my $iters = 100;
+    return "{PBKDF2_$algorithm}".derive_hex( $algorithm, encode('ascii',$password), $salt );
+}
+
+sub _password_rfc2307($password, $algorithm='MD5') {
+
+    my $apr=Authen::Passphrase::SaltedDigest->new(passphrase => $password
+        , algorithm => ($algorithm or 'MD5'));
+    return $apr->as_rfc2307();
 }
 
 =head2 remove_user
@@ -454,7 +476,22 @@ sub _match_password {
 #        ."\n"
 #        .sha1_hex($password);
 
-    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
+    my ($storage) = $password_ldap =~ /^{([a-z0-9]+)[_}]/i;
+    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
+        if $storage =~ /rfc2307|md5/i;
+
+    my $salt = encode('ascii', 'random_name');
+
+    if ( lc($storage) eq 'pbkdf2') {
+        my ($algorithm) = $password_ldap =~ /^{[a-z0-9]+_([a-z0-9]+)}/i;
+        confess "Error: I can't find the algorithm in $password_ldap"
+            if !$algorithm;
+        return verify_hex($password_ldap, $algorithm
+            , encode('ascii',$password)
+            , $salt)
+    }
+
+    confess "Error: Unknown password storage $storage";
 }
 
 sub _dc_base {
