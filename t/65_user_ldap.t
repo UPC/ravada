@@ -47,11 +47,7 @@ sub _remove_user_ldap($name) {
     }
 }
 
-sub test_user{
-    my $name = (shift or 'jimmy.mcnulty');
-    my $with_posix_group = ( shift or 0);
-    my $password = 'jameson';
-
+sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $algorithm=undef) {
     if ( Ravada::Auth::LDAP::search_user($name) ) {
         diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
@@ -72,7 +68,11 @@ sub test_user{
     ok(!$row->{name},"I shouldn't find $name in the SQL db ".Dumper($row));
 
 
-    eval { Ravada::Auth::LDAP::add_user($name,$password) };
+    my @options;
+    push @options, ( $storage )      if defined $storage;
+    push @options, ( $algorithm )  if defined $algorithm;
+
+    eval { Ravada::Auth::LDAP::add_user($name,$password, @options) };
     push @USERS,($name);
 
     ok(!$@, $@) or return;
@@ -477,6 +477,23 @@ sub test_uid_cn($user, $with_posix_group) {
 
 }
 
+sub test_pass_storage($with_posix_group) {
+    my $name = 'test_md5';
+    my $new_user = test_user($name, $with_posix_group, $$ , 'rfc2307','MD5');
+    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{MD5}/);
+    _remove_user_ldap($name);
+
+    $name = 'test_md52';
+    $new_user = test_user($name, $with_posix_group, $$, 'rfc2307');
+    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{MD5}/);
+    _remove_user_ldap($name);
+
+    $name = 'test_pbk';
+    $new_user = test_user($name, $with_posix_group, $$, 'PBKDF2');
+    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{PBKDF2}/);
+    _remove_user_ldap($name);
+}
+
 SKIP: {
     test_filter();
     my $file_config = "t/etc/ravada_ldap.conf";
@@ -509,6 +526,8 @@ SKIP: {
         ok($ldap) and do {
 
             test_user_fail();
+            test_pass_storage($with_posix_group);
+
             my $user = test_user( 'pepe.mcnulty', $with_posix_group );
 
             test_add_group();
