@@ -251,6 +251,8 @@ sub test_user_bind {
 
     is($mcnulty->{_auth}, 'bind');
 
+    test_uid_cn($user, $with_posix_group);
+
     unlink $file_config_bind;
 
     $ravada = Ravada->new(config => $file_config
@@ -490,7 +492,7 @@ sub test_pass_storage($with_posix_group) {
 
     $name = 'test_pbk';
     $new_user = test_user($name, $with_posix_group, $$, 'PBKDF2');
-    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{PBKDF2}/);
+    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{PBKDF2/);
     _remove_user_ldap($name);
 }
 
@@ -535,8 +537,6 @@ SKIP: {
             test_posix_group($with_posix_group);
 
             test_user_bind($user, $fly_config, $with_posix_group);
-
-            test_uid_cn($user, $with_posix_group);
 
             remove_users();
         };
