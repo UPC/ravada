@@ -108,8 +108,11 @@ sub _password_pbkdf2($password, $algorithm='SHA-256') {
     $algorithm = 'SHA-256' if ! defined $algorithm;
 
     my $salt = encode('ascii', 'random_name');
-    my $iters = 100;
-    return "{PBKDF2_$algorithm}".derive_hex( $algorithm, encode('ascii',$password), $salt );
+    my $info = $algorithm;
+    $info =~ s/-//;
+    $info = "PBKDF2_$info";
+    my $pass="{$info}".derive_hex( $algorithm, encode('ascii',$password), $salt );
+    return $pass;
 }
 
 sub _password_rfc2307($password, $algorithm='MD5') {
@@ -477,21 +480,24 @@ sub _match_password {
 #        .sha1_hex($password);
 
     my ($storage) = $password_ldap =~ /^{([a-z0-9]+)[_}]/i;
+    my ($password_ldap_hex) = $password_ldap =~ /.*?}(.*)/;
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 
     my $salt = encode('ascii', 'random_name');
 
-    if ( lc($storage) eq 'pbkdf2') {
-        my ($algorithm,$n) = $password_ldap =~ /^{[a-z0-9]+_([a-z]+)([0-9]+)}/i;
-        confess "Error: I can't find the algorithm in $password_ldap"
-            if !$algorithm;
-        return verify_hex($password_ldap, "$algorithm-$n"
+    if ( lc($storage) =~ /pbkdf2|SSHA/i) {
+        my ($algorithm,$n);
+        ($algorithm, $n) = $password_ldap =~ /^{[a-z0-9]+_([a-z]+)([0-9]+)}/i;
+        ($algorithm, $n) = $password_ldap =~ /^{([a-z]+)([0-9]+)}/i if !$algorithm;
+
+        $algorithm = "$algorithm-$n";
+        return verify_hex($password_ldap_hex, $algorithm
             , encode('ascii',$password)
             , $salt)
     }
 
-    confess "Error: Unknown password storage $storage";
+    confess "Error: Unknown password storage $storage $password_ldap";
 }
 
 sub _dc_base {
