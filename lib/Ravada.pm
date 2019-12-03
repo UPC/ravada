@@ -2250,7 +2250,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) + 60 );
+    $sth->execute(time - 5*scalar(@domains) - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)

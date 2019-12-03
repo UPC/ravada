@@ -440,43 +440,56 @@ sub test_posix_group {
 
 }
 
-sub test_uid_cn($user, $with_posix_group) {
-    my $password = 'jameson';
+sub _replace_field($entry, $field, $with_posix_group) {
+    my $old_value = $entry->get_value($field);
+    die "Error: No $field found in LDAP entry in ".$entry->get_value('cn')
+        if !$old_value;
+
+    my $new_value = new_domain_name();
+
+    Ravada::Auth::LDAP::init();
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    $entry->replace($field => $new_value);
+    my $mesg = $entry->update($ldap);
+    confess $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
+
+    _add_to_posix_group($new_value, $with_posix_group);
+
+    return ($old_value, $new_value);
+}
+
+sub test_uid_cn($user, $with_posix_group) {
+    Ravada::Auth::LDAP::init();
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $entry = $user->{_ldap_entry};
+
+    my $field = 'uid';
+    my %data = (
+        cn => $entry->get_value('cn')
+        ,$field => $entry->get_value($field)
+
+    );
+
+    test_login_fields(\%data);
+    my ($old_value, $new_value) = _replace_field($entry, $field, $with_posix_group);
+
+    $data{$field} = $new_value;
+    test_login_fields(\%data);
+
+    $entry->replace($field => $old_value);
+    $entry->update($ldap);
+}
+
+sub test_login_fields($data) {
+    my $password = 'jameson';
     my $login_ok;
+    for my $field ( sort keys %$data ) {
+        my $value = $data->{$field};
+        eval { $login_ok = Ravada::Auth::login($value, $password) };
 
-    for my $field ( qw(uid cn) ) {
-        diag("Testing login with $field");
-
-        my $entry = $user->{_ldap_entry};
-        my $old_value = $entry->get_value($field);
-        die "Error: No $field found in LDAP entry in ".Dummper($user)
-            if !$old_value;
-
-        eval { $login_ok = Ravada::Auth::login($old_value, $password) };
-        is($@,'',$old_value);
-        ok($login_ok, $old_value);
-
-        next if $field eq 'cn';
-
-        my $new_value = new_domain_name();
-        diag("Testing login with $field $new_value , posix_group=$with_posix_group");
-
-        $entry->replace($field => $new_value);
-        my $mesg = $entry->update($ldap);
-        die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
-
-        _add_to_posix_group($new_value, $with_posix_group);
-
-        eval { $login_ok = Ravada::Auth::login($new_value, $password) };
-        is($@,''," $field: $new_value") or exit;
-        ok($login_ok, $new_value);
-
-        $entry->replace($field => $old_value);
-        $entry->update($ldap);
-
+        is($@,''," $field: $value");
+        ok($login_ok, $value);
     }
-
 }
 
 sub test_pass_storage($with_posix_group) {
