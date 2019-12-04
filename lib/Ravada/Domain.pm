@@ -1487,6 +1487,7 @@ sub _after_remove_domain {
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
+    $self->_remove_ports_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
@@ -1515,6 +1516,14 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
     }
+}
+
+sub _remove_ports_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_ports"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _remove_access_attributes_db($self) {
