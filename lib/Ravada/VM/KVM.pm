@@ -1610,7 +1610,7 @@ sub _xml_modify_network {
     my $self = shift;
      my $doc = shift;
     my $network = shift;
-
+warn $network;
     my ($type, $source );
     if (ref($network) =~ /^Ravada/) {
         ($type, $source) = ($network->type , $network->source);
@@ -1996,49 +1996,48 @@ sub _xml_modify_mac {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
-    my (@if_mac) = $doc->findnodes('/domain/devices/interface/mac')
+    my ($if_mac) = $doc->findnodes('/domain/devices/interface/mac')
         or exit;
-	for my $if_mac (@if_mac) {
-        my $mac = $if_mac->getAttribute('address');
+    my $mac = $if_mac->getAttribute('address');
 
-        my @macparts0 = split/:/,$mac;
+    my @macparts0 = split/:/,$mac;
 
-        my @old_macs;
+    my @old_macs;
 
-        for my $dom ($self->vm->list_all_domains) {
-            my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+    for my $dom ($self->vm->list_all_domains) {
+        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
 
-            for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
-                my $nic_mac = $nic->getAttribute('address');
-                push @old_macs,($nic_mac);
-            }
+        for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
+            my $nic_mac = $nic->getAttribute('address');
+            push @old_macs,($nic_mac);
         }
-
-
-        my $new_mac;
-
-        my @tried;
-        for ( 1 .. 1000 ) {
-            for my $cont ( 1 .. 1000 ) {
-                my @macparts = @macparts0;
-                my $pos = int(rand(scalar(@macparts)-3))+3;
-                my $num =sprintf "%02X", rand(0xff);
-                die "Missing num " if !defined $num;
-                $macparts[$pos] = $num;
-                $new_mac = lc(join(":",@macparts));
-                push @tried,($new_mac);
-
-                last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
-                push @old_macs,($new_mac);
-            }
-
-            if ( $self->_unique_mac($new_mac) ) {
-                $if_mac->setAttribute(address => $new_mac);
-                return;
-            }
-        }
-        die "I can't find a new unique mac '$new_mac'\n".Dumper(\@tried);
     }
+warn $if_mac;
+    my $new_mac;
+
+    my @tried;
+    for ( 1 .. 1000 ) {
+        for my $cont ( 1 .. 1000 ) {
+            my @macparts = @macparts0;
+            my $pos = int(rand(scalar(@macparts)-3))+3;
+            my $num =sprintf "%02X", rand(0xff);
+            die "Missing num " if !defined $num;
+            $macparts[$pos] = $num;
+            $new_mac = lc(join(":",@macparts));
+warn $new_mac;
+            push @tried,($new_mac);
+
+            last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
+            push @old_macs,($new_mac);
+        }
+
+        if ( $self->_unique_mac($new_mac) ) {
+            $if_mac->setAttribute(address => $new_mac);
+            return;
+        }
+    }
+    die "I can't find a new unique mac '$new_mac'\n".Dumper(\@tried);
+
 }
 
 

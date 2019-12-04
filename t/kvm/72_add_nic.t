@@ -56,7 +56,7 @@ sub test_req_prepare_base{
 
     my $domain0 = $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
- 
+
     my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => user_admin->id);
     $RAVADA->_process_all_requests_dont_fork();
 
@@ -85,20 +85,21 @@ sub test_add_nic {
     wait_request();
     is($req->error,"");
     is($req->status,"done");
-    
+
     #Read xml
     sub read_mac{
         my $domain = shift;
         my $xml = XML::LibXML->load_xml(string => $domain->get_xml_base());
-        my @mac;        
+        my @mac;
         my (@if_mac) = $xml->findnodes('/domain/devices/interface/mac');
         for my $if_mac (@if_mac) {
             my $mac = $if_mac->getAttribute('address');
+            warn $mac;
             push @mac, $mac;
         }
         return(@mac);
     }
-    
+
     #Prepare base
     test_req_prepare_base($domain->name);
 
@@ -115,14 +116,14 @@ sub test_add_nic {
     wait_request();
     is($req2->error,"");
     is($req2->status,"done");
-    
+
     my $domain_clon = $RAVADA->search_domain($name);
-    
+
     my @mac = read_mac($domain);
     my @mac2 = read_mac($domain_clon);
-    isnt($mac[0],$mac2[0]);
-    isnt($mac[1],$mac2[1]);
-    
+    isnt($mac[0],$mac2[0], "1st MAC from 1st NIC cloned are the same");
+    isnt($mac[1],$mac2[1], "2nd MAC from 2nd NIC cloned are the same");
+
 }
 
 
@@ -149,6 +150,6 @@ SKIP: {
     test_add_nic($vm_name);
 }
 
-#clean();
+clean();
 
 done_testing();
