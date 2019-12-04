@@ -49,6 +49,9 @@ sub test_remove_domain {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
+    my $id_domain = $domain->id;
+    $domain->expose(22);
+    is(scalar($domain->list_ports), 1);
 
     my @volumes = $domain->list_volumes();
     $domain->remove($USER);
@@ -63,6 +66,18 @@ sub test_remove_domain {
             ok(!-e $vol,"[$vm_name] volume $vol should be removed");
         }
     }
+
+    test_ports_remove($id_domain);
+}
+
+sub test_ports_remove {
+    my $id_domain = shift;
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM domain_ports "
+        ." WHERE id_domain = ? "
+    );
+    my ($count) = $sth->fetchrow;
+    is($count,undef);
 }
 
 sub test_remove_domain_base {
