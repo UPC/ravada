@@ -16,6 +16,9 @@ my $DIR_SRC = getcwd;
 my $DIR_DST;
 my $DEBIAN = "DEBIAN";
 
+my %COPY_RELEASES = (
+    'ubuntu-19.04'=> ['ubuntu-18.10','ubuntu-19.10']
+);
 my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
@@ -324,6 +327,18 @@ sub get_fallback {
     print `etc/get_fallback.pl`;
 }
 
+sub copy_identical_releases {
+    for my $source (sort keys %COPY_RELEASES ) {
+        for my $copy (@{$COPY_RELEASES{$source}}) {
+            my $file_source = "$DIR_SRC/../ravada_release/ravada_${VERSION}_${source}_all.deb";
+            die "Error: No $file_source" if !-e $file_source;
+            my $file_copy = "$DIR_SRC/../ravada_release/ravada_${VERSION}_${copy}_all.deb";
+            copy($file_source, $file_copy) or die "Error: $!\n$file_source -> $file_copy";
+        }
+    }
+    exit;
+}
+
 #########################################################################
 
 get_fallback();
@@ -367,3 +382,5 @@ tar($dist);
 create_md5sums();
 create_deb($dist);
 }
+
+copy_identical_releases();
