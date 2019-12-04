@@ -51,9 +51,9 @@ Requirements
 ------------
 
 To add a new node to a Ravada cluster you have to install a minimal Linux operating
-system with some specific applications. ( TODO: review this )
+system with these packages:
 
-- ssh
+- openssh-server
 - libvirt-bin
 - qemu-kvm
 
