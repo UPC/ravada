@@ -510,6 +510,10 @@ sub test_clone_exports_add_ports($vm) {
     my @base_ports = $base->list_ports();
     is(scalar @base_ports, scalar @base_ports0 + 1);
 
+    my $clone_f = Ravada::Front::Domain->open($clone->id);
+    eval { my $info = $clone_f->info(user_admin) };
+    is($@,'');
+
     $clone->start(remote_ip => '10.1.1.1', user => user_admin);
     my @clone_ports = $clone->list_ports();
     is(scalar @clone_ports,2 );
