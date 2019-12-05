@@ -2557,7 +2557,7 @@ sub list_ports($self) {
         for my $data (@ports_base) {
             next if exists $clone_port{$data->{internal_port}};
             unlock_hash(%$data);
-            $data->{public_port} = $self->_vm->_new_free_port();
+            $data->{public_port} = $self->_vm->_new_free_port() if $self->_vm;
             lock_hash(%$data);
             push @list,($data);
         }
