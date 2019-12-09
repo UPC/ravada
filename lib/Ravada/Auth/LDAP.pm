@@ -15,7 +15,8 @@ use Carp qw(carp);
 use Data::Dumper;
 use Digest::SHA qw(sha1_hex sha256_hex);
 use Encode;
-use PBKDF2::Tiny qw/derive_hex verify_hex/;
+use PBKDF2::Tiny qw/derive/;
+use MIME::Base64;
 use Moose;
 use Net::LDAP;
 use Net::LDAPS;
@@ -44,6 +45,11 @@ our @OBJECT_CLASS = ('top'
 our $STATUS_EOF = 1;
 our $STATUS_DISCONNECTED = 81;
 our $STATUS_BAD_FILTER = 89;
+
+our $PBKDF2_SALT_LENGTH = 64;
+our $PBKDF2_ITERATIONS_LENGTH = 4;
+our $PBKDF2_HASH_LENGTH = 256;
+our $PBKDF2_LENGTH = $PBKDF2_SALT_LENGTH + $PBKDF2_ITERATIONS_LENGTH + $PBKDF2_HASH_LENGTH;
 
 =head2 BUILD
 
@@ -107,12 +113,31 @@ sub _password_store($password, $storage, $algorithm) {
 sub _password_pbkdf2($password, $algorithm='SHA-256') {
     $algorithm = 'SHA-256' if ! defined $algorithm;
 
-    my $salt = encode('ascii', 'random_name');
-    my $info = $algorithm;
-    $info =~ s/-//;
-    $info = "PBKDF2_$info";
-    my $pass="{$info}".derive_hex( $algorithm, encode('ascii',$password), $salt );
-    return $pass;
+    my $salt = encode('ascii',Ravada::Utils::random_name($PBKDF2_SALT_LENGTH));
+
+    die "wrong salt length ".length($salt)." != $PBKDF2_SALT_LENGTH"
+    if length($salt) != $PBKDF2_SALT_LENGTH;
+
+    my $iterations = 1024;
+    my $derive = derive($algorithm
+        , encode('ascii',$password)
+        , $salt
+        , $iterations
+        , $PBKDF2_HASH_LENGTH);
+
+    my $iterations_n = pack('N', $iterations);
+
+    die "wrong iterations length ".length($iterations_n)." != $PBKDF2_ITERATIONS_LENGTH"
+    if length($iterations_n) != $PBKDF2_ITERATIONS_LENGTH;
+
+    my $pbkdf2 = $iterations_n.$salt.$derive;
+
+    die "wrong pass length ".length($pbkdf2)." != $PBKDF2_LENGTH"
+    if length($pbkdf2) != $PBKDF2_LENGTH;
+
+    $algorithm =~ s/-//;
+    return "\{PBKDF2_$algorithm}"
+        .encode_base64($pbkdf2,"");
 }
 
 sub _password_rfc2307($password, $algorithm='MD5') {
@@ -373,10 +398,11 @@ sub login($self) {
     }
 
         $user_ok = $self->_login_bind()
-            if !exists $$CONFIG->{ldap}->{auth}
-                || !$$CONFIG->{ldap}->{auth}
-                || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
-        $user_ok = $self->_login_match()    if !$user_ok;
+        if !exists $$CONFIG->{ldap}->{auth} || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
+
+        $user_ok = $self->_login_match()
+            if !$user_ok && exists $$CONFIG->{ldap}->{auth}
+            && $$CONFIG->{ldap}->{auth} =~ /match|all/i;
 
         $self->_check_user_profile($self->name)   if $user_ok;
         $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
@@ -484,20 +510,42 @@ sub _match_password {
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 
-    my $salt = encode('ascii', 'random_name');
+    return _match_pbkdf2($password_ldap,$password) if $storage =~ /pbkdf2|SSHA/i;
 
-    if ( lc($storage) =~ /pbkdf2|SSHA/i) {
-        my ($algorithm,$n);
-        ($algorithm, $n) = $password_ldap =~ /^{[a-z0-9]+_([a-z]+)([0-9]+)}/i;
-        ($algorithm, $n) = $password_ldap =~ /^{([a-z]+)([0-9]+)}/i if !$algorithm;
+    confess "Error: storage $storage can't do match. Use bind.";
+}
 
-        $algorithm = "$algorithm-$n";
-        return verify_hex($password_ldap_hex, $algorithm
-            , encode('ascii',$password)
-            , $salt)
-    }
+sub _ntohl {
+    return unless defined wantarray;
+    confess "Wrong number of arguments ($#_) to " . __PACKAGE__ . "::ntohl, called"
+    if @_ != 1 and !wantarray;
+    unpack('L*', pack('N*', @_));
+}
 
-    confess "Error: Unknown password storage $storage $password_ldap";
+sub _match_pbkdf2($password_db_64, $password) {
+
+    my ($sign,$password_db) = $password_db_64 =~ /(\{.*?})(.*)/;
+    $password_db=decode_base64($password_db);
+
+    my ($algorithm,$n) = $sign =~ /_(.*?)(\d+)}/;
+
+    die "password_db length wrong: ".length($password_db)
+    ." != $PBKDF2_LENGTH"
+        if length($password_db) != $PBKDF2_LENGTH;
+
+    my ($iterations_db) = substr($password_db, 0, $PBKDF2_ITERATIONS_LENGTH);
+    my $iterations = unpack 'V', $iterations_db;
+    ($iterations) = _ntohl($iterations);
+
+    my ($salt)
+    = substr($password_db, $PBKDF2_ITERATIONS_LENGTH, $PBKDF2_SALT_LENGTH);
+    my $derive = derive("$algorithm-$n", encode('ascii',$password), $salt
+        , $iterations, $PBKDF2_HASH_LENGTH);
+
+    my $match = $sign.encode_base64($iterations_db.$salt.$derive,"");
+
+    return $password_db_64 eq $match;
+
 }
 
 sub _dc_base {

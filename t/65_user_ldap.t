@@ -155,6 +155,7 @@ sub remove_users {
 
 sub test_add_group {
 
+    Ravada::Auth::LDAP::init();
     my $name = "grup.test";
 
     Ravada::Auth::LDAP::remove_group($name)
@@ -202,6 +203,7 @@ sub test_manage_group {
     ok(!$@,$@);
     ok(!$is_admin,"User $uid should not be admin");
 
+    Ravada::Auth::LDAP::init();
     Ravada::Auth::LDAP::add_to_group($uid, $name);
 
     if ($with_admin) {
@@ -493,20 +495,32 @@ sub test_login_fields($data) {
 }
 
 sub test_pass_storage($with_posix_group) {
-    my $name = 'test_md5';
-    my $new_user = test_user($name, $with_posix_group, $$ , 'rfc2307','MD5');
-    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{MD5}/);
-    _remove_user_ldap($name);
+    my %data = (
+        rfc2307 => 'MD5'
+        ,PBKDF2 => 'SHA-256'
+    );
+    for my $storage ( keys %data ) {
+        for my $algorithm ( undef, $data{$storage} ) {
+            my $name = "tst_".lc($storage)."_".lc($algorithm or 'none');
+            my @args = ( $name, $with_posix_group, $$, $storage);
+            push @args, ($algorithm) if $algorithm;
 
-    $name = 'test_md52';
-    $new_user = test_user($name, $with_posix_group, $$, 'rfc2307');
-    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{MD5}/);
-    _remove_user_ldap($name);
+            Ravada::Auth::LDAP::init();
 
-    $name = 'test_pbk';
-    $new_user = test_user($name, $with_posix_group, $$, 'PBKDF2');
-    like($new_user->{_ldap_entry}->get_value('userPassword'), qr/^{PBKDF2/);
-    _remove_user_ldap($name);
+            my $user = test_user(@args);
+            my $sign = $storage;
+            $sign = $data{$storage} if $sign eq 'rfc2307';
+            like($user->{_ldap_entry}->get_value('userPassword'), qr/^{$sign/);
+
+            $user->_login_match();
+            $user->_login_bind();
+            $user->_login_match();
+            $user->_login_bind();
+
+            _remove_user_ldap($name);
+        }
+    }
+    Ravada::Auth::LDAP::init();
 }
 
 SKIP: {
