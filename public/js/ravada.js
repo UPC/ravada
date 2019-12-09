@@ -107,13 +107,24 @@
                 }
 
             };
+            ws_connected = false;
+            $timeout(function() {
+                if (!ws_connected) {
+                    $scope.ws_fail = true;
+                }
+            }, 5 * 1000 );
+
             $scope.subscribe_list_machines_user = function(url) {
                 var channel = 'list_machines_user';
                 if ($scope.anonymous) {
                     channel = 'list_bases_anonymous';
                 }
                 var ws = new WebSocket(url);
-                ws.onopen = function(event) { ws.send(channel) };
+                ws.onopen = function(event) {
+                    $scope.ws_fail = false;
+                    ws_connected = true;
+                    ws.send(channel);
+                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {

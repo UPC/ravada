@@ -115,7 +115,7 @@ ravadaApp.directive("solShowMachine", swMach)
       });
   };
 
-  function machinesPageC($scope, $http, $interval, request, listMach) {
+  function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {
     $http.get('/pingbackend.json').then(function(response) {
       $scope.pingbe_fail = !response.data;
     });
@@ -142,8 +142,20 @@ ravadaApp.directive("solShowMachine", swMach)
           subscribe_list_requests(url);
       };
       subscribe_list_machines= function(url) {
+
+          ws_connected = false;
+          $timeout(function() {
+              if (!ws_connected) {
+                $scope.ws_fail = true;
+              }
+          }, 5 * 1000 );
+
           var ws = new WebSocket(url);
-          ws.onopen    = function (event) { ws.send('list_machines') };
+          ws.onopen    = function (event) {
+              ws_connected = true ;
+              $scope.ws_fail = false;
+              ws.send('list_machines');
+          };
           ws.onmessage = function (event) {
               var data = JSON.parse(event.data);
 

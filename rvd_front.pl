@@ -1460,6 +1460,7 @@ sub admin {
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
         $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
 
+        $c->stash(USER => $USER);
         if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
             if (!defined $c->session('monitoring')) {
                 my $host = $c->req->url->to_abs->host;

@@ -12,6 +12,9 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong><%=l 'Error!' %></strong><%=l 'Backend no available!' %>
       </div>
+%       if ($USER->is_operator || $USER->is_admin) {
+            %= include 'main/check_ws'
+%       }
     <div class="row">
       <div style="margin-right: 10px;" data-netdata="system.swap"
           data-dimensions="used"
