@@ -39,6 +39,8 @@ with:
 
   auth: all # defaults to all, can be all, bind, match
 
+Notice matching authentication may be a security risk so bind is recommended.
+
 Example: All users
 ------------------
 
