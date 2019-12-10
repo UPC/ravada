@@ -153,6 +153,24 @@ sub test_start {
 
 }
 
+sub test_screenshot_db {
+    my $vm_name = shift;
+    my $domain_name = shift;
+
+    my $domain = $RAVADA->search_domain($domain_name);
+    $domain->start($USER) if !$domain->is_active();
+    return if !$domain->can_screenshot();
+    sleep 2;
+
+    $domain->screenshot();
+    $domain->shutdown(user => $USER, timeout => 1);
+    my $sth = connector->dbh->prepare("SELECT screenshot FROM domains WHERE id=?");
+    $sth->execute($domain->id);
+    my @fields = $sth->fetchrow;
+
+    ok($fields[0]);
+}
+
 sub test_screenshot {
     my $vm_name = shift;
     my $domain_name = shift;
@@ -247,8 +265,7 @@ for my $vm_name (qw(KVM Void)) {
         my $domain_name = $domain->name;
         $domain = undef;
 
-        test_screenshot($vm_name, $domain_name);
-        test_screenshot_file($vm_name, $domain_name);
+        test_screenshot_db($vm_name, $domain_name);
     };
 }
 clean();
