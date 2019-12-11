@@ -251,6 +251,8 @@ sub test_user_bind {
 
     is($mcnulty->{_auth}, 'bind');
 
+    test_uid_cn($user, $with_posix_group);
+
     unlink $file_config_bind;
 
     $ravada = Ravada->new(config => $file_config
@@ -438,6 +440,58 @@ sub test_posix_group {
 
 }
 
+sub _replace_field($entry, $field, $with_posix_group) {
+    my $old_value = $entry->get_value($field);
+    die "Error: No $field found in LDAP entry in ".$entry->get_value('cn')
+        if !$old_value;
+
+    my $new_value = new_domain_name();
+
+    Ravada::Auth::LDAP::init();
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    $entry->replace($field => $new_value);
+    my $mesg = $entry->update($ldap);
+    confess $mesg->code." ".$mesg->error if $mesg->code && $mesg->code;
+
+    _add_to_posix_group($new_value, $with_posix_group);
+
+    return ($old_value, $new_value);
+}
+
+sub test_uid_cn($user, $with_posix_group) {
+    Ravada::Auth::LDAP::init();
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $entry = $user->{_ldap_entry};
+
+    my $field = 'uid';
+    my %data = (
+        cn => $entry->get_value('cn')
+        ,$field => $entry->get_value($field)
+
+    );
+
+    test_login_fields(\%data);
+    my ($old_value, $new_value) = _replace_field($entry, $field, $with_posix_group);
+
+    $data{$field} = $new_value;
+    test_login_fields(\%data);
+
+    $entry->replace($field => $old_value);
+    $entry->update($ldap);
+}
+
+sub test_login_fields($data) {
+    my $password = 'jameson';
+    my $login_ok;
+    for my $field ( sort keys %$data ) {
+        my $value = $data->{$field};
+        eval { $login_ok = Ravada::Auth::login($value, $password) };
+
+        is($@,''," $field: $value");
+        ok($login_ok, $value);
+    }
+}
+
 SKIP: {
     test_filter();
     my $file_config = "t/etc/ravada_ldap.conf";
@@ -477,6 +531,7 @@ SKIP: {
             test_posix_group($with_posix_group);
 
             test_user_bind($user, $fly_config, $with_posix_group);
+
 
             remove_users();
         };

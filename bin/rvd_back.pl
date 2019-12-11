@@ -47,6 +47,7 @@ my $LIST;
 my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
+my $REMOVE_DOMAIN;
 my $REBASE;
 my $RUN_REQUEST;
 
@@ -80,6 +81,7 @@ my $USAGE = "$0 "
         ." --start\n"
         ." --hibernate machine\n"
         ." --shutdown machine\n"
+        ." --remove machine\n"
         ."\n"
         ."Operations modifiers:\n"
         ." --all : execute on all virtual machines\n"
@@ -106,6 +108,7 @@ GetOptions (       help => \$help
            ,'url-isos=s'=> \$URL_ISOS
            ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
           ,'hibernate:s'=> \$HIBERNATE_DOMAIN
+             ,'remove:s'=> \$REMOVE_DOMAIN
          ,'disconnected'=> \$DISCONNECTED
         ,'remove-user=s'=> \$REMOVE_USER
         ,'make-admin=s' => \$MAKE_ADMIN_USER
@@ -443,6 +446,20 @@ sub hibernate {
         if !$domain_name && !$found;
 }
 
+sub remove_domain {
+    my $domain_name = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+    my $domain = $rvd_back->search_domain($domain_name);
+    die "Error: domain $domain_name not found\n" if !$domain;
+
+    Ravada::Request->remove_domain(
+                uid => Ravada::Utils::user_daemon()->id
+                ,name => $domain->name
+    );
+    print "Removing $domain_name\n";
+}
+
 sub start_domain {
     my $domain_name = shift;
 
@@ -607,6 +624,7 @@ rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
 hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;
+remove_domain($REMOVE_DOMAIN)              if defined $REMOVE_DOMAIN;
 start_domain($START_DOMAIN)         if $START_DOMAIN;
 
 shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)

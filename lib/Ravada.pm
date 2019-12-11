@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0-rc7';
+our $VERSION = '0.5.0-rc9';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -138,6 +138,7 @@ sub BUILD {
 sub _install($self) {
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
 }
@@ -1274,6 +1275,30 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
 }
 
+sub _upgrade_timestamps($self) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
+    my $req = Ravada::Request->ping_backend();
+    return if $req->{date_changed};
+
+    my @commands = qw(cleanup enforce_limits list_isos list_network_interfaces
+    manage_pools open_exposed_ports open_iptables ping_backend
+    refresh_machine refresh_storage refresh_vms
+    screenshot);
+    my $sql ="DELETE FROM requests WHERE "
+        .join(" OR ", map { "command = '$_'" } @commands);
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute();
+
+    $self->_upgrade_timestamp('requests','date_changed');
+}
+
+sub _upgrade_timestamp($self, $table, $field) {
+
+    my $sth = $CONNECTOR->dbh->prepare("ALTER TABLE $table change $field "
+        ."$field timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    $sth->execute();
+}
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
@@ -2225,7 +2250,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) + 60 );
+    $sth->execute(time - 5*scalar(@domains) - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2315,9 +2340,9 @@ sub _execute {
     }
 
     $request->status('working','') unless $request->status() eq 'waiting';
+    $request->pid($$);
     $request->start_time(time);
     $request->error('');
-        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
@@ -2573,8 +2598,7 @@ sub _wait_pids {
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             my $kid = waitpid($pid , WNOHANG);
-            last if $kid <= 0 ;
-            push @done, ($kid);
+            push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
     return if !@done;

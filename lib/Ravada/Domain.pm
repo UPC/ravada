@@ -1487,6 +1487,7 @@ sub _after_remove_domain {
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
+    $self->_remove_ports_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
@@ -1515,6 +1516,14 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
     }
+}
+
+sub _remove_ports_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_ports"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _remove_access_attributes_db($self) {
@@ -2290,14 +2299,21 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         ." VALUES (?,?,?,?,?)"
     );
 
-    my $public_port = $self->_vm->_new_free_port();
 
-    $sth->execute($self->id
-        , $public_port, $internal_port
-        , ($name or undef)
-        , $restricted
-    );
-    $sth->finish;
+    my $public_port;
+    for (;;) {
+        eval {
+            $public_port = $self->_vm->_new_free_port();
+            $sth->execute($self->id
+                , $public_port, $internal_port
+                , ($name or undef)
+                , $restricted
+            );
+            $sth->finish;
+        };
+        last if !$@;
+        confess $@ if $@ && $@ !~ /Duplicate entry .*for key 'public/;
+    }
 
     $self->_open_exposed_port($internal_port, $name, $restricted)
         if $self->is_active && $self->ip;
@@ -2539,7 +2555,11 @@ sub list_ports($self) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
-            push @list,($data) if !exists $clone_port{$data->{internal_port}};
+            next if exists $clone_port{$data->{internal_port}};
+            unlock_hash(%$data);
+            $data->{public_port} = $self->_vm->_new_free_port() if $self->_vm;
+            lock_hash(%$data);
+            push @list,($data);
         }
     }
 
