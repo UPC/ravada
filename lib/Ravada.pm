@@ -2599,8 +2599,7 @@ sub _wait_pids {
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             my $kid = waitpid($pid , WNOHANG);
-            last if $kid <= 0 ;
-            push @done, ($kid);
+            push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
     return if !@done;
