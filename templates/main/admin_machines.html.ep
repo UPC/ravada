@@ -286,7 +286,7 @@
                           <i class="fa fa-desktop"></i>
                         </a>
                       </div>
-                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
+                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine <a href="/request/{{machine.is_locked}}.html"><%=l 'locked' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
@@ -417,7 +417,7 @@
                             <i class="fa fa-desktop"></i>
                           </a>
                         </div>
-                        <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine locked by' %><a href="/request/{{child.is_locked}}.html"> <%=l 'process' %></a></div>
+                        <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine' %> <a href="/request/{{child.is_locked}}.html"> <%=l 'locked' %></a></div>
                       </td>
                       <td class="lgMachToggle"><span class="badge badge-info" title="<%=l 'Node'%>">{{child.node}}</span></td>
                     </tr>

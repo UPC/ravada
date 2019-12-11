@@ -10,6 +10,7 @@ use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $DEBUG=0;
 
 has clients => (
     is => 'ro'
@@ -25,12 +26,14 @@ has ravada => (
 
 my %SUB = (
                   list_alerts => \&_list_alerts
+                  ,list_isos  => \&_list_isos
                ,list_machines => \&_list_machines
           ,list_machines_user => \&_list_machines_user
         ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
                 ,machine_info => \&_get_machine_info
                 ,ping_backend => \&_ping_backend
+                     ,request => \&_request
 );
 
 ######################################################################
@@ -60,6 +63,19 @@ sub _list_alerts($rvd, $args) {
     }
 
     return [@ret2,@ret];
+}
+
+sub _list_isos($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    $type = 'KVM' if !defined $type;
+
+    return $rvd->iso_file($type);
+}
+
+sub _request($rvd, $args) {
+    my ($id_request) = $args->{channel} =~ m{/(.*)};
+    my $req = Ravada::Request->open($id_request);
+    return {status => $req->status, error => $req->error};
 }
 
 sub _list_machines($rvd, $args) {
@@ -172,6 +188,7 @@ sub BUILD {
                 my $ret = $exec->($self->ravada, $self->clients->{$key});
                 my $old_ret = $self->clients->{$key}->{ret};
                 if ( _different($ret, $old_ret )) {
+                    warn "WS: send $channel" if $DEBUG;
                     $ws_client->send( { json => $ret } );
                     $self->clients->{$key}->{ret} = $ret;
                 }
@@ -182,6 +199,9 @@ sub BUILD {
 
 sub subscribe($self, %args) {
     my $ws = $args{ws};
+    my %args2 = %args;
+    delete $args2{ws};
+    warn "Subscribe ".Dumper(\%args2) if $DEBUG;
     $self->clients->{$ws} = {
         ws => $ws
         , %args

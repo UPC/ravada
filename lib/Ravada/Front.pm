@@ -585,13 +585,20 @@ Returns a reference to a list of the ISOs known by the system
 =cut
 
 sub iso_file ($self, $vm_type) {
+
+    my $cache = $self->_cache_get("list_isos");
+    return $cache if $cache;
+
     my $req = Ravada::Request->list_isos(
         vm_type => $vm_type
     );
+    return [] if !$req;
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
     my $isos = decode_json($req->output());
+
+    $self->_cache_store("list_isos",$isos);
 
     return $isos;
 }
@@ -705,8 +712,6 @@ Return true if alive, false otherwise.
 
 sub ping_backend {
     my $self = shift;
-
-    return 1 if $self->_ping_backend_localhost();
 
     my $req = Ravada::Request->ping_backend();
     $self->wait_request($req, 2);
@@ -1096,6 +1101,22 @@ sub add_node($self,%arg) {
 
     my $req = Ravada::Request->refresh_vms( _force => 1 );
     return $req->id;
+}
+
+sub _cache_store($self, $key, $value, $timeout=60) {
+    $self->{cache}->{$key} = [ $value, time+$timeout ];
+}
+
+sub _cache_get($self, $key) {
+
+    delete $self->{cache}->{$key}
+        if exists $self->{cache}->{$key}
+            && $self->{cache}->{$key}->[1] < time;
+
+    return if !exists $self->{cache}->{$key};
+
+    return $self->{cache}->{$key}->[0];
+
 }
 
 sub list_network_interfaces($self, %args) {

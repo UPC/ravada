@@ -191,12 +191,30 @@
                     });
                 }
             };
-            $scope.subscribe_ws = function(url) {
+
+            subscribe_isos = function(url) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_isos') };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.list_isos = data;
+                    });
+                }
+            };
+
+
+            subscribe_ws = function(url) {
                 subscribe_machine_info(url);
                 subscribe_requests(url);
+                subscribe_isos(url);
             };
-          $scope.init = function(id) {
+
+          var url_ws;
+          $scope.init = function(id, url) {
+                url_ws = url;
                 $scope.showmachineId=id;
+                subscribe_ws(url_ws);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
                             $scope.showmachine=response.data;
@@ -206,12 +224,13 @@
                             }
                             $scope.init_ldap_access();
                             $scope.list_ldap_attributes();
-                            $scope.list_interfaces();
+                            list_interfaces();
                             $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
           };
-          $scope.list_interfaces = function() {
+
+          list_interfaces = function() {
             if (! $scope.network_nats) {
                 $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
                     .then(function(response) {
@@ -278,11 +297,29 @@
               }
           };
 
+          subscribe_request = function(id_request, action) {
+                var ws = new WebSocket(url_ws);
+                ws.onopen = function(event) { ws.send('request/'+id_request) };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    action(data);
+                }
+            };
+
+
           $scope.rename = function(machineId, old_name) {
             if ($scope.new_name_duplicated || $scope.new_name_invalid) return;
-            $scope.rename_requested=1;
+
+            $scope.rename_request= { 'status': 'requested' };
+
             $http.get('/machine/rename/'+machineId+'/'
-            +$scope.new_name);
+            +$scope.new_name).then(function(response) {
+                subscribe_request(response.data.req, function(data) {
+                    $scope.$apply(function () {
+                        $scope.rename_request=data;
+                    });
+                });
+            });
           };
           $scope.cancel_rename=function(old_name) {
                 $scope.new_name = old_name;
@@ -340,6 +377,7 @@
               });
           };
           $scope.copy_machine = function() {
+              $scope.copy_request= { 'status': 'requested' };
               $http.post('/machine/copy/'
                       , JSON.stringify({ 'id_base': $scope.showmachine.id
                             ,'copy_number': $scope.copy_number
@@ -347,6 +385,13 @@
                           ,'new_name': $scope.new_name
                       })
               ).then(function(response) {
+                  // if there are many , we pick the last one
+                  id_request = response.data.request[response.data.request.length-1];
+                  subscribe_request(id_request, function(data) {
+                    $scope.$apply(function () {
+                        $scope.copy_request=data;
+                    });
+                  });
               });
           };
 

@@ -1904,7 +1904,6 @@ sub manage_machine {
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
-        , isos => $RAVADA->iso_file($domain->type)
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
     );

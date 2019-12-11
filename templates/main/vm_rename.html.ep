@@ -7,11 +7,17 @@
                 <div class="alert alert-danger" role="alert" ng-show="showmachine.is_hibernated">
                    This machine is hibernated and can't be renamed.
                 </div>
-            <div ng-hide="pending_requests">
                 <input class="form-control" type="text" name="new_name" ng-model="new_name"
                         ng-change="validate_new_name(showmachine.name)"
-                        ng-disabled="showmachine.is_active || showmachine.is_hibernated"
+                        ng-disabled="showmachine.is_active || showmachine.is_hibernated
+                             || (rename_request && rename_request.status !== 'done')"
                 >
+            <div ng-show="rename_request" class="alert alert-info">
+                Rename {{shownamchine.name}} {{rename_request.status}}.
+                <br/>
+                {{rename_request.error}}
+            </div>
+            <div ng-hide="rename_request && rename_request.status !== 'done'">
                 <input type="reset"  class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
                 <button type="button" class="btn btn-primary mt-3" ng-disabled="showmachine.is_active || showmachine.is_hibernated || new_name_duplicated || new_name_invalid || message_rename"
                     ng-click="rename(showmachine.id, showmachine.name)">

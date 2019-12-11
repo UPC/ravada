@@ -553,7 +553,7 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools)$/) {
+    if ($args{command} =~ /^(clone|manage_pools|list_isos)$/) {
         if ( _duplicated_request($args{command}, $args{args})
             || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
             #            warn "Warning: duplicated request for $args{command} $args{args}";
