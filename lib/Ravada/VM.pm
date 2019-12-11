@@ -1272,7 +1272,7 @@ sub create_iptables_chain($self, $chain, $jchain='INPUT') {
 }
 
 sub iptables($self, @args) {
-    my @cmd = ('/sbin/iptables');
+    my @cmd = ('/sbin/iptables','-w');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
