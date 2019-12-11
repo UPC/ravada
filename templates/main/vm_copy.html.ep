@@ -33,7 +33,7 @@
                     <input class="form-control" ng-model="copy_ram" type="text" size="3">
                 </div>
             </div>
-            <div ng-show="copy_request" class="alert alert-info">
+            <div ng-show="copy_request" class="alert alert-warning">
                 Copy {{shownamchine.name}} {{copy_request.status}}.
                 <br/>
                 {{copy_request.error}}
