@@ -367,37 +367,19 @@ sub test_json {
 
 }
 
-sub test_screenshot {
+sub test_screenshot_db {
     my $vm_name = shift;
     my $domain= shift;
-
     return if !$domain->can_screenshot;
-
-    my $file = "/var/tmp/screenshot.$$.png";
-
-#    diag("[$vm_name] testing screenshot");
     $domain->start($USER)   if !$domain->is_active;
     sleep 2;
-
-    eval { $domain->screenshot($file) };
-    ok(!$@,"[$vm_name] $@");
-
+    $domain->screenshot();
     $domain->shutdown(user => $USER, timeout => 1);
-    ok(-e $file,"[$vm_name] Checking screenshot $file");
-    ok(-e $file && -s $file,"[$vm_name] Checking screenshot $file should not be empty")
-        and do {
-            unlink $file or die "$! unlinking $file";
-        };
-}
-
-sub test_screenshot_file {
-    my $vm_name = shift;
-    my $domain= shift;
-
-    return if !$domain->can_screenshot;
-
-    my $file = $domain->_file_screenshot();
-    ok($file,"Expecting a screnshot filename, got '".($file or '<UNDEF>'));
+    my $sth = connector->dbh->prepare("SELECT screenshot FROM domains WHERE id=?");
+    $sth->execute($domain->id);
+    my @fields = $sth->fetchrow;
+    #ok($fields[0],"Expecting child node listen , got :'".substr( $fields[0], 0, 10 ) or ''));
+    ok($fields[0]);
 }
 
 sub test_change_interface {
@@ -594,14 +576,13 @@ for my $vm_name ( vm_names() ) {
 
         test_json($vm_name, $domain->name);
         test_search_domain($domain);
-        test_screenshot_file($vm_name, $domain);
 
         test_remove_domain($vm_name, $clone1);
         test_remove_domain($vm_name, $clone2);
 
         $domain->remove_base($USER);
         test_manage_domain($vm_name, $domain);
-        test_screenshot($vm_name, $domain);
+        test_screenshot_db($vm_name, $domain);
 
         test_shutdown_suspended_domain($vm_name, $domain);
         test_pause_domain($vm_name, $domain);

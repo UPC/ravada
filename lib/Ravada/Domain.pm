@@ -1312,6 +1312,7 @@ sub info($self, $user) {
         ,pool_clones => $self->pool_clones
         ,is_pool => $self->is_pool
         ,comment => $self->_data('comment')
+        ,screenshot => $self->_data('screenshot')
     };
     if ($is_active) {
         eval {
@@ -1786,6 +1787,8 @@ sub _convert_png {
     $in->Scale(width => 250, height => 188);
     $in->Write("png24:$file_out");
 
+    my @blobs = $in->ImageToBlob(magick => 'png');
+    return $blobs[0];
     chmod 0755,$file_out or die "$! chmod 0755 $file_out";
 }
 

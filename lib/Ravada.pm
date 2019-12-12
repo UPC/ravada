@@ -1262,6 +1262,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
+    $self->_upgrade_table('domains','screenshot','BLOB');
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
@@ -2487,14 +2488,11 @@ sub _cmd_screenshot {
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
-    my $bytes = 0;
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
-        $bytes = $domain->screenshot($request->args('filename'));
-        $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
-    }
-    $request->error("No data received") if !$bytes;
+        $domain->screenshot();
+        }
 }
 
 sub _cmd_copy_screenshot {
