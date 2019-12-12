@@ -57,6 +57,8 @@ create_domain
     local_ips
 
     delete_request
+
+    remove_old_domains_req
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -359,6 +361,33 @@ sub remote_config_nodes {
         }
     }
     return $conf;
+}
+
+sub remove_old_domains_req() {
+    my $base_name = base_domain_name();
+    my $machines = rvd_front->list_machines(user_admin);
+    for my $machine ( @$machines) {
+        my $domain = Ravada::Front::Domain->open($machine->{id});
+        next if $domain->name !~ /^$base_name/;
+        my $n_clones = scalar($domain->clones);
+        my $req_clone;
+        for my $clone ($domain->clones) {
+            $req_clone = Ravada::Request->remove_domain(
+                name => $clone->{name}
+                ,uid => user_admin->id
+            );
+        }
+        wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
+
+        my @after_req = ();
+        @after_req = ( after_request => $req_clone->id ) if $req_clone;
+        my $req = Ravada::Request->remove_domain(
+            name => $machine->{name}
+            ,uid => user_admin->id
+        );
+    }
+    wait_request(debug => 1, background => 1, timeout => 120);
+
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -685,6 +714,7 @@ sub wait_request {
         $post = '' if !defined $post;
         if ( $done_all ) {
             for my $req (@$request) {
+                $req = Ravada::Request->open($req) if !ref($req);
                 next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
