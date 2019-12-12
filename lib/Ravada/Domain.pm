@@ -1312,6 +1312,7 @@ sub info($self, $user) {
         ,pool_clones => $self->pool_clones
         ,is_pool => $self->is_pool
         ,comment => $self->_data('comment')
+        ,screenshot => $self->_data('screenshot')
     };
     if ($is_active) {
         eval {
@@ -1487,6 +1488,7 @@ sub _after_remove_domain {
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
+    $self->_remove_ports_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
@@ -1515,6 +1517,14 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
     }
+}
+
+sub _remove_ports_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_ports"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _remove_access_attributes_db($self) {
@@ -1777,6 +1787,8 @@ sub _convert_png {
     $in->Scale(width => 250, height => 188);
     $in->Write("png24:$file_out");
 
+    my @blobs = $in->ImageToBlob(magick => 'png');
+    return $blobs[0];
     chmod 0755,$file_out or die "$! chmod 0755 $file_out";
 }
 
@@ -2548,7 +2560,7 @@ sub list_ports($self) {
         for my $data (@ports_base) {
             next if exists $clone_port{$data->{internal_port}};
             unlock_hash(%$data);
-            $data->{public_port} = $self->_vm->_new_free_port();
+            $data->{public_port} = $self->_vm->_new_free_port() if $self->_vm;
             lock_hash(%$data);
             push @list,($data);
         }

@@ -956,7 +956,7 @@ post '/request/(:name)/' => sub {
         ,uid => $USER->id
         ,%$args
     );
-    return $c->render(json => { ok => 1 });
+    return $c->render(json => { ok => 1, request => $req });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -1173,17 +1173,19 @@ sub user_settings {
 
 get '/img/screenshots/:file' => sub {
     my $c = shift;
-
     my $file = $c->param('file');
     my $path = $DOCUMENT_ROOT."/".$c->req->url->to_abs->path;
+    my ($id_domain) =$path =~ m{/(\d+)\..+$};
+    my $domain = $RAVADA->search_domain_by_id($id_domain);
 
-    my ($id_domain ) =$path =~ m{/(\d+)\..+$};
+    my $image = new Image::Magick;
+    my $sshot = $image->BlobToImage($domain->get_info()->{screenshot});
     if (!$id_domain) {
         warn"ERROR : no id domain in $path";
         return $c->reply->not_found;
     }
     if ($USER && !$USER->is_admin) {
-        my $domain = $RAVADA->search_domain_by_id($id_domain);
+        #my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
             return access_denied($c) if $USER->id != $domain->id_owner;
@@ -1305,7 +1307,7 @@ sub login {
             my @languages = I18N::LangTags::implicate_supers(
                 I18N::LangTags::Detect::detect()
             );
-            my $header = $c->req->headers->header('accept-language');
+            my $header = ( $c->req->headers->header('accept-language') or '');
             my @languages2 = map {s/^(.*?)[;-].*/$1/; $_ } split /,/,$header;
 
             Ravada::Request->post_login(
@@ -1719,7 +1721,8 @@ sub init {
     $home->detect();
 
     if (exists $ENV{MORBO_VERBOSE}
-        || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
+        || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
+                && $ENV{MOJO_MODE} =~ /devel/i )) {
             return if -e $home->rel_file("public");
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}

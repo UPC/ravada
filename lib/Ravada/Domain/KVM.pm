@@ -15,6 +15,7 @@ use File::Copy;
 use File::Path qw(make_path);
 use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
+use MIME::Base64;
 use Moose;
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
@@ -1213,13 +1214,7 @@ sub handler {
     return $n;
 }
 
-sub screenshot {
-    my $self = shift;
-    my $file = (shift or $self->_file_screenshot);
-
-    my ($path) = $file =~ m{(.*)/};
-    make_path($path) if ! -e $path;
-
+sub screenshot($self) {
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
 
@@ -1229,7 +1224,9 @@ sub screenshot {
     my $file_tmp = "/var/tmp/$$.tmp";
     $stream->finish;
 
-    $self->_convert_png($file_tmp,$file);
+    my $file = "$file_tmp.png";
+    my $blob_file = $self->_convert_png($file_tmp,$file);
+    $self->_data(screenshot => encode_base64($blob_file));
     unlink $file_tmp or warn "$! removing $file_tmp";
 }
 
