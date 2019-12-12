@@ -4,6 +4,8 @@ use strict;
 #####
 use locale ':not_characters';
 #####
+use lib 'lib';
+
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
@@ -23,7 +25,6 @@ use I18N::LangTags::Detect;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Front::Domain;
@@ -1461,6 +1462,7 @@ sub admin {
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
         $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
 
+        $c->stash(USER => $USER);
         if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
             if (!defined $c->session('monitoring')) {
                 my $host = $c->req->url->to_abs->host;
@@ -1905,7 +1907,6 @@ sub manage_machine {
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
-        , isos => $RAVADA->iso_file($domain->type)
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
     );
