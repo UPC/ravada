@@ -214,6 +214,12 @@
           $scope.init = function(id, url) {
                 url_ws = url;
                 $scope.showmachineId=id;
+                $scope.tab_access=['client']
+                $scope.client_attributes = [ 'User-Agent'
+                   , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
+                   , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
+                ];
+
                 subscribe_ws(url_ws);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
@@ -222,6 +228,7 @@
                                 $scope.new_name=$scope.showmachine.name+"-2";
                                 $scope.validate_new_name($scope.showmachine.name);
                             }
+                            $scope.init_domain_access();
                             $scope.init_ldap_access();
                             $scope.list_ldap_attributes();
                             list_interfaces();
@@ -474,14 +481,21 @@
           };
 
 
-          $scope.add_ldap_access = function() {
-              $http.get('/add_ldap_access/'+$scope.showmachine.id+'/'+$scope.ldap_attribute+'/'
-                            +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed
-                            +'/'+$scope.ldap_attribute_last)
-                    .then(function(response) {
-                        $scope.init_ldap_access();
+          $scope.add_access = function(type) {
+              $http.post('/machine/add_access/'+$scope.showmachine.id
+                    ,JSON.stringify({
+                        'type': type
+                        ,'attribute': $scope.access_attribute[type]
+                        ,'value': $scope.access_value[type]
+                        ,'allowed': $scope.access_allowed[type]
+                        ,'last': $scope.access_last[type]
+                    })
+                    ).then(function(response) {
+                        if (type == 'ldap') { $scope.init_ldap_access() }
+                        else { $scope.init_domain_access() }
                     });
           };
+
            $scope.delete_ldap_access= function(id_access) {
               $http.get('/delete_ldap_access/'+$scope.showmachine.id+'/'+id_access)
                     .then(function(response) {
@@ -501,6 +515,22 @@
                         $scope.init_ldap_access();
                     });
           };
+          $scope.move_access= function(type, id_access, count) {
+              $http.get('/machine/move_access/'+$scope.showmachine.id+'/'
+                        +id_access+'/'+count)
+                    .then(function(response) {
+                        $scope.init_domain_access();
+                    });
+          };
+ 
+          $scope.set_access = function(id_access, allowed, last) {
+              $http.get('/machine/set_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
+                        +'/'+last)
+                    .then(function(response) {
+                        $scope.init_domain_access();
+                    });
+          };
+
           $scope.init_ldap_access = function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
@@ -513,6 +543,24 @@
                   $scope.ldap_attributes_default = response.data.default;
               });
           };
+          $scope.init_domain_access = function() {
+              $http.get('/machine/list_access/'+$scope.showmachine.id).then(function(response) {
+                  $scope.domain_access  = response.data.list;
+                  $scope.domain_access_default = response.data.default;
+              });
+
+              $http.get('/machine/check_access/'+$scope.showmachine.id)
+                      .then(function(response) {
+                          $scope.check_client_access = response.data.ok;
+                  });
+          };
+          $scope.delete_access= function(id_access) {
+              $http.get('/machine/delete_access/'+$scope.showmachine.id+'/'+id_access)
+                    .then(function(response) {
+                        $scope.init_domain_access();
+                    });
+          };
+
           $scope.init_new_port = function() {
               $scope.new_port = null;
               $scope.new_port_name = null;
@@ -578,6 +626,10 @@
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
             list_nodes();
+            $scope.access_attribute = [ ];
+            $scope.access_value = [ ];
+            $scope.access_allowed = [ ];
+            $scope.access_last = [ ];
           $scope.list_ldap_attributes();
         };
 
