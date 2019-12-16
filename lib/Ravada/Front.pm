@@ -127,9 +127,7 @@ Returns: listref of machines
 
 =cut
 
-sub list_machines_user {
-    my $self = shift;
-    my $user = shift;
+sub list_machines_user($self, $user, $access_data={}) {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name,is_public, screenshot"
@@ -177,6 +175,7 @@ sub list_machines_user {
             $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
             $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
+        next if !$self->_access_allowed($id, $base{id_clone}, $access_data);
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
         push @list,(\%base);
@@ -185,6 +184,19 @@ sub list_machines_user {
     return \@list;
 }
 
+sub _access_allowed($self, $id_base, $id_clone, $access_data) {
+    if ($id_clone) {
+        my $clone = Ravada::Front::Domain->open($id_clone);
+        my $allowed = $clone->access_allowed(%$access_data);
+        return $allowed if $allowed;
+    }
+    my $base = Ravada::Front::Domain->open($id_base);
+
+    my $allowed = $base->access_allowed(%$access_data);
+    return 1 if !defined $allowed;
+    return $allowed;
+
+}
 
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines();
