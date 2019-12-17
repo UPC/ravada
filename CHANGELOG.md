@@ -8,7 +8,6 @@
 - Test mojo app [\#1137]
 - Logout timeout on start machine too quick [\#1119]
 - Do not remove the CD from the clones [\#1116]
-- Pools of virtual machines [\#1115]
 - Multiple copies of machines [\#1091]
 - Frontend javascript and CSS from behind Firewall [\#993]
 - Improve network ports management [\#265]

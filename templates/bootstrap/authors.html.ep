@@ -36,5 +36,5 @@
 <%=l 'Thanks to:' %>
 <ul>
     <li>Jorge Mata</li>
-    <li>Francesc Oller<li>
+    <li>Francesc Oller</li>
 </ul>
