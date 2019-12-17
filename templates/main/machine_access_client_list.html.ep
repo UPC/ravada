@@ -12,6 +12,7 @@
     </td>
     <td class="col-lg-1">
         <input type="checkbox" ng-checked="access.last"
+            ng-show="access.allowed"
             ng-click="set_access(access.id, access.allowed, !access.last)"
         >
     </td>
