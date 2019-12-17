@@ -106,7 +106,7 @@ sub test_access_by_lang($vm, $do_clones=0) {
     $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value }});
     is(scalar (@$list_bases), 1);
 
-    is($base->access_allowed( $type => { $attribute => 'ca,en-US;q=0.7,en;q=0.3'} ),1);
+    is($base->access_allowed( $type => { $attribute => 'ca-ca,en-US;q=0.7,en;q=0.3'} ),1);
 
     _remove_bases($base);
 }
