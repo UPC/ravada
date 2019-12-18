@@ -504,6 +504,15 @@ sub _update_isos {
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
         }
+        ,qubes_4010 => {
+                    name => 'Qubes Release 4.0.1'
+            ,description => 'Qubes-R4.0.1-x86 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'https://ftp.qubes-os.org/iso/Qubes-R4.0.1-x86_64.iso'
+                ,md5_url => 'https://ftp.qubes-os.org/iso/Qubes-R4.0.1-x86_64.iso.DIGESTS'
+        }
     );
     $self->_scheduled_fedora_releases(\%data);
     $self->_update_table($table, $field, \%data);
