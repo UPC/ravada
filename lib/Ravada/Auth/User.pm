@@ -161,6 +161,24 @@ sub unshown_messages {
 
 }
 
+=head2 send_message
+
+Send a message to this user
+
+    $user->send_message($subject, $message)
+
+=cut
+
+sub send_message($self, $subject, $message='') {
+    _init_connector() if !$$CONNECTOR;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO messages (id_user, subject, message) "
+        ." VALUES(?, ? , ? )");
+
+    $sth->execute($self->id, $subject, $message);
+}
+
 
 =head2 show_message
 
@@ -336,6 +354,10 @@ sub _load_allowed {
     my $refresh = shift;
 
     return if !$refresh && $self->{_load_allowed}++;
+
+    if (ref($self) !~ /SQL$/) {
+        $self = Ravada::Auth::SQL->new(name => $self->name);
+    }
 
     my $ldap_entry;
     $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';

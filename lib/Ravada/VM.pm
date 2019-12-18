@@ -9,7 +9,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 =cut
 
-use Carp qw( carp croak cluck);
+use Carp qw( carp confess croak cluck);
 use Data::Dumper;
 use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
@@ -20,6 +20,7 @@ use Moose::Role;
 use Net::DNS;
 use Net::Ping;
 use Net::SSH2 qw(LIBSSH2_FLAG_SIGPIPE);
+use IO::Scalar;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
@@ -305,7 +306,6 @@ sub _connect_ssh($self, $disconnect=0) {
         warn $self->name." readonly, don't do ssh";
         return;
     }
-    return if !$self->ping();
 
     my @pwd = getpwuid($>);
     my $home = $pwd[7];
@@ -314,6 +314,7 @@ sub _connect_ssh($self, $disconnect=0) {
     $ssh = $SSH{$self->host}    if exists $SSH{$self->host};
 
     if (! $ssh || $disconnect ) {
+        return if !$self->ping();
         $ssh->disconnect if $ssh && $disconnect;
         $ssh = Net::SSH2->new( timeout => $SSH_TIMEOUT );
         my $connect;
@@ -1000,10 +1001,33 @@ sub ping($self, $option=undef) {
     confess "ERROR: option unknown" if defined $option && $option ne 'debug';
 
     return 1 if $self->is_local();
+
+    my $cache_key = "ping_".$self->host;
+    my $ping = $self->_get_cache($cache_key);
+    return $ping if defined $ping;
+
     my $debug = 0;
     $debug = 1 if defined $option && $option eq 'debug';
 
-    return $self->_do_ping($self->host, $debug);
+    $ping = $self->_do_ping($self->host, $debug);
+    $self->_set_cache($cache_key => $ping);
+    return $ping;
+}
+
+sub _set_cache($self, $key, $value) {
+    $key = "_cache_$key";
+    $self->{$key} = [ $value, time ];
+}
+
+sub _get_cache($self, $key, $timeout=30) {
+    $key = "_cache_$key";
+    return if !exists $self->{$key};
+    my ($value, $time) = @{$self->{$key}};
+    if ( time - $time > $timeout ) {
+        delete $self->{$key};
+        return ;
+    }
+    return $value;
 }
 
 sub _do_ping($self, $host, $debug=0) {
@@ -1202,9 +1226,14 @@ sub _write_file_local( $self, $file, $contents ) {
 sub read_file( $self, $file ) {
     return $self->_read_file_local($file) if $self->is_local;
 
-    my ($content, $err) = $self->run_command("cat $file");
-    confess $err if $err;
-    return $content;
+    my $ssh = ($self->{_ssh} or $self->_connect_ssh());
+    die "Error: no ssh connection to ".$self->name if ! $ssh;
+
+    my $data = '';
+    my $io = IO::Scalar->new(\$data);
+    my $ok = $ssh->scp_get($file, $io);
+
+    return $data;
 }
 
 sub _read_file_local( $self, $file ) {
@@ -1215,18 +1244,13 @@ sub _read_file_local( $self, $file ) {
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    # why should we force disconnect before ?
-    $self->_connect_ssh();
-    my ( $out, $err) = $self->run_command("/usr/bin/test",
-        "-e $file ; echo \$?");
+    my $ssh = ($self->{_ssh} or $self->_connect_ssh());
+    die "Error: no ssh connection to ".$self->name if ! $ssh;
 
-    chomp $out;
-    chomp $err;
+    my $io = IO::Scalar->new();
+    my $ok = $ssh->scp_get($file, $io);
 
-    warn $self->name." ".$err if $err;
-
-    return 1 if $out =~ /^0$/;
-    return 0;
+    return $ok;
 }
 
 sub remove_file( $self, $file ) {
@@ -1248,7 +1272,7 @@ sub create_iptables_chain($self, $chain, $jchain='INPUT') {
 }
 
 sub iptables($self, @args) {
-    my @cmd = ('/sbin/iptables');
+    my @cmd = ('/sbin/iptables','-w');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
@@ -1416,24 +1440,44 @@ sub shutdown_domains($self) {
     $sth->finish;
 }
 
-sub shared_storage($self, $node, $dir) {
-    return if !$node->is_active || !$self->is_active;
-    my $cached_st_key = "_cached_shared_storage_".$self->name.$node->name.$dir;
-    $cached_st_key =~ s{/}{_}g;
-    return $self->{$cached_st_key} if exists $self->{$cached_st_key};
+sub _shared_storage_cache($self, $node, $dir, $value=undef) {
+    if (!defined $value) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "SELECT is_shared FROM storage_nodes "
+            ." WHERE dir= ? "
+            ." AND ((id_node1 = ? AND id_node2 = ? ) "
+            ."      OR (id_node2 = ? AND id_node1 = ? )) "
+        );
+        $sth->execute($dir, $self->id, $node->id, $node->id, $self->id);
+        my ($is_shared) = $sth->fetchrow;
+        return $is_shared;
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO storage_nodes (id_node1, id_node2, dir, is_shared) "
+        ." VALUES (?,?,?,?)"
+    );
+    $sth->execute($self->id, $node->id, $dir, $value);
+    return $value;
+}
 
+sub shared_storage($self, $node, $dir) {
     $dir .= '/' if $dir !~ m{/$};
+    my $shared_cache = $self->_shared_storage_cache($node, $dir);
+    return $shared_cache if defined $shared_cache;
+
+    return if !$node->is_active || !$self->is_active;
+
     my $file;
     for ( ;; ) {
         $file = $dir.Ravada::Utils::random_name(4).".tmp";
+        my $exists;
         eval {
-            next if $self->file_exists($file);
-            next if $node->file_exists($file);
+            $exists = $self->file_exists($file) || $node->file_exists($file);
         };
+        next if $exists;
         return if $@ && $@ =~ /onnect to SSH/i;
         last;
     }
-    $file = "$dir$cached_st_key";
     $self->write_file($file,''.localtime(time));
     confess if !$self->file_exists($file);
     my $shared;
@@ -1443,8 +1487,9 @@ sub shared_storage($self, $node, $dir) {
         sleep 1;
     }
     $self->remove_file($file);
+    $shared = 0 if !defined $shared;
+    $self->_shared_storage_cache($node, $dir, $shared);
 
-    $self->{$cached_st_key} = $shared;
     return $shared;
 }
 sub _fetch_tls_host_subject($self) {

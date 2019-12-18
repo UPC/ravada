@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document" ng-init="num_lista = <%= scalar @$list_users %>">
     <div id="wrapper">
         %= include 'bootstrap/navigation'
         <div id="page-wrapper">
@@ -13,12 +13,12 @@
                         <form method="post" action="/admin/users">
                             <input type="text" name="name" placeholder="<%=l 'Users' %>">
                             <input type="submit" value="<%=l 'Search' %>">
-                            <button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'"><%=l 'Register' %></button>
+                            <button type="button" style="float: right; margin: 0 10px;" class="btn btn-success" onclick = "location='/users/register'"><%=l 'New user' %></button>
                         </form>
                     </div>
                 </div>
                 <div class="card-body">
-                        <table class="table table-striped">
+                        <table class="table table-striped" ng-show="num_lista">
                             <thead>
                                 <tr>
                                 <th><%=l 'Name' %></th>
@@ -32,9 +32,9 @@
     %                         }
                             </tbody>
                         </table>
-                    </div>
-                 </div>
                 </div>
+              </div>
+            </div>
         </div>
     </div>
 %= include $footer

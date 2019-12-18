@@ -1,8 +1,10 @@
-<div id="overNotifications" class="notifications" ng-controller="notifCrtl" ng-cloak>
+<div id="overNotifications" class="notifications" ng-controller="notifCrtl"
+    ng-init="subscribe_alerts('<%= url_for('ws_subscribe')->to_abs %>')"
+ng-cloak>
 <script type="text/ng-template" id="alert.html">
 <div ng-transclude></div>
 </script>
-<div uib-alert ng-repeat="alert in alerts"
+<div uib-alert ng-repeat="alert in alerts_ws"
  ng-class="'alert-' + (alert.type || 'warning')"
   ng-click="closeAlert($index)"
   ng-mouseover="alert.showMessage = false"

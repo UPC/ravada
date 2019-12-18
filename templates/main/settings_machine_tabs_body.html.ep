@@ -96,14 +96,4 @@
     </div>
 % }
 
-<div ng-show="message.length" class="alert alert-light border-primary text-primary mt-4">
-    <div ng-repeat="text in message">
-            {{text}}
-    </div>
-</div>
-
-<div class="mt-4"> <!-- del panel heading-->
-    %= include 'main/show_requests'
-</div>
-
 </div>

@@ -18,8 +18,11 @@
                 Clones
             </div>
             <div class="col-md-2">
-                <input type="text" size="2" ng-model="showmachine.pool_clones"
+                <input type="number" size="2" ng-model="showmachine.pool_clones"
                     ng-disabled="showmachine.pools==0"
+                    ng-change="set('pool_clones')"
+                    min="{{showmachine.pool_start}}"
+                    style="width: 5em"
                 >
             </div>
             <div class="col-mg-4">
@@ -32,8 +35,11 @@
                 Start
             </div>
             <div class="col-md-2">
-                <input type="text" size="2" ng-model="showmachine.pool_start"
+                <input type="number" size="2" ng-model="showmachine.pool_start"
                     ng-disabled="showmachine.pools==0"
+                    ng-change="set('pool_start')"
+                    max="{{showmachine.pool_clones}}"
+                    style="width: 5em"
                 >
             </div>
             <div class="col-mg-4">
@@ -50,7 +56,7 @@
                 <button type="button" class="btn btn-primary mt-3"
                     ng-disabled="showmachine.pool_start > showmachine.pool_clones"
                     ng-click="set('pool_clones');set('pool_start');refresh_machine()">
-                    <%=l 'Submit' %>
+                    <%=l 'Save' %>
                 </button>
 
             </div>
@@ -63,7 +69,8 @@
                 </div>
                 <div ng-show="showmachine.pool_start > showmachine.pool_clones"
                     class="alert alert-danger"
-                >Error: you want to have {{showmachine.pool_start}} but only have {{showmachine.pool_clones}} clones defined.
+                >Error: you want to have {{showmachine.pool_start}} but there are
+                    only {{showmachine.pool_clones}} clones defined.
                 </div>
              </div>
          </div>

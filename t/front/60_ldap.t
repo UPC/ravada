@@ -54,6 +54,11 @@ sub test_ldap {
     is($login_ok->{_auth},'bind',"Expecting bind login with $USER_DATA->{name}")
         if $login_ok;
 
+    my $user_db = Ravada::Auth::SQL->new( name => $USER_DATA->{name});
+    $user_db->remove();
+
+    create_ldap_user($USER_DATA->{name}, $USER_DATA->{password});
+
     $Ravada::CONFIG->{ldap}->{auth} = 'match';
     $login_ok = undef;
     eval { $login_ok = Ravada::Auth::LDAP->new( %$USER_DATA ); };
@@ -77,7 +82,7 @@ sub test_ldap_space {
     like($@, qr'.');
     ok(!$login_ok,"Expecting no login with $user{name}");
 
-    eval { $login_ok = Ravada::Auth::login($user{name}, $user{password}) };
+    eval { $login_ok = Ravada::Auth::login($user{name}, $user{password} , 1) };
     like($@, qr'.');
     ok(!$login_ok,"Expecting no login with $user{name}");
 
@@ -87,7 +92,7 @@ sub test_ldap_space {
     like($@, qr'.');
     ok(!$login_ok,"Expecting no login with $user{name}");
 
-    eval { $login_ok = Ravada::Auth::login($user{name}, $user{password}) };
+    eval { $login_ok = Ravada::Auth::login($user{name}, $user{password}, 1) };
     like($@, qr'.');
     ok(!$login_ok,"Expecting no login with $user{name}");
 }
