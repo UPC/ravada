@@ -680,7 +680,7 @@ sub create_volume {
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
 
-    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+(\.\d+)?$/);
 
     confess "Invalid capacity"
         if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
