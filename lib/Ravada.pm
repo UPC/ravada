@@ -1434,6 +1434,12 @@ sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
         warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
         return 0;
     }
+    warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
+        if exists $config_orig->{ldap}
+        && exists $config_orig->{ldap}->{auth}
+        && $config_orig->{ldap}->{auth} =~ /match/
+        && $0 !~ /\.t$/;
+
     return 1;
 }
 
