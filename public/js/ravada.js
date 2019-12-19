@@ -112,7 +112,7 @@
                 if (!ws_connected) {
                     $scope.ws_fail = true;
                 }
-            }, 5 * 1000 );
+            }, 60 * 1000 );
 
             $scope.subscribe_list_machines_user = function(url) {
                 var channel = 'list_machines_user';
@@ -157,9 +157,6 @@
                 subscribe_ping_backend(url);
             };
 
-            $http.get('/pingbackend.json').then(function(response) {
-                $scope.pingbe_fail = !response.data;
-            });
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
@@ -246,9 +243,6 @@
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
-          $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe_fail = !response.data;
-          });
           $scope.machine_info = function(id) {
                $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {

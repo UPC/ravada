@@ -116,9 +116,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -140,6 +137,7 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.subscribe_all=function(url) {
           subscribe_list_machines(url);
           subscribe_list_requests(url);
+          subscribe_ping_backend(url);
       };
       subscribe_list_machines= function(url) {
 
@@ -218,6 +216,17 @@ ravadaApp.directive("solShowMachine", swMach)
               });
           }
       }
+
+      subscribe_ping_backend= function(url) {
+          var ws = new WebSocket(url);
+          ws.onopen = function(event) { ws.send('ping_backend') };
+          ws.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+            $scope.$apply(function () {
+                        $scope.pingbe_fail = !data;
+            });
+          }
+      };
 
     $scope.orderParam = ['name'];
     $scope.auto_hide_clones = true;
@@ -299,9 +308,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function usersPageC($scope, $http, $interval, request) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
@@ -309,9 +315,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function messagesPageC($scope, $http, $interval, request) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
     $scope.getMessages = function() {
       $http.get('/messages.json').then(function(response) {
         $scope.list_message= response.data;
