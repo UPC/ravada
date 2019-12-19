@@ -930,8 +930,17 @@ add_network_10(0);
 test_can_expose_ports();
 for my $vm_name ( 'KVM', 'Void' ) {
 
+    SKIP: {
     my $vm = rvd_back->search_vm($vm_name);
-    next if !$vm;
+
+    my $msg = "SKIPPED test: No $vm_name VM found ";
+    if ($vm && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+    }
+
+    diag($msg)      if !$vm;
+    skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
     test_clone_exports_add_ports($vm);
@@ -957,6 +966,7 @@ for my $vm_name ( 'KVM', 'Void' ) {
 
     test_clone_exports($vm);
 
+    }; # of SKIP
 }
 
 flush_rules();
