@@ -15,8 +15,9 @@ use Moose;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
-
+use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
+use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -1262,7 +1263,13 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
-    $self->_upgrade_table('domains','screenshot','BLOB');
+
+    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+
+    $self->_upgrade_screenshots();
+
+    }
+
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
@@ -2510,6 +2517,21 @@ sub _cmd_copy_screenshot {
     } else {
         $base->_data(screenshot => $domain->_data('screenshot'));
     }
+}
+
+sub _upgrade_screenshots() {
+
+    my $self = shift;
+    my $id = shift  or confess "ERROR: missing argument id";
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT file_screenshot FROM domains WHERE id=?");
+    $sth->execute($id);
+    my ($file_path)= $sth->fetchrow;
+
+    my $file= new Image::Magick::Q16;
+    $file->Read($file_path);
+    
+    $self->_data(screenshot => encode_base64($file));
 }
 
 sub _cmd_create{
