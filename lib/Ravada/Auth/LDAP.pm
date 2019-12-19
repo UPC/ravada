@@ -415,7 +415,15 @@ sub _login_bind {
     my ($username, $password) = ($self->name , $self->password);
 
     my $found = 0;
-    for my $user (search_user( name => $self->name )) {
+
+    my @user;
+    if (exists $$CONFIG->{ldap}->{field} && defined $$CONFIG->{ldap}->{field} ) {
+        @user = search_user( name => $self->name );
+    } else {
+        @user = (search_user(name => $self->name, field => 'uid')
+                ,search_user(name => $self->name, field => 'cn'));
+    }
+    for my $user (@user) {
         my $dn = $user->dn;
         $found++;
         my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
