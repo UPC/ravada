@@ -30,7 +30,7 @@ sub test_list_nats($vm) {
     rvd_back->_process_requests_dont_fork();
     is($req->status,'done');
     is($req->error,'');
-    is($req->output,"[\"$exp_nat[0]\"]");
+    like($req->output,qr{\"$exp_nat[0]\"});
 
     my $nats = rvd_front->list_network_interfaces(
            user => user_admin

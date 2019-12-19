@@ -222,6 +222,176 @@ sub test_prepare_base {
 
 }
 
+sub test_prepare_base_with_cd {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    eval {
+        $domain->prepare_base(user => user_admin, with_cd => 1);
+    };
+    is($@,'') or exit;
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base)) or exit;
+
+    my $clone = rvd_back->create_domain(
+             name => new_domain_name
+        , id_base => $domain->id
+        ,id_owner => user_admin->id
+    );
+    my @volumes_clone = $clone->list_volumes_info;
+    for my $vol (@volumes_clone) {
+        like(ref $vol->domain, qr/^Ravada::Domain/);
+        like(ref $vol->vm, qr/^Ravada::VM/);
+    }
+
+    my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
+
+}
+sub test_prepare_base_with_cd_req {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    ok($domain_f->info(user_admin)->{cdrom}) or die Dumper($domain_f->info(user_admin)->{hardware}->{disk});
+    like($domain_f->info(user_admin)->{cdrom}->[0],qr/\.iso$/) or die Dumper($domain_f->info(user_admin)->{hardware}->{disk});
+
+    my $req = Ravada::Request->prepare_base(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,with_cd => 1
+    );
+    wait_request( debug => 1 );
+    is($req->status, 'done');
+    is($req->error, '');
+
+    is($domain->is_base, 1);
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
+
+    my $clone = rvd_back->create_domain(
+             name => new_domain_name
+        , id_base => $domain->id
+        ,id_owner => user_admin->id
+    );
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep {defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm} } @volumes_clone])) or exit;
+
+    $clone->remove(user_admin);
+
+    for my $vol ( @volumes_clone ) {
+        if ($vol->file =~ /\.iso$/) {
+            ok(-e $vol->file, $vol->file);
+        } else {
+            ok(!-e $vol->file, $vol->file);
+        }
+    }
+
+    $domain->remove_base(user_admin);
+
+    for my $volume ( @volumes_base ) {
+        my $file = $volume->[0];
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file, $file);
+        } else {
+            ok(!-e $file, $file);
+        }
+    }
+
+    $domain->prepare_base(user => user_admin, with_cd => 1);
+    my @volumes_base2 = $domain->list_files_base;
+    ok(grep(/\.iso$/,@volumes_base2));
+
+    for my $volume ( @volumes_base ) {
+        my $file = $volume->[0];
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file, "File shouldn't be removed : $file") or exit;
+        } else {
+            ok(-e $file, $file);
+        }
+    }
+
+
+    $domain->remove(user_admin);
+
+    for my $volume ( @volumes_base ) {
+        my $file = $volume->[0];
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file, "File shouldn't be removed : $file") or exit;
+        } else {
+            ok(!-e $file, $file);
+        }
+    }
+
+}
+
+sub test_clone_with_cd {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $clone = $domain->clone(
+             name => new_domain_name
+            ,user => user_admin
+         ,with_cd => 1
+    );
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
+
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
+
+}
+
+sub test_clone_with_cd_req {
+    my $vm = shift;
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes_info;
+    my ($cd) = grep { $_->file =~ /\.iso$/ } @volumes;
+    die "Expecting a CDROM\n".Dumper(@volumes) if !$cd;
+
+    my $clone_name = new_domain_name();
+    my $req = Ravada::Request->clone(
+            id_domain => $domain->id
+             ,with_cd => 1
+                ,name => $clone_name
+                 ,uid => user_admin->id
+    );
+    wait_request(debug => 1);
+    is($domain->is_base,1);
+    is($req->status, 'done');
+    is($req->error,'');
+
+    my @volumes_base = $domain->list_files_base_target;
+    my ($cd_base) = grep { $_->[0] =~ /\.iso$/ } @volumes_base;
+    ok($cd_base,"Expecting a CD base ".Dumper(\@volumes_base));
+
+    my $clone = rvd_back->search_domain($clone_name);
+    my @volumes_clone = $clone->list_volumes_info;
+    my ($cd_clone ) = grep { $_->file =~ /\.iso$/ } @volumes_clone;
+    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+
+}
+
 sub test_prepare_base_active {
     my $vm_name = shift;
 
@@ -275,7 +445,12 @@ sub test_remove_base {
     ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     for my $file (@files) {
-        ok(!-e $file,"Expecting file base '$file' removed" );
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$};
+        if ($file =~ /\.iso$/) {
+            ok(-e $file,"Expecting file base '$file' removed" );
+        } else {
+            ok(!-e $file,"Expecting file base '$file' removed" );
+        }
     }
 
     my @files_deleted = $domain->list_files_base();
@@ -319,6 +494,7 @@ sub test_dont_remove_base_cloned {
     ok($domain->is_base,"[$vm_name] expecting domain is base, got "
                         .$domain->is_base);
     for my $file (@files) {
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
         ok(-e $file,"[$vm_name] Expecting file base '$file' not removed" );
     }
 
@@ -332,7 +508,13 @@ sub test_dont_remove_base_cloned {
     ok(!$domain->is_base,"[$vm_name] expecting domain is base, got "
                         .$domain->is_base);
     for my $file (@files) {
-        ok(!-e $file,"[$vm_name] Expecting file base '$file' removed" );
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$}i;
+        if ($file =~ /\.iso$/) {
+            ok(-e $file,"[$vm_name] Expecting file base '$file' not removed" );
+        } else {
+            ok(!-e $file,"[$vm_name] Expecting file base '$file' removed" );
+        }
+
     }
 
 }
@@ -629,7 +811,8 @@ sub test_prepare_fail($vm) {
     is($domain->is_base,0) or exit;
     for my $vol ( @volumes ) {
         eval { $vol->backing_file };
-        like($@,qr/./);
+        like($@,qr/./, $vol->file)
+            if $vol->file !~ /\.iso$/;
     }
 
     # Now we only have the second file already there
@@ -642,7 +825,8 @@ sub test_prepare_fail($vm) {
     like($@,qr/already exists/);
     for my $vol ( @volumes ) {
         eval { $vol->backing_file };
-        like($@,qr/./, "Expecting ".$vol->file." not prepared") or exit;
+        like($@,qr/./, "Expecting ".$vol->file." not prepared")
+            if $vol->file !~ /\.iso$/;
     }
 
 
@@ -683,6 +867,12 @@ for my $vm_name ('KVM', 'Void') {
         test_prepare_fail($vm);
 
         test_domain_limit_already_requested($vm_name);
+
+        test_prepare_base_with_cd($vm);
+        test_clone_with_cd($vm);
+
+        test_prepare_base_with_cd_req($vm);
+        test_clone_with_cd_req($vm);
 
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);

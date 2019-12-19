@@ -27,6 +27,7 @@ my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
 my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
+my $REMOVE_USER;
 my $IMPORT_DOMAIN;
 my $IMPORT_VBOX;
 my $CHANGE_PASSWORD;
@@ -46,7 +47,9 @@ my $LIST;
 my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
+my $REMOVE_DOMAIN;
 my $REBASE;
+my $RUN_REQUEST;
 
 my $IMPORT_DOMAIN_OWNER;
 
@@ -58,9 +61,11 @@ my $USAGE = "$0 "
         ." [--test-ldap] "
         ." [-X] [start|stop|status]"
         ." [--rebase MACHINE]"
+        ." [--remove-user=name]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
+        ." --remove-user : removes a db user\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --import-domain-owner : owner of the domain to import\n"
@@ -76,6 +81,7 @@ my $USAGE = "$0 "
         ." --start\n"
         ." --hibernate machine\n"
         ." --shutdown machine\n"
+        ." --remove machine\n"
         ."\n"
         ."Operations modifiers:\n"
         ." --all : execute on all virtual machines\n"
@@ -102,7 +108,9 @@ GetOptions (       help => \$help
            ,'url-isos=s'=> \$URL_ISOS
            ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
           ,'hibernate:s'=> \$HIBERNATE_DOMAIN
+             ,'remove:s'=> \$REMOVE_DOMAIN
          ,'disconnected'=> \$DISCONNECTED
+        ,'remove-user=s'=> \$REMOVE_USER
         ,'make-admin=s' => \$MAKE_ADMIN_USER
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
@@ -112,6 +120,7 @@ GetOptions (       help => \$help
 ,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
 
     ,'add-locale-repository=s' => \$ADD_LOCALE_REPOSITORY
+    ,'run-request=s' => \$RUN_REQUEST
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -126,7 +135,7 @@ if ($help) {
     exit;
 }
 
-die "Only root can do that\n" if $> && ( $ADD_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
+die "Only root can do that\n" if $> && ( $ADD_USER || $REMOVE_USER || $ADD_USER_LDAP || $IMPORT_DOMAIN);
 die "ERROR: Missing file config $FILE_CONFIG\n"
     if $FILE_CONFIG && ! -e $FILE_CONFIG;
 
@@ -169,6 +178,8 @@ sub do_start {
         $ravada->process_long_requests();
         $ravada->process_requests();
 
+        exit if done_request();
+
         if ( time - $t_refresh > 60 ) {
             Ravada::Request->cleanup();
             Ravada::Request->refresh_vms()      if rand(5)<3;
@@ -178,6 +189,16 @@ sub do_start {
         }
         sleep 1 if time - $t0 <1;
     }
+
+}
+
+sub done_request {
+    return 0 if !$RUN_REQUEST;
+    my $req;
+    eval { $req = Ravada::Request->open($RUN_REQUEST) };
+    warn $req->status;
+    warn $@ if $@;
+    return 1 if !$req || $req->status eq 'done';
 
 }
 
@@ -200,6 +221,7 @@ sub start {
     for (;;) {
         eval { do_start() };
         warn $@ if $@;
+        exit if done_request();
     }
 }
 
@@ -235,6 +257,21 @@ sub add_user_ldap {
     chomp $password;
 
     Ravada::Auth::LDAP::add_user($login, $password);
+}
+
+sub remove_user {
+    my $login = shift;
+    my $ravada = Ravada->new( %CONFIG);
+
+    my $user = Ravada::Auth::SQL->new(name => $login);
+
+    die "ERROR: Unknown user '$login'\n" if !$user->id;
+    print "Are you sure you want remove $login user ? : [y/n] ";
+    my $remove_it = <STDIN>;
+    if ( $remove_it =~ /y/i ) {
+        $user->remove();
+        print "USER $login was removed\n";
+    }
 }
 
 sub change_password {
@@ -409,6 +446,20 @@ sub hibernate {
         if !$domain_name && !$found;
 }
 
+sub remove_domain {
+    my $domain_name = shift;
+
+    my $rvd_back = Ravada->new(%CONFIG);
+    my $domain = $rvd_back->search_domain($domain_name);
+    die "Error: domain $domain_name not found\n" if !$domain;
+
+    Ravada::Request->remove_domain(
+                uid => Ravada::Utils::user_daemon()->id
+                ,name => $domain->name
+    );
+    print "Removing $domain_name\n";
+}
+
 sub start_domain {
     my $domain_name = shift;
 
@@ -561,6 +612,7 @@ my $rvd_back = Ravada->new(%CONFIG);
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
+remove_user($REMOVE_USER)           if $REMOVE_USER;
 change_password()                   if $CHANGE_PASSWORD;
 import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
 import_vbox($IMPORT_VBOX)           if $IMPORT_VBOX;
@@ -572,6 +624,7 @@ rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
 hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;
+remove_domain($REMOVE_DOMAIN)              if defined $REMOVE_DOMAIN;
 start_domain($START_DOMAIN)         if $START_DOMAIN;
 
 shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)

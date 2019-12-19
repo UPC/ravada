@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0-beta8';
+our $VERSION = '0.6.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -139,6 +139,7 @@ sub BUILD {
 sub _install($self) {
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
 }
@@ -1282,6 +1283,30 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
 }
 
+sub _upgrade_timestamps($self) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
+    my $req = Ravada::Request->ping_backend();
+    return if $req->{date_changed};
+
+    my @commands = qw(cleanup enforce_limits list_isos list_network_interfaces
+    manage_pools open_exposed_ports open_iptables ping_backend
+    refresh_machine refresh_storage refresh_vms
+    screenshot);
+    my $sql ="DELETE FROM requests WHERE "
+        .join(" OR ", map { "command = '$_'" } @commands);
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute();
+
+    $self->_upgrade_timestamp('requests','date_changed');
+}
+
+sub _upgrade_timestamp($self, $table, $field) {
+
+    my $sth = $CONNECTOR->dbh->prepare("ALTER TABLE $table change $field "
+        ."$field timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    $sth->execute();
+}
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
@@ -2233,7 +2258,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) + 60 );
+    $sth->execute(time - 5*scalar(@domains) - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2269,7 +2294,8 @@ sub _domain_working {
     }
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? "
-        ." AND (status <> 'requested' AND status <> 'done' AND command <> 'set_base_vm')");
+        ." AND (status <> 'requested' AND status <> 'done' AND status <> 'waiting' "
+        ." AND command <> 'set_base_vm')");
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -2322,9 +2348,10 @@ sub _execute {
         return;
     }
 
+    $request->status('working','') unless $request->status() eq 'waiting';
+    $request->pid($$);
     $request->start_time(time);
     $request->error('');
-        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
@@ -2357,6 +2384,7 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    $request->status('working','') unless $request->status() eq 'working';
     $request->pid($$);
     my $t0 = [gettimeofday];
     eval {
@@ -2366,6 +2394,18 @@ sub _do_execute_command {
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
     $request->error($err)   if $err;
+    if ($err) {
+        my $user = $request->defined_arg('user');
+        if ($user) {
+            my $subject = $err;
+            my $message = '';
+            if (length($subject) > 40 ) {
+                $message = $subject;
+                $subject = substr($subject,0,40);
+                $user->send_message($subject, $message);
+            }
+        }
+    }
     if ($err && $err =~ /retry.?$/i) {
         my $retry = $request->retry;
         if (defined $retry && $retry>0) {
@@ -2377,11 +2417,10 @@ sub _do_execute_command {
             $err =~ s/(.*?)retry.?/$1/i;
             $request->error($err)   if $err;
         }
-    } else {
+    }
     $request->status('done')
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
-    }
 }
 
 sub _cmd_manage_pools($self, $request) {
@@ -2568,22 +2607,35 @@ sub _can_fork {
     warn $msg if $DEBUG;
 
     $req->error($msg);
+    $req->at_time(time+10);
     $req->status('waiting') if $req->status() !~ 'waiting';
+    $req->at_time(time+10);
     return 0;
 }
 sub _wait_pids {
     my $self = shift;
 
+    my @done;
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             my $kid = waitpid($pid , WNOHANG);
-            last if $kid <= 0 ;
-            my $request = Ravada::Request->open($self->{pids}->{$type}->{$kid});
-            if ($request) {
-                $request->status('done') if $request->status =~ /working/i;
-            };
-            delete $self->{pids}->{$type}->{$kid};
+            push @done, ($pid) if $kid == $pid || $kid == -1;
         }
+    }
+    return if !@done;
+    for my $pid (@done) {
+        my $id_req;
+        for my $type ( keys %{$self->{pids}} ) {
+            $id_req = $self->{pids}->{$type}->{$pid} if exists $self->{pids}->{$type}->{$pid};
+            next if !$id_req;
+            delete $self->{pids}->{$type}->{$pid};
+            last;
+        }
+        next if !$id_req;
+        my $request = Ravada::Request->open($id_req);
+        if ($request) {
+            $request->status('done') if $request->status =~ /working/i;
+        };
     }
 }
 
@@ -2832,12 +2884,14 @@ sub _cmd_prepare_base {
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
         or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
+    my $with_cd = $request->defined_arg('with_cd');
+
     my $domain = $self->search_domain_by_id($id_domain);
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
     $self->_remove_unnecessary_downs($domain);
-    $domain->prepare_base($user);
+    $domain->prepare_base(user => $user, with_cd => $with_cd);
 
 }
 
@@ -2986,6 +3040,11 @@ sub _cmd_shutdown {
         die "Unknown domain '$id_domain'\n" if !$domain
     }
 
+    Ravada::Request->refresh_machine(
+                   uid => $uid
+            ,id_domain => $id_domain
+        ,after_request => $request->id
+    );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
     $domain->shutdown(timeout => $timeout, user => $user
@@ -3087,9 +3146,10 @@ sub _cmd_refresh_machine($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+    $domain->check_status();
     $domain->list_volumes_info();
+    $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
     $domain->info($user);
-    $self->_remove_unnecessary_downs($domain);
 
 }
 
@@ -3313,6 +3373,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
 }
 
 sub _refresh_active_domain($self, $domain, $active_domain) {
+    $domain->check_status();
     return if $domain->is_hibernated();
 
     my $is_active = $domain->is_active();

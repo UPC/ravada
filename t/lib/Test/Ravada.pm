@@ -51,13 +51,14 @@ create_domain
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
-    create_ldap_user
     init_ldap_config
 
     create_storage_pool
     local_ips
 
     delete_request
+
+    remove_old_domains_req
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -102,8 +103,15 @@ sub user_admin {
     my $admin_name = base_domain_name();
     my $admin_pass = "$$ $$";
     eval {
-        $login = Ravada::Auth::SQL->new(name => $admin_name );
+        $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
     };
+    if ($@ && $@ =~ /Login failed/ ) {
+        $login = Ravada::Auth::SQL->new(name => $admin_name);
+        $login->remove();
+        $login = undef;
+    } elsif ($@) {
+        die $@;
+    }
     $USER_ADMIN = $login if $login && $login->id;
     $USER_ADMIN = create_user($admin_name, $admin_pass,1)
         if !$USER_ADMIN;
@@ -226,19 +234,22 @@ sub new_volume_name($domain=undef) {
     return $name."_".$CONT_VOL++;
 }
 
-sub rvd_back($config=undef, $init=1) {
+sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     return $RVD_BACK            if $RVD_BACK && !$config;
 
     $RVD_BACK = 1;
     init($config or $DEFAULT_CONFIG) if $init;
 
+    my @connector;
+    @connector = ( connector => connector() ) if $sqlite;
     my $rvd = Ravada->new(
-            connector => connector()
+            @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
     );
     $rvd->_install();
+    $CONNECTOR = $rvd->connector if !$sqlite;
 
     user_admin();
     $RVD_BACK = $rvd;
@@ -259,7 +270,7 @@ sub rvd_front($config=undef) {
     return $RVD_FRONT;
 }
 
-sub init($config=undef) {
+sub init($config=undef, $sqlite = 1) {
 
     if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
         $config = { vm => [ $config ] };
@@ -279,12 +290,17 @@ sub init($config=undef) {
         DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
     }
 
-    $Ravada::CONNECTOR = connector();
-    Ravada::Auth::SQL::_init_connector($CONNECTOR);
+
+    rvd_back($config, 0,$sqlite)  if !$RVD_BACK;
+    if (!$sqlite) {
+        $CONNECTOR = $RVD_BACK->connector;
+    } else {
+        $Ravada::CONNECTOR = connector();
+        Ravada::Auth::SQL::_init_connector($CONNECTOR);
+    }
 
     $Ravada::Domain::MIN_FREE_MEMORY = 512*1024;
 
-    rvd_back($config, 0)  if !$RVD_BACK;
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
 }
@@ -347,6 +363,33 @@ sub remote_config_nodes {
     return $conf;
 }
 
+sub remove_old_domains_req() {
+    my $base_name = base_domain_name();
+    my $machines = rvd_front->list_machines(user_admin);
+    for my $machine ( @$machines) {
+        my $domain = Ravada::Front::Domain->open($machine->{id});
+        next if $domain->name !~ /^$base_name/;
+        my $n_clones = scalar($domain->clones);
+        my $req_clone;
+        for my $clone ($domain->clones) {
+            $req_clone = Ravada::Request->remove_domain(
+                name => $clone->{name}
+                ,uid => user_admin->id
+            );
+        }
+        wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
+
+        my @after_req = ();
+        @after_req = ( after_request => $req_clone->id ) if $req_clone;
+        my $req = Ravada::Request->remove_domain(
+            name => $machine->{name}
+            ,uid => user_admin->id
+        );
+    }
+    wait_request(debug => 1, background => 1, timeout => 120);
+
+}
+
 sub _remove_old_domains_vm($vm_name) {
 
     confess "Undefined vm_name" if !defined $vm_name;
@@ -383,6 +426,7 @@ sub _remove_old_domains_vm($vm_name) {
 
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
+        warn $@ if $@;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine() if $domain->domain };
         }
@@ -636,9 +680,10 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or [] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
+    %skip = ( enforce_limits => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -657,7 +702,8 @@ sub wait_request {
             my $req = Ravada::Request->open($req_id);
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
-                diag("Waiting for request ".$req->id." ".$req->command) if $debug;
+                diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
+                    ." ".($req->error or '')) if $debug && (time%5 == 0);
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
@@ -668,6 +714,8 @@ sub wait_request {
         $post = '' if !defined $post;
         if ( $done_all ) {
             for my $req (@$request) {
+                $req = Ravada::Request->open($req) if !ref($req);
+                next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     diag("Waiting for request ".$req->id." ".$req->command);
@@ -677,7 +725,7 @@ sub wait_request {
         }
         return if $done_all && $prev eq $post && scalar(keys %done) == $done_count;;
         return if defined $timeout && time - $t0 >= $timeout;
-        sleep 1 if !$background;
+        sleep 1 if $background;
     }
 }
 

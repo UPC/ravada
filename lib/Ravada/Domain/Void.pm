@@ -231,31 +231,6 @@ sub start($self, @args) {
     $self->_set_display( $listen_ip );
 }
 
-=pod
-
-sub prepare_base {
-    my $self = shift;
-
-    my @img;
-    for my $volume ($self->list_volumes_info(device => 'disk')) {;
-        next if $volume->{device} ne 'disk';
-        my $file_qcow = $volume->{file};
-        my $file_base = $file_qcow.".qcow";
-
-        if ( $file_qcow =~ /.SWAP.img$/ ) {
-            $file_base = $file_qcow;
-            $file_base =~ s/(\.SWAP.img$)/base-$1/;
-        }
-        open my $out,'>',$file_base or die "$! $file_base";
-        print $out "$file_qcow\n";
-        close $out;
-        push @img,([$file_base, $volume->{target}]);
-    }
-    return @img;
-}
-
-=cut
-
 sub list_disks {
     my @disks;
     for my $disk ( list_volumes_info(@_)) {
@@ -284,6 +259,7 @@ sub remove_disks {
         my $file = $vol->{file};
         my $device = $vol->info->{device};
         next if $device eq 'cdrom';
+        next if $file =~ /\.iso$/;
         $self->_vol_remove($file);
     }
 

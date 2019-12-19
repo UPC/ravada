@@ -33,10 +33,19 @@
                     <input class="form-control" ng-model="copy_ram" type="text" size="3">
                 </div>
             </div>
+            <div ng-show="copy_request" class="alert alert-warning">
+                Copy {{shownamchine.name}} {{copy_request.status}}.
+                <br/>
+                {{copy_request.error}}
+            </div>
+
+            <div ng-hide="copy_request && copy_request.status !== 'done'">
             <button type="reset" class="btn btn-outline-secondary mr-2"><%=l 'Cancel' %></button>
             <button class="btn btn-primary"
                 ng-click="copy_machine()"
-                ng-disabled="copy_number <1 || copy_number == 1 && (new_name_duplicated || new_name_invalid || new_name === showmachine.name)"><%=l 'Submit' %></button>
+                ng-disabled="copy_number <1 || copy_number == 1 && (new_name_duplicated || new_name_invalid || new_name === showmachine.name )
+                || (copy_request && copy_request.status !== 'done')"><%=l 'Submit' %></button>
+            </div>
         </div>
     <div class="form-group has-error">
         <label ng-show="copy_number==1 && new_name_duplicated"

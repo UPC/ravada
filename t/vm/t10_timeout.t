@@ -47,14 +47,12 @@ sub test_run_timeout {
     is($clone->is_active,1);
     rvd_back->_process_all_requests_dont_fork();
     is($clone->is_active,1);
-    sleep($timeout);
-    rvd_back->_process_all_requests_dont_fork();
-    for ( 1 .. 60 ) {
-        last if !$clone->is_active;
+    for ( 1 .. $timeout + 60 ) {
+        last if !$clone->is_active || ! scalar($clone->list_requests(1));
         sleep 1;
         rvd_back->_process_all_requests_dont_fork();
     }
-    is($clone->is_active,0);
+    is($clone->is_active,0, "Expecting ".$clone->name." timed out shutdown") or exit;
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);

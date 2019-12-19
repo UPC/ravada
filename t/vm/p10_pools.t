@@ -42,7 +42,7 @@ sub test_clones($domain, $n_clones) {
     wait_request();
     $domain->pool_clones($n_clones);
     is($domain->pool_clones, $n_clones);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($domain->is_base,1);
     is($domain->clones(), $n_clones) or exit;
     is($domain->clones(is_pool => 1), $n_clones);

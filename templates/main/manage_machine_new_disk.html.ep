@@ -43,10 +43,9 @@
             <label for="file"><%=l 'ISO file' %></label>
         </div>
         <div class="col-lg-3">
-            <select name="file" ng-model="add_disk.file">
-%               for (@$isos) {
-                <option value="<%= $_ %>"><%= $_ %></option>
-%               }
+            <select name="file" ng-model="add_disk.file"
+                ng-options="iso for iso in list_isos"
+            >
             </select>
         </div>
     </div>

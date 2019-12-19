@@ -548,6 +548,8 @@ sub _around_add_volume {
 }
 
 sub _check_volume_added($self, $file) {
+    return if $file =~ /\.iso$/i;
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain FROM volumes "
         ." WHERE file=?"
     );
@@ -592,10 +594,21 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     return @volumes;
 }
 
-sub _around_prepare_base($orig, $self, $user, $request = undef) {
+sub _around_prepare_base($orig, $self, @args) {
+    #sub _around_prepare_base($orig, $self, $user, $request = undef) {
+    my ($user, $request, $with_cd);
+    if(ref($args[0]) =~/^Ravada::/) {
+        ($user, $request) = @args;
+    } else {
+        my %args = @args;
+        $user = delete $args{user};
+        $request = delete $args{request};
+        $with_cd = delete $args{with_cd};
+        confess "Error: uknown args". Dumper(\%args) if keys %args;
+    }
     $self->_pre_prepare_base($user, $request);
 
-    my @base_img = $self->$orig();
+    my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -605,16 +618,17 @@ sub _around_prepare_base($orig, $self, $user, $request = undef) {
     $self->_post_prepare_base($user, $request);
 }
 
-sub prepare_base($self) {
+sub prepare_base($self, $with_cd) {
     my @base_img;
-    for my $volume ($self->list_volumes_info(device => 'disk')) {
-        confess "Undefined info->target ".Dumper($volume)
-            if !$volume->info->{target};
+    for my $volume ($self->list_volumes_info()) {
         my $base_file = $volume->base_filename;
+        next if !$base_file || $base_file =~ /\.iso$/;
         die "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
     }
 
-    for my $volume ($self->list_volumes_info(device => 'disk')) {
+    for my $volume ($self->list_volumes_info()) {
+        next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
+        next if $volume->info->{device} eq 'cdrom' && !$with_cd;
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
 
@@ -1059,12 +1073,13 @@ sub open($class, @args) {
         $domain = $vm->search_domain($row->{name}, $force) or return;
         $domain->_data(id_vm => $vm->id);
     }
-    if (!$id_vm) {
-        $domain->_search_already_started() if !$domain->is_base;
-        $domain->_check_clean_shutdown()  if $domain->domain && !$domain->is_active;
-    }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
     return $domain;
+}
+
+sub check_status($self) {
+    $self->_search_already_started()    if !$self->is_base;
+    $self->_check_clean_shutdown()      if $self->domain && !$self->is_active;
 }
 
 =head2 is_known
@@ -1285,6 +1300,7 @@ sub info($self, $user) {
         ,is_base => $self->is_base
         ,id_base => $self->id_base
         ,is_active => $is_active
+        ,is_hibernated => $self->is_hibernated
         ,spice_password => $self->spice_password
         ,description => $self->description
         ,msg_timeout => ( $self->_msg_timeout or undef)
@@ -1332,6 +1348,13 @@ sub info($self, $user) {
     $info->{bases} = $self->_bases_vm();
     $info->{clones} = $self->_clones_vm();
     $info->{ports} = [$self->list_ports()];
+    my @cdrom = ();
+    for my $disk (@{$info->{hardware}->{disk}}) {
+        push @cdrom,($disk->{file}) if $disk->{file} && $disk->{file} =~ /\.iso$/;
+    }
+    $info->{cdrom} = \@cdrom;
+    $info->{requests} = $self->list_requests();
+
     return $info;
 }
 
@@ -1429,6 +1452,8 @@ sub _pre_remove_domain($self, $user, @) {
 
 }
 
+# check the node is active
+# search the domain in another node if it is not
 sub _check_active_node($self) {
     return $self->_vm if $self->_vm->is_active(1);
 
@@ -1436,7 +1461,9 @@ sub _check_active_node($self) {
         next if !$node->is_local;
 
         $self->_vm($node);
-        $self->domain($node->search_domain_by_id($self->id)->domain);
+        my $domain_active = $node->search_domain_by_id($self->id);
+        next if !$domain_active;
+        $self->domain($domain_active->domain);
         last;
     }
     return $self->_vm;
@@ -1461,6 +1488,7 @@ sub _after_remove_domain {
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
+    $self->_remove_ports_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
@@ -1489,6 +1517,14 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
     }
+}
+
+sub _remove_ports_db($self) {
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_ports"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
 }
 
 sub _remove_access_attributes_db($self) {
@@ -1554,6 +1590,7 @@ sub _remove_files_base {
     my $self = shift;
 
     for my $file ( $self->list_files_base ) {
+        next if $file =~ /\.iso$/;
         unlink $file or die "$! $file" if -e $file;
     }
 }
@@ -1859,7 +1896,9 @@ sub clone {
     my $request = delete $args{request};
     my $memory = delete $args{memory};
     my $start = delete $args{start};
-
+    my $is_pool = delete $args{is_pool};
+    my $no_pool = delete $args{no_pool};
+    my $with_cd = delete $args{with_cd};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -1882,7 +1921,7 @@ sub clone {
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
-        $self->prepare_base($user)
+        $self->prepare_base(user => $user, with_cd => $with_cd)
     }
 
     my @args_copy = ();
@@ -1995,7 +2034,6 @@ sub _pre_shutdown {
 
     $self->_allow_shutdown(@_);
 
-    $self->_vm->connect;
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
@@ -2017,6 +2055,7 @@ sub _post_shutdown {
     }
 
     my $is_active = $self->is_active;
+
     $self->_data(status => 'shutdown')
         if $self->is_known && !$self->is_volatile && !$is_active;
 
@@ -2040,6 +2079,11 @@ sub _post_shutdown {
             return $self->_do_force_shutdown() if !$self->is_removed && $is_active;
         }
 
+        Ravada::Request->refresh_machine(
+                         at => time+int($timeout/2)
+                      , uid => Ravada::Utils::user_daemon->id
+                , id_domain => $self->id
+        );
         my $req = Ravada::Request->force_shutdown_domain(
             id_domain => $self->id
                ,id_vm => $self->_vm->id
@@ -2184,6 +2228,10 @@ sub expose($self, @args) {
         $internal_port = delete $args{port};
         $internal_port = delete $args{internal_port} if exists $args{internal_port};
         delete $args{internal_ip};
+        # remove old fields
+        for (qw(public_ip active description)) {
+            delete $args{$_};
+        }
 
         confess "Error: Missing port" if !defined $internal_port && !$id_port;
         confess "Error: internal port not a number '".($internal_port or '<UNDEF>')."'"
@@ -2238,10 +2286,10 @@ sub _update_expose($self, %args) {
 
     if ($self->is_active) {
         my $sth=$$CONNECTOR->dbh->prepare(
-            "SELECT internal_port,restricted FROM domain_ports where id=?");
+            "SELECT internal_port,name,restricted FROM domain_ports where id=?");
         $sth->execute($id);
-        my ($internal_port, $restricted) = $sth->fetchrow;
-        $self->_open_exposed_port($internal_port, $restricted);
+        my ($internal_port, $name, $restricted) = $sth->fetchrow;
+        $self->_open_exposed_port($internal_port, $name, $restricted);
     }
 }
 
@@ -2254,31 +2302,51 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         ." VALUES (?,?,?,?,?)"
     );
 
-    my $public_port = $self->_vm->_new_free_port();
 
-    $sth->execute($self->id
-        , $public_port, $internal_port
-        , ($name or undef)
-        , $restricted
-    );
-    $sth->finish;
+    my $public_port;
+    for (;;) {
+        eval {
+            $public_port = $self->_vm->_new_free_port();
+            $sth->execute($self->id
+                , $public_port, $internal_port
+                , ($name or undef)
+                , $restricted
+            );
+            $sth->finish;
+        };
+        last if !$@;
+        confess $@ if $@ && $@ !~ /Duplicate entry .*for key 'public/;
+    }
 
-    $self->_open_exposed_port($internal_port, $restricted) if $self->is_active && $self->ip;
+    $self->_open_exposed_port($internal_port, $name, $restricted)
+        if $self->is_active && $self->ip;
     return $public_port;
 }
 
-sub _open_exposed_port($self, $internal_port, $restricted) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports"
+sub _open_exposed_port($self, $internal_port, $name, $restricted) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
-    my ($public_port) = $sth->fetchrow();
+    my ($id_port, $public_port) = $sth->fetchrow();
     if (!$public_port) {
         $public_port = $self->_vm->_new_free_port();
-        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
-            ." WHERE id_domain=? AND internal_port=?"
-        );
-        $sth->execute($public_port, $self->id, $internal_port);
+        if ($id_port) {
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
+                ." WHERE id_domain=? AND internal_port=?"
+            );
+            $sth->execute($public_port, $self->id, $internal_port);
+        } else {
+            my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
+                 ."(id_domain, public_port, internal_port, name, restricted)"
+                 ." VALUES(?,?,?,?,?) "
+            );
+            $sth->execute( $self->id
+                ,$public_port, $internal_port
+                ,( $name or undef )
+                ,$restricted
+            );
+        }
     }
 
     my $local_ip = $self->_vm->ip;
@@ -2359,7 +2427,8 @@ sub open_exposed_ports($self) {
     }
 
     for my $expose ( @ports ) {
-        $self->_open_exposed_port($expose->{internal_port}, $expose->{restricted});
+        $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
+            ,$expose->{restricted});
     }
 }
 
@@ -2389,9 +2458,6 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
 
-    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM requests WHERE id_domain=? "
-            ." AND command='open_exposed_ports'");
-    $sth->execute($self->id);
     $sth->finish;
 }
 
@@ -2481,10 +2547,25 @@ sub list_ports($self) {
         ." FROM domain_ports WHERE id_domain=?");
     $sth->execute($self->id);
     my @list;
+    my %clone_port;
     while (my $data = $sth->fetchrow_hashref) {
         lock_hash(%$data);
         push @list,($data);
+        $clone_port{$data->{internal_port}}++;
     }
+
+    if ($self->id_base) {
+        my $base = Ravada::Front::Domain->open($self->id_base);
+        my @ports_base = $base->list_ports();
+        for my $data (@ports_base) {
+            next if exists $clone_port{$data->{internal_port}};
+            unlock_hash(%$data);
+            $data->{public_port} = $self->_vm->_new_free_port() if $self->_vm;
+            lock_hash(%$data);
+            push @list,($data);
+        }
+    }
+
     return @list;
 }
 
@@ -2605,7 +2686,7 @@ sub _post_start {
     Ravada::Request->open_exposed_ports(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
-            ,retry => 5
+            ,retry => 20
     ) if $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
@@ -2613,7 +2694,7 @@ sub _post_start {
             id_domain => $self->id
                 , uid => $arg{user}->id
                  , at => time+$self->run_timeout
-                 , timeout => 59
+                 , timeout => $TIMEOUT_SHUTDOWN
         );
 
     }
@@ -3449,6 +3530,7 @@ sub _pre_migrate($self, $node, $request = undef) {
 
     return if !$self->id_base;
 
+    $self->check_status();
     confess "ERROR: Active domains can't be migrated"   if $self->is_active;
 
     my $base = Ravada::Domain->open($self->id_base);
@@ -3639,7 +3721,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
