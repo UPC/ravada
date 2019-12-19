@@ -63,9 +63,9 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
-    ,screenshot_domain => { id_domain => 1, filename => 2 }
+    ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
-    ,copy_screenshot => { id_domain => 1, filename => 2 }
+    ,copy_screenshot => { id_domain => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -150,6 +150,7 @@ our %COMMAND = (
     ,disk => {
         limit => 1
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
+                    , 'screenshot'
                     , 'manage_pools']
         ,priority => 6
     }
@@ -415,7 +416,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request retry)) {
+    for (qw(at after_request retry _no_duplicate)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -531,6 +532,7 @@ sub _new_request {
         $args{domain_name} = $args{name};
         delete $args{name};
     }
+    my $no_duplicate = delete $args{_no_duplicate};
     my $uid;
     if ( ref $args{args} ) {
         $args{args}->{uid} = $args{args}->{id_owner}
@@ -553,7 +555,8 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools|list_isos)$/) {
+    if ($args{command} =~ /^(clone|manage_pools|list_isos)$/
+        || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
         if ( _duplicated_request($args{command}, $args{args})
             || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
             #            warn "Warning: duplicated request for $args{command} $args{args}";
@@ -842,34 +845,6 @@ sub defined_arg {
     return $self->{args}->{$name};
 }
 
-=head2 screenshot_domain
-
-Request the screenshot of a domain.
-
-Arguments:
-
-- optional filename , defaults to "storage_path/$id_domain.png"
-
-Returns a Ravada::Request;
-
-=cut
-
-sub screenshot_domain {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('screenshot_domain', @_ );
-
-    $args->{filename} = '' if !exists $args->{filename};
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
-        ,args => $args);
-
-}
-
 =head2 copy_screenshot
 
 Request to copy a screenshot from a domain to another
@@ -881,8 +856,6 @@ sub copy_screenshot {
   my $class=ref($proto) || $proto;
 
   my $args = _check_args('copy_screenshot', @_ );
-
-  $args->{filename} = '' if !exists $args->{filename};
 
   my $self = {};
   bless($self,$class);

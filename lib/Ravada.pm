@@ -2505,16 +2505,10 @@ sub _cmd_copy_screenshot {
     my $id_base = $domain->id_base;
     my $base = $self->search_domain_by_id($id_base);
 
-    if (!$domain->file_screenshot) {
+    if (!$domain->screenshot) {
         die "I don't have the screenshot of the domain ".$domain->name;
     } else {
-
-        my $base_screenshot = $domain->file_screenshot();
-
-        $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
-        $base->_post_screenshot($base_screenshot);
-
-        copy($domain->file_screenshot, $base_screenshot);
+        $base->_data(screenshot => $domain->_data('screenshot'));
     }
 }
 

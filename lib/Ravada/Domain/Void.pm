@@ -453,12 +453,11 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
 sub screenshot {
     my $self = shift;
     my $DPI = 300; # 600;
-    my $image = Image::Magick->new(density => $DPI,width=>100, height=>100);
-    $image = Image::Magick->new;
-    $image->Set(size=>'100x100');
-    $image->ReadImage('canvas:white');
-    $image->Set('pixel[49,49]'=>'red');
-    $self->_data(screenshot => encode_base64($image));
+    my $image = Image::Magick->new(density => $DPI,width=>250, height=>188);
+    $image->Set(size=>'250x188');
+    $image->ReadImage('canvas:#'.int(rand(10)).int(rand(10)).int(rand(10)));
+    my @blobs = $image->ImageToBlob(magick => 'png');
+    $self->_data(screenshot => encode_base64($blobs[0]));
 }
 
 sub _file_screenshot {

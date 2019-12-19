@@ -163,10 +163,12 @@ sub list_machines_user {
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
             if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
-                my $req = Ravada::Request->screenshot_domain(
-                id_domain => $clone->id
-                ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
-                );
+                if (!Ravada::Request::done_recently(undef,10,'screenshot')) {
+                    my $req = Ravada::Request->screenshot(
+                        id_domain => $clone->id
+                        ,_no_duplicate => 1
+                    );
+                }
             }
             $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('screenshot')

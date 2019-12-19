@@ -2036,10 +2036,8 @@ sub screenshot_machine {
 
     my $domain = _search_requested_machine($c);
 
-    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    my $req = Ravada::Request->screenshot_domain (
+    my $req = Ravada::Request->screenshot(
         id_domain => $domain->id
-        ,filename => $file_screenshot
     );
     $c->render(json => { request => $req->id});
 }
@@ -2050,10 +2048,8 @@ sub copy_screenshot {
 
     my $domain = _search_requested_machine($c);
 
-    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
     my $req = Ravada::Request->copy_screenshot (
         id_domain => $domain->id
-        ,filename => $file_screenshot
     );
     $c->render(json => { request => $req->id});
 }
@@ -2091,12 +2087,10 @@ sub prepare_machine {
     return $c->render(json => { error => "Domain ".$domain->name." is locked" })
             if  $domain->is_locked();
 
-    my $file_screenshot = "$DOCUMENT_ROOT/img/screenshots/".$domain->id.".png";
-    if (! -e $file_screenshot && $domain->can_screenshot()
+    if (! $domain->_data('screenshot') && $domain->can_screenshot()
             && $domain->is_active) {
-        Ravada::Request->screenshot_domain (
+        Ravada::Request->screenshot(
             id_domain => $domain->id
-            ,filename => $file_screenshot
         );
     }
 
