@@ -10,7 +10,7 @@ use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $DEBUG=0;
+my $DEBUG=1;
 
 has clients => (
     is => 'ro'
@@ -134,8 +134,7 @@ sub _get_machine_info($rvd, $args) {
 }
 
 sub _ping_backend($rvd, $args) {
-    my $requests = $rvd->list_requests(undef, 120, 1);
-    return 1 if !scalar(@$requests);
+    my $requests = $rvd->list_requests(undef, 120);
     warn Dumper($requests);
     my @requests2 = grep { $_->{status} ne 'requested' } @$requests;
 
