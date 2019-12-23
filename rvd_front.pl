@@ -1527,6 +1527,9 @@ sub req_new_domain {
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
 
+    my $data = ($c->param('data') or 0);
+    $data *= 1024*1024*1024;
+
     my %args = (
            name => $name
         ,id_iso => $c->param('id_iso')
