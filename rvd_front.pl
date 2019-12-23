@@ -1522,7 +1522,7 @@ sub req_new_domain {
     my $name = $c->param('name');
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
-    $swap *= 1024*1024*1024;
+    $swap = int($swap * 1024*1024*1024);
 
     my %args = (
            name => $name
