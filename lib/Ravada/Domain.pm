@@ -1500,6 +1500,30 @@ sub restore($self,$user){
     }
 }
 
+sub restore($self,$user){
+    die "Error: ".$self->name." is not a clone. Only clones can be restored."
+        if !$self->id_base;
+
+    $self->_pre_remove_domain($user);
+
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $self->list_volumes_info();
+    my %file = map { $_->info->{target} => $_->file } @volumes;
+
+    for my $file_data ( $base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self->_vm
+        );
+        next if $vol_base->file =~ /\.DATA\.\w+$/;
+        my $file_clone = $file{$target} or die Dumper(\%file);
+        unlink $file_clone;
+        my $clone = $vol_base->clone(file => $file_clone);
+    }
+}
+
 # check the node is active
 # search the domain in another node if it is not
 sub _check_active_node($self) {
@@ -3139,11 +3163,9 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
-        if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
-            eval { $vol->backing_file };
-            confess $@ if $@ && $@ !~ /No backing file/i;
-            $vol->restore() if !$@;
-        }
+        $vol->restore()
+            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/
+            && $vol->info->{backing_file};
     }
 }
 
