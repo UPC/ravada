@@ -254,12 +254,33 @@ sub _cache_volume_info($self) {
     }
     my $file = (delete $info{file} or $row->{file});
     my $n_order = (delete $info{n_order} or $row->{n_order});
+
+    $self->_swap_order($row->{id}, $n_order, $row->{n_order});
+
     warn "Error: Missing file field ".Dumper(\%info, $row)
         if !defined $file || !length($file);
     my $sth = $self->domain->_dbh->prepare(
         "UPDATE volumes set info=?, name=?,file=?,id_domain=?,n_order=? WHERE id=?"
     );
     $sth->execute(encode_json(\%info), $name, $file, $self->domain->id, $n_order, $row->{id});
+}
+
+sub _swap_order($self, $id, $new_order, $old_order) {
+    return if $new_order == $old_order;
+
+    my $sth = $self->domain->_dbh->prepare(
+        "SELECT id FROM volumes where n_order=? AND id<>? AND id_domain=?"
+    );
+    $sth->execute($new_order, $id, $self->domain->id);
+    my ($id_conflict) = $sth->fetchrow();
+
+    my $sth_sw = $self->domain->_dbh->prepare(
+        "UPDATE volumes set n_order = ? WHERE id = ?"
+    );
+    # tmp bogus
+    $sth_sw->execute(-$new_order, $id_conflict);
+    $sth_sw->execute($new_order, $id);
+    $sth_sw->execute($old_order, $id_conflict);
 }
 
 1;
