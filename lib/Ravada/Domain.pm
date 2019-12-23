@@ -585,10 +585,6 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
 
     return $self->$orig($attribute, $value) if ref($self) =~ /^Ravada::Front/i;
 
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-
     my @volumes = $self->$orig($attribute => $value);
 
     return @volumes;
