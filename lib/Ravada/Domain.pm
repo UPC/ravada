@@ -1452,6 +1452,30 @@ sub _pre_remove_domain($self, $user, @) {
 
 }
 
+sub restore($self,$user){
+    die "Error: ".$self->name." is not a clone. Only clones can be restored."
+        if !$self->id_base;
+
+    $self->_pre_remove_domain($user);
+
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $self->list_volumes_info();
+    my %file = map { $_->info->{target} => $_->file } @volumes;
+
+    for my $file_data ( $base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self->_vm
+        );
+        next if $vol_base->file =~ /\.DATA\.\w+$/;
+        my $file_clone = $file{$target} or die Dumper(\%file);
+        unlink $file_clone;
+        my $clone = $vol_base->clone(file => $file_clone);
+    }
+}
+
 # check the node is active
 # search the domain in another node if it is not
 sub _check_active_node($self) {
@@ -2977,10 +3001,13 @@ sub _rename_domain_db {
 
     my $new_name = $args{name} or confess "Missing new name";
 
+    $self->_data(name => $new_name);
+    return;
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
                 ." WHERE id=?");
     $sth->execute($new_name, $self->id);
     $sth->finish;
+
 }
 
 =head2 is_public
@@ -3091,7 +3118,8 @@ sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
         $vol->restore()
-            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/;
+            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/
+            && $vol->info->{backing_file};
     }
 }
 
@@ -3112,7 +3140,11 @@ sub _post_rename {
     my $self = shift;
     my %args = @_;
 
+    my $new_name = $args{new_name};
+
     $self->_rename_domain_db(@_);
+
+    $self->{_name} = $new_name;
 }
 
 sub _post_dettach($self, @) {
