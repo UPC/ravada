@@ -3176,11 +3176,9 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
-        if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
-            eval { $vol->backing_file };
-            confess $@ if $@ && $@ !~ /No backing file/i;
-            $vol->restore() if !$@;
-        }
+        $vol->restore()
+            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/
+            && $vol->info->{backing_file};
     }
 }
 
