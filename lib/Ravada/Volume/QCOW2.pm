@@ -21,6 +21,7 @@ sub prepare_base($self) {
 
     my $file_img = $self->file;
     my $base_img = $self->base_filename();
+    confess $base_img if $base_img !~ /\.ro/;
 
     confess "Error: '$base_img' already exists" if -e $base_img;
 
