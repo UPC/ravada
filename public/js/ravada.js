@@ -90,8 +90,10 @@
                 $scope.host_restore = machineId;
             };
             $scope.restore= function(machineId){
-                var toGet = '/machine/remove/'+machineId+'.html?sure=yes';
-                $http.get(toGet);
+              $http.post('/request/restore_domain/'
+                      , JSON.stringify({ 'id_domain': machineId
+                      })
+              );
             };
             $scope.action = function(machineId, action) {
                 $scope.refresh = 2;
@@ -568,6 +570,7 @@
             };
             $scope.add_disk = {
                 device: 'disk',
+                type: 'sys',
                 driver: 'virtio',
                 capacity: '1G',
                 allocation: '0.1G'

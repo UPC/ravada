@@ -53,6 +53,7 @@ our %VALID_ARG = (
            #        ,network => 2
       ,remote_ip => 2
           ,start => 2
+           ,data => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -60,6 +61,7 @@ our %VALID_ARG = (
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
+    ,restore_domain => { id_domain => 1, uid => 1 }
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
